@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fyp.local/crowdsim/persona.schema.json",
+  "title": "PersonaAgeGroup",
+  "description": "One entry in the age_groups list of dataset/personas.yaml.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "label", "age_range", "free_flow_speed_mps", "anthropometry"],
+  "properties": {
+    "id": { "type": "string", "enum": ["child", "teenager", "young_adult", "middle_aged", "elderly"] },
+    "label": { "type": "string" },
+    "age_range": { "type": "array", "items": { "type": "integer", "minimum": 0, "maximum": 120 }, "minItems": 2, "maxItems": 2 },
+    "free_flow_speed_mps": { "type": "number", "exclusiveMinimum": 0, "maximum": 2.5, "description": "Literature-informed base free-flow speed; adapter perturbs it with the LLM's qualitative attributes." },
+    "anthropometry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["shoulder_width_m", "depth_m", "mass_kg"],
+      "properties": {
+        "shoulder_width_m": { "type": "number", "exclusiveMinimum": 0, "description": "-> CrowdGym Radius side (~ shoulder_width/2)." },
+        "depth_m": { "type": "number", "exclusiveMinimum": 0, "description": "-> CrowdGym Radius front (~ depth/2)." },
+        "mass_kg": { "type": "number", "exclusiveMinimum": 0, "description": "-> CrowdGym Mass." }
+      }
+    },
+    "source": { "type": "string" }
+  }
+}

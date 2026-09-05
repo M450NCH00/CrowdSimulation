@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fyp.local/crowdsim/behaviour_record.schema.json",
+  "title": "BehaviourRecord",
+  "description": "Canonical, aggregated behaviour record for one (scenario x persona) cell. One of these is produced by aggregating N raw DeepSeek responses (repeats). This is the file the CrowdGym adapter reads.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "record_id", "schema_version", "country", "scenario_id", "age_group",
+    "gender", "movement_profile", "disposition", "conflict_behaviour",
+    "aggregation", "provenance"
+  ],
+  "properties": {
+    "record_id": {
+      "type": "string",
+      "description": "Stable key, e.g. 'sg__bottleneck_doorway_bidirectional__elderly__female'."
+    },
+    "schema_version": { "type": "integer", "const": 1 },
+    "country": { "type": "string", "const": "Singapore" },
+    "scenario_id": { "type": "string", "description": "Must match an id in scenarios.yaml." },
+    "age_group": { "type": "string", "enum": ["child", "teenager", "young_adult", "middle_aged", "elderly"] },
+    "gender": { "type": "string", "enum": ["male", "female"] },
+
+    "movement_profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Coarse movement attributes. The LLM fills these; the adapter maps them onto CrowdGym AgentType numeric params (Speed, Tau, Mass, Radius side/front).",
+      "required": ["walking_speed_mps", "reaction_speed", "body_size", "acceleration_tendency"],
+      "properties": {
+        "walking_speed_mps": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["estimate", "low", "high"],
+          "properties": {
+            "estimate": { "type": "number", "minimum": 0.2, "maximum": 2.5 },
+            "low": { "type": "number", "minimum": 0.2, "maximum": 2.5 },
+            "high": { "type": "number", "minimum": 0.2, "maximum": 2.5 }
+          }
+        },
+        "reaction_speed": { "type": "string", "enum": ["slow", "normal", "fast"], "description": "-> CrowdGym Tau (fast => lower Tau)." },
+        "body_size": { "type": "string", "enum": ["small", "medium", "large"], "description": "-> CrowdGym Radius side/front and Mass." },
+        "acceleration_tendency": { "type": "string", "enum": ["hesitant", "steady", "eager"] }
+      }
+    },
+
+    "disposition": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Behavioural tendencies that parameterise the conflict-resolution policy.",
+      "required": ["patience", "assertiveness", "rule_compliance", "risk_tolerance", "situational_awareness"],
+      "properties": {
+        "patience": { "type": "string", "enum": ["low", "medium", "high"] },
+        "assertiveness": { "type": "string", "enum": ["low", "medium", "high"] },
+        "rule_compliance": { "type": "string", "enum": ["low", "medium", "high"] },
+        "risk_tolerance": { "type": "string", "enum": ["low", "medium", "high"] },
+        "situational_awareness": { "type": "string", "enum": ["low", "medium", "high"] }
+      }
+    },
+
+    "conflict_behaviour": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "What this persona typically does in this scenario's conflict / interaction point.",
+      "required": [
+        "primary_action", "fallback_action", "yield_likelihood",
+        "expected_resolution_time", "decision_factors", "priority_rules",
+        "narrative", "locality"
+      ],
+      "properties": {
+        "primary_action": { "type": "string", "enum": ["proceed", "slow", "halt", "yield_step_aside", "speed_up", "back_off", "reroute"] },
+        "fallback_action": { "type": "string", "enum": ["proceed", "slow", "halt", "yield_step_aside", "speed_up", "back_off", "reroute"] },
+        "yield_likelihood": {
+          "type": "number", "minimum": 0.0, "maximum": 1.0,
+          "description": "P(this persona gives way) when facing a generic other person. Used to compose pairwise outcomes (DD1)."
+        },
+        "expected_resolution_time": { "type": "string", "enum": ["immediate", "short", "medium", "long"] },
+        "decision_factors": {
+          "type": "array", "minItems": 1, "maxItems": 8,
+          "items": { "type": "string" }
+        },
+        "priority_rules": {
+          "type": "array", "maxItems": 6,
+          "description": "Generic 'who goes first' rules this persona follows, e.g. 'give way to someone with a stroller', 'first to enter the doorway continues'.",
+          "items": { "type": "string" }
+        },
+        "narrative": { "type": "string", "maxLength": 900, "description": "2-4 sentence description of the typical behaviour." },
+        "locality": {
+          "type": "string", "enum": ["singapore_specific", "universal", "mixed"],
+          "description": "Model's own judgement of whether this behaviour is Singapore-specific."
+        }
+      }
+    },
+
+    "aggregation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["n_repeats", "primary_action_agreement", "yield_likelihood_std", "notes"],
+      "properties": {
+        "n_repeats": { "type": "integer", "minimum": 1 },
+        "primary_action_agreement": { "type": "number", "minimum": 0.0, "maximum": 1.0, "description": "Fraction of repeats that returned the modal primary_action." },
+        "yield_likelihood_std": { "type": "number", "minimum": 0.0 },
+        "notes": { "type": "string", "maxLength": 500 }
+      }
+    },
+
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["model", "prompt_version", "generated_utc", "run_id", "raw_response_ids"],
+      "properties": {
+        "model": { "type": "string", "examples": ["deepseek-chat"] },
+        "prompt_version": { "type": "string", "examples": ["v1"] },
+        "generated_utc": { "type": "string", "format": "date-time" },
+        "run_id": { "type": "string" },
+        "raw_response_ids": { "type": "array", "items": { "type": "string" }, "description": "Links to raw_response rows this record was aggregated from." }
+      }
+    }
+  }
+}

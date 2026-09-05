@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fyp.local/crowdsim/raw_response.schema.json",
+  "title": "RawResponse",
+  "description": "One row per DeepSeek API call, including every repeat. Stored before aggregation so runs are auditable and re-aggregatable without re-spending API budget.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "raw_id", "schema_version", "run_id", "scenario_id", "age_group", "gender",
+    "repeat_index", "request", "response", "status"
+  ],
+  "properties": {
+    "raw_id": { "type": "string", "description": "e.g. '<run_id>__<scenario_id>__<age_group>__<gender>__r2'." },
+    "schema_version": { "type": "integer", "const": 1 },
+    "run_id": { "type": "string", "description": "One id per pipeline execution." },
+    "scenario_id": { "type": "string" },
+    "age_group": { "type": "string", "enum": ["child", "teenager", "young_adult", "middle_aged", "elderly"] },
+    "gender": { "type": "string", "enum": ["male", "female"] },
+    "repeat_index": { "type": "integer", "minimum": 0 },
+
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["model", "prompt_version", "system_prompt_sha1", "messages", "params"],
+      "properties": {
+        "model": { "type": "string" },
+        "prompt_version": { "type": "string" },
+        "system_prompt_sha1": { "type": "string", "description": "Hash of the system prompt actually sent." },
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["role", "content"],
+            "properties": {
+              "role": { "type": "string", "enum": ["system", "user", "assistant"] },
+              "content": { "type": "string" }
+            }
+          }
+        },
+        "params": {
+          "type": "object",
+          "description": "Sampling params actually used (temperature, max_tokens, etc.).",
+          "additionalProperties": true
+        }
+      }
+    },
+
+    "response": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["raw_text", "parsed_ok"],
+      "properties": {
+        "raw_text": { "type": "string", "description": "Verbatim model output." },
+        "parsed_ok": { "type": "boolean" },
+        "parsed": {
+          "description": "The JSON object parsed out of raw_text; null if parsing failed. Shape should match the conflict/movement blocks of behaviour_record.",
+          "type": ["object", "null"]
+        },
+        "usage": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Token usage returned by the API (prompt_tokens, completion_tokens, prompt_cache_hit_tokens, prompt_cache_miss_tokens).",
+          "properties": {
+            "prompt_tokens": { "type": "integer" },
+            "completion_tokens": { "type": "integer" },
+            "prompt_cache_hit_tokens": { "type": "integer" },
+            "prompt_cache_miss_tokens": { "type": "integer" },
+            "total_tokens": { "type": "integer" }
+          }
+        },
+        "cost_usd": { "type": "number", "description": "Computed from usage x the rates in config.py." }
+      }
+    },
+
+    "status": { "type": "string", "enum": ["ok", "parse_error", "api_error", "retry_exhausted", "skipped"] },
+    "error": { "type": ["string", "null"] },
+    "timestamp_utc": { "type": "string", "format": "date-time" }
+  }
+}

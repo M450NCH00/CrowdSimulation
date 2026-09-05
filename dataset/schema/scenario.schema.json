@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fyp.local/crowdsim/scenario.schema.json",
+  "title": "Scenario",
+  "description": "One entry in dataset/scenarios.yaml.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "name", "category", "description", "geometry", "agents_involved", "conflict_type", "expected_actions", "decision_factors"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+    "name": { "type": "string" },
+    "category": { "type": "string", "enum": ["conflict", "everyday"] },
+    "description": { "type": "string", "minLength": 40, "description": "LLM-facing text describing the situation." },
+    "sg_variant": { "type": "string", "description": "Singapore-specific framing / examples." },
+    "geometry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["plane_size_m", "passage_width_m", "num_exits", "exit_width_m", "layout"],
+      "properties": {
+        "plane_size_m": { "type": "array", "items": { "type": "number", "exclusiveMinimum": 0 }, "minItems": 2, "maxItems": 2 },
+        "passage_width_m": { "type": "number", "exclusiveMinimum": 0 },
+        "num_exits": { "type": "integer", "minimum": 1 },
+        "exit_width_m": {
+          "oneOf": [
+            { "type": "number", "exclusiveMinimum": 0 },
+            { "type": "array", "items": { "type": "number", "exclusiveMinimum": 0 } }
+          ]
+        },
+        "layout": { "type": "string" }
+      }
+    },
+    "agents_involved": { "type": "string", "enum": ["pair", "few", "many"] },
+    "conflict_type": { "type": "string", "enum": ["deadlock", "congestion", "resource_competition", "none"] },
+    "rimea_ref": { "type": "string" },
+    "expected_actions": {
+      "type": "array", "minItems": 1,
+      "items": { "type": "string", "enum": ["proceed", "slow", "halt", "yield_step_aside", "speed_up", "back_off", "reroute"] }
+    },
+    "decision_factors": { "type": "array", "minItems": 1, "items": { "type": "string" } }
+  }
+}

@@ -1,0 +1,77 @@
+# Closed action vocabulary for conflict-resolution behaviour records.
+# The LLM MUST choose primary_action / fallback_action from `high_level` ids only.
+# `crowdgym_effect` says how the overridden RL_take_action turns the choice into
+# CrowdGym's accepted action (an (N, 3) array: [move_x, move_y, delta_facing]) or
+# a journey/path change. See integration/crowdgym_mapping.md.
+
+version: 1
+
+high_level:
+  - id: proceed
+    label: Proceed / hold course
+    description: >
+      Continue toward the current waypoint at desired speed; do not concede right
+      of way. Used when the agent judges it has priority or the gap is sufficient.
+    crowdgym_effect: >
+      move vector = desired_direction * desired_speed; delta_facing toward waypoint.
+
+  - id: slow
+    label: Slow down
+    description: >
+      Keep moving toward the goal but reduce speed to let a situation resolve or
+      to open a gap without fully stopping.
+    crowdgym_effect: >
+      move vector = desired_direction * (speed_factor * desired_speed),
+      speed_factor in [0.3, 0.7].
+
+  - id: halt
+    label: Stop and wait
+    description: >
+      Come to a full stop and wait for the other party / the bottleneck to clear
+      before resuming. The agent keeps its place in space.
+    crowdgym_effect: >
+      move vector = (0, 0); facing unchanged or turned toward the conflict.
+
+  - id: yield_step_aside
+    label: Yield / step aside
+    description: >
+      Actively give way: shift laterally out of the other party's path (and stop
+      or slow), then resume once clear. This is the cooperative conflict-breaker.
+    crowdgym_effect: >
+      move vector = lateral_unit * clearance_speed for a short burst, then halt;
+      path is NOT changed, only a temporary offset target.
+
+  - id: speed_up
+    label: Speed up / push through
+    description: >
+      Briefly accelerate above desired speed to clear the conflict point first
+      (assertive resolution). Higher risk of contact.
+    crowdgym_effect: >
+      move vector = desired_direction * (speed_factor * desired_speed),
+      speed_factor in [1.1, 1.4], clipped by model max speed.
+
+  - id: back_off
+    label: Back off / retreat
+    description: >
+      Move backward or away from the conflict point to fully concede space,
+      typically to break a face-to-face deadlock in a very narrow space.
+    crowdgym_effect: >
+      move vector = -desired_direction * (0.3..0.6 * desired_speed) for a short
+      burst, then halt and re-request a path if needed.
+
+  - id: reroute
+    label: Take an alternative route
+    description: >
+      Abandon the contested path and choose a different door / corridor / exit to
+      the same destination.
+    crowdgym_effect: >
+      request a new journey / path to an alternative guide point; handled via the
+      AgentJourneyDirector or a direct path re-request.
+
+# Coarse timing buckets the LLM uses for expected_resolution_time; the adapter
+# maps them to seconds for CrowdGym (fps * seconds = steps).
+resolution_time_buckets:
+  immediate: { seconds: 1.0,  note: "resolved almost at once" }
+  short:     { seconds: 3.0,  note: "a few seconds of negotiation" }
+  medium:    { seconds: 8.0,  note: "noticeable hesitation / queue" }
+  long:      { seconds: 20.0, note: "sustained congestion before clearing" }

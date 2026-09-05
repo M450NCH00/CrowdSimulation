@@ -1,0 +1,90 @@
+# Persona dimension for the dataset. Generation loops over
+# scenarios x age_groups x genders x repeats.
+#
+# `anthropometry` and `free_flow_speed_mps` are LITERATURE-INFORMED DEFAULTS used
+# as the base values the adapter perturbs with the LLM's qualitative attributes.
+# They are NOT produced by the LLM. Values are approximate — see `source` notes.
+#
+# `population_weight` is the share of that (age_group, gender) cell in Singapore's
+# resident population, used to weight the CrowdGym AgentType mix. The numbers here
+# are APPROXIMATE PLACEHOLDERS. >>> VERIFY against the latest SingStat data
+# (Population Trends / M810001 resident population by age group and sex) before
+# using them in a report. <<<
+
+version: 1
+country: Singapore
+persona_framing: observer   # DD2: third-person "describe how X typically behaves"
+population_weight_source: "PLACEHOLDER — replace with SingStat resident pop, year TBC"
+
+genders:
+  - id: male
+    label: male
+  - id: female
+    label: female
+
+age_groups:
+  - id: child
+    label: child
+    age_range: [5, 12]
+    free_flow_speed_mps: 1.05        # slower, shorter stride; ~0.9-1.2
+    anthropometry:
+      shoulder_width_m: 0.33
+      depth_m: 0.20
+      mass_kg: 30
+    source: "child gait literature; Weidmann pedestrian speed review (approx)"
+
+  - id: teenager
+    label: teenager
+    age_range: [13, 19]
+    free_flow_speed_mps: 1.40
+    anthropometry:
+      shoulder_width_m: 0.44
+      depth_m: 0.27
+      mass_kg: 58
+    source: "Weidmann 1993 free-flow ~1.34-1.45 m/s; anthropometry approx"
+
+  - id: young_adult
+    label: young adult
+    age_range: [20, 39]
+    free_flow_speed_mps: 1.40
+    anthropometry:
+      shoulder_width_m: 0.46
+      depth_m: 0.28
+      mass_kg: 68
+    source: "Weidmann 1993; Still crowd dynamics"
+
+  - id: middle_aged
+    label: middle-aged adult
+    age_range: [40, 59]
+    free_flow_speed_mps: 1.30
+    anthropometry:
+      shoulder_width_m: 0.47
+      depth_m: 0.29
+      mass_kg: 72
+    source: "age decline in walking speed ~ -0.1 to -0.2 m/s vs young adult"
+
+  - id: elderly
+    label: elderly person
+    age_range: [60, 99]
+    free_flow_speed_mps: 1.05        # well-documented slowdown; ~0.9-1.2
+    anthropometry:
+      shoulder_width_m: 0.45
+      depth_m: 0.30
+      mass_kg: 64
+    source: "Bohannon 1997 gait speed norms; TransSafe elderly pedestrian studies"
+
+# gender_speed_multiplier: applied on top of age free_flow_speed_mps.
+# Evidence: small male > female free-flow difference (~2-5%). Keep modest and
+# document it; treat as tunable.
+gender_speed_multiplier:
+  male: 1.02
+  female: 0.98
+
+# APPROXIMATE population weights per cell. Must sum to ~1.0 across all 10 cells.
+# >>> PLACEHOLDER — VERIFY WITH SINGSTAT <<<
+population_weight:
+  child:       { male: 0.045, female: 0.043 }
+  teenager:    { male: 0.041, female: 0.039 }
+  young_adult: { male: 0.165, female: 0.170 }
+  middle_aged: { male: 0.140, female: 0.145 }
+  elderly:     { male: 0.100, female: 0.112 }
