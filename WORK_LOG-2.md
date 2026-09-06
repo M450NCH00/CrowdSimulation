@@ -115,10 +115,121 @@ behavioural fidelity are load-bearing, not inconvenient.
     the others. Recorded because it changes how strong that result actually is.
 - Next step: write the deliverables.
 
+### 2026-09-06 - Deliverables written and verified
+- What I did: Wrote `literature/papers.md` (7 entries), `literature/refs.bib`
+  (7 entries) and `literature/search-log.md`. Ran a structural validator over
+  the .bib and a cross-check between the two files.
+- Why: Plan steps 5-8; acceptance criteria in the issue.
+- Result / what I found:
+  - .bib: UTF-8 clean, 71 balanced brace pairs, 7 entries parsed, no duplicate
+    keys, no duplicate titles, all required fields present per entry type, no
+    unescaped `%`. **Caveat: no LaTeX toolchain on this machine** (no
+    `bibtex` / `biber` / `pdflatex`), so "compiles" was verified structurally,
+    not by an actual BibTeX run. Flagged under risks.
+  - Cross-check: the 7 BibTeX keys in papers.md and the 7 in refs.bib match
+    exactly in both directions; all 7 entries carry every template field.
+  - 4 `[unverified]` markers and 7 `[non-archival]` markers placed.
+- Next step: push and open the PR.
+
 ## Open questions / risks
 
-- (to be filled during the work)
+1. **`refs.bib` was not compiled by a real BibTeX run.** No LaTeX toolchain is
+   installed here. A structural validator confirmed balanced braces, unique keys,
+   unique titles, required fields per entry type and no unescaped `%`, but the
+   acceptance criterion says "compiles". **Run it through the actual report
+   template once before relying on it.** The `@misc` preprint entries are the
+   most likely to render differently under a specific bibliography style.
+2. **ACM Digital Library returned HTTP 403 to every automated fetch**, and the
+   issue names it as a required source. Worked around by verifying Zhong et al.
+   from the PDF's own ACM reference block and Park et al. from arXiv plus the ACM
+   citation record. Nothing in `papers.md` depends on an unverified ACM claim,
+   but a human on a university network should spot-check both DOIs.
+3. **Wang et al.'s venue is unresolved.** A companion GitHub repo labels it
+   "ICLR 2025"; arXiv lists no venue. Treated as a preprint and marked
+   `[unverified]`. Resolve before the report cites it - if it *is* peer-reviewed,
+   the review gets stronger, since it is the entry carrying the gender-stereotype
+   finding.
+4. **Section/figure numbers come from ar5iv renderings of arXiv versions**, not
+   from published camera-ready PDFs. Usually identical, not guaranteed. Two
+   fetches of Aher et al. disagreed on where the hyper-accuracy-distortion
+   discussion sits, so it is cited as "sections 7-8" rather than a single section.
+   Confirm any number that gets quoted verbatim in the report.
+5. **I reported 7 papers where the issue asked for 5.** Justified in
+   `search-log.md` on scope-coverage grounds, but it is a judgement call and the
+   supervisor may prefer a tighter set. The five LLM-validity entries alone
+   satisfy the issue as literally written.
+6. **One seed lead was dropped.** Horton et al. was verified as real and
+   relevant but ranked below the seven adopted entries; reasoning is in
+   `search-log.md`. This is a defensible call, not a confident one - it is
+   well-cited (544 per Semantic Scholar) and a supervisor may expect to see it.
+7. **"Utopian illusion" (arXiv 2510.21180) is worth a second look** before the
+   report is written. Its claim - that LLM social simulations drift toward
+   unrealistically harmonious outcomes - may describe this project's specific
+   failure mode (conflict agents that always de-escalate) better than anything
+   in the adopted set. Not adopted here only to avoid a third preprint.
+8. **Citation counts could not be gathered** (Semantic Scholar returned 429s).
+   None are used as evidence, so no claim depends on this, but if the report
+   wants them an API key is needed.
+9. **Relevance ratings are my judgement, not a measurement.** The 1-5 scores and
+   the specific transfer arguments should be reviewed by the supervisor - they
+   encode assumptions about where this project is heading that only the
+   supervisor can confirm.
 
-## Summary (fill in at the end)
+## Summary
 
-- (to be filled at the end)
+**What changed.** Added a new top-level `literature/` folder with the three
+deliverables the issue specified, plus a `refs/` folder caching every source.
+
+- `literature/papers.md` - 7 verified papers, each using the issue's full
+  template with no blank fields, each with an explicit transfer argument to this
+  project's dataset design or validation plan.
+- `literature/refs.bib` - 7 deduplicated entries, structurally validated.
+- `literature/search-log.md` - sources, queries, forward-citation results,
+  rejected candidates (with reasons, including for a dropped seed lead), and an
+  honest record of the two access failures.
+- `refs/` - cached HTML/PDF of every cited source so claims can be re-checked.
+- `README.md` - one line added to the directory layout so `literature/` is
+  discoverable.
+
+**Why.** The FYP had a generated dataset but no literature grounding for the two
+claims the report must defend: that LLM-elicited behaviour is a valid simulation
+input, and that behaviour-driven crowd agents are a reasonable direction at all.
+
+**The most useful finding.** The `run01` validation flagged a systematic "female
+personas yield more than male" pattern as an open item for the supervisor. Two
+independent papers say this is a *documented, expected* property of the method,
+not a bug in the prompt: Wang et al. section 3.1 report LLMs are "3-6 times more
+likely to generate gender-stereotypical behavioural patterns", and Aher et al.
+found a large gender asymmetry in yielding (60% vs 20% acceptance of unfair
+offers, p<1e-16) in the Ultimatum Game - structurally the same yield/refuse
+decision this dataset encodes. Cheng et al. then supply a runnable audit method
+(Marked Words) and the specific warning that flattering-sounding gender
+differences are the ones that survive plausibility checks. That reframes the
+supervisor conversation from "is this a bug?" to "here is the known failure
+mode, and here is how we audit it."
+
+**A second finding worth surfacing.** Hullman et al.'s exploratory/confirmatory
+distinction implies the honest claim for this report is "a plausible, internally
+consistent behaviour prior", not "a validated substitute for human behavioural
+data". Park et al.'s cost figure (thousands of dollars for 25 agents over two
+simulated days) is the citable evidence for DD1, but their ablation also shows
+what freezing the table gives up (TrueSkill 29.89 -> 21.21 without memory and
+reflection). Both are recorded in `papers.md` rather than smoothed over.
+
+**How it was verified.** Per workflow step 5b:
+- Every quantitative claim carries a section/figure/table reference, or is
+  marked `[unverified]` (4 such markers).
+- Every title, author list, year and venue was confirmed by opening the actual
+  abstract page or PDF - never from memory of a title. One mis-attribution I
+  introduced myself (guessing "Zhu Wang" for the TOMACS survey) was caught and
+  corrected to Zhong et al. from the PDF front matter, and is logged.
+- One substantive misreading (the Park et al. crowdworker baseline ranking) was
+  caught by cross-checking a second source and corrected; both the error and the
+  correction are recorded rather than quietly fixed.
+- `refs.bib`: 7 entries, no duplicate keys or titles, required fields present,
+  balanced braces, valid UTF-8. Not compiled by real BibTeX - see risk 1.
+- Cross-check: BibTeX keys in `papers.md` and `refs.bib` match exactly in both
+  directions; all 7 entries carry every template field.
+- Every acceptance-criteria item is answered; the ACM DL access failure is
+  stated explicitly rather than omitted.
+- Sources cached in `refs/`.

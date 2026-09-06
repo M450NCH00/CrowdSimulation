@@ -46,6 +46,11 @@ CrowdSimulation/
     requirements.txt
   integration/
     crowdgym_mapping.md             record -> CrowdGym AgentType / journey / action handler
+  literature/
+    papers.md                       reviewed papers backing the LLM-as-behaviour-source claim
+    refs.bib                        BibTeX for the above
+    search-log.md                   what was searched, rejected, and where access failed
+  refs/                             cached copies of every cited source (re-checkable)
 ```
 
 ## Output files (written to `dataset/generated/`)
