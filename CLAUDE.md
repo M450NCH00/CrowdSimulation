@@ -71,6 +71,7 @@ See `README.md` for the live status of each step.
 6. Iterate with supervisor feedback before the next meeting
 
 ## Notes for Claude Code
+- When asked to work on a GitHub issue, follow `github_issue_workflow.md`
 - Check `integration/crowdgym_mapping.md` and `dataset/schema/README.md` before
   proposing anything that touches CrowdGym — go back to the original PDF
   (outside this repo) only for details not already covered there.
