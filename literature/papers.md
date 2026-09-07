@@ -217,8 +217,8 @@ concrete transfers:
    stereotype risk) — and simultaneously shows DD2 is *not sufficient*, since Cheng et
    al.'s prompts were also third-person descriptive and still produced amplification.
 2. The Marked Words method is directly runnable on this dataset: contrast the free-text
-   `rationale` / `decision_factors` fields for female personas against male ones and
-   inspect the distinguishing words. That is a more explainable audit than the current
+   `conflict_behaviour.narrative` and `decision_factors` fields for female personas
+   against male ones and inspect the distinguishing words. That is a more explainable audit than the current
    `|Δ yield_likelihood| > 0.25` threshold, and `CLAUDE.md` asks for explainable over
    automated.
 3. The resilience-myth finding is the specific warning for `run01`: a gender difference
@@ -410,7 +410,7 @@ the research question, and it does three jobs no LLM paper can.
    literature explicitly recommends — and §5.5 also warns against reporting a single
    headline pass rate.
 3. §5.3 on interpretability is a genuine argument *for* this project's architecture — a
-   frozen `(scenario × persona) → behaviour` table with an explicit `rationale` field is
+   frozen `(scenario × persona) → behaviour` table with an explicit `narrative` field is
    interpretable in exactly the sense the survey says learned crowd models usually are
    not, which is a defensible advantage over a neural trajectory model.
 
