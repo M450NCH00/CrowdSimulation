@@ -91,10 +91,102 @@ Specific traps the issue sets, which I read as deliberate:
     labelled as such, and §7 is explicitly conditional on that.
 - Next step: write the 11 sections.
 
+### 2026-09-07 - Deliverable written; a missing validation check found
+- What I did: Wrote all 11 sections of `docs/biweekly-updates/update-01.md`, then
+  re-verified every asserted number programmatically against its source file.
+- Why: Plan steps 4-5; the issue's sourcing rule and its acceptance criteria.
+- Result / what I found:
+  - **20/20 numeric assertions verified OK** against the raw log, the aggregated
+    records, `validation_report.json` and `pipeline/config.py`. Nothing in the
+    document is a number I did not recompute or read directly from source.
+  - **A fourth new finding surfaced while writing section 10.**
+    `dataset/schema/VALIDATION.md` section 3 lists **four** directional
+    hypotheses; the report contains only **three**. Reading
+    `pipeline/validate.py` (lines ~120-145) confirms the fourth - "young adults
+    at least as assertive as elderly" - **is never implemented**. It did not
+    fail; it was never run, and the report gives no sign it was skipped. Added
+    to section 10 as a process weakness, to section 11 as a likely question, and
+    to the next-steps list. Also noted that the third hypothesis is checked with
+    a tolerance (`el_y >= ya_y - 0.05`), so "at least as much" permits a small
+    shortfall.
+  - Section 11 was renumbered 1-16 after inserting that question; an "6a."
+    marker would not have rendered as a list item.
+- Next step: push and open the PR.
+
 ## Open questions / risks
 
-- (to be filled during the work)
+1. **Sections 5 and 6 are second-hand and cannot be fixed from this repo.**
+   CrowdGym's source is not here; `integration/crowdgym_mapping.md` is the only
+   file that mentions it, and it was written from the senior's report. Class and
+   method names, the `AgentType` field list, the `RL_take_action` signature and
+   the exact RiMEA cases are all marked `[unverified - needs confirmation]`.
+   Resolving this needs the CrowdGym source or a re-read of the senior's PDF,
+   which is outside the repository.
+2. **The gender finding is mine, not the validator's.** The 51/8/11 split across
+   70 cells is recomputed for this document. It is a stronger statement than
+   `validation_report.md` makes, and it should be sanity-checked before it goes
+   in front of the supervisor - the underlying numbers are verified, but the
+   framing ("the threshold understates a dataset-wide skew") is my reading.
+3. **The missing fourth hypothesis is a finding about our own tooling**, not the
+   dataset. I have reported it but not fixed it - implementing it is a code
+   change outside this documentation issue's scope. It is in the next-steps list.
+4. **Whether `back_off` / `reroute` absence is a defect is genuinely unclear.**
+   It may be correct behaviour for these 14 scenarios. I have stated both
+   possibilities rather than picking one.
+5. **The $0.0966 cost is measured, but the dollar conversion is not.** The
+   pricing table in `pipeline/config.py` is marked `VERIFY` in-file. Token counts
+   are hard numbers; the dollar figure inherits an assumption.
+6. **Section 3's gap claim is deliberately limited.** It is stated as five
+   specific absences in the seven reviewed papers, with the wider-literature
+   claim marked unverified. If the supervisor wants a stronger novelty claim,
+   that needs a broader survey than this review.
+7. **Date and authorship in the header** - I used the repo's git user (Choo Zhen
+   Ming) and today's date. Adjust if the meeting date differs.
+8. **Branch is stacked three deep** (`main` <- lit review <- lit README <- this).
+   GitHub retargets automatically as each merges, but if you would rather merge
+   PR #3 first and rebase these onto `main`, that is straightforward.
 
-## Summary (fill in at the end)
+## Summary
 
-- (to be filled at the end)
+**What changed.** Added `docs/biweekly-updates/update-01.md`, a supervisor-facing
+progress document answering all 11 questions from the issue in order.
+
+**Sourcing approach.** Rather than reusing the summaries already in `README.md`
+and `CLAUDE.md`, I recomputed the run statistics from primary sources: the raw
+per-call log `dataset/generated/raw/run01.jsonl`, the aggregated
+`behaviour_records.jsonl`, `validation_report.json`, `pipeline/config.py`,
+`pipeline/generate.py`, `pipeline/validate.py`, the scenario/persona registries
+and `integration/crowdgym_mapping.md`.
+
+**Four findings not previously recorded anywhere in the repo:**
+
+1. **The gender skew is dataset-wide.** `validation_report.md` flags 11 cells on
+   a `|delta| > 0.25` threshold. Across all 70 `(scenario, age)` cells: **51
+   female-yields-more, 8 male-yields-more, 11 equal, mean delta +0.101.** The
+   threshold understates a systematic direction.
+2. **33 of 140 records have zero variance across all 3 repeats** - the
+   hyper-accuracy-distortion pattern Aher et al. describe, now quantified.
+3. **`back_off` and `reroute` were never produced** - 2 of 7 actions unused.
+4. **A stated validation check is silently missing** - `VALIDATION.md` lists four
+   directional hypotheses, `validate.py` implements three.
+
+**Honesty constraints applied.** Sections 5 and 6 are explicitly labelled
+second-hand because CrowdGym's source is not in this repository and
+`integration/adapter.py` does not exist. Section 10 states plainly that the two
+most convincing checks (the blind spot-check and the human gender-audit
+judgement) **have not been done**, and that consistency is not accuracy. Section
+3 states the gap as five specific absences rather than asserting novelty, and
+marks the wider-literature claim unverified. Section 4 quotes the goal from
+`CLAUDE.md` without enlarging it.
+
+**How it was verified.**
+- **20 of 20 numeric assertions re-verified programmatically** against their
+  source files: record and scenario counts, 420 calls, 420/420 parsed, cost
+  $0.0966, all four token totals, mean agreement 0.753, 12 low-agreement cells,
+  0 FAIL / 54 REVIEW / 3 INFO, locality 40/69/31, 33 zero-variance records, the
+  70-cell gender split, mean delta, the action distribution, n_repeats, model,
+  temperature, max_tokens, and the budget arithmetic.
+- All 11 sections confirmed present and in order.
+- Five `[unverified - needs confirmation]` markers placed, in sections 3, 6 and 7.
+- Sections 10 and 11 carry no unverified markers because every claim in them
+  cites a source, which is what the acceptance criterion requires.
