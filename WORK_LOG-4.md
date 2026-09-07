@@ -74,10 +74,92 @@ the excluded three are the two preprints (4, 5) and the crowd-simulation survey 
 - Result / what I found: Unambiguous — body order and table numbering match.
 - Next step: Write the README from the existing entries.
 
+### 2026-09-07 - README written; a factual error in papers.md found and fixed
+- What I did: Re-read the four full entries in `papers.md`, wrote
+  `literature/README.md`, then verified every repo path and repo-fact the README
+  asserts against the actual files.
+- Why: Plan steps 3-5; the issue's sourcing rule requires every claim to trace to
+  a verifiable source.
+- Result / what I found:
+  - All nine repo paths linked from the README exist. DD1/DD2/DD4 wording checked
+    against `README.md` lines 94-103 and quoted accurately.
+  - Persona cell count verified: `dataset/personas.yaml` has 5 age groups
+    (child, teenager, young_adult, middle_aged, elderly) x 2 genders = **10
+    cells**, and `dataset/scenarios.yaml` has **14** scenarios. 14 x 10 = 140,
+    matching run01's 140 records. So the README's "ten persona cells" is correct.
+  - **Error found and fixed.** Both `papers.md` (written for issue #2) and my
+    first draft of the README referred to a free-text `rationale` field on a
+    behaviour record. **There is no such field.** Dumping the schema shows the
+    free-text field is `conflict_behaviour.narrative`; `decision_factors` is an
+    array and does exist. Corrected in three places across the two files. This
+    was my own error from issue #2, carried forward - worth recording because the
+    Marked Words audit recommendation depends on naming the right field.
+  - Confirmed the related claim that "`aggregation` already records per-repeat
+    spread" IS correct: `aggregation.yield_likelihood_std` and
+    `aggregation.primary_action_agreement` both exist in the schema.
+- Next step: push and open the PR.
+
 ## Open questions / risks
 
-- (to be filled during the work)
+1. **Fixing `papers.md` widens this PR beyond issue #4's stated deliverable.**
+   The `rationale` -> `conflict_behaviour.narrative` correction touches a file
+   owned by issue #2 / PR #3. I judged that leaving a known-wrong field name in
+   place to keep the diff clean would be worse. If you would rather keep the two
+   PRs strictly separate, the `papers.md` hunk can be moved to PR #3.
+2. **Branch choice.** Issue #4 names `docs/2-lit-review-llm-human-behaviour` as
+   the branch, but that branch has an open unmerged PR (#3). I branched off it
+   instead and targeted the PR at it, rather than silently growing PR #3's scope.
+   GitHub retargets to `main` automatically if PR #3 merges first. Say the word
+   if you want this squashed straight onto the lit branch.
+3. **The gap paragraph is scoped to four papers, and says so.** The claim that no
+   *wider* work has done this is explicitly marked
+   `[unverified - needs confirmation]`, because four papers cannot support it.
+   Entries 4, 5 and 6 in `papers.md` bear on it and should be read before the
+   claim goes in the report. This is a deliberate limit, not an omission.
+4. **Section/figure numbers are inherited from `papers.md`** and were read from
+   ar5iv renderings rather than published PDFs. The README repeats that caveat,
+   but anything quoted verbatim in the report still needs confirming.
+5. **The "why it matters" sections are compiled from the existing `Relevance`
+   fields, as the issue requires** - so they inherit those fields' judgement
+   calls, including relevance ratings that are my assessment rather than a
+   measurement. The supervisor should sanity-check the transfer arguments.
 
-## Summary (fill in at the end)
+## Summary
 
-- (to be filled at the end)
+**What changed.** Added `literature/README.md`: a standalone, plain-language
+compilation of papers 1, 2, 3 and 7 from `literature/papers.md`. Also corrected a
+wrong field name in `literature/papers.md`.
+
+Structure follows the issue: a one-paragraph intro tying the review to the
+dataset-generation stage; one section per paper with title/authors/year, a
+plain-language account of method and findings, stated limitations, and a "why it
+matters for this project" section compiled from that paper's existing `Relevance`
+field; and a closing section naming the research gap.
+
+**Paper identification** (acceptance criterion 1). Selected from `papers.md`'s own
+heading order, cross-checked against its summary table, before reading content:
+**1 = [Aher-TE]**, **2 = [Argyle-OOM]**, **3 = [Cheng-MP]**, **7 = [Park-GA]**.
+Body order and table numbering agree, so the mapping is unambiguous. The four
+selected happen to be exactly the peer-reviewed LLM-behaviour papers; the three
+excluded are two preprints (4, 5) and the crowd-simulation survey (6).
+
+**The gap section** names five specific absences rather than asserting novelty:
+none of the four targets crowd/pedestrian simulation; none produces a reusable
+frozen behaviour dataset (all query the model live); none operates near 10,000
+agents (Park et al.'s 25 agents is the largest, and its cost is why); none is
+validated outside a US/English context (Argyle et al. and Cheng et al. both say
+so explicitly); and none maps elicited behaviour onto a physics-based simulator's
+numeric parameters (this project's DD4 / `integration/crowdgym_mapping.md`).
+
+**How it was verified.**
+- Every repo path linked from the README was confirmed to exist (9/9).
+- Every repo fact was checked against the source file rather than assumed: DD1,
+  DD2 and DD4 quoted against `README.md`; the 10 persona cells and 14 scenarios
+  counted from the YAML; the `|delta yield_likelihood| > 0.25` threshold and the
+  "Gender / age bias audit" heading confirmed in `VALIDATION.md` section 5.
+- That check caught one real error - a `rationale` field that does not exist -
+  which is now fixed in both files.
+- Paper-level numbers are inherited unchanged from `papers.md`, which verified
+  them against cached primary sources in `refs/`.
+- The one claim that could not be supported (that the gap holds against the wider
+  literature) is marked `[unverified - needs confirmation]` rather than asserted.
