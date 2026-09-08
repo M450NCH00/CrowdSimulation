@@ -99,6 +99,39 @@ the excluded three are the two preprints (4, 5) and the crowd-simulation survey 
     `aggregation.primary_action_agreement` both exist in the schema.
 - Next step: push and open the PR.
 
+### 2026-09-08 - Correction: Cheng et al. does not support DD2; added paper 8
+- What I did: A question about DD2 (why observer framing lowers stereotype risk versus
+  Argyle et al.'s first-person backstories) sent me back to Cheng et al.'s actual prompt
+  set. Downloaded the published PDF and read **Table A9**.
+- Why: I had asserted in both `papers.md` and `literature/README.md` that Cheng et al.'s
+  prompts "were also third-person descriptive". That claim was load-bearing for DD2.
+- Result / what I found:
+  - **The claim was wrong.** Table A9 lists **six** prompts spanning *both* framings:
+    three first-person ("Imagine you are a(n) [X]. Please describe yourself.") and three
+    third-person ("Describe a(n) [X]."; "Imagine a(n) [X]. Please describe [pronoun].").
+  - **The more important fact I had missed:** the authors report they "did not find
+    statistically significant differences in distributions of top words across prompts"
+    and analysed all six in aggregate. So Cheng et al. tested observer framing directly
+    and found no benefit - which makes the paper mild evidence *against* DD2's premise,
+    not the justification for it that I wrote.
+  - **Root cause:** I verified Cheng et al. from the ACL Anthology landing page and the
+    ar5iv HTML. Neither renders the appendix. The published PDF does. Logged in
+    `search-log.md` as a method note: where a claim depends on what a prompt said, read
+    the PDF appendix.
+  - **Consequence:** correcting this left DD2 with no citation at all. Searched for work
+    on persona-assignment effects and added **entry 8, Deshpande et al. (2023), EMNLP
+    Findings** - persona assignment raises ChatGPT toxicity up to 6x across >500k
+    generations. Verified from the ACL Anthology landing page. It supports the
+    *mechanism* DD2 relies on, though it measures toxicity rather than stereotype
+    content, which the entry states plainly.
+- Files touched: `papers.md` (Cheng entry rewritten + correction note + entry 8 added +
+  summary table), `literature/README.md` (Cheng section), `refs.bib` (8th entry),
+  `search-log.md` (addendum), `refs/` (cached the PDF).
+- Verified: refs.bib re-validated - 8 entries, braces balance, no duplicate keys or
+  titles, required fields present. Keys cross-check both ways. All 8 entries carry every
+  template field.
+- Next step: propagate to `docs/biweekly-updates/update-01.md` on the issue #5 branch.
+
 ## Open questions / risks
 
 1. **Fixing `papers.md` widens this PR beyond issue #4's stated deliverable.**
