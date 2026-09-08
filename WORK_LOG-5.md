@@ -113,6 +113,34 @@ Specific traps the issue sets, which I read as deliberate:
     marker would not have rendered as a list item.
 - Next step: push and open the PR.
 
+### 2026-09-08 - Propagated the DD2 / Cheng correction into update-01.md
+- What I did: Merged the corrected literature branch in, then updated the biweekly
+  document everywhere the Cheng et al. error had propagated.
+- Why: The correction (see `WORK_LOG-4.md`) changed what can be claimed for DD2, and
+  update-01.md repeated the wrong claim in section 2 and relied on it in section 9.
+- Result / what I found - six sections touched:
+  - **Header**: added a "Revised 2026-09-08" line naming the affected sections.
+  - **Section 1**: seven papers -> eight; added the Deshpande row to the table.
+  - **Section 2**: kept the wrong two sentences in place and appended a visible
+    correction block under them, rather than silently rewriting - the supervisor should
+    be able to see what changed. Added a Paper 8 paragraph.
+  - **Section 3**: "Seven papers cannot establish it" -> "Eight".
+  - **Section 9**: the DD2 bullet now says the "lower stereotype risk" wording is too
+    strong, and states the narrower defensible claim.
+  - **Section 10**: new weakness bullet - the dataset has **no prompt-side stereotype
+    mitigation**, only the not-yet-performed audit. This is the substantive consequence:
+    we previously believed DD2 was doing protective work, and it is not.
+  - **Section 11**: new question 4 ("what is your evidence observer framing reduces
+    stereotype risk?"); questions renumbered 1-17.
+  - **Next steps**: added rewording DD2 in `README.md`, and testing the two framings
+    directly on a subset - the remaining ~$1.90 budget covers it easily.
+- Verified: all 11 sections still present and in order; section 11 numbering sequential
+  1-17; next steps 1-7; 5 unverified markers retained; re-ran the numeric check - all
+  7 spot-checks still pass (no data changed). The two new Cheng claims are quotable
+  verbatim from the cached PDF text.
+- Note: `README.md`'s DD2 wording itself is NOT changed here - that is a repo design
+  record, and editing it is the user's call. It is in the next-steps list.
+
 ## Open questions / risks
 
 1. **Sections 5 and 6 are second-hand and cannot be fixed from this repo.**
@@ -142,7 +170,10 @@ Specific traps the issue sets, which I read as deliberate:
    that needs a broader survey than this review.
 7. **Date and authorship in the header** - I used the repo's git user (Choo Zhen
    Ming) and today's date. Adjust if the meeting date differs.
-8. **Branch is stacked three deep** (`main` <- lit review <- lit README <- this).
+8. **DD2's wording in `README.md` is still the old, too-strong claim** ("lower
+   stereotype risk"). I did not edit it - it is a signed-off design record and the
+   rewording is your call. `update-01.md` section 9 and the next-steps list both flag it.
+9. **Branch is stacked three deep** (`main` <- lit review <- lit README <- this).
    GitHub retargets automatically as each merges, but if you would rather merge
    PR #3 first and rebase these onto `main`, that is straightforward.
 

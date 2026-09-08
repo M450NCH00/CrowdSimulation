@@ -5,6 +5,8 @@
 **Date:** 2026-09-07
 **Covers:** work up to and including dataset generation run01 (2026-09-04) and the
 literature review completed 2026-09-06/07.
+**Revised:** 2026-09-08 — a correction to the Cheng et al. entry changed what can be
+claimed for **DD2**; an eighth paper was added. Affected: §1, §2, §3, §9, §10, §11.
 
 ## Sourcing convention used in this document
 
@@ -29,9 +31,9 @@ Two structural limits worth stating at the top, because they shape sections 5, 6
 
 ## 1. Papers read
 
-Seven papers, in `literature/papers.md`, with a plain-language write-up of four of them
+Eight papers, in `literature/papers.md`, with a plain-language write-up of four of them
 in `literature/README.md` and the full search record in `literature/search-log.md`.
-Cached copies of every source are in `refs/`.
+Cached copies of every source are in `refs/`. (Paper 8 was added on 2026-09-08; see §2.)
 
 | # | Paper | Year | Venue | Peer-reviewed |
 |---|---|---|---|---|
@@ -42,6 +44,7 @@ Cached copies of every source are in `refs/`.
 | 5 | Hullman et al. — *Validating LLM Simulations as Behavioral Evidence* — [arXiv:2602.15785](https://arxiv.org/abs/2602.15785) | 2026 | arXiv `[non-archival]` | no |
 | 6 | Zhong et al. — *Data-driven Crowd Modeling Techniques: A Survey* — [doi:10.1145/3481299](https://doi.org/10.1145/3481299) | 2022 | ACM TOMACS | yes |
 | 7 | Park et al. — *Generative Agents: Interactive Simulacra of Human Behavior* — [doi:10.1145/3586183.3606763](https://doi.org/10.1145/3586183.3606763) | 2023 | UIST | yes |
+| 8 | Deshpande et al. — *Toxicity in ChatGPT: Analyzing Persona-assigned Language Models* — [doi:10.18653/v1/2023.findings-emnlp.88](https://doi.org/10.18653/v1/2023.findings-emnlp.88) | 2023 | EMNLP Findings | yes |
 
 Two are preprints and are labelled `[non-archival]`; neither is the sole support for any
 claim. Section and figure numbers cited below were read from the arXiv/ar5iv versions
@@ -85,6 +88,21 @@ the justification for **DD2** (observer framing) and the proof DD2 is insufficie
 their prompts were also third-person descriptive and still amplified. Their limitation
 is real for us: they draw only on American stereotypes and English.
 
+> **Correction, 2026-09-08.** The two sentences above about DD2 were wrong and are
+> retained only so the change is visible. Checking **Table A9** of the published PDF
+> (cached at `refs/cheng2023_marked_personas.pdf`) shows Cheng et al. used **six**
+> prompts spanning *both* framings — three first-person (*"Imagine you are a(n) [X].
+> Please describe yourself."*) and three third-person (*"Describe a(n) [X]."*, *"Imagine
+> a(n) [X]. Please describe [pronoun]."*) — and report **no statistically significant
+> difference** in top-word distributions across them. So the paper does **not** justify
+> DD2's choice of observer framing; it is mild evidence *against* the premise that
+> framing changes stereotype content. (A null result, and possibly underpowered — it was
+> not a targeted framing experiment.) What it does establish is that persona prompting
+> amplifies stereotype relative to human-written text **whichever framing is used**, so
+> DD2 is not a mitigation that removes the need to audit. The citation DD2 actually
+> rests on is now paper 8. The error came from verifying Cheng et al. against the ACL
+> Anthology landing page and ar5iv HTML, neither of which renders the appendix.
+
 **Paper 4 — Wang et al. (the critical survey).** Reports that LLMs are **"3–6 times more
 likely to generate gender-stereotypical behavioural patterns"** (§3.1) — the single most
 applicable number in the review to our §10 finding. Also reports a
@@ -119,6 +137,17 @@ resources... costing thousands of dollars" for **25 agents over two simulated da
 `(scenario × persona)` and freezing the answers — and it is honest to note the ablation
 also shows what freezing discards.
 
+**Paper 8 — Deshpande et al. (the citation DD2 actually rests on).** Added 2026-09-08
+after the correction above. Across **over half a million ChatGPT generations**, assigning
+a persona ("you are X") **increased toxicity up to 6×** versus the default assistant,
+producing "incorrect stereotypes, harmful dialogue, and hurtful opinions"; certain groups
+were targeted ~3× more regardless of which persona was assigned. This is the evidence for
+the mechanism DD2 relies on: first-person persona *assignment* measurably changes model
+behaviour, and observer framing never issues such an instruction. Two limits, which the
+report must carry: it measures **toxicity**, not stereotype content or behavioural
+fidelity; and its setting is open-ended dialogue, not constrained JSON output about
+pedestrian behaviour. So it supports a mechanism claim, not a quantitative transfer.
+
 ## 3. Has this been done before, and what is the research gap
 
 **It has partly been done before, and the review says so.** Using an LLM as a source of
@@ -152,7 +181,7 @@ physics-based crowd simulator at a scale where live LLM calls are impossible.**
 **Honest limits on that claim:**
 
 - Whether the gap holds against the **wider literature these papers cite** is
-  **`[unverified — needs confirmation]`**. Seven papers cannot establish it. Forward
+  **`[unverified — needs confirmation]`**. Eight papers cannot establish it. Forward
   citations of papers 1, 2 and 7 were checked (see `literature/search-log.md`), but
   that is not an exhaustive survey.
 - Two candidates found and *not* adopted bear on this and should be read before the
@@ -330,7 +359,13 @@ raw log — not the originally planned approach.
   `pipeline/prompts/user_template.txt` and an explicit output contract
   (`pipeline/prompts/output_contract.json`). Prompt version `v1`.
 - **Persona framing is observer, not role-play** (DD2): "describe how a 72-year-old
-  woman in Singapore typically behaves", chosen to lower stereotype risk.
+  woman in Singapore typically behaves". DD2 records this as chosen "to lower stereotype
+  risk"; **that wording is now known to be too strong** (see the correction in §2). The
+  defensible claim is narrower: observer framing avoids the persona-*assignment* effects
+  Deshpande et al. document, but it is **not** established that it produces less
+  stereotyped content — Cheng et al. found no significant difference between framings.
+  The `run01` gender pattern in §10 occurred *under* observer framing, which is the local
+  demonstration that DD2 is not a mitigation.
 - **Aggregation**: `pipeline/aggregate.py` collapses the 3 repeats per cell into one
   canonical record, recording `primary_action_agreement` and `yield_likelihood_std` so
   the spread across repeats is retained rather than discarded.
@@ -420,6 +455,11 @@ adults. Mean `primary_action_agreement` is 0.753.
   "Do not silently accept them." That judgement has not been made. Cheng et al. supply a
   method (Marked Words on the `conflict_behaviour.narrative` and `decision_factors`
   fields) that has not been run.
+- **Weak — the mitigation we assumed we had, we do not have.** DD2 (observer framing)
+  was recorded as reducing stereotype risk. As of the 2026-09-08 correction in §2, that
+  is unsupported: Cheng et al. tested both framings and found no significant difference,
+  and the `run01` gender skew occurred under observer framing anyway. So the dataset has
+  **no prompt-side stereotype mitigation** — only the (not yet performed) audit.
 - **Weak — a stated check is missing without being reported as missing.** The
   assertiveness hypothesis is in `VALIDATION.md` but not in `validate.py`, and the
   report gives no indication it was skipped. A validation suite that silently omits one
@@ -451,53 +491,61 @@ Grounded in the specific weak points surfaced above.
    an answer ready; it would halve the persona count to 5 and remove the most
    contestable axis, at the cost of some heterogeneity.
 
+4. *"You chose observer framing to reduce stereotype risk. What is your evidence that
+   it does?"* — **Weaker than we first wrote.** Cheng et al. tested both first-person and
+   observer framings and found no significant difference in stereotype word
+   distributions. Deshpande et al. supports the narrower claim that persona *assignment*
+   raises toxicity up to 6x, which observer framing avoids — but that is about assignment
+   effects, not stereotype content. The honest answer is that DD2 avoids one known
+   failure mode and is not a stereotype mitigation.
+
 **On validation (§10).**
 
-4. *"You say validation passes. What exactly passed?"* — Format and internal
+5. *"You say validation passes. What exactly passed?"* — Format and internal
    consistency, plus 3 directional hypotheses. Not human accuracy.
-5. *"Why haven't you done the blind spot-check?"* — It is the check `VALIDATION.md`
+6. *"Why haven't you done the blind spot-check?"* — It is the check `VALIDATION.md`
    calls the most convincing, it needs no API budget, and it has not been done. There is
    no good answer except that it is next.
-6. *"Three repeats at temperature 1.0 — is that enough to measure consistency?"* — Almost
+7. *"Three repeats at temperature 1.0 — is that enough to measure consistency?"* — Almost
    certainly not, and 33/140 records showing zero variance may reflect the small sample
    as much as model behaviour. ~$1.90 of budget remains, so more repeats are affordable.
-7. *"Your validation document lists four hypotheses and your report shows three. What
+8. *"Your validation document lists four hypotheses and your report shows three. What
    happened to the fourth?"* — It was never implemented in `validate.py`. This is the
    most awkward question in this list, because the report gives no sign the check was
    skipped.
 
 **On the dataset itself (§8, §9).**
 
-8. *"Two of your seven actions never appear. Is your action space wrong, or your
+9. *"Two of your seven actions never appear. Is your action space wrong, or your
    prompt?"* — Unresolved; `back_off` and `reroute` were never produced.
-9. *"Only 31 of 140 records are labelled Singapore-specific. Is the localisation doing
+10. *"Only 31 of 140 records are labelled Singapore-specific. Is the localisation doing
    any work?"* — A fair challenge to the whole Singapore framing, given the effort in
    the system prompt.
-10. *"Your population weights — where did they come from?"* — They are **placeholders**.
+11. *"Your population weights — where did they come from?"* — They are **placeholders**.
    `personas.yaml` marks them `VERIFY` against SingStat, and `README.md` records this as
    assumption **A1**. This should be fixed before the report.
-11. *"Is your cost figure right?"* — $0.0966 is measured from the raw log, but the
+12. *"Is your cost figure right?"* — $0.0966 is measured from the raw log, but the
     pricing table in `config.py` is marked `VERIFY`, so the dollar conversion rests on
     assumed rates.
 
 **On CrowdGym integration (§5, §6, §7).**
 
-12. *"Have you actually run any of this in CrowdGym?"* — No. There is no adapter; the
+13. *"Have you actually run any of this in CrowdGym?"* — No. There is no adapter; the
     interface is documented from the senior's report and not verified against source.
-13. *"Your speeds are 1.0–1.5 m/s but the senior's verification runs used 0.8 m/s. How
+14. *"Your speeds are 1.0–1.5 m/s but the senior's verification runs used 0.8 m/s. How
     will you compare?"* — `crowdgym_mapping.md` flags exactly this and says not to
     compare across the two baselines without rescaling or re-running.
-14. *"You generate per persona but conflicts are pairwise. How do you get a pairwise
+15. *"You generate per persona but conflicts are pairwise. How do you get a pairwise
     outcome from single-persona data?"* — DD1: composed via `yield_likelihood` plus a
     `priority_bias` table that does not exist yet. This is an unvalidated design
     decision and probably the biggest technical risk.
 
 **On the research gap and scope (§3, §4).**
 
-15. *"How do you know nobody has done this?"* — We do not, at seven papers. The gap is
+16. *"How do you know nobody has done this?"* — We do not, at seven papers. The gap is
     stated as five specific absences in the reviewed work, and the wider-literature
     claim is explicitly marked unverified.
-16. *"You want 10,000 agents. What is your evidence the frozen-table approach gets you
+17. *"You want 10,000 agents. What is your evidence the frozen-table approach gets you
     there?"* — Only that it removes API calls from the loop. No performance measurement
     has been done at any scale.
 
@@ -530,8 +578,12 @@ standalone README (issue #4).
    A1).
 4. **Raise `REPEATS`** above 3 for at least a subset, to test whether the 33 zero-variance
    records are real distortion or small-sample noise. Budget allows it.
-5. **Implement the missing fourth directional hypothesis** in `pipeline/validate.py`,
+5. **Reword DD2 in `README.md`** to match what the literature supports — "avoids
+   persona-assignment effects (Deshpande et al.)" rather than "lower stereotype risk" —
+   and consider testing the two framings directly on a subset of cells, which the
+   remaining budget easily covers.
+6. **Implement the missing fourth directional hypothesis** in `pipeline/validate.py`,
    and make the validator report stated-but-unimplemented checks explicitly rather than
    omitting them silently.
-6. **Confirm the CrowdGym interface against the actual source** before writing the
+7. **Confirm the CrowdGym interface against the actual source** before writing the
    adapter, as `crowdgym_mapping.md` instructs.
