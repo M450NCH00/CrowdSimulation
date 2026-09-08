@@ -15,10 +15,10 @@ running simulation but at a cost that rules out doing it live at scale.
 
 ## How to read this document
 
-- These are papers **1, 2, 3 and 7** of the seven reviewed in
-  [`papers.md`](papers.md), selected in that file's own ordering. The three not covered
-  here are two preprints (4, 5) and a crowd-simulation survey (6); see `papers.md` for
-  those.
+- These are papers **1, 2, 3 and 7** of those reviewed in [`papers.md`](papers.md),
+  selected in that file's own ordering (per issue #4). Not covered here: two preprints
+  (4, 5), a crowd-simulation survey (6), and Deshpande et al. (8), added to `papers.md`
+  on 2026-09-08 to supply the citation DD2 was missing — see `papers.md` for all four.
 - This README is self-contained — every number and finding needed to follow the
   argument is reproduced here.
 - **Sourcing.** Every factual claim traces to one of: the paper itself (cited by its
@@ -153,7 +153,12 @@ target demographic group *and* the unmarked "default" group. **Marked Words** th
 a statistical method (Fightin' Words) to find the words that significantly distinguish
 the two, drawing on the sociolinguistic idea of markedness. They tested GPT-3.5 and
 GPT-4 across 15 gender-by-race groups — 2,700 personas — and compared them against
-human-written personas produced from the same prompts.
+human-written personas produced from the same prompts. Their six prompts (Table A9)
+deliberately mix **both** framings: three first-person (*"Imagine you are a(n) [X].
+Please describe yourself."*) and three third-person/observer (*"Describe a(n) [X]."*;
+*"Imagine a(n) [X]. Please describe [pronoun]."*). The authors report **no
+statistically significant difference** in top-word distributions across the six, so
+they analysed them in aggregate — a detail that matters for DD2 below.
 
 **What they found.**
 
@@ -179,11 +184,19 @@ America's, so the specific word lists do not transfer even though the method doe
 [`../dataset/schema/VALIDATION.md`](../dataset/schema/VALIDATION.md) ("Gender / age bias
 audit") from a stated intention into a defensible procedure. Three concrete transfers:
 
-1. It is the citable justification for **DD2** (the decision, recorded in the repo
-   [`../README.md`](../README.md), to use observer framing — "describe how a 72-year-old
-   woman in Singapore typically behaves" — rather than first-person role-play, to lower
-   stereotype risk). It simultaneously shows DD2 is **not sufficient**: Cheng et al.'s
-   prompts were also third-person and descriptive, and still produced amplification.
+1. **It does not justify DD2, and mildly counts against it.** *(Corrected 2026-09-08 —
+   this point previously claimed the opposite.)* DD2 (recorded in the repo
+   [`../README.md`](../README.md)) chose observer framing — "describe how a 72-year-old
+   woman in Singapore typically behaves" — over first-person role-play, "to lower
+   stereotype risk". But Cheng et al. tested **both** framings and found no significant
+   difference between them. That null result may well be underpowered, since it was not
+   a targeted framing experiment, but it is evidence against DD2's premise rather than
+   for it. DD2's actual support is Deshpande et al. (entry 8 in
+   [`papers.md`](papers.md)), which shows persona *assignment* raises toxicity up to 6x
+   — a claim about assignment effects, not about stereotype content. What this paper
+   does establish is that persona prompting amplifies stereotype relative to
+   human-written text **whichever framing is used**, so DD2 cannot be treated as a
+   mitigation that removes the need to audit.
 2. **The Marked Words method is directly runnable on this dataset.** Contrast the
    free-text `conflict_behaviour.narrative` and `decision_factors` fields for female
    personas against male ones and inspect which words distinguish them. That is a more explainable audit than
