@@ -74,6 +74,57 @@ Concretely the issue asks for:
   prefix and needs correcting.
 - Next step: verify the two supervisor-assigned papers from primary sources.
 
+### 2026-09-12 — anchor papers verified; the two supervisor papers turn out to be one citation chain
+- What I did: verified Wu et al. (2024) from the ACL Anthology landing page and the
+  full PDF (cached + `pdftotext`-extracted to `refs/`), and Wang et al. (2015) from the
+  RePEc record for *Physica A* 428:396-409.
+- Why: the issue requires every field confirmed from a primary source, and Wu et al. is
+  the designated hub for the Topic 1 citation sweep.
+- Result / what I found: Wu et al. §6.1 states "We follow Wang et al. (2015) to simulate
+  EE in a grid environment" — the supervisor's two papers are **one chain**, not two
+  independent leads. Also extracted the real Table 2 numbers, which matter: the
+  evacuation case study's effect is much weaker than the paper's prose suggests
+  (see the criticism recorded in `topic1-llm-conflict.md`).
+- Next step: forward citation sweep on Wu et al.
+
+### 2026-09-12 — forward citation sweep surfaces the closest prior work to this FYP
+- What I did: Semantic Scholar citations API on Wu et al.; 58 citing papers enumerated.
+  The arXiv-id route returned HTTP 429 (same rate-limiting issue #2 hit); the DOI route
+  worked.
+- Why: issue protocol step 4 requires checking both citation directions.
+- Result / what I found: **Zhang, Andelfinger, Tan & Cai, ACM TOMACS 2026, "Sense, Think,
+  Act, Reflect: Distilling Fast and Interpretable Decision Functions from LLM-Driven
+  Crowds"** — Decision Function Distillation, demonstrated on crowd evacuation, motivated
+  by LLM inference cost limiting crowd size. This is roadmap steps 3-4 of this FYP,
+  already published, by a group that includes two NTU authors. Flagged to the supervisor
+  in an issue comment rather than buried in the review.
+  ACM DL 403s to automated fetches (same dead end as issue #2), so the abstract was
+  verified via the Semantic Scholar record (paper is CC-BY) and the BibTeX from the
+  second author's own publications page.
+- Next step: Topic 1 breadth, then Topic 2.
+
+### 2026-09-12 — Topic 1 and Topic 2 candidate sets assembled
+- What I did: ran the issue's suggested queries plus follow-ups; verified GameChat
+  (MRS 2025), Abdelnabi et al., Piatti et al. (GovSim, NeurIPS 2024), NegotiationArena
+  (ICML 2024), Chen et al. (MAPF); on the Topic 2 side Yamamoto et al. (TR-B 2019),
+  Moeller et al. (eLife 2023), Echeverria-Huarte et al. (Nat. Comms. 2026), and the
+  Julich data guidance paper.
+- Why: the issue wants breadth across both topics with every entry primary-source verified.
+- Result / what I found: two things worth calling out.
+  (a) **GameChat** (Mahadevan, Zhang & Chandra, IEEE MRS 2025) is almost exactly this
+  FYP's proposed scenario — LLM agents in *natural-language dialogue* resolving who
+  yields in doorways and corridors, with a deadlock-freedom guarantee.
+  (b) **A real dataset exists.** The Julich Pedestrian Dynamics Data Archive publishes
+  open trajectory data from controlled corridor/bottleneck experiments, and
+  Echeverria-Huarte et al. deposit raw trajectories on Zenodo. This is the "materially
+  changes the validation plan" case the issue asked to flag prominently.
+  Piatti et al.'s **title changed between the arXiv preprint and the NeurIPS version**
+  ("Sustainability Behaviors" -> "Sustainable Cooperation"); recorded because citing the
+  preprint title would misattribute the published paper.
+  APS (Phys. Rev. E) 403s to automated fetches — recorded as a dead end.
+- Next step: close the remaining Topic 2 gap on decision-level (not physics-level) work,
+  then write the deliverables.
+
 ## Open questions / risks
 
 - **Recency vs. peer review tension.** Topic 1's most relevant work is 2024–2026 and much
