@@ -14,6 +14,35 @@ So we query the LLM **offline**, once per `(scenario x age x gender)`, freeze th
 answers into this dataset, and let the simulation do O(1) lookups at runtime.
 See `integration/crowdgym_mapping.md` for exactly how records feed CrowdGym.
 
+## Current focus (second supervisor meeting onward)
+
+The dataset work below is **Phase 1 and is on hold, not abandoned** — see `CLAUDE.md`.
+The project now has LLM agents *communicate with each other* to resolve a conflict
+(starting with two agents crossing a narrow hallway), then looks for a reusable
+resolution pattern that can be applied without re-running the exchange.
+
+Standing supervisor instruction: **no new dataset generation and no simulation or
+experiment code until the literature review is complete and discussed.**
+
+| # | Roadmap step | Status |
+|---|---|---|
+| 1 | Literature review — `literature/llm-conflict-resolution/` | **delivered** (issue #8); awaiting supervisor discussion |
+| 2 | Design a small-scale conflict scenario (2-agent hallway) | blocked on step 1 discussion |
+| 3 | Implement the LLM-to-LLM exchange | not started |
+| 4 | Analyse exchanges for a reusable pattern | not started |
+| 5 | Validate the pattern against real data or sociology | not started |
+| 6 | Bridge into CrowdGym — `integration/crowdgym_mapping.md` | not started |
+
+Two results from step 1 that change later steps, both needing supervisor sign-off:
+
+- **A real human dataset exists.** The Jülich Pedestrian Dynamics Data Archive
+  (CC-BY, doi:10.34735/ped.da) publishes trajectories from controlled **bidirectional
+  corridor** experiments, so step 5 can be a quantitative comparison rather than an
+  argument by analogy to sociology.
+- **Step 3–4's core idea is already published** — Zhang et al., ACM TOMACS 2026,
+  distil interpretable decision functions from LLM-driven crowds and demonstrate it on
+  evacuation scenarios. The project needs a stated position relative to it.
+
 ## Directory layout
 
 ```

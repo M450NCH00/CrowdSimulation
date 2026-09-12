@@ -125,17 +125,98 @@ Concretely the issue asks for:
 - Next step: close the remaining Topic 2 gap on decision-level (not physics-level) work,
   then write the deliverables.
 
+### 2026-09-12 - deliverables written, issue path corrected, README status added
+- What I did: wrote the four deliverables under `literature/llm-conflict-resolution/`,
+  corrected the stale `/CrowdSimulation/` prefix in the issue #8 body itself (CLAUDE.md
+  instructs this), and added a "Current focus" roadmap-status table to `README.md`.
+- Why: the issue's deliverable list is the contract; CLAUDE.md says README carries the
+  live status of each roadmap step, and it still described only the on-hold Phase 1.
+- Result / what I found: 12 papers reported within 2016-2026 against a target of 10
+  (Topic 1: 7, Topic 2: 5), plus the two supervisor-assigned anchors marked as assigned
+  rather than found. 10 of the 12 are peer-reviewed. I deliberately did **not** rewrite
+  the README's Phase 1 framing - out of scope for this issue.
+- Next step: verification pass per workflow section 5b.
+
 ## Open questions / risks
 
-- **Recency vs. peer review tension.** Topic 1's most relevant work is 2024–2026 and much
-  of it is arXiv-only. Over-weighting preprints would weaken the report; excluding them
-  would miss the closest prior work. Handling this by labelling and pairing, but the
-  supervisor may want a firmer rule.
-- **Whether a real behavioural dataset exists at all** for two-person narrow-passage
-  conflict. If none does, the project's validation step falls back entirely to
-  sociological literature, which is a weaker form of validation and should be surfaced
-  to the supervisor early rather than discovered at validation time.
+- **Zhang et al. (TOMACS 2026) is cited from its abstract, not its full text.** ACM DL
+  blocks automated access. Nothing in the review depends on a number from it, but before
+  the FYP report cites its *results* the PDF should be pulled through the NTU library.
+  This is the single biggest gap in the review.
+- **The project's position relative to Zhang et al. is unresolved.** I set out what I
+  think is genuinely left (validation against human data; deriving rather than assuming
+  the priority ordering; scale), but that is my reading of the literature, not a
+  supervisor decision.
+- **Whether the Julich archive actually contains clean two-person head-on encounters is
+  unconfirmed.** The archive certainly has bidirectional corridor data, but most series
+  are many-participant flows. Isolating dyadic encounters may need filtering and the
+  yield may be low. Worth checking before step 5 is planned around it.
+- **Two relevant papers were dropped for verification failure, not irrelevance**
+  (Corbetta et al. 2016, Phys. Rev. E; the Springer gaze-cues paper). Both are on topic.
+  Someone with institutional access should retrieve them.
+- **One promising lead could not be located at all** - a head-on avoidance experiment
+  with 32 participant pairs and a cost-benefit decision framework, described in a search
+  summary but never traced to a primary source. It is cited nowhere; see `search-log.md`.
+- **Recency vs. peer review**, flagged at the start, was handled by labelling and pairing
+  rather than a firm rule. 10 of 12 entries are peer-reviewed, a better ratio than I
+  expected, but the supervisor may still want preprints excluded from the report.
+- **The gender-bias flag from `run01` is still unresolved** and now has a literature
+  hook: Ashery et al. show population-level bias emerging from individually unbiased LLM
+  agents. That is a plausible mechanism for the same artefact, and may be worth raising
+  as one combined discussion point rather than two separate ones.
 
-## Summary (fill in at the end)
+## Summary
 
-<pending>
+**What changed.** Added `literature/llm-conflict-resolution/` containing
+`topic1-llm-conflict.md`, `topic2-sociological-grounding.md`, `refs.bib` and
+`search-log.md`; cached 22 source files under `refs/`; corrected the stale deliverable
+path inside issue #8; added a roadmap-status section to `README.md`. No code, no dataset
+generation, no simulation work - the standing supervisor instruction was respected.
+
+**Count against target.** The issue asked for 10+ papers from 2016-2026 beyond the two
+supervisor-assigned ones. **12 are reported** - Topic 1: 7 (6 peer-reviewed, 1 preprint),
+Topic 2: 5 (4 peer-reviewed, 1 preprint). Both supervisor papers are included and marked
+as assigned rather than as search results. Both preprints are labelled `[non-archival]`,
+and neither is the sole support for any claim.
+
+**Three findings the supervisor should see before roadmap step 2:**
+
+1. **The two assigned papers are one citation chain.** Wu et al. (2024) section 6.1:
+   "We follow Wang et al. (2015) to simulate EE in a grid environment."
+2. **A real human dataset exists** - the Julich Pedestrian Dynamics Data Archive
+   (CC-BY, doi:10.34735/ped.da), including bidirectional corridor trajectories. The
+   project plan assumed this probably would not exist. Roadmap step 5 can now be
+   quantitative. Flagged at the top of `topic2-sociological-grounding.md` as required.
+3. **Roadmap steps 3-4 have largely been published already** - Zhang, Andelfinger, Tan
+   and Cai, ACM TOMACS 2026, distil interpretable decision functions from LLM-driven
+   crowds, demonstrated on evacuation, with two NTU co-authors. The FYP needs a stated
+   position relative to it; my reading of the remaining gap is in
+   `topic1-llm-conflict.md`, flagged there as an assumption needing sign-off.
+
+**How it was verified** (workflow section 5b, research-task verification):
+
+- **Every entry uses all ten template fields.** Checked mechanically: 8/8 entries in
+  Topic 1 and 6/6 in Topic 2 carry every field, no blanks.
+- **Every entry is `Verified: yes`** with the route stated. Three entries (Zhang, Ashery,
+  Piatti) are verified at *abstract level only*, and each says so explicitly in its own
+  Verified field rather than implying full-text reading.
+- **Bibliographic fields double-checked.** For all 7 DOI-bearing entries, author lists,
+  titles, venues, volumes and pages were independently re-fetched from the Crossref API
+  and compared against the publisher page.
+- **BibTeX keys cross-checked mechanically** - all 14 keys cited in the reviews exist in
+  `refs.bib`; no dangling references.
+- **Quantitative claims are sourced or marked.** 12 `[unverified]` markers are present
+  where a number could not be traced to a primary source, rather than the number being
+  quietly dropped or asserted.
+- **Sources cached** - 22 files in `refs/`, so every claim can be re-checked later.
+- **Dead ends recorded, not hidden** - ACM DL, APS, Springer, nature.com, science.org,
+  ScienceDirect, ADS, DBLP and the Semantic Scholar arXiv route all refused automated
+  access. Each is logged with its workaround or, where there was none, the affected
+  candidate was **rejected rather than cited unverified** (2 papers dropped this way).
+
+**One process note worth carrying forward:** the Wu et al. PDF came back as unreadable
+binary through the fetch tool. Downloading it and running `pdftotext` locally is what
+surfaced the review's most important criticism - that Table 2's evacuation-speed margins
+(100.0 vs 99.8 escaped at round 50) are far thinner than the paper's prose implies, and
+that the authors themselves concede the evacuation metrics are inadequate. A summary of
+that PDF would have reproduced the paper's own framing uncritically.
