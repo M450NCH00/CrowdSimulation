@@ -142,18 +142,59 @@ The issue has two parts:
   table, section or passage, and 10,000 is the project target, not a claim.
 - Next step: push, open PR against the issue #8 branch, comment on the issue.
 
+### 2026-09-13 — Zhang et al. full text supplied by the user; G1 resolved, draft revised
+- What I did: the user shared the Zhang et al. PDF (TOMACS "Just Accepted" version). I
+  found the same file in the parent FYP folder, copied it to `refs/zhang2026_dfd.pdf`
+  (CC-BY 4.0, so redistribution is permitted) and extracted text to
+  `refs/zhang2026_dfd.txt`. Read it in full, then string-matched every quote I use
+  against the extracted text.
+- Why: G1 was the one blocking item. The research-gap paragraph rested on an inference
+  from the abstract.
+- Result / what I found:
+  - **The gap claim holds.** All datasets come from the LLM-driven simulation and
+    fidelity is measured against it (§5.1). §6.1: "the validity of the distilled
+    function depends directly on the reference data". Real-world data appears only as
+    an alternative (§6.2).
+  - **A nuance the abstract hid, and my first draft did not account for:** the ground
+    truth is Wu et al.'s simulation, which includes a communication phase, and the
+    agents' conversations feed insight generation (§4.2). So "DFD ignores communication"
+    would have been wrong. The final functions use only numerical perception features
+    (§3, Fig. 14), and interaction features are future work (§7). The gap sentence
+    already says "conflict dialogue … validates against people", so it survives; the
+    nuance is recorded in source-map row G7.
+  - **G2 resolved as a side effect.** §1 opens with evacuation simulation being
+    "essential for emergency planning and building design", which covers why crowd
+    simulation matters without Wang 2015 or a sixth reference.
+  - **New quantitative evidence:** §5.5 gives ≈ 1 day per LLM-driven run vs ≈ 1 minute
+    for the distilled function (100 agents, §5.1).
+  - **Two more errors in the issue #8 review:** it says two of the four authors are at
+    NTU, but all four are listed at NTU. It also says DFD is "motivated by the same
+    10,000-agent scalability constraint", but the paper never mentions 10,000. Added to
+    the corrections in `open-gaps.md`, with a note that the review's Zhang entry can be
+    upgraded to full-text-verified.
+- Draft changes:
+  - Background: added "Such simulations inform emergency planning and building design
+    [2]".
+  - Research Gap: replaced the marked sentence with the §5.5 run-time comparison and
+    the §6.1 validity statement. Changed "entirely" to "directly" to match the paper's
+    wording. Cut the Wu $1,000 sentence to stay under 500; Zhang's measured run times
+    make the cost point more directly.
+  - Reference [2] is now "to be published" (no volume or article number yet).
+  - Body is **494 words** with no markers (157 / 147 / 190). Citation order is still
+    [1]→[5], matching the reference list.
+- Also updated: the source map (full-text locations for all [2] rows), the Zhang entry
+  and coverage assessment in `paper-selection.md` (now "sufficient", no condition), and
+  in `open-gaps.md` G1/G2 marked resolved, G3 and N2 updated. README status updated.
+
 ## Open questions / risks
 
-- **The research gap depends on an abstract.** The sentence saying Zhang et al. do not
-  validate against human behaviour is inferred from their abstract only. It is marked in
-  the draft and is blocking item G1 in `open-gaps.md`. If DFD does validate against
-  humans, the gap paragraph needs rewriting, not just the marker removed.
+- ~~**The research gap depends on an abstract.**~~ Resolved 2026-09-13. Full text read;
+  the claim holds (see the entry above).
 - **Base branch is a stacked PR.** This branch is built on the unmerged issue #8 branch.
   If PR #9 changes before merging, this branch will need rebasing; if PR #9 is merged
   first, retarget this PR to `main`.
-- **Five-reference cap forced out the only "why crowd simulation matters" source**
-  (Wang 2015). Either the user raises the cap or the Background stays thin (G2). This is
-  a judgement call about what the assignment marker values, not something I can settle.
+- ~~**Five-reference cap forced out the only "why crowd simulation matters" source.**~~
+  Resolved 2026-09-13: Zhang et al. §1 covers it (G2).
 - **GameChat citation vs version read.** Cited as IEEE MRS 2025, read as arXiv v2 (May
   2026). The section numbers and the 2.767 s figure need checking against the published
   version (G3).
@@ -176,11 +217,13 @@ The issue has two parts:
 - `paper-selection.md` — 5 papers (Wu 2024, Zhang 2026, Mahadevan/GameChat 2025,
   Ashery 2025, Moeller 2023), each with the issue's template filled in, plus the
   evidence level checked, 9 considered-but-rejected candidates with reasons, and a
-  coverage assessment: **sufficient, conditional on the Zhang full text**.
+  coverage assessment: first **sufficient, conditional on the Zhang full text**; after
+  the full text was read, **sufficient** with no condition.
 - `introduction-draft.md` — 11-word title; 494-word body in the required three-part
   structure; 5 IEEE references; a not-for-submission source map and quality checklist.
-- `open-gaps.md` — 5 items to resolve before submission (1 blocking), 5 claims left out
-  for lack of a source, and 3 corrections to the issue #8 review.
+- `open-gaps.md` — 5 items to check before submission (G1 blocking, now resolved along
+  with G2), 5 claims left out for lack of a source, and 6 corrections to the issue #8
+  review.
 
 Also added a status note to `README.md`. No papers were searched for; no code, dataset
 or simulation work.
