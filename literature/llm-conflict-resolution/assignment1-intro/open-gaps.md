@@ -17,7 +17,7 @@ or unverified, in two groups:
 
 ## A. Check before submission
 
-### ~~G1 — Zhang et al. [2] full text~~ — ✅ RESOLVED 2026-09-13
+### ~~G1 — Zhang et al. [1] full text~~ — ✅ RESOLVED 2026-09-13
 - **Was:** the Research Gap sentence said DFD compares its rules with symbolic regression
   "rather than human behaviour". Only the first half was in the abstract, so the sentence
   carried `[needs verification against full text]`. This was blocking.
@@ -43,13 +43,13 @@ or unverified, in two groups:
 ### ~~G2 — "Why crowd simulation matters" is thin~~ — ✅ RESOLVED 2026-09-13
 - **Was:** the Background established importance only through the evacuation example.
   The only in-review fix was Wang 2015, a sixth reference over the cap.
-- **Resolution:** Zhang et al. [2] §1 opens with "Simulating crowd behavior during
+- **Resolution:** Zhang et al. [1] §1 opens with "Simulating crowd behavior during
   evacuations is essential for emergency planning and building design". The draft now
-  says "Such simulations inform emergency planning and building design [2]", with no
+  says "Such simulations inform emergency planning and building design [1]", with no
   extra reference needed. Wang 2015 is no longer needed as a swap-in.
 
 ### G3 — Incomplete IEEE reference fields
-- [2] Zhang et al.: the cached PDF is the "Just Accepted" version (accepted 22 May 2026;
+- [1] Zhang et al.: the cached PDF is the "Just Accepted" version (accepted 22 May 2026;
   footer "ACM 1558-1195/2026/6-ART" with no article number). The reference is formatted
   as "to be published". Re-check the ACM DL for volume, issue and article number before
   submission.
@@ -89,7 +89,7 @@ literature review, so it was **left out of the draft**.
 | # | Claim that would help | Where it would go | What kind of paper would supply it |
 |---|---|---|---|
 | N1 | Conflicts make **crowd simulations** (not robots) stall or deadlock | Background | A crowd-simulation paper reporting gridlock or deadlock at bottlenecks or in counterflow in agent-based or social-force models. The only deadlock evidence selected is GameChat [3], which is multi-robot navigation. The draft avoids saying "crowd simulation" in the deadlock sentences for this reason. |
-| N2 | Per-conflict LLM calls are **quantitatively** infeasible at 10,000 agents | Research Gap / significance | *Partly filled 2026-09-13:* Zhang [2] §5.5 measures ≈ 1 day per LLM-driven run at 100 agents vs ≈ 1 minute distilled, and §2.2 says each LLM agent update is "several orders of magnitude slower". Still missing: any measurement of how cost scales with population size. The draft never puts a number on 10,000-agent cost, and 10,000 is stated as this project's target. |
+| N2 | Per-conflict LLM calls are **quantitatively** infeasible at 10,000 agents | Research Gap / significance | *Partly filled 2026-09-13:* Zhang [1] §5.5 measures ≈ 1 day per LLM-driven run at 100 agents vs ≈ 1 minute distilled, and §2.2 says each LLM agent update is "several orders of magnitude slower". Still missing: any measurement of how cost scales with population size. The draft never puts a number on 10,000-agent cost, and 10,000 is stated as this project's target. |
 | N3 | How **real pedestrians** decide who gives way in a narrow corridor | Introducing the Study (validation) | A behavioural study of yielding decisions in two-person head-on encounters. The review has Moeller [5] (non-spatial game), Yamamoto 2019 (how bodies physically pass, not who yields) and the Jülich trajectory data (no behavioural finding). The draft therefore calls the link to Moeller an analogy, not direct evidence. |
 | N4 | LLM-derived behaviour has been **validated against human crowd data** | Research Gap | Any paper that checks LLM-agent crowd behaviour against empirical trajectories. Its presence or absence would sharpen G5. |
 | N5 | Human conflict resolution is **culturally variable** (relevant to the Singapore-only scope of the Phase 1 dataset) | Scope | Cross-cultural pedestrian or coordination studies. Echeverría-Huarte 2026 covers Spain and Japan, but for free walking, not conflict. |

@@ -207,6 +207,41 @@ The issue has two parts:
   [1]→[5]; the new [3]/[5] citations are repeats. Source map rows S1, S1b and S4 and the
   objective/scope checklist items were updated.
 
+### 2026-09-13 — revision 4: paragraph-only structure with a gentler opening; references renumbered
+- What I did: at the user's request, removed the three section headings, since the Word
+  submission is continuous prose, and rewrote the opening so it leads into the topic
+  instead of starting on a definition. The opening now moves from why people's movement
+  in an emergency matters ([Zhang] §1: evacuation planning, building design, exit
+  placement) → how agent-based crowd simulation models it ([Zhang] §1, §2.2; [Wu] §6.1)
+  → "These decisions can conflict" (congestion → two-agent doorway deadlock) → LLMs as
+  "another way to model such decisions". The old separate conflicts sentence ("Local
+  conflicts are harder still") was folded into that new second paragraph.
+- Why: without headings the old first sentence ("In agent-based crowd simulation, each
+  pedestrian is modelled…") dropped the reader straight into jargon, and each paragraph
+  now has to carry its own transition.
+- Additional references: **none added.** The user allowed more than 5 if needed. I
+  considered Wang 2015 (stadium evacuation, casualties under panic) for a more vivid
+  hook, but Zhang et al. §1, already cited and full-text verified, supports the opening,
+  whereas Wang is abstract-only and would add a reference plus ~20 words.
+- Consequences:
+  - **IEEE renumbering.** The opening now cites Zhang first, so Zhang is [1] and Wu is
+    [2]; GameChat [3], Ashery [4] and Moeller [5] are unchanged. Applied mechanically to
+    the draft (in-text citations, reference-list order, source map), `paper-selection.md`
+    (numbers and entry order) and `open-gaps.md`. Earlier entries in this log keep the
+    old numbering.
+  - **Clarity fix.** Once headings were gone, "In GameChat" had no antecedent (GameChat
+    is never named in the prose). A first attempt, "Each such encounter needs a new LLM
+    dialogue", overgeneralised a GameChat-specific figure, so it now reads "In that
+    doorway study, each encounter needed…".
+  - Trims to stay ≤500: dropped "GPT-4" and "three" from the exit-balancing clause,
+    shortened the Moeller game description, shortened the DFD run-time clause, and cut
+    the repeated "symmetric standoff that dialogue has been shown to break [3]" from P5
+    (P2–P3 already establish it).
+- Result: **497 words** with no headings (P1–P7: 52 / 58 / 75 / 138 / 63 / 66 / 45;
+  background 185, gap 138, study 174). First appearance is [1]→[5]; the cited set equals
+  the reference list. The source map was rebuilt per paragraph (P1a…P7), and every row
+  was re-pointed to its source section.
+
 ## Open questions / risks
 
 - ~~**The research gap depends on an abstract.**~~ Resolved 2026-09-13. Full text read;
@@ -240,7 +275,7 @@ The issue has two parts:
   evidence level checked, 9 considered-but-rejected candidates with reasons, and a
   coverage assessment: first **sufficient, conditional on the Zhang full text**; after
   the full text was read, **sufficient** with no condition.
-- `introduction-draft.md` — 11-word title; 496-word body (after revisions) in the required three-part
+- `introduction-draft.md` — 11-word title; 497-word paragraph-only body (after revision 4) in the required three-part
   structure; 5 IEEE references; a not-for-submission source map and quality checklist.
 - `open-gaps.md` — 5 items to check before submission (G1 blocking, now resolved along
   with G2), 5 claims left out for lack of a source, and 6 corrections to the issue #8

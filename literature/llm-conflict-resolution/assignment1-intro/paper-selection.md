@@ -11,38 +11,15 @@ the findings below were re-checked against that text rather than against the rev
 summary. Each entry states which level it was checked at.
 
 The IEEE numbers `[n]` match the reference list in `introduction-draft.md` and follow the
-order of first citation in that draft.
+order of first citation in that draft. **Renumbered in revision 4** (paragraph-only
+draft with a new opening): Zhang et al. is now [1] and Wu et al. [2]. Earlier work-log
+entries use the old numbering.
 
 ---
 
 ## Selected papers
 
-### [1] [Wu-SWTU] — Shall We Team Up: Exploring Spontaneous Cooperation of Competing LLM Agents
-
-- **Authors / Year / Venue:** Z. Wu, R. Peng, S. Zheng, Q. Liu, X. Han, B. I. Kwon,
-  M. Onizuka, S. Tang, C. Xiao / 2024 / *Findings of the Association for Computational
-  Linguistics: EMNLP 2024*, pp. 5163–5186. Supervisor-assigned.
-- **Which introduction component(s) it supports:** 1 (its cost figure below supported 2
-  in the first draft, and was cut in revision 2; see the note)
-- **What specifically it contributes:** It says LLM agents are a growing research topic
-  in social simulation because they are more flexible than rule-based agent models
-  (§1). In its 100-agent GPT-4 evacuation study, agents that could talk to each other
-  spread more evenly across the three exits than agents that could not (§6.1–6.2,
-  Fig. 9). The Limitations section says the authors used only one GPT-4 model partly
-  because of cost: $900, $3,000 and $1,000 for the three case studies, with $1,000 for
-  the evacuation study.
-- **What it does NOT cover that the introduction still needs:** It extracts no reusable
-  pattern from the agents' messages. Its evacuation conflict is about spreading people
-  across exits, not about two agents blocking each other.
-- *Checked against:* full text (`refs/wu2024_shall_we_team_up.txt`). The evacuation
-  speed result in Table 2 is **not** used, because the margins are too thin (the review
-  explains why).
-- *Revision 2 note:* once Zhang et al. [2] was read in full, its measured run times (one
-  LLM-driven run ≈ 1 day vs ≈ 1 minute distilled) made the cost point more directly than
-  Wu's dollar figure, so the Wu cost sentence was cut to stay under 500 words. Wu is
-  still cited for evacuation congestion, LLM agents in simulation, and exit balancing.
-
-### [2] [Zhang-DFD] — Sense, Think, Act, Reflect: Distilling Fast and Interpretable Decision Functions from LLM-Driven Crowds
+### [1] [Zhang-DFD] — Sense, Think, Act, Reflect: Distilling Fast and Interpretable Decision Functions from LLM-Driven Crowds
 
 - **Authors / Year / Venue:** Y. Zhang, P. Andelfinger, W. J. Tan, W. Cai (all Nanyang
   Technological University) / 2026 / *ACM Transactions on Modeling and Computer
@@ -68,6 +45,31 @@ order of first citation in that draft.
 - *Checked against:* **full text** of the Just Accepted PDF, provided by the user on
   2026-09-13 and cached as `refs/zhang2026_dfd.pdf` (text: `refs/zhang2026_dfd.txt`).
   The first draft of this entry was abstract-only; see `WORK_LOG-10.md`.
+
+### [2] [Wu-SWTU] — Shall We Team Up: Exploring Spontaneous Cooperation of Competing LLM Agents
+
+- **Authors / Year / Venue:** Z. Wu, R. Peng, S. Zheng, Q. Liu, X. Han, B. I. Kwon,
+  M. Onizuka, S. Tang, C. Xiao / 2024 / *Findings of the Association for Computational
+  Linguistics: EMNLP 2024*, pp. 5163–5186. Supervisor-assigned.
+- **Which introduction component(s) it supports:** 1 (its cost figure below supported 2
+  in the first draft, and was cut in revision 2; see the note)
+- **What specifically it contributes:** It says LLM agents are a growing research topic
+  in social simulation because they are more flexible than rule-based agent models
+  (§1). In its 100-agent GPT-4 evacuation study, agents that could talk to each other
+  spread more evenly across the three exits than agents that could not (§6.1–6.2,
+  Fig. 9). The Limitations section says the authors used only one GPT-4 model partly
+  because of cost: $900, $3,000 and $1,000 for the three case studies, with $1,000 for
+  the evacuation study.
+- **What it does NOT cover that the introduction still needs:** It extracts no reusable
+  pattern from the agents' messages. Its evacuation conflict is about spreading people
+  across exits, not about two agents blocking each other.
+- *Checked against:* full text (`refs/wu2024_shall_we_team_up.txt`). The evacuation
+  speed result in Table 2 is **not** used, because the margins are too thin (the review
+  explains why).
+- *Revision 2 note:* once Zhang et al. [1] was read in full, its measured run times (one
+  LLM-driven run ≈ 1 day vs ≈ 1 minute distilled) made the cost point more directly than
+  Wu's dollar figure, so the Wu cost sentence was cut to stay under 500 words. Wu is
+  still cited for evacuation congestion, LLM agents in simulation, and exit balancing.
 
 ### [3] [Mahadevan-GameChat] — GameChat: Multi-LLM Dialogue for Safe, Agile, and Socially Optimal Multi-Agent Navigation in Constrained Environments
 
@@ -148,7 +150,7 @@ reasons are recorded so the choice can be revisited.
 
 | Paper | Would have supported | Why not selected |
 |---|---|---|
-| Wang 2015 — Congestion evacuation with panic *(supervisor-assigned)* | 1: why crowd simulation matters (stadium evacuation, casualties under panic, abstract) | A sixth reference would exceed the cap. First chosen as the likely swap-in for "why it matters"; no longer needed, because Zhang [2] §1 now covers that point from full text. Abstract-level only. |
+| Wang 2015 — Congestion evacuation with panic *(supervisor-assigned)* | 1: why crowd simulation matters (stadium evacuation, casualties under panic, abstract) | A sixth reference would exceed the cap. First chosen as the likely swap-in for "why it matters"; no longer needed, because Zhang [1] §1 now covers that point from full text. Abstract-level only. |
 | Chen 2024 — MAPF with LLMs | 2: LLMs fail at full spatial planning | Preprint `[non-archival]`; supports scope design rather than the gap the issue defines. |
 | Bianchi 2024 — NegotiationArena | 2: LLM negotiation outcomes move with rhetoric | Non-spatial. It is a threat to validity, better placed in a methods section than an introduction. |
 | Abdelnabi 2024 — LLM-Stakeholders Negotiation | 2: even frontier models underperform at negotiation | Overlaps with Ashery [4]'s caution and is non-spatial. |
@@ -162,17 +164,17 @@ reasons are recorded so the choice can be revisited.
 
 ## Coverage assessment
 
-*Revised 2026-09-13 after reading the Zhang et al. [2] full text. The first version was
+*Revised 2026-09-13 after reading the Zhang et al. [1] full text. The first version was
 "partially covered / covered with one condition"; see `WORK_LOG-10.md`.*
 
-- **Background: covered, with one limitation.** Why crowd simulation matters: [2] §1
+- **Background: covered, with one limitation.** Why crowd simulation matters: [1] §1
   (emergency planning and building design). What crowd simulation is, with evacuation
-  congestion as the example: [1] §6.1 and [2] §1. LLMs as agents in simulation: [1] §1
-  and [2] §1. Conflicts causing deadlock: [3], but in **multi-robot navigation**, not
+  congestion as the example: [2] §6.1 and [1] §1. LLMs as agents in simulation: [2] §1
+  and [1] §1. Conflicts causing deadlock: [3], but in **multi-robot navigation**, not
   crowd simulation; no selected paper shows a crowd simulation stalling. The draft talks
   about "agents" and "doorway tests" for this reason (`open-gaps.md` N1).
 - **Research gap: covered.** [3] shows each conflict needs a fresh LLM dialogue and is
-  scored against a designer-fixed ranking. [2] shows that distillation already exists
+  scored against a designer-fixed ranking. [1] shows that distillation already exists
   (so the gap is **not** "nobody extracts rules"), quantifies the speed-up, and, per its
   own §6.1, is judged only against LLM-generated behaviour. [4] explains why human
   validation matters. The gap is stated as "no reviewed study extracts a rule from
