@@ -64,6 +64,31 @@ The issue has two parts:
 - Next step: map candidates to introduction components and re-check claims against
   `refs/`.
 
+### 2026-09-13 — claims re-checked against cached sources; 5 papers selected
+- What I did: mapped all 14 review papers to the three introduction components.
+  Re-checked every finding I intended to use against `refs/`: Wu full text (§1,
+  §6.1–6.2, Table 2, Limitations), GameChat v2 full text (§I, §IV-C, §IV-E, §V-B,
+  Table III), Moeller article HTML (Results, Fig. 2A, participants), and the Ashery,
+  Zhang and Wang abstracts. Wrote `paper-selection.md`.
+- Why: the issue forbids extrapolating findings, and the review's summaries are
+  secondary, so a claim is only as good as the primary text behind it.
+- Result / what I found:
+  - **Selected:** Wu [1], Zhang-DFD [2], GameChat [3], Ashery [4], Moeller [5].
+  - **Discrepancy in the issue #8 review:** it says GameChat evaluated only 2 agents,
+    but cached arXiv v2 has 3/4/5-agent results (Table IV). Recorded in
+    `paper-selection.md`; I did not edit the issue #8 file, which is out of scope here.
+  - **Moeller percentages are derived.** The paper states counts (10, 5 and 4 of 19);
+    26% and 21% are the review's rounding. The draft uses counts.
+  - **Hard choice:** Wang 2015 is the only paper that says *why* crowd simulation
+    matters, but a sixth reference breaks the cap. I kept Wu because it gives
+    full-text-verified cost evidence for the gap. The alternative is recorded.
+  - **Framing decision:** Zhang-DFD already distils LLM behaviour into rule code for
+    crowd evacuation, so the gap cannot honestly be "nobody extracts patterns". It is
+    stated as "not from LLM-to-LLM conflict dialogue, and not checked against humans",
+    and the human-validation half rests on an abstract, so it carries
+    `[needs verification against full text]`.
+- Next step: coverage is sufficient (with that condition), so draft the introduction.
+
 ## Open questions / risks
 
 _(filled in as work proceeds)_
