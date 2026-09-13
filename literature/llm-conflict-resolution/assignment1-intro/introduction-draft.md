@@ -118,7 +118,7 @@ literature.
 | G2 | Success judged against an urgency ranking fixed in advance by the designers | [3] | §IV-C ("in decreasing order of priority … hospital, airport, grocery"); §V-B.2 ("correct consensus"). The prompt does **not** give the LLM this ranking; the LLM infers urgency from task text (Table II) | full text (arXiv v2) |
 | G3 | One GPT-4 model partly due to cost; evacuation study cost $1,000 | [1] | Limitations, "Limited Experimentation on LLMs" ({$900, $3000, $1000}, third = EE) | full text |
 | G4 | Cost limits crowd size; DFD distils decisions into interpretable rule code | [2] | abstract | **abstract only** |
-| G5 | Compared with symbolic regression; human check not described in abstract | [2] | abstract (SR comparison stated; no human validation mentioned) | **abstract only — flagged** |
+| G5 | Rules benchmarked against symbolic regression "rather than human behaviour" | [2] | abstract states the SR comparison; the "rather than human behaviour" half is inferred from the abstract **not** mentioning human validation | **abstract only — carries `[needs verification against full text]` in the draft** |
 | G6 | Emergent conventions carry collective bias without individual bias | [4] | abstract | abstract only |
 | G7 | No reviewed study both extracts from LLM-to-LLM conflict dialogue and validates against humans | — | Limited to the 14 papers in the issue #8 review; follows from G1–G6 | Own synthesis — see `open-gaps.md` G5 |
 | G8 | Without a rule, a new exchange for every conflict | — | Follows from G1 | Own reasoning |
@@ -137,22 +137,23 @@ literature.
   *Caveat:* "why crowd simulation matters" is carried only by the evacuation example
   (see `open-gaps.md` G2).
 - [x] **Research gap defines the problem and the need for further research** — cost per
-  conflict, designer-set priorities, and existing distillation not checked against
+  conflict, success judged against a designer-fixed ranking, and existing distillation not checked against
   humans; bias risk [4] shows why that check is needed.
 - [x] **Objective of the study is described** — first sentence of "Introducing the
   Study".
 - [x] **Scope outlines the parameters of the project** — 2-agent hallway → pattern
   analysis → validation against sociological evidence → CrowdGym integration.
 - [x] **Paragraphs connected with transitional devices** — "Large language models …
-  offer another option", "However", "That check matters, because", "therefore", "Two
+  offer another option", "However", "That check matters:", "therefore", "Two
   findings suggest this is feasible", "Finally".
 - [x] **In-text citations IEEE, consistent, all in reference list** — [1]–[5], numbered
   by first appearance; checked mechanically (see work log).
 - [x] **Reference list IEEE, consistent, only cited works** — 5 entries, all cited.
   *Caveat:* [2] has no volume/issue yet and [3] has no page numbers or IEEE DOI
   (`open-gaps.md` G3).
-- [x] **Word count ≤500 (excluding title and reference list)** — see the count in
-  `WORK_LOG-10.md`.
+- [x] **Word count ≤500 (excluding title and reference list)** — **494 words** counting
+  headings, citation numbers and the verification marker (489 without the marker);
+  counted by script, see `WORK_LOG-10.md`.
 - [x] **No claim is unsourced** — see the source map above. Rows G7, G8 and S4 are the
   author's own reasoning from cited findings, and S1/S5 are the project's own scope;
   none of them states a new fact about the literature.
