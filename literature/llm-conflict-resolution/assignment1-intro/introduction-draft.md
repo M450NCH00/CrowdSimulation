@@ -54,17 +54,18 @@ conflict. Without such a rule, each conflict still requires a fresh LLM exchange
 ### Introducing the Study
 
 This project therefore investigates whether LLM agents can resolve spatial conflicts
-through communication and, if so, whether their resolutions follow a reusable pattern.
-It begins with the simplest case: two agents meeting head-on in a narrow hallway, a
-symmetric standoff that dialogue has been shown to break [3]. Repeated exchanges will be
-analysed for a recurring rule, such as who gives way and why.
+through communication, whether their resolutions follow a reusable pattern, and whether
+that pattern matches how people resolve the same conflicts. It begins with the simplest
+case: two agents meeting head-on in a narrow hallway, a symmetric standoff that dialogue
+has been shown to break [3]. Repeated exchanges will be analysed for a recurring rule,
+such as a right-of-way ordering [3] or turn-taking [5].
 
 Two findings suggest this is feasible. LLM agent populations settle on shared
 conventions without explicit programming [4], and human conflict resolution is itself
 patterned: in a face-to-face game where each partner preferred a different option, 10 of
 19 pairs took turns, five settled on a fixed choice favouring one partner, and four
-failed to coordinate [5]. Extracted patterns will be validated against such sociological
-evidence, treating the human benchmark as a mix of strategies, not one rule.
+failed to coordinate [5]. A humanlike pattern should reproduce this mix of strategies,
+not a single rule.
 
 Finally, a validated pattern will be integrated into CrowdGym, the simulation
 environment this project builds on. If a reusable pattern exists, conflicts among 10,000
@@ -124,10 +125,11 @@ version cached at `refs/zhang2026_dfd.pdf`.
 | G6 | Emergent conventions carry collective bias without individual bias | [4] | abstract | abstract only |
 | G7 | No reviewed study both extracts a rule from LLM-to-LLM conflict dialogue and validates against humans | — | Limited to the 14 papers in the issue #8 review; follows from G1–G6. Nuance: DFD's ground truth *does* include inter-agent conversation ([2] §4.2), but its decisions are exit choices, its final functions use only numerical perception features (§3, Fig. 14), interaction features are future work (§7), and it is not human-validated (G5) | Own synthesis — see `open-gaps.md` G5 |
 | G8 | Without a rule, a new exchange for every conflict | — | Follows from G1 | Own reasoning |
-| S1 | Aim; start with 2-agent hallway; analyse for a recurring rule | [3] for "symmetric standoff dialogue can break" | [3] Table III / §V-B | Own scope + full text |
+| S1 | Aim (communication → reusable pattern → match to how people resolve the same conflicts); start with 2-agent hallway | [3] for "symmetric standoff dialogue can break" | [3] Table III / §V-B | Own aim/scope + full text |
+| S1b | Example rule forms: right-of-way ordering, turn-taking | [3], [5] | [3] §IV-C (consensus sets leader/follower by priority); [5] Results, Fig. 2A (10 of 19 pairs took turns) | full text / full article |
 | S2 | LLM populations settle on conventions without programming | [4] | abstract | abstract only |
 | S3 | 10/19 turn-taking, 5 fixed favouring one, 4 failed | [5] | Results, "Human pairs mainly converge on fair coordination", Fig. 2A | full article |
-| S4 | Treat human result as a mix of strategies | [5] | Follows from S3 | Own reasoning |
+| S4 | A humanlike pattern should reproduce this mix of strategies, not a single rule | [5] | Follows from S3 (human pairs split across turn-taking, fixed choice, failure) | Own reasoning |
 | S5 | Integrate into CrowdGym; 10,000 agents with a rule instead of per-encounter LLM calls | [2] for inference cost limiting crowd size | [2] §1, p. 2 ("limits the scalability beyond relatively modest numbers of individuals"). The 10,000 figure is this project's target, not from [2] | Own scope (CrowdGym uncited — `open-gaps.md` G4) |
 
 ## Not for submission — quality checklist (from the issue)
@@ -142,9 +144,11 @@ version cached at `refs/zhang2026_dfd.pdf`.
   distillation judged only against LLM behaviour [2], bias risk [4] showing why human
   validation is needed.
 - [x] **Objective of the study is described** — first sentence of "Introducing the
-  Study".
+  Study": three linked questions (resolve by communication; reusable pattern; matches how
+  people resolve the same conflicts).
 - [x] **Scope outlines the parameters of the project** — 2-agent hallway → pattern
-  analysis → validation against sociological evidence → CrowdGym integration.
+  analysis (right-of-way ordering or turn-taking as example forms) → comparison with the
+  human mix of strategies [5] → CrowdGym integration.
 - [x] **Paragraphs connected with transitional devices** — "Large language models …
   offer another option", "However", "Yet", "This matters because", "therefore", "Two
   findings suggest this is feasible", "Finally".
@@ -153,7 +157,7 @@ version cached at `refs/zhang2026_dfd.pdf`.
 - [x] **Reference list IEEE, consistent, only cited works** — 5 entries, all cited.
   *Caveat:* [2] is an accepted article with no volume/issue/article number yet ("to be
   published"), and [3] has no page numbers or IEEE DOI (`open-gaps.md` G3).
-- [x] **Word count ≤500 (excluding title and reference list)** — **494 words** counting
+- [x] **Word count ≤500 (excluding title and reference list)** — **496 words** counting
   headings and citation numbers; counted by script, see `WORK_LOG-10.md`.
 - [x] **No claim is unsourced** — see the source map above. Rows G7, G8 and S4 are the
   author's own reasoning from cited findings, and S1/S5 are the project's own scope;
