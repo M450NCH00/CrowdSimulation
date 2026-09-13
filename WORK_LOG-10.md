@@ -186,6 +186,27 @@ The issue has two parts:
   and coverage assessment in `paper-selection.md` (now "sufficient", no condition), and
   in `open-gaps.md` G1/G2 marked resolved, G3 and N2 updated. README status updated.
 
+### 2026-09-13 — aim widened to include human validation; pattern examples made concrete
+- What I did: at the user's request, (1) rewrote the aim sentence to include a third
+  question, "whether that pattern matches how people resolve the same conflicts";
+  (2) replaced "such as who gives way and why" with "such as a right-of-way ordering [3]
+  or turn-taking [5]"; (3) replaced "Extracted patterns will be validated against such
+  sociological evidence, treating the human benchmark as a mix of strategies, not one
+  rule" with "A humanlike pattern should reproduce this mix of strategies, not a single
+  rule", which avoids repeating validation now that the aim states it.
+- Why: the research-gap paragraph argues that human validation is the missing piece, so
+  an aim without it did not answer the gap. The user also asked what "pattern" means;
+  naming the two rule forms the cited papers actually show makes the term concrete at
+  no word cost.
+- Wording choice, flagged: the aim says "how people resolve the same conflicts", not
+  "real human data". The only human evidence cited in the introduction is Moeller [5]
+  (non-spatial). Using the Jülich trajectories as ground truth is still awaiting
+  supervisor sign-off, and whether they contain clean two-person encounters is
+  unconfirmed.
+- Result: body **496 words** (157 / 147 / 192). Citation first-appearance order is still
+  [1]→[5]; the new [3]/[5] citations are repeats. Source map rows S1, S1b and S4 and the
+  objective/scope checklist items were updated.
+
 ## Open questions / risks
 
 - ~~**The research gap depends on an abstract.**~~ Resolved 2026-09-13. Full text read;
@@ -219,7 +240,7 @@ The issue has two parts:
   evidence level checked, 9 considered-but-rejected candidates with reasons, and a
   coverage assessment: first **sufficient, conditional on the Zhang full text**; after
   the full text was read, **sufficient** with no condition.
-- `introduction-draft.md` — 11-word title; 494-word body in the required three-part
+- `introduction-draft.md` — 11-word title; 496-word body (after revisions) in the required three-part
   structure; 5 IEEE references; a not-for-submission source map and quality checklist.
 - `open-gaps.md` — 5 items to check before submission (G1 blocking, now resolved along
   with G2), 5 claims left out for lack of a source, and 6 corrections to the issue #8
