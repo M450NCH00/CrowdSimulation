@@ -43,6 +43,11 @@ Two results from step 1 that change later steps, both needing supervisor sign-of
   distil interpretable decision functions from LLM-driven crowds and demonstrate it on
   evacuation scenarios. The project needs a stated position relative to it.
 
+**Assignment 1 introduction** (issue #10) — `literature/llm-conflict-resolution/assignment1-intro/`:
+five papers selected from the step 1 review, a 496-word IEEE-style draft, and
+`open-gaps.md`. Zhang et al. was verified against its full text on 2026-09-13 (gap G1
+resolved). No blocking items remain; the non-blocking checks are in `open-gaps.md`.
+
 ## Directory layout
 
 ```
