@@ -45,8 +45,8 @@ Two results from step 1 that change later steps, both needing supervisor sign-of
 
 **Assignment 1 introduction** (issue #10) — `literature/llm-conflict-resolution/assignment1-intro/`:
 five papers selected from the step 1 review, a 494-word IEEE-style draft, and
-`open-gaps.md`. **Not ready to submit** until the Zhang et al. full text is checked
-(gap G1): the research-gap paragraph depends on it.
+`open-gaps.md`. Zhang et al. was verified against its full text on 2026-09-13 (gap G1
+resolved). No blocking items remain; the non-blocking checks are in `open-gaps.md`.
 
 ## Directory layout
 

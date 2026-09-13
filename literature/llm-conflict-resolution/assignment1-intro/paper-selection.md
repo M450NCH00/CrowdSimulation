@@ -22,7 +22,8 @@ order of first citation in that draft.
 - **Authors / Year / Venue:** Z. Wu, R. Peng, S. Zheng, Q. Liu, X. Han, B. I. Kwon,
   M. Onizuka, S. Tang, C. Xiao / 2024 / *Findings of the Association for Computational
   Linguistics: EMNLP 2024*, pp. 5163–5186. Supervisor-assigned.
-- **Which introduction component(s) it supports:** 1, 2
+- **Which introduction component(s) it supports:** 1 (its cost figure below supported 2
+  in the first draft, and was cut in revision 2; see the note)
 - **What specifically it contributes:** It says LLM agents are a growing research topic
   in social simulation because they are more flexible than rule-based agent models
   (§1). In its 100-agent GPT-4 evacuation study, agents that could talk to each other
@@ -36,27 +37,37 @@ order of first citation in that draft.
 - *Checked against:* full text (`refs/wu2024_shall_we_team_up.txt`). The evacuation
   speed result in Table 2 is **not** used, because the margins are too thin (the review
   explains why).
+- *Revision 2 note:* once Zhang et al. [2] was read in full, its measured run times (one
+  LLM-driven run ≈ 1 day vs ≈ 1 minute distilled) made the cost point more directly than
+  Wu's dollar figure, so the Wu cost sentence was cut to stay under 500 words. Wu is
+  still cited for evacuation congestion, LLM agents in simulation, and exit balancing.
 
 ### [2] [Zhang-DFD] — Sense, Think, Act, Reflect: Distilling Fast and Interpretable Decision Functions from LLM-Driven Crowds
 
-- **Authors / Year / Venue:** Y. Zhang, P. Andelfinger, W. J. Tan, W. Cai / 2026 /
-  *ACM Transactions on Modeling and Computer Simulation* (TOMACS), doi:10.1145/3818686.
+- **Authors / Year / Venue:** Y. Zhang, P. Andelfinger, W. J. Tan, W. Cai (all Nanyang
+  Technological University) / 2026 / *ACM Transactions on Modeling and Computer
+  Simulation* (TOMACS), "Just Accepted" (received 17 Apr 2026, accepted 22 May 2026),
+  doi:10.1145/3818686. CC-BY 4.0.
 - **Which introduction component(s) it supports:** 1, 2
-- **What specifically it contributes:** The abstract says LLMs can produce human-like
-  agent behaviour and are useful building blocks for agent-based simulations, but their
-  inference cost limits how large a crowd can be simulated. It proposes Decision
-  Function Distillation (DFD), which turns LLM agents' decision strategies into
-  interpretable, commented rule code. DFD is tested on agent-based crowd evacuation and
-  beats classical and LLM-based symbolic regression. It is the closest existing work to
-  this project's "extract a reusable rule" step, so the research gap has to be stated
-  against it.
-- **What it does NOT cover that the introduction still needs:** The abstract does not
-  say whether the distilled rules are checked against real human behaviour, or whether
-  they come from agents talking to each other about a conflict
-  `[needs verification against full text]`.
-- *Checked against:* **abstract only** (Semantic Scholar record,
-  `refs/s2_zhang2026_dfd.json`). ACM DL blocked automated access during issue #8. No
-  numbers from this paper are used.
+- **What specifically it contributes:** §1 says evacuation crowd simulation is
+  "essential for emergency planning and building design" and that LLMs increasingly act
+  as agents in simulation. It proposes Decision Function Distillation (DFD), which turns
+  LLM agents' exit-choice decisions into interpretable, commented rule code (§1, §3–4).
+  One LLM-driven run of the 100-agent evacuation took about a day, against about a
+  minute with the distilled function (§5.1, §5.5). The functions are judged by how
+  closely they reproduce the LLM-generated ground truth, and the authors state that
+  "the validity of the distilled function depends directly on the reference data"
+  (§5.1, §6.1). Real-world observations are named only as an alternative source (§6.2).
+  It is the closest existing work to this project's "extract a reusable rule" step, so
+  the research gap has to be stated against it.
+- **What it does NOT cover that the introduction still needs:** It does not validate
+  against human data, and it does not target pairwise conflict resolution. Its ground
+  truth includes agents' conversations (§4.2), but the final functions use only
+  numerical perception features, and encoding agent interactions is left to future
+  work (§7).
+- *Checked against:* **full text** of the Just Accepted PDF, provided by the user on
+  2026-09-13 and cached as `refs/zhang2026_dfd.pdf` (text: `refs/zhang2026_dfd.txt`).
+  The first draft of this entry was abstract-only; see `WORK_LOG-10.md`.
 
 ### [3] [Mahadevan-GameChat] — GameChat: Multi-LLM Dialogue for Safe, Agile, and Socially Optimal Multi-Agent Navigation in Constrained Environments
 
@@ -137,7 +148,7 @@ reasons are recorded so the choice can be revisited.
 
 | Paper | Would have supported | Why not selected |
 |---|---|---|
-| Wang 2015 — Congestion evacuation with panic *(supervisor-assigned)* | 1: why crowd simulation matters (stadium evacuation, casualties under panic, abstract) | Best fit for "why it matters", but a sixth reference would exceed the cap. It was dropped instead of Wu [1], which also covers LLM agents in simulation and gives the cost figure. Abstract-level only. **Most likely swap-in** — see `open-gaps.md`. |
+| Wang 2015 — Congestion evacuation with panic *(supervisor-assigned)* | 1: why crowd simulation matters (stadium evacuation, casualties under panic, abstract) | A sixth reference would exceed the cap. First chosen as the likely swap-in for "why it matters"; no longer needed, because Zhang [2] §1 now covers that point from full text. Abstract-level only. |
 | Chen 2024 — MAPF with LLMs | 2: LLMs fail at full spatial planning | Preprint `[non-archival]`; supports scope design rather than the gap the issue defines. |
 | Bianchi 2024 — NegotiationArena | 2: LLM negotiation outcomes move with rhetoric | Non-spatial. It is a threat to validity, better placed in a methods section than an introduction. |
 | Abdelnabi 2024 — LLM-Stakeholders Negotiation | 2: even frontier models underperform at negotiation | Overlaps with Ashery [4]'s caution and is non-spatial. |
@@ -151,28 +162,26 @@ reasons are recorded so the choice can be revisited.
 
 ## Coverage assessment
 
-- **Background: partially covered.** LLMs as agents in social and agent-based
-  simulation is covered by [1] §1 and [2]. Crowd simulation, with evacuation congestion
-  as the example, is covered by [1] §6 and [2]. Conflicts causing deadlock is covered by
-  [3], but in **multi-robot navigation**, not crowd simulation; no selected paper shows a
-  crowd simulation stalling. *Why* crowd simulation matters is only implied through
-  evacuation. The draft is worded to stay within what these sources say. Both gaps are
-  listed in `open-gaps.md`.
-- **Research gap: covered, with one condition.** [3] shows each conflict needs a fresh
-  LLM dialogue and uses a designer-set priority ranking. [1] shows the cost. [2] shows
-  that a distillation approach already exists, so the gap is **not** "nobody extracts
-  rules"; it is "no reviewed work extracts rules from LLM-to-LLM conflict dialogue and
-  checks them against humans". [4] explains why that check matters. **Condition:** the
-  claim that [2] does not validate against humans comes from its abstract only and is
-  marked `[needs verification against full text]`. If the full text shows human
-  validation, the gap paragraph must be rewritten. The gap is also limited to the
-  reviewed literature; it is not the result of a systematic search.
+*Revised 2026-09-13 after reading the Zhang et al. [2] full text. The first version was
+"partially covered / covered with one condition"; see `WORK_LOG-10.md`.*
+
+- **Background: covered, with one limitation.** Why crowd simulation matters: [2] §1
+  (emergency planning and building design). What crowd simulation is, with evacuation
+  congestion as the example: [1] §6.1 and [2] §1. LLMs as agents in simulation: [1] §1
+  and [2] §1. Conflicts causing deadlock: [3], but in **multi-robot navigation**, not
+  crowd simulation; no selected paper shows a crowd simulation stalling. The draft talks
+  about "agents" and "doorway tests" for this reason (`open-gaps.md` N1).
+- **Research gap: covered.** [3] shows each conflict needs a fresh LLM dialogue and is
+  scored against a designer-fixed ranking. [2] shows that distillation already exists
+  (so the gap is **not** "nobody extracts rules"), quantifies the speed-up, and, per its
+  own §6.1, is judged only against LLM-generated behaviour. [4] explains why human
+  validation matters. The gap is stated as "no reviewed study extracts a rule from
+  LLM-to-LLM conflict dialogue and validates it against humans". It is limited to the
+  reviewed literature, not the result of a systematic search (`open-gaps.md` G5).
 - **Study introduction: covered.** [3] shows a two-agent dialogue can break a doorway
   deadlock. [4] shows conventions emerge from LLM interaction. [5] shows human
   conflict-resolution patterns exist and are classifiable. The weak point is that [5]
   is not spatial; the draft calls the hallway link an analogy.
-- **Overall: sufficient for a 3–5 citation introduction**, provided the Zhang et al. [2]
-  full text is checked before submission. Part 2 was therefore attempted. Nothing in the
-  draft is unsourced, but two background points are deliberately narrower than the
-  issue's ideal wording because the selected papers do not support more (see
-  `open-gaps.md`).
+- **Overall: sufficient for a 3–5 citation introduction.** The earlier blocking
+  condition (Zhang full text) is resolved and the claim held. Remaining items in
+  `open-gaps.md` are non-blocking.
