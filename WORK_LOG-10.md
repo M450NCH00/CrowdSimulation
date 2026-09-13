@@ -242,6 +242,37 @@ The issue has two parts:
   the reference list. The source map was rebuilt per paragraph (P1a…P7), and every row
   was re-pointed to its source section.
 
+### 2026-09-13 — revision 5: opening funnels from "what crowd simulation is" down to conflict
+- What I did: at the user's request, rewrote paragraph 1 to open with a definition and
+  narrow step by step. It now goes: what crowd simulation is (many people moving through
+  a shared space) and why it matters (evacuation planning, building design, exit
+  placement) → agent-based models (each person an agent; crowd behaviour emerges from
+  individual rules) → where they struggle (social-force-type models handle low-level
+  distance-keeping, but higher-level decisions such as exit choice are task-specific and
+  hard to generalise) → P2 "These decisions can conflict", now picking up P1's
+  "higher-level decisions" directly.
+- Sources: all from Zhang et al. [1], full text: §2.1 for the definition and the
+  operational/tactical split, §1 for the importance and hand-defined behaviours, §2.2
+  for emergence. **No new references added.** The funnel's key middle step (models
+  handle movement but not decisions) is stated almost exactly in [1] §2.1, so none was
+  needed. Wu et al. [2] is still first cited in P2, so the numbering is unchanged.
+- Trims to stay ≤500:
+  - dropped the "versus 50% without communication" comparison from P3 (the doorway
+    result still says "every scenario");
+  - cut "so their validity depends directly on that reference" from P4, leaving "judged
+    against LLM-generated behaviour, not human data"; the §6.1 quote stays in the source
+    map;
+  - "an existing collision-avoiding controller" → "a collision-avoiding controller";
+  - shortened the P5 and P6 closing phrases.
+  - The Ashery sentence was reworded to "LLM agent populations can develop strong
+    collective biases even when no individual agent is biased", closer to the abstract.
+- Flagged: the social force model is now named, cited via [1] §2.1 as a secondary
+  source. The original Helbing & Molnár (1995) paper is not in the review; added as
+  `open-gaps.md` N6 (optional).
+- Result: **497 words** (P1–P7: 69 / 57 / 72 / 127 / 63 / 64 / 45). Citation order
+  [1]→[5]; the cited set equals the reference list. Source map rows P1a–P1c, P2c, P3c,
+  P4d, P4e and P6c updated, along with the background checklist item.
+
 ## Open questions / risks
 
 - ~~**The research gap depends on an abstract.**~~ Resolved 2026-09-13. Full text read;

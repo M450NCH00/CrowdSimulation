@@ -93,6 +93,7 @@ literature review, so it was **left out of the draft**.
 | N3 | How **real pedestrians** decide who gives way in a narrow corridor | Introducing the Study (validation) | A behavioural study of yielding decisions in two-person head-on encounters. The review has Moeller [5] (non-spatial game), Yamamoto 2019 (how bodies physically pass, not who yields) and the Jülich trajectory data (no behavioural finding). The draft therefore calls the link to Moeller an analogy, not direct evidence. |
 | N4 | LLM-derived behaviour has been **validated against human crowd data** | Research Gap | Any paper that checks LLM-agent crowd behaviour against empirical trajectories. Its presence or absence would sharpen G5. |
 | N5 | Human conflict resolution is **culturally variable** (relevant to the Singapore-only scope of the Phase 1 dataset) | Scope | Cross-cultural pedestrian or coordination studies. Echeverría-Huarte 2026 covers Spain and Japan, but for free walking, not conflict. |
+| N6 | Original citation for the **social force model** named in paragraph 1 | Opening paragraph | The draft names the model and cites Zhang et al. [1] §2.1, which describes it; that is a legitimate secondary citation for the statement made. A marker may still expect the original model paper, which Zhang cites as its ref. [33] (Helbing & Molnár, 1995). It is not in the issue #8 review, so it was not added. If wanted, verify it and add it as a 6th reference, or drop the model's name ("Established movement models handle…"). |
 
 ---
 
