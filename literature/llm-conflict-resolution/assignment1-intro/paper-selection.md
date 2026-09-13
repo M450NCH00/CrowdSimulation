@@ -69,8 +69,10 @@ order of first citation in that draft.
   scenarios. When the two agents instead talked through natural-language dialogue,
   there were no deadlocks, and the more urgent agent went first in 100% of cases
   instead of 50% (Table III, abstract). Two further facts support the gap argument:
-  each dialogue took 2.767 s on average (§V-B.2), and the urgency ranking (hospital >
-  airport > grocery) was set by the authors, not discovered by the agents (§IV-C).
+  each dialogue took 2.767 s on average (§V-B.2), and a "correct" outcome means matching
+  an urgency ranking the authors fixed in advance (hospital > airport > grocery, §IV-C).
+  The LLMs are not given that ranking; they infer urgency from the task descriptions
+  (§IV-C, Table II).
 - **What it does NOT cover that the introduction still needs:** It is about robot
   navigation, not crowd simulation. It extracts no reusable pattern and does not
   validate against human behaviour; real-world validation is listed as future work
@@ -81,7 +83,11 @@ order of first citation in that draft.
 - *Correction to the issue #8 review:* `topic1-llm-conflict.md` says GameChat was
   evaluated with only two agents and only "sketches a k>2 extension". The cached v2
   full text includes 3-, 4- and 5-agent doorway results (§IV-E, §V-B.4, Table IV).
-  The introduction does not rely on either version of this point.
+  The introduction does not rely on either version of this point. The review also says
+  "the priority ordering is supplied by the designer — the LLM *applies* a hierarchy
+  rather than discovering one". That is slightly overstated: the prompt does not contain
+  the ordering (§IV-C). The designers define the ground truth, and the LLM infers
+  urgency from free-text tasks. The draft is worded to match the paper, not the review.
 
 ### [4] [Ashery-Conventions] — Emergent social conventions and collective bias in LLM populations
 

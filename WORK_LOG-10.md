@@ -89,6 +89,45 @@ The issue has two parts:
     `[needs verification against full text]`.
 - Next step: coverage is sufficient (with that condition), so draft the introduction.
 
+### 2026-09-13 — introduction drafted; over the word limit twice, then a wording error caught
+- What I did: wrote `introduction-draft.md` with a sentence-by-sentence source map and
+  the issue's checklist below the reference list (marked "not for submission"). Counted
+  words with a script over explicit `BODY START/END` markers, counting headings,
+  citation tokens and the verification marker, as Word would.
+- Why: the issue sets ≤500 words and every claim cited; checking by eye is not reliable
+  for either.
+- Result / what I found:
+  - **First draft: 560 words.** Cut to 517, then to 496. The cuts were wording only; no
+    cited finding was dropped.
+  - **Caught an overstatement while re-checking.** The draft said GameChat's urgency
+    ranking was "set by the designers rather than discovered". Re-reading §IV-C and
+    Table II: the prompt does *not* give the LLM the ordering. The LLM infers urgency
+    from free-text tasks, and the designers only define the ground truth it is scored
+    against. Rewrote it as "success is judged against an urgency ranking the designers
+    fixed in advance". The issue #8 review makes the same overstatement; logged as a
+    correction in `open-gaps.md`, not fixed in that branch's files.
+  - Also changed "a standard collision-avoiding controller" to "an existing" one: the
+    paper does not call MPC-CBF standard.
+  - **Final: title 11 words; body 494 words** with the marker (489 without); sections
+    151 / 151 / 192 against targets ~150–200 / ~100–150 / ~150–200. Research Gap is
+    slightly over its ~150 guide; the total is within limit.
+  - Mechanical checks: citations first appear in order [1]→[5]; the cited set equals the
+    reference list. Every sentence without a citation was listed and checked. Each is a
+    transition, the project's own aim or scope, or reasoning from cited findings, and
+    each is labelled in the source map.
+- Next step: write `open-gaps.md`.
+
+### 2026-09-13 — open-gaps.md written
+- What I did: listed 5 items to resolve before submission (G1–G5) and 5 nice-to-have
+  unsourced claims (N1–N5), plus the 3 corrections to the issue #8 review.
+- Why: the issue requires this file always, and requires that unsupported claims go here
+  rather than into the draft.
+- Result / what I found: G1 (Zhang full text) is the only blocking item. N1 matters
+  most: no paper in the review shows a *crowd simulation* (as opposed to robots)
+  stalling on a conflict, so the draft's deadlock sentences talk about "agents" and
+  "doorway tests", not crowd simulation.
+- Next step: verification pass per workflow §5b, README status, push, PR.
+
 ## Open questions / risks
 
 _(filled in as work proceeds)_
