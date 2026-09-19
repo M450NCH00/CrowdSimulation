@@ -30,7 +30,7 @@ experiment code until the literature review is complete and discussed.**
 | 2 | Design a small-scale conflict scenario (2-agent hallway) | blocked on step 1 discussion |
 | 3 | Implement the LLM-to-LLM exchange | not started |
 | 4 | Analyse exchanges for a reusable pattern | not started |
-| 5 | Validate the pattern against real data or sociology | not started |
+| 5 | Validate the pattern against real data or sociology | **coding scheme drafted** (issue #12) — `literature/human-conflict-resolution/` |
 | 6 | Bridge into CrowdGym — `integration/crowdgym_mapping.md` | not started |
 
 Two results from step 1 that change later steps, both needing supervisor sign-off:
