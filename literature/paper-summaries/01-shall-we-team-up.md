@@ -125,11 +125,11 @@ facilitate further research" (Limitations, p. 5172) — benchmarks, not extracte
 
 **Mixed — and this differs by case study, which matters.**
 
-- **KBC: validated against real human data.** "[O]ur simulation result from the baseline
-  generally aligns with the large-scale empirical experiment conducted by The New York
-  Times (N = 61,140) in terms of numerical choice distribution (Leonhardt and Quealy,
-  2015)" — both LLM and NYT players predominantly chose 33, with sub-peaks near 0, 22, 50
-  and 66 "well mirrored" (§4.2 "Comparison With Human Data", p. 5168, Fig. 5).
+- **KBC: validated against real human data.** The baseline result "generally aligns with
+  the large-scale empirical experiment conducted by The New York Times", an N = 61,140
+  study (Leonhardt and Quealy, 2015). Both LLM and NYT players predominantly chose 33,
+  with sub-peaks near 0, 22, 50 and 66 "well mirrored" (§4.2 "Comparison With Human
+  Data", p. 5168, Fig. 5).
 - **BC: validated against prior findings, not new human data.** The authors state their
   agents' behaviour "aligns with these findings" from earlier economics work (§5.2,
   p. 5169) and that results "align with those from simulations" (§5.2, p. 5169).

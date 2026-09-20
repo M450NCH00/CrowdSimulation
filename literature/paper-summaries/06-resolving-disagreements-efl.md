@@ -38,9 +38,10 @@ be opened.
 ## 1. Research question
 
 What interactional patterns advanced EFL learners use in disagreement episodes that do,
-and do not, bring a disagreement to a close: the study "sets out to discover the
-interactional patterns advanced EFL participants use in disagreement episodes in
-post-completion sequences that do and do not bring disagreements to a close" (Abstract).
+and do not, bring a disagreement to a close: the study sets out to find "the
+interactional patterns advanced EFL participants use in disagreement episodes", in
+post-completion sequences "that do and do not bring disagreements to a close"
+(Abstract).
 
 ## 2. The categories / scheme
 
