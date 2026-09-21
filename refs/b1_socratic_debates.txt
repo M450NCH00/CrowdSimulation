@@ -1,0 +1,1669 @@
+                                                                     Synthetic Socratic Debates:
+                                        Examining Persona Effects on Moral Decision and Persuasion Dynamics
+
+                                                         Jiarui Liu1, Yueqi Song1*, Yunze Xiao1*, Mingqian Zheng1*,
+                                                      Lindia Tjuatja1, Jana Schaich Borg2, Mona Diab1, Maarten Sap1
+
+                                                                   1Carnegie Mellon University, 2Duke University
+                                                    {jiaruil5, yueqis, yunzex, mingqia2, msap2}@andrew.cmu.edu
+
+                                                              Abstract                                  Moderator: A pregnant woman must choose between staying loyal to her beloved
+                                                                                                        but disruptive cat or rehoming it to ensure a safe, healthy environment for her baby.
+                                             As large language models (LLMs) are increas-
+arXiv:2506.12657v2 [cs.CL] 30 Jan 2026       ingly used in morally sensitive domains, it is             Pets are families. As a family, we can work through challenges together,
+                                             crucial to understand how persona traits affect            possibly with help from specialists. (Ethos: 3; Pathos: 5; Logos: 1)
+                                             their moral reasoning and persuasive behav-
+                                             ior. We present the first large-scale study of             You can love cats. But making the right choice requires
+                                             multi-dimensional persona effects in AI-AI de-             setting emotions aside. (Ethos: 3; Pathos: 3; Logos: 3)
+                                             bates over real-world moral dilemmas. Using
+                                             a 6-dimensional persona space (age, gender,                                Caring is not weakness. You talk about making
+                                             country, social class, ideology, and personal-                             right choices, but it is also about compassion
+                                             ity), we simulate structured debates between                               and about teaching the child what is empathy
+                                             AI agents over 131 relationship-based cases.                               from day one. Rehoming isn't the only solution.
+                                             Our results show that personas affect initial                              (Ethos: 4; Pathos: 5; Logos: 3)
+                                             moral stances and debate outcomes, with polit-
+                                             ical ideology and personality traits exerting the          Agent's         This is about priorities. You don't risk         Agent's
+                                             strongest influence. Persuasive success varies             Persona         a baby's health over a cat. Be smart.            Persona
+                                             across traits, with liberal and open personalities                         (Ethos: 3; Pathos: 3; Logos: 4)
+                                             reaching higher consensus. While logit-based               Gender: Female
+                                             confidence grows during debates, emotional                 Openness: High  Moderator: No Consensus Reached           Gender: Male
+                                             and credibility-based appeals diminish, indicat-           ......                                                    Openness: Low
+                                             ing more tempered argumentation over time.                                                                           ......
+                                             These trends mirror findings from psychology
+                                             and cultural studies, reinforcing the need for             Figure 1: We study how two agents with distinct per-
+                                             persona-aware evaluation frameworks for AI                 sonas engage in moral debate, presenting arguments and
+                                             moral reasoning.1                                          counterarguments in response to each other's reasoning.
+                                                                                                        Their strategies are evaluated using Aristotle's modes of
+                                        1 Introduction                                                  persuasion: Ethos (appeal to authority), Pathos (appeal
+                                                                                                        to emotion), and Logos (appeal to logic).
+                                        LLMs are increasingly endowed with personas
+                                        such as demographic traits (Hu and Collier, 2024),              2010; Savulescu and Maslen, 2015; Conitzer et al.,
+                                        political orientation (Rozado, 2024), social identi-            2017), questions arise about how personas could
+                                        ties (Chuang et al., 2024), to shape the style and              affect these morally laden interactions. Understand-
+                                        content of their output. These persona cues help                ing these decisions requires insights from moral
+                                        LLMs simulate diverse perspectives in tasks such                psychology and social ethics, focusing not just on
+                                        as education, healthcare, and customer service (Tu-             what LLMs decide, but also how and why. Previous
+                                        dor Car et al., 2020; Kanero et al., 2022; Shanahan             work has largely focused on synthetic dilemmas
+                                        et al., 2023; Shao et al., 2023).                               (Bauman et al., 2014; Bostyn et al., 2018; Chiu
+                                                                                                        et al., 2024; Jin et al., 2024b) or isolated persona
+                                           As people increasingly turn to LLMs for guid-                traits (Chen et al., 2024; Li et al., 2024), leaving
+                                        ance on morally complex decisions (Wallach et al.,              open how richer, intersecting identities shape moral
+                                                                                                        judgment and reasoning.
+                                            *Contributed equally and are listed in alphabetical order.
+                                            1Our data is available at https://huggingface.co/              In this work, we investigate how personas influ-
+                                        datasets/Jerry999/SyntheticSocraticDebates, and our             ence moral decision-making and persuasive strate-
+                                        code is open-sourced at https://github.com/jiarui-liu/          gies in four LLMs: GPT-4o (Achiam et al., 2023),
+                                        SyntheticSocraticDebates.                                       Claude-3.5-Sonnet (Anthropic, 2024), LLaMA-
+                                                                                                        4-Maverick (Meta AI, 2025), and Qwen3-235B-
+                                                                                                        A22B (Qwen Team, 2025). Drawing from an ex-
+                                                                                                        isting dataset of human-written moral dilemmas
+                                                                                                        (Lourie et al., 2021), we focus on highly controver-
+                                                                                                        sial everyday scenarios centered on relationships.
+                                                                                                        These dilemmas often lack clear answers and are
+[Agent1] Age:20                                     [Agent2] Age:30                                        Modes of Persuasion
+              Gender: Male                                        Gender: Female                           Ethos: Appeal to Authority
+              Country: China                                      Country: United State                    Pathos: Appeal to Emotion
+              Social Status: middle class                         Social Status: upper class               Logos: Appeal to Logic
+              Political Ideology: Libertarian left                Political Ideology: Authoritarian right
+              Big Five: OCEAN                                     Big Five: OCEAN
+
+Scenario                                            Turn1                                      Turn 2                       Turn N
+                                                                                   [Agent1]: If I stay silent     [Agent1]: A healthy
+After my boyfriend's                                [Agent1]: It's frustrating     to this, I risk reinforcing a  relationship should
+constant complaints                                                                cycle that's hurting him       include the courage to
+about his weight, I                                 to watch someone               [Agent2]: When someone 3       confront hard truths ...
+grew frustrated when                                                               is already feeling insecure,   but to push him toward
+he kept taking bites     Author is Right (4)        complain repeatedly, ...       a frustrated remark can        the change he keeps
+from my meal after       Others is Right (2)        contradict their goals ... 4   sound more like judgment 3     saying he wants.
+intentionally ordering                                                             than care. But I can           [Agent2]: You are
+light..."If you don't                               [Agent2]: Even if his          understand your point.         right.
+want to be heavy, do
+something about it."                                actions were frustrating,   2
+Was I too harsh
+instead of offering the                             weight struggles often
+support he truly
+needed?                                             involve deep emotional
+
+                                                    challenges.
+
+                                                                                   [Moderator]
+
+Figure 2: The two persona-conditioned agents that initially disagree on the moral dilemma alternate arguments for
+up to 5 turns, updating a 5-point moral stance rating after every turn. A moderator tracks the ratings, ends the debate
+once they converge or the turn limit is reached, and records stance shifts and metric scores for later analysis. The
+stand shifts during debate demonstrate underlying modes of persuasion.
+
+characterized by conflicting values and emotional                               gies, including appeals to emotion, logic, and au-
+complexity (McConnell, 2002; Svensson, 2006).                                   thority (Braet, 1992).
+We address two research questions:
+                                                                                   Our findings reveal that certain persona traits sig-
+   RQ1: How does persona influence moral deci-                                  nificantly shape both initial moral stances and de-
+sion making in language models in a single turn?                                bate outcomes. Political ideology and personality
+We first examine how rich, multi-dimensional per-                               emerged as the strongest predictors of moral judg-
+sonas influence LLMs' judgments on controver-                                   ment, with liberal and open-minded personas dis-
+sial moral dilemmas. Each persona combines six                                  playing more empathetic responses and greater per-
+dimensions varied between agents: age, gender,                                  suasive success. In debate settings, these personas
+political ideology, social class, nationality, and per-                         also reached consensus more efficiently. We also
+sonality traits. We then assess whether different                               observed that while agents' confidence typically
+personas lead models to favor distinct positions                                increased over the course of debates, their reliance
+aligned with specific moral principles, drawing on                              on emotional and credibility-based appeals dimin-
+moral foundation theory from social psychology                                  ished, indicating a shift toward more reasoned, less
+(Graham et al., 2013).                                                          affective argumentation. These results offer action-
+                                                                                able insights for designing LLMs that are sensitive
+   RQ2: What persuasion strategies emerge                                       to diverse value systems and transparent in how
+when persona-rich agents engage in multi-turn                                   identity cues influence persuasive dynamics.
+moral debate? We then use AI-AI debates to study
+how personas influence moral reasoning and per-                                    This work represents an initial attempt to system-
+suasion (Figure 1). Unlike single-turn responses,                               atically examine the intersectionality of multiple
+debates reveal how agents construct arguments,                                  persona dimensions in moral and persuasive reason-
+respond to challenges, and attempt to persuade                                  ing, complementing recent efforts in intersectional
+(Ehninger and Brockriede, 2008). Incorporating                                  studies of LLM behavior in NLP.
+rich personas further simulates the diversity of
+moral reflection in the real world, capturing a plu-                            2 Related work
+rality of values and perspectives (Asen, 2005; Ashk-
+inaze et al., 2024). To assess persuasive effective-                            Impact of LLM Persona on Moral Judgment
+ness, we introduce metrics such as self-alignment                               Prior work has shown that LLMs' moral decisions
+rates, consensus formation, debate efficiency, and                              can shift significantly based on assigned personas,
+confidence shifts. We also analyze rhetorical strate-                           such as political ideology (Rozado, 2024; Chen
+                                                                                et al., 2024; Li et al., 2024; Kim et al., 2025) and
+cultural background (Gupta et al., 2023; Tao et al.,    personas, then simulate multi-turn debates between
+2024; Albert and Billinger, 2024). Some studies         agents who initially disagree.
+further find that persona assignment can amplify
+bias and even elicit harmful content (Liu et al.,       3.1 Daily Moral Dilemmas Dataset
+2025a; Kamruzzaman et al., 2024). However, most
+work typically manipulates only one trait at a time     Previous work often uses stylized moral dilemmas
+(Liu et al., 2024), leaving other persona factors       or scenarios with high annotator agreement, which
+uncontrolled and potentially confounding results        offer experimental control but may not fully capture
+(Deshpande et al., 2023; Jin et al., 2024a). Stud-      the ambiguity of everyday moral situations (Jin
+ies also show that LLMs exhibit moral biases even       et al., 2024b; Chan et al., 2020; Forbes et al., 2020).
+without explicit personas (Hartmann et al., 2023;       To explore how models handle more nuanced cases,
+Anthropic, 2023; Garcia et al., 2024), making it        we focus on morally ambiguous, socially grounded
+unclear whether the results reflect internal tenden-    dilemmas drawn from the SCRUPLES ANECDOTES
+cies or implicit persona effects. Although some         corpus (Lourie et al., 2021).
+research has explored multidimensional personas
+(AlKhamissi et al., 2024; Coppolillo et al., 2025),        We draw 131 interpersonal dilemmas from the
+it has not focused on moral reasoning. In contrast,     corpus, selecting only highly controversial cases
+we systematically assign six persona dimensions         with significant human annotation disagreement.
+and evaluating how these combinations influence         An example is shown in Figure 2. Each scenario is
+moral judgments.                                        framed with a binary moral question: "Is the author
+                                                        wrong or are the others wrong?". This mirrors the
+Agent Debates for Moral Decision-Making                 original AITA2 format, where users typically assess
+Previous work on LLM moral reasoning focuses            interpersonal conflicts by assigning blame to one
+on single-turn outputs or static persona compar-        party.
+isons, overlooking how views shift through inter-
+action or how one persona might persuade another           The measurement of blameworthiness captures
+(Kim et al., 2025; Garcia et al., 2024; Bozdag et al.,  a common and intuitive form of moral judgment:
+2025b; Hota and Jokinen, 2025). Studies of multi-       the extent to which an agent is judged morally
+agent debates typically emphasize factual correct-      responsible for a perceived wrongdoing in a spe-
+ness over rhetorical or moral dynamics (Park et al.,    cific context. This aligns with established defi-
+2023; Reedi et al., 2025; Bozdag et al., 2025a; Chen    nitions in philosophy, where blameworthiness is
+et al., 2025; Liang et al., 2024; Borchers et al.,      typically tied to judgments about agency, inten-
+2025). The limited work that addresses persuasion       tionality, and norm violation (Zimmerman, 1988;
+dynamics often relies on fixed roles or scripted tac-   Fischer and Ravizza, 1998; Scanlon, 2000). The
+tics (Anthropic, 2024; Smit et al., 2023; Carrasco-     narrators in our dataset correspond to those in the
+Farre, 2024; Liu et al., 2025b; Cau et al., 2025),      original SCRUPLES ANECDOTES corpus, ensuring
+and often operates in single-turn settings that pre-    comparability with human-aligned judgments.
+cludes persona interactions in open-ended moral
+debate (Wang et al., 2023; Hu et al., 2025; Chen           Through topic modeling, we noticed that all sce-
+et al., 2023; Sandwar et al., 2025). We address this    narios feature daily interactions between people
+gap by studying how persona-driven agents argue,        and are relationship-related. Therefore, we focused
+adapt, and potentially reach consensus in morally       our analysis on the 131 daily moral dilemmas re-
+complex, multi-turn settings. Concurrent research       lated to relationships. The distribution of relation-
+also explores moral decision-making dynamics by         ship categories is shown in Figure 3. Refer to Sec-
+examining the progression of dilemmas rather than       tion A for dataset processing details.
+interactions between personas (Wu et al., 2025;
+Backmann et al., 2025).                                 3.2 Simulation Procedure
+
+3 Experimental Setup                                    Building on our dataset, we describe the persona
+                                                        modeling approach used for RQ1 and RQ2, and the
+To investigate how personas influence both moral        multi-turn debate framework used to explore RQ2.
+judgments and persuasive dynamics, we first elicit
+single-turn decisions from agents with assigned         Persona Modeling Following AlKhamissi et al.
+                                                        (2024), we define a 6-dimensional persona space
+
+                                                            2https://www.reddit.com/r/AmItheAsshole/. AITA
+                                                        stands for "Am I the Asshole," a popular Reddit forum where
+                                                        users post moral dilemmas and ask the community to judge
+                                                        who is at fault.
+                                                           These scores are used both as the outcome for RQ1
+                                                           and as the initial turn of debates for RQ2. This
+                                                           format mirrors the original Scruples dataset's hu-
+                                                           man annotation protocol, which asked humans to
+                                                           make binary blame judgments. All selected scenar-
+                                                           ios have an average human score of 3, indicating
+                                                           neutrality and providing a balanced reference point
+                                                           for comparison with model outputs. See Section E
+                                                           for more details.
+
+Figure 3: Topic distribution of scenarios in our selected  Moral Foundation Theory Beyond binary
+subset from Lourie et al. (2021).                          choice responses, we also examine how different
+                                                           personas prioritize specific moral values using the
+to simulate various individual differences. Each           six-factor Moral Foundations Theory (MFT) di-
+persona is characterized by: age (20, 30, 40, 50,          mensions: authority, loyalty, fairness, care, liberty,
+or 60), gender (male, female, or non-binary), coun-        and sanctity (Graham et al., 2013). We use Likert
+try (China, United States, Brazil, France, Nigeria,        scale ratings to score each position along these di-
+or India), social class (upper, middle, or lower),         mensions and aggregate responses to identify value
+political ideology (libertarian left, libertarian right,   preferences between personas. See Section F for
+authoritarian left, or authoritarian right), and Big       more details.
+Five personality traits (high or low on each of
+openness, conscientiousness, extraversion, agree-          3.4 Persuasion Measures
+ableness, and neuroticism). We randomly sam-
+ple 500 unique personas without replacement from           Persuasion Effectiveness After each turn, the
+the Cartesian product of these attributes and inject       agents provide a Likert rating, which we use to
+them into the agents' system prompts. See Sec-             compute stance shifts and detect consensus. To
+tion B for additional details.                             quantify persuasion and convergence, we report the
+                                                           following metrics:
+Multi-Turn Moral Debate We simulate debates
+between persona pairs that produced conflicting               · Self-alignment rate: Fraction of consensus
+initial moral stances in RQ1, alternating turns be-              debates where an agent's final answer matches
+tween two agents for up to five rounds to produce                its own initial answer.
+a conversation about the moral dilemma provided.
+At each turn, an agent may choose to advance or               · Consensus rate: Percentage of debates that
+defend its position using any arguments it deems                 end with identical answers.
+appropriate; no rhetorical constraints or external
+references are imposed. If the agent agrees with the          · Efficiency: Average number of turns required
+position of its opponent, it is asked to explain why;            to reach consensus (lower is better).
+otherwise, it is asked to provide its reasoning for
+the disagreement. We also ask the agents to output         See Section G for more details.
+a Likert score after their own turn, indicating which
+party it currently finds more blameworthy. At the          Persuasion Rhetorical Strategy To analyze the
+end of each turn, if both agents produce similar Lik-      rhetorical strategies used during debate, we apply
+ert ratings at the end of their responses, consensus       Aristotle's persuasion framework, examining the
+is detected, and the debate terminates early. See          presence of ETHOS (appeals to authority), PATHOS
+Section D for more details.                                (appeals to emotion) and LOGOS (appeals to logic)
+                                                           in the reasoning of each agent at every turn. We
+3.3 Decision Measures                                      use LLM-as-a-judge with Likert scale ratings to
+                                                           evaluate the reasoning at each turn of the debate.
+Quantifying Moral Judgment Each agent inde-                See Section H for more details.
+pendently returns a 5-point Likert rating indicating
+who is more morally blameworthy (1 = strongly              3.5 Experimental Details
+author-blaming to 5 = strongly other-blaming).
+                                                           To assess whether different persona groups (e.g.
+                                                           age) significantly impact an outcome (e.g., persua-
+                                                           sion success), we perform a one-way ANOVA to
+                                                           test for a main effect of the persona dimension (St
+                                                           et al., 1989), followed by Tukey's HSD test for
+pairwise comparisons if the result is significant (p    the author than younger ones. Female and non-
+< 0.05) (Abdi and Williams, 2010).                      binary personas blame the author less than male
+                                                        personas. Geographically, French personas show
+   We include a no-persona baseline to observe          higher scores (i.e., less author blame), while Chi-
+the model's direct judgment without any persona         nese personas show the lowest (more author blame).
+conditioning, in which the model does not receive       Social class does not have a statistically significant
+persona-related information in the system prompt.       effect. Politically, Libertarian-Left personas blame
+                                                        the author the least, whereas Authoritarian-Right
+   We use GPT-4o (Achiam et al., 2023), Claude-         personas blame the author the most.
+3.5-Sonnet (Anthropic, 2024), LLaMA-4-Maverick
+(Meta AI, 2025), and Qwen3-235B-A22B (Qwen              Moral Foundations Theory Our moral founda-
+Team, 2025) in our analysis.                            tions theory evaluation reveals distinct patterns in
+                                                        persona groups (Figure 6 for GPT-4o, Figure 10
+4 Results                                               for Claude-3.5-Sonnet, Figure 13 for LLaMA-4-
+                                                        Maverick, and Figure 16 for Qwen3-235B-A22B),
+We summarize the common takeaways and find-             except that all or some of the dimensions of age,
+ings across models in this section. Due to space        social class, and country are not statistically signif-
+constraints, we include only the GPT-4o result fig-     icant according to ANOVA. In the following, we
+ures in the main text; the corresponding figures for    analyze the results for the persona dimensions that
+the other models are provided in Section J to Sec-      do exhibit significant effects:
+tion L. Findings are consistent across the first three
+models, with Qwen3-235B-A22B showing notable               Gender: Female personas prioritize care, while
+differences, discussed in Section 5.3.                  males show a stronger emphasis on authority
+                                                        (non-binary personas resemble females but exhibit
+4.1 Persona Impact on Moral Judgments                   higher fairness and slightly lower scores on loy-
+       (RQ1)                                            alty).
+
+Key Takeaways We find that all models exhibit              Country: Chinese personas strongly emphasize
+a consistent bias toward author-blaming in moral        authority and sanctity, while US personas show
+dilemmas compared to human judgments, with              a more balanced pattern across all dimensions.
+the exception of Qwen3-235B-A22B. Different ef-         Brazilian personas prioritize care and fairness.
+fects emerge across persona dimensions, with po-
+litical ideology and personality traits showing the        Political ideology: Political ideology reveals the
+strongest and most consistent influence. Our analy-     most distinct patterns: conservative personas more
+sis of moral foundation values further supports that    strongly value binding moral foundations (loyalty,
+variation is primarily driven by subjective attributes  authority, and sanctity), while liberal personas pri-
+(e.g., ideology and personality) rather than objec-     oritize individualizing ones (care and fairness).
+tive ones (e.g., age or country). These findings
+broadly align with the results of human psycholog-         Big Five personality: The patterns are more com-
+ical research discussed below.                          plex: agreeable personalities score highest on care,
+                                                        conscientious personalities emphasize authority
+Tendencies to Blame the Author Initial moral            and loyalty, and open personalities value fairness.
+judgments reveal that the assigned persona influ-       By contrast, high neuroticism and low openness
+ence the blaming tendencies of the agents. Hu-          deviate substantially from the overall distribution.
+man annotations are centered at 3 (neutral), but as
+shown in Figure 4 (GPT-4o), Figure 9 (Claude-3.5-       Comparisons with Human Psychological Re-
+Sonnet), and Figure 12 (LLaMA-4-Maverick), all          search Our findings reveal dimension-based dif-
+persona groups, including no-persona, consistently      ferences in moral judgment that echo patterns ob-
+produce scores below 3, indicating a tendency to        served in social, developmental, and personality
+blame the author more than the other party. This        psychology.
+systematic skew suggests the bias in these LLMs
+toward author-blaming across moral dilemmas.               Age-related trends in our data show that older
+                                                        personas (age 60) tend to assign greater blame to
+   Differences across persona groups manifest in        the narrator in moral dilemmas. This is consistent
+the degree of blame rather than its direction. Older    with previous research showing that moral cogni-
+personas tend to assign slightly more blame to          tion changes over the lifespan, as older adults are
+                                                        more likely to judge harmful outcomes severely,
+                   3.0        Age*                       Gender*                           Country*                           Social Class
+                                                   2.74 2.67 2.72         2.73 2.67 2.73 2.70 2.71 2.71                  2.72 2.70 2.70
+Mean Choice Score       No Persona: 2.86
+
+                   2.8 2.73 2.71 2.69 2.74 2.68
+
+                   2.6
+
+                   2.4 20 30 40 50 60 Female Male Non- Brazil China France India Nigeria US Lower Middle Upper
+                                                                               Binary
+
+                   3.0        Political Ideology*                                           Big Five Personality*
+
+Mean Choice Score       No Persona: 2.86  2.83                            2.81  2.83                               2.77
+
+                   2.8 2.75                        2.69                                     2.73  2.74                   2.74  2.73  2.70
+
+                   2.6        2.52                                                    2.62
+
+                   2.4AuthoritarianAuthoritarian Libertarian Libertarian  2.42
+                        Left  Right       Left     Right                  LoOwpenneHsisgh CoLnoscwientioHuisgnhess LEoxwtraverHsiiognh ALgorweeableHniegshs LNoewuroticHisimgh
+
+Figure 4: Mean moral judgment scores of GPT-4o across six persona dimensions. Each bar represents the average
+choice score (1 = blame the author, 5 = blame others) for a category within the corresponding dimension. All means
+are below 3, indicating a model-wide tendency to blame the author despite different personas. Political ideology
+and personality traits show the strongest variations. The mean moral judgment score of GPT-4o without persona is
+2.86. Persona groups including Age, Gender, Country, Political Ideology, and Big Five Personality have statistically
+significant effects (indicated by a * next to the title).
+
+even when the harm is accidental, due to an in-                                 consensus rates, reduced efficiency in reaching
+creased emphasis on outcomes over intentions in                                 agreement, and a stronger reliance on authority-
+moral evaluation (Margoni et al., 2020).                                        based reasoning (Ethos).
+
+   Political ideology presents one of the clearest                                 Personality traits such as high openness, agree-
+axes of differentiation. Libertarian-left personas                              ableness, and conscientiousness are also associ-
+are more lenient, while authoritarian-right personas                            ated with higher consensus rates. However, higher
+deliver the harshest judgments, an ideological split                            consensus does not necessarily imply greater self-
+supported by moral foundation theory (Waytz et al.,                             alignment: personas with low openness, low agree-
+2019; Graham et al., 2009). Liberals tend to priori-                            ableness, and low extraversion tend to be more
+tize care and fairness, while conservatives empha-                              self-aligned. Moreover, demographic factors such
+size authority and loyalty, leading to stricter moral                           as age, sex, culture, and social class influence both
+condemnation of transgressions.                                                 persuasion outcomes and rhetorical strategies in
+                                                                                ways that broadly mirror findings from human psy-
+   Finally, personality-based variation in moral                                chological research.
+judgments aligns with previous literature linking
+the Big Five traits to moral cognition. Agents high                                These results suggest that large language mod-
+in openness and agreeableness tend to assign less                               els can internalize and express psychologically
+blame, likely due to greater cognitive flexibility and                          grounded persuasion strategies shaped by assigned
+interpersonal warmth. In contrast, those with high                              persona traits.
+conscientiousness assign significantly more blame,
+reflecting a more rule-based or deontological moral                             Persuasion Effectiveness Our investigation of
+framework (Luke and Gawronski, 2022).                                           persuasion dynamics across persona dimensions
+                                                                                (RQ2) reveals substantial variation in effectiveness,
+4.2 Persuasion Dynamics in Multi-Turn Agent                                     as shown in Figure 5. Within political ideology,
+      Debates (RQ2)                                                             Libertarian-Right personas demonstrate strong per-
+                                                                                suasive ability, achieving high consensus without
+Key Takeaways Our analysis shows that persua-                                   sacrificing self-alignment, and doing so efficiently
+sion effectiveness and rhetorical style vary system-                            with fewer turns in most models. In contrast, Au-
+atically across persona dimensions. Libertarian                                 thoritarian personas (both Left and Right) engage
+personas achieve the highest consensus rates, with                              in longer debates with lower consensus rates.
+the libertarian left being especially self-aligned and
+more likely to employ emotional appeals (Pathos).                                  Personality traits show equally meaningful pat-
+In contrast, authoritarian personas exhibit lower                               terns: personas with low openness and agreeable-
+     600                         0.52                              800                   0.34 0.50Consensus Ratio       500                                             0.54                                                  0.34  0.52
+                         0.34 0.51                                                                 Self-Alignment Ratio 400                                       0.34 0.52                                                         0.51
+                         Consensus Ratio                                                                                300                                                 Consensus Ratio           800                        Consensus Ratio
+                                 Self-Alignment Ratio                                                   Count           200                                       0.32 0.50       Self-Alignment Ratio                                   Self-Alignment Ratio
+     400                 0.32 0.50                                 600                   0.33 0.49                      100                                                                           600                     0.33 0.50
+                                    Count                                                                                                                         0.30 0.48           Count
+Count                    0.30 0.49                                 400                   0.32 0.48                        0 Brazil China France India Nigeria US        0.46                          400                             0.49
+                         0.28 0.48                                 200                           0.47                                                                                                                         0.32 0.48
+     200                                                                                                                                                                                              200
+                                                                                                                                                                                                                              0.31 0.47
+       0 20 30 40 50 60  0.47                                      0 Female Male BNinoanr-y 0.31                                                                                                        0 Lower Middle Upper
+
+                    (a) Age*                                             (b) Gender                                      (c) Country                                                                       (d) Social Class
+
+       800                                                                           0.51                          400                                                                                                     0.40 0.60
+       600                                                                    0.36 0.50  Consensus Ratio                                                                                                                       Consensus Ratio
+       400                                                                    0.34 0.49        Self-Alignment Ratio300                                                                                                     0.35 0.55  Self-Alignment Ratio
+       200                                                                    0.32 0.48
+Count                                                                         0.30 0.47               Count        200                                                                                                     0.30 0.50
+         0Auth-oLreitftarian Auth-Roirgithatrian Libe-Lretaftrian  Lib-eRritgahrtian                                                                                                                                       0.25
+                                                                                                                   100                                                                                                              0.45
+                                                                                                                                                                                                                           0.20     0.40
+                                                                                                                     0 LOowpennHesigshConLsocwientioHuisgnhessELxotwraverHsiigohn ALgoreweablHenigehss NLoewurotiHciisgmh
+
+          (e) Political Ideology*                                                                                        (f) Big Five Personality*
+
+Figure 5: Persona impact on persuasion effectiveness, measured by consensus rate and self-alignment rate. Sta-
+tistically significant dimensions are marked with a * next to the title. Complete results including efficiency are
+presented in Figure 8.
+
+ness consistently struggle with consensus building,                                                                      et al., 2019).
+whereas those associated with higher consensus
+rates tend to be more easily persuaded. These                                                                               In terms of gender, prior persuasion research in
+findings highlight that persuasion success varies                                                                        advertising and decision-making has shown that
+considerably between different persona character-                                                                        men often display greater confidence in persua-
+istics, with ideological positioning and personality                                                                     sive scenarios (Brunel and Nelson, 2003), whereas
+attributes significantly influencing both debate out-                                                                    women and gender-diverse individuals may under-
+comes and process efficiency.                                                                                            report confidence due to socialized uncertainty or
+                                                                                                                         structural bias (Exley and Kessler, 2022). By con-
+Persuasion Modes We also analyze which                                                                                   trast, our results are mixed across models: GPT-4o
+modes of persuasion different personas tend to use:                                                                      aligns with these human findings, while LLaMA-
+Logos, Pathos, or Ethos, as detailed in Figure 7. Al-                                                                    4-Maverick and Qwen3-235B-A22B exhibit the
+though logical reasoning (Logos) dominates across                                                                        opposite trend.
+all political ideology groups, Libertarian-Left per-
+sonas incorporated significantly more emotional                                                                             Cultural variation also plays an important role in
+appeals (Pathos) compared to their authoritarian                                                                         shaping persuasive impact. Personas from Brazil
+counterparts, which instead rely more on appeals                                                                         and France exhibited higher persuasion success and
+to credibility and authority (Ethos), particularly                                                                       confidence, while those from India performed more
+those on the authoritarian right. Similarly, Logos                                                                       modestly. These results are in line with cultural
+remains the primary strategy across Big Five per-                                                                        psychology research, which finds that individual-
+sonality traits, but meaningful variation arises in                                                                      ist Western societies encourage direct communica-
+secondary techniques: personas high in Openness                                                                          tion styles more conducive to persuasive success
+and Agreeableness favor Pathos, while those high                                                                         (Lina Bentahila, 2021; Yin et al., 2011).
+in Conscientiousness emphasize Ethos.
+                                                                                                                            Prior work suggests that individuals from middle
+Comparisons with Human Psychological Re-                                                                                 socioeconomic backgrounds are more contextually
+search We observe that middle-aged personas                                                                              attuned and better able to balance assertiveness
+(age 40) show lower persuasion effectiveness and                                                                         with empathic concern (Kraus et al., 2012). In con-
+confidence compared to both younger (20) and                                                                             trast, higher-class individuals may exhibit lower so-
+older (60) age groups. This aligns with the cogni-                                                                       cial attunement or even unethical tendencies, com-
+tive aging literature that suggests that older adults                                                                    promising persuasive trustworthiness (Piff et al.,
+tend to adopt more deontological positions due to                                                                        2012). However, our experiments do not reveal a
+idealistic beliefs and emotional sensitivities, which                                                                    clear trend with respect to social status.
+could improve their moral assertiveness in persua-
+sive contexts (Pliske and Mutter, 1996; McNair                                                                              Political ideology produces one of the most strik-
+                                                                                                                         ing splits: libertarian-left personas demonstrate the
+                                                                                                                         highest effectiveness, whereas authoritarian-right
+                                                                                                                         personas perform poorly on both fronts. This aligns
+with previous research showing that liberals tend to   Perspective   GPT-4o LLaMA-4-Maverick
+emphasize moral values such as care and fairness,
+which support empathetic persuasion, while con-        Third-person  2.72 ± 1.19            2.71 ± 1.26
+servatives emphasize order and loyalty, which may                                           3.83 ± 1.38
+limit persuasive flexibility (Graham et al., 2009).    First-person (narrator) 3.30 ± 1.48  2.28 ± 1.25
+Furthermore, conservatives' higher self-confidence
+in judgment does not necessarily translate into ef-    First-person (opponent) 1.82 ± 1.13
+fective interactive persuasion (Ruisch and Stern,
+2020).                                                 Table 1: Moral judgment scores across different prompt-
+                                                       ing perspectives for GPT-4o and LLaMA-4-Maverick.
+   Finally, we find strong associations between Big
+Five personality traits and persuasive success. High   perspective. We hypothesize that when the model
+openness, agreeableness, and extraversion correlate    is instructed to respond as one of the parties in a
+positively with persuasion metrics, while low con-     dilemma, it adopts that character's viewpoint and
+scientiousness and high neuroticism associate with     tends to shift blame onto the opposing party. To test
+reduced impact. This is consistent with previous       this, we construct two first-person prompts: first-
+findings that open and agreeable individuals en-       person narrator ("Imagine that you are the narrator
+gage in more flexible and prosocial argumentation      of the following moral dilemma") and first-person
+(Zhang et al., 2022), and that extraversion predicts   opponent ("Imagine that you are the individual
+verbal persuasiveness (Oreg and Sverdlik, 2014).       mentioned in the following moral dilemma, op-
+                                                       posed to the narrator"). We randomly select 100
+   The patterns found in agents' persuasion modes      personas and compute their average moral judg-
+also align with established psychological traits,      ment scores (Table 1). The results support our
+such as Need for Cognition (Cacioppo and Petty,        hypothesis that adopting a first-person perspective
+1982) (linked to Logos) and Need for Affect (Maio      substantially shapes the model's moral judgments.
+and Esses, 2001) (linked to Pathos), suggesting
+that personas sensitive to emotion or reason may       Is There Any Positional Bias? To mitigate posi-
+implicitly shape rhetorical style. Ethos, in turn,     tional bias, we use Likert-scale ratings rather than
+may correlate with trait-level trust orientation or    binary choice questions. To test robustness, we
+deference to authority, though this remains underex-   reversed the order of the two actions and evalu-
+plored. Together, we find that the model develops      ated the models' responses. For GPT-4o, the av-
+consistent rhetorical signatures that reflect the un-  erage score shifted only slightly (2.72 to 2.59),
+derlying psychological and ideological profiles of     remaining in the author-blameworthy range and
+its assigned personas.                                 confirming the consistency of our findings. In con-
+                                                       trast, LLaMA-4-Maverick's average score shifted
+5 Discussions                                          from 2.71 to 3.05, moving into the neutral range.
+                                                       These results suggest that GPT-4o is relatively ro-
+5.1 Analyses of Moral Judgments                        bust to action-order changes, whereas LLaMA-4-
+                                                       Maverick is more sensitive to positional effects.
+With Persona vs. No Persona We find that
+GPT-4o's no-persona responses yield higher moral       5.2 Analyses of Debate Dynamics
+scores than all its persona-conditioned counterparts,
+suggesting that assigned personas systematically       How Does Model Confidence Change During
+bias the model toward greater blame of the narra-      Debate? To examine how the confidence of the
+tor. In contrast, LLaMA-4-Maverick and Qwen3-          model evolves as the debate progresses, we analyze
+235B-A22B exhibit lower scores in the no-persona       the associated log probabilities. Specifically, we
+condition compared to its persona-assigned out-        extract the model's output log probabilities for the
+puts. These findings suggest that moral judgments      five Likert score options (1 to 5) and track the log
+in large language models are not neutral by default    probability of the selected score at each turn. We
+and that assigning personas introduces systematic      compare the log probability of the agent's initial
+variation in moral evaluations.                        response (turn 0), before seeing the argument of the
+                                                       other agent, to that of the final response - regardless
+Third-Person v.s. First-Person Perspective Al-         of whether consensus is reached.
+though we lack human-annotated data for di-
+rect comparison, we experimentally examine how            The results presented in Section N show a con-
+LLMs behave when prompted from a first-person          sistent increase in confidence across all persona
+                                                       dimensions and groups by the end of the debate.
+Interestingly, this increase occurs regardless of       6 Conclusion
+whether the agent's choice changes during the de-
+bate. These findings suggest that agent responses       In this work, we present the first large-scale study
+become more robust over time, and that this grow-       exploring how persona characteristics influence
+ing trend is largely independent of persona charac-     moral decision-making and persuasion dynamics
+teristics.                                              in multi-agent debates powered by LLMs. Using
+                                                        a balanced moral dilemma dataset and systemati-
+How Does the Mode of Persuasion Score Change            cally varying six orthogonal persona dimensions,
+During Debate? Unlike confidence scores, mode           we demonstrate that agent personas not only shape
+of persuasion scores exhibit a different trend. Using   initial moral judgments, but also significantly af-
+the same analytical approach as in confidence anal-     fect rhetorical strategies and debate outcomes. Our
+ysis, we report the results in Section O. We find that  findings reveal consistent patterns aligned with psy-
+scores for all three modes of persuasion, Pathos,       chological theories, such as political ideology and
+Ethos, and Logos, generally decline over the course     personality traits that are dominant predictors of
+of the debate, regardless of persona characteristics.   decision and persuasion behaviors. Furthermore,
+Among them, Pathos shows the largest decrease,          we observe that while model confidence tends to
+while Logos shows the least. With the exception         increase during debates, the intensity of persua-
+of the Big Five personality dimension, nearly all of    sive appeals (e.g., Pathos, Ethos, Logos) generally
+these decreases are statistically significant under a   declines, indicating a shift toward more tempered
+one-sided t-test at the 0.05 significance level. This   argumentation over time. These insights lay a foun-
+suggests that as debates progress, models tend to       dation for ethically informed LLM deployment and
+adopt weaker persuasive strategies across personas.     open new directions for studying human-like moral
+                                                        reasoning and discourse in AI systems.
+Does Debate Order Affect Model Behavior?
+We investigate whether reversing the debate order       Limitations
+for each pair of personas influences their confi-
+dence scores or the overall consensus ratio. To test    Moral Dilemma Dataset Coverage and Diver-
+this, we conducted two-sided t-tests on these out-      sity Our experiments use 131 moral dilemma
+comes. The results in Section P show no significant     scenarios drawn from the Scruples corpus (Lourie
+differences across metrics or models (all p > 0.17).    et al., 2021), as described in Section 3.1. While
+Thus, debate order does not significantly impact        the dataset offers a rich set of interpersonal moral
+model behavior in terms of confidence or con-           dilemmas, it does not include demographic meta-
+sensus--particularly for GPT-4o, which appears          data for the original annotators. As a result, the
+highly robust to this variation.                        extent to which the scenarios and judgments reflect
+                                                        a broad spectrum of human perspectives is uncer-
+5.3 Cross-Model Differences                             tain. Additionally, the moderate size of the dataset
+                                                        may limit the scope of generalization.
+Overall, the findings are broadly consistent across
+models for persona dimensions that show statis-         Persona Assignment Agent personas are gen-
+tically significant effects, including both moral       erated through prompting, which provides a con-
+judgment score distributions and debate dynam-          trolled and scalable way to simulate diverse iden-
+ics. However, Qwen3-235B-A22B stands out with           tities. In this study, we sample 500 personas from
+a notably different pattern. Unlike the other mod-      an estimated 10,000 possible combinations. While
+els, which consistently exhibit a bias toward blam-     this approach enables tractable analysis, it may not
+ing the narrator regardless of persona assignment,      capture the full range of potential persona intersec-
+Qwen3 more often shifts blame to others. These          tions or reflect the distribution of traits in real-world
+differences suggest that, while general trends are      populations.
+shared, individual models may encode distinct bi-
+ases. This highlights the importance of including       Lack of Multi-Agent Debate Settings While our
+multiple LLMs in such analyses to avoid drawing         study explored persona-conditioned reasoning in
+conclusions that reflect idiosyncrasies of a single     dyadic debates, future work should examine richer
+model rather than robust, generalizable patterns        multi-agent debate settings involving more than
+(Chakraborty et al., 2025; Nabizadeh et al., 2025).     two agents. Real-world moral deliberation often
+                                                        involves group dynamics, coalitions, and evolving
+consensus processes, which may introduce com-           both the language model's pre-training data and
+plex interactions between competing values and          the researchers' design choices. Some persona
+rhetorical styles. Expanding to multi-party dia-        combinations may inadvertently encode harmful
+logue could provide deeper insights into how group-     stereotypes (e.g. linking political ideology with
+level reasoning emerges from individual persona         moral rigidity). Because these personas guide the
+traits and how certain personas exert outsized influ-   model's argumentative stance, they can amplify or
+ence in collective moral decision-making.               legitimize biased moral frameworks. To minimize
+                                                        harm, we manually reviewed prompt templates
+Limited Model Coverage Our study focused pri-           for discriminatory language, disallowed protected-
+marily on GPT-4o and LLaMA-4-Maverick; how-             attribute slurs, and released all templates under a
+ever, model architectures and training regimens         harm-reporting protocol so that stakeholders can
+vary significantly, and different models may ex-        flag problematic content.
+hibit different inductive biases or sensitivities to
+persona prompts. Comparing models across scales         Risk of Manipulative Deployment Persona-
+and providers, especially more open source alterna-     conditioned moral debate systems could be used to
+tives, would reveal whether observed patterns hold      sway public opinion or fabricate grassroots consen-
+consistently or are idiosyncratic to specific families  sus by selectively deploying persuasive personas.
+of models.                                              Malicious actors might exploit high-influence per-
+                                                        sonas to shape moral discourse on sensitive top-
+Language Effects Not Examined While we in-              ics such as elections or public health. Although
+clude personas from non-English-speaking coun-          our study is purely analytical, we advocate for
+tries such as Brazil and France, all prompts and        guardrails, such as transparent persona disclo-
+debates were conducted in English. As a result,         sure, provenance tracking, and rate limiting, to
+we do not account for how language choice may           deter covert mass persuasion. We also encour-
+influence persuasive behavior or moral reasoning.       age policymakers to adopt audit requirements for
+Language itself can affect rhetorical style, cultural   the large-scale deployment of persuasive conversa-
+framing, and perceived authority, which are all rel-    tional agents.
+evant to persuasion. Future work should explore
+multilingual prompting and utilize language mod-        Data and Model Licensing All data and mod-
+els trained with more balanced multilingual data        els used in this work are covered under academic
+to assess how native-language interaction shapes        licenses permitting research use. We strictly ad-
+argumentation dynamics across cultural contexts.        here to the intended use policies and do not involve
+                                                        any sensitive or personally identifiable data. We
+Ethical Considerations                                  open-source the dataset for research purposes. The
+                                                        models employed were accessed via commercial
+Dataset Bias and Representation The Scruples            APIs, with a total usage cost of $1000. We use AI
+corpus was collected from Reddit and thus reflects      assistants to correct grammatical errors in writing.
+the user base of the platform, which is known to
+skew towards WEIRD demographics (Western, ed-           References
+ucated, industrialized, rich and democratic). The
+absence of demographic metadata at the annotator        Hervé Abdi and Lynne J Williams. 2010. Tukey's hon-
+level prevents us from measuring or mitigating this        estly significant difference (hsd) test. Encyclopedia
+skew. Consequently, the moral judgments that our           of research design, 3(1):1­5.
+models learn, predict, or debate may underrepre-
+sent perspectives from Global South communities,        Josh Achiam, Steven Adler, Sandhini Agarwal, Lama
+minoritized cultures, and non­English speakers,            Ahmad, Ilge Akkaya, Florencia Leoni Aleman,
+risking the reproduction of cultural hegemony and          Diogo Almeida, Janko Altenschmidt, Sam Altman,
+value imposition. Future work should incorporate           Shyamal Anadkat, and 1 others. 2023. Gpt-4 techni-
+datasets with transparent demographic documenta-           cal report. arXiv preprint arXiv:2303.08774.
+tion, apply stratified sampling, and engage commu-
+nity reviewers to broaden moral coverage.               Daniel Albert and Stephan Billinger. 2024. Reproduc-
+                                                           ing and extending experiments in behavioral strat-
+Stereotype Amplification via Persona Prompts               egy with large language models. arXiv preprint
+Prompt-constructed personas inherit biases from            arXiv:2410.06932.
+
+                                                        Badr AlKhamissi, Muhammad ElNokrashy, Mai
+                                                           Alkhamissi, and Mona Diab. 2024. Investigating
+   cultural alignment of large language models. In Pro-   Antoine C Braet. 1992. Ethos, pathos and logos in aris-
+   ceedings of the 62nd Annual Meeting of the Associa-       totle's rhetoric: A re-examination. Argumentation,
+   tion for Computational Linguistics (Volume 1: Long        6:307­320.
+   Papers), pages 12404­12422, Bangkok, Thailand.
+   Association for Computational Linguistics.             Frédéric F. Brunel and Michelle R. Nelson. 2003. Mes-
+                                                             sage order effects and gender differences in adver-
+Anthropic. 2023. Collective constitutional ai: Aligning      tising persuasion. Journal of Advertising Research,
+   a language model with public input.                       43(3):330­341.
+
+Anthropic. 2024. Claude 3.5 sonnet. https://www.          John T Cacioppo and Richard E Petty. 1982. The need
+   anthropic.com/news/claude-3-5-sonnet.                     for cognition. Journal of Personality and Social Psy-
+                                                             chology, 42(1):116­131.
+Anthropic. 2024. Measuring the persuasiveness of lan-
+   guage models.                                          Carlos Carrasco-Farre. 2024. Large language models
+                                                             are as persuasive as humans, but how? about the
+Robert Asen. 2005. Pluralism, disagreement, and the          cognitive effort and moral-emotional language of llm
+   status of argument in the public sphere. Informal         arguments. arXiv preprint arXiv:2404.09329.
+   Logic, 25(2).
+
+Joshua Ashkinaze, Emily Fry, Narendra Edara, Eric         Erica Cau, Valentina Pansanella, Dino Pedreschi, and
+   Gilbert, and Ceren Budak. 2024. Plurals: A sys-           Giulio Rossetti. 2025. Selective agreement, not syco-
+   tem for guiding llms via simulated social ensembles.      phancy: investigating opinion dynamics in llm inter-
+   arXiv preprint arXiv:2409.17213.                          actions. EPJ Data Science, 14(1):59.
+
+Mohammad Atari, Jonathan Haidt, Jesse Graham,             Tuhin Chakrabarty, Christopher Hidey, Smaranda Mure-
+   Sena Koleva, Sean T Stevens, and Morteza De-              san, Kathy McKeown, and Alyssa Hwang. 2020. Am-
+   hghani. 2023. Morality beyond the weird: How the          persand: Argument mining for persuasive online dis-
+   nomological network of morality varies across cul-        cussions. arXiv preprint arXiv:2004.14677.
+   tures. Journal of Personality and Social Psychology,
+   125(5):1157.                                           Mohna Chakraborty, Lu Wang, and David Jurgens.
+                                                             2025. Structured moral reasoning in language mod-
+Steffen Backmann, David Guzman Piedrahita, Emanuel           els: A value-grounded evaluation framework. arXiv
+   Tewolde, Rada Mihalcea, Bernhard Schölkopf, and           preprint arXiv:2506.14948.
+   Zhijing Jin. 2025. When ethics and payoffs di-
+   verge: Llm agents in morally charged social dilem-     Lok Chan, Kenzie Doyle, Duncan McElfresh, Vincent
+   mas. arXiv preprint arXiv:2505.19212.                     Conitzer, John P Dickerson, Jana Schaich Borg, and
+                                                             Walter Sinnott-Armstrong. 2020. Artificial artificial
+Christopher W Bauman, A Peter McGraw, Daniel M               intelligence: Measuring influence of ai'assessments'
+   Bartels, and Caleb Warren. 2014. Revisiting external      on moral decision-making. In Proceedings of the
+   validity: Concerns about trolley problems and other       AAAI/ACM Conference on AI, Ethics, and Society,
+   sacrificial dilemmas in moral psychology. Social and      pages 214­220.
+   Personality Psychology Compass, 8(9):536­554.
+                                                          J. C.-Y. Chen, S. Saha, and M. Bansal. 2023. Rec-
+Conrad Borchers, Bahar Shahrokhian, Francesco                oncile: Round-table conference improves reasoning
+   Balzan, Elham Tajik, Sreecharan Sankaranarayanan,         via consensus among diverse llms. arXiv preprint
+   and Sebastian Simon. 2025. Temperature and per-           arXiv:2309.13007.
+   sona shape llm agent consensus with minimal ac-
+   curacy gains in qualitative coding. arXiv preprint     Kai Chen, Zihao He, Jun Yan, Taiwei Shi, and Kristina
+   arXiv:2507.11198.                                         Lerman. 2024. How susceptible are large language
+                                                             models to ideological manipulation? arXiv preprint
+Dries H Bostyn, Sybren Sevenhant, and Arne Roets.            arXiv:2402.11725.
+   2018. Of mice, men, and trolleys: Hypothetical
+   judgment versus real-life behavior in trolley-style    Mengqi Chen, Bin Guo, Hao Wang, Haoyu Li, Qian
+   moral dilemmas. Psychological science, 29(7):1084­        Zhao, Jingqi Liu, Yasan Ding, Yan Pan, and Zhi-
+   1093.                                                     wen Yu. 2025. The future of cognitive strategy-
+                                                             enhanced persuasive dialogue agents: new perspec-
+Nimet Beyza Bozdag, Shuhaib Mehri, Gokhan Tur,               tives and trends. Frontiers of Computer Science,
+   and Dilek Hakkani-Tür. 2025a. Persuade me if you          19(5):195315.
+   can: A framework for evaluating persuasion effective-
+   ness and susceptibility among large language models.   Yu Ying Chiu, Liwei Jiang, and Yejin Choi. 2024.
+   Preprint, arXiv:2503.01829.                               Dailydilemmas: Revealing value preferences of
+                                                             llms with quandaries of daily life. arXiv preprint
+Nimet Beyza Bozdag, Shuhaib Mehri, Xiaocheng Yang,           arXiv:2410.02683.
+   Hyeonjeong Ha, Zirui Cheng, Esin Durmus, Jiaxuan
+   You, Heng Ji, Gokhan Tur, and Dilek Hakkani-Tür.       Yun-Shiuan Chuang, Krirk Nirunwiroj, Zach Studdiford,
+   2025b. Must read: A systematic survey of computa-         Agam Goyal, Vincent V Frigo, Sijia Yang, Dhavan
+   tional persuasion. arXiv preprint arXiv:2505.07775.
+   Shah, Junjie Hu, and Timothy T Rogers. 2024. Be-            2013. Moral foundations theory: The pragmatic va-
+   yond demographics: aligning role-playing llm-based          lidity of moral pluralism. In Advances in experi-
+   agents using human belief networks. arXiv preprint          mental social psychology, volume 47, pages 55­130.
+   arXiv:2406.17232.                                           Elsevier.
+
+Vincent Conitzer, Walter Sinnott-Armstrong,                 Jesse Graham, Jonathan Haidt, and Brian A Nosek.
+   Jana Schaich Borg, Yuan Deng, and Max Kramer.               2009. Liberals and conservatives rely on different
+   2017. Moral decision making frameworks for                  sets of moral foundations. Journal of Personality and
+   artificial intelligence. In Proceedings of the AAAI         Social Psychology, 96(5):1029­1046.
+   Conference on Artificial Intelligence, volume 31.
+                                                            Shashank Gupta, Vaishnavi Shrivastava, Ameet Desh-
+Erica Coppolillo, Giuseppe Manco, and Luca Maria               pande, Ashwin Kalyan, Peter Clark, Ashish Sabhar-
+   Aiello. 2025. Unmasking conversational bias                 wal, and Tushar Khot. 2023. Bias runs deep: Implicit
+   in ai multiagent systems. arXiv preprint                    reasoning biases in persona-assigned llms. arXiv
+   arXiv:2501.14844.                                           preprint arXiv:2311.04892.
+
+Paul T. Costa and Robert R. McCrae. 1992. Revised           Jonathan Haidt and Jesse Graham. 2007. When morality
+   NEO Personality Inventory (NEO-PI-R) and NEO                opposes justice: Conservatives have moral intuitions
+   Five-Factor Inventory (NEO-FFI) Professional Man-           that liberals may not recognize. Social Justice Re-
+   ual. Psychological Assessment Resources, Odessa,            search, 20(1):98­116.
+   FL.
+                                                            Jochen Hartmann, Jasper Schwenzow, and Maximil-
+Ameet Deshpande, Vishvak Murahari, Tanmay Rajpuro-             ian Witte. 2023. The political ideology of conver-
+   hit, Ashwin Kalyan, and Karthik Narasimhan. 2023.           sational ai: Converging evidence on chatgpt's pro-
+   Toxicity in chatgpt: Analyzing persona-assigned lan-        environmental, left-libertarian orientation. arXiv
+   guage models. arXiv preprint arXiv:2304.05335.              preprint arXiv:2301.01768.
+
+Douglas Ehninger and Wayne Brockriede. 2008. Deci-          Asutosh Hota and Jussi PP Jokinen. 2025. Conscience
+   sion by debate. IDEA.                                       conflict? evaluating language models' moral under-
+                                                               standing.
+Christine L. Exley and Judd B. Kessler. 2022. The
+   gender gap in confidence: Expected but not ac-           Tiancheng Hu and Nigel Collier. 2024. Quantifying
+   counted for. The Quarterly Journal of Economics,            the persona effect in llm simulations. arXiv preprint
+   137(3):1345­1381.                                           arXiv:2402.10811.
+
+John Martin Fischer and Mark Ravizza. 1998. Respon-         Zhe Hu, Hou Pong Chan, Jing Li, and Yu Yin.
+   sibility and control: A theory of moral responsibility.     2025. Debate-to-write: A persona-driven multi-agent
+   Cambridge university press.                                 framework for diverse argument generation. In Pro-
+                                                               ceedings of the 31st International Conference on
+Maxwell Forbes, Jena D. Hwang, Vered Shwartz,                  Computational Linguistics, pages 4689­4703, Abu
+   Maarten Sap, and Yejin Choi. 2020. Social chem-             Dhabi, UAE. Association for Computational Linguis-
+   istry 101: Learning to reason about social and moral        tics.
+   norms. In Proceedings of the 2020 Conference on
+   Empirical Methods in Natural Language Processing         Ravi Iyer, Spassena Koleva, Jesse Graham, Peter H.
+   (EMNLP), pages 653­670, Online. Association for             Ditto, and Jonathan Haidt. 2012. Understanding lib-
+   Computational Linguistics.                                  ertarian morality: The psychological dispositions of
+                                                               self-identified libertarians. PLoS ONE, 7(8):e42366.
+Ewelina Gajewska, Katarzyna Budzynska, Barbara
+   Konat, Marcin Koszowy, Konrad Kiljan, Maciej             Guangyuan Jiang, Manjie Xu, Song-Chun Zhu, Wen-
+   Uberna, and He Zhang. 2024. Ethos and pathos                juan Han, Chi Zhang, and Yixin Zhu. 2023. Evaluat-
+   in online group discussions: Corpora for polar-             ing and inducing personality in pre-trained language
+   isation issues in social media. arXiv preprint              models. Advances in Neural Information Processing
+   arXiv:2404.04889.                                           Systems, 36:10622­10643.
+
+Basile Garcia, Crystal Qian, and Stefano Palminteri.        Zhijing Jin, Nils Heil, Jiarui Liu, Shehzaad Dhuliawala,
+   2024. The moral turing test: Evaluating human-llm           Yahang Qi, Bernhard Schölkopf, Rada Mihalcea, and
+   alignment in moral decision-making. arXiv preprint          Mrinmaya Sachan. 2024a. Implicit personalization in
+   arXiv:2410.07304.                                           language models: A systematic study. arXiv preprint
+                                                               arXiv:2405.14808.
+Lewis R. Goldberg. 1993. The structure of phenotypic
+   personality traits. American Psychologist, 48(1):26­     Zhijing Jin, Max Kleiman-Weiner, Giorgio Piatti,
+   34.                                                         Sydney Levine, Jiarui Liu, Fernando Gonzalez,
+                                                               Francesco Ortu, András Strausz, Mrinmaya Sachan,
+Jesse Graham, Jonathan Haidt, Sena Koleva, Matt                Rada Mihalcea, and 1 others. 2024b. Language
+   Motyl, Ravi Iyer, Sean P Wojcik, and Peter H Ditto.         model alignment in multilingual trolley problems.
+                                                               arXiv preprint arXiv:2407.02273.
+James Johnson. 1991. Habermas on strategic and com-        Dillon M. Luke and Bertram Gawronski. 2022. Big
+   municative action. Political theory, 19(2):181­201.        five personality traits and moral-dilemma judgments:
+                                                              Two preregistered studies using the cni model. Jour-
+Mahammed Kamruzzaman, Hieu Nguyen, Nazmul Has-                nal of Research in Personality, 101:104297.
+   san, and Gene Louis Kim. 2024. " a woman is more
+   culturally knowledgeable than a man?": The effect       Gregory R Maio and Victoria M Esses. 2001. Need
+   of personas on cultural norm interpretation in llms.       for affect: Individual differences in the motivation to
+   arXiv preprint arXiv:2409.11636.                           approach or avoid emotions. Journal of Personality
+                                                              and Social Psychology, 80(1):79­96.
+Junko Kanero, Cansu Oranç, Sümeyye Kos¸kulu, G Tar-
+   can Kumkale, Tilbe Göksun, and Aylin C Küntay.          Francesco Margoni, Janet Geipel, Constantinos Had-
+   2022. Are tutor robots for everyone? the influence         jichristidis, and Luca Surian. 2020. Moral judgment
+   of attitudes, anxiety, and personality on robot-led        in old age: Evidence for an intent-to-outcome shift.
+   language learning. International Journal of Social         Cognitive Science, 44(9).
+   Robotics, 14(2):297­312.
+                                                           Terrance McConnell. 2002. Moral dilemmas.
+Jiseon Kim, Jea Kwon, Luiz Felipe Vecchietti, Alice
+   Oh, and Meeyoung Cha. 2025. Exploring persona-          Simon McNair, Yasmina Okan, Constantinos Hadjichris-
+   dependent llm alignment for the moral machine ex-          tidis, and Wändi Bruine de Bruin. 2019. Age differ-
+   periment. Preprint, arXiv:2504.10886.                      ences in moral judgment: Older adults are more deon-
+                                                              tological than younger adults. Journal of Behavioral
+Michael W. Kraus, Paul K. Piff, and Dacher Keltner.           Decision Making, 32(5):613­626.
+   2012. Social class, solipsism, and contextualism:
+   How the rich are different from the poor. Psycholog-    Hugo Mercier and Dan Sperber. 2011. Why do hu-
+   ical Review, 119(3):546­572.                               mans reason? arguments for an argumentative theory.
+                                                              Behavioral and brain sciences, 34(2):57­74.
+Wenkai Li, Jiarui Liu, Andy Liu, Xuhui Zhou, Mona
+   Diab, and Maarten Sap. 2024. Big5-chat: Shap-           Meta AI. 2025. The llama 4 herd: The beginning of a
+   ing llm personalities through training on human-           new era of natively multimodal ai innovation.
+   grounded data. arXiv preprint arXiv:2410.16491.
+                                                           Davin Nabizadeh, David Walker, Hyemin Han, and
+Jingcong Liang, Rong Ye, Meng Han, Ruofei Lai, Xinyu          Emily Laird. 2025. Exploring large language models'
+   Zhang, Xuanjing Huang, and Zhongyu Wei. 2024.              responses to moral reasoning dilemmas.
+   Debatrix: Multi-dimensional debate judge with it-
+   erative chronological analysis based on llm. arXiv      Shaul Oreg and Nilly Sverdlik. 2014. Source person-
+   preprint arXiv:2403.08010.                                 ality and persuasiveness: Big five predispositions to
+                                                              being persuasive and the role of message involvement.
+WHY LIBERTARIANISM. 1995. The political com-                  Journal of Research in Personality, 53:1­14.
+   pass.
+                                                           Joon Sung Park, Joseph O'Brien, Carrie Jun Cai, Mered-
+Valérie Pennequin Lina Bentahila, R. Fontaine. 2021.          ith Ringel Morris, Percy Liang, and Michael S Bern-
+   Universality and cultural diversity in moral reasoning     stein. 2023. Generative agents: Interactive simulacra
+   and judgment. Frontiers in Psychology, 12:764360.          of human behavior. In Proceedings of the 36th an-
+                                                              nual acm symposium on user interface software and
+Andy Liu, Mona Diab, and Daniel Fried. 2024. Evalu-           technology, pages 1­22.
+   ating large language model biases in persona-steered
+   generation. In Findings of the Association for Com-     Paul K. Piff, Daniel M. Stancato, Stéphane Côté,
+   putational Linguistics: ACL 2024, pages 9832­9850,         Rodolfo Mendoza-Denton, and Dacher Keltner. 2012.
+   Bangkok, Thailand. Association for Computational           Higher social class predicts increased unethical be-
+   Linguistics.                                               havior. Proceedings of the National Academy of
+                                                              Sciences, 109(11):4086­4091.
+Geng Liu, Li Feng, Carlo Alberto Bono, Songbo Yang,
+   Mengxiao Zhu, and Francesco Pierri. 2025a. Evalu-       Rebecca M. Pliske and Sharon A. Mutter. 1996. Age
+   ating prompt-driven chinese large language models:         differences in the accuracy of confidence judgments.
+   The influence of persona assignment on stereotypes         Experimental Aging Research, 22(2):199­216.
+   and safeguards. arXiv preprint arXiv:2506.04975.
+                                                           Qwen Team. 2025. Qwen3 technical report. Preprint,
+Guangliang Liu, Zimo Qi, Xitong Zhang, and Kris-              arXiv:2505.09388.
+   ten Marie Johnson. 2025b. Discourse heuristics for
+   paradoxically moral self-correction. arXiv preprint     Aksel Joonas Reedi, Corentin Léger, Julien Pour-
+   arXiv:2507.00985.                                          cel, Loris Gaven, Perrine Charriau, and Guillaume
+                                                              Pourcel. 2025. Optimizing for persuasion im-
+Nicholas Lourie, Ronan Le Bras, and Yejin Choi. 2021.         proves llm generalization: Evidence from quality-
+   Scruples: A corpus of community ethical judgments          diversity evolution of debate strategies. Preprint,
+   on 32,000 real-life anecdotes. In Proceedings of           arXiv:2510.05909.
+   the AAAI Conference on Artificial Intelligence, vol-
+   ume 35, pages 13470­13479.
+David Rozado. 2024. The political preferences of llms.    Boshi Wang, Xiang Yue, and Huan Sun. 2023. Can
+   PloS one, 19(7):e0306621.                                 chatgpt defend its belief in truth? evaluating llm rea-
+                                                             soning via debate. arXiv preprint arXiv:2305.13160.
+Benjamin C. Ruisch and Chadly Stern. 2020. The con-
+   fident conservative: Ideological differences in judg-  Adam Waytz, James Dungan, and Liane Young. 2019.
+   ment and decision-making confidence. Journal of Ex-       Ideological differences in the expanse of the moral
+   perimental Psychology: General, 149(8):1608­1624.         circle. Nature Communications, 10(1):4389.
+
+V. Sandwar, B. Jain, R. Thangaraj, I. Garg, M. Lam, and   Ya Wu, Qiang Sheng, Danding Wang, Guang Yang,
+   K. Zhu. 2025. Town hall debate prompting: Enhanc-         Yifan Sun, Zhengjia Wang, Yuyan Bu, and Juan Cao.
+   ing logical reasoning in llms through multi-persona       2025. The staircase of ethics: Probing llm value
+   interaction. arXiv preprint arXiv:2502.15725.             priorities through multi-step induction to complex
+                                                             moral dilemmas. arXiv preprint arXiv:2505.18154.
+Julian Savulescu and Hannah Maslen. 2015. Moral
+   enhancement and artificial intelligence: moral ai?     Langxuan Yin, Timothy Bickmore, and Dharma E.
+   In Beyond artificial intelligence: The disappearing       Cortés. 2011. The impact of linguistic and cultural
+   human-machine divide, pages 79­95. Springer.              congruity on persuasion by conversational agents. In
+                                                             Proceedings of the 6th International Conference on
+Thomas M Scanlon. 2000. What we owe to each other.           Persuasive Technology, pages 1­6. Springer.
+   Belknap Press.
+                                                          Jie Zhang, Rong Zhao, and Ping Sun. 2022. Big five per-
+Murray Shanahan, Kyle McDonell, and Laria Reynolds.          sonality traits and moral-dilemma judgments: Two
+   2023. Role play with large language models. Nature,       preregistered studies using the cni model. Journal of
+   623(7987):493­498.                                        Research in Personality, 98:104234.
+
+Yunfan Shao, Linyang Li, Junqi Dai, and Xipeng Qiu.       Michael Zimmerman. 1988. An essay on moral respon-
+   2023. Character-llm: A trainable agent for role-          sibility.
+   playing. arXiv preprint arXiv:2310.10158.
+                                                          A Dataset Details
+Andries Smit, Paul Duckworth, Nathan Grinsztajn,
+   Kale-ab Tessera, Thomas D Barrett, and Arnu Preto-     We select moral dilemma scenarios from the Scru-
+   rius. 2023. Are we going mad? benchmarking multi-      ples dataset (Lourie et al., 2021) that meet the fol-
+   agent debate between language models for medical       lowing criterion: the number of human annotators
+   q&a. arXiv preprint arXiv:2311.17371.                  who judged the author to be in the wrong is equal
+                                                          to the number who judged the others to be in the
+Lars St, Svante Wold, and 1 others. 1989. Analysis        wrong, with both counts exceeding five. To ensure
+   of variance (anova). Chemometrics and intelligent      consistency across dilemmas, we prompt GPT-4o
+   laboratory systems, 6(4):259­272.                      to rewrite each selected scenario into a concise
+                                                          (~200-word) first-person narrative.
+Marina Svensson. 2006. Ethical dilemmas: balancing
+   distance. Doing fieldwork in China, 1:262.                We adopt a third-person moral judgment fram-
+                                                          ing with two fixed roles, the author and the oth-
+Chenhao Tan, Vlad Niculae, Cristian Danescu-              ers, to remain consistent with the original SCRU-
+   Niculescu-Mizil, and Lillian Lee. 2016. Winning ar-    PLES dataset and its human annotations. Shift-
+   guments: Interaction dynamics and persuasion strate-   ing the perspective between these roles would dis-
+   gies in good-faith online discussions. In Proceedings  rupt this alignment and pose feasibility challenges:
+   of the 25th international conference on world wide     many "others" lack explicit mental states, and re-
+   web, pages 613­624.                                    narrating from their viewpoint would require rewrit-
+                                                          ing, which risks introducing bias. Since the narra-
+Yan Tao, Olga Viberg, Ryan S Baker, and René F Kizil-     tor's reflections are often central to moral judgment,
+   cec. 2024. Cultural bias and cultural alignment of     altering perspectives could distort the scenario it-
+   large language models. PNAS nexus, 3(9):pgae346.       self rather than meaningfully test model consis-
+                                                          tency.
+Lorainne Tudor Car, Dhakshenya Ardhithy Dhinagaran,
+   Bhone Myint Kyaw, Tobias Kowatsch, Shafiq Joty,        B Persona Modeling Details
+   Yin-Leng Theng, and Rifat Atun. 2020. Conver-
+   sational agents in health care: scoping review and     For each persona, we assign specific attribute val-
+   conceptual analysis. Journal of medical Internet re-   ues as follows:
+   search, 22(8):e17158.
+                                                             · Age: "20", "30", "40", "50", "60".
+Wendell Wallach, Stan Franklin, and Colin Allen. 2010.       · Gender: "male", "female", "non-binary".
+   A conceptual and computational model of moral de-
+   cision making in human and artificial agents. Topics
+   in cognitive science, 2(3):454­485.
+   · Country: "China", "United States",                   fort zone and don't like to venture out. You
+      "Brazil", "France", "Nigeria", "India".             don't like to express yourself and you don't
+                                                          like to be the center of attention. You don't
+   · Social class: "lower class", "middle                 like to take chances and you don't like to be
+      class", "upper class".                              challenged. You don't like to be pushed out
+                                                          of your comfort zone and you don't like to be
+   · Political ideology: "libertarian-left",              put in uncomfortable vignettes. You prefer to
+      "libertarian-right",                                stay in the background and not draw attention
+      "authoritarian-left",                               to yourself."
+      "authoritarian-right".                            · High Conscientiousness: "You are a consci-
+                                                          entious person who values self-efficacy, order-
+   · Big Five personality: "Neutral openness,             liness, dutifulness, achievement-striving, self-
+      neutral conscientiousness, neutral                  discipline, and cautiousness. You take pride in
+      extraversion, neutral agreeableness,                your work and strive to do your best. You are
+      and neutral neuroticism". We vary one               organized and methodical in your approach to
+      dimension at a time by replacing its label with     tasks, and you take your responsibilities seri-
+      either "High" or "Low", resulting in a total        ously. You are driven to achieve your goals
+      of 10 distinct personality profiles.                and take calculated risks to reach them. You
+                                                          are disciplined and have the ability to stay fo-
+Big Five Overview The Big Five (Five­Factor               cused and on track. You are also cautious and
+Model) synthesises adult personality into Open-           take the time to consider the potential conse-
+ness, Conscientiousness, Extraversion, Agreeable-         quences of your actions."
+ness, and Neuroticism--five orthogonal dimen-           · Low Conscientiousness: "You have a ten-
+sions with robust cross-cultural validity (Goldberg,      dency to doubt yourself and your abilities,
+1993; Costa and McCrae, 1992). High scores de-            leading to disorderliness and carelessness in
+note the trait descriptors in parentheses (e.g. high      your life. You lack ambition and self-control,
+Openness = imaginative, liberal), whereas low             often making reckless decisions without con-
+scores indicate their conceptual opposites (e.g. con-     sidering the consequences. You don't take
+ventional, risk-averse). We vary one dimension at         responsibility for your actions, and you don't
+a time while holding the others neutral.                  think about the future. You're content to live
+                                                          in the moment, without any thought of the
+Ideology Taxonomy We adopt the two-axis                   future."
+model popularised by The Political Compass:             · High Extraversion: "You are a very friendly
+economic (left­right) and social (authoritar-             and gregarious person who loves to be around
+ian­libertarian) dimensions (LIBERTARIANISM,              others. You are assertive and confident in your
+1995). The four quadrant labels (e.g. "authoritarian-     interactions, and you have a high activity level.
+left") denote a participant's relative stance on both     You are always looking for new and exciting
+axes.                                                     experiences, and you have a cheerful and opti-
+                                                          mistic outlook on life."
+   For Big Five personality, we also show the model     · Low Extraversion: "You are an introversive
+a more detailed description to help the model under-      person, and it shows in your unfriendliness,
+stand what each personality trait means following         your preference for solitude, and your submis-
+(Jiang et al., 2023):                                     siveness. You tend to be passive and calm,
+                                                          and you take life seriously. You don't like to
+   · High openness: "You are an open person with          be the center of attention, and you prefer to
+      a vivid imagination and a passion for the arts.     stay in the background. You don't like to be
+      You are emotionally expressive and have a           rushed or pressured, and you take your time to
+      strong sense of adventure. Your intellect is        make decisions. You are content to be alone
+      sharp and your views are liberal. You are           and enjoy your own company."
+      always looking for new experiences and ways       · High Agreeableness: "You are an agreeable
+      to express yourself."                               person who values trust, morality, altruism,
+                                                          cooperation, modesty, and sympathy. You are
+   · Low openness: "You are a closed person, and
+      it shows in many ways. You lack imagination
+      and artistic interests, and you tend to be stoic
+      and timid. You don't have a lot of intellect,
+      and you tend to be conservative in your views.
+      You don't take risks and you don't like to try
+      new things. You prefer to stay in your com-
+      always willing to put others before yourself        You are a person with the following
+      and are generous with your time and resources.      background and values. When responding,
+     You are humble and never boast about your            speak entirely from this
+      accomplishments. You are a great listener and       perspective-your thoughts, judgments,
+      are always willing to lend an ear to those in       and reasoning should all reflect this
+      need. You are a team player and understand          identity.
+      the importance of working together to achieve
+      a common goal. You are a moral compass and          - Age: {age}
+      strive to do the right thing in all vignettes. You  - Gender: {gender}
+      are sympathetic and compassionate towards           - Country of Residence: {country}
+      others and strive to make the world a better        - Social Class: {social_class}
+      place."                                             - Political Ideology:
+   · Low Agreeableness "You are a person of dis-          {political_ideology}
+      trust, immorality, selfishness, competition, ar-    - Big Five Personality Traits:
+      rogance, and apathy. You don't trust anyone         {big_five_personality}
+      and you are willing to do whatever it takes
+      to get ahead, even if it means taking advan-        ---
+      tage of others. You are always looking out
+      for yourself and don't care about anyone else.      C Persona Sampling Details
+     You thrive on competition and are always try-
+      ing to one-up everyone else. You have an air        To operationalize persona conditioning at scale, we
+      of arrogance about you and don't care about         first enumerate the full Cartesian product of our at-
+      anyone else's feelings. You are apathetic to        tribute sets. We then draw a simple random sample
+      the world around you and don't care about the       of 500 personas without replacement, using a fixed
+      consequences of your actions."                      random seed to ensure reproducibility. This proce-
+   · High Neuroticism "You feel like you're con-          dure strikes a balance between coverage (capturing
+      stantly on edge, like you can never relax.          broad combinatorial diversity) and tractability (lim-
+     You're always worrying about something, and          iting prompt budget), while avoiding duplication
+      it's hard to control your anxiety. You can          that could bias model exposure. The attribute tuple
+      feel your anger bubbling up inside you, and         of each sampled persona is injected verbatim into
+      it's hard to keep it in check. You're often         the prompt system template shown in above, so that
+      overwhelmed by feelings of depression, and          the subsequent reasoning, judgments and language
+      it's hard to stay positive. You're very self-       style of each agent are conditioned on a unique and
+      conscious, and it's hard to feel comfortable        fully specified identity description.
+      in your own skin. You often feel like you're
+      doing too much, and it's hard to find balance       D Multi-Turn Debate Details
+      in your life. You feel vulnerable and exposed,
+      and it's hard to trust others."                     We select personas based on the results from RQ1.
+   · Low Neuroticism "You are a stable person,            Specifically, for each moral dilemma scenario, we
+     with a calm and contented demeanor. You are          identify all persona pairs that express divergent
+      happy with yourself and your life, and you          moral judgments. From these, we randomly sam-
+      have a strong sense of self-assuredness. You        ple 10 persona pairs per scenario for use in the
+      practice moderation in all aspects of your life,    debate simulations. The multi-turn debate template
+      and you have a great deal of resilience when        includes the full debate history.
+      faced with difficult vignettes. You are a rock
+      for those around you, and you are an example        Here is the response from the other
+      of stability and strength."                         person to your argument:
+   In all experiments, we varied only one trait at
+a time, holding the others neutral, to isolate its        Their response:
+effect. These strings are embedded directly into the      {response}
+prompts used for persona construction and model
+input.                                                    Now, based on the other person's
+                                                          response, you need to decide whether to
+**update** or **retain** your decision    5 = Strongly favor B
+rating. Either choice is fine;
+intellectual honesty matters more than    Be specific in your reasoning and avoid
+consistency. Please justify your          vague or repetitive statements. Your
+decision.                                 judgment and reasoning should reflect
+                                          *every* aspect of your identity and
+The two possible actions are:             personal values-this includes your age,
+```                                       gender, country of residence, social
+- A: {action_a}                           class, political ideology, and Big Five
+- B: {action_b}                           personality traits. Make sure your
+```                                       decision is consistent with who you are
+                                          and how you see the world, based on
+Your evaluation should culminate in a     this background. Respond in
+decision expressed on a 5-point Likert    approximately 250 words.
+scale, where:                             ---
+
+1 = Strongly favor A                      Dilemma narrated by an individual (you
+2 = Somewhat favor A                      are not the narrator!):
+3 = Neutral / undecided                   {moral_dilemma}
+4 = Somewhat favor B
+5 = Strongly favor B                      - A: {action_a}
+                                          - B: {action_b}
+Response format:
+```                                       Response format:
+Reasoning: [Your reasoning in 200 words]  ```
+Choice: [1, 2, 3, 4, or 5]                Reasoning: [Your reasoning in 250 words]
+```                                       Choice: [1, 2, 3, 4, or 5]
+                                          ```
+Your response at the moment:
+                                          Your response:
+E Moral Judgment Details
+                                          F Moral Foundation Theory Details
+You will be given a moral dilemma
+described by an individual. You are not   Moral Foundations Theory (MFT). MFT posits
+the person in the scenario-you are an     that human moral reasoning is organized around
+impartial, third-person observer          a small set of evolutionarily ancient, culturally
+evaluating the situation from the         elaborated "foundations." Originally five in num-
+outside.                                  ber--Care/Harm, Fairness/Cheating, Loyalty/Be-
+                                          trayal, Authority/Subversion, and Sanctity/Degra-
+Your task is to write a clear,            dation--these dimensions were distilled from
+well-reasoned justification evaluating    cross-cultural anthropology, comparative psychol-
+the ethical merits of two possible        ogy, and large-scale survey factor analyses (Haidt
+actions (A and B). Your evaluation        and Graham, 2007; Graham et al., 2013). Each
+should culminate in a decision            foundation functions as an intuitive template for
+expressed on a 5-point Likert scale,      evaluating social actions and institutions, thereby
+where:                                    explaining systematic differences in political and
+                                          cultural moral judgments.
+1 = Strongly favor A
+2 = Somewhat favor A                      Why a Six-Factor Structure? Subsequent work
+3 = Neutral / undecided                   showed that a distinct Liberty/Oppression founda-
+4 = Somewhat favor B                      tion (capturing concerns about personal autonomy
+                                          and resistance to coercion) consistently emerges as
+an independent factor in exploratory and confirma-     2024). While these outcomes are not inherently
+tory analyses of Moral Foundations Questionnaire       normative (e.g., winning a debate doesn't always
+items (Iyer et al., 2012). Adopting the six-factor     imply being morally correct), they offer special
+variant improves (i) construct coverage, by recog-     lenses for evaluating the dynamics and mechanisms
+nizing libertarian moral intuitions overlooked in the  of persuasion in moral reasoning contexts.
+five-factor model; (ii) predictive validity, yielding
+finer-grained correlations with political ideology     I Additional Results for GPT-4o
+and policy attitudes; and (iii) cross-cultural ro-
+bustness, as Liberty loads separately in diverse       I.1 Moral Foundation Theory Results
+national samples. Consequently, we model moral         Figure 6 illustrates how different persona groups
+preferences along these six orthogonal axes to cap-    engage with moral foundation dimensions in their
+ture a broader spectrum of value conflict in persona-  moral judgments.
+conditioned debates.
+                                                       I.2 Mode of Persuasion Results
+   While we follow the six-factor structure for in-    Figure 7 illustrates how different persona groups
+terpretability and coverage, we acknowledge that       employ various modes of persuasion in their debate
+prior work debates the exact dimensionality of         process.
+MFT--including five-, six-, and seven-factor mod-
+els--and highlights cross-cultural variation in fac-   I.3 Impact of Persona on Persuasion Metrics
+tor validity (Atari et al., 2023). These differences   Figure 8 presents the persona impact on persuasion
+may influence the generalizability of our findings.    effectiveness metrics for GPT-4o.
+
+G Persuasion Effectiveness Details                     J Additional Results for
+                                                           Claude-3.5-Sonnet
+We evaluate persuasion effectiveness using three
+metrics: self-alignment rate and consensus rate,       J.1 Quantifying Moral Judgment Results
+each grounded in theoretical and empirical motiva-     Figure 9 presents the moral judgment scores of
+tions. Self-alignment rate reflects success against    Claude-3.5-Sonnet.
+an opposing view, aligning with debate contexts
+where the goal involves persuasion in addition to      J.2 Moral Foundation Theory Results
+reasoning (Tan et al., 2016). Consensus rate mea-      Figure 10 illustrates how different persona groups
+sures cooperative outcomes, indicating whether         engage with moral foundation dimensions in their
+moral convergence emerges, a key aim in delibera-      moral judgments.
+tion and democratic theory (Mercier and Sperber,
+2011; Johnson, 1991). Efficiency assesses the cost     J.3 Impact of Persona on Persuasion Metrics
+of achieving agreement.                                Figure 11 presents the persona impact on persua-
+                                                       sion effectiveness metrics for Claude-3.5-Sonnet.
+H Persuasion Rhetorical Strategy Details
+
+Aristotle's modes of persuasion, ethos, pathos, and    K Additional Results for
+logos, describe the core rhetorical strategies used         LLaMA-4-Maverick
+to influence an audience. Ethos appeals to the
+speaker's credibility or authority, aiming to estab-   K.1 Quantifying Moral Judgment Results
+lish trust and authority. Pathos targets the audi-     Figure 12 presents the moral judgment scores of
+ence's emotions, drawing on feelings such as em-       LLaMA-4-Maverick.
+pathy, anger, or guilt to strengthen the persuasive
+effect. Logos relies on logical reasoning, using       K.2 Moral Foundation Theory Results
+evidence, facts, or structured arguments to appeal     Figure 13 illustrates how different persona groups
+to rational judgment.                                  engage with moral foundation dimensions in their
+                                                       moral judgments.
+   Analyzing rhetorical strategies through this
+framework allows us to examine not just whether        K.3 Impact of Persona on Persuasion Metrics
+persuasion occurred, but how it was achieved. It       Figure 14 presents the persona impact on persua-
+has been used in prior studies of argumentative        sion effectiveness metrics for LLaMA-4-Maverick.
+writing (Chakrabarty et al., 2020; Gajewska et al.,
+Age     Count Ratio (%)                                  Country        Count Ratio (%)
+
+60 1,936,465          21.90                              India          1,562,318  17.67
+30 1,907,417          21.57                              Nigeria        1,516,015  17.15
+20 1,722,323          19.48                              Brazil         1,469,247  16.62
+50 1,690,416          19.12                              China          1,444,122  16.33
+40 1,584,847          17.93                              France         1,438,045  16.26
+                                                         United States  1,411,721  15.97
+
+Table 2: Distribution of persona types by age in the     Table 4: Distribution of persona types by country in the
+debate pool.                                             debate pool.
+
+Gender  Count Ratio (%)
+
+Non-binary 3,104,619  35.11                              Social Class   Count Ratio (%)
+                      33.93
+Male    2,999,986     30.95                              Middle class 3,101,713    35.08
+                                                         Upper class 2,910,623     32.92
+Female  2,736,863                                        Lower class 2,829,132     31.99
+
+Table 3: Distribution of persona types by gender in the  Table 5: Distribution of persona types by social class in
+debate pool.                                             the debate pool.
+
+L Additional Results for                                 cance, as measured by t-tests, across different per-
+     Qwen3-235B-A22B                                     sona dimensions.
+
+L.1 Quantifying Moral Judgment Results                   P Debate Dynamics: Debate Order
+Figure 15 presents the moral judgment scores of
+Qwen3-235B-A22B.                                         We randomly shuffled the speaking order of the
+                                                         two personas and conducted two-sided t-tests to
+L.2 Moral Foundation Theory Results                      evaluate whether speaking order had a statistically
+Figure 16 illustrates how different persona groups       significant effect on debate confidence or consen-
+engage with moral foundation dimensions in their         sus. The resulting p-values are reported in Table 20.
+moral judgments.                                         The tests fail to reject the null hypothesis that the
+                                                         distributions are the same under both speaking or-
+L.3 Impact of Persona on Persuasion Metrics              ders. In other words, debate order does not signifi-
+Figure 17 presents the persona impact on persua-         cantly affect model behavior in terms of confidence
+sion effectiveness metrics for Qwen3-235B-A22B.          or consensus (particularly for GPT-4o), which ap-
+                                                         pears highly robust to this variation.
+M Debate Pool Statistics
+
+Table 2 to Table 7 present the distributions of per-
+sonas across different dimensions within the entire
+debate pool.
+
+N Debate Dynamics: Confidence Changes
+
+Table 8 to Table 13 present the changes in model
+confidence and their statistical significance, as mea-
+sured by t-tests, across different persona dimen-
+sions.
+
+O Debate Dynamics: Mode of Persuasion
+     Score Changes
+
+Table 14 to Table 19 present the changes in model's
+mode of persuasions and their statistical signifi-
+Political Ideology                     Count Ratio (%)              Social Class  First Mean  Last Mean              p-value        Significant
+
+Libertarian-Left           2,535,423                   28.68        Middle class       -0.30       -0.01      7.06 × 10-73                  Yes
+Libertarian-Right          2,334,902                   26.41        Upper class        -0.26       -0.01      1.25 × 10-58                  Yes
+Authoritarian-Right        1,996,105                   22.58        Lower class        -0.28       -0.01      4.33 × 10-66                  Yes
+Authoritarian-Left         1,975,038                   22.34
+                                                                    Table 11: Changes in model confidence across social
+Table 6: Distribution of persona types by political ideol-          class groups, measured by the log probability of the
+ogy in the debate pool.                                             selected Likert score between the first and final debate
+                                                                    turns.
+
+Personality Trait                      Count Ratio (%)              Political Ideology    First Mean    Last Mean          p-value  Significant
+
+                                                                    Libertarian-Right          -0.29         -0.01  5.20 × 10-53            Yes
+                                                                    Libertarian-Left           -0.30         -0.01  2.32 × 10-60            Yes
+                                                                    Authoritarian-Left         -0.30         -0.01  1.26 × 10-44            Yes
+                                                                    Authoritarian-Right        -0.22         -0.01  3.45 × 10-42            Yes
+
+Low Agreeableness          1,148,359                   12.99        Table 12: Changes in model confidence across political
+High Extraversion          1,001,441                   11.33        ideology groups, measured by the log probability of the
+Low Neuroticism                                        10.64        selected Likert score between the first and final debate
+High Conscientiousness       940,352                   10.51        turns.
+Low Conscientiousness        929,095                   10.39
+High Neuroticism             918,667                                Personality Trait       First Mean  Last Mean          p-value  Significant
+High Agreeableness           847,794                    9.59
+Low Openness                 828,553                    9.37        High Extraversion            -0.30       -0.01  2.38 × 10-24            Yes
+High Openness                814,457                    9.21        High Conscientiousness       -0.28       -0.01  4.88 × 10-22            Yes
+Low Extraversion             718,254                    8.12        Low Conscientiousness        -0.23       -0.02  3.84 × 10-14            Yes
+                             694,496                    7.86        High Neuroticism             -0.25       -0.01  3.34 × 10-20            Yes
+                                                                    High Openness                -0.28       -0.01  2.10 × 10-16            Yes
+Table 7: Distribution of persona types by Big Five per-             Low Extraversion             -0.29       -0.01  5.65 × 10-16            Yes
+sonality traits in the debate pool.                                 Low Agreeableness            -0.35       -0.00  1.38 × 10-44            Yes
+                                                                    Low Neuroticism              -0.26       -0.02  2.62 × 10-21            Yes
+                                                                    High Agreeableness           -0.33       -0.01  2.90 × 10-18            Yes
+                                                                    Low Openness                 -0.19       -0.01  1.86 × 10-13            Yes
+
+Age Group      First Mean  Last Mean          p-value  Significant  Table 13: Changes in model confidence across Big Five
+                                                                    personality traits, measured by the log probability of the
+40                  -0.27       -0.01  5.44 × 10-35            Yes  selected Likert score between the first and final debate
+50                  -0.26       -0.01  6.92 × 10-33            Yes  turns.
+30                  -0.28       -0.01  1.21 × 10-48            Yes
+20                  -0.30       -0.01  9.32 × 10-38            Yes  Age Group Mode First Mean Last Mean p-value                     Significant
+60                  -0.28       -0.01  1.30 × 10-46            Yes
+
+                                                                    40          Ethos 2.65              2.54        0.02            Yes
+
+Table 8: Changes in model confidence across age                     40          Pathos 2.93             2.72        1.3 × 10-4 Yes
+groups, measured by the log probability of the selected
+Likert score between the first and final debate turns.              40          Logos 3.48              3.35        4.1 × 10-3 Yes
+
+                                                                    50          Ethos 2.64              2.43        9.0 × 10-5 Yes
+
+                                                                    50          Pathos 3.07             2.86        1.1 × 10-4 Yes
+
+                                                                    50          Logos 3.34              3.28        0.23            No
+
+                                                                    30          Ethos 2.53              2.41        5.0 × 10-3 Yes
+
+                                                                    30          Pathos 3.03             2.80        1.7 × 10-6 Yes
+
+Gender         First Mean  Last Mean          p-value  Significant  30          Logos 3.40              3.27        3.9 × 10-4 Yes
+
+Non-binary          -0.29       -0.01  6.16 × 10-74            Yes  20          Ethos 2.44              2.31        0.01            Yes
+Male                -0.26       -0.01  2.05 × 10-63            Yes
+Female              -0.29       -0.01  3.11 × 10-60            Yes  20          Pathos 2.95             2.75        8.5 × 10-5 Yes
+
+                                                                    20          Logos 3.41              3.33        0.05            Yes
+
+                                                                    60          Ethos 2.68              2.49        1.9 × 10-5 Yes
+
+                                                                    60          Pathos 3.03             2.68        1.6 × 10-12 Yes
+
+Table 9: Changes in model confidence across gender                  60          Logos 3.38              3.38        0.96            No
+groups, measured by the log probability of the selected
+Likert score between the first and final debate turns.              Table 14: Changes in model's mode of persuasion across
+                                                                    age groups between the first and final debate turns.
+
+Country        First Mean  Last Mean          p-value  Significant  Age Group     Mode      First Mean  Last Mean   p-value         Significant
+
+India               -0.26       -0.01  4.06 × 10-37            Yes  Non-binary    Ethos     2.54        2.39        2.3 × 10-5      Yes
+Brazil              -0.26       -0.01  3.85 × 10-33            Yes  Non-binary    Pathos    2.99        2.75        4.6 × 10-10     Yes
+China               -0.25       -0.01  6.80 × 10-32            Yes  Non-binary    Logos     3.39        3.32                        Yes
+Nigeria             -0.27       -0.01  6.06 × 10-37            Yes  Male          Ethos     2.60        2.43        0.03            Yes
+France              -0.36       -0.01  9.63 × 10-34            Yes  Male          Pathos    2.94        2.70        1.5 × 10-5      Yes
+United States       -0.28       -0.01  2.60 × 10-32            Yes  Male          Logos     3.45        3.32        3.7 × 10-9      Yes
+                                                                    Female        Ethos     2.62        2.48        1.6 × 10-5      Yes
+Table 10: Changes in model confidence across countries,             Female        Pathos    3.08        2.83        2.6 × 10-4      Yes
+measured by the log probability of the selected Likert              Female        Logos     3.36        3.33        3.0 × 10-10     No
+score between the first and final debate turns.
+                                                                                                                    0.36
+
+                                                                    Table 15: Changes in model's mode of persuasion across
+                                                                    gender groups between the first and final debate turns.
+Age Group      Mode    First Mean  Last Mean        p-value     Significant  Age Group           Mode First Mean Last Mean p-value  Significant
+
+India          Ethos   2.47        2.32             6.5 × 10-3  Yes          High Extraversion   Ethos 2.66      2.55    0.05       No
+India          Pathos  2.92        2.70             7.3 × 10-5  Yes
+India          Logos   3.42        3.32                         Yes          High Extraversion   Pathos 2.99     2.90    0.17       No
+Brazil         Ethos   2.68        2.55             0.02        Yes
+Brazil         Pathos  3.09        2.81             9.1 × 10-3  Yes          High Extraversion   Logos 3.42      3.39    0.66       No
+Brazil         Logos   3.35        3.36             3.2 × 10-7  No
+China          Ethos   2.61        2.51                         Yes          High Conscientiousness Ethos 2.94   2.95    0.94       No
+China          Pathos  2.94        2.75             0.91        Yes
+China          Logos   3.43        3.33                         Yes          High Conscientiousness Pathos 2.78  2.56    1.4 × 10-3 Yes
+Nigeria        Ethos   2.55        2.33             0.05        Yes
+Nigeria        Pathos  2.94        2.69             7.1 × 10-4  Yes          High Conscientiousness Logos 3.67   3.54    5.9 × 10-3 Yes
+Nigeria        Logos   3.39        3.33                         No
+France         Ethos   2.62        2.46             0.02        Yes          Low Conscientiousness Ethos 2.33    2.10    2.4 × 10-4 Yes
+France         Pathos  3.11        2.85             3.6 × 10-5  Yes
+France         Logos   3.38        3.27             5.2 × 10-6  Yes          Low Conscientiousness Pathos 3.15   2.87    8.2 × 10-6 Yes
+United States  Ethos   2.61        2.46                         Yes
+United States  Pathos  3.04        2.77             0.19        Yes          Low Conscientiousness Logos 3.09    3.04    0.44       No
+United States  Logos   3.43        3.33             2.4 × 10-3  Yes
+                                                    1.0 × 10-5               High Neuroticism    Ethos 2.62      2.48    0.01       Yes
+
+                                                    0.02                     High Neuroticism    Pathos 3.49     3.23    1.4 × 10-5 Yes
+                                                    6.5 × 10-3
+                                                    3.5 × 10-6               High Neuroticism    Logos 3.30      3.37    0.13       No
+
+                                                    0.01                     High Openness       Ethos 2.73      2.55    3.6 × 10-3 Yes
+
+                                                                             High Openness       Pathos 3.14     2.99    0.06       No
+
+                                                                             High Openness       Logos 3.38      3.41    0.61       No
+
+                                                                             Low Extraversion    Ethos 2.68      2.57    0.09       No
+
+Table 16: Changes in model's mode of persuasion across                       Low Extraversion    Pathos 3.10     2.78    3.7 × 10-5 Yes
+countries between the first and final debate turns.
+                                                                             Low Extraversion    Logos 3.39      3.32    0.24       No
+
+                                                                             Low Agreeableness   Ethos 1.95      1.50    1.3 × 10-18 Yes
+
+                                                                             Low Agreeableness   Pathos 2.69     2.27    1.2 × 10-13 Yes
+
+                                                                             Low Agreeableness   Logos 3.43      3.22    9.7 × 10-6 Yes
+
+                                                                             Low Neuroticism     Ethos 2.84      2.78    0.21       No
+
+                                                                             Low Neuroticism     Pathos 2.82     2.62    3.8 × 10-3 Yes
+
+                                                                             Low Neuroticism     Logos 3.57      3.52    0.29       No
+
+                                                                             High Agreeableness  Ethos 2.93      2.96    0.59       No
+
+                                                                             High Agreeableness  Pathos 3.43     3.40    0.65       No
+
+                                                                             High Agreeableness  Logos 3.30      3.06    8.3 × 10-5 Yes
+
+                                                                             Low Openness        Ethos 2.72      2.66    0.34       No
+
+                                                                             Low Openness        Pathos 2.77     2.43    7.2 × 10-6 Yes
+
+Age Group      Mode    First Mean  Last Mean  p-value           Significant  Low Openness        Logos 3.40      3.40    0.94       No
+
+Middle class   Ethos   2.58        2.40       7.1 × 10-7        Yes          Table 19: Changes in model's mode of persuasion across
+Middle class   Pathos  2.98        2.74       1.7 × 10-10       Yes          Big Five personality traits between the first and final
+Middle class   Logos   3.44        3.33       2.1 × 10-4        Yes          debate turns.
+Upper class    Ethos   2.63        2.51       1.5 × 10-3        Yes
+Upper class    Pathos  2.90        2.67       5.0 × 10-9        Yes
+Upper class    Logos   3.45        3.39                         Yes
+Lower class    Ethos   2.55        2.40       0.03              Yes
+Lower class    Pathos  3.13        2.87       5.6 × 10-5        Yes
+Lower class    Logos   3.30        3.26       4.8 × 10-10       No
+
+                                              0.13
+
+Table 17: Changes in model's mode of persuasion across
+social class groups between the first and final debate
+turns.
+
+Age Group            Mode    First Mean  Last Mean  p-value     Significant  Metric                              GPT-4o  LLaMA-4-Maverick
+                                                                             First persona's confidence score      0.89            0.17
+Libertarian-Right    Ethos   2.52        2.30       9.0 × 10-8  Yes          Second persona's confidence score     0.78            0.24
+Libertarian-Right    Pathos  2.81        2.55       1.8 × 10-9  Yes          Consensus ratio                       0.61            0.70
+Libertarian-Right    Logos   3.52        3.41       3.8 × 10-4  Yes
+Libertarian-Left     Ethos   2.58        2.38       6.2 × 10-7  Yes          Table 20: P-values from two-sided t-tests assessing
+Libertarian-Left     Pathos  3.22        3.03       9.2 × 10-7  Yes          whether debate order (first vs. second speaker) signifi-
+Libertarian-Left     Logos   3.32        3.23       5.9 × 10-3  Yes          cantly affects persona confidence scores and consensus
+Authoritarian-Left   Ethos   2.61        2.50                   Yes          ratio for GPT-4o and LLaMA-4-Maverick.
+Authoritarian-Left   Pathos  3.13        2.87       0.03        Yes
+Authoritarian-Left   Logos   3.34        3.26       5.0 × 10-7  Yes
+Authoritarian-Right  Ethos   2.64        2.57                   No
+Authoritarian-Right  Pathos  2.84        2.56       0.03        Yes
+Authoritarian-Right  Logos   3.42        3.41                   No
+                                                    0.12
+                                                    3.1 × 10-9
+
+                                                    0.86
+
+Table 18: Changes in model's mode of persuasion across
+political ideology groups between the first and final
+debate turns.
+(a) age       (b) gender
+
+(c) country   (d) social class
+
+(e) ideology  (f) big5
+
+Figure 6: Persona impact on moral foundation theory dimensions. Highlighted dimensions are statistically significant
+based on ANOVA results.
+                               4.0                                                                  Ethos        Persuasion Score (Mean ± Std)  4.0                                                                                                  Persuasion Score (Mean ± Std)  4.0
+                               3.5                                                                  Pathos                                                                                                                                                                          3.5
+Persuasion Score (Mean ± Std)  3.0                                                                  Logos                                       3.5                                                                                                                                 3.0
+                               2.5                                                                                                                                                                                                                                                  2.5
+                               2.0                                                                                                              3.0                                                                                                                                 2.0
+                               1.5                                                                                                                                                                                                                                                  1.5
+                                                                                                                                                2.5  Ethos
+                                       20                                                                                                                                                                                                                                                 Brazil
+                                                                                                                                                2.0  Pathos                                                                                                                                                                                        Ethos
+                                                                                                                                                     Logos                                                                                                                                                                                         Pathos
+                                                                                                                                                                                                                                                                                                                                                   Logos
+                                                                                                                                                     Female                                          Male                    Non-binary
+                                                     30                   40                    50  60                                                                                                                                                                                                  China       France  India         Nigeria        US
+
+                                                         (a) Age                                                                                                         (b) Gender                                                                                                                           (c) Country
+
+Persuasion Score (Mean ± Std)  4.0                                                                               Persuasion Score (Mean ± Std)  4.0                                                                                                  Persuasion Score (Mean ± Std)  4.0
+
+                               3.5                                                                                                              3.5                                                                                                                                 3.5
+
+                               3.0                                                                                                              3.0                                                                                                                                 3.0
+
+                               2.5                                                                                                              2.5  Ethos                                                                                                                          2.5
+
+                               2.0         Ethos                                                                                                2.0        Pathos                                                                                                                   2.0
+                                           Pathos                                                                                               1.5        Logos
+                                           Logos                                                                                                     Authoritarian-Left  Authoritarian-Right               Libertarian-Left  Libertarian-Right                                      1.5                                                            Ethos
+                                                                                                                                                                                                                                                                                                                                                   Pathos
+                                                                                                                                                                                                                                                                                    1.0                                                            Logos
+                                        Lower class          Middle class                           Upper class
+                                                                                                                                                                                                                                                                                          Low High Low High Low High Low High Low High
+                                                                                                                                                                                                                                                                                          Openness Conscientiousness Extraversion Agreeableness Neuroticism
+
+                                                     (d) Social Class                                                                                       (e) Political Ideology                                                                                                                (f) Big Five Personality
+
+Figure 7: The impact of persona on modes of persuasion in GPT-4o. All dimensions are statistically significant,
+except for logos scores in the country dimension.
+
+                                                                                                                                                     0.345               8.25                                                                                                                                                             0.340    0.52
+
+       600                                                                              0.52 8.5    800                                              0.340 0.50                                 500                                                                                       0.35    0.54  8.35   800                        0.335 0.51 8.25
+                                                                                  0.34 0.51 8.4                                                                                                                                                                                           0.34    0.53  8.30
+       500                                                                                      Consensus Ratio                                      0.335               8.20                   400                                                                                           Consensus Ratio0.52
+                                                                                  0.32 0.50 8.3       Self-Alignment Ratio                           0.330               8.15                                                                                                                        Self-Alignment Ratio
+
+                                                                                  0.30 0.49 8.2             Efficiency                                                                                                                                                                                       Efficiency
+                                                                                        0.48 8.1               Count                                                                                                                                                                                            Count
+
+                                                                                  0.28 0.47 8.0                                                          Consensus Ratio                                                                                                                                                                                  Consensus Ratio
+                                                                                                                                                                 Self-Alignment Ratio                                                                                                                                                                             Self-Alignment Ratio
+
+                                                                                                                                                                          Efficiency                                                                                                                                                                                       Efficiency
+       400                                                                                                                                                                               Count6000.49                                                                                     0.33    0.51  8.25   600                        0.330 0.50 8.20
+                                                                                                    400                                                                                                                                                                                   0.32    0.50  8.20
+Count                                                                                                                                                0.325 0.48                                 300                                                                                       0.31    0.49  8.15                              0.325 0.49
+                                                                                                                                                                                                                                                                                          0.30    0.48  8.10
+       300                                                                                                                                           0.320               8.10                   200                                                                                       0.29    0.47  8.05   400                        0.320    0.48                               8.15
+                                                                                                                                                                                                                                                                                                  0.46  8.00   200                        0.315                                       8.10
+       200                                                                                          200                                              0.315 0.47
+
+       100                                                                                          0 Female Male BNinoanr-y 0.310                                       8.05                   100                                                                                                                                       0.310 0.47
+
+                               0    20     30        40  50                   60                                                                                                                0 Brazil China France India Nigeria                                                 US                         0 Lower Middle Upper                                                   8.05
+
+                                                     (a) Age*                                                    (b) Gender                                                                                                  (c) Country                                                                            (d) Social Class
+
+       800                                                                                                                0.51 8.3                                       400                                                                                                                                                       0.40 0.60 9.0
+       600                                                                                                       0.36 0.50 8.2
+       400                                                                                                       0.34 0.49 8.1    Consensus Ratio                        300                                                                                                                                                       0.35Consensus Ratio0.55           8.8
+       200                                                                                                                                Self-Alignment Ratio                                                                                                                                                                                   Self-Alignment Ratio8.6
+                                                                                                                 0.32 0.48 8.0
+         0 Auth-oLreitftarian                                                                                                                     Efficiency                                                                                                                                                                                              Efficiency
+Count                                                                                                            0.30 0.47 7.9                            Count          200                                                                                                                                                       0.30 0.50 8.4
+                                                                                                    Lib-eRritgahrtian                                                                                                                                                                                                                                    8.2
+                                                                                                                                                                                                                                                                                                                                   0.25
+                                                                                                                                                                                                                                                                                                                                          0.45 8.0
+                                                                                                                                                                         100
+                                                                                                                                                                                                                                                                                                                                    0.20
+                                                                                                                                                                                                                                                                                                                            High          0.40           7.8
+
+                                                     Auth-Roirgithatrian          Libe-Lretaftrian                                                                             0 Low                       High  Low         High               Low                                 High      Low       High   Low
+                                                                                                                                                                                                Openness Conscientiousness Extraversion Agreeableness Neuroticism
+
+                                                         (e) Political Ideology*                                                                                                                                             (f) Big Five Personality*
+
+Figure 8: Persona impact on persuasion effectiveness for GPT-4o, measured by consensus ratio, self-alignment ratio,
+and efficiency. Statistically significant dimensions are marked with a * next to the title.
+                   3.2       Age*                       Gender*                                        Country*                     Social Class
+
+Mean Choice Score  2.8 2.68 2.64 2.63 2.70 2.60 2.67 2.63 2.65                              2.65 2.59 2.67 2.66 2.66 2.66           2.65 No2.P6e6rsona2:.26.563
+                   2.4
+
+                   2.0 20 30 40 50  60 Female Male BNinoanr-y Brazil China France India Nigeria US                                  Lower Middle Upper
+
+                   3.2       Political Ideology*                                                       Big Five Personality*  3.03
+
+Mean Choice Score  2.8 2.63         2.77          2.75                                      2.80 2.85             2.74              2.66 No2.P6e4rsona2:.621.63
+
+                             2.39                                                                      2.56 2.54
+
+                   2.4
+
+                   2.0AuthLoreifttarianAuthRoirgihtatrian LibeLretaftrian LibRerigtahrtian  2.07
+                                                                                            LoOwpenneHsisgh ConLsocwientioHuisgnhess LEoxwtraverHsiiognh ALgorweeableHniegshs LNoewuroticHisimgh
+
+Figure 9: Mean moral judgment scores of Claude-3.5-Sonnet across six persona dimensions. Each bar represents
+the average choice score (1 = blame the author, 5 = blame others) for a category within the corresponding dimension.
+All means are below 3, indicating a model-wide tendency to blame the author despite different personas. The mean
+moral judgment score of Claude-3.5-Sonnet without persona is 2.63. The persona groups Age, Political Ideology,
+and Big Five Personality have statistically significant impact outcomes.
+(a) Age                 (b) Gender
+
+(c) Country             (d) Social Class
+
+(e) Political Ideology  (f) Big Five Personality
+
+Figure 10: Persona impact on moral foundation theory dimensions for Claude-3.5-Sonnet. Highlighted dimensions
+are statistically significant based on ANOVA results.
+                                                                                                         0.825         5.98                                                                                            1000                                                0.4625
+                                                                                                                                                                                                                                                         0.83
+                                                        0.825 0.50        6.05  800                      0.820 0.46                                                                                         0.550 6.4                                                      0.4600 5.96
+                                                        0.820                                                                                                                                                           800                                                0.4575
+                                                             Consensus Ratio                                           5.96                                 400                                      0.82 0.525 6.3                                      0.82              0.4550 5.95
+                                                                  Self-Alignment Ratio                                                                                                               0.80 0.500 6.2
+                                                                                                                                                                                                                        600
+                                                                        Efficiency                                                                                                                          0.475 6.1
+                                                                            Count                                                                                                                    0.78 0.450 6.0                                      0.81
+                                                                                                                                                                                                     0.76 0.425 5.9     400
+       500                                              0.815 0.48 6.00                                               Consensus Ratio0.815                                                                           Consensus Ratio
+                                                                                                                              Self-Alignment Ratio                                                          0.400 5.8        Self-Alignment Ratio
+       400                                                                      600                              0.45  5.94                                 300                                      0.74
+                                                                                                                                       Efficiency0.810                                                                             Efficiency
+Count                                                   0.810                                                                                        Count5.95400                                                                     Count                                0.4525 5.94
+
+       300                                              0.805 0.46        5.90                           0.805 0.44 5.92                                    200                                                                                                                Consensus Ratio0.4500
+                                                                          5.85                                                                                                                                                                                                            Self-Alignment Ratio0.4475
+       200                                              0.800  0.44             200                      0.800 0.43 5.90                                                                                                                      0.80                                 5.93
+                                                        0.795                                                                                                                                                                                                                                   Efficiency
+                                                                                                                                                            100                                                        200                                                 0.4450 5.92
+       100
+                                                        0.790 0.42 5.80         0 Female                   0.795
+       0                                                                                  Male     BNinoanr-y                                               0 Brazil China France India Nigeria                        0 Lower Middle Upper 0.79                           0.4425
+                   20   30     40  50               60                                                                                                                                           US
+
+                               (a) Age                                                    (b) Gender                                                             (c) Country*                                               (d) Social Class
+
+       700                                                                                0.83     0.50  6.3                 350                                                                                                         0.9                               0.60 8.0
+       600                                                                                0.82     0.48                      300                                                                                                         0.8                               0.55 7.5
+       500                                                                                0.81Consensus Ratio6.2             250                                                                                                         0.7Consensus Ratio                0.50 7.0
+       400                                                                                            Self-Alignment Ratio6.1200                                                                                                         0.6           Self-Alignment Ratio0.45 6.5
+       300                                                                                                                   150                                                                                                         0.5
+Count  200                                                                                                    Efficiency     100                                                                                       Low High                                 Efficiency 0.40 6.0
+       100                                                                                                            Count   50                                                                                        Neuroticism
+                                                                                          0.80 0.46 6.0                                                                                                                                                                    0.35 5.5
+         0 Auth-oLreitftarian                                                                                                  0 Low High Low High Low High                                                                                                                0.30
+                                                                                          0.79 0.44 5.9                               Openness Conscientiousness Extraversion
+
+                                                                                          0.78 0.42 5.8
+                                                                                             0.77        5.7
+                               Auth-Roirgithatrian      Libe-Lretaftrian        Lib-eRritgahrtian                                                                                                    Low High
+                                                                                                                                                                                                     Agreeableness
+
+                                   (e) Political Ideology*                                                                                                       (f) Big Five Personality*
+
+Figure 11: Persona impact on persuasion effectiveness for Claude-3.5-Sonnet, measured by consensus ratio, self-
+alignment ratio, and efficiency. Statistically significant dimensions are marked with a * next to the title.
+
+                   3.0                 Age*                                                        Gender                                                        Country                                                     Social Class
+
+Mean Choice Score  2.8 2.73 2.75 2.71 2.71 2.64 2.71 2.69 2.71                                                                                                   2.71 2.69 2.73 2.72 2.69 2.71                              2.72 2.71 2.69
+                   2.6                                                                                                                                                                                                             No Persona: 2.61
+
+                   2.4 20 30 40 50 60 Female Male Non- Brazil China France India Nigeria US Lower Middle Upper
+                                                                               Binary
+
+                   3.0                 Political Ideology*                                                                                                       Big Five Personality*2.98
+
+Mean Choice Score  2.8                                                    2.77            2.79                               2.77 2.70                           2.75 2.73                                                   2.80
+                         2.64
+                                       2.59                                                                                                2.60                                                                        2.62                   2.64
+                   2.6                                                                                            2.51
+                                                                                                                                                                                                                             No Persona: 2.61
+
+                   2.4AuthoritarianAuthoritarian Libertarian Libertarian                                          LoOwpenneHsisgh CoLnoscwientioHuisgnhess LEoxwtraverHsiiognh ALgorweeableHniegshs LNoewuroticHisimgh
+                        Left           Right                              Left            Right
+
+Figure 12: Mean moral judgment scores of LLaMA-4-Maverick across six persona dimensions. Each bar represents
+the average choice score (1 = blame the author, 5 = blame others) for a category within the corresponding dimension.
+All means are below 3, indicating a model-wide tendency to blame the author despite different personas. The mean
+moral judgment score of LLaMA-4-Maverick without persona is 2.61. The persona groups Age, Political Ideology,
+and Big Five Personality have statistically significant impact outcomes.
+(a) Age                 (b) Gender
+
+(c) Country             (d) Social Class
+
+(e) Political Ideology  (f) Big Five Personality
+
+Figure 13: Persona impact on moral foundation theory dimensions for LLaMA-4-Maverick. Highlighted dimensions
+are statistically significant based on ANOVA results.
+                                                        0.36 0.56 8.35                                    0.335 0.495 8.275                                                                                          8.40                        0.3325 0.50 8.24
+
+                                                                                800                       0.330 0.490 8.250                                                                           0.36 0.52 8.35       800                   0.3300
+                                                            Consensus Ratio                                                                                                                                  0.50 8.30                           0.3275 0.49 8.22
+       500                                              0.35 0.54 8.30Self-Alignment Ratio                                                                   400                                                         Consensus Ratio
+                                                                                                                                                                                                      0.34 0.48 8.25            Self-Alignment Ratio
+                                                                         Efficiency                                                                                                                          0.46 8.20
+                                                                            Count                                                                                                                                                       Efficiency
+                                                                                                                                                                                                      0.32 0.44 8.15                       Count
+                                                                                                                     Consensus Ratio                                                                         0.42 8.10
+                                                                                                                             Self-Alignment Ratio                                                                                                                                      Consensus Ratio
+                                                                                                                                                                                                      0.30 0.40 8.05                                                                         Self-Alignment Ratio
+                                                                                                                                      Efficiency                                                             0.38 8.00
+                                                                                                                                                      Count                                                                                                                                           Efficiency
+       400                                              0.34 0.52 8.25          600                       0.325 0.485 8.225                                                                                                600                   0.3250 0.48
+                                                                                                                   0.480 8.200                               300                                                           400                   0.3225
+                                                              0.50        8.20                            0.320 0.475 8.175                                                                                                                                       8.20
+Count  300                                              0.33  0.48        8.15  400
+                                                        0.32  0.46        8.10                                                                               200                                                                                 0.3200 0.47 8.18
+       200                                              0.31  0.44        8.05                            0.315 0.470 8.150
+                                                                                200                                                                                                                                        200                   0.3175 0.46
+                                                                                                              0.310 0.465 8.125                              100
+       100                                                                      0 Female Male BNinoanr-y                                                                                                                                         0.3150           8.16
+                                                        0.30 0.42 8.00
+       0                                                                                                                                                     0 Brazil China France India Nigeria                           0 Lower Middle Upper          0.45
+                   20   30     40  50               60                                                                                                                                            US
+
+                               (a) Age                                               (b) Gender                                                                   (c) Country                                                   (d) Social Class
+
+       700                                                                                   0.35                                        350                                                                                    0.40                              9.0
+       600                                                                                   0.34 0.50 8.4                               300
+       500                                                                                                                               250                                                                                    0.35 0.6                          8.8
+       400                                                                                   0.33 0.48 8.3Consensus Ratio                200                                                                                    Consensus Ratio
+       300                                                                                   0.32                 Self-Alignment Ratio                                                                                                  Self-Alignment Ratio0.30 0.58.6
+       200                                                                                   0.31 0.46 8.2
+Count  100                                                                                                                Efficiency     150                                                                                                       Efficiency     8.4
+                                                                                             0.30 0.44 8.1                        Count
+         0 Auth-oLreitftarian                                                   Lib-eRritgahrtian                                        100                                                                                    0.25 0.4 8.2
+                                                                                                                                          50
+                                                                                                                                                                                                                                0.20 0.3                          8.0
+                                                                                                                                                                                                                                                                  7.8
+                                                                                                                                         0 Low High Low High Low High Low High Low High
+                               Auth-Roirgithatrian      Libe-Lretaftrian                                                                                     Openness Conscientiousness Extraversion Agreeableness Neuroticism
+
+                                   (e) Political Ideology                                                                                                         (f) Big Five Personality*
+
+Figure 14: Persona impact on persuasion effectiveness for LLaMA-4-Maverick, measured by consensus ratio,
+self-alignment ratio, and efficiency. Statistically significant dimensions are marked with a * next to the title.
+
+                   4.5                 Age*                                                               Gender*                                                 Country*                                                      Social Class*
+
+Mean Choice Score  4.0
+
+                   3.5 3.35 3.30 3.28 3.31 3.32                                       3.33 3.29 3.32                                                         3.27 3.26 3.31 3.32 3.38 3.34                                      3.36 3.29 3.29
+                   3.0 20 30 40 50 60                                                Female Male BNinoanr-y                                                  Brazil China France India Nigeria US                                       No Persona: 3.15
+
+                                                                                                                                                                                Big Five Personality*                           Lower Middle Upper
+                                                                                                                                                                                                     4.30
+                   4.5                 Political Ideology*
+
+Mean Choice Score  4.0
+
+                   3.5 3.28            3.29                               3.29       3.39                          3.04 3.30 3.35 3.17 3.20 3.35                                                                                  3.00 No3.P2e6rsona3:.235.15
+                                                                                                                   LoOwpenneHsisgh ConLsocwientioHuisgnhess LEoxwtraverHsiiognh                                          ALgorweeableHniegshs LNoewuroticHisimgh
+                   3.0AuthLoreifttarianAuthRoirgihtatrian LibeLretaftrian LibRerigtahrtian
+
+Figure 15: Mean moral judgment scores of Qwen3-235B-A22B across six persona dimensions. Each bar represents
+the average choice score (1 = blame the author, 5 = blame others) for a category within the corresponding dimension.
+All means are below 3, indicating a model-wide tendency to blame the author despite different personas. The mean
+moral judgment score of Qwen3-235B-A22B without persona is 3.15. The persona groups Age, Political Ideology,
+and Big Five Personality have statistically significant impact outcomes.
+(a) Age                 (b) Gender
+
+(c) Country             (d) Social Class
+
+(e) Political Ideology  (f) Big Five Personality
+
+Figure 16: Persona impact on moral foundation theory dimensions for Qwen3-235B-A22B. Highlighted dimensions
+are statistically significant based on ANOVA results.
+       600                                              0.40250.40 8.04                                        0.405 0.42 8.04                                                                                  0.43                                                      0.404 0.385 8.04
+                                                                                                                                                                                                                0.42 0.42 8.05                                            0.402                               8.02
+                                                                                800                            0.400  0.41      8.02                                                                                                              800
+                                                        0.40000.39 8.02 Consensus Ratio600                            0.40      8.00                                  400                                                      8.00                                       0.400 0.380 8.00
+       500                                                                  Self-Alignment Ratio                                                                                                                0.41 0.40 7.95     Consensus Ratio
+                                                                                                                                                                                                                0.40 0.38 7.90            Self-Alignment Ratio
+                                                        0.39750.38 8.00           Efficiency                   0.395 0.39                                                                                                                         600
+                                                                                      Count                                                                                                                     0.39 0.36 7.85                    Efficiency
+                                                                                                                                                                                                                                                     Count
+                                                                                                                                Consensus Ratio                                                                 0.38 0.34 7.80
+                                                                                                                                        Self-Alignment Ratio                                                                                                                                   Consensus Ratio
+                                                                                                                                                                                                                                                                                                        Self-Alignment Ratio
+                                                                                                                                                 Efficiency
+                                                                                                                                                               Count                                                                                                                                            Efficiency
+       400                                              0.39500.37 7.98                                        0.390 0.38 7.98                                        300                                                                                                 0.398 0.375 7.98
+
+Count  300                                              00..339902500.36        400                                       0.37  7.96                                  200                                                                         400                     0.396                        0.370  7.96
+                                                        0.38750.35                                               0.385 0.36     7.94                                                                                                                                      0.394
+       200                                              0.38500.34        7.96                                                  7.92                                                                                                                                                                          7.94
+                                                                          7.94  200                              0.380 0.35                                                                                                                       200                     0.392                        0.365  7.92
+       100                                                                7.92    0 Female Male          BNinoanr-y                                                   100                                                                                                 0.390
+
+       0    20  30             40  50               60                                                                                                                0 Brazil  China France India Nigeria  US                                    0 Lower Middle Upper 0.388 0.360 7.90
+
+                               (a) Age                                                             (b) Gender                                                                   (c) Country                                                            (d) Social Class
+
+       700                                                                                         0.42 0.40                           300                                                                                                                          0.42Consensus Ratio                0.450 8.2
+       600                                                                                                 0.39 8.05                   250                                                                                                                          0.40           Self-Alignment Ratio0.425
+       500                                                                                                                             200                                                                                                                          0.38                               0.400 8.1
+       400                                                                                         0.41                                150                                                                                                                          0.36                   Efficiency
+       300                                                                                                 0.38 8.00                   100                                                                                                        Low High                                             0.375 8.0
+Count  200                                                                                             Consensus Ratio                  50                                                                                                         Neuroticism                                         0.350
+       100                                                                                                     Self-Alignment Ratio                                                                                                                                                                    0.325 7.9
+                                                                                                                                         0 Low High Low High Low High
+         0 Auth-oLreitftarian                                                                                           Efficiency              Openness Conscientiousness Extraversion                                                                                                                0.300 7.8
+                                                                                                                                Count                                                                                                                                                                  0.275
+                                                                                                   0.40 0.37 7.95
+
+                                                                                                   0.39  0.36  7.90
+                                                                                                         0.35
+                                                                                                   0.38
+                               Auth-Roirgithatrian      Libe-Lretaftrian        Lib-eRritgahrtian                                                                                                                                  Low High
+                                                                                                                                                                                                                                   Agreeableness
+
+                                   (e) Political Ideology                                                                                                                       (f) Big Five Personality
+
+Figure 17: Persona impact on persuasion effectiveness for Qwen3-235B-A22B, measured by consensus ratio,
+self-alignment ratio, and efficiency. Statistically significant dimensions are marked with a * next to the title.
+
