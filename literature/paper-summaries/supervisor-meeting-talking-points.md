@@ -1,4 +1,4 @@
-# Supervisor meeting — talking points (last two weeks)
+# FYP meeting — findings (last two weeks)
 
 Speaking notes drawn from five papers most relevant to the FYP. The first column gives each
 paper's number, which is also the start of its summary file's name in this folder:
@@ -182,15 +182,3 @@ Rahim's five styles sit on two dimensions, **concern for self** and **concern fo
 - The one direct measurement from the wider search (Rapos et al. 2021, *Gait & Posture*;
   abstract only) found **young walkers do more of the avoiding when meeting an older walker**.
   That is the opposite of `run01`'s "elderly yield at least as much as young adults".
-
----
-
-## Part 5 — Questions for my supervisor
-
-1. Should the next experiment be the **equal-priority doorway with only the personas varied**?
-2. Should Phase 1 be re-run on a **second model**? One paper from the wider search found the
-   gender effect flipping direction between models.
-3. Is the target **realism** (match real people, even where groups differ) or **fairness**?
-   This decides whether any debiasing belongs in the pipeline.
-4. Is labelling LLM transcripts with Rahim's five styles acceptable, given the instrument was
-   never validated for coding conversations?
