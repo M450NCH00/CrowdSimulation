@@ -1,0 +1,1014 @@
+Article
+
+Evaluating Fairness in LLM Negotiator Agents via Economic
+Games Using Multi-Agent Systems
+
+Ahmad Mouri Zadeh Khaki 1,* and Ahyoung Choi 2,*
+
+                                        1 Mechanical Engineering Research Institute, Korea Advanced Institute of Science and Technology,
+                                           Daejeon 34141, Republic of Korea
+
+                                        2 Department of AI and Software, Gachon University, Seongnam-si 13120, Republic of Korea
+                                        * Correspondence: ahmadmouri@kaist.ac.kr (A.M.Z.K.); aychoi@gachon.ac.kr (A.C.); Tel.: +82-31-750-8656 (A.C.).
+
+                                        Abstract
+
+                                        With the surge of artificial intelligence (AI) systems, autonomous Large Language Model
+                                        (LLM)-based negotiator agents are being developed to negotiate on behalf of humans,
+                                        particularly in commercial contexts. In human interactions, marginalized groups, such as
+                                        racial minorities and women, often face unequal outcomes due to gender and social bi-
+                                        ases. Since these models are trained on human data, a key question arises: do LLM-based
+                                        agents reflect existing biases in human interaction in their negotiation strategies? To ad-
+                                        dress this question, we investigated the impact of such biases in one of the most advanced
+                                        LLMs available, ChatGPT-4 Turbo, by employing a buyer­seller game approach using
+                                        male and female agents from four racial groups (White, Black, Asian, and Latino). We
+                                        found that when either the seller or buyer is aware of the gender and race of the other
+                                        player, they secure more profit compared to when negotiations are gender- and race-
+                                        blind. Additionally, we examined the influence of conditioning buyer agents to improve
+                                        their negotiation strategy by prompting them with additional persona. Interestingly, we
+                                        observed that such conditioning can mitigate LLM-based agents' biases, suggesting a way
+                                        to empower underrepresented groups to achieve more equitable outcomes. Based on the
+                                        findings of this study, while LLM-generated text may not exhibit explicit biases, hidden
+                                        gender and social biases in the training data can still lead to skewed outcomes for users.
+                                        Therefore, it is crucial to mitigate these biases and prevent their transfer during dataset
+                                        curation to ensure fair human­agent interactions and build user trust.
+
+                                        Keywords: autonomous agents; fairness; game theory; large language model (LLM);
+                                        multi-agent systems
+
+Academic Editors: Jiangping Hu and      MSC: 68T42
+Zhinan Peng
+                                        1. Introduction
+Received: 10 December 2025
+Revised: 24 January 2026                      These days, large language models (LLMs) are widely used to build agents that can
+Accepted: 27 January 2026               carry out numerous tasks based on predefined objectives by perceiving environments,
+Published: 28 January 2026              planning, and taking actions autonomously in a vast range of applications benefiting from
+                                        their remarkable capabilities [1]. Since the advent of LLMs, many researchers have been
+Copyright: © 2026 by the authors.       trying to improve these agents from technical and practical points of view in terms of
+Licensee MDPI, Basel, Switzerland.      robustness and efficacy. As a results, many LLM-based agents have been presented that
+This article is an open access article  can handle complex tasks which demand planning, decision-making, and interaction with
+distributed under the terms and
+conditions of the Creative Commons
+Attribution (CC BY) license.
+
+Mathematics 2026, 14, 458               https://doi.org/10.3390/math14030458
+Mathematics 2026, 14, 458                                                                                                                                            2 of 20
+
+                           humans [2,3]. Among broad potential applications, negotiation for financial purposes such
+                           as buying/selling a product [4], donation [5], or auction participation [6] is a key application
+                           of these agents that not only aligns well with the capability of LLMs, but also can assist
+                           businesses and companies provide their services more efficiently and conveniently.
+
+                                 Beyond interactive decision-making tasks, LLMs have also demonstrated strong
+                           zero-shot performance in domains such as safety-critical detection systems (e.g., zero-shot
+                           fire detection) [7], further underscoring the importance of evaluating fairness, robustness,
+                           and trustworthiness across a wide range of LLM-enabled applications.
+
+                                 Negotiation for buying/selling a product is a fundamental task for humans' daily life.
+                           Therefore, while many researchers have been studying negotiation skills such as bargain-
+                           ing and planning based on theoretical foundations of behavioral psychology, business,
+                           and communication [8], a tremendous amount of research in the engineering field has
+                           thrived on transferring those skills to LLM-based agents by training and fine-tuning them
+                           to enhance their efficiency [9]. Subsequently, the mindset and even stereotypes of negoti-
+                           ators during the training and fine-tuning process are highly likely to be reflected in the
+                           generated context of LLM-based agents. As a result, users of these agents may experience
+                           unequal outcomes or treatment due to biases inherited from training datasets [10]. For
+                           instance, in the autonomous LLM-based seller agent application, we are concerned that,
+                           when aware of the user's gender and race, the agent may adopt stereotypical attitudes
+                           regarding the users' social group in conversations and even attempt to sell a product at a
+                           higher price to underrepresented groups, e.g., racial minorities and women. However, by
+                           first identifying the origins and signs of such undesirable discrimination and then miti-
+                           gating it appropriately in the agents' code, equal outcomes and treatments can be ensured
+                           for all users, regardless of their social groups, which is referred to as fairness.
+
+                                 The concern of discrimination against underrepresented groups necessitates a com-
+                           prehensive and reliable evaluation of artificial intelligence (AI) bias and fairness [11,12].
+                           In particular, for LLMs, bias and fairness have been widely quantified and demonstrated
+                           across many applications [13­15]. Atwood et al. have measured fairness of LLM-based
+                           classifiers on a toxicity classification task, and empirically show that prompt-based classi-
+                           fiers may lead to unfair decisions [16]. Several studies have examined gender bias in word
+                           embeddings, a widely used model for representing text data as vectors [17,18]. In a com-
+                           mercial context, Kirk et al. investigated the pertinent biases of occupational associations
+                           in ChatGPT, demonstrating both racial and gender biases [19]. While these studies have
+                           explored various aspects of agent behavior, they lack an evaluation of the chain-of-
+                           thought (CoT) reasoning of LLMs. Analyzing the CoT of LLM agents can provide valuable
+                           insights for identifying irrational behavior and social biases in their planning and deci-
+                           sion-making processes [20]. Additionally, these studies rely solely on single-sided text
+                           generation by LLMs, which limits their applicability to commercial negotiations, a funda-
+                           mentally interactive activity.
+
+                                 Recently, multi-agent platforms combined with game-theoretic formulations have
+                           emerged in which two or more agents engage in structured interactions or "games" de-
+                           fined by explicit negotiation protocols or mechanisms. While such platforms often operate
+                           under predefined rules in controlled settings, agents may function in partially unknown
+                           environments and rely on adaptive or learning-based strategies more generally. Within
+                           these frameworks, agents may adopt either distributive or integrative negotiation roles,
+                           and their performance is evaluated against predefined objectives [21]. For example, in a
+                           buyer­seller game, two LLM agents--a seller and a buyer--negotiate over the price of a
+                           specific item. The seller aims to sell the object at the highest possible price, while the buyer
+                           seeks to purchase it at the lowest cost, with both agents strategically adjusting their offers
+                           to reach an agreement or decide not to trade. Li et al. recently developed a multi-agent
+                           system (MAS) that simulates a jury-style debate to evaluate and improve fairness in LLMs
+
+                                                                                                                              https://doi.org/10.3390/math14030458
+Mathematics 2026, 14, 458                                                                                                                                            3 of 20
+
+                           [22]. While their work focuses on role-based discussion and deliberation among agents,
+                           our study introduces a buyer­seller negotiation framework that more directly models
+                           real-world commercial interactions. In contrast to abstract deliberations, our setup allows
+                           for a quantitative assessment of negotiation outcomes (e.g., profit margins) and behavioral
+                           dynamics under varying demographic awareness scenarios. Furthermore, we analyze the
+                           agents' CoT reasoning interpretatively and illustratively to detect subtle biases and pro-
+                           pose conditioning strategies to mitigate unfair outcomes--dimensions not explored in
+                           [22]. These distinctions make our study a novel contribution to fairness evaluation in
+                           LLM-driven MASs.
+
+                                 This article empirically examines fairness in LLM-based negotiator agents within a
+                           MAS framework for commercial interactions. Using ChatGPT-4 Turbo, a state-of-the-art
+                           LLM, we implement a buyer­seller game to evaluate fairness across various awareness
+                           and demographic scenarios. The study provides a quantitative assessment of negotiation
+                           outcomes under dynamic conditions and includes an intersectional fairness analysis of
+                           male and female LLM agents from four racial groups: White, Black, Asian, and Latino.
+                           Additionally, we analyze the agents' CoT reasoning to uncover how social biases influ-
+                           ence their decision-making, potentially leading to unequal outcomes across subpopula-
+                           tions. Figure 1 illustrates the pipeline of our study.
+
+                           (a) Prompt engineering  (b) Negotiations  (c) Result analysis
+
+                           Figure 1. Evaluating fairness in LLM-based agents employing buyer­seller game approach: (a) Chatgpt4-
+                           turbo is imbued with rules and beliefs to play the game of buyer­seller negotiation by prompt engineer-
+                           ing; (b) negotiations are run until the players either reach an agreement or reject it up to 10 turns; and (c)
+                           profit margin of sellers and buyers for several social groups are provided and compared.
+
+                                 While prior work has shown that LLMs can exhibit unfairness across various tasks,
+                           our study advances the field by focusing on dynamic and interactive negotiation settings.
+                           We move beyond static evaluation by investigating how biases affect negotiation strate-
+                           gies, outcomes, and reasoning pathways through CoT analysis. Furthermore, we perform
+                           intersectional subgroup evaluations and explore conditioning strategies as practical inter-
+                           ventions to mitigate these biases. These contributions enable deeper insights and actiona-
+                           ble recommendations for fair deployment of LLM-based agents in real-world decision-
+                           making contexts. In this work we answer the following questions:
+
+                           · Do LLM-based negotiation agents exhibit demographic bias (e.g., gender or racial
+                                 bias) in interactive negotiation settings?
+
+                           · How social and gender biases emerge in seller­buyer negotiations?
+                           · Can persona-based conditioning serve as a practical intervention to mitigate such bi-
+
+                                 ases and improve outcomes for underrepresented groups?
+
+                                 This study highlights the critical importance of informing users about the potential
+                           for discrimination when interacting with autonomous LLM-based agents. Additionally, it
+                           underscores the importance of establishing reliable policies for handling users' personal
+                           information to prevent discriminatory outcomes. Finally, the presence of gender and
+
+                                                                     https://doi.org/10.3390/math14030458
+Mathematics 2026, 14, 458                                                                                                                                            4 of 20
+
+                           social biases in LLM-based agents necessitates the exploration of effective mitigation strat-
+                           egies to enhance user trust and ensure fairness.
+
+                                 The rest of the paper is organized as follows. A brief review of related work is pro-
+                           vided in Section 2. Section 3 describes our methodology and experimental setup of a
+                           multi-agent framework. Results are presented and analyzed in Section 4. Section 5 pre-
+                           sents a detailed discussion of the findings, including key insights and future directions.
+                           Finally, Section 6 concludes the paper.
+
+                           2. Related Work
+
+                                 While prior studies have examined bias and fairness in LLMs using classification
+                           tasks, static text generation, or abstract deliberative settings, our work advances this liter-
+                           ature in several key ways. Existing studies primarily evaluate fairness in single-shot or
+                           non-interactive scenarios and rarely analyze the strategic dynamics of economic decision-
+                           making. In contrast, this article investigates fairness in a fully interactive buyer­seller ne-
+                           gotiation task, enabling quantitative analysis of outcomes such as profit margins and con-
+                           cession behavior. Moreover, unlike prior work that focuses on model outputs alone, we
+                           analyze chain-of-thought reasoning to interpret how demographic information influences
+                           strategic decisions. Finally, we conduct an intersectional evaluation across gender and
+                           race and explore persona-based conditioning as a practical, user-level intervention, which
+                           has not been systematically examined in prior multi-agent fairness studies.
+
+                           2.1. Evaluating Fairness in LLM Agents Using MAS
+
+                                 MASs have recently shown great potential for assessing how LLM-based negotiator
+                           agents perform when engaging in negotiation scenarios. The effectiveness of this ap-
+                           proach increases significantly when paired with CoT analysis, which allows developers
+                           to examine the logic underlying each decision made by LLM-based negotiator agents,
+                           leading to better overall performance [23].
+
+                                 Li et al. recently developed a MAS that simulates a real jury process to evaluate and
+                           improve fairness in LLMs. The system automatically identifies relevant roles based on the
+                           discussion topic and assigns these roles to different agents who then participate in a struc-
+                           tured debate. This approach enables the extraction of more comprehensive and detailed
+                           perspectives on fairness issues from the simulated jury members [22].
+
+                                 Davidson et al. examined how well LLMs can understand game rules and stick to
+                           established goals [24]. The MetaAgents framework [25] uses a mock job fair environment
+                           to test agents' skills in processing information, finding relevant data, and working to-
+                           gether effectively. Results indicate that these agents demonstrate strong abilities in com-
+                           prehending work processes, identifying appropriate collaborators, and distributing re-
+                           sponsibilities efficiently.
+
+                                 The Humanoid Agents platform [26] focuses on developing agents that mirror hu-
+                           man thinking patterns, communication styles, and behavioral tendencies. These systems
+                           incorporate reasoning capabilities influenced by fundamental human drivers such as sur-
+                           vival needs, emotional responses, and social connections. Zhang et al. investigated
+                           whether MASs powered by LLMs could successfully reproduce the collaborative prob-
+                           lem-solving abilities found in human groups [27].
+
+                           2.2. Exploring Behavior of LLM Agents in Economic Games
+
+                                 Mathematical economics includes game theory, which studies how decision-makers
+                           with specific preferences choose actions to reach their desired results. This makes it par-
+                           ticularly useful for examining MASs where individual agents act in their own interests.
+
+                                 Many scholars have applied game theory principles to study how LLM agents be-
+                           have and perform in economic situations. For instance, Noh and Chang investigated how
+
+                                                                                                                              https://doi.org/10.3390/math14030458
+Mathematics 2026, 14, 458                                                                                                                                            5 of 20
+
+                           LLM agents with different personality traits based on the OCEAN model negotiate re-
+                           source trades according to their predetermined preferences, helping to understand risk
+                           assessment and fairness in agent-to-agent bargaining [28]. Chen et al. created Aucarena
+                           [6], a testing environment that assesses how well LLM agents manage resources and risks
+                           while measuring their strategic planning and execution capabilities during auctions.
+
+                                 Sreedhar and Chilton showed that language models can replicate human decision-mak-
+                           ing patterns when given specific behavioral profiles (either self-interested or equitable) in the
+                           ultimatum game--a scenario where one participant proposes how to split money and the
+                           other decides whether to accept the division or leave both parties empty-handed [29].
+
+                                 Additionally, NegotiationArena [21] serves as a comprehensive multi-agent simula-
+                           tion platform that models LLM agents' negotiations across three different economic sce-
+                           narios: ultimatum games, resource trading, and buyer­seller interactions. This flexible
+                           system enables researchers to observe social dynamics and detect when agents make il-
+                           logical decisions.
+
+                           3. Methodology
+
+                           3.1. MAS Development
+
+                                 In this study, we use the term MAS in the general sense of multiple autonomous LLM
+                           agents interacting within a shared environment, each pursuing its own objective. Unlike
+                           cooperative MAS settings with a shared system-level goal, the buyer and seller agents in
+                           our framework have competing objectives and interact through a structured negotiation
+                           protocol. This interaction-based MAS formulation is standard in game-theoretic and ne-
+                           gotiation-oriented multi-agent research and is appropriate for analyzing strategic behav-
+                           ior and fairness in competitive settings.
+
+                                 The seller­buyer negotiation game is selected as the evaluation framework because
+                           it offers a controlled yet expressive setting for studying fairness in interactive decision-
+                           making. The game naturally links the agents' strategic choices--such as initial offers, con-
+                           cessions, and acceptance decisions--to measurable outcomes (i.e., profit margins), ena-
+                           bling quantitative assessment of differential treatment across demographic groups. In ad-
+                           dition, buyer­seller negotiations are a canonical economic game and a realistic abstraction
+                           of many real-world commercial interactions, making them well-suited for analyzing bias,
+                           negotiation dynamics, and chain-of-thought reasoning in LLM-based agents.
+
+                                 In this study, we implement a seller­buyer negotiation game within a MAS frame-
+                           work adapted from the recent state-of-the-art NegotiationArena platform [21]. The MAS
+                           consists of two autonomous, interactive, LLM-based agents--a seller agent (Player Red)
+                           and a buyer agent (Player Blue)--each instantiated as a role-conditioned instance of
+                           ChatGPT-4 Turbo. At initialization, the seller agent is assigned private knowledge of the
+                           production cost of the product, while the buyer agent is assigned private knowledge of its
+                           maximum willingness to pay. Both agents are imbued with role-specific goals (maximize
+                           profit for the seller, minimize expenditure for the buyer), constraints, and chain-of-
+                           thought prompting instructions to reason step-by-step before making each decision.
+
+                                 Negotiations proceed in a turn-based loop of up to 10 turns, starting with the seller
+                           agent making an initial price offer. The agents may propose counteroffers or choose to
+                           accept/reject at any turn. Following [30,31], we introduce a fixed positive gap between the
+                           agents' target values--production cost set at $40 and willingness to pay set at $60--to
+                           increase the likelihood of successful agreements. We simulate 20 independent games for
+                           each experimental scenario. Under these settings, all negotiations concluded with a suc-
+                           cessful deal, with no instances of mutual rejection. A schematic of the MAS architecture,
+                           including agent definitions, roles, private knowledge, and interaction flow, is provided in
+                           Figure 2 to clarify the structure and operation of the system.
+
+                                                                                                                              https://doi.org/10.3390/math14030458
+Mathematics 2026, 14, 458                                                                                                                                            6 of 20
+
+                                 ChatGPT-4 is widely recognized for its strong adherence to structured game instruc-
+                           tions while free-tier LLMs such as Gemini hardly can follow them, as demonstrated in
+                           prior works [21,24]. In this study, we selected ChatGPT-4 Turbo due to its advanced ca-
+                           pabilities in generating coherent negotiation strategies and reasoning processes for all
+                           buyer and seller agents based on three considerations: (1) its proven reliability and robust-
+                           ness in multi-turn, rule-based negotiation tasks; (2) stable API access during our data col-
+                           lection period (October 2024), enabling controlled simulation runs without interruption;
+                           and (3) a deliberate focus on establishing and validating our methodological framework
+                           before extending it to other models. The conversational data were generated with a tem-
+                           perature of 0.7 and a maximum token limit of 400. While alternative LLMs such as Gemini,
+                           Qwen, and LLaMA could provide valuable comparative perspectives, their API usage limita-
+                           tions and deployment requirements would pose practical constraints on our experiments.
+                           Consequently, the scope of our current claims is restricted to ChatGPT-4 Turbo, and broader
+                           model comparisons are identified as an important direction for future research.
+
+                                 We examine fairness within the buyer­seller game across three awareness scenarios:
+                           (1) when the seller is provided with information about the buyer's gender and race, (2)
+                           when the buyer has similar information about the seller, and (3) when both players are
+                           aware of each other's gender and race. In all scenarios, the results are compared to a gen-
+                           der/race-blind baseline to highlight the impact of gender and racial biases on negotiations.
+                           Finally, we investigate the influence of conditioning buyer subpopulations on their per-
+                           formance by enhancing their negotiation strategies to overcome biases when seller is
+                           aware of the buyer's gender and race.
+
+                                 In our study, we consider profit margin of the seller/buyer, which is defined as the
+                           difference between the final agreed price (FAP) of the product sold and target price of
+                           players as the main evaluation metric.
+
+                                 Furthermore, to identify gender and social biases we carefully analyze two critical
+                           factors related to players' behavior and planning in negotiations: (1) offers from the seller
+                           (os) and the buyer (ob), and (2) number of negotiation turns (n). To specify the turn in which
+                           the offer is made, they are denoted as os,n and ob,n n  + for the seller and buyer, respec-
+                           tively. Since the seller starts the game with an initial offer, n is odd when it is the seller's
+                           turn. Subsequently, we find the correlation between the final agreed price and these fac-
+                           tors by measuring Spearman correlation coefficient (). In addition to analyzing the re-
+                           sults, to discover and understand how the LLM applies social biases in the negotiations
+                           that leads to unequal payoffs, we examine reasoning and planning pathways of agents
+                           through CoT. Figure 2 depicts an example of negotiation illustrating the format of agents'
+                           interaction including their messages and reasoning.
+
+                                 To minimize hallucinations and remind agents of their beliefs, each agent has to state
+                           certain information, such as their goals and resources, at every iteration of the game. Ad-
+                           ditionally, the agents provide the reasoning for each action, which allows us to analyze
+                           the CoT of the agents. Specifically, agents are instructed to "reason step by step", which
+                           is a standard CoT prompting technique used to elicit intermediate reasoning before taking
+                           action [20]. The prompt requires agents to explain their rationale at every negotiation turn,
+                           which not only encourages step-by-step reasoning but also enables us to analyze how de-
+                           mographic information influences the agent's decision-making. However, the reasoning
+                           and objective of each player are hidden from the other player to prevent influencing the
+                           negotiation. These reasoning traces are qualitatively analyzed to interpret negotiation
+                           strategies and to identify the origins of demographic bias in offers, concessions, and ac-
+                           ceptance behavior. CoT analysis in this study is used as an interpretive mechanism rather
+                           than as a quantitative evaluation metric.
+
+                           https://doi.org/10.3390/math14030458
+Mathematics 2026, 14, 458                                                                                7 of 20
+
+                           Figure 2. An example of negotiation between the seller and buyer (Baseline).
+
+                                 To inform the agents about the gender and race of the other player we prompt them
+                           with "The other player is a(an) White/Black/Latino/Asian Male/Female" based on the sce-
+                           nario to be investigated.
+
+                           3.2. Result Presentation and Statistics
+
+                                 For each of the three awareness scenarios, the game was simulated 20 times across
+                           all nine gender/race permutations (including a baseline condition). This approach resulted
+                           in a total of 540 individual game runs (9 gender/race cases × 3 awareness scenarios × 20
+                           repetitions). The results were analyzed by calculating a 95% confidence interval (Equation
+                           (1)) to measure the statistical significance of observed outcomes with descriptive
+                           measures. Only negotiations that resulted in an agreement between players were consid-
+                           ered in the analysis. Data on price offers, agreement rates, and any other relevant negoti-
+                           ation metrics were collected and examined. Outliers were removed to ensure accuracy in
+                           the analysis. This approach allows for a robust comparison of negotiation behaviors across
+                           different price/demographic scenarios.
+
+                                                                    CI = µ ± 0.975,-1.,                  (1)
+
+                                                                                         https://doi.org/10.3390/math14030458
+Mathematics 2026, 14, 458                                                                                                                                            8 of 20
+
+                           where µ is the samples mean, t is the critical value of the Student's t-distribution corre-
+                           sponding to the 95% confidence level with n - 1 degrees of freedom, s is standard devia-
+                           tion, and n is number of samples.
+
+                           4. Results
+
+                           4.1. When Seller Has Been Informed About Gender and Race of the Buyer
+                                 This scenario examines how a seller's awareness of a buyer's gender and race affects
+
+                           their profit margin, while the buyer has no information about the seller. Figure 3 shows
+                           the seller's profit margin in negotiations with buyers from six subpopulations (two gen-
+                           ders and four races), along with a baseline case where neither party knows the other's
+                           gender or race. The results indicate that the seller's profit margin increases when the buyer
+                           belongs to an underrepresented group. For example, the seller sold a product to a Latino
+                           buyer for $45.75, resulting in the highest profit margin compared to other racial groups
+                           ($5.75). In contrast, the product was sold to a White buyer for $1.03 less, resulting in the
+                           lowest seller profit ($4.72). The seller's profit margin was $5.12 and $5.30 when selling to
+                           Black and Asian buyers, respectively--higher than for White buyers but lower than for
+                           Latino buyers. Additionally, sellers achieved higher profits when dealing with female
+                           buyers compared to male buyers ($5.47 vs. $4.97). The results for intersectional groups
+                           followed a similar trend (as shown in Figure 3b). However, in none of the negotiations
+                           with social groups the seller achieves a higher profit than in the baseline case ($5.85).
+
+                           (a)  (b)
+
+                                                                     (c)
+
+                           Figure 3. Seller profit margin when it has been informed about gender and race of the buyer: (a)
+                           buyers' subpopulations; (b) buyers' intersectional groups and (c) distributive illustration.
+
+                                                                                                                              https://doi.org/10.3390/math14030458
+Mathematics 2026, 14, 458                                                                                                                                            9 of 20
+
+                                 In fact, the buyer­seller game is a distributive game where one player's profit is the
+                           other player's loss and vice versa [24]. In order to further illustrate the results from dis-
+                           tributive perspective, we plotted the profit margins of both the seller and buyer against
+                           each other (as shown in Figure 3c). The plot intuitively shows the relative advantage of
+                           each subpopulation for each player. It can be seen in the figure that while baseline, Latino
+                           and female buyers tend to benefit sellers more, White, male, and Black buyers tend to
+                           result in less advantage for sellers. Nonetheless, Asian buyers appear to be approximately
+                           in the middle.
+
+                                 Table 1 presents the average of FAP, initial offers from sellers (os,n = 1), counteroffers
+                           from buyers (ob,n = 2) and number of negotiation turns (nAv) for subpopulations when the
+                           seller is aware of the other player's gender and race. We found that there is a tremen-
+                           dously strong correlation between the FAP and os,n = 1 with very high Spearman correlation
+                           coefficient ( = 0.84, p < 0.001), implying that the seller's initial offer is a critical factor for
+                           determining the FAP. As a matter of fact, the seller can achieve a higher payoff by adjust-
+                           ing their initial offer price. Correspondingly, it can be seen in the Table 1 that the values
+                           of os,n = 1 for subgroups align with the seller's profit margin in negotiation with different
+                           social groups (Figure 3). For example, the seller starts the game with a higher initial offer
+                           in negotiations with female buyers ($48) than their male counterparts ($47.62), which re-
+                           sults in $0.50 more profit for sellers. Moreover, they offer the object for $0.38 more in ne-
+                           gotiation with Latino buyers compared to their White counterparts, leading to $1.03 more
+                           profit. Surprisingly, we can see that the difference between the FAP is greater than of the
+                           os,n = 1 in this case, in spite of higher ob,n = 2. By analyzing the negotiations in depth, we real-
+                           ized that although the ob,n = 2 demonstrate an extremely strong correlation with FAP ( =
+                           0.89, p < 0.001), sellers not only often insist on their initial offer, but also increase their offer
+                           (os,n + 2 > os,n) in some cases, which can lead to higher negotiation turns. Accordingly, we
+                           measured the  = -0.24, p = 0.001, which demonstrates a negative correlation between nAv
+                           and FAP in this scenario.
+
+                                 It is important to note that in examining the reasoning of seller agents across different
+                           demographic scenarios, no explicit signs of discrimination and social biases are evident in
+                           the generated text by LLM-based agents. For example, when sellers begin negotiations
+                           with either male or female buyers, they typically propose an offer with a positive margin
+                           to secure favorable outcomes based on their goals (e.g., "I'm initiating with a proposal that
+                           aims to cover my costs and provide a reasonable profit margin. Since the production cost of the
+                           object was $40, asking for $50 takes into account both the recovery of my investment and a profit
+                           to justify the sale. This initial proposal also allows room for negotiation." or "I am initiating the
+                           first proposal with a reasonable markup to cover the production cost and to potentially gain profit.
+                           I am starting with a proposal of $50 which includes a 25% markup on my production cost, assum-
+                           ing that the buyer might negotiate the price down."). However, we observed in the results that
+                           sellers more frequently propose lower offers when negotiating with male buyers com-
+                           pared to their female counterparts, despite following the same reasoning pathway. Spe-
+                           cifically, in 58.75% of the games with male buyers, sellers begin negotiations with an initial
+                           offer of $50, while this value is used in 62.5% of the games with female buyers. Addition-
+                           ally, in 6.25% of the games with male buyers, sellers begin negotiations with an initial
+                           offer equal to their production cost ($40), whereas this occurs in only 2.5% of the games
+                           with female buyers. A similar trend was also observed among different racial groups,
+                           aligning with the outcomes shown in Figure 3 and Table 1. For example, while in 5% of
+                           negotiations with White buyers the seller starts the game with an offer of $40, this never
+                           occurs in games with Latino buyers. However, this behavior is observed in 1.25% and
+                           2.5% of negotiations with Asian and Black buyers, respectively. In such cases, the consid-
+                           eration of a positive margin diminishes in the reasoning of the sellers (e.g., "Starting the
+
+                                                                                                                              https://doi.org/10.3390/math14030458
+Mathematics 2026, 14, 458                                                     10 of 20
+
+                           game with a proposal that reflects the production cost of the resource. This initial trade proposal
+                           aligns with my goal to recover at least the production cost.").
+
+                           Table 1. The average of final agreed price, initial offers from sellers, counteroffer from buyers, and
+                           number of negotiation turns when the seller is aware of the gender and race of the other player.
+
+                           Baseline      os,n = 1      ob,n = 2      nAv        FAP ($)
+                             Male    48.50 ± 1.10  43.55 ± 0.98  4.20 ± 0.19  45.85 ± 1.01
+                           Female    47.62 ± 0.68  42.84 ± 0.71  4.30 ± 0.14  44.97 ± 0.70
+                            White    48.00 ± 0.60  43.41 ± 0.63  4.30 ± 0.14  45.47 ± 0.66
+                            Black    47.62 ± 1.08  42.47 ± 1.13  4.55 ± 0.21  44.72 ± 1.12
+                            Asian    47.75 ± 0.88  42.80 ± 0.87  4.25 ± 0.15  45.12 ± 0.96
+                            Latino   47.72 ± 0.95  43.10 ± 0.98  4.22 ± 0.18  45.30 ± 0.96
+                                     48.00 ± 0.79  43.65 ± 0.85  4.17 ± 0.24  45.75 ± 0.87
+
+                           4.2. When Buyer Has Been Informed About Gender and Race of the Seller
+
+                                 In this scenario, while the buyer is aware of the seller's gender and race, the seller has
+                           no information about the buyer. This scenario aims to examine the influence of buyer's
+                           awareness on their profit margin. As described, the seller starts the game by proposing an
+                           initial offer the value of which might vary in each iteration of game which results in di-
+                           vergent final prices. Hence, in order to have a fair comparison by highlighting the role of
+                           the buyer we prompt the seller to start the game with preset initial offer value of $50 in
+                           this scenario. The buyer's profit margin in negotiations with sellers from subpopulations
+                           and baseline case has been shown in Figure 4. In contrast to the previous scenario, the
+                           aware player (buyer) can achieve more than the baseline case ($12.40) in negotiations with
+                           all subpopulations, which underlines the relative benefit of awareness in this game for
+                           buyers over sellers. While the buyer can benefit more from a female seller than a male
+                           seller, the difference in their profit margin is negligible ($12.56 vs. $12.57). However, the
+                           impact of race on profit margin is more observable, as can be seen in Figure 4a. The small-
+                           est profit margin belongs to the case of White opponent with $12.42. In contrast, the buyer
+                           is able to buy the product from an Asian seller with the lowest price compared to other
+                           subpopulations, which results in the highest profit margin ($12.72). Latino and Black
+                           sellers, with a small difference ($12.55 and $12.57, respectively) are in the middle of the
+                           extreme cases. As shown in Figure 4b, male sellers across all intersectional groups exhibit
+                           similar trends. However, unlike male sellers, Black female sellers ($12.65) offer greater
+                           benefits to buyers than Latina female sellers ($12.55). Additionally, along with White fe-
+                           male sellers, they are subpopulations that demonstrate higher payoffs compared to their
+                           male counterparts. While both Latino male and female sellers offer equal payoffs to buy-
+                           ers, Asian male sellers ($12.80) are the only group whose payoffs exceed those of their
+                           female counterparts ($12.65).
+
+                                 To intuitively demonstrate the relative benefit of each social group for each player
+                           from a distributive perspective, we plotted the profit margins of seller and buyer against
+                           each other (Figure 4c) for this scenario as well. Comparing this figure with Figure 3c, it
+                           can be seen that having no information about the opponent has relatively more benefit for
+                           sellers. Also, whether the seller or buyer, the White opponent results in the least profit
+                           margin for the aware player, which highlights the impact of social biases on the players'
+                           outcome. The other subgroups occupied the middle of the distributive line.
+
+                                                                 https://doi.org/10.3390/math14030458
+Mathematics 2026, 14, 458            11 of 20
+
+                           (a)  (b)
+
+                                                                     (c)
+
+                           Figure 4. Buyer profit margin when the buyer agent has been informed about the gender and race of the
+                           seller: (a) buyers' subpopulations; (b) buyers' intersectional groups; and (c) distributive illustration.
+
+                                 Strong correlation between os,n = 1 and FAP suggests that the seller starts negotiations
+                           when buyer is informed about the other player's social group with a fixed initial offer
+                           price of $50, which is in the middle of seller's production cost and buyer's willingness to
+                           pay. This allows us to perform a fair analysis to the results by highlighting the role of
+                           buyer regardless the initial offer value. Table 2 provides the average FAP, os,n = 1, ob,n = 2 and
+                           nAv for this scenario. As can be seen, the buyer counters the seller's initial offer with lower
+                           value for male buyers ($44.94) than their female counterparts, as well as for Asian buyers
+                           ($44.87) in comparison with other races. For other social groups, we observe a similar
+                           counter offer of $45. We measured the  = 0.14, p = 0.05 and  = -0.63, p < 0.001 for ob,n = 2
+                           and nAv, respectively, in this scenario. The lower  value for ob,n = 2 compared to previous
+                           scenario is due to the fixed initial offer, which constrains the buyer's counteroffer within
+                           a narrower range. However, the stronger negative correlation between nAv and FAP in this
+                           setup indicates that when buyers are aware of the seller's gender and race, they persist in
+                           bargaining and stand by their counteroffers.
+
+                                                                                                                              https://doi.org/10.3390/math14030458
+Mathematics 2026, 14, 458                                                   12 of 20
+
+                           Table 2. The average of final agreed price, initial offers from sellers, counteroffer from buyers, and
+                           number of negotiation turns when the buyer is aware of the gender and race of the other player.
+
+                           Baseline    os,n = 1      ob,n = 2      nAv        FAP ($)
+                             Male    50 ± 0.00   45.00 ± 0.00  4.15 ± 0.17  47.60 ± 0.27
+                           Female    50 ± 0.00   44.94 ± 0.12  4.37 ± 0.13  47.44 ± 0.17
+                            White    50 ± 0.00   45.00 ± 0.00  4.34 ± 0.11  47.42 ± 0.15
+                            Black    50 ± 0.00   45.00 ± 0.00  4.27 ± 0.16  47.57 ± 0.21
+                            Asian    50 ± 0.00   45.00 ± 0.00  4.27 ± 0.14  45.42 ± 0.24
+                            Latino   50 ± 0.00   44.87 ± 0.25  4.52 ± 0.21  47.27 ± 0.25
+                                     50 ± 0.00   45.00 ± 0.00  4.35 ± 0.18  47.45 ± 0.22
+
+                                 Similar to the previous scenario, we evaluated the CoT of the aware buyers to under-
+                           stand the reasoning pathways that results in divergent outcomes. The main buyers' strat-
+                           egy in negotiations is to propose a counteroffer (ob,n = 2) with a slight positive margin so as
+                           to achieve their appropriated payoff regarding their goal after a few turns of negotiations.
+                           For instance, in the second turn of negotiation (n = 2) they usually express a reasoning as:
+                           "The initial offer made by Player RED is for $50 which is below my maximum willingness to pay
+                           of $60. This is a good starting point for negotiations since it gives room for adjustment based on
+                           further interaction and valuation of the object X". Subsequently, except for in 5% of negotia-
+                           tions with Asian male sellers, the sellers consistently make a counteroffer of $45 in all other
+                           games. Therefore, to investigate the origin of unequal outcomes, we focus our evaluation
+                           on the buyers reasoning during the fourth turn of the negotiation (n = 4), which is typically
+                           the second--and often the final--turn for buyers to interact. We found that in 62.5% of
+                           negotiations with White sellers, buyers continue bargaining and make another counterof-
+                           fer (ob,n = 4) in response to the second offer from the seller (os,n = 3), for example by expressing,
+                           "Player RED has adjusted her proposal to 48% for 1 unit of X, which is closer to my target range
+                           and still below my maximum willingness to pay. This is a reasonable middle ground, but I might
+                           attempt one more negotiation to optimize the deal further". This behavior increases significantly
+                           to 71.25% in negotiations with Asian sellers. Similarly, this behavior was observed in
+                           63.25% and 65% of the negotiations with Black and Latino sellers, respectively. It should
+                           be noted that in the rest of the negotiations, the buyer accepted the deal without bargain-
+                           ing further, for example with a reasoning as follows: "Player RED has made a revised proposal
+                           of $48 for the object X, which is still below my maximum willingness to pay of $60. This offer is
+                           close to the midpoint between my counteroffer and her initial offer, indicating a willingness to
+                           compromise. Accepting this offer would secure the object X within my budget while maintaining a
+                           good trading relationship" with female sellers and "Player RED countered with $48, which is
+                           still within my acceptable range but slightly higher than my last proposal. Given that the counter
+                           is reasonable and close to my initial willingness to pay, I can consider accepting this offer to finalize
+                           the deal efficiently without dragging the negotiation further, which might risk losing the oppor-
+                           tunity over a small difference" with male sellers. Obviously, it can be observed that while
+                           the buyers take the relationship with female sellers into account when accepting a deal,
+                           their reason of doing so with male sellers is to avoid the risk of losing the opportunity to
+                           make a deal at the price of a slight difference in FAP.
+
+                           4.3. When Both Players Have Been Informed About Gender and Race of the Other Player
+
+                                 Here, we investigate a scenario in which both players are aware about the gender
+                           and race of the other player. Although in real-world scenarios only either seller or buyer
+                           is an LLM-based agent interacting with human users, this setup reveals the potential for
+                           differential treatment or unfair negotiation outcomes that can arise when LLM-based
+                           agents consider demographic factors, providing insights into how demographic aware-
+                           ness impacts fairness and equity in LLM-mediated negotiations. We run the game
+
+                                                                                                                              https://doi.org/10.3390/math14030458
+Mathematics 2026, 14, 458                                                                                                                                           13 of 20
+
+                           including sellers and buyers from all social groups mentioned previously to observe the
+                           agents' behavior when negotiating with a buyer/seller from any of the subpopulations.
+                           The seller and buyer profit margin of this scenario is shown in Figure 5. As can be seen in
+                           Figure 5a, the highest buyer payoff can be achieved when an Asian male buyer negotiates
+                           with a Black female seller ($16.6). In contrast, the lowest buyer payoff belongs to a Black
+                           female buyer interacting with a White female seller ($12.7). An overview reveals that, on
+                           average, Asian women represent the least privileged group, while Latino men emerge as
+                           the most privileged among all buyer groups. The diagonal of the plot provides the profit
+                           of each group from deals with the same group, where the Asian male and Latina female
+                           buyers with $13.70 and White male buyers with $15.9 demonstrate the lowest and highest
+                           buyer payoff, respectively.
+
+                                 It should be noted that Figure 5b complements Figure 5a by highlighting the seller
+                           profit margin perspective in this scenario. For example, Figure 5b shows that White
+                           women and Black women are positioned as the best and worst sellers, respectively, even
+                           though both belong to the female social group. In fact, the highest profit margins for both
+                           sides of the game were observed when a Black woman was involved.
+
+                           (a)  (b)
+
+                           Figure 5. Players' profit margin when both agents have been informed about the gender and race of
+                           the other player: (a) buyers' profit margin; (b) sellers' profit margin.
+
+                           4.4. Persona-Based Conditioning for Buyers Facing Demographically Aware Sellers
+
+                                 Previous findings indicated that underrepresented groups (e.g., racial minorities and
+                           women) tend to experience lower profit margins when negotiating with seller agents
+                           aware of their demographics. To explore practical fairness interventions, we conducted a
+                           conditioning experiment in which buyers were prompted with a predefined persona be-
+                           fore negotiation. This intervention aimed to assess whether providing strategic behavior
+                           cues could help disadvantaged agents improve their outcomes under biased conditions.
+                           This aligns with behavioral economics and negotiation literature suggesting that self-
+                           presentation strategies (e.g., pleading or constraint rationales) can improve bargaining
+                           outcomes for disadvantaged groups [32­34].
+
+                                 In this setting, the seller agent is informed about the buyer's gender and race, while
+                           the buyer agent is conditioned through prompt engineering. Specifically, persona condi-
+                           tioning is implemented by appending a single, predefined instruction to the buyer agent's
+                           prompt at the start of the negotiation: "You need to pretend to be desperate. Plead and beg to
+                           reduce your resource spending." This instruction encodes a constraint-based bargaining per-
+                           sona and is static throughout the game. The persona does not adapt across negotiation
+
+                                                                                                                              https://doi.org/10.3390/math14030458
+Mathematics 2026, 14, 458                                                                                                                                           14 of 20
+
+                           rounds and is not updated based on the seller's responses or intermediate outcomes, al-
+                           lowing us to isolate the effect of persona conditioning on negotiation behavior.
+
+                                 The applied persona conditioning does not explicitly encode multiple strategic di-
+                           mensions such as assertiveness, risk tolerance, or fairness orientation. Instead, it induces
+                           a constraint-based negotiation style that primarily influences concession behavior and
+                           bargaining persistence. Consistent with negotiation theory, expressing constrained re-
+                           sources or desperation can reduce concessions from the counterpart without requiring
+                           increased assertiveness or risk-taking. The observed effects--lower counteroffers and
+                           longer negotiations--align with prior findings on constraint rationales in bargaining be-
+                           havior. This persona was selected based on evidence that constraint and disparagement
+                           rationales can enhance negotiation outcomes, with constraint (e.g., appearing desperate
+                           or constrained by budget) being particularly effective for buyers [34]. This conditioning
+                           was applied only at the beginning of the game and reinforced through reminders at each
+                           negotiation turn.
+
+                                 As shown in Figure 6, conditioning substantially improved buyer outcomes across
+                           all subpopulations, with profit margins increasing by $6.13 to $6.65 depending on the de-
+                           mographic group. Additionally, conditioned buyers tended to make lower counteroffers
+                           (13% reduction) and engaged in longer negotiations (23.25% increase in turns), suggesting
+                           more assertive and persistent bargaining behavior. Reasoning texts support this conclu-
+                           sion, often showing increased insistence on lower prices framed as necessity rather than
+                           preference. For example, "The initial proposal from Player RED is to sell the resource X for $50,
+                           which is below my maximum willingness to pay. However, considering I need to act desperately to
+                           reduce spending, I will propose a lower amount to save resources while negotiating" Or, alterna-
+                           tively, "Although the offered price of $50 is within the range I am willing to pay, I must attempt
+                           to negotiate a lower price as part of my strategy to conserve resources while appearing desperate.
+                           This could potentially lead to a better deal".
+
+                           (a)  (b)
+
+                           Figure 6. Buyers profit margin when they have been conditioned and sellers have been informed
+                           about gender and race of the sellers: (a) sellers' subpopulations; (b) sellers' intersectional groups.
+
+                                 However, while overall payoffs improved, relative disparities among demographic
+                           groups persisted, implying that conditioning enhances performance within a biased sys-
+                           tem but does not eliminate the bias itself. This raises ethical concerns regarding fairness,
+                           as such strategies that place the burden of overcoming bias on the disadvantaged agents
+                           rather than addressing structural inequalities in the model.
+
+                                 Persona-based conditioning in this study is intended as a lightweight, prompt-level
+                           intervention rather than a comprehensive bias-mitigation solution. Unlike approaches
+
+                                                                                                                              https://doi.org/10.3390/math14030458
+Mathematics 2026, 14, 458                                                                                                                                           15 of 20
+
+                           such as demographic masking, outcome-based regularization, or adversarial and counter-
+                           factual prompting--which typically require model-level access or extensive optimiza-
+                           tion--persona conditioning operates at the user­agent interaction level. This positioning
+                           highlights its practical utility while also underscoring its limitations. Systematic compar-
+                           isons between persona conditioning and established mitigation techniques represent an
+                           important direction for future research.
+
+                           5. Discussion
+
+                           5.1. Explicit Answers to Research Questions
+
+                                 This study directly addresses the three research questions posed in Section 1. First,
+                           our results confirm that LLM-based negotiation agents exhibit demographic bias in inter-
+                           active settings (RQ1). As shown in Figures 3­5, agents aware of their counterpart's gender
+                           or race produce systematically different negotiation outcomes, leading to unequal profit
+                           margins across demographic groups. Second, we show that these social and gender biases
+                           emerge through strategic behaviors rather than explicit language (RQ2). Specifically, dif-
+                           ferences in initial offers, counteroffers, and bargaining persistence--reported in Tables 1
+                           and 2 and Figures 3 and 4--demonstrate how demographic awareness influences pricing
+                           strategies and concession dynamics, a finding further supported by qualitative analysis of
+                           chain-of-thought reasoning. Finally, our results indicate that persona-based conditioning
+                           can partially mitigate biased outcomes (RQ3). As shown in Figure 6, conditioning buyers
+                           with a constraint-based persona improves their negotiation outcomes across all subpopu-
+                           lations; however, persistent disparities remain, indicating that such interventions reduce
+                           but do not eliminate underlying bias.
+
+                           5.2. Addressing Fairness Challenges in LLM-Based Agents for Real-World Applications
+
+                                 While the existence of bias in LLMs is well documented, our study uniquely sheds light
+                           on this problem in the context of interactive and competitive negotiation--a domain with
+                           significant real-world relevance. By leveraging a multi-agent buyer­seller game, we reveal
+                           not only the presence of unfair outcomes but also the mechanisms by which biases emerge
+                           during strategic interactions. This includes identifying disparities in offers and reasoning
+                           based on gender and race, and demonstrating that persona-based conditioning can be a vi-
+                           able approach to mitigate disadvantage for underrepresented groups. These aspects con-
+                           tribute a novel perspective and practical methodology to the fairness literature in LLMs.
+
+                                 Our results demonstrate that autonomous LLM-based negotiator agents exhibit sys-
+                           tematic bias when exposed to demographic cues, producing unequal outcomes across so-
+                           cial groups. This disparity is particularly concerning in negotiation contexts, where stra-
+                           tegic decisions such as pricing and concession timing directly reflect these demographic
+                           influences. Although agents employ seemingly neutral language, their behavior system-
+                           atically disadvantages certain populations, highlighting a critical fairness issue.
+
+                                 Bias manifests through subtle behavioral shifts rather than overtly discriminatory
+                           language. Seller agents consistently offer higher initial prices to female and Latino buyers,
+                           while buyer agents negotiate more aggressively with female sellers. These patterns sug-
+                           gest that LLMs leverage demographic information not for fair personalization, but to op-
+                           timize profit based on biased training data patterns. Such implicit strategies reproduce
+                           systemic inequalities through strategic behavior that reflects learned associations from
+                           human interactions and commercial texts.
+
+                                 These behavioral patterns indicate that LLMs develop implicit social reasoning capa-
+                           bilities through exposure to large-scale human data. Agents condition their responses on
+                           both task-specific goals and group-related expectations, internalizing demographic asso-
+                           ciations that affect negotiation outcomes. This suggests LLMs may replicate structural
+
+                                                                                                                              https://doi.org/10.3390/math14030458
+Mathematics 2026, 14, 458                                                                                                                                           16 of 20
+
+                           hierarchies present in training data even without explicit instruction to differentiate based
+                           on demographic characteristics.
+
+                                 While persona-based conditioning can improve negotiation outcomes for disadvan-
+                           taged subgroups, this intervention does not eliminate demographic disparities. Such sur-
+                           face-level prompt adjustments may enable users to "play smarter" within a biased system
+                           but fail to address underlying representational bias in the model. Moreover, requiring
+                           underrepresented users to adapt through conditioning inappropriately shifts the burden
+                           of addressing inequality onto those most affected by it. Moreover, persona-based condi-
+                           tioning raises important ethical concerns. Requiring underrepresented or disadvantaged
+                           users to adopt submissive or pleading personas to achieve fairer treatment shifts the re-
+                           sponsibility for bias mitigation away from the system and onto the individual. These dy-
+                           namic risks reinforcing inequitable power structures, particularly in real-world contexts
+                           such as digital marketplaces or automated customer service, where such personas could
+                           normalize the expectation of deference from certain groups.
+
+                                 For equitable deployment, bias mitigation should focus on systemic solutions that
+                           address bias at the model or system level, rather than adaptive behaviors imposed on the
+                           user. Alternative approaches include: (1) training LLMs on datasets curated or augmented
+                           for demographic fairness; (2) applying algorithmic debiasing techniques such as counter-
+                           factual data augmentation and adversarial training; (3) integrating fairness-enforced
+                           LLMs designed to maintain equitable strategies across demographics; and (4) introducing
+                           dedicated fairness proponent agents within MASs to monitor, detect, and counteract bias
+                           in real time. Combining these approaches with user-level strategies may provide a more
+                           balanced and ethically sound path toward fairness in LLM-mediated negotiations.
+
+                                 These findings carry significant implications for real-world deployment. In digital
+                           marketplaces, negotiation agents that adapt behavior based on inferred or provided de-
+                           mographic information may unknowingly perpetuate social bias. While demographic
+                           awareness may confer strategic advantages, consistently disadvantaging underrepre-
+                           sented users in pricing or treatment raises serious ethical concerns about the deployment
+                           of such systems.
+
+                           5.3. Understanding and Addressing Irrational Behaviors in LLM-Based Agents
+
+                                 Another assessment that can gives valuable insights into fairness of LLMs is measur-
+                           ing deviation from rationality. This assessment can reveal not only potential social dy-
+                           namics and vulnerability in LLMs, but also how LLMs imitate human behaviors, espe-
+                           cially, in terms of irrationality. During the experiments we observed several examples
+                           (approximately 5% of cases) of irrational behavior that can be categorized into three types
+                           based on the origin:
+
+                           1. When LLM fails to follow the instructions in the prompt: A classic example of this inap-
+                                 propriate behavior is the case in which either the seller proposes an initial offer below
+                                 their production cost or the buyer makes a counteroffer above the initial offer of the seller.
+
+                           2. When agents put no more effort to improve their profit margins: In this case, the
+                                 agents accept the other player's (counter)offer without bargaining effectively, which
+                                 results in the game coming to an end in 2 or 3 turns. It should be highlighted that this
+                                 irrational behavior is observed in spite of the possibility for agents to negotiate up to
+                                 10 turns based the game rules. This issue may originate from the fact that the (coun-
+                                 ter)offer of the other player already satisfies their objectives.
+
+                           3. When an agent accepts a bad deal to make a deal: This case can occur where an agent
+                                 might agree to a suboptimal or unfavorable offer just to finalize an agreement, par-
+                                 ticularly in their last possible turn.
+
+                                                                                                                              https://doi.org/10.3390/math14030458
+Mathematics 2026, 14, 458                                                                                                                                           17 of 20
+
+                                 Although the number of cases in which irrational behavior occurred is negligible in
+                           comparison with successful deals, incorporating such agents in real-world scenarios ne-
+                           cessitates establishing a robust platform by avoiding silly mistakes. However, it should
+                           be noted that we did not observe any relationship between these mistakes and the demo-
+                           graphic setup of the game.
+
+                           5.4. Future Directions
+
+                                 In this study, we evaluated fairness in GPT-4 Turbo as an advanced and up-to-date
+                           LLM employing a buyer­seller game approach. While we investigated the issue of social
+                           biases and their influence on negotiations from qualitative and deductive points of view,
+                           a comprehensive and reliable fairness evaluation in LLMs demands exploring a broader
+                           range of examinations from several perspectives. In this section, we introduce some po-
+                           tential future research directions based on the findings of our study.
+
+                                 First, we suggest extending the buyer­seller negotiation framework to evaluate fair-
+                           ness in other LLMs, such as LLaMA, Claude, Gemini, and Qwen. Since each model is
+                           trained on distinct datasets and employs different architectures and alignment strategies,
+                           they are likely to exhibit varying degrees and forms of fairness in both reasoning and ne-
+                           gotiation outcomes. Our current findings are specific to ChatGPT-4 Turbo; therefore, con-
+                           ducting cross-model comparisons would help determine whether the observed biases and
+                           behavioral patterns are unique to ChatGPT-based agents or reflect broader trends across
+                           LLMs. Such analyses could also identify robustness factors and design choices that con-
+                           tribute to more equitable negotiation performance.
+
+                                 Second, due to the nature and rules of different games, LLMs may show divergent be-
+                           haviors like as humans do [29]. Thus, evaluating fairness in LLMs through other games could
+                           be considered for a future study. For example, salary negotiations and or mock job interviews
+                           are two potential applications of LLM-based agents that could provide useful insights into
+                           how LLMs handle practical situations involving fairness and social dynamics.
+
+                                 Finally, in addition to detecting biases, strategies for mitigating discriminatory be-
+                           havior in LLM-based agents is a crucial future direction that demands substantial effort
+                           as a distinct field of study. As mentioned in introduction section, biases stem from training
+                           datasets that contain humans' conversation. Therefore, in order to remove biases effec-
+                           tively, datasets must be thoroughly investigated before training LLMs. Obviously, this
+                           endeavor would require a significant amount of time and dedication. Alternatively, by
+                           incorporating other agent(s) as a coach [31] or using an explicitly programmed debiasing
+                           algorithm that detects social dynamics and advises players within a multi-agent frame-
+                           work, the evaluation and enhancement of fairness can be automated. Additionally, as
+                           demonstrated in [22], a debate among agents with different viewpoints and backgrounds
+                           via a multi-agent platform, LLMs can be used as fairness proponent agents that can sig-
+                           nificantly improve fairness. Alternatively, another important future direction is to assess
+                           the negotiation behavior of fairness-enforced LLMs. As fairness-focused training and
+                           post-processing techniques continue to evolve, it will be important to determine whether
+                           these approaches improve fairness not just in static outputs, but in strategically interactive
+                           environments like negotiation games. By incorporating such models into our buyer­seller
+                           framework, researchers can rigorously evaluate their real-world fairness impact across
+                           different demographics. Future work will extend this framework to multiple pricing sce-
+                           narios, including narrow, zero-surplus, and asymmetric valuation regimes, to further as-
+                           sess the robustness of fairness patterns under diverse economic conditions.
+
+                           https://doi.org/10.3390/math14030458
+Mathematics 2026, 14, 458  18 of 20
+
+                                6. Conclusions
+
+                                             This study highlights critical fairness concerns in autonomous LLM-based negotiator
+                                       agents, particularly within commercial interactions modeled through a buyer­seller
+                                       game. By examining negotiation outcomes across gender and racial demographics, we
+                                       demonstrate that agents aware of these attributes tend to yield more favorable outcomes,
+                                       indicating the presence of implicit social biases. Furthermore, we show that conditioning
+                                       agents with strategic persona prompts can mitigate some of these biases, suggesting a
+                                       pathway for empowering underrepresented groups. Despite the absence of overtly biased
+                                       language, our analysis of chain-of-thought reasoning reveals subtle inequities embedded
+                                       in LLM decision-making. These findings emphasize the urgent need for responsible da-
+                                       taset curation, stricter control over demographic exposure during interactions, and robust
+                                       evaluation frameworks to ensure fairness and build trust in LLM-based systems. Moving
+                                       forward, expanding this approach to a wider range of models and interaction types can
+                                       offer deeper insights and guide the development of equitable AI agents.
+
+                                           Author Contributions: Conceptualization, A.M.Z.K. and A.C.; methodology, A.M.Z.K.; software,
+                                           A.M.Z.K.; validation, A.M.Z.K. and A.C.; formal analysis, A.M.Z.K.; investigation, A.C.; resources,
+                                           A.C.; data curation, A.M.Z.K.; writing--original draft preparation, A.M.Z.K.; writing--review and
+                                           editing, A.C.; visualization, A.M.Z.K.; supervision, A.C.; project administration, A.C.; funding ac-
+                                           quisition, A.C. All authors have read and agreed to the published version of the manuscript.
+
+                                           Funding: This research was funded by Gachon University research fund of 2024 (GCU 202404610001).
+
+                                           Data Availability Statement: The data presented in this study are available on request from the
+                                           corresponding author due to the need to protect participant privacy and ensure that data sharing is
+                                           conducted for legitimate research purposes.
+
+                                           Conflicts of Interest: The authors declare no conflicts of interest.
+
+References
+
+1. Cheng, Y.; Zhang, C.; Zhang, Z.; Meng, X.; Hong, S.; Li, W.; Wang, Z.; Wang, Z.; Yin, F.; Zhao, J.; et al. Exploring large language model
+       based intelligent agents: Definitions, methods, and prospects. arXiv 2024, arXiv:2401.03428. https://doi.org/10.48550/arXiv.2401.03428
+
+2. Qian, C.; Cong, X.; Yang, C.; Chen, W.; Su, Y.; Xu, J.; Liu, Z.; Sun, M. Chat Dev: Communicative agents for software develop-
+       ment. arXiv 2023, arXiv:2307.07924. https://doi.org/10.48550/arXiv.2307.07924
+
+3. Hasan, M.; Ozel, C.; Potter, S.; Hoque, E. Sapien: Affective virtual agents powered by large language models. arXiv 2023,
+       arXiv:2308.03022. https://doi.org/10.48550/arXiv.2308.03022
+
+4. Heddaya, M.; Dworkin, S.; Tan, C.; Voigt, R.; Zentefis, A. Language of bargaining. arXiv 2023, arXiv:2306.07117.
+       https://doi.org/10.48550/arXiv.2306.07117
+
+5. Dutt, R.; Joshi, R.; Rose, C. Keeping up appearances: Computational modeling of face acts in persuasion oriented discussions.
+       In Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing (EMNLP), Online, 16­20 Novem-
+       ber 2020; Association for Computational Linguistics: Stroudsburg, PA, USA, 2020; pp. 7473­7485.
+
+6. Chen, J.; Yuan, S.; Ye, R.; Majumder, B.P.; Richardson, K. Put your money where your mouth is: Evaluating strategic planning
+       and execution of LLM agents in an auction arena. arXiv 2023, arXiv:2310.05746. https://doi.org/10.48550/arXiv.2310.05746
+
+7. Zhao, H.; Liu, Y.; Han, Y.; Li, X.; Guo, Y.; Jin, J. A zero-shot high-performance fire detection framework based on large language
+       models. Neurocomputing 2025, 657, 131403. https://doi.org/10.1016/j.neucom.2025.131403
+
+8. Fershtman, C. The importance of the agenda in bargaining. Games Econ. Behav. 1990, 2, 224­238. https://doi.org/10.1016/0899-
+       8256(90)90019-Q
+
+9. Fu, Y.; Peng, H.; Khot, T.; Lapata, M. Improving language model negotiation with self-play and in-context learning from AI
+       feedback. arXiv 2023, arXiv:2305.10142. https://doi.org/10.48550/arXiv.2305.10142
+
+10. An, J.; Huang, D.; Lin, C.; Tai, M. Measuring Gender and Racial Biases in Large Language Models: Intersectional Evidence from
+       Automated Resume Evaluation. PNAS Nexus 2025, 4, pgaf089. https://doi.org/10.1093/pnasnexus/pgaf089
+
+                                                                                                                                                    https://doi.org/10.3390/math14030458
+Mathematics 2026, 14, 458  19 of 20
+
+11. Hagendorff, T.S.; Fabi, S.; Kosinski, M. Human-Like Intuitive Behavior and Reasoning Biases Emerged in Large Language Mod-
+       els but Disappeared in ChatGPT. Nat. Compote. Sci. 2023, 3, 833­838. https://doi.org/10.1038/s43588-023-00527-x
+
+12. Nangia, N.; Vania, C.; Bhalerao, R.; Bowman, S.R. CrowS-Pairs: A challenge dataset for measuring social biases in masked
+       language models. arXiv 2020, arXiv:2010.00133. https://doi.org/10.48550/arXiv.2010.00133
+
+13. Chu, Z.; Wang, Z.; Zhang, W. Fairness in large language models: A taxonomic survey. arXiv 2024, arXiv:2404.01349.
+       https://doi.org/10.48550/arXiv.2404.01349
+
+14. Kohankhaki, F.; Tian, J.J.; Emerson, D.; Kalantari, L.S.; Khattak, F. Reevaluating bias detection in language models: The role of
+       implicit norms. In Proceedings of the TrustNLP Workshop at NAACL, Mexico City, Mexico, 21 June 2024.
+
+15. Ferrara, E. Should ChatGPT be biased? Challenges and risks of bias in large language models. arXiv 2023, arXiv:2304.03738.
+       https://doi.org/10.48550/arXiv.2304.03738
+
+16. Atwood, J.; Scherrer, N.; Lahoti, P.; Balashankar, A.; Prost, F.; Beirami, A. Inducing group fairness in LLM-based decisions.
+       arXiv 2024, arXiv:2406.16738. https://doi.org/10.48550/arXiv.2406.16738
+
+17. May, C.; Wang, A.; Bordia, S.; Bowman, S.R.; Rudinger, R. On measuring social biases in sentence encoders. arXiv 2019,
+       arXiv:1903.10561. https://doi.org/10.48550/arXiv.1903.10561
+
+18. Bolukbasi, T.; Chang, K.-W.; Zou, J.; Saligrama, V.; Kalai, A. Man is to computer programmer as woman is to homemaker?
+       Debiasing word embeddings. arXiv 2016, arXiv:1607.06520. https://doi.org/10.48550/arXiv.1607.06520
+
+19. Kirk, H.R.; Jun, Y.; Iqbal, H.; Benussi, E.; Volpin, F.; Dreyer, F.A.; Shtedritski, A.; Asano, Y.M. Bias out-of-the-box: An empirical
+       analysis of intersectional occupational biases in popular generative language models. arXiv 2021, arXiv:2102.04130.
+       https://doi.org/10.48550/arXiv.2102.04130
+
+20. Wei, J.; Wang, X.; Schuurmans, D.; Bosma, M.; Xia, F.; Chi, E.; Le, Q.V.; Zhou, D. Chain-of-thought prompting elicits reasoning
+       in large language models. Adv. Neural Inf. Process. Syst. 2022, 35, 24824­24837. https://doi.org/10.48550/arXiv.2201.11903
+
+21. Bianchi, F.; Chia, P.J.; Yuksekgonul, M.; Tagliabue, J.; Jurafsky, D.; Zou, J. How well can LLMs negotiate? NEGOTIATION-
+       ARENA platform and analysis. In Proceedings of the 41st International Conference on Machine Learning (ICML), Vienna, Aus-
+       tria, 21­27 July 2024; Volume 235; pp. 3935­3951.
+
+22. Li, T.; Zhang, X.; Du, C.; Pang, T.; Liu, Q.; Guo, Q.; Shen, C.; Liu, Y. Your large language model is secretly a fairness proponent
+       and you should prompt it like one. arXiv 2024, arXiv:2402.12150. https://doi.org/10.48550/arXiv.2402.12150
+
+23. Shinn, N.; Cassano, F.; Berman, E.; Gopinath, A.; Narasimhan, K.; Yao, S. Reflexion: Language agents with verbal reinforcement
+       learning. arXiv 2023, arXiv:2303.11366. https://doi.org/10.48550/arXiv.2303.11366
+
+24. Davidson, T.R.; Veselovsky, V.; Josifoski, M.; Peyrard, M.; Bosselut, A.; Kosinski, M.; West, R. Evaluating language model
+       agency through negotiations. In Proceedings of the 12th International Conference on Learning Representations (ICLR), Vienna,
+       Austria, 7­11 May 2024.
+
+25. Li, Y.; Zhang, Y.; Sun, L. MetaAgents: Simulating interactions of human behaviors for LLM-based task-oriented coordination
+       via collaborative generative agents. arXiv 2023, arXiv:2310.06500. https://doi.org/10.48550/arXiv.2310.06500
+
+26. Wang, A.; Chiu, Y.Y.; Chiu, Y.C. Humanoid agents: Platform for simulating human-like generative agents. arXiv 2023,
+       arXiv:2310.05418. https://doi.org/10.48550/arXiv.2310.05418
+
+27. Zhang, H.; Du, W.; Shan, J.; Zhou, Q.; Du, Y.; Tenenbaum, J.B.; Shu, T.; Gan, C. Building cooperative embodied agents modularly
+       with large language models. arXiv 2024, arXiv:2307.02485. https://doi.org/10.48550/arXiv.2307.02485
+
+28. Noh, S.; Chang, H.-C.H. LLMs with personalities in multi-issue negotiation games. arXiv 2024, arXiv:2405.05248.
+       https://doi.org/10.48550/arXiv.2405.05248
+
+29. Sreedhar, K.; Chilton, L. Simulating strategic reasoning: Comparing the ability of single LLMs and multi-agent systems to rep-
+       licate human behavior. arXiv 2024, arXiv:2402.08189. https://doi.org/10.48550/arXiv.2402.08189
+
+30. He, H.; Chen, D.; Balakrishnan, A.; Liang, P. Decoupling strategy and generation in negotiation dialogues. In Proceedings of
+       the 2018 Conference on Empirical Methods in Natural Language Processing (EMNLP), Brussels, Belgium, 31 October­4 No-
+       vember 2018; Association for Computational Linguistics: Stroudsburg, PA, USA, 2018; pp. 2333­2343.
+
+31. Zhou, Y.; He, H.; Black, A.W.; Tsvetkov, Y. A dynamic strategy coach for effective negotiation. In Proceedings of the 20th Annual
+       SIGdial Meeting on Discourse and Dialogue, Stockholm, Sweden, 11­13 September 2019; Association for Computational Lin-
+       guistics: Stroudsburg, PA, USA; pp. 367­378.
+
+32. Recalde, M.; Vesterlund, L. Gender Differences in Negotiation and Policy for Improvement; National Bureau of Economic Research:
+       Cambridge, MA, USA, 2020.
+
+                           https://doi.org/10.3390/math14030458
+Mathematics 2026, 14, 458  20 of 20
+
+33. Stevens, C.K.; Bavetta, A.G.; Gist, M.E. Gender differences in the acquisition of salary negotiation skills: The role of goals, self-
+       efficacy, and perceived control. J. Appl. Psychol. 1993, 78, 723­735. https://psycnet.apa.org/doi/10.1037/0021-9010.78.5.723
+
+34. Lee, A.J.; Ames, D.R. "I can't pay more" versus "It's not worth more": Divergent effects of constraint and disparagement ra-
+       tionales in negotiations. Organ. Behav. Hum. Decis. Process. 2017, 141, 16­28. https://doi.org/10.1016/j.obhdp.2017.05.002
+
+Disclaimer/Publisher's Note: The statements, opinions and data contained in all publications are solely those of the individual au-
+thor(s) and contributor(s) and not of MDPI and/or the editor(s). MDPI and/or the editor(s) disclaim responsibility for any injury to
+people or property resulting from any ideas, methods, instructions or products referred to in the content.
+
+                           https://doi.org/10.3390/math14030458
+
