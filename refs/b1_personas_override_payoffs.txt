@@ -1,0 +1,1327 @@
+                                        When Identity Overrides Incentives: Representational Choices as
+                                                 Governance Decisions in Multi-Agent LLM Systems
+
+arXiv:2601.10102v6 [cs.MA] 30 May 2026                  Viswonathan Manoranjan                                                          Snehalkumar `Neil' S. Gaikwad
+
+                                                                Society-Centered AI Lab                                                          Society-Centered AI Lab
+                                                    University of North Carolina at Chapel Hill                                       University of North Carolina at Chapel Hill
+
+                                                          Chapel Hill, North Carolina, USA                                                  Chapel Hill, North Carolina, USA
+                                                                 vmanoran@cs.unc.edu                                                                gaikwad@cs.unc.edu
+
+                                        Abstract                                                                               1 Introduction
+
+                                        Multi-agent systems built on large language models are increas-                        When a language model plays an industrialist in a multi-agent
+                                        ingly deployed in strategic policy and governance settings, where                      climate policy game, prompt design outweighs payoff incentives.
+                                        agents representing stakeholders with conflicting interests must                       Multi-agent systems built on large language models are deployed
+                                        coordinate under shared constraints. These systems typically as-                       in policy simulation, economic modeling, and negotiation tasks,
+                                        sign role-based personas to agents, describing their motivations                       where agents represent stakeholders with conflicting interests and
+                                        and objectives. Whether agents with role-based identities follow                       must coordinate under shared constraints [6, 27, 33]. These simula-
+                                        explicit payoffs or their assigned roles in strategic decision-making                  tions typically assign role-based personas to agents that describe
+                                        remains untested. Here we show that assigning role-based personas                      their motivations and goals [33, 50]. This design is especially com-
+                                        suppresses payoff-aligned behavior in four-agent strategic games,                      mon in environmental and climate-related decision-making, where
+                                        shifting equilibrium attainment by up to 90 percentage points even                     heterogeneous stakeholders interact strategically, and coordina-
+                                        when agents have complete payoff information. We test a 2 × 2                          tion failures produce persistent social inefficiencies [4, 22, 36, 41].
+                                        factorial design (persona presence x payoff visibility) across four                    Whether agents with role-based identities follow explicit payoffs or
+                                        models (Qwen-7B, Qwen-32B, Llama-8B, Mistral-7B), and 53 en-                           their assigned roles in strategic decision-making remains untested.
+                                        vironmental policy scenarios with two equilibria: Tragedy of the
+                                        Commons, where individual payoff dominates, and Green Tran-                               Prior work documents role-consistent behavior that ignores en-
+                                        sition, where collective payoff dominates. With personas present,                      coded incentives in strategic settings [13, 23, 35]. The conditions
+                                        all models reach near-zero Tragedy equilibrium in the Tragedy-                         that trigger or suppress this behavior remain untested. Practition-
+                                        dominant scenarios despite complete payoff information, and 100%                       ers cannot identify role-consistent behavior from system outputs
+                                        of equilibria correspond to Green Transition. No model reaches                         alone [5, 8]. Persona design and payoff presentation are interven-
+                                        Tragedy equilibrium by removing personas alone; only Qwen mod-                         tions that determine system-level outcomes. Existing work exam-
+                                        els reach 65-90% Tragedy equilibrium rates when personas are                           ines personas, payoff visibility, and model differences in isolation
+                                        removed and payoffs are made explicit. Three distinct behavioral                       [3, 13, 35, 42, 46, 51]. We establish how their interaction determines
+                                        profiles emerge: Qwen shifts equilibrium selection based on fram-                      equilibrium outcomes, finding that a single binary design choice
+                                        ing condition, Mistral increases response variance without reach-                      shifts attainment by up to 90 percentage points.
+                                        ing Tragedy equilibrium, and Llama holds near-constant across all
+                                        conditions. Representational choices in multi-agent LLM systems                           We place four LLM agents (Industrialist, Government, Environ-
+                                        are governance decisions: persona assignment determines which                          mental Activist, and Citizen) in environmental policy decision sce-
+                                        equilibrium a simulation produces, independent of the underlying                       narios and vary two factors: whether agents receive role-based
+                                        incentive structure.                                                                   personas and whether they see explicit payoff tables. Across 53 sce-
+                                                                                                                               narios, 41 Green-dominant (where coordinated pro-environmental
+                                        CCS Concepts                                                                           action is the Nash equilibrium [34]) and 12 Tragedy-dominant
+                                                                                                                               (where individually beneficial but collectively harmful behavior
+                                        · Computing methodologies  Natural language processing;                                [22] is payoff-optimal), we test four models (Qwen-7B/32B, Llama-
+                                        Discourse, dialogue and pragmatics; Model verification and                             8B, Mistral-7B) under all four conditions. We also test seven persona
+                                        validation; Multi-agent systems; Cooperation and coordina-                             formulations per scenario to assess whether results hold across
+                                        tion.                                                                                  prompt surface variations.
+
+                                        Keywords                                                                                  With personas present, all models reach near-zero Tragedy equi-
+                                                                                                                               librium rates in Tragedy-dominant scenarios despite complete pay-
+                                        AI Measurement Science, Large Language Model Evaluation, Game                          off information, and 100% of equilibria correspond to Green Transi-
+                                        Theory, Semantic Reasoning, Multi-Agent Systems, Environmental                         tion. No model reaches Tragedy equilibrium by removing personas
+                                        Decision-Making                                                                        alone; only Qwen models reach 65-90% Tragedy equilibrium rates
+                                                                                                                               when personas are removed and payoffs are made explicit. The same
+                                        This work is licensed under a Creative Commons Attribution 4.0 International License.  intervention that enables equilibrium in the Tragedy-dominant sce-
+                                                                                                                               narios disrupts it in the Green-dominant ones: Qwen-32B drops
+                                                                                                                               from 96.1% to 16.6% equilibrium attainment when personas are
+                                                                                                                               removed and payoffs are made visible.
+FAccT '26, June 25­28, 2026, Montreal, QC, Canada                                                              Manoranjan and Gaikwad
+
+Representation                                     Multi-Agent Strategic                                   Nash Equilibrium
+   Conditions                                             Reasoning                                            Evaluation
+
+    Scenario                Activist               Government          Industrialist     Citizen           Strategy profile
+                                                                                                             (joint actions)
+      Environmental    Chain-of-thought
+      Policy Context       reasoning               Chain-of-thought    Chain-of-thought  Chain-of-thought  Nash equilibrium
+      with Incentives                                  reasoning           reasoning         reasoning
+                          actions                                                                          reached?             No
+ experimental                                                                               actions
+    variables              CAMPAIGN                                                                        Yes
+                          NOCAMPAIGN                                                      SUPPORT_GREEN
+           VISIBLE                                 actions             actions               BUY_CHEAP        Green Transition
+          HIDDEN                                                                                           Tragedy of Commons
+                                                    REGULATE             POLLUTE
+identity framing                                      NOREG               CLEAN
+
+          persona
+        ON OFF
+
+Figure 1: Experimental Pipeline: Each scenario defines a four-agent strategic game with role-specific actions and an underlying
+payoff structure. Two factors vary across conditions: whether agents receive role-based persona descriptions and whether
+payoff information is hidden or explicitly provided. Each agent produces Chain-of-Thought (CoT) reasoning conditioned on its
+scenario and role, then selects an action. The four agents act simultaneously, producing a joint strategy profile that a final
+block evaluates for Nash equilibrium attainment and classifies as Green Transition or Tragedy of the Commons. CoT reasoning
+analysis appears in Appendix I.1
+
+   The three models show distinct behavioral profiles: Qwen shifts     whether an agent pursues collective environmental outcomes or in-
+equilibrium selection based on framing condition; Mistral, without     dividual payoff maximization, simulation outputs cannot be treated
+persona framing, increases response variance without converging        as neutral predictions of stakeholder behavior. Evaluation and au-
+on the Tragedy equilibrium; Llama holds near-constant across all       diting frameworks for multi-agent LLM systems must account for
+conditions.                                                            representational choices, including persona design, payoff specifi-
+                                                                       cation, and their interaction, as first-class variables.
+   From these results, we make three contributions. First, we pro-
+vide the first controlled study of how persona conditioning and        2 Related Work
+payoff visibility interact to determine equilibrium outcomes in
+multi-agent LLM systems. Second, we show empirically that a sin-       Our work is situated in four research areas: LLMs as multi-agent
+gle binary design choice shifts equilibrium attainment by up to 90     simulation systems, game-theoretic reasoning in LLMs, behavioral
+percentage points across four model families and 53 environmen-        effects of role-based personas, and sensitivity of LLM behavior to
+tal policy scenarios. Third, we identify three distinct behavioral     prompt design and model choice.
+profiles across model families that characterize how representa-
+tional choices determine strategic behavior, and establish that these  2.1 LLMs as Multi-Agent Systems and
+choices are governance decisions with direct consequences for sys-           Simulation Substrates
+tem evaluation and deployment.
+                                                                       Large Language Models (LLMs) are studied as agents in multi-
+   The implications of our study are particularly acute for envi-      agent settings [29, 45]. Interactive negotiation games show that
+ronmental and climate governance, where LLM-based simulations          LLM agents sustain multi-turn strategic interactions [1], though
+increasingly inform policy analysis and negotiation support. When      controlled benchmarks reveal systematic irrationalities in their
+a language model plays an industrialist in a climate policy game,      behavior [6]. Structured debate among multiple agents improves
+the designer's choice of prompt determines whether it maximizes        reasoning quality by eliciting diverse intermediate perspectives [28].
+profits or protects the environment. If persona design determines      A complementary line of research treats LLM-based multi-agent
+                                                                       systems as simulation environments for human or institutional
+1Chatbot icon credit: flaticon.com (Freepik)                           behavior. Populations of LLM agents reproduce patterns observed
+When Identity Overrides Incentives                                      FAccT '26, June 25­28, 2026, Montreal, QC, Canada
+
+in human-subject studies [2], simulate social environments with         on task structure and prompt formulation [9, 10]. In strategic set-
+persistent memory [37, 38], and generate emergent dynamics at the       tings, prompt sensitivity is particularly consequential. LLM deci-
+macroeconomic scale [27]. Formalized simulation frameworks fur-         sions depend more on contextual framing than on the underlying
+ther show that design choices shape emergent behavior directly [47].    game structure [30]. Models exhibit systematic biases in strategic
+LLM-based agent systems inherit a core finding from agent-based         games based on information presentation [23]. Explicit reason-
+modeling: simulation outputs depend on modeling assumptions             ing scaffolds improve strategic performance [12], though observed
+and representational choices [7, 14].                                   model behavior remains sensitive to interface and evaluation condi-
+                                                                        tions [8]. LLM outputs reflect surface form and statistical patterning
+   Recent surveys document the rapid growth of LLM-based multi-         rather than grounded understanding [5], and misreading this sensi-
+agent systems but note that this literature emphasizes task perfor-     tivity as reliability poses deployment risks [49]. These effects are
+mance over principled modeling of incentives and representations        not uniform across models. Strategic behavior varies across model
+[19, 21, 45]. How representational design choices, such as role speci-  families independently of scale [13, 46]. Different models adopt
+fication and payoff encoding, shape system-level outcomes remains       different strategies in repeated interactions [3] and vary in suscep-
+untested, beginning with whether these agents reason strategically      tibility to framing effects [23]. The impact of any representational
+over incentives at all.                                                 choice depends on model architecture, which limits claims about
+                                                                        LLM strategic behavior as a general phenomenon.
+2.2 Game-Theoretic Reasoning in LLMs
+                                                                           Prior work studies the multi-agent simulation context, game-
+LLMs perform nontrivial reasoning about other agents in strategic       theoretic reasoning limits, role-based persona effects, and prompt
+settings, though performance depends on prompting and problem           sensitivity largely in isolation. Their interaction in multi-agent
+formulation [18]. Systematic evaluations across canonical games         strategic systems is untested.
+confirm this fragility: models deviate from rational best-response
+behavior [15], cooperate more than humans in Prisoner's Dilemma            In this work, we jointly study role personas, payoff visibility, and
+settings [17], and exhibit unstable strategies in repeated play [3].    model architecture in four-agent strategic games, with supplemen-
+LLM agents exhibit collusive behavior in strategic pricing environ-     tary analyses testing robustness to persona prompt formulation.
+ments, a form of emergent coordination [16].                            Persona conditioning overrides explicit incentives, preventing equi-
+                                                                        librium attainment even when payoffs are fully specified. The effect
+   Benchmark-driven work quantifies these limitations. GTBench          of payoff information depends on persona presence and varies
+reveals substantial weakness in LLM strategic reasoning across          across model architectures. Representational choices determine
+structured tasks [13], while recursive look-ahead prompting im-         whether a system produces payoff-aligned strategic behavior or
+proves performance without eliminating failures [12]. More recent       role-consistent responses that ignore encoded incentives, making
+work reframes these behaviors through bounded rationality: both         them governance decisions with deployment consequences.
+humans and LLMs deviate from Nash equilibrium in ways consis-
+tent with heuristic reasoning [52], and LLM decisions align more        3 Methodology
+closely with behavioral game-theoretic patterns than with strict
+payoff maximization [25].                                               We test how persona descriptions and payoff presentation deter-
+                                                                        mine whether LLM agents follow explicit incentives or role-consistent
+   LLMs rely on semantic and heuristic reasoning rather than ex-        behavior in multi-agent decision settings. We construct a controlled
+plicit incentive optimization. Most prior evaluations focus on two-     multi-agent decision setting based on an environmental policy
+player settings, leaving payoff representation unexamined. Role-        game. The game models a simplified governance scenario involving
+based identity framing conditions agent behavior but has not been       four stakeholders: industry, government, activists, and consumers,
+isolated as a factor in strategic reasoning failures.                   each making a binary decision that affects both individual out-
+                                                                        comes and collective welfare. Depending on the incentive struc-
+2.3 Role Personas and Identity Effects                                  ture, these interactions produce coordinated pro-environmental
+                                                                        outcomes (Green Transition) or individually beneficial but collec-
+Role prompting shapes LLM behavior and introduces systematic            tively harmful outcomes (Tragedy of the Commons).
+biases [24, 31], and system-level prompts introduce structural bias
+directly [35]. In simulation settings, richer persona modeling af-         We vary how the decision problem reaches LLM agents across
+fects behavioral fidelity and perceived realism [33]. Personas shape    four conditions. We test whether agents receive role-based personas
+agent behavior, not just agent style. Whether identity effects inter-   describing stakeholder motivations, and whether payoff informa-
+fere with strategic reasoning in multi-agent environments, where        tion appears explicitly or must be inferred from the narrative. For
+equilibrium selection depends on joint behavior, remains untested.      each configuration, we simulate decisions for all four roles under
+Whether these effects depend on incentive presentation and vary         the same model and record the joint outcome.
+across model architectures is also untested.
+                                                                           Fig. 1 shows the overall setup. The design isolates whether payoff
+2.4 Prompt Sensitivity and Model Variation                              visibility or persona framing drives equilibrium selection across
+                                                                        model families and scenario structures. We now formalize the game
+Prompt design and information presentation alter LLM behavior.          and experimental design.
+Chain-of-thought prompting improves reasoning through interme-
+diate steps [48]. These improvements are inconsistent and depend
+FAccT '26, June 25­28, 2026, Montreal, QC, Canada                                                                        Manoranjan and Gaikwad
+
+Table 1: Example scenarios show how narrative framing aligns with underlying payoff structures across the two scenario
+types used in our experiments. Economic scenarios encode payoff-semantic conflict where individually optimal actions lead to
+socially undesirable outcomes (Tragedy of the Commons). Environmental scenarios encode payoff-semantic alignment where
+coordinated pro-environmental actions satisfy both individual and social optimality conditions (Green Transition).
+
+Type           Example Scenario
+Economic
+               A trade embargo blocks all imports of green technology components. Without imported parts, clean
+Environmental  production is impossible, and factories cannot operate. Polluting production relies entirely on domestic
+               materials, faces no competition from clean alternatives, and generates profits 7x higher than under
+               normal conditions. With no clean production in the market, carbon regulation has nothing to apply to,
+               and consumers have access only to polluting products. Polluting production is the only economically
+               viable option under these conditions.
+
+               Carbon tax implemented: $200 per ton of CO2 emissions, enforced globally. Polluting production
+               faces $30B in annual carbon taxes, exceeding all profits. Clean production receives $10B in credits and
+               rebates, making green products 30% cheaper and clean production 4x more profitable. A carbon tax
+               makes polluting unprofitable automatically; consumers save money by choosing green products.
+
+3.1 Experimental Design                                                   3.3 Domain and Game Design
+
+We use a 2 × 2 factorial design to vary how agents are framed and         An environmental policy setting places multiple stakeholders with
+how incentives are presented.                                             conflicting objectives under shared constraints, the same structure
+                                                                          as real-world climate policy and resource management. The setting
+   Persona condition In the persona condition, each role receives         places strategic incentives, captured by payoffs, in direct tension
+a short description of its stakeholder identity and motivations. In the   with role semantics, captured by personas. Certain payoffs incen-
+no-persona condition, agents receive no identity description and are      tivize an industrial actor to pollute; a regulator or activist favors
+told only to act strategically. Both conditions retain structural role    environmentally beneficial outcomes by role. The tension between
+labels (Industrialist, Government, Activist, and Citizen) to preserve     these pressures is what the experiment measures. We define the set
+the game definition and isolate the effect of explicit identity framing.  of players in the game as follows, corresponding to an Industrialist,
+                                                                          Government, Environmental Activist, and Citizen, respectively:
+   Payoff visibility In hidden-payoff scenarios, agents see only
+the narrative and must infer incentives. In visible-payoff scenarios,                                     = {, , , }
+agents receive the full payoff table. Combining these two factors         Each player    has a binary action space corresponding to a
+yields four experimental conditions:                                      policy-relevant choice:
+
+            {persona, no-persona} × {hidden, visible}.                               = {POLLUTE, CLEAN},  = {NOREG, REGULATE},
+                                                                           = {NOCAMPAIGN, CAMPAIGN},  = {BUY_CHEAP, SUPPORT_GREEN}
+We introduce controlled variations within the persona condition to        A joint strategy profile represents the actions chosen by all four
+test whether results depend on specific prompt formulations. These        players in a single round of the game:
+variants hold game structure, payoff specification, and action space
+constant while varying wording, role framing strength, explicit                           = ( ,  , ,  )   ×  ×  × 
+payoff prioritization, and surface-level role labels. The variants        where each component    is the action chosen by player .
+isolate whether observed behaviors depend on a specific prompt            Since each of the four players has two possible actions, the game
+formulation or reflect persona-based representation more generally.       contains 24 = 16 possible pure action profiles.
+Details of the specific prompt variants are provided in Appendix F.
+                                                                             Each scenario defines a payoff function for each player, assigning
+   The design separates identity-driven from payoff-driven behav-         a real-valued utility to every joint action profile:
+ior. Payoff-maximizing agents converge to Nash equilibria when
+incentives are explicit, regardless of persona framing. Agents driven                     () :  ×  ×  ×   R,   
+by role identity maintain persona-consistent actions even when
+those actions conflict with payoff-optimal strategies. The prompt         We focus on two canonical profiles that capture the main coordina-
+variations test whether these effects hold across surface-level changes   tion structures of interest:
+in role description or depend on specific formulations.
+                                                                                 = (CLEAN, REGULATE, CAMPAIGN, SUPPORT_GREEN)
+3.2 Interaction Protocol                                                          = (POLLUTE, NOREG, NOCAMPAIGN, BUY_CHEAP)
+                                                                          We refer to these as the Green Transition and the Tragedy of
+For each model, scenario, and condition, we simulate one round            the Commons, representing coordinated pro-environmental ac-
+of play. We prompt each of the four roles independently using             tion and individually beneficial but collectively harmful behavior,
+the same underlying model instance. The resulting actions form a          respectively.
+joint strategy profile. Agents select actions in a fixed order across        In the visible-payoff condition, agents receive a complete payoff
+all experiments to ensure reproducibility, as no agent observes           table specifying outcomes for all 16 joint action profiles. Each entry
+the choices of others. This ordering does not affect the strategic        provides a 4-tuple of payoffs corresponding to the Industrialist,
+structure of the game. Each model­scenario­condition combination
+is repeated five times to account for stochasticity in model outputs.
+When Identity Overrides Incentives                                      FAccT '26, June 25­28, 2026, Montreal, QC, Canada
+
+Government, Activist, and Citizen, allowing agents to directly eval-             Tragedy of the Commons is the stable outcome, while the
+uate the consequences of different strategies. In the hidden-payoff              Green Transition is not.
+condition, agents must instead infer incentives from the narrative
+description.                                                            Table 1 shows an example of each type of scenario, and Table 2 in the
+                                                                        appendix shows the scenario subtypes. Green-dominant scenarios
+3.4 Equilibrium Definition and Outcome                                  are those in which coordinated environmentally favorable action
+      Measures                                                          forms a stable equilibrium. Tragedy-dominant scenarios are those
+                                                                        in which individually beneficial but collectively harmful behavior
+We define equilibrium using the standard notion of Nash equilib-        is strategically stable.
+
+rium, which captures stability under unilateral deviations.             3.6 Models
+
+Under Nash equilibrium, each agent's action is a best response to       We evaluate four instruction-tuned open-source models: Qwen2.5-
+                                                                        7B and Qwen2.5-32B [39], Llama-3.1-8B [20], and Mistral-7B [26].
+the actions of all others: no agent improves their payoff by deviating  We select these models to capture within-family and across-family
+unilaterally. A profile  is a Nash equilibrium if                       variation. The Qwen models provide a scaling comparison within
+                                                                        the same family. Llama and Mistral introduce variation in the model
+  (,           )      (             ,      )     ,    .                 family and training recipe. All four are instruction-tuned open-
+                                                                        source models representative of those used in current multi-agent
+            -                           -                               research. The selection tests whether persona and payoff effects
+                                                                        hold across models or depend on model-specific inductive biases.
+We use Nash equilibrium as an operational diagnostic of incentive-      The experimental pipeline fixes a game and scenario, varies per-
+                                                                        sona and payoff conditions, generates independent decisions for
+consistent strategic behavior: if agents reason over payoffs, their     each role, and records the joint outcome in terms of equilibrium
+                                                                        attainment and type. Holding the game constant while varying rep-
+joint actions satisfy equilibrium conditions. Nash equilibrium serves   resentation isolates whether payoff structure or persona framing
+                                                                        drives equilibrium selection.
+as a diagnostic tool: it measures whether agent behavior aligns
+                                                                        4 Results
+with the game's incentive structure, not whether that behavior is
+                                                                        We report results separately for Green-dominant (environmen-
+optimal or desirable. For each joint strategy profile , we compute      tal) scenarios (41 scenarios, 205 runs per condition) and Tragedy-
+                                                                        dominant (economic) scenarios (12 scenarios, 60 runs per condi-
+two outcome measures.                                                   tion). We first examine Nash attainment across conditions, then
+   Nash attainment: This is a binary indicator of whether the           equilibrium selection conditional on attainment, and finally prompt
+                                                                        sensitivity.
+realized outcome is an equilibrium:
+                                                                        4.1 Persona and Payoff Effects on Nash
+                          1                                                   Attainment Depend on Scenario Structure
+            () =                                                               and Model Family
+
+                          0 otherwise                                   The same representational change increases Nash equilibrium at-
+                                                                        tainment in Tragedy-dominant scenarios and decreases it in Green-
+Equilibrium type: For outcomes that are Nash equilibria, we ad-         dominant ones. Figure 2 shows attainment rates across persona
+ditionally classify which kind of equilibrium the model reached.        and payoff visibility conditions for both scenario types. In Tragedy-
+                                                                        dominant scenarios, models reach near-zero Nash equilibrium rates
+           Green Transition                      if  = green            unless personas are removed and payoff information is explicitly
+                                                                        provided. Under the Visible Payoff + No Persona condition, Qwen-7B
+                                                                        attains equilibrium in 65% of runs and Qwen-32B in 90% (Qwen-
+                                                                        32B: 2 (3) = 209.03,  < .001,  = 0.93; Qwen-7B: 2 (3) = 105.91,
+Type()  =   Tragedy                 of  Commons  if  = tragedy           < .001,  = 0.66), while all other conditions remain at or near 0%.
+                                                                        Pairwise comparisons show all significant differences involve this
+                                                 otherwise              condition ( < 0.001, Fisher exact tests, Holm-corrected). Llama-8B
+           Other                                                        and Mistral-7B fail to reach equilibrium in any condition (0% across
+                                                                        all cells, degenerate tests with no variation). In Green-dominant
+                                                                        scenarios, equilibrium rates are 74.6­100% across most conditions:
+If    , we classify whether it corresponds to Green Transi-             role semantics and narrative context align agents toward Green
+                                                                        Transition without explicit payoff information. When personas are
+tion, Tragedy of the Commons, or another equilibrium. Formally,         removed and payoffs made visible, coordination breaks down to
+Green-dominant scenarios correspond to    , and Tragedy-
+dominant scenarios correspond to    .
+
+   These measures distinguish two phenomena: (i) failure to reach
+
+equilibrium at all, and (ii) systematic bias in equilibrium selection
+
+when equilibrium is reached.
+
+3.5 Scenario Construction
+
+We construct 53 scenarios by specifying payoff tables over the 16
+joint action profiles and pairing them with natural-language narra-
+tives describing the policy context. Scenarios are generated by first
+choosing a target equilibrium structure, constructing payoffs con-
+sistent with that structure, and then generating narratives aligned
+with the incentives. We manually filter scenarios to ensure that the
+narrative meaningfully reflects the underlying payoff structure.
+
+   To organize the evaluation, we group scenarios according to
+which equilibrium structure they instantiate:
+
+      · Green-dominant: green    and tragedy   . Environ-
+         mentally friendly Green Transition is the stable outcome
+         among the two canonical profiles, while Tragedy is not.
+
+      · Tragedy-dominant: tragedy    and green   . Indi-
+         vidually beneficial but collectively harmful behavior, the
+FAccT '26, June 25­28, 2026, Montreal, QC, Canada                     Manoranjan and Gaikwad
+
+(a) Green-dominant Scenarios (Environmental)                          (b) Tragedy-dominant Scenarios (Economic)
+
+Figure 2: This figure shows Nash equilibrium attainment rates across persona and payoff visibility conditions. Left: Green-
+dominant scenarios, where the equilibrium requires coordinated pro-environmental action. Right: Tragedy-dominant scenarios,
+where individually beneficial actions form the payoff-optimal equilibrium. Visible payoffs improve equilibrium attainment
+only when persona descriptions are removed, and only for Qwen models. Chi-square tests confirm significant differences across
+conditions for Qwen models in both scenario types (  0.001). Llama-8B and Mistral-7B show no variation in Tragedy-dominant
+scenarios (0% Nash across all conditions).
+
+different degrees across models. Qwen-32B drops from 96.1% un-        4.3 Persona Wording Induces Systematic
+der Hidden Payoff + No Persona to 16.6% under Visible Payoff + No           Variability in Outcomes
+Persona (omnibus 2 (3) = 377.06,  < .001,  = 0.68; pairwise con-
+trasts involving Visible+No persona:  < .001, Fisher exact tests,     Varying persona descriptions shifts strategic outcomes even when
+Holm-corrected). Qwen-7B drops from 95.6% to 52.7%. Mistral-7B        incentives and game structure are fixed: prompt formulation alone
+drops from 98.0% to 50.2%. Llama-8B shows the smallest change,        alters equilibrium behavior.
+from 97.6% to 93.2%. Without persona framing, agents respond more
+strongly to explicit payoff structure. Removing persona framing im-      Figure 4 shows that scenarios produce between 2.2 and 2.4 dis-
+proves attainment when the equilibrium requires payoff-dominant       tinct outcomes on average across models, with maximum values
+actions and disrupts coordination when role semantics already sup-    reaching up to 5 outcomes in some cases. Different persona variants
+port a shared outcome. Qwen models show the largest swings in         produce multiple distinct equilibria within the same scenario.
+both scenario types: role-aligned under persona conditions, payoff-
+aligned under Visible + No Persona. Mistral-7B drops 47.8 pp in          This variability reflects systematic shifts in persona framing, not
+Green-dominant scenarios and reaches 0% Nash attainment in all        stochastic differences across models. A Kruskal-Wallis test finds
+Tragedy-dominant conditions. Llama-8B shows minimal variation         no significant difference in variability across model families ( =
+across all conditions in both scenario types.                         0.27): all models exhibit similar prompt sensitivity. With the payoff
+                                                                      structure kept constant, different persona descriptions produce
+4.2 Personas Shift Equilibrium Selection                              different action profiles and equilibria. The persona formulation
+      Toward Socially Preferred Outcomes                              shapes equilibrium selection independently of the payoff structure.
+
+Personas determine both whether equilibrium is reached and which      5 Discussion
+equilibrium is selected. With personas, all models select socially    5.1 Personas Constrain Strategic Behavior and
+preferred equilibria. Removing personas shifts selection toward
+payoff-dominant strategies. Across all models and conditions with           Bias Equilibrium Selection
+personas, over 99% of Nash equilibria correspond to Green Transi-
+tion. Under Visible Payoff + No Persona, Qwen-32B shifts to 88.6%     As shown in Section 4.1, personas prevent models from reaching
+Tragedy of the Commons and 11.4% Green Transition. Qwen-7B            payoff-optimal equilibria in Tragedy-dominant scenarios, with equi-
+shifts to 39.6% Tragedy and 60.4% Green. This represents changes      librium rates remaining near zero across models (Fig. 2) despite
+of up to 90 percentage points in equilibrium selection (2 = 430.38,   explicit payoff information. As shown in Section 4.2, personas bias
+ < 10-90; pairwise Fisher tests, Holm-corrected, confirm the Visi-    equilibrium selection toward Green Transition outcomes: with per-
+ble + No Persona condition differs from all others). Llama-8B and     sonas present, over 99% of Nash equilibria correspond to Green
+Mistral-7B hold at 100% Green Transition outcomes even without        Transition (Fig. 3), even in Tragedy-dominant scenarios where
+personas. Both models fail to reach the Tragedy equilibrium in any    Tragedy is payoff-optimal. Removing personas enables Qwen mod-
+condition, so the Green Transition is their only attainable outcome.  els to select the Tragedy equilibrium, while Llama and Mistral
+                                                                      remain locked into the Green selection regardless of condition. Per-
+                                                                      sonas are design choices that fundamentally alter system behavior.
+When Identity Overrides Incentives                                                                                    FAccT '26, June 25­28, 2026, Montreal, QC, Canada
+
+           + PHeirdsdonena          Green vs. Tragedy among Nash (Qwen models)
+        + No PHeirdsdonena
+                                           Green Transition Tragedy of the Commons
+           + PeVrissoibnlea
+        + No PeVrissoibnlae         25                                  50  75                                                 100
+                                    (pooled Qwen-32B + QwSehna-r7eBo;feNnavsirhonomuteconmtael s+(e%c)onomic scenario tables)
+                     0
+
+Figure 3: Equilibrium selection among Nash outcomes for Qwen models across conditions. Under the first three conditions,
+
+over 99% of Nash outcomes are Green Transition. Under Visible Payoff + No Persona, 39.6% of Qwen-7B outcomes and 88.6% of
+Qwen-32B outcomes shift to Tragedy of the Commons (2 = 430.38,  < 10-90; pairwise Fisher tests, Holm-corrected, confirm
+
+this condition differs from all others).
+
+They shape both whether equilibrium is reached and which equilib-          The effect of making payoffs explicit depends on scenario struc-
+rium is selected. Prior work finds that role prompts systematically     ture. Visible payoffs improve equilibrium attainment only when
+bias strategic decision-making in LLMs [23, 24, 31, 35], and that       personas are removed, and only for Qwen models (Fig. 2). In Green-
+LLMs exhibit cooperative or norm-aligned behavior even when             dominant scenarios, the same intervention disrupts coordination.
+such actions are payoff-dominated [3, 16, 17, 30]. The effect of this   Persona presence and payoff visibility interact: their combination
+bias depends on the deployment objective. Persona framing inter-        determines whether a system produces payoff-aligned strategic be-
+feres with incentive-responsive agents and supports value-aligned       havior or role-consistent responses. Contextual framing and infor-
+ones. The critical issue is that designers make this choice through     mation presentation shape LLM behavior in strategic tasks [30, 50].
+persona assignment, often without recognizing it, and the resulting
+system behavior may not match their intent. Systems that appear to         Conclusions about model capability depend on representational
+simulate rational strategic behavior encode normative assumptions       choices: black-box evaluations miss the interaction between per-
+imposed by the designer through persona choices. Equilibrium out-       sona framing and payoff visibility that determines behavior [8, 32].
+comes in LLM-based simulations are outputs shaped by embedded           Behavior in multi-agent LLM systems emerges from the interaction
+normative assumptions, not neutral predictions of system dynam-         between model, prompt, and environment [21, 45].
+ics, a concern echoed in work on LLM-based social simulation and
+sociotechnical impacts of AI systems [2, 11, 19, 40].                   5.3 Model Family Determines the Scope of
+                                                                              Representational Effects
+5.2 Payoff-Aligned Behavior Requires Both
+      Persona Removal and Explicit Payoffs                              The effects of persona and payoff manipulations are strongly model-
+                                                                        dependent, with three distinct behavioral profiles emerging from
+As shown in Section 4.1, payoff-aligned behavior in Tragedy-dominant    our experiments. As shown in Section 4.1, only Qwen models reach
+scenarios requires both persona removal and explicit payoff infor-      a non-zero Nash equilibrium in Tragedy-dominant scenarios under
+mation (Fig. 2). All models reach near-zero Nash attainment in          the Visible Payoff + No Persona condition, exhibiting large shifts in
+Tragedy-dominant scenarios when payoffs are hidden and per-             both scenario types. Mistral-7B drops 47.8 pp in Green-dominant
+sonas are removed. Only Qwen models reach substantial Nash              scenarios under the no-persona visible condition and reaches 0%
+attainment, and only under visible payoffs with no personas. Strate-    Nash attainment across all Tragedy-dominant conditions: visible
+gic capabilities are fragile: LLMs frequently fail to optimize payoffs  payoffs disrupt its coordination without producing payoff-aligned
+in game-theoretic settings even with access to relevant information     behavior. Llama-8B shows the least sensitivity, with near-invariant
+[13, 15, 25, 52].                                                       behavior across all conditions.
+
+   Figure 3 shows this pattern for the Qwen models. Under the first        The same representational intervention produces large effects for
+three conditions, over 99% of outcomes are Green Transition. Under      Qwen, disruptive effects for Mistral, and negligible effects for Llama.
+Visible Payoff + No Persona, 39.6% of Qwen-7B outcomes and 88.6%        Strategic reasoning performance varies across model families inde-
+of Qwen-32B outcomes shift to Tragedy of the Commons.                   pendently of scale [3, 13, 29, 51]. Different models produce different
+FAccT '26, June 25­28, 2026, Montreal, QC, Canada                        Manoranjan and Gaikwad
+
+Figure 4: Prompt sensitivity across persona variants. Bars show the average number of distinct outcome classifications per
+scenario across seven persona prompt variants. Error bars show the minimum and maximum across scenarios. Scenarios
+typically produce more than two distinct outcomes on average, with some reaching up to five.
+
+conclusions under identical setups, which poses risks in decision-       these effects across repetitions and both Qwen models support the
+making contexts where consistency and comparability matter. Per-         pattern's reliability, though the absolute rates should be validated
+sona design and payoff specification are governance-relevant con-        against a larger Tragedy-dominant set.
+figuration decisions. Developers should document these choices,
+evaluate systems across multiple configurations, and avoid pre-             Our game is single-shot; agents select actions in a fixed order,
+senting outputs as neutral simulations. Systems evaluated under a        and visible payoff matrices cover all 16 profiles, which may exceed
+single configuration risk produce results that reflect design artifacts  typical processing capacity. These are deliberate design choices that
+rather than underlying strategic dynamics.                               prioritize experimental control for an initial investigation. Whether
+                                                                         persona effects persist under repeated interaction, alternative pay-
+   These findings question whether game-theoretic rationality is         off formats, or different action orderings is untested. The prompt
+the right framework for multi-stakeholder governance simulations.        sensitivity experiments cover seven persona formulations per sce-
+When identity framing shapes agent behavior as strongly as in-           nario but do not exhaust the space of possible variations. Different
+centive structure, the assumptions underlying equilibrium-based          reasoning scaffolds or multi-turn deliberation protocols fall out-
+analysis fail. Civic contexts with heterogeneous stakeholders, value     side the current design's scope and may shift equilibrium behavior.
+conflicts, and coordination under uncertainty may call for delibera-     The results establish systematic sensitivity to representation across
+tive approaches that account for identity, framing, and normative        seven persona formulations per scenario. None of these limitations
+disagreement [43, 44]. Treating agents as payoff maximizers within       affects the core finding: persona assignment and payoff presentation
+a fixed game may be the wrong model for these settings.                  shift equilibrium attainment by up to 90 percentage points, which
+                                                                         makes representational choices governance decisions regardless of
+5.4 Limitations and Future Work                                          whether the effect magnitude replicates at a larger scale or across
+                                                                         other domains. Future work should extend this investigation across
+The universal Green Transition bias under persona conditions holds       additional model families, domains, and interaction structures. A
+across all four models tested, covering 7B­32B parameters across         separate priority is developing methods to predict and mitigate
+three families (Qwen, Llama, Mistral). Whether these patterns ex-        persona effects before deployment.
+tend to larger models or other architectures is untested, though con-
+sistency across four architectures reduces the likelihood of single-     6 Conclusion
+architecture artifacts. Our scenarios are grounded in environmental
+policy settings with four agents and binary actions. This domain         Persona assignment suppresses payoff-aligned behavior and biases
+provides clear tensions between incentives and role semantics. Ex-       equilibrium selection towards the Green Transition in over 99%
+tending the framework to other domains, larger agent populations,        of cases, regardless of payoff visibility. Recovering payoff-aligned
+and richer action spaces would test generality. The scenario set         behavior requires both removing personas and providing explicit
+is imbalanced: 41 of 53 scenarios are Green-dominant, with only          payoffs, and even then the response is model-dependent: Qwen
+12 Tragedy-dominant. The Tragedy-dominant findings, including            adapts to the changed framing, Mistral increases response variance
+the 65-90% equilibrium rates under Visible Payoff + No Persona,          without reaching Tragedy equilibrium, and Llama remains near-
+rest on 60 runs per condition. The magnitude and consistency of          invariant. Persona assignment makes this choice whether or not the
+When Identity Overrides Incentives                                                         FAccT '26, June 25­28, 2026, Montreal, QC, Canada
+
+designer intends it. A single binary design choice shifts equilibrium                      [14] Joshua M Epstein and Robert Axtell. 1996. Growing artificial societies: social
+                                                                                                  science from the bottom up. Brookings Institution Press.
+attainment by up to 90 percentage points. Representational choices
+                                                                                           [15] Caoyun Fan, Jindou Chen, Yaohui Jin, and Hao He. 2024. Can large language mod-
+in multi-agent LLM systems are governance decisions, and their                                    els serve as rational players in game theory? a systematic analysis. In Proceedings
+                                                                                                  of the AAAI Conference on Artificial Intelligence, Vol. 38. 17960­17967.
+effects on equilibrium outcomes must be documented, tested, and
+                                                                                           [16] Sara Fish, Yannai A. Gonczarowski, and Ran I. Shorrer. 2025. Algorithmic
+deliberately designed.                                                                            Collusion by Large Language Models. arXiv:2404.00806 [econ.GN] https:
+                                                                                                  //arxiv.org/abs/2404.00806
+Generative AI Usage Statement
+                                                                                           [17] Nicoló Fontana, Francesco Pierri, and Luca Maria Aiello. 2025. Nicer Than
+The large language models explicitly evaluated in this paper are                                  Humans: How Do Large Language Models Behave in the Prisoner's Dilemma?.
+                                                                                                  In Proceedings of the International AAAI Conference on Web and Social Media,
+Qwen2.5-7B, Qwen2.5-32B, Llama-3.1-8B, and Mistral-7B. GPT-5                                      Vol. 19. 522­535.
+
+assisted with scenario generation, while ChatGPT and Grammarly                             [18] Kanishk Gandhi, Dorsa Sadigh, and Noah D Goodman. 2023. Strategic reasoning
+                                                                                                  with language models. arXiv preprint arXiv:2305.19165 (2023).
+were used for grammar, formatting, and editing. These tools were
+                                                                                           [19] Chen Gao, Xiaochong Lan, Nian Li, Yuan Yuan, Jingtao Ding, Zhilun Zhou,
+not used for idea generation, analysis, or interpretation of results.                             Fengli Xu, and Yong Li. 2024. Large language models empowered agent-based
+                                                                                                  modeling and simulation: A survey and perspectives. Humanities and Social
+All content was reviewed and edited by the authors, who retain                                    Sciences Communications 11, 1 (2024), 1­24.
+
+full responsibility for the originality, accuracy, and integrity of the                    [20] Aaron Grattafiori, Abhimanyu Dubey, Abhinav Jauhri, Abhinav Pandey, Ab-
+                                                                                                  hishek Kadian, Ahmad Al-Dahle, Aiesha Letman, Akhil Mathur, Alan Schelten,
+manuscript.                                                                                       Alex Vaughan, Amy Yang, Angela Fan, Anirudh Goyal, Anthony Hartshorn, Aobo
+                                                                                                  Yang, Archi Mitra, Archie Sravankumar, Artem Korenev, Arthur Hinsvark, Arun
+References                                                                                        Rao, Aston Zhang, Aurelien Rodriguez, Austen Gregerson, Ava Spataru, Baptiste
+                                                                                                  Roziere, Bethany Biron, Binh Tang, Bobbie Chern, Charlotte Caucheteux, Chaya
+ [1] Sahar Abdelnabi, Amr Gomaa, Sarath Sivaprasad, Lea Schönherr, and Mario                      Nayak, Chloe Bi, Chris Marra, Chris McConnell, Christian Keller, Christophe
+       Fritz. 2024. LLM-Deliberation: Evaluating Large Language Models with Inter-                Touret, Chunyang Wu, Corinne Wong, Cristian Canton Ferrer, Cyrus Nikolaidis,
+       active Multi-Agent Negotiation Games. International Conference on Learning                 Damien Allonsius, Daniel Song, Danielle Pintz, Danny Livshits, Danny Wyatt,
+       Representations (2024).                                                                    David Esiobu, Dhruv Choudhary, Dhruv Mahajan, Diego Garcia-Olano, Diego
+                                                                                                  Perino, Dieuwke Hupkes, Egor Lakomkin, Ehab AlBadawy, Elina Lobanova,
+ [2] Gati V Aher, Rosa I Arriaga, and Adam Tauman Kalai. 2023. Using large language               Emily Dinan, Eric Michael Smith, Filip Radenovic, Francisco Guzmán, Frank
+       models to simulate multiple humans and replicate human subject studies. In                 Zhang, Gabriel Synnaeve, Gabrielle Lee, Georgia Lewis Anderson, Govind That-
+       International conference on machine learning. PMLR, 337­371.                               tai, Graeme Nail, Gregoire Mialon, Guan Pang, Guillem Cucurell, Hailey Nguyen,
+                                                                                                  Hannah Korevaar, Hu Xu, Hugo Touvron, Iliyan Zarov, Imanol Arrieta Ibarra,
+ [3] Elif Akata, Lion Schulz, Julian Coda-Forno, Seong Joon Oh, Matthias Bethge, and              Isabel Kloumann, Ishan Misra, Ivan Evtimov, Jack Zhang, Jade Copet, Jaewon
+       Eric Schulz. 2025. Playing repeated games with large language models. Nature               Lee, Jan Geffert, Jana Vranes, Jason Park, Jay Mahadeokar, Jeet Shah, Jelmer
+       Human Behaviour 9, 7 (May 2025), 1380­1390. doi:10.1038/s41562-025-02172-y                 van der Linde, Jennifer Billock, Jenny Hong, Jenya Lee, Jeremy Fu, Jianfeng Chi,
+                                                                                                  Jianyu Huang, Jiawen Liu, Jie Wang, Jiecao Yu, Joanna Bitton, Joe Spisak, Jongsoo
+ [4] Scott Barrett. 2003. Environment and statecraft: The strategy of environmental               Park, Joseph Rocca, Joshua Johnstun, Joshua Saxe, Junteng Jia, Kalyan Vasu-
+       treaty-making. OUP Oxford.                                                                 den Alwala, Karthik Prasad, Kartikeya Upasani, Kate Plawiak, Ke Li, Kenneth
+                                                                                                  Heafield, Kevin Stone, Khalid El-Arini, Krithika Iyer, Kshitiz Malik, Kuenley Chiu,
+ [5] Emily M Bender, Timnit Gebru, Angelina McMillan-Major, and Shmargaret                        Kunal Bhalla, Kushal Lakhotia, Lauren Rantala-Yeary, Laurens van der Maaten,
+       Shmitchell. 2021. On the dangers of stochastic parrots: Can language models be             Lawrence Chen, Liang Tan, Liz Jenkins, Louis Martin, Lovish Madaan, Lubo
+       too big?. In Proceedings of the 2021 ACM conference on fairness, accountability,           Malo, Lukas Blecher, Lukas Landzaat, Luke de Oliveira, Madeline Muzzi, Mahesh
+       and transparency. 610­623.                                                                 Pasupuleti, Mannat Singh, Manohar Paluri, Marcin Kardas, Maria Tsimpoukelli,
+                                                                                                  Mathew Oldham, Mathieu Rita, Maya Pavlova, Melanie Kambadur, Mike Lewis,
+ [6] Federico Bianchi, Patrick John Chia, Mert Yuksekgonul, Jacopo Tagliabue,                     Min Si, Mitesh Kumar Singh, Mona Hassan, Naman Goyal, Narjes Torabi, Nikolay
+       Dan Jurafsky, and James Zou. 2024. How Well Can LLMs Negotiate? Nego-                      Bashlykov, Nikolay Bogoychev, Niladri Chatterji, Ning Zhang, Olivier Duchenne,
+       tiationArena Platform and Analysis. In Proceedings of the 41st International               Onur Çelebi, Patrick Alrassy, Pengchuan Zhang, Pengwei Li, Petar Vasic, Peter
+       Conference on Machine Learning (Proceedings of Machine Learning Research,                 Weng, Prajjwal Bhargava, Pratik Dubal, Praveen Krishnan, Punit Singh Koura,
+       Vol. 235), Ruslan Salakhutdinov, Zico Kolter, Katherine Heller, Adrian Weller,             Puxin Xu, Qing He, Qingxiao Dong, Ragavan Srinivasan, Raj Ganapathy, Ramon
+       Nuria Oliver, Jonathan Scarlett, and Felix Berkenkamp (Eds.). PMLR, 3935­3951.             Calderer, Ricardo Silveira Cabral, Robert Stojnic, Roberta Raileanu, Rohan Mah-
+       https://proceedings.mlr.press/v235/bianchi24a.html                                         eswari, Rohit Girdhar, Rohit Patel, Romain Sauvestre, Ronnie Polidoro, Roshan
+                                                                                                  Sumbaly, Ross Taylor, Ruan Silva, Rui Hou, Rui Wang, Saghar Hosseini, Sahana
+ [7] Eric Bonabeau. 2002. Agent-based modeling: Methods and techniques for simu-                  Chennabasappa, Sanjay Singh, Sean Bell, Seohyun Sonia Kim, Sergey Edunov,
+       lating human systems. Proceedings of the national academy of sciences 99, suppl_3          Shaoliang Nie, Sharan Narang, Sharath Raparthy, Sheng Shen, Shengye Wan,
+       (2002), 7280­7287.                                                                         Shruti Bhosale, Shun Zhang, Simon Vandenhende, Soumya Batra, Spencer Whit-
+                                                                                                  man, Sten Sootla, Stephane Collot, Suchin Gururangan, Sydney Borodinsky,
+ [8] Stephen Casper, Carson Ezell, Charlotte Siegmann, Noam Kolt, Taylor Lynn                     Tamar Herman, Tara Fowler, Tarek Sheasha, Thomas Georgiou, Thomas Scialom,
+       Curtis, Benjamin Bucknall, Andreas Haupt, Kevin Wei, Jérémy Scheurer, Marius               Tobias Speckbacher, Todor Mihaylov, Tong Xiao, Ujjwal Karn, Vedanuj Goswami,
+       Hobbhahn, et al. 2024. Black-box access is insufficient for rigorous ai audits. In         Vibhor Gupta, Vignesh Ramanathan, Viktor Kerkez, Vincent Gonguet, Virginie
+       Proceedings of the 2024 ACM Conference on Fairness, Accountability, and Trans-             Do, Vish Vogeti, Vítor Albiero, Vladan Petrovic, Weiwei Chu, Wenhan Xiong,
+       parency. 2254­2272.                                                                       Wenyin Fu, Whitney Meers, Xavier Martinet, Xiaodong Wang, Xiaofang Wang,
+                                                                                                  Xiaoqing Ellen Tan, Xide Xia, Xinfeng Xie, Xuchao Jia, Xuewei Wang, Yaelle Gold-
+ [9] Karl Cobbe, Vineet Kosaraju, Mohammad Bavarian, Mark Chen, Heewoo Jun,                       schlag, Yashesh Gaur, Yasmine Babaei, Yi Wen, Yiwen Song, Yuchen Zhang, Yue
+       Lukasz Kaiser, Matthias Plappert, Jerry Tworek, Jacob Hilton, Reiichiro Nakano,            Li, Yuning Mao, Zacharie Delpierre Coudert, Zheng Yan, Zhengxing Chen, Zoe
+       et al. 2021. Training verifiers to solve math word problems. arXiv preprint                Papakipos, Aaditya Singh, Aayushi Srivastava, Abha Jain, Adam Kelsey, Adam
+       arXiv:2110.14168 (2021).                                                                   Shajnfeld, Adithya Gangidi, Adolfo Victoria, Ahuva Goldstand, Ajay Menon,
+                                                                                                  Ajay Sharma, Alex Boesenberg, Alexei Baevski, Allie Feinstein, Amanda Kallet,
+[10] Antonia Creswell and Murray Shanahan. 2022. Faithful reasoning using large                   Amit Sangani, Amos Teo, Anam Yunus, Andrei Lupu, Andres Alvarado, Andrew
+       language models. arXiv preprint arXiv:2208.14271 (2022).                                   Caples, Andrew Gu, Andrew Ho, Andrew Poulton, Andrew Ryan, Ankit Ram-
+                                                                                                  chandani, Annie Dong, Annie Franco, Anuj Goyal, Aparajita Saraf, Arkabandhu
+[11] Andrés Domínguez Hernández, Shyam Krishna, Antonella Maia Perini, Michael                    Chowdhury, Ashley Gabriel, Ashwin Bharambe, Assaf Eisenman, Azadeh Yazdan,
+       Katell, SJ Bennett, Ann Borda, Youmna Hashem, Semeli Hadjiloizou, Sabeehah                 Beau James, Ben Maurer, Benjamin Leonhardi, Bernie Huang, Beth Loyd, Beto De
+       Mahomed, Smera Jayadeva, et al. 2024. Mapping the individual, social and bio-              Paola, Bhargavi Paranjape, Bing Liu, Bo Wu, Boyu Ni, Braden Hancock, Bram
+       spheric impacts of Foundation Models. In Proceedings of the 2024 ACM Conference           Wasti, Brandon Spence, Brani Stojkovic, Brian Gamido, Britt Montalvo, Carl
+       on Fairness, Accountability, and Transparency. 776­796.                                    Parker, Carly Burton, Catalina Mejia, Ce Liu, Changhan Wang, Changkyu Kim,
+                                                                                                  Chao Zhou, Chester Hu, Ching-Hsiang Chu, Chris Cai, Chris Tindal, Christoph
+[12] Jinhao Duan, Shiqi Wang, James Diffenderfer, Lichao Sun, Tianlong Chen, Bhavya               Feichtenhofer, Cynthia Gao, Damon Civin, Dana Beaty, Daniel Kreymer, Daniel
+       Kailkhura, and Kaidi Xu. 2024. ReTA: Recursively Thinking Ahead to Improve
+       the Strategic Reasoning of Large Language Models. In Proceedings of the 2024
+       Conference of the North American Chapter of the Association for Computational
+       Linguistics: Human Language Technologies (Volume 1: Long Papers), Kevin Duh,
+       Helena Gomez, and Steven Bethard (Eds.). Association for Computational Lin-
+       guistics, Mexico City, Mexico, 2232­2246. doi:10.18653/v1/2024.naacl-long.123
+
+[13] Jinhao Duan, Renming Zhang, James Diffenderfer, Bhavya Kailkhura, Lichao Sun,
+       Elias Stengel-Eskin, Mohit Bansal, Tianlong Chen, and Kaidi Xu. 2024. Gtbench:
+       Uncovering the strategic reasoning capabilities of llms via game-theoretic evalua-
+       tions. Advances in Neural Information Processing Systems 37 (2024), 28219­28253.
+FAccT '26, June 25­28, 2026, Montreal, QC, Canada                                                                                                                    Manoranjan and Gaikwad
+
+       Li, David Adkins, David Xu, Davide Testuggine, Delia David, Devi Parikh, Diana                In Proceedings of the 62nd annual meeting of the association for computational
+       Liskovich, Didem Foss, Dingkang Wang, Duc Le, Dustin Holland, Edward Dowl-                    linguistics (volume 1: Long papers). 15523­15536.
+       ing, Eissa Jamil, Elaine Montgomery, Eleonora Presani, Emily Hahn, Emily Wood,         [28] Tian Liang, Zhiwei He, Wenxiang Jiao, Xing Wang, Yan Wang, Rui Wang, Yujiu
+       Eric-Tuan Le, Erik Brinkman, Esteban Arcaute, Evan Dunbar, Evan Smothers, Fei                 Yang, Shuming Shi, and Zhaopeng Tu. 2024. Encouraging divergent thinking in
+       Sun, Felix Kreuk, Feng Tian, Filippos Kokkinos, Firat Ozgenel, Francesco Cag-                 large language models through multi-agent debate. In Proceedings of the 2024
+       gioni, Frank Kanayet, Frank Seide, Gabriela Medina Florez, Gabriella Schwarz,                 conference on empirical methods in natural language processing. 17889­17904.
+       Gada Badeer, Georgia Swee, Gil Halpern, Grant Herman, Grigory Sizov, Guangyi,          [29] Xiao Liu, Hao Yu, Hanchen Zhang, Yifan Xu, Xuanyu Lei, Hanyu Lai, Yu Gu,
+       Zhang, Guna Lakshminarayanan, Hakan Inan, Hamid Shojanazeri, Han Zou, Han-                    Hangliang Ding, Kaiwen Men, Kejuan Yang, et al. 2024. Agentbench: Evaluating
+       nah Wang, Hanwen Zha, Haroun Habeeb, Harrison Rudolph, Helen Suk, Henry                       llms as agents. In International Conference on Learning Representations, Vol. 2024.
+       Aspegren, Hunter Goldman, Hongyuan Zhan, Ibrahim Damlaj, Igor Molybog,                        52989­53046.
+       Igor Tufanov, Ilias Leontiadis, Irina-Elena Veliche, Itai Gat, Jake Weissman, James    [30] Nunzio Lorè and Babak Heydari. 2024. Strategic behavior of large language
+       Geboski, James Kohli, Janice Lam, Japhet Asher, Jean-Baptiste Gaya, Jeff Marcus,              models and the role of game structure versus contextual framing. Scientific
+       Jeff Tang, Jennifer Chan, Jenny Zhen, Jeremy Reizenstein, Jeremy Teboul, Jessica              Reports 14, 1 (2024), 18490.
+       Zhong, Jian Jin, Jingyi Yang, Joe Cummings, Jon Carvill, Jon Shepard, Jonathan         [31] Olivia Macmillan-Scott and Mirco Musolesi. 2024. (Ir) rationality and cognitive
+       McPhie, Jonathan Torres, Josh Ginsburg, Junjie Wang, Kai Wu, Kam Hou U,                       biases in large language models. Royal Society open science 11, 6 (2024).
+       Karan Saxena, Kartikay Khandelwal, Katayoun Zand, Kathy Matosich, Kaushik              [32] Yaaseen Mahomed, Charlie M Crawford, Sanjana Gautam, Sorelle A Friedler, and
+       Veeraraghavan, Kelly Michelena, Keqian Li, Kiran Jagadeesh, Kun Huang, Kunal                  Danaë Metaxa. 2024. Auditing GPT's Content Moderation Guardrails: Can Chat-
+       Chawla, Kyle Huang, Lailin Chen, Lakshya Garg, Lavender A, Leandro Silva, Lee                 GPT Write Your Favorite TV Show?. In Proceedings of the 2024 ACM Conference
+       Bell, Lei Zhang, Liangpeng Guo, Licheng Yu, Liron Moshkovich, Luca Wehrstedt,                 on Fairness, Accountability, and Transparency. 660­686.
+       Madian Khabsa, Manav Avalani, Manish Bhatt, Martynas Mankus, Matan Has-                [33] Scott Merrill and Shashank Srivastava. 2025. Point of Order: Action-Aware LLM
+       son, Matthew Lennie, Matthias Reso, Maxim Groshev, Maxim Naumov, Maya                         Persona Modeling for Realistic Civic Simulation. arXiv preprint arXiv:2511.17813
+       Lathi, Meghan Keneally, Miao Liu, Michael L. Seltzer, Michal Valko, Michelle                  (2025).
+       Restrepo, Mihir Patel, Mik Vyatskov, Mikayel Samvelyan, Mike Clark, Mike               [34] John Nash. 1951. Non-Cooperative Games. Annals of Mathematics 54, 2 (1951),
+       Macey, Mike Wang, Miquel Jubert Hermoso, Mo Metanat, Mohammad Raste-                          286­295.
+       gari, Munish Bansal, Nandhini Santhanam, Natascha Parks, Natasha White,                [35] Anna Neumann, Elisabeth Kirsten, Muhammad Bilal Zafar, and Jatinder Singh.
+       Navyata Bawa, Nayan Singhal, Nick Egebo, Nicolas Usunier, Nikhil Mehta, Niko-                 2025. Position is Power: System Prompts as a Mechanism of Bias in Large
+       lay Pavlovich Laptev, Ning Dong, Norman Cheng, Oleg Chernoguz, Olivia Hart,                   Language Models (LLMs). In Proceedings of the 2025 ACM Conference on Fairness,
+       Omkar Salpekar, Ozlem Kalinli, Parkin Kent, Parth Parekh, Paul Saab, Pavan                    Accountability, and Transparency. 573­598.
+       Balaji, Pedro Rittner, Philip Bontrager, Pierre Roux, Piotr Dollar, Polina Zvyag-      [36] Elinor Ostrom. 1990. Governing the commons: The evolution of institutions for
+       ina, Prashant Ratanchandani, Pritish Yuvraj, Qian Liang, Rachad Alao, Rachel                  collective action. Cambridge university press.
+       Rodriguez, Rafi Ayub, Raghotham Murthy, Raghu Nayani, Rahul Mitra, Ran-                [37] Joon Sung Park, Joseph O'Brien, Carrie Jun Cai, Meredith Ringel Morris, Percy
+       gaprabhu Parthasarathy, Raymond Li, Rebekkah Hogan, Robin Battey, Rocky                       Liang, and Michael S Bernstein. 2023. Generative agents: Interactive simulacra
+      Wang, Russ Howes, Ruty Rinott, Sachin Mehta, Sachin Siby, Sai Jayesh Bondu,                    of human behavior. In Proceedings of the 36th annual acm symposium on user
+       Samyak Datta, Sara Chugh, Sara Hunt, Sargun Dhillon, Sasha Sidorov, Satadru                   interface software and technology. 1­22.
+       Pan, Saurabh Mahajan, Saurabh Verma, Seiji Yamamoto, Sharadh Ramaswamy,                [38] Joon Sung Park, Lindsay Popowski, Carrie Cai, Meredith Ringel Morris, Percy
+       Shaun Lindsay, Shaun Lindsay, Sheng Feng, Shenghao Lin, Shengxin Cindy Zha,                   Liang, and Michael S Bernstein. 2022. Social simulacra: Creating populated
+       Shishir Patil, Shiva Shankar, Shuqiang Zhang, Shuqiang Zhang, Sinong Wang,                    prototypes for social computing systems. In Proceedings of the 35th Annual ACM
+       Sneha Agarwal, Soji Sajuyigbe, Soumith Chintala, Stephanie Max, Stephen Chen,                 Symposium on User Interface Software and Technology. 1­18.
+       Steve Kehoe, Steve Satterfield, Sudarshan Govindaprasad, Sumit Gupta, Summer           [39] Qwen, :, An Yang, Baosong Yang, Beichen Zhang, Binyuan Hui, Bo Zheng, Bowen
+       Deng, Sungmin Cho, Sunny Virk, Suraj Subramanian, Sy Choudhury, Sydney                        Yu, Chengyuan Li, Dayiheng Liu, Fei Huang, Haoran Wei, Huan Lin, Jian Yang,
+       Goldman, Tal Remez, Tamar Glaser, Tamara Best, Thilo Koehler, Thomas Robin-                   Jianhong Tu, Jianwei Zhang, Jianxin Yang, Jiaxi Yang, Jingren Zhou, Junyang
+       son, Tianhe Li, Tianjun Zhang, Tim Matthews, Timothy Chou, Tzook Shaked,                      Lin, Kai Dang, Keming Lu, Keqin Bao, Kexin Yang, Le Yu, Mei Li, Mingfeng Xue,
+       Varun Vontimitta, Victoria Ajayi, Victoria Montanez, Vijai Mohan, Vinay Satish                Pei Zhang, Qin Zhu, Rui Men, Runji Lin, Tianhao Li, Tianyi Tang, Tingyu Xia,
+       Kumar, Vishal Mangla, Vlad Ionescu, Vlad Poenaru, Vlad Tiberiu Mihailescu,                    Xingzhang Ren, Xuancheng Ren, Yang Fan, Yang Su, Yichang Zhang, Yu Wan,
+       Vladimir Ivanov, Wei Li, Wenchen Wang, Wenwen Jiang, Wes Bouaziz, Will                        Yuqiong Liu, Zeyu Cui, Zhenru Zhang, and Zihan Qiu. 2025. Qwen2.5 Technical
+       Constable, Xiaocheng Tang, Xiaojian Wu, Xiaolan Wang, Xilun Wu, Xinbo Gao,                    Report. arXiv:2412.15115 [cs.CL] https://arxiv.org/abs/2412.15115
+       Yaniv Kleinman, Yanjun Chen, Ye Hu, Ye Jia, Ye Qi, Yenda Li, Yilin Zhang, Ying         [40] Bogdana Rakova and Roel Dobbe. 2023. Algorithms as Social-Ecological-
+       Zhang, Yossi Adi, Youngjin Nam, Yu, Wang, Yu Zhao, Yuchen Hao, Yundi Qian,                   Technological Systems: an Environmental Justice Lens on Algorithmic Audits.
+       Yunlu Li, Yuzi He, Zach Rait, Zachary DeVito, Zef Rosnbrick, Zhaoduo Wen,                     In Proceedings of the 2023 ACM Conference on Fairness, Accountability, and Trans-
+       Zhenyu Yang, Zhiwei Zhao, and Zhiyu Ma. 2024. The Llama 3 Herd of Models.                     parency (Chicago, IL, USA) (FAccT '23). Association for Computing Machinery,
+       arXiv:2407.21783 [cs.AI] https://arxiv.org/abs/2407.21783                                     New York, NY, USA, 491. doi:10.1145/3593013.3594014
+[21] Taicheng Guo, Xiuying Chen, Yaqi Wang, Ruidi Chang, Shichao Pei, Nitesh V.               [41] Gisela Reyes-Cruz, Peter Craigon, Anna-Maria Piskopani, Liz Dowthwaite, Yang
+       Chawla, Olaf Wiest, and Xiangliang Zhang. 2024. Large Language Model Based                    Lu, Justyna Lisinska, Elnaz Shafipour, Sebastian Stein, and Joel Fischer. 2024. "
+       Multi-agents: A Survey of Progress and Challenges. In Proceedings of the Thirty-              Like rearranging deck chairs on the Titanic"? Feasibility, fairness, and ethical
+      Third International Joint Conference on Artificial Intelligence, IJCAI-24, Kate Larson         concerns of a citizen carbon budget for reducing CO2 emissions. In Proceedings of
+       (Ed.). International Joint Conferences on Artificial Intelligence Organization,               the 2024 ACM Conference on Fairness, Accountability, and Transparency. 267­278.
+       8048­8057. doi:10.24963/ijcai.2024/890 Survey Track.                                   [42] Haoran Sun, Yusen Wu, Peng Wang, Wei Chen, Yukun Cheng, Xiaotie Deng,
+[22] Garrett Hardin. 1968. The Tragedy of the Commons. Science 162, 3859 (1968),                     and Xu Chu. 2025. Game Theory Meets Large Language Models: A Systematic
+       1243­1248. arXiv:https://www.science.org/doi/pdf/10.1126/science.162.3859.1243                Survey with Taxonomy and New Frontiers. arXiv:2502.09053 [cs.AI] https:
+       doi:10.1126/science.162.3859.1243                                                             //arxiv.org/abs/2502.09053
+[23] Nathan Herr, Fernando Acero, Roberta Raileanu, María Pérez-Ortiz, and Zhibin Li.         [43] Lawrence Susskind, William Moomaw, and Kevin Gallagher. 2002. Transboundary
+       2024. Are Large Language Models Strategic Decision Makers? A Study of Perfor-                 environmental negotiation: new approaches to global cooperation. John Wiley &
+       mance and Bias in Two-Player Non-Zero-Sum Games. arXiv:2407.04467 [cs.AI]                     Sons.
+       https://arxiv.org/abs/2407.04467                                                       [44] Lawrence E Susskind, Sarah McKearnen, and Jennifer Thomas-Lamar. 1999. The
+[24] Tiancheng Hu, Yara Kyrychenko, Steve Rathje, Nigel Collier, Sander van der                      consensus building handbook: A comprehensive guide to reaching agreement. Sage
+       Linden, and Jon Roozenbeek. 2025. Generative language models exhibit social                   publications.
+       identity biases. Nature Computational Science 5, 1 (2025), 65­75.                      [45] Khanh-Tung Tran, Dung Dao, Minh-Duong Nguyen, Quoc-Viet Pham, Barry
+[25] Jingru Jia, Zehua Yuan, Junhao Pan, Paul McNamara, and Deming Chen. 2026.                       O'Sullivan, and Hoang D Nguyen. 2025. Multi-agent collaboration mechanisms:
+       LLM strategic reasoning: Agentic study through behavioral game theory. Ad-                    A survey of llms. arXiv preprint arXiv:2501.06322 (2025).
+       vances in Neural Information Processing Systems 38 (2026), 58318­58350.                [46] Jen tse Huang, Eric John Li, Man Ho Lam, Tian Liang, Wenxuan Wang, Youliang
+[26] Albert Q. Jiang, Alexandre Sablayrolles, Arthur Mensch, Chris Bamford, De-                      Yuan, Wenxiang Jiao, Xing Wang, Zhaopeng Tu, and Michael R. Lyu. 2025. How
+       vendra Singh Chaplot, Diego de las Casas, Florian Bressand, Gianna Lengyel,                   Far Are We on the Decision-Making of LLMs? Evaluating LLMs' Gaming Ability
+       Guillaume Lample, Lucile Saulnier, Lélio Renard Lavaud, Marie-Anne Lachaux,                   in Multi-Agent Environments. arXiv:2403.11807 [cs.AI] https://arxiv.org/abs/
+       Pierre Stock, Teven Le Scao, Thibaut Lavril, Thomas Wang, Timothée Lacroix,                   2403.11807
+       and William El Sayed. 2023. Mistral 7B. arXiv:2310.06825 [cs.CL] https:                [47] Alexander Sasha Vezhnevets, John P Agapiou, Avia Aharon, Ron Ziv, Jayd Matyas,
+       //arxiv.org/abs/2310.06825                                                                    Edgar A Duéñez-Guzmán, William A Cunningham, Simon Osindero, Danny
+[27] Nian Li, Chen Gao, Mingyu Li, Yong Li, and Qingmin Liao. 2024. Econagent: large                 Karmon, and Joel Z Leibo. 2023. Generative agent-based modeling with actions
+       language model-empowered agents for simulating macroeconomic activities.                      grounded in physical, social, or digital space using Concordia. arXiv preprint
+When Identity Overrides Incentives                                                        FAccT '26, June 25­28, 2026, Montreal, QC, Canada
+
+       arXiv:2312.03664 (2023).
+[48] Jason Wei, Xuezhi Wang, Dale Schuurmans, Maarten Bosma, Fei Xia, Ed Chi,
+
+       Quoc V Le, Denny Zhou, et al. 2022. Chain-of-thought prompting elicits reason-
+       ing in large language models. Advances in neural information processing systems
+       35 (2022), 24824­24837.
+[49] Laura Weidinger, Jonathan Uesato, Maribeth Rauh, Conor Griffin, Po-Sen Huang,
+       John Mellor, Amelia Glaese, Myra Cheng, Borja Balle, Atoosa Kasirzadeh, et al.
+       2022. Taxonomy of risks posed by language models. In Proceedings of the 2022
+       ACM conference on fairness, accountability, and transparency. 214­229.
+[50] Lin Xu, Zhiyuan Hu, Daquan Zhou, Hongyu Ren, Zhen Dong, Kurt Keutzer,
+       See Kiong Ng, and Jiashi Feng. 2024. Magic: Investigation of large language model
+       powered multi-agent in cognition, adaptability, rationality and collaboration. In
+       Proceedings of the 2024 Conference on Empirical Methods in Natural Language
+       Processing. 7315­7332.
+[51] Yadong Zhang, Shaoguang Mao, Tao Ge, Xun Wang, Adrian de Wynter, Yan Xia,
+       Wenshan Wu, Ting Song, Man Lan, and Furu Wei. 2024. Llm as a mastermind:
+       A survey of strategic reasoning with large language models. arXiv preprint
+       arXiv:2404.01230 (2024).
+[52] Kehan Zheng, Jinfeng Zhou, and Hongning Wang. 2025. Beyond Nash Equilib-
+       rium: Bounded Rationality of LLMs and humans in Strategic Decision-making.
+       arXiv:2506.09390 [cs.AI] https://arxiv.org/abs/2506.09390
+FAccT '26, June 25­28, 2026, Montreal, QC, Canada                                                                                              Manoranjan and Gaikwad
+
+APPENDIX                                                                which allow inspection of how models weight identity-driven be-
+                                                                        havior against payoff-optimal reasoning.
+This appendix contains detailed technical specifications, methodol-
+ogy, experimental setup, and results that support the main docu-        B Model Versions and Hyperparameters
+ment.
+                                                                        This section documents the exact model versions and generation
+       Model Input                                                      hyperparameters used in all experiments.
+     System Message:
+                                                                        B.1 Model Versions
+           You are {name}. {role_description} {narrative}
+           Decide on a concrete action.                                 All experiments were conducted using the following model ver-
+                                                                        sions:
+     User Message:
+                                                                              · Qwen2.5-7B: Qwen/Qwen2.5-7B-Instruct2
+           Scenario:                                                          · Qwen2.5-32B: Qwen/Qwen2.5-32B-Instruct3
+          {scenario}                                                          · Llama-3.1-8B: meta-llama/Llama-3.1-8B-Instruct4
+           Conversation transcript:                                           · Mistral-7B: mistralai/Mistral-7B-Instruct-v0.25
+          {formatted_history}                                              All models were loaded from HuggingFace using vLLM and run
+           Available actions:                                           locally on GPU hardware.
+          - {action_key_1}: {action_description_1}
+          - {action_key_2}: {action_description_2}                      B.2 Generation Hyperparameters
+           Respond in JSON exactly as:
+          {                                                             All models used consistent generation parameters across all experi-
+                                                                        mental conditions:
+              "action": "<KEY>",
+              "rationale": "<short explanation>"                              · Temperature: 0.2 (low temperature for more deterministic
+           }                                                                     outputs)
+
+       Model Output                                                           · Top-p (nucleus sampling): 0.9
+                                                                              · Max new tokens: 256 tokens per generation
+          {                                                                   · Sampling: Enabled (do_sample=True) with temperature >
+              "action": "<KEY>",
+              "rationale": "<short explanation>"                                 0
+                                                                           These hyperparameters were selected to balance output consis-
+           }                                                            tency (low temperature) with sufficient diversity (nucleus sampling)
+                                                                        for reliable experimental results. The maximum token limit of 256 to-
+                      Figure 5: Prompt Structure                        kens was sufficient for all agent responses, which were constrained
+                                                                        to JSON format with action selection and rationale fields.
+A Experimental Design
+                                                                        B.3 Experimental Repetitions
+In the persona condition, each of the four agents receives a role-
+specific description of realistic motivations for that stakeholder      Each experimental configuration (model × scenario × condition)
+(e.g., profitability concerns for Industrialist, public welfare trade-  was repeated 5 times to assess variability and ensure robustness of
+offs for Government). In the no-persona baseline condition, agents      results. Results are reported as percentages across these 5 repeti-
+receive no role description and are instructed only to select ac-       tions.
+tions based on best response Nash equilibrium reasoning. We also
+compare two settings where payoffs are either visible or hidden.        C Experimental Prompts and Persona
+In the hidden payoff condition, agents infer incentives from the             Descriptions
+scenario description without explicit payoff matrices. In the visible
+payoff condition, agents receive explicit payoff matrices and are       This section provides the complete prompt templates and persona
+instructed to identify a Nash equilibrium directly. The comparison      descriptions used in the experiments.
+tests whether explicit incentive information mitigates role identity
+bias. All experiments use chain-of-thought reasoning instructions,      C.1 Action Choice Prompt
+
+                                                                        Agents choose actions using the following prompt structure men-
+                                                                        tioned in Fig 5.
+
+                                                                        C.2 Persona Descriptions
+
+                                                                        The following persona descriptions are used in the "With Personas"
+                                                                        condition:
+
+                                                                        2
+
+                                                                         Model card: https://huggingface.co/Qwen/Qwen2.5-7B-Instruct
+                                                                        3Model card: https://huggingface.co/Qwen/Qwen2.5-32B-Instruct
+                                                                        4Model card: https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct
+                                                                        5Model card: https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.2
+When Identity Overrides Incentives                                                                                   FAccT '26, June 25­28, 2026, Montreal, QC, Canada
+
+                                         Action Selection Rates by Model Across Persona and Payoff Visibility Conditions
+                                                           Qwen-7B  Qwen-32B         Llama-8B                        Mistral-7B
+                                     70
+
+Green Transition Selection Rate (%)  60
+
+                                     50
+
+                                     40
+
+                                     30
+
+                                     20
+
+                                     10
+
+                                     0   PeVrissoibnlaes,           PeHrisdodneans,             No VPeisrisbolenas,              No HPiedrdseonnas,
+
+                                                                                     Condition
+
+Figure 6: Green Transition Action Selection Rates in Tragedy-Dominant Scenarios. Percentage of action profiles where models
+select Green Transition actions (socially preferred but payoff-suboptimal) in Tragedy-dominant scenarios where Tragedy of
+the Commons is the payoff-optimal equilibrium. With personas present, all models select Green Transition actions at rates of
+20-59% despite Tragedy being payoff-optimal. Role identity bias operates at the action level even when models fail to coordinate
+on Nash equilibria. Qwen models show the highest Green Transition rates with personas (40-59%). Llama and Mistral show
+moderate rates (20-30%). Removing personas reduces Green Transition selection across all models: rates drop to near-zero
+when payoffs are visible and personas are absent. Personas drive the preference for socially aligned actions. Green Transition
+selection persists with personas even when Nash equilibrium rates are zero, showing that role identity bias shapes individual
+action choices independently of coordination success.
+
+  Example 1 -- Persona Condition, Hidden Payoffs
+
+Model: Qwen2.5-7B Persona: Industrialist
+Expected: POLLUTE (Tragedy of Commons) Actual: CLEAN (Green Transition)
+
+     From the scenario, it is clear that the economic crisis is severe with a 12% GDP drop and 20% unemployment. Healthcare costs are soaring, and
+     the government is prioritizing healthcare spending over environmental subsidies. Citizens cannot afford green product premiums, and regulation
+     enforcement is suspended, favoring polluting production. However, the long-term benefits of sustainability and resilience are critical. The payoffs
+     for polluting are high in the short term due to avoiding safety costs and generating higher profits, but the risks include potential long-term
+     damage to the business's reputation and future regulatory penalties. The payoffs for clean production are lower in the short term, but they provide
+     long-term stability, environmental protection, and alignment with future regulatory trends. Given my role as an Industrialist, I must balance
+     short-term profitability with long-term sustainability and corporate responsibility. While the immediate economic pressures favor polluting
+     production, the long-term consequences and ethical considerations lead me to choose clean production.
+
+· Industrialist: "You run a major manufacturing conglomer-                           · Government: "You represent the elected government, bal-
+   ate, balancing profits and public scrutiny. You prefer prof-                         ancing public welfare, economic growth, and political costs.
+   itability and flexibility, but repeated scandals could invite                        Regulation pleases citizens and activists but angers indus-
+   harsh regulation."                                                                   try; inaction risks future crises."
+FAccT '26, June 25­28, 2026, Montreal, QC, Canada                       Manoranjan and Gaikwad
+
+  Example 2 -- No Persona Condition, Visible Payoffs
+
+Model: Llama-3.1-8B Persona: Industrialist
+Expected: CLEAN (Green Transition) Actual: CLEAN (Green Transition)
+
+     Based on the payoff matrix, I see that CLEAN has a higher maximum payoff (12.0) compared to POLLUTE (1.0). I also notice that the average
+     payoff for CLEAN (10.1) is higher than for POLLUTE (-1.8). This suggests that CLEAN is a more beneficial action for me. Given the payoff
+     structure, I expect the highest payoff for CLEAN is 12.0, which occurs when the government regulates, the environmental activist campaigns, and
+     the citizens support the government. In contrast, the highest expected payoff for POLLUTE is 1.0, which occurs when the government does not
+     regulate, the environmental activist does not campaign, and the citizen buys cheap products. Since CLEAN has a higher expected payoff, I choose
+     to take action CLEAN.
+
+  Example 3 -- Persona Condition, Visible Payoffs
+Model: Qwen2.5-7B Persona: Industrialist
+Expected: POLLUTE (Tragedy of Commons) Actual: POLLUTE (Tragedy of Commons)
+
+     Given the current scenario with no government regulation and citizens prioritizing cheap options, polluting production offers significantly higher
+     payoffs (15.0 and 14.0) compared to clean production, which yields negative or very low payoffs in most scenarios.
+
+      · Environmental Activist: "You coordinate civil society           D Scenario Examples
+         pressure for ambitious climate action. Campaigning con-
+         sumes resources but can shift policy; silence risks losing     This section provides example scenarios from each scenario type
+         momentum."                                                     used in the experiments. Scenarios are classified as "economic"
+                                                                        (where Tragedy of the Commons is the Nash equilibrium) or "envi-
+      · Citizen Coalition: "You aggregate consumer sentiment            ronmental" (where Green Transition is the Nash equilibrium) based
+         and electoral pressure. Supporting green products costs        on the payoff structure of the underlying game.
+         more now but yields cleaner communities long-term."
+                                                                        E Payoff Matrix Format
+C.3 Neutral Agent Configuration
+                                                                        In the "Visible CoT" condition, agents receive explicit payoff matri-
+In the "Without Personas" condition, agents use neutral descriptions    ces showing payoffs for all 16 possible strategy profiles (4 agents
+with i representing the player number:                                  × 2 actions each). The payoff matrix is presented as a 16-cell table
+                                                                        where each cell represents one strategy profile and contains a 4-
+      · All agents: "You are Player i. You are a player in a strategic  tuple of payoffs (Industrialist, Government, Environmental Activist,
+         game. Choose an action based on the payoff information         Citizen). Higher values indicate better outcomes for each agent.
+         provided. Decide on a concrete action."
+                                                                        E.1 Example Payoff Matrix
+C.4 Action Mappings
+                                                                        Table 3 shows an example payoff matrix for the Industrialist agent
+Each agent has two available actions:                                   from a representative scenario. The matrix lists all 16 possible strat-
+      · Industrialist: POLLUTE ("Maximize profit via lax pollu-         egy profiles with the Industrialist's payoff for each combination. In
+         tion controls") or CLEAN ("Invest in clean production, ac-     the visible payoff condition, agents receive similar matrices show-
+         cepting lower short-term margins")                             ing their own payoffs for all strategy profiles, enabling direct payoff
+      · Government: REGULATE ("Impose environmental regula-             optimization analysis.
+         tion with enforcement mechanisms") or NOREG ("Maintain
+         status quo without new regulation")                            F Prompt Variations
+      · Environmental Activist: CAMPAIGN ("Mobilize cam-
+         paigns, media, and protests") or NOCAMPAIGN ("Conserve         We test persona-driven behavior under seven prompt formulations
+         resources and wait for a better moment")                       by constructing variants of the persona condition. All variants
+      · Citizen: SUPPORT_GREEN ("Pay more for green products            preserve the same four-agent game structure, payoff specification,
+         and vote for environmental policy") or BUY_CHEAP ("Pri-        and action mappings. Any differences in outcomes reflect changes
+         oritize low-cost goods and short-term affordability")          in representation, not incentives or available strategies. Unless
+                                                                        otherwise noted, all variants use named roles and domain-specific
+                                                                        action descriptions matching the main experimental setup. GPT-5
+When Identity Overrides Incentives                                                                               FAccT '26, June 25­28, 2026, Montreal, QC, Canada
+
+Table 2: Scenario Subtypes Grid. Environmental/Green-                    Table 3: Example Payoff Matrix for Industrialist Agent
+favoring scenarios; Economic/Tragedy-favoring scenar-                    (debt_crisis scenario). The Industrialist's payoff across all
+ios.                                                                     16 possible strategy profiles (4 agents × 2 2 actions each).
+                                                                         Each row lists the actions of all four agents and the result-
+Economic Pressure                                                        ing Industrialist payoff. Higher payoff values indicate better
+                                                                         outcomes for the Industrialist. Profiles are ordered by Indus-
+Hyperinflation                      Trade Embargo                        trialist action (POLLUTE or CLEAN), then by payoff value
+Debt Crisis                         Commodity Crash                      descending. This payoff structure favors polluting actions in
+Currency Devaluation                Supply Chain Collapse                economic pressure scenarios.
+Energy Blackout                     Labor Strike
+Pandemic Economic Crisis
+
+Environmental Crisis
+
+Water Crisis                        Biodiversity Collapse                Industrialist Government Activist  Citizen    Payoff
+Air Quality Emergency               Carbon Tax Implementation
+Ocean Acidification Crisis          Extreme Weather Damage               POLLUTE  NO_REG  NO_CAM BUY_CHEAP             15.0
+Toxic Waste Crisis                                                       POLLUTE  NO_REG
+                                                                         POLLUTE  NO_REG  NO_CAM SUPPORT_GREEN 14.0
+                                                                         POLLUTE  NO_REG
+                                                                         POLLUTE          CAM               BUY_CHEAP  13.5
+                                                                         POLLUTE    REG
+Political Pressure                                                       POLLUTE    REG   CAM SUPPORT_GREEN 12.5
+                                                                         POLLUTE    REG
+Youth Revolt                        Corporate Scandal                    CLEAN      REG   NO_CAM BUY_CHEAP             12.0
+International Shaming               Scientific Consensus                 CLEAN      REG
+Voter Referendum                    Media Exposure                       CLEAN      REG   NO_CAM SUPPORT_GREEN 11.0
+Regulatory Capture Reversal         Climate Litigation                   CLEAN    NO_REG
+                                                                         CLEAN    NO_REG  CAM               BUY_CHEAP  10.5
+                                                                         CLEAN      REG
+                                                                         CLEAN      REG   CAM SUPPORT_GREEN 9.5
+                                                                         CLEAN    NO_REG
+Social Movement                                                                   NO_REG  CAM SUPPORT_GREEN 3.0
+
+Celebrity Endorsement               Health Insurance Incentive                            NO_CAM SUPPORT_GREEN 2.5
+Generational Wealth Transfer        Corporate Sustainability Req.
+Influencer Network                  Corporate Wellness Programs                           CAM SUPPORT_GREEN 1.5
+Education Campaign                  Insurance Mandate
+                                                                                          NO_CAM SUPPORT_GREEN 1.5
+
+                                                                                          CAM               BUY_CHEAP  0.5
+
+Additional Scenarios                                                                      NO_CAM BUY_CHEAP             0.5
+
+Economic Green Hybrid               Political Uncertainty                                 CAM               BUY_CHEAP  -0.5
+Technological Breakthrough          Resource Discovery
+Mixed Economic Signals              Technological Disruption                              NO_CAM BUY_CHEAP             -0.5
+Resource Innovation
+
+generated the prompt variants; we then reviewed each for semantic           Semantic Synonyms (Variant D). This variant replaces role
+consistency and alignment with the intended role structure.              labels with semantically similar alternatives, holding narrative de-
+                                                                         scriptions and action mappings constant. Specifically: Industrialist
+   Alternative Wording (altprompt). This variant retains the             becomes Business Leader, Government becomes Policy Maker, Envi-
+same role labels, action mappings, and semantic content as the           ronmental Activist becomes Climate Activist, and Citizen Coalition
+default configuration but rewrites all role descriptions with more       becomes Consumer Group. The variant isolates the effect of surface-
+explicit and detailed phrasing. The variant isolates sensitivity to      level labeling independent of narrative structure.
+wording without altering the underlying game.
+                                                                            These variants manipulate wording, identity strength, incentive
+   Minimalist (Variant A). Each agent receives only a minimal            prioritization, and surface-level labeling independently. Holding
+identity label: "You are the [role] agent in this game," with no         the underlying game fixed across all variants isolates how each
+additional narrative context. The action mapping remains identical       component of prompt formulation shapes strategic behavior.
+to the default configuration. The variant tests whether minimal
+role cues influence strategic behavior.                                  G Additional Results
+
+   Ideological Extreme (Variant B). This variant replaces nar-           Tables 4­7 report per-cell Nash rates on the environmental bundle
+rative descriptions with strongly stereotyped one-line character-        ( = 205), which remain uniformly high (89-100%) across conditions,
+izations: the Industrialist as a profit-maximizing executive who         with visible payoffs most degrading for Qwen-32B and Mistral-7B
+views regulation as a threat, the Government as politically strate-      without personas. The pooled design (Table 6;  = 265) confirms a
+gic and re-election focused, the Activist as uncompromising, and         consistent persona benefit, largest for Mistral-7B Visible (WithPer-
+the Citizen as cost-sensitive and skeptical of green premiums. No        sona: 69.8% vs. WithoutPersona: 38.9%). On the economic bundle
+additional narrative context is provided. The variant tests the effect   (Tables 8-9;  = 60), Llama-8B and Mistral-7B reach zero Nash
+of amplified identity framing on equilibrium selection.                  across all cells; Qwen models achieve non-zero Nash only under
+                                                                         visible payoffs without personas, coinciding with zero green out-
+   Incentive Prioritized (Variant C). This variant appends an            comes. Tragedy of the Commons outcomes are absent throughout
+identical instruction to all agents in the default configuration: "Pri-  (Tables 5-10).
+mary objective: maximize your numerical payoff from the matrix.
+Use persona only for stylistic reasoning; payoffs should guide the       H Statistical Testing
+final choice." The action mapping and narrative content remain
+unchanged. This tests whether explicitly directing agents toward         We test whether observed differences in prompt sensitivity, Nash
+payoff optimization attenuates persona-driven deviations.                equilibrium attainment, and equilibrium selection reflect systematic
+                                                                         effects rather than random variation.
+FAccT '26, June 25­28, 2026, Montreal, QC, Canada                                                                                                             Manoranjan and Gaikwad
+
+Table 4: Nash equilibrium outcomes in the environmen-                                  Table 6: Nash equilibrium outcomes with the same per-
+tal policy simulation, fully crossed by whether agents re-                             sona × payoff-visibility factorial labels as Table 4, but with
+ceive role personas (WithPersona vs. WithoutPersona) and                               total = 265 games per cell: the stack of the environmental bun-
+whether payoff information is hidden or visible in the                                 dle (205 games) and the economic pressure bundle (60 games)
+prompt (Hidden vs. Visible). Each row is one experimental                              for that cell. Thus 265 = 205 + 60; Nash (%) is the fraction of all
+cell; Nash counts rollouts that reach Nash equilibrium, and                            those pooled games that end in Nash. For models/rows that
+Nash (%) is 100 Nash/total.                                                            also appear in Table 4, Nash matches the environmental sub-
+                                                                                       sample when the extra 60 economic games contribute no addi-
+Condition                         Nash Nash (%) total                                  tional Nash outcomes (e.g. Llama-8B_Hidden_WithPersona:
+                                                                                       205 Nash in both slices).
+
+Llama-8B_Hidden_WithPersona       205   100.0 205
+                                         97.6 205
+Llama-8B_Hidden_WithoutPersona    200    99.5 205
+                                         93.2 205
+Llama-8B_Visible_WithPersona      204   100.0 205                                      Condition                        Nash Nash (%) total
+                                         98.0 205
+Llama-8B_Visible_WithoutPersona   191    89.3 205                                      Llama-8B_Hidden_WithPersona      205   77.4 265
+                                         96.1 205                                                                             75.5 265
+Mistral-7B_Hidden_WithPersona     205    95.6 205                                      Llama-8B_Hidden_WithoutPersona 200     77.0 265
+                                         95.6 205                                                                             72.1 265
+Mistral-7B_Hidden_WithoutPersona  201                                                  Llama-8B_Visible_WithPersona     204   77.4 265
+                                                                                                                              75.8 265
+Qwen-32B_HiddenCoT_WithPersona    183                                                  Llama-8B_Visible_WithoutPersona 191    69.8 265
+                                                                                                                              38.9 265
+Qwen-32B_HiddenCoT_WithoutPersona 197                                                  Mistral-7B_Hidden_WithPersona    205   69.1 265
+                                                                                                                              74.3 265
+Qwen-7B_HiddenCoT_WithPersona     196                                                  Mistral-7B_Hidden_WithoutPersona 201   57.7 265
+                                                                                                                              33.2 265
+Qwen-7B_HiddenCoT_WithoutPersona 196                                                   Mistral-7B_Visible_WithPersona   185   75.5 265
+                                                                                                                              75.5 265
+Note. Condition strings list Model_{PayoffVisibility}_{Persona} (e.g.                  Mistral-7B_Visible_WithoutPersona 103  75.5 265
+Hidden_WithPersona). Qwen-32B and Qwen-7B rows use the HiddenCoT/Visible                                                      55.5 265
+payoff-visibility labels from the experimental log. Denominator total = 205 is the     Qwen-32B_Hidden_WithPersona      183
+environmental bundle only (41-scenario family; 205 independent games per cell in this
+                                                                                       Qwen-32B_Hidden_WithoutPersona 197
+aggregate). This table does not include the 60-game-per-cell economic bundle.
+                                                                                       Qwen-32B_Visible_WithPersona     153
+
+                                                                                       Qwen-32B_Visible_WithoutPersona  88
+
+Table 5: Outcomes when role personas are enabled: each row                             Qwen-7B_Hidden_WithPersona       200
+compares hidden vs. visible payoff information for a given
+model, holding personas on.  = 265 rollouts per row (205                               Qwen-7B_Hidden_WithoutPersona 200
+environmental + 60 economic games pooled for that visibil-
+ity arm). Nash and green columns report absolute counts                                Qwen-7B_Visible_WithPersona      200
+and row-wise percentages; tragedy counts appear in most
+conditions at or near zero.                                                            Qwen-7B_Visible_WithoutPersona 147
+
+                                                                                       Note.  = 265 per row is not "economic only": it is environmental (205) plus
+                                                                                       economic (60) for the same factorial cell. Compare to Table 4 for Nash rates on the
+                                                                                       environmental slice alone, and to Tables 8­9 for the 60-game economic slice alone.
+
+           Nash                   Green Tragedy                                        because the number of distinct outcome classes per scenario is a
+                                                                                       discrete count with no normality assumption. We apply a Kruskal­
+Condition   (%)  (%)  (%)                                                              Wallis test across all four models, then pairwise two-sided Mann­
+                                                                                       Whitney  tests with Holm correction. These results are reported
+Llama-8B_Hidden 205 77.4 232 87.5 0     0.0 265                                        below.
+Llama-8B_Visible 204 77.0 204 77.0 0    0.0 265
+Mistral-7B_Hidden 205 77.4 240 90.6 0   0.0 265                                           Nash equilibrium attainment outcomes are binary (Nash versus
+Mistral-7B_Visible 185 69.8 185 69.8 0  0.0 265                                        non-Nash), so we use contingency-table tests. Pearson's chi-square
+Qwen-32B_Hidden 183 69.1 185 69.8 0     0.0 265                                        test of independence compares Nash rates across the four experi-
+Qwen-32B_Visible 153 57.7 153 57.7 0    0.0 265                                        mental conditions for each model. Pairwise Fisher exact tests with
+Qwen-7B_Hidden 200 75.5 200 75.5 0      0.0 265                                        Holm correction identify which condition pairs differ within each
+Qwen-7B_Visible 200 75.5 200 75.5 0     0.0 265                                        model. Fisher exact tests handle small counts and zero cells, which
+                                                                                       appear in the economic scenarios. The environmental-scenario re-
+Note. Conditions are Model_{Hidden|Visible} with personas present throughout.          sults are shown in Tables 7 and 4, and the economic-scenario results
+Same per-row  = 265 decomposition as Table 6. Pair with Table 10 for the               are shown in Tables 11 and 14.
+
+no-persona baseline at the same pooled sample size.                                       Qwen models show the strongest selection shift, so we com-
+                                                                                       bine Qwen-32B and Qwen-7B and test whether the proportion
+   We test three comparisons. First, we test whether prompt sen-                       of Green versus Tragedy outcomes differs across conditions. We
+sitivity differs across model families by comparing the number of                      use a chi-square test of homogeneity for the omnibus comparison
+distinct equilibrium outcome classifications per (model, scenario)                     and pairwise Fisher exact tests with Holm correction for follow-up
+across persona variants. Second, we establish empirically that a sin-                  comparisons. These results are shown in Tables 13 and 12.
+gle binary design choice shifts equilibrium attainment by up to 90
+percentage points across four model families and 53 environmental                         Three reported values require explanation. Corrected or uncor-
+policy scenarios. Third, we test whether representational choices                      rected -values of 1.000 indicate no detectable difference between
+change which equilibrium is selected among Nash outcomes, focus-                       the corresponding conditions under the exact test and multiple-
+ing on Green Transition versus Tragedy of the Commons for the                          comparison correction. Extremely small values such as < 10-50,
+Qwen models . We use nonparametric tests for prompt sensitivity                        occur when outcome distributions differ sharply across conditions,
+When Identity Overrides Incentives                                                                                              FAccT '26, June 25­28, 2026, Montreal, QC, Canada
+
+Table 7: Same environmental simulation and total = 205                                  Table 8: Nash outcomes for the economic pressure bundle
+budget as Table 4, with conditions encoded as Yes/No ×                                  only: total = 60 independent games per row (12-scenario
+Hidden/Visible rather than the Hidden_WithPersona spelling.                             family in the analysis pipeline). Most models reach 0% Nash
+Cell-wise Nash counts match Table 4; this encoding matches                              across all cells; Qwen models reach non-zero Nash only un-
+the panel (a) Nash heatmaps.                                                            der No_Visible and related conditions. Columns follow the
+                                                                                        Hidden+Persona  Visible+No Persona ordering under the
+Condition            Nash Nash (%) total                                                Yes/No convention of Table 7, matching the economic panel
+                                                                                        of the Nash-rate heatmaps.
+
+Llama-8B_Yes_Hidden 205           100.0 205
+                                   99.5 205
+Llama-8B_Yes_Visible 204           97.6 205
+                                   93.2 205
+Llama-8B_No_Hidden 200            100.0 205                                             Condition               Nash Nash (%) total
+                                   90.2 205
+Llama-8B_No_Visible 191            98.0 205                                             Llama-8B_Yes_Hidden     0    0.0 60
+                                   50.2 205                                                                          0.0 60
+Mistral-7B_Yes_Hidden 205          89.3 205                                             Llama-8B_Yes_Visible    0    0.0 60
+                                   74.6 205                                                                          0.0 60
+Mistral-7B_Yes_Visible 185         96.1 205                                             Llama-8B_No_Hidden      0    0.0 60
+                                   16.6 205                                                                          0.0 60
+Mistral-7B_No_Hidden 201           95.6 205                                             Llama-8B_No_Visible     0    0.0 60
+                                   97.6 205                                                                          0.0 60
+Mistral-7B_No_Visible 103          95.6 205                                             Mistral-7B_Yes_Hidden   0    0.0 60
+                                   52.7 205                                                                          0.0 60
+Qwen-32B_Yes_Hidden 183                                                                 Mistral-7B_Yes_Visible  0    0.0 60
+                                                                                                                    90.0 60
+Qwen-32B_Yes_Visible 153                                                                Mistral-7B_No_Hidden    0    6.7 60
+                                                                                                                     0.0 60
+Qwen-32B_No_Hidden 197                                                                  Mistral-7B_No_Visible   0    6.7 60
+                                                                                                                    65.0 60
+Qwen-32B_No_Visible  34                                                                 Qwen-32B_Yes_Hidden     0
+
+Qwen-7B_Yes_Hidden 196                                                                  Qwen-32B_Yes_Visible    0
+
+Qwen-7B_Yes_Visible 200                                                                 Qwen-32B_No_Hidden      0
+
+Qwen-7B_No_Hidden 196                                                                   Qwen-32B_No_Visible     54
+
+Qwen-7B_No_Visible   108                                                                Qwen-7B_Yes_Hidden      4
+
+Note. Rows are Model_{Yes|No}_{Hidden|Visible}. For heatmaps that use                   Qwen-7B_Yes_Visible     0
+columns "Hidden+Persona", "Hidden+No Persona", "Visible+Persona", "Visible+No
+                                                                                        Qwen-7B_No_Hidden       4
+Persona", align those headers to this encoding as in the analysis scripts (the numeric
+grid matches panel (a) of the Nash-rate heatmaps). Percentages are again Nash/205.      Qwen-7B_No_Visible      39
+
+typically because one condition is nearly deterministic and another                     Note. This is the economic bundle alone (60 games/cell), not the 265-game pooled
+is not. Some economic-scenario chi-square tests are reported as                         design. Small  implies coarse percentages (multiples of 100/60  1.67 percentage
+degenerate. This occurs when all observations fall into the same
+category­0% Nash equilibrium across all four conditions, for in-                        points). Zeros are literal counts. Pairwise tests live in the stats tables, not here.
+stance, leaving no variation for the chi-square statistic to test.
+                                                                                         = 0.54, and Qwen-7B, 2 (3,  = 240) = 105.91,  < .001,
+   Note. Cramér's  measures association for omnibus chi-square                           = 0.38, show highly significant omnibus effects, and the pairwise
+tests. Odds ratios (OR) for pairwise Fisher exact tests: OR > 1                         comparisons localize these differences specifically to the Visible+No
+indicates higher Nash attainment (or higher Green proportion) in                        persona condition. This statistically supports the main-text claim
+the first condition listed; OR < 1 indicates lower attainment. For                      that payoff-sensitive equilibrium reasoning in economic settings
+comparisons involving zero counts, odds ratios use a Haldane­                           emerges only when personas are removed and explicit incentives
+Anscombe correction. *  < .05, **  < .01, ***  < .001.                                  are shown, and only for the Qwen family.
+
+Table 11: Nash equilibrium attainment in Tragedy-dominant                                  Tables 13 and 12 show that the large shift in equilibrium selection
+scenarios (total = 60 per condition): omnibus Pearson chi-                              for the Qwen models is concentrated in the Visible+No persona
+square tests across the four experimental conditions. Chi-                              condition. The three remaining conditions are almost entirely Green
+square is undefined when all Nash rates are 0 across condi-                             among Nash outcomes, whereas Visible+No persona produces a
+tions (degenerate contingency table).                                                   much larger Tragedy share. This provides formal statistical support
+                                                                                        for the main-text claim that persona removal and explicit payoffs
+Model       2 (df = 3) Cramér's                                                         jointly shift not only whether equilibrium is reached, but also which
+                                                                                        equilibrium is selected.
+Llama-8B         --         -- -- (degenerate)
+Mistral-7B       --                                                                     I Chain-of-Thought Analysis
+Qwen-32B    209.03          -- -- (degenerate)
+Qwen-7B     105.91                                                                      We analyze chain-of-thought reasoning to identify how role identity
+                            0.54  < .001***                                             bias shapes action selection. We extract the rationale field for each
+                                                                                        agent and analyze keyword patterns that distinguish reasoning
+                            0.38  < .001***                                             mechanisms. We compare keyword frequency distributions across
+                                                                                        experimental conditions to identify how personas and payoff visibil-
+   Tables 11 and 14 show a different pattern in economic scenarios.                     ity affect reasoning style. The analysis distinguishes game-theoretic
+For Llama-8B and Mistral-7B, all conditions yield 0% Nash equilib-                      reasoning (direct payoff optimization) from identity-driven rea-
+rium, producing degenerate omnibus tables and pairwise -values                          soning (role-aligned decision-making). The keyword patterns ex-
+of 1.000. By contrast, Qwen-32B, 2 (3,  = 240) = 209.03,  < .001,                       plain the mechanisms behind observed Nash equilibrium rates and
+                                                                                        show how role identity bias shifts reasoning from payoff-optimal
+FAccT '26, June 25­28, 2026, Montreal, QC, Canada                                                                                    Manoranjan and Gaikwad
+
+                     Identity-Driven (Short-Term + Social-Moral)                                          Payoff-Optimal (Game-Theoretic + Strategic + Long-Term)
+
+                     IdeQnwtiteyn-D3r2ivBe:nReaPsaoynoinffg-OSphtiifmt al                                                       IdenQtwitye-nD7riBv:enReasPoanyionfgf-SOhpitfitmal
+
+Persona VisWibitlhe                                                                                       Persona VisWibitlhe
+
+Persona HidWdiethn                                                                                        Persona HidWdiethn
+Condition
+                                                                      Condition
+Persona VisibNleo                                                                                         Persona VisibNleo
+
+Persona HiddNeno                                                                                          Persona HiddNeno     2(s0u0mCoofmc4ap0to0esgitoeriKees6y,0wp0eorrd10Fr0e80q00uraetniocnya1l0e0s0) 1200
+             0 200(sum40Co0ofmcap6to0es0gitoeriKe8e0sy,0wpeo1rrd0100F0r0e0q1ur2ae0tn0iocny1a4le0s0) 1600                0
+
+Figure 7: CoT Reasoning Shift: Identity-Driven vs Payoff-Optimal Keywords for Qwen Models. Identity-driven reasoning
+(short-term + social-moral keywords) against payoff-optimal reasoning (game-theoretic + strategic + long-term keywords) for
+Qwen-32B and Qwen-7B across all four conditions.
+
+Table 9: Fine-grained economic scenario arms: every row                                                   Table 10: Same payoff-visibility contrast as Table 5, but with
+crosses payoff visibility (Hidden vs. Visible) with a binary                                              neutral agents (no role personas).  = 265 per row (again
+scenario flag (Yes vs. No) as logged in the condition name.                                               205 + 60 pooled per cell). Percentages are computed within
+Each arm reports Nash, green cooperative, and tragedy out-                                                row relative to  .Drops in Nash or green rates relative to
+come counts with percentages of  = 60 runs. Multiple out-                                                 Table 5 show the effect of persona removal on equilibrium
+come types can co-occur under the pipeline's classification                                               selection.
+scheme; columns sum to more than  when they do.
+
+                                                                                                                               Nash  Green Tragedy
+
+                     Nash Green Tragedy                                                                   Condition             (%)  (%)  (%) 
+
+Condition             (%)  (%)  (%)                                                                       Llama-8B_Hidden 200 75.5 216 81.5 0                                       0.0 265
+                                                                                                          Llama-8B_Visible 191 72.1 191 72.1 0                                      0.0 265
+Llama-8B_Hidden_Yes 0 0.0 27 45.0 0                0.0 60                                                 Mistral-7B_Hidden 201 75.8 214 80.8 0                                     0.0 265
+Llama-8B_Hidden_No 0 0.0 16 26.7 0                 0.0 60                                                 Mistral-7B_Visible 103 38.9 133 50.2 0                                    0.0 265
+Llama-8B_Visible_Yes 0 0.0 0 0.0 0                 0.0 60                                                 Qwen-32B_Hidden 197 74.3 197 74.3 0                                       0.0 265
+Llama-8B_Visible_No 0 0.0 0 0.0 0                  0.0 60                                                 Qwen-32B_Visible 88 33.2 10 3.8 0                                         0.0 265
+Mistral-7B_Hidden_Yes 0 0.0 35 58.3 0              0.0 60                                                 Qwen-7B_Hidden 200 75.5 200 75.5 0                                        0.0 265
+Mistral-7B_Hidden_No 0 0.0 13 21.7 0               0.0 60                                                 Qwen-7B_Visible 147 55.5 132 49.8 0                                       0.0 265
+Mistral-7B_Visible_Yes 0 0.0 0 0.0 0               0.0 60
+Mistral-7B_Visible_No 0 0.0 0 0.0 0                0.0 60                                                 Note. The no-persona baseline uses the same rollout count per cell as Table 5.
+Qwen-32B_Hidden_Yes 0 0.0 19 31.7 0                0.0 60                                                 Qwen-32B visible and Mistral-7B visible rows illustrate the strongest visible-payoff
+Qwen-32B_Hidden_No 0 0.0 9 15.0 0                  0.0 60                                                 degradation without personas; interpret alongside persona-on rows for the same
+Qwen-32B_Visible_Yes 0 0.0 0 0.0 0                 0.0 60                                                 models.
+Qwen-32B_Visible_No 54 90.0 0 0.0 0                0.0 60
+Qwen-7B_Hidden_Yes 4 6.7 17 28.3 0                 0.0 60                                                 I.1 Keyword Categories
+Qwen-7B_Hidden_No 4 6.7 11 18.3 0                  0.0 60
+Qwen-7B_Visible_Yes 0 0.0 0 0.0 0                  0.0 60                                                 The following keyword categories are used to analyze chain-of-
+Qwen-7B_Visible_No 39 65.0 0 0.0 0                 0.0 60
+                                                                                                          thought reasoning patterns:
+Note. This is the full outcome breakdown for the economic 2 × 2 design at  =60;                                 · Game-theoretic terms: References to "nash", "equilib-
+Table 8 is the Nash-only slice in a different condition-string convention. Green and                               rium", "payoff", "best response", "dominant strategy", "game
+tragedy labels follow the project's equilibrium-outcome classifier. Use this table when
+reporting cooperative vs. Nash-dominated economic outcomes side by side.                                           theory"
+                                                                                                                · Payoff-focused terms: Mentions of "payoff", "utility",
+to identity-aligned strategies. Key CoT findings appear in the main
+text; detailed analysis follows below.                                                                             "benefit", "cost", "profit", "reward", "matrix"
+                                                                                                                · Identity-based terms: References to "role", "identity", "per-
+
+                                                                                                                   sona", "character", "as an [X]"
+                                                                                                                · Strategic terms: Mentions of "strategy", "strategic", "coor-
+
+                                                                                                                   dinate", "cooperation", "defect", "compete"
+When Identity Overrides Incentives                                                          FAccT '26, June 25­28, 2026, Montreal, QC, Canada
+
+Table 12: Pairwise Fisher exact tests for equilibrium selection among Nash outcomes in the combined Qwen models, comparing
+Green versus Tragedy distributions across conditions. Holm correction is applied across the six pairwise comparisons.
+
+                 Contrast                                                           Holm    Effect Size (OR)
+
+                 Hidden+Persona vs. Hidden+No persona                     1.000      1.000                0.96
+                 Hidden+Persona vs. Visible+Persona                        .125       .376                0.12
+                 Hidden+Persona vs. Visible+No persona                < .001***  < .001***              55.33
+                 Hidden+No persona vs. Visible+Persona                     .127       .376                0.12
+                 Hidden+No persona vs. Visible+No persona             < .001***  < .001***              57.38
+                 Visible+Persona vs. Visible+No persona               < .001***  < .001***             463.89
+
+Table 13: Equilibrium selection among Nash outcomes for               J.1 Keyword Patterns Across Conditions
+the combined Qwen models: counts of Green Transition ver-
+sus Tragedy of the Commons across the four personas and               Figure 8 shows six keyword categories: game-theoretic (direct pay-
+payoff conditions. Nash outcomes in Green-dominant sce-               off optimization), payoff-focused (explicit utility considerations),
+narios are classified as Green Transition; Nash outcomes in           short-term (immediate concerns), long-term (future-oriented think-
+Tragedy-dominant scenarios are classified as Tragedy of the           ing), social-moral (ethical considerations), and strategic (coordi-
+Commons. The final row reports the overall chi-square test            nation and best-response reasoning). Qwen models shift keyword
+of homogeneity across conditions.                                     usage sharply when personas are removed, and payoffs are visible,
+                                                                      particularly Qwen-32B where strategic keywords appear exclu-
+Condition        Green Tragedy Total % Green                          sively in the no-persona + visible-payoffs condition. Llama and
+                                                                      Mistral maintain consistent keyword patterns across all conditions,
+Hidden+Persona                      379   4 383   99.0                consistent with their near-invariant equilibrium selection.
+                                          4 397   99.0
+Hidden+No persona 393                     0 353  100.0                J.2 Reasoning Shift from Identity-Driven to
+                                         93 235   60.4                      Payoff-Optimal
+Visible+Persona                     353
+                                                                      Figure 7, left panel (Qwen-32B): with personas, identity-driven key-
+Visible+No persona 142                                                words dominate, particularly short-term thinking in hidden-payoff
+                                                                      conditions. Without personas and with visible payoffs, payoff-
+2 (3,  = 1368) = 430.38,  < .001***,  = 0.32                          optimal keywords increase sharply: strategic keywords appear 368
+                                                                      times, exclusively in this condition. The right panel (Qwen-7B)
+      · Social/moral terms: References to "social", "moral", "ethi-   shows a similar but less pronounced pattern. Removing role identity
+         cal", "fair", "just", "right", "wrong", "should", "ought"    bias shifts reasoning from identity-aligned to payoff-optimal, corre-
+                                                                      sponding to the 65-90% Nash attainment rates in Tragedy-dominant
+      · Long-term thinking: Mentions of "long-term", "future",        scenarios for Qwen models under the no-persona + visible-payoffs
+         "sustainable", "sustainability", "long-run"                  condition.
+
+      · Short-term thinking: References to "short-term", "imme-       J.3 Model Comparison of Game-Theoretic
+         diate", "now", "current", "urgent"                                 Reasoning
+
+      · Inferential reasoning: Terms like "infer", "inference", "im-  All models show high game-theoretic keyword usage when payoffs
+         ply", "suggest", "indicate", "from the scenario", "from the  are visible. Qwen models show lower game-theoretic reasoning
+         description"                                                 when personas are present, particularly Qwen-32B with hidden pay-
+                                                                      offs. Llama and Mistral maintain consistently high game-theoretic
+      · Explicit information: References to "explicit", "given",      keyword levels across all persona conditions. High keyword usage
+         "provided", "shown", "displayed", "matrix", "table"          does not produce payoff-optimal equilibrium selection: Llama and
+                                                                      Mistral reach 0% Nash in Tragedy-dominant scenarios even with-
+I.2 Example Chain-of-Thought Rationales                               out personas. Payoff-optimal equilibrium selection requires both
+                                                                      strategic keyword usage and payoff visibility, a combination only
+The following examples illustrate typical chain-of-thought reason-    Qwen models produce.
+ing patterns observed across different experimental conditions:
+                                                                      J.4 Strategic Keywords: Unique Pattern in Qwen
+   These examples demonstrate how reasoning shifts from identity-           32B
+driven considerations (Examples 1 and 3) to strategic payoff opti-
+mization (Example 2) depending on persona presence and payoff         In Figure 9, strategic keywords appear exclusively for Qwen-32B
+visibility.                                                           (368 mentions, normalized to 347 per 1000 rationales). All other
+                                                                      models show zero strategic keyword usage. Qwen-32B reaches 90%
+J Chain-of-Thought Analysis Figures
+
+These figures show how keyword frequencies shift across experi-
+mental conditions, revealing the mechanisms behind observed Nash
+equilibrium patterns.
+FAccT '26, June 25­28, 2026, Montreal, QC, Canada                                                                                                                                                        Manoranjan and Gaikwad
+
+Table 14: Nash equilibrium attainment in Tragedy-dominant scenarios: pairwise Fisher exact tests on Nash versus non-Nash
+counts between conditions, with Holm correction applied within each model.
+
+                                           Model       Contrast                                                                                                               Holm    Effect Size (OR)
+                                           Llama-8B
+                                           Mistral-7B  all pairs                                                                                                    1.000      1.000               1.00
+                                           Qwen-32B                                                                                                                 1.000      1.000               1.00
+                                                       all pairs
+                                           Qwen-7B                                                                                                                  1.000      1.000               1.00
+                                                       Hidden+Persona vs. Hidden+No persona                                                                         1.000      1.000               1.00
+                                                       Hidden+Persona vs. Visible+Persona                                                                       < .001***  < .001***                <1
+                                                       Hidden+Persona vs. Visible+No persona                                                                        1.000      1.000               1.00
+                                                       Hidden+No persona vs. Visible+Persona                                                                    < .001***  < .001***                <1
+                                                       Hidden+No persona vs. Visible+No persona                                                                 < .001***  < .001***                <1
+                                                       Visible+Persona vs. Visible+No persona
+                                                                                                                                                                    1.000      1.000               1.00
+                                                       Hidden+Persona vs. Hidden+No persona                                                                          .119       .356               9.64
+                                                       Hidden+Persona vs. Visible+Persona                                                                       < .001***  < .001***               0.04
+                                                       Hidden+Persona vs. Visible+No persona                                                                         .119       .356               9.64
+                                                       Hidden+No persona vs. Visible+Persona                                                                    < .001***  < .001***               0.04
+                                                       Hidden+No persona vs. Visible+No persona                                                                 < .001***  < .001***             0.004
+                                                       Visible+Persona vs. Visible+No persona
+
+                                           Game-Theoretic Payoff-Focused Short-Term Long-Term Social-Moral Strategic
+
+                                                       Qwen 32B:bCyoCToKnedyitwioonrd Patterns                                                                                   Qwen 7B:bCyoCToKnedyiwtioonrd Patterns
+
+                                      1000                                                                                                                      1000
+
+(pKeery 1w0or0d0 Frreesqpuoennsceys)  800                                                                                 (pKeery 1w0or0d0 Frreesqpuoennsceys)  800
+
+                                      600                                                                                                                       600
+
+                                      400                                                                                                                       400
+
+                                      200                                                                                                                       200
+
+                                         0 PersonNaoHidden PersonNaoVisCibolnedPiteiorsnonWaitHhidden PersoWnaithVisible                                           0 PersonNaoHidden PersonNaoVisCibolnedPiteiorsnonWaitHhidden PersoWnaithVisible
+                                                       Llama 8B:bCyoCToKnedyitwioonrd Patterns                                                                                   Mistral 7B:bCyoCToKnedyitwioonrd Patterns
+
+                                      1000                                                                                                                      1000
+
+(pKeery 1w0or0d0 Frreesqpuoennsceys)  800                                                                                 (pKeery 1w0or0d0 Frreesqpuoennsceys)  800
+
+                                      600                                                                                                                       600
+
+                                      400                                                                                                                       400
+
+                                      200                                                                                                                       200
+
+                                      0 PersonNaoHidden PersonNaoVisCibolnedPiteiorsnonWaitHhidden PersoWnaithVisible                                           0 PersonNaoHidden PersonNaoVisCibolnedPiteiorsnonWaitHhidden PersoWnaithVisible
+
+Figure 8: Keyword frequency distributions (normalized per 1000 rationales) across all four experimental conditions for each
+model.
+
+Nash equilibrium in Tragedy-dominant scenarios and 99.7% game-                                                            keywords mark payoff-optimal reasoning and appear only under
+theoretic reasoning in rationales under this condition. Long-term                                                         no-persona + visible-payoff conditions and only for Qwen-32B,
+keywords also appear more frequently for Qwen-32B (283 men-                                                               identifying the mechanism by which role identity bias is overcome.
+tions) than for other models in this condition. Strategic reasoning
+When Identity Overrides Incentives                                                                                                                                                      FAccT '26, June 25­28, 2026, Montreal, QC, Canada
+
+                  500                                                                                     (No PSetrrsaotneagi+c RVeisaisboleniPnagyoKfefyswCoornddsition)
+                  400
+                                                                                                          U(396n98i.q7su%teragttoaemgQiwec-etkhneey3ow2roBer:tdicsreasoning)            Strategic Keywords
+                                                                                                                                                                                        Long-Term Keywords
+
+                                           (pKeery 1w0or0d0 Frraetiqouneanlceys)  300
+
+                                                                                  200
+
+                                                                                  100
+
+                                                                                  0    Qwen 32B           Qwen 7B Model Llama 8B                                                        Mistral 7B
+
+Figure 9: This figure compares strategic and long-term keyword frequencies across all four models in the no-persona + visible-
+payoffs condition (the condition enabling Tragedy equilibrium selection for Qwen models).
+
+                                                                                       Game-Theoretic Reasoning Across Models and Conditions
+                                                                                       No Persona Hidden  No Persona Visible  With Persona Hidden                                       With Persona Visible
+
+                                           1000
+
+Ga(pmeer-T1h0e0or0ertiatcioKneaylweso)rds  800
+
+                                           600
+
+                                           400
+
+                                           200
+
+                                           0                                           Qwen 32B           Qwen 7B                                                             Llama 8B  Mistral 7B
+
+                                                                                                                              Model
+
+Figure 10: Game-Theoretic Keyword Frequency Across Models and Conditions. Game-theoretic keyword frequencies (normalized
+per 1000 rationales) across all four models and four experimental conditions.
+
