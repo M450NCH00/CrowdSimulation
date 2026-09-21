@@ -31,7 +31,22 @@ experiment code until the literature review is complete and discussed.**
 | 3 | Implement the LLM-to-LLM exchange | not started |
 | 4 | Analyse exchanges for a reusable pattern | not started |
 | 5 | Validate the pattern against real data or sociology | **coding scheme drafted** (issue #12) — `literature/human-conflict-resolution/` |
+| 5a | Demographic personas: realism vs LLM bias | **delivered** (issue #16) — `literature/demographic-personas/` |
 | 6 | Bridge into CrowdGym — `integration/crowdgym_mapping.md` | not started |
+
+Three findings from the demographic review (issue #16) that bear on `run01`, all
+needing supervisor discussion — see `literature/demographic-personas/`:
+
+- **The `run01` gender pattern has no settled direction in the literature.** One LLM study
+  reports female personas conceding more, another reports the opposite on DeepSeek, and a
+  third reports the direction *flipping between models within one study*. `run01` used one
+  model.
+- **Where real pedestrians were measured, the young yield to the old** — the opposite of
+  `run01`'s "elderly yield at least as much as young adults". Only one located study
+  measures this directly, and only its abstract was obtainable.
+- **No paper was found combining LLM agents resolving a spatial conflict through dialogue
+  with gender or age personas**, which is the gap this FYP can claim. GameChat was verified
+  by full-text search to carry no demographic personas at all.
 
 Two results from step 1 that change later steps, both needing supervisor sign-off:
 
@@ -137,5 +152,10 @@ the generator later.
   literature-anchored mapping turns them into CrowdGym's numeric AgentType params.
 - **A1** DeepSeek pricing and Singapore population weights in the configs are
   *assumptions* — marked `VERIFY` in-file. Confirm before relying on them.
+  Authoritative sources for the population weights are now recorded in
+  `literature/demographic-personas/population-data-sources.md` (issue #16), which
+  also flags a distinction the configs do not currently make: Singapore's
+  *citizen*, *resident* and *total* populations have different age and sex mixes,
+  and a public-space crowd is the total population.
 - **A2** tiktoken `cl100k_base` is used as a proxy for DeepSeek's tokenizer
   (typically within ~10-15%); the estimator inflates by a safety factor.
