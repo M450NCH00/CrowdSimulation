@@ -32,7 +32,26 @@ experiment code until the literature review is complete and discussed.**
 | 4 | Analyse exchanges for a reusable pattern | not started |
 | 5 | Validate the pattern against real data or sociology | **coding scheme drafted** (issue #12) — `literature/human-conflict-resolution/` |
 | 5a | Demographic personas: realism vs LLM bias | **delivered** (issue #16) — `literature/demographic-personas/` |
+| 5b | Game theory: communication-free conflict rules | **delivered** (issue #20) — `literature/game-theory/` |
 | 6 | Bridge into CrowdGym — `integration/crowdgym_mapping.md` | not started |
+
+Three findings from the game-theory review (issue #20) that bear on the project's
+direction, all needing supervisor sign-off — see `literature/game-theory/`:
+
+- **The supervisor's hypothesis holds up.** Of 11 candidate runtime rules catalogued from
+  the literature, **only one needs communication at runtime**, and even that one stops
+  needing it if the simulator supplies agent types. Conflict *can* be resolved by a
+  convention rather than a dialogue — see `candidate-rule-catalogue.md`.
+- **But "convention" is probably the wrong word.** Two standard definitions require the
+  alternatives being chosen between to be *equivalent* or *arbitrary*. In a doorway
+  deadlock they are not — yielding costs time, proceeding does not. **"Social law"**
+  (Shoham & Tennenholtz) fits exactly and carries the offline-design / cheap-runtime split
+  the 10,000-agent target needs. Framing check in `search-log.md` §0.
+- **Do not plan for the rule to emerge inside the simulation.** Two independent sources — a
+  human experiment and a survey of agent-based work — find global conventions do **not**
+  form in *spatially structured* populations, only in randomly mixing ones. A crowd is
+  spatially structured. This is an argument *for* extracting the rule offline from an LLM,
+  which is what this project already does.
 
 Three findings from the demographic review (issue #16) that bear on `run01`, all
 needing supervisor discussion — see `literature/demographic-personas/`:
@@ -75,6 +94,19 @@ CrowdSimulation/
     scenarios.yaml                  14 scenarios (conflict + everyday), Singapore-localised
     personas.yaml                   5 age groups x 2 genders + SG population weights
     generated/                      pipeline output (git-ignored) — see "Output files" below
+  literature/
+    game-theory/                    issue #20: game theory for communication-free rules
+      g1-conflict-games-conventions.md   conventions as correlated equilibria (priority)
+      g2-norm-emergence.md               how a shared rule arises, spreads, breaks
+      g3-cheap-talk.md                   does pre-play talk change the outcome?
+      g4-game-theoretic-crowd-models.md  rules embedded in real pedestrian simulators
+      g5-llm-agents-game-theory.md       LLM conventions + the data-leakage critique
+      g6-transfer-across-games.md        generality across games (thin, reported as such)
+      candidate-rule-catalogue.md        *** 11 candidate runtime rules, all sourced ***
+      search-log.md                      what was searched; framing check; acquisition list
+      refs-game-theory.bib               36 entries, each with read-depth recorded
+    (see also demographic-personas/, human-conflict-resolution/,
+     llm-conflict-resolution/, paper-summaries/ from issues #8/#12/#14/#16/#18)
   pipeline/
     prompts/
       system_sg.txt                 system prompt: Singapore context + rules
