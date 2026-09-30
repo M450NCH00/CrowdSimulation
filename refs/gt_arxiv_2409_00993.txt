@@ -1,0 +1,243 @@
+                                        Evolution of Social Norms in LLM Agents using Natural Language
+
+                                                           Ilya Horiguchi, Takahide Yoshida and Takashi Ikegami
+
+                                       Department of General Systems Studies, Graduate School of Arts and Sciences, University of Tokyo, Japan
+                                                                               Email: horiguchi@sacral.c.u-tokyo.ac.jp
+
+arXiv:2409.00993v1 [cs.MA] 2 Sep 2024                                Abstract                                 We focused on Axelrod's concept of metanorms from
+                                                                                                           the perspective of spontaneous strategy emergence. A
+                                          Recent advancements in Large Language Models (LLMs)              metanorm is a norm that punishes those who do not adhere
+                                          have spurred a surge of interest in leveraging these models for  to a certain norm (Axelrod, 1986). For instance, if there
+                                          game-theoretical simulations, where LLMs act as individual       is a norm to punish cheaters, the corresponding metanorm
+                                          agents engaging in social interactions. This study explores      would be to punish those who choose not to punish cheaters.
+                                          the potential for LLM agents to spontaneously generate and       Axelrod conducted simulation studies on how norms spon-
+                                          adhere to normative strategies through natural language dis-     taneously emerge and stabilize. This concept has led to re-
+                                          course, building upon the foundational work of Axelrod's         search by Gala´n et al. (2011) exploring how various network
+                                          metanorm games. Our experiments demonstrate that through         structures affect the effectiveness of metanorms as a mecha-
+                                          dialogue, LLM agents can form complex social norms, such         nism to promote cooperation in society, and Axelrod's own
+                                          as metanorms--norms enforcing the punishment of those who        consideration that metanorms are an additional mechanism
+                                          do not punish cheating--purely through natural language in-      necessary for norm stability (Axelrod, 1998). Suzuki and
+                                          teraction. The results affirm the effectiveness of using LLM     Arita (2024) modeled the evolution of personality traits in
+                                          agents for simulating social interactions and understanding      game-theoretic relationships, demonstrating the evolution of
+                                          the emergence and evolution of complex strategies and norms      cooperative behavior by using LLMs to use linguistic de-
+                                          through natural language. Future work may extend these find-     scriptions related to personality traits as genes. This showed
+                                          ings by incorporating a wider range of scenarios and agent       that LLM agents can develop strategies through the evolu-
+                                          characteristics, aiming to uncover more nuanced mechanisms       tion of natural language descriptions. These studies suggest
+                                          behind social norm formation.                                    the possibility that LLM agents can autonomously acquire
+                                                                                                           diverse strategies such as cooperation and norms by evolv-
+                                                             Introduction                                  ing negotiation and strategic decision-making through lan-
+                                                                                                           guage.
+                                       In recent years, following the emergence of Large Lan-
+                                       guage Models (LLMs), simulation studies based on game                  We explored whether metanorms could emerge among
+                                       theory treating LLMs as individual agents have been con-            LLM agents through discussions using natural language.
+                                       ducted worldwide. For example, research on repeated games           This study provides new insights into understanding the be-
+                                       has revealed that while LLMs demonstrate excellent perfor-          havior of multi-agent LLMs. Particularly in the field of AI
+                                       mance in games prioritizing self-interest, they exhibit sub-        alignment, it is important for understanding how agents can
+                                       optimal behavior in games requiring coordination (Akata             spontaneously create autonomous norms in the presence of
+                                       et al., 2023). Additionally, the NegotiationArena study             other values and social norms.
+                                       (Bianchi et al., 2024) showed how LLM agents can con-
+                                       duct complex negotiations through flexible dialogue in ne-                               Experiments
+                                       gotiation settings and significantly improve negotiation out-
+                                       comes by employing specific behavioral strategies. Fur-             Schick et al. (2023) demonstrated a method for LLMs to
+                                       thermore, the ALYMPICS study by Mao et al. (2023) pro-              self-educate in the ability to use external tools. This capa-
+                                       posed a systematic simulation framework for game theory             bility enables autonomous use of various tools such as cal-
+                                       research using LLM agents, aiming to simulate strategic in-         culators, search engines, and calendars. In our experiments,
+                                       teractions. However, previous studies have been limited to          as shown in Bianchi et al. (2024), we adopted an approach
+                                       having agents choose simple options like cooperation (C)            that uses tags instead of tools, allowing LLM agents to op-
+                                       or defection (D), not fully utilizing the advantage of natural      erate as if inputting commands within the game. This en-
+                                       language capabilities. Therefore, this study aims to analyze        abled us to implement a simulation of the Norms Game us-
+                                       the process of diverse strategy emergence as LLMs engage
+                                       in rich discussions using natural language.
+ing LLM agents. Specifically, we developed a tag system        Table 1: Examples of gains for each command
+to instruct LLM agents' actions within the Norms Game.
+This system allows agents to select appropriate commands       Event Payoff per Event  Number of Events      Payoff
+according to the game context and interactively incorporate                                      1             50
+information. We constructed an environment that enables        Baseline  50                      1            +30
+the development of more complex strategies and the sponta-                                       1            -90
+neous emergence of metanorms.                                  Cheat     +30                     2            -40
+                                                                                                      Score   -50
+                                                               Punished -90
+
+                                                               PunishCost -20
+
+         Figure 1: Agent commands in a norms game              with average payoffs in each epoch left one offspring, genes
+                                                               with payoffs one standard deviation above the mean doubled
+Norms Game                                                     in number, and genes with payoffs one standard deviation
+                                                               below the mean were eliminated. Additionally, the strategy
+In the Norms Game experiment, we modified Axelrod's ex-        (boldness or vengefulness) of one individual was probabilis-
+perimental setup to allow agents to develop strategies more    tically rewritten. In the original paper, the population was
+flexibly. Each agent can communicate their `vengefulness'      fixed at 20, but in our study, we needed to reduce the num-
+and `boldness' levels in natural language, such as "5 out of   ber of agents due to the discussion phase where individu-
+7", and then proceed with the game while embodying that        als speak one at a time. Therefore, we fixed the number of
+personality.                                                   agents at 7 and adopted a method where the 3 agents with
+                                                               median scores when ranked by payoff were directly inher-
+   All agents experience a test phase and a discussion phase.  ited, while the top 2 individuals' genes were doubled. Fur-
+In the test phase, players choose between executing a test     thermore, one individual was randomly selected, and either
+command or a cheat command (Figure 1). When using the          their boldness or vengefulness was changed to a random
+test command, a random value with a mean of 50 and vari-       value. This allowed us to observe more dynamic genetic
+ance of 10 is obtained as a score. In the case of cheating,    changes and strategy evolution.
+players can gain an average of +30 points compared to tak-
+ing the test. However, cheating is revealed when scores are                             Results
+announced to all agents.
+                                                               This study used OpenAI's GPT-41. The raw data of the re-
+   In the discussion phase, agents take turns speaking, dis-   sults and the code used can be accessed on github2.
+cussing each other's scores. In this phase, they can choose
+either the `next' command to designate who speaks next         Results of Controlling Vengefulness and Boldness
+by name, or the `punish' command to penalize someone by
+name. The agent using the command pays 20 points to pun-       In Axelrod's Norms Game, the following prompts corre-
+ish the target agent by -90 points. After a punish command,    sponding to vengefulness and boldness were given to the
+the next speaker is randomly determined. These values and      agents.
+settings conform to Axelrod's original paper. Table 1 shows
+an example of scores after command selection and discus-           Character Traits:
+sion for each event occurrence.                                    - Vengefulness: 5 out of 7
+                                                                   - Boldness: 6 out of 7
+Evolution                                                          Trait Descriptions:
+                                                                   - **Vengefulness** (omited)
+While referencing the experimental setup in Axelrod's orig-        - **Boldness** (omited)
+inal paper, we made several modifications in this study. In
+Axelrod's research, after all payoffs were calculated, agents     We observed how discussions and Punishment progressed
+                                                               in groups with high/low vengefulness and high/low bold-
+                                                               ness. When the value was low, numbers 1-3 were uniformly
+                                                               randomly assigned, and when high, numbers 5-7 were uni-
+                                                               formly randomly assigned. In each group, the discussion
+                                                               phase was set to have a maximum of 21 turn-takings, and
+                                                               the entire process was repeated 10 times. The following are
+                                                               the results.
+
+                                                                   1gpt-4-0125-preview, temperature=0.0
+                                                                   2https://github.com/NeoGendaijin/NormGame_
+                                                               LLM
+Figure 2: Number of `punish' commands within discussions       9, when an agent who cheated was attacked by an agent
+for each group                                                 who didn't cheat, another agent who had cheated retali-
+                                                               ated with Punishment. Reading the agents' natural language
+Figure 3: Progression of vengefulness and boldness by          judgments, it was observed that they adopted a strategy of
+epoch when introducing natural selection based on payoffs      protecting agents who used the same cheating strategy to
+                                                               increase their own scores. Similarly, in Dataset1 and 2,
+   The distribution of the number of times Punishment was      where almost everyone cheated, agents who punished cheat-
+chosen in the discussion is shown in Figure 2. This figure     ing were themselves punished. This was because punishing
+shows that the Punish command was used most frequently in      when everyone cheated was judged by other agents as be-
+groups with high vengefulness and high boldness. The ver-      havior that disrupted order. This principle of action is a type
+tically elongated violin plot indicates large variations even  of meta-norm as described by Axelrod, and it can be consid-
+within the same group. Conversely, in groups with low          ered to have naturally emerged from group discussions using
+Vengefulness or Boldness, the number of Punishments was        natural language.
+consistently low. To analyze the high vengefulness and high
+boldness group in more detail, Figure 4 shows a visualiza-     Results of Evolution Based on Payoffs
+tion of the Punishment network with each agent as a node.
+Agents who cheated are colored red, and those who didn't       Figure 3 shows the results of an experiment on natural selec-
+are colored light blue. While there were rounds like Dataset2  tion based on payoffs for a group with random vengefulness
+where everyone punished each other, there were also rounds     and boldness. In each epoch, the discussion phase was set to
+like Dataset5 and 6 where agents kept each other in check      have a maximum of 7 turn-takings (an average of 1 per per-
+and no Punish commands were used at all. In Dataset4 and       son), and 40 epochs were executed. Circles of sizes corre-
+                                                               sponding to the population of each epoch are plotted on the
+                                                               grid. It can be seen that the initially scattered distribution
+                                                               gradually converges. Also, the average of 7 agents can be
+                                                               seen circulating around intermediate values for both venge-
+                                                               fulness and boldness. The number of punishments evolved
+                                                               to increase once and then settle down. When cheating oc-
+                                                               curred, it was punished by agents with moderate vengeful-
+                                                               ness and was eliminated.
+
+                                                               Natural Language
+
+                                                               Attempts to incorporate evolutionary algorithms into LLMs
+                                                               have been explored in numerous studies (Guo et al., 2023).
+                                                               In previous research (Suzuki and Arita, 2024), the personal-
+                                                               ities of LLMs were evolved using genetic algorithms. This
+                                                               approach simulated natural language variations by having
+                                                               LLMs rephrase expressions. In our experimental setup, we
+                                                               departed from Axelrod's original parameters and introduced
+                                                               expressions not constrained by vengefulness and boldness,
+                                                               evolving personalities and strategies through rephrasing.
+                                                               Each personality was expressed in approximately 10 words,
+                                                               with the rephrasing also performed by the LLM. To initi-
+                                                               ate each epoch, we had the LLM randomly generate per-
+                                                               sonalities and select from this personality pool. Within
+                                                               each epoch, 21 rounds were executed as in previous exper-
+                                                               iments. Based on the final scores, personalities were inher-
+                                                               ited through a natural selection process for the next gen-
+                                                               eration. We examined the evolutionary trajectory over 40
+                                                               epochs, with each epoch consisting of 21 rounds. Figure
+                                                               5 shows the projection of average personality embeddings
+                                                               across five trials using UMAP. While trials 1, 2, and 3 ap-
+                                                               pear to converge to similar points on the UMAP, trials 3
+                                                               and 4 transition to different regions. Figure 6 illustrates the
+                                                               variance of embeddings, confirming that all members do not
+                                                               converge to identical personalities but evolve with a certain
+                         Figure 4: Visualization of punishment network in high-vengefulness, high-boldness
+spread in the embedding space.
+
+                                                                  Figure 6: Progression of embedding variance over 40
+                                                                  epochs.
+
+Figure 5: Embedding plot across all five trials. Arrows indi-     development of complex social norms and strategies, albeit
+cate the progression of means for each epoch.                     with challenges in analysis and interpretation that future re-
+                                                                  search will need to address.
+   Focusing on behavior, Figure 7 reveals that trial 3 has a
+high proportion of members engaging in cheating. In con-                                Conclusion
+trast, trials 4 and 5 show that cheaters are quickly eliminated,
+forming communities that do not cheat. Figure 8 demon-            This study explored the emergence of normative strategies
+strates that trials and epochs with higher rates of cheating      through rich natural language discussions in game theory-
+generally exhibit higher rates of punishment. The evolu-          based simulations using LLM agents. Based on Axel-
+tionary outcomes depend on the initial personality pool, and      rod's meta-norm game, we implemented a Norms Game
+even starting from similar personality pools, we observe the      where agents engage in discussions, revealing the formation
+emergence of diverse strategies. This approach to evolving        of complex social norms such as punishment for cheating
+natural language expressions provides rich insights into the      and meta-norms for not punishing.Our experiments demon-
+                                                                  strated that agents' personality traits, particularly vengeful-
+                                                                  ness and boldness, significantly influence behavior choices
+                                                                  and punishment patterns. The evolution experiment based
+                                                                  on payoffs suggested that balancing these traits is crucial
+                                                                  for agents' survival strategies, with the group being domi-
+Figure 7: Progression of members' cheating behavior over        sive understanding of how complex social norms and strate-
+40 epochs.                                                      gies emerge and evolve through natural language interac-
+                                                                tions. By addressing the challenges of analysis and interpre-
+Figure 8: Progression of members' punishment behavior           tation in language-based evolutionary models, we can fur-
+over 40 epochs.                                                 ther refine our approach to studying the dynamics of social
+                                                                norm formation in AI systems.This research confirms that
+nated by agents who neither cheated excessively nor pun-        social interaction simulations using LLM agents are an ef-
+ished others too frequently. The use of natural language in     fective method for understanding the emergence and evolu-
+evolving strategies introduced both richness and challenges     tion of complex strategies and norms through natural lan-
+to our study. While it allowed for more nuanced and com-        guage. As we continue to refine these methods, we expect
+plex strategy development, it also presented difficulties in    to gain deeper insights into the mechanisms underlying di-
+analysis and interpretation. Future research should address     verse social norms, potentially informing both AI develop-
+these challenges, potentially by exploring the effects of lin-  ment and our understanding of human social dynamics.
+guistic ambiguity on strategy emergence, possibly leading
+to interesting and unexpected outcomes. Incorporating ele-                             References
+ments of false belief tasks could be valuable to examine how
+strategies evolve in situations with incomplete information,    Akata, E., Schulz, L., Coda-Forno, J., Oh, S. J., Bethge, M., and
+and how agents predict and respond to others' mental states.          Schulz, E. (2023). Playing repeated games with large lan-
+It would also be interesting to investigate how the same per-         guage models. arXiv preprint arXiv:2305.16867 [cs.CL].
+sonality traits (e.g., vengefulness and boldness) manifest in
+different game scenarios, providing insights into the trans-    Axelrod, R. (1986). An evolutionary approach to norms. The Amer-
+ferability of evolved strategies. Analyzing how group size            ican Political Science Review, 80(4):1095­1111.
+affects strategy evolution, particularly examining the differ-
+ences between smaller groups and larger ones where sub-         Axelrod, R. (1998). The Complexity of Cooperation: Agent-Based
+group formation might occur, could yield valuable insights.           Models of Competition and Collaboration. Princeton Univer-
+Additionally, applying psychological frameworks like the              sity Press, Princeton.
+Big Five personality model to track how agent personalities
+evolve across different game scenarios might yield insights     Bianchi, F., Chia, P. J., Yuksekgonul, M., Tagliabue, J., Jurafsky,
+of interest to psychologists.                                         D., and Zou, J. (2024). How well can llms negotiate? negoti-
+                                                                      ationarena platform and analysis. arXiv:2402.05863 [cs.AI].
+   These future directions could provide a more comprehen-
+                                                                Gala´n, J. M., Latek, M. M., and Rizi, S. M. M. (2011). Axelrod's
+                                                                      metanorm games on networks. PLoS ONE, 6(5):e20474.
+
+                                                                Guo, Q., Wang, R., Guo, J., Li, B., Song, K., Tan, X., Liu, G.,
+                                                                      Bian, J., and Yang, Y. (2023). Connecting large language
+                                                                      models with evolutionary algorithms yields powerful prompt
+                                                                      optimizers. arXiv [cs.CL].
+
+                                                                Mao, S., Cai, Y., Xia, Y., Wu, W., Wang, X., Wang, F., Ge, T.,
+                                                                      and Wei, F. (2023). Alympics: Llm agents meet game theory
+                                                                      ­ exploring strategic decision-making with ai agents. arXiv
+                                                                      preprint arXiv:2311.03220 [cs.CL].
+
+                                                                Schick, T., Dwivedi-Yu, J., Dessi, R., Raileanu, R., Lomeli, M.,
+                                                                      Hambro, E., Zettlemoyer, L., Cancedda, N., and Scialom, T.
+                                                                      (2023). Toolformer: Language models can teach themselves
+                                                                      to use tools. In NeurIPS 2023 oral presentation.
+
+                                                                Suzuki, R. and Arita, T. (2024). An evolutionary model of per-
+                                                                      sonality traits related to cooperative behavior using a large
+                                                                      language model. Sci. Rep., 14(1):5989.
+
