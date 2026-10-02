@@ -1,0 +1,506 @@
+2018 21st International Conference on Intelligent Transportation Systems (ITSC)
+Maui, Hawaii, USA, November 4-7, 2018
+
+   Modeling Interactions of Multimodal Road Users in Shared Spaces
+
+                                             Fatema T. Johora1 and Jo¨rg P. Mu¨ller2
+
+   Abstract-- In shared spaces, motorized and non-motorized              and extend SFM using long-range conflict avoidance mecha-
+road users share the same space with equal priority. Their               nisms [4] [5], rule-based constraints [6], a multinomial logit
+movements are not regulated by traffic rules, hence they                 model [7], or a game theoretic approach [8] for modeling
+interact more frequently to negotiate priority over the shared           multimodal interaction. Cellular automata are also used to
+space. To estimate the safeness and efficiency of shared spaces,         model mixed traffic in presence of traffic regulations like in
+reproducing the traffic behavior in such traffic places is               [9], for modeling car-following and lane-changing behaviors
+important. In this paper, we consider and combine different              of cars and motorcycles or in [10], for modeling pedestrians-
+levels of interaction between pedestrians and cars in shared             vehicles interactions at crosswalks.
+space environments. Our proposed model consists of three
+layers: a layer to plan trajectories of road users; a force-based           All these works cover interactions among multimodal road
+modeling layer to reproduce free flow movement and simple                users at a certain level of details. A restriction of the state of
+interactions; and a game-theoretic decision layer to handle              the art is that only single bilateral conflicts are considered.
+complex situations where road users need to make a decision              This means that, at a time, each road user can only handle
+over different alternatives. We validate our model by simulating         a single conflict with another user, but not all conflicts
+scenarios involving various interactions between pedestrians             she is encountering at that time. We define a conflict in
+and cars and also car-to-car interaction. The results indicate           accordance with [11] as "an observable situation in which
+that simulated behaviors match observed behaviors well.                  two or more road users approach each other in time and
+                                                                         space to such an extent that there is a risk of collision,
+                       I. INTRODUCTION                                   if their movements remain unchanged". These models also
+                                                                         do not consider courtesy behavior of car drivers for car-car
+   In recent years, the shared space design paradigm in-                 interactions.
+troduced by Dutch traffic engineer Hans Monderman in
+the 1970s [1], has received considerable attention as an                    This paper describes a first step to address this gap,
+alternative approach to classic traffic design. Shared spaces            by proposing a multiagent-based model for more realisti-
+are mixed traffic environments, in which heterogeneous road              cally describing, recognizing and dealing with real-world
+users such as pedestrians, cyclists, and motorized vehicles              interactions of pedestrians and cars in shared spaces. It
+are not separated by temporal and spatial division of road               includes interactions involving two or more road users and
+resources, but share the same space; their movements are                 the courtesy behavior of car drivers.
+conducted based on social protocols (e.g. courtesy behavior)
+and informal rules (e.g. colored road surface) instead of                      II. PROBLEM STATEMENT AND REQUIREMENTS
+traffic regulations. They interact more frequently to coordi-
+nate trajectories, by performing actions they choose through                As there are no explicit traffic regulations in shared spaces,
+negotiating with others.                                                 road users interact with each other for negotiating the priority
+                                                                         of the integrated space. To understand their interactions, we
+   Despite the ongoing debate on efficiency (average road                analyze the data of a shared space area in Hamburg [7].
+user delays and road capacity) and safeness of shared space,             Based on our observation of the video data and on the
+many cities in Europe already have adopted the shared space              classification of road users' behaviors given by Helbing and
+design principles to reconstruct city centers [2]. This makes            Molna`r [3], we classify typical interactions into the following
+the investigation of traffic performance in shared spaces                categories:
+critical. Modeling and analyzing the motion behavior of
+multimodal road users including interactions among them                     · Simple Interaction: direct mapping of percepts to
+can reproduce the operation of shared spaces, which provides                  actions.
+a basis for measuring aspects of their performance.
+                                                                                 ­ Reactive Interaction: When road users do not have
+   Modeling mixed traffic interactions is challenging as it                         time to think or plan their actions, they behave re-
+is the result of complex human decision-making processes.                           actively. As an example, if a pedestrian suddenly
+To the best of our knowledge, until now, only little work                           jumps in front of the vehicle, to avoid a serious
+has been done on modeling and simulating shared spaces.                             collision, the car driver will either break strongly
+Previous works on shared spaces modeling use a physics-                             or steer away immediately.
+based model, most prominently the classical social force
+model (SFM) [3] to model pedestrian movement behaviors                           ­ Car Following (car only): Even-though in shared
+                                                                                    space, there is no defined lane for cars, but em-
+   This research has been supported by the German Research Foundation               pirical observation indicates that cars merge into
+(DFG) through the Research Training Group SocialCars: Cooperative (De-)             assumed lanes and follow the car in front [6].
+centralized Traffic Management (GRK 1931). We cordially thank Federico
+Pascucci and Bernhard Friedrich for providing road user datasets.
+
+978-1-7281-0323-5/18/$31.00 ©2018 IEEE  3568
+
+Authorized licensed use limited to: Nanyang Technological University Library. Downloaded on October 02,2026 at 04:39:30 UTC from IEEE Xplore. Restrictions apply.
+   · Complex Interaction: road users need to decide an                   A. Trajectory Planning Layer
+     action among different alternatives.
+        ­ Implicit Interaction between Two Road Users:                      We plan the trajectories of road users by considering
+           Each road user chooses her best action to avoid con-          static obstacles like walls or trees in the shared space
+           flicts with another user by predicting their action.          environment. To perform a trajectory planning algorithm,
+           E.g., in reality, when a car comes with a moderate            the environment needs to be represented as a graph. We
+           speed, a pedestrian may predict that if she continues         transform the environment into a visibility graph: where each
+           to walk, the car driver will decelerate and let her           edge connects two outline vertices of any obstacle, which
+           go.                                                           are visible to each other and these edges do not collide with
+        ­ Implicit Interaction among Multiple Road                       any line segment that outlines any obstacle [17]. The origin
+           Users: Sometimes road user needs to implicitly                and destination points of each road user are added to the
+           interact with multiple users at the same time as              graph. We perform the A* algorithm [18] on the graph to
+           in pedestrian crossing, where pedestrian needs to             plan free flow trajectory for each road user. However, humans
+           interact with cars coming from both directions to             keep some distance from obstacles. Hence, to model this
+           make a precise decision to cross or not to cross the          behavior we fine-tune the placement of the inner path vertices
+           road.                                                         regarding their distance to obstacles.
+        ­ Explicit Interaction: Road users also interact with
+           other road users through communicating.                       B. Force-Based Modeling Layer
+
+Road users interact by performing some actions. Courtesy                    We use the classical social force model (see also [19])
+behavior is one of them, where a road user decelerates and               to model the driving force of road users towards their
+eventually stops to give priority to others. We model this               destination, the interaction of road users with static obstacles,
+behavior both as reactive and complex interaction.                       the interaction between pedestrians, and also the overtaking
+                                                                         behavior of cars. In this model, the motion of a road user
+   The simple interactions can be represented using forced-              is conducted by a set of simple forces that represent various
+based [3], [6] or cellular automata models [12], [13]. How-              influences she faces in simple situations:
+ever, for complex interactions, decision-theoretic models
+such as games are useful [3]. In a noncooperative game-                    dv (t)     fo                                 Isto  p ping     Icourt  esy     I f ol  lowing
+theoretic model, each decision maker makes a decision by
+predicting others' decision. We argue that such models can                 dt                                                                              
+more precisely model implicit interaction between road users.                    =        +      fsoBc +       fsoVc  +                +               +
+Indeed, they have been used to describe merging-give way
+interaction [14], lane-changing interaction of cars [15], or                                               =V
+cyclist-car driver interaction at zebra crossings [16]. We note
+that modeling explicit interaction is also missing in previous           Here, fo represents the driving force of road user  and can
+works. However, we do not consider it in this paper.                                                                                              v (t)-v (t)
+                                                                         be  computed     by     the  formula:  fo(v (t), v (t)) =                       
+      III. MULTIAGENT-BASED SIMULATION MODEL
+   We model the motion behaviors of multimodal road users,               for a relaxation time  and v (t) and v (t) are the desired
+including the interactions among them (discussed in Section
+II) in three layers: trajectory planning, force-based modeling,          and  current     velocities  of       respectively.   Forces     f soc        and  fsoBc
+and game-theoretic decision-making. Figure 1 summarizes
+the roles of each layer.                                                                                                                   
+
+Fig. 1. The conceptual structure of motion behaviors of multimodal road  represent the human behavior of maintaining some distance
+users. Here, AF means Additional Force and SFM means Social Force
+Model (adapted from [6],p.88).                                           from other road users  and static obstacles B. If  is a
+
+                                                                         pedestrian   then    f soc   applies  between         and        every   other     road
+
+                                                                                               
+
+                                                                         users,  but  if     is  a  car  then  f soc  only     applies    between           and
+
+                                                                                                                
+
+                                                                         every other cars. These behaviors are formulated by the fol-
+
+                                                                         lowing equations:          fsoc (d    (t))   =  Vo    exp        -d (t)       n^ F
+                                                                                                                                              
+                                                                                                                           
+
+                                                                         and  fsoBc(dB(t)) = UoB exp            -d B (t )      n^B,       where   Vo        and
+                                                                                                                    R
+                                                                                                                                                    
+
+                                                                         UoB denote the interaction strengths, and  and R indicate
+
+                                                                         the range of these repulsive interactions. d (t) and dB(t)
+
+                                                                         are the distances from  to  , or  to B at a specific time.
+
+                                                                         n^ and n^B denote the normalized vectors. F represents
+                                                                         the fact that human are mostly influenced by the objects
+
+                                                                         which can be captured within their field of view.
+
+                                                                            We extend the social force model to consider reactive
+                                                                         interactions of cars towards pedestrians (Istopping), car fol-
+
+                                                                                                                                                 
+
+                                                                         lowing interactions (I f ollowing) and courtesy behavior of car
+
+                                                                                                             
+
+                                                                         drivers (Icourtesy):
+
+                                                                                        
+
+                                                                               a) Car to Pedestrian Reactive Interaction:: If the near-
+
+                                                                         est conflict of a car driver  is with pedestrian(s)  and 
+
+                                                                         has already started moving in front of  or is very close to
+
+                                                                         , then  decelerates to let  pass. This type of interaction
+
+                                                                         only happens if e n^  15 e n^  345.
+
+                                                                                              3569
+Authorized licensed use limited to: Nanyang Technological University Library. Downloaded on October 02,2026 at 04:39:30 UTC from IEEE Xplore. Restrictions apply.
+  b) Car Following: If d  d , the car following                                         of all possible actions of the leader and follower players
+                                                                                        respectively, and ul(sl, s f ) and u f (s f |sl) are the utility of
+interaction   of  follower      with  leader       is  I f ollowing        =  n^ p x ,  the leader and followers, when the leader choose the action
+                                                                                        sl  Sl and the followers react by the move s f  S f . sl  Sl,
+                                                                                        B f (sl) = {s f  S f |max(u f (s f |sl))} is the best answer of the
+                                                                                        follower. Then the SPNE = <{sl  Sl|max(ul(sl, B f (sl)))},
+ maintains the direction of movement towards p = x (t)+                                 B f (sl)>.
+
+v^ (t) · d , where d is the minimum vehicle distance, d                                    1) Payoff Estimation: In the game, all actions of the
+
+is the distance between  and  , and x (t) is the current                                players are ordinally valued from 2 to -100 as shown in
+                                I f ollowing
+position  of  .   Otherwise,                  =  scurrent  ,    slows         down      Figure 2a, with the assumption that every person prefers
+                                                    2
+                                                                                        to reach their destination safely and quickly. To model
+to maintain safe distance from  . This interaction type only
+                                                                                        courtesy behavior and situation dynamics, we consider six
+occurs if the leader  is in the movement direction of the
+                                                                                        observable factors (in the following denoted by boolean
+follower  (e ): e n^  10 e n^  350 and the                                              variables x1 . . . x6) relevant for payoff estimation. They are
+                                                                                        defined in the following and are used to calculate a set of
+movement direction of  (e ) is  equal to e : e n^  5                                    parameters F1 . . . F12, which are impacts of these factors. Let
+                                                                                         is a road user who needs to interact with another user  :
+  e n^  355. Here, n^ is the normalized vector from 
+                                                                                           · x1: has value 1, if current speed of  , Scurrent < Snormal.
+to  and    fesonc^      is the  angle between      vectors e and n^ .                        This factor determines the value of F1, F6 and F11.
+The force               set to  zero when car      following is active.
+                    is                                                                     · x2: has value 1 if number of active interactions < N
+                                                                                             (=2). This factor determines the value of F2 and F7.
+  c) Courtesy Behavior: The courtesy behavior of driver
+                                      Icourtesy                                            · x3: has value 1 if the number of give ways already
+  to  another       road  user    is                   =      scurrent  ,  here              allowed by , G < M (=3) or not. This determines
+                                                                 2                           the value of F3 and F8. We generate the value of G
+                                                                                             randomly.
+decelerates and eventually stops when  is passing in front
+                                                                                           · x4: has value 1 if  is a car driver following another
+of . This type of interaction only happens if e n^  20                                       car. This factor determines the value of F4 and F9.
+
+  e n^     340      asoncdis70se<t toezen^ro  < 100 260 < e n^                   <         · x5: has value 1 if  is a pedestrian in a group. This
+290. The  force f                             when courtesy behavior             of          factor determines the value of F5 and F10.
+
+ is active.                                                                                · x6: has value 1 if  is a car driver followed by another
+                                                                                             car. This factor determines the value of F12.
+  This layer is also responsible for executing the game layer
+
+decisions. As an example, if the result of a game-theoretic
+
+interaction between a car driver and a pedestrian is that the
+
+pedestrian will continue to walk and the vehicle driver will
+
+decelerate (see also Subsection III-C), the respective actions
+
+of car and pedestrian will be executed in the Force-Based
+
+Modeling Layer. In this paper, we consider the following
+
+possible actions for road users:
+
+  · Continue: Car drivers continue the free-flow movement                               (a) Ordinal valuations of out- (b) The complete payoff ma-
+
+    with their previous speed. Pedestrians also continue
+
+    free-flow movement but with maximum speed.
+
+  · Decelerate: Road users decelerate and eventually stop.
+
+  · Deviate (pedestrian only): We model this action as that
+
+    any pedestrian  first passes the car  from behind from
+    a position p and then continues moving towards the
+    original destination. Here, p = x (t) - 0.5v (t), if the
+    car continues moving and p = x (t) - v (t), if the car
+    stops. The pedestrian will move towards p until the car
+    stays within the field of view (FOV) of the pedestrian.
+
+                                                                                        comes.  trix
+
+C. Game-Theoretic Decision Layer                                                        Fig. 2. The row player is a pedestrian with three possible actions; the
+                                                                                        column player is a car driver with two possible actions.
+   This layer handles complex interactions among road users.
+We use one-shot Stackelberg games, which are sequential                                    For the scope of this paper, the parameters N and M
+leader-follower games, where the leader player commits to an                            were chosen in a "trial-and-error" manner through simulation
+action first; then followers choose an action to optimize their                         experiments.
+utility considering the action chosen by the leader [8]. For a                          The payoff of a car driver's actions is calculated as follows:
+single game, restrict the number of leaders to one, while there
+may be one or more followers. For each implicit interaction                                · Continue: Cc = F1 + F2 + F3 + F4 + F5
+only one game is played and the games are independent of                                   · Decelerate: Cd = F6 + F7 + F8 + F9 + F10
+each other. In multiple players game, the leader player makes                           The payoff value of the actions of a pedestrian is calculated
+a decision sl by considering the nearest follower and the total                         as follows:
+number of followers. All followers follow the same action
+sf.                                                                                        · Continue: Pc = F1 + F9 + F10
+                                                                                           · Decelerate: Pd = F6 + F4 + F5
+   Solving the Stackelberg game is done by finding the                                     · Deviate: Pdev = F11 + F12
+subgame perfect Nash equilibrium (SPNE), which can be                                      The utility calculation of the action pairs is shown in
+inferred by backward induction. Let Sl and S f are the sets                             Figure 2b. As we were not able to determine the parameters
+
+                                                                                              3570
+Authorized licensed use limited to: Nanyang Technological University Library. Downloaded on October 02,2026 at 04:39:30 UTC from IEEE Xplore. Restrictions apply.
+F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, and F12 based
+on a substantial amount of real interaction scenarios, there
+remains a considerable doubt about providing correct values
+for other and more complex scenarios. Hence, while we
+did perform a sensitivity analysis on a certain amount of
+interaction scenarios and analyzed the behavior of our model,
+we do not present the values of these parameters in this paper.
+Automated calibration and validation of these parameters
+(including N and M) is an important task in our future work,
+see Section V.
+
+D. Recognition and Handling of Interactions                          (a) A Road User Agent
+
+   In our model, simple interactions are handled locally by
+the road users. Remember that simple interactions are dealt
+with by local action and does not require synchronization or
+communication. If a simple interaction situation is detected
+by a road user within its FOV (set to 180° in this paper), it is
+classified based on the interaction angle as given in Section
+II, and the corresponding action is performed. Complex
+interactions are handled by a (virtual) central mediation
+entity, further referred to as host agent. At first, the host agent
+collects the nearest conflict (one conflict at a time) and the
+total number of conflicts the user agent is facing currently for
+each car agent in the environment by considering their FOV.
+The host agent checks if this conflict can be solved without
+game playing, if yes then the conflict will be handled by the
+respective car agent itself. Otherwise, the host selects the car
+agent (faster agent) as the leader and organizes a game by
+considering only the selected leader and its followers, not
+all other user agent involved in this situation (if any), as
+then the host may need to consider all possible subsets of
+conflicts as one game (worst-case scenario) which will make
+the situation more complex. Hence, the impact of follower-
+to-follower conflict and follower-to-other-agent conflict is not
+considered in the scope of a single game. The workflow of
+a user agent and the host agent for a single cycle are shown
+in Figure 7. The agent cycle is executed once per simulation
+time unit including time to perform all interactions.
+
+                          IV. EVALUATION                                                              (b) The Host Agent
+
+   To evaluate our simulation model, we simulate 117 conflict        Fig. 3. The inner steps of the user and host agents with their plans and
+scenarios from the shared space data and visualize the real          goals.
+and simulated trajectories and speed difference of all road
+users involved in these scenarios. We select two example             the vehicular movement. To simulate different shared space
+scenarios among all those scenarios that involve multiple            scenarios, we use Lightjason, a Java-based BDI multi-agent
+user interaction, the courtesy behavior of car drivers towards       framework [20]. All simulation runs were performed on an
+pedestrians and also the car following behavior to illustrate        Intel CoreTMi5 processor with 16 GB RAM.
+elaborately how our model works. We also simulate another
+scenario revealing courtesy behavior of car drivers towards                a) Scenario 1: Here, an interaction between three
+other car drivers. However, for the last case we could not           pedestrians and one car driver is captured. In this scenario,
+compare the performance as real data is currently missing.           the car driver decelerates to let the pedestrians cross the
+We consider all these three scenarios as complex situations          street. In our model, car handles this interaction re-actively as
+because here the road users can choose their actions among           the angle between the car and (at least) one of the pedestrians
+different alternatives like the pedestrians can deviate, con-        is  15  345 and reproduces the same solution. We
+tinue, or stop moving and the car driver can give way or             observe that in both simulation and reality, the car driver
+continue driving. We did not consider deviation as an option
+for car drivers because of the non-holonomic constraints of
+
+                                                                                              3571
+Authorized licensed use limited to: Nanyang Technological University Library. Downloaded on October 02,2026 at 04:39:30 UTC from IEEE Xplore. Restrictions apply.
+(a) observation                                                                                              (a)
+                                                                          (b) The game matrices, left: Car2 to Ped4 and Ped5, right: Car4 to Ped6
+
+(b) Comparison of the intensity of interaction
+
+                                                                          (c) The real trajectories
+
+(c) Comparison of the trajectories. The arrows indicate the direction of                        (d) The simulated trajectories
+movement of the road users.
+                                                                                     (e) The simulated trajectories without game decision
+            Fig. 4. Comparison of a car-to-pedestrian interaction         Fig. 5. Comparison of a car to pedestrian and a car to car interaction
+
+decelerates; yet, the timing and the way of acting differ in
+both cases: The acceleration and deceleration of simulated
+car driver is sharp compare to real car driver. The mechanism
+of speed handing of cars in our model need to be improved.
+The speed difference between the real and simulated cars
+are illustrated in Figure 4b. The comparison between the
+observed and simulated trajectories is given in Figure 4c.
+In Figure 4c, the trajectories of both simulated and real
+car are very similar, while the trajectories of pedestrians in
+simulation slightly deviated from the real trajectories because
+of the repulsive force between pedestrians when they come
+close to each other.
+
+                                                                                              3572
+Authorized licensed use limited to: Nanyang Technological University Library. Downloaded on October 02,2026 at 04:39:30 UTC from IEEE Xplore. Restrictions apply.
+      b) Scenario 2: It includes two types of interactions,                      (a) The real trajectories
+namely car-to-pedestrian and car-to-car. In this scenario,
+Car2 has interaction with Ped4 and Ped5; Car3 and Car4
+have car following interaction with Car2; and Car4 has
+interaction with Ped6. Here, both Car2 and Car4 decelerate
+to let the pedestrians cross the street. We handle both car-
+to-pedestrian interactions using game-theoretic model and
+depict the game matrices in Figure 5b. Here, both Car2 and
+Car4 act as leader and decide to decelerate; their payoff
+function reflects courtesy of the drivers towards the pedes-
+trians, as decelerating will maximize its value. We visualize
+the real and simulated trajectories of these interactions at two
+specific time steps in Figure 5c and Figure 5d respectively.
+In both Figure 5c and Figure 5d, Ped indicates Pedestrian.
+Car3 and Car4 in Figure 5d decide to stay behind Car2,
+instead of overtaking as in Figure 5c. We model this behavior
+as reactive car following. Our simulation model reproduces
+real interactions, but a large safety distance is maintained
+between pedestrian to pedestrian, car to car and also car to
+pedestrian, compared to real situation.
+
+   We simulate this same scenario again but without game-
+theoretic layer. Figure 5e visualizes the simulated trajectories
+at a specific time step to show how the classical social force
+model behaves in this situation. In Figure 5e all cars deviate
+from their trajectory instead of stopping and pedestrians
+sometimes go back and forth and sometimes stop.
+
+      c) Scenario 3: The third example studies courtesy
+behavior of a car driver towards another. This is shown in
+Figure 6. In the example, when the driver of the blue car
+perceives the green car, she slows down and lets the green
+car pass first.
+
+                                                                                                                 (b) The simulated trajectories
+
+                                                                                 Fig. 7. The trajectories of pedestrians and cars are indicated by blue lines
+                                                                                 and red lines respectively.
+
+Fig. 6. Car-to-car interaction at different time steps. The blue car is showing  of road users varies in real and simulated scenarios. The
+courtesy to the green car.                                                       trajectories of real and simulated road users closely match.
+                                                                                 However, the time step wise position of each road user differs
+   To sum up, in Scenario 1, our simulation model reproduces                     in real scenario and simulation because of speed difference
+a multiple user interaction among four road users realis-                        between real and simulated road users and also the fact that
+tically. Scenario 2 shows that our model can handle three                        a large safety distance is maintained between road users in
+interdependent situations realistically. In the third scenario,                  simulation. The mean and standard deviation of speed of the
+our model simulates the courtesy behavior between car                            simulated and real road users are: 2.779 and 2.966 (simulated
+drivers re-actively. In all these example scenarios, the road                    cars); 0.8469 and 0.7813 (simulated pedestrians); 1.27 and
+users suitably detect and classify the interaction and behave                    1.007 (real cars), 0.502 and 0.2526 (real pedestrians). The
+accordingly during simulation.                                                   calibration of the acceleration and deceleration parameters
+                                                                                 is a part of our future work. Figure 8a represents average
+   Figure 7a and Figure 7b visualize the real and simulated                      distance between simulated and real trajectories of every car
+trajectories of all road users involved in 117 selected real                     and pedestrian involved in each scenario of our selected 117
+scenarios, respectively. We start simulating each road user                      scenarios. For more than one car or pedestrian in a single
+five time steps before and end simulating five time steps                        scenario we take the average among them to calculate the
+after than real data, because in some situations road users                      average distance. Figure 8b visualizes the individual average
+cross each other without having any conflict, which is not                       speed difference of real and simulated road users, which is
+the case in real scenario. The reason behind that is the speed                   calculated in the same way as trajectory distance.
+
+                                                                                              3573
+Authorized licensed use limited to: Nanyang Technological University Library. Downloaded on October 02,2026 at 04:39:30 UTC from IEEE Xplore. Restrictions apply.
+              (a) Distance between real and simulated trajectories                                REFERENCES
+
+            (b) Speed differences of real and simulated road users     [1] E. Clarke, "Shared space-the alternative approach to calming traffic,"
+Fig. 8. The difference in trajectory and speed of real and simulated        Traffic engineering & control, vol. 47, no. 8, 2006.
+pedestrians and cars.
+                                                                       [2] R. Scho¨nauer, M. Stubenschrott, H. Schrom-Feiertag, and K. Mensik,
+                V. CONCLUSION AND OUTLOOK                                   Social and Spatial Behaviour in Shared Spaces, 2012.
+   This work-in-progress paper proposes a multiagent-based
+model for modeling interactions of pedestrians and cars in             [3] D. Helbing and P. Molnar, "Social force model for pedestrian dynam-
+shared spaces. We analyze mixed traffic interactions, classify              ics," Physical review E, vol. 51, no. 5, p. 4282, 1995.
+the interactions in terms of complexity and then model
+different levels of interactions using the social force model          [4] F. Pascucci, N. Rinke, C. Schiermeyer, B. Friedrich, and V. Berkhahn,
+and Stackelberg games. Our model facilitates interaction                    "Modeling of shared space with multi-modal traffic using a multi-layer
+recognition depending on the situation context. First results               social force approach," Transportation Research Procedia, vol. 10, pp.
+support the hypothesis that this model has good potential to                316­326, 2015.
+simulate both complex and simple shared space scenarios,
+as modeling multiple user interactions and interdependent              [5] N. Rinke, C. Schiermeyer, F. Pascucci, V. Berkhahn, and B. Friedrich,
+interactions can make the simulation model more realistic.                  "A multi-layer social force approach to model interactions in shared
+   Future research will focus on calibrating and validating                 spaces using collision prediction," Transportation Research Procedia,
+the model parameters using genetic algorithms. Next, we                     vol. 25, pp. 1249­1267, 2017.
+will try to find out other factors which might influence road
+users decision making. The explicit interaction and pedes-             [6] B. Anvari, M. G. Bell, A. Sivakumar, and W. Y. Ochieng, "Modelling
+trian group dynamic will be integrated into our simulation                  shared space users via rule-based social force model," Transportation
+model. Most importantly, we shall study larger scenarios with               Research Part C: Emerging Technologies, vol. 51, pp. 83­103, 2015.
+larger numbers interactions. Doing so, we shall explore the
+scalability of various interaction types for different scenarios       [7] F. Pascucci, N. Rinke, C. Schiermeyer, V. Berkhahn, and B. Friedrich,
+varying in number and heterogeneity of users as well as                     "Should i stay or should i go? a discrete choice model for pedestrian­
+in topology. In particular, more efficient algorithms for                   vehicle conflicts in shared space," Tech. Rep., 2018.
+recognizing, framing and resolving conflicts interactions will
+be required for realistically simulating larger shared space           [8] R. Scho¨nauer, M. Stubenschrott, W. Huang, C. Rudloff, and M. Fellen-
+scenarios.                                                                  dorf, "Modeling concepts for mixed traffic: Steps toward a microscopic
+                                                                            simulation tool for shared space zones," Transportation Research
+                                                                            Record: Journal of the Transportation Research Board, no. 2316, pp.
+                                                                            114­121, 2012.
+
+                                                                       [9] L. W. Lan and C.-W. Chang, "Inhomogeneous cellular automata
+                                                                            modeling for mixed traffic with cars and motorcycles," Journal of
+                                                                            Advanced Transportation, vol. 39, no. 3, pp. 323­349, 2005.
+
+                                                                      [10] Y. Zhang and H. Duan, "Modeling mixed traffic flow at crosswalks
+                                                                            in micro-simulations using cellular automata," Tsinghua Science &
+                                                                            Technology, vol. 12, no. 2, pp. 214­222, 2007.
+
+                                                                      [11] D. Gettman and L. Head, "Surrogate safety measures from traffic
+                                                                            simulation models," Transportation Research Record: Journal of the
+                                                                            Transportation Research Board, no. 1840, pp. 104­115, 2003.
+
+                                                                      [12] C. Burstedde, K. Klauck, A. Schadschneider, and J. Zittartz, "Simula-
+                                                                            tion of pedestrian dynamics using a two-dimensional cellular automa-
+                                                                            ton," Physica A: Statistical Mechanics and its Applications, vol. 295,
+                                                                            no. 3-4, pp. 507­525, 2001.
+
+                                                                      [13] K. Nagel and M. Schreckenberg, "A cellular automaton model for
+                                                                            freeway traffic," Journal de physique I, vol. 2, no. 12, pp. 2221­2229,
+                                                                            1992.
+
+                                                                      [14] H. Kita, "A merging­giveway interaction model of cars in a merging
+                                                                            section: a game theoretic analysis," Transportation Research Part A:
+                                                                            Policy and Practice, vol. 33, no. 3-4, pp. 305­312, 1999.
+
+                                                                      [15] N. Lu¨tteken, M. Zimmermann, and K. J. Bengler, "Using gamification
+                                                                            to motivate human cooperation in a lane-change scenario," in Intel-
+                                                                            ligent Transportation Systems (ITSC), 2016 IEEE 19th International
+                                                                            Conference on. IEEE, 2016, pp. 899­906.
+
+                                                                      [16] T. Bjørnskau, "The zebra crossing game­using game theory to explain
+                                                                            a discrepancy between road user behaviour and traffic rules," Safety
+                                                                            science, vol. 92, pp. 298­301, 2017.
+
+                                                                      [17] A. Koefoed-Hansen and G. S. Brodal, "Representations for path
+                                                                            finding in planar environments," Ph.D. dissertation, 2012.
+
+                                                                      [18] I. Millington and J. Funge, Artificial intelligence for games. CRC
+                                                                            Press, 2009.
+
+                                                                      [19] F. T. Johora, P. Kraus, and J. P. Mu¨ller, "Dynamic path planning and
+                                                                            movement control in pedestrian simulation," Sao Paulo, Brazil, May
+                                                                            2017. [Online]. Available: http://arxiv.org/abs/1709.08235
+
+                                                                      [20] M. Aschermann, P. Kraus, and J. P. Mu¨ller, "LightJason: A
+                                                                            BDI Framework inspired by Jason," in Multi-Agent Systems and
+                                                                            Agreement Technologies: 14th Europ. Conf., EUMAS 2016, ser.
+                                                                            LNCS, vol. 10207. Springer, 2017, pp. 58­66. [Online]. Available:
+                                                                            https://lightjason.github.io
+
+                                                                                              3574
+Authorized licensed use limited to: Nanyang Technological University Library. Downloaded on October 02,2026 at 04:39:30 UTC from IEEE Xplore. Restrictions apply.
+
