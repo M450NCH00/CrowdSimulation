@@ -344,6 +344,29 @@ suggests, in three specific ways, all sourced in [G5](g5-llm-agents-game-theory.
 
 ## 9. Acquisition list, in priority order
 
+> ### ✅ UPDATE 2026-10-02 — three items acquired, two reported unobtainable
+> The user supplied PDFs for **items 3, 5 and 6** below. All three have been **read in full**, cached
+> under `refs/`, and written up in
+> [`conflict-avoidance-shortlist.md`](conflict-avoidance-shortlist.md); the corresponding entries in
+> [`g1-conflict-games-conventions.md`](g1-conflict-games-conventions.md) and
+> [`g4-game-theoretic-crowd-models.md`](g4-game-theoretic-crowd-models.md) have been upgraded from
+> "abstract only" / "not opened" to full text.
+>
+> | # | Item | Status |
+> |---|---|---|
+> | 3 | Farrell & Rabin (1996), JEP | ❌ **still not obtained** |
+> | 5 | Maynard Smith & Parker (1976), *Animal Behaviour* | ❌ **reported unobtainable by the user** |
+> | 6 | Johora & Müller (2018), IEEE ITSC | ✅ **obtained and read in full** |
+> | 7 | Mesterton-Gibbons et al. (2014), *Dyn. Games Appl.* | ❌ **reported unobtainable by the user** |
+> | — | Camara et al. (2018), *Proc. Measuring Behavior* (was listed under G4 leads) | ✅ **obtained and read in full** |
+> | — | Duffy & Feltovich (2010), *Int. Econ. Rev.* (was abstract-only) | ✅ **obtained and read in full** |
+>
+> ⚠ **The two that remain unobtainable both bear on the same open question** — whether an
+> **arrival-order / prior-possession** rule exists in this literature (risk R6 below). Maynard Smith
+> & Parker is the origin of the uncorrelated-asymmetry idea, and Mesterton-Gibbons et al. is about
+> bourgeois under *ownership uncertainty*. Until one of them is read, this review's negative finding
+> stands as **"no arrival-order rule was found in anything opened"**, not as "none exists".
+
 Everything below is confirmed to exist. This is the shopping list for the university library.
 
 1. **Vanderschraaf (1995), "Convention as correlated equilibrium"**, *Erkenntnis* 42:65–87 — closes

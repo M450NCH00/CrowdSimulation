@@ -106,7 +106,8 @@ through the university library. That is logged as a risk in
   to human behaviour only rhetorically — the host–guest norm is "a phenomenon common to human
   interaction" (Abstract) — and cites others for the claim that correlated equilibria "are also
   readily learned by humans" (§1, its reference [45]). [inference] That citation is the route to
-  [Duffy-CorrelatedEq] in §2 below, which *is* a human experiment.
+  [Duffy-CorrelatedEq] below, which *is* a human experiment — and which, as of 2026-10-02, has been
+  read in full.
 - **Assumptions that may not hold in a crowd:**
   - **The cue must be shared and unambiguous.** The model's cue is host/visitor, which is
     well-defined because one agent initiates. [inference] In a corridor conflict there is no
@@ -303,6 +304,16 @@ Each row below was confirmed by fetching its Crossref record (all cached in
 `refs/gt_crossref_all.json`). The `[secondhand]` tag from the issue is **discharged as to
 existence**, and explicitly **not discharged as to content**.
 
+> ⚠ **One exception, 2026-10-02.** [Duffy-CorrelatedEq] sits in this section for historical reasons
+> but is **no longer a §2 entry** — its full text was supplied by the user and read, and its entry
+> has been rewritten accordingly. It is left in place so existing cross-references keep working.
+> Everything else in §2 remains unread at source.
+
+> ⚠ **One exception, 2026-10-02.** [Duffy-CorrelatedEq] sits in this section for historical reasons
+> but is **no longer a §2 entry** — its full text was supplied by the user and read, and its entry
+> has been rewritten accordingly. It is left in place so existing cross-references keep working.
+> Everything else in §2 remains unread at source.
+
 ### [MaynardSmith-AnimalConflict]: The Logic of Animal Conflict `[foundational]`
 
 - **Authors / Year / Venue:** J. Maynard Smith, G. R. Price / 1973 / *Nature* **246**, pp. 15–18.
@@ -420,50 +431,103 @@ existence**, and explicitly **not discharged as to content**.
 
 ### [Duffy-CorrelatedEq]: Correlated Equilibria, Good and Bad: An Experimental Study
 
-- **Authors / Year / Venue:** John Duffy, Nick Feltovich / 2010 / *International Economic Review*
-  **51**(3), pp. 701–721.
+> ⚠ **UPGRADED 2026-10-02.** This entry was originally **abstract-only**. The full text was
+> subsequently supplied by the user and read. It is rewritten below from the full text, and locators
+> are now to the **printed page numbers 701–721**. A fuller treatment, including the experimental
+> design in detail, is in [`conflict-avoidance-shortlist.md`](conflict-avoidance-shortlist.md) §A3.
+
+- **Authors / Year / Venue:** John Duffy (University of Pittsburgh), Nick Feltovich (University of
+  Aberdeen Business School) / 2010 / *International Economic Review* **51**(3), August 2010,
+  pp. 701–721.
 - **Link:** doi:[10.1111/j.1468-2354.2010.00598.x](https://doi.org/10.1111/j.1468-2354.2010.00598.x)
-- **Peer-review status:** published, peer-reviewed journal (Wiley).
-- **Verified:** **abstract only.** Bibliographic fields **and the publisher's abstract** were
-  read from the cached Crossref record (`refs/gt_crossref_all.json`, key `duffy2010`). Full text
-  paywalled and **not opened**. **All locators below are to the abstract.**
+- **Peer-review status:** **published**, peer-reviewed journal (Wiley).
+- **Verified:** **yes — full text**, cached as `refs/gt_duffy2010_ier.pdf` (text at `.txt`).
 - **Sub-area:** G1
-- **Tags:** none (2010 — outside the 2016+ window, but retained because it is the only **human
+- **Tags:** none (2010 — outside the 2016+ window, retained because it is the only **human
   experiment on correlated equilibrium in a conflict game** found in this review)
 - **Type:** human experiment
-- **The game or conflict modelled:** **Chicken** — "subjects playing the game of Chicken"
-  (Abstract). Two parties. Payoffs not given in the abstract.
-- **The rule or solution concept:** correlated equilibrium implemented as **private third-party
-  recommendations drawn from a publicly announced distribution** — "we examine the conditions
-  under which subjects playing the game of Chicken will condition their behavior on private
-  third-party recommendations drawn from publicly announced distributions" (Abstract).
-- **Information the rule requires:** a **private signal** (the recommendation) plus **public
-  knowledge of the distribution** it is drawn from (Abstract). [inference] This is the cleanest
-  statement in the whole review of what a correlated-equilibrium rule actually costs in
-  information terms, and it is *more* than Foley's one-bit cue: it needs a trusted signalling
-  device.
-- **One-shot or repeated:** `[not stated in abstract]`.
-- **Communication required:** **none between the players** — the recommendation comes from a
-  third party, not from the opponent. [inference] In simulator terms the third party is the
-  simulator itself, which makes this a candidate for the FYP's runtime rule: a central device can
-  hand each agent a private recommendation cheaply.
-- **Scalability:** `[not stated in abstract]`.
-- **Validated against human behaviour:** **yes — this is the entry's whole point.** "We find that
-  when recommendations are given, behavior differs from both a mixed-strategy Nash equilibrium
-  and behavior without recommendations. In particular, subjects typically follow recommendations
-  if and only if (1) those recommendations derive from a correlated equilibrium and (2) that
-  correlated equilibrium is payoff-enhancing relative to the available Nash equilibria"
-  (Abstract).
-- **Assumptions that may not hold in a crowd:** [inference] it requires a trusted recommender and
-  subjects who understand the announced distribution — neither is obviously available to a
-  pedestrian agent without the simulator playing that role explicitly.
-- **Limitations stated by the authors:** `[not stated in abstract]`.
-- **Relevance to this FYP:** it is the **human-validation leg** that
-  [Foley-ConflictConvention] lacks, and it comes with a sharp caveat the FYP must not skip: humans
-  follow a correlated-equilibrium recommendation **only if it pays better than the Nash
-  alternatives** (Abstract, condition (2)). [inference] So an extracted convention that is merely
-  *consistent* is not enough; if the FYP wants agents (or humans) to keep following it, it has to
-  be payoff-enhancing.
+- **The game or conflict modelled:** **Chicken**, two parties, payoffs in figure 1 (p. 702):
+  (D,D) = 0,0; (D,C) = 9,3; (C,D) = 3,9; (C,C) = 7,7. Three Nash equilibria — (D,C) → (9,3),
+  (C,D) → (3,9), and mixed with each playing D with probability 2/5 → (5.4, 5.4) (p. 704). Chosen
+  because it is "perhaps the simplest game with the property that there exist correlated equilibrium
+  payoff pairs that lie outside the convex hull of Nash equilibrium payoff pairs" (§2, p. 703).
+- **The rule or solution concept:** correlated equilibrium implemented through a **mediator** — "a
+  nonstrategic third party" who "chooses one of the four pure-strategy profiles according to a
+  commonly known probability distribution, and to each player 'recommends' that player's component in
+  the profile… The probability distribution is a correlated equilibrium of the original game **if
+  each player at least weakly prefers following her recommended action to choosing any other
+  action**" (p. 704). The incentive conditions reduce to four linear inequalities (p. 704):
+  2*p_DC* ≥ 3*p_DD*; 3*p_CD* ≥ 2*p_CC*; 2*p_CD* ≥ 3*p_DD*; 3*p_DC* ≥ 2*p_CC*, summing to 1.
+- **Information the rule requires:** a **private per-agent signal** (the recommendation), **public
+  knowledge of the distribution** it was drawn from, and a **trusted third party** to draw it
+  (p. 704). [inference] The clearest statement in this review of what a signal-based rule actually
+  costs — and all three are things a simulator can supply, because the simulator *is* the mediator.
+- **One-shot or repeated:** each round is one-shot, but subjects played **40 rounds** under
+  **round-robin matching** "in an attempt to minimize incentives for reputation building" (p. 708),
+  so no dyad-level history accumulates.
+- **Communication required:** **none between the players.** "Subjects were asked not to communicate
+  directly with one another, so the only interactions were via the computer program" (p. 708). The
+  signal comes from the mediator. **Candidate for the FYP's runtime rule.**
+- **Scalability:** `[not stated in paper]`.
+- **Validated against human behaviour:** **yes — this is the entry's whole point.** 16 sessions ×
+  12 subjects = **192 subjects**, 7,580 observations, 1,920 per treatment (§4, p. 708). Four
+  treatments (table 1, p. 707): *good* (a payoff-superior CE, expected payoffs 6.333), *bad* (a CE
+  that is payoff-**inferior** to every symmetric Nash-hull payoff, 4.8), *Nash* (a convex combination
+  of Nash equilibria, 6), and *very good* (**not** a CE but highest payoffs, 6.8 — the control for
+  experimenter demand).
+  - **Result 1** (p. 712): recommendations shift outcomes "**if and only if the recommendations come
+    from a correlated equilibrium**."
+  - **The striking null** (p. 711): no significant difference between *no recommendations* and *very
+    good recommendations* (χ² = 3.511, df = 3, p > 0.20). "It suggests that **subjects will not
+    blindly follow just *any* recommendations, but rather will follow them only if they are
+    consistent with implementation of a correlated equilibrium.**"
+  - **Compliance rates** (table 3, p. 713), against a mixed-NE baseline of 0.400 for D and 0.600 for
+    C: good 0.735 / 0.732; Nash 0.567 / 0.777; bad 0.477 / 0.631 (not significant overall); very
+    good 0.511 / 0.608, with D-following collapsing to **0.227** in the last five rounds.
+  - **Result 4** (p. 719): following pays only where the distribution is a sensible CE — forgone
+    payoffs −0.467/round (good) and −0.428/round (Nash), both significantly below zero; +0.026 (bad)
+    and +0.059 (very good), neither significant.
+- **Assumptions that may not hold in a crowd:** an abstract points game with no space, movement or
+  time pressure; a trusted mediator; and subjects who understand the announced distribution — the
+  authors themselves raise (footnote 19, p. 720) that compliance may partly track **how easy Bayes'
+  rule is** in each treatment.
+- **Limitations stated by the authors:** "our results cast a bit of doubt on the usefulness of this
+  solution concept as a descriptive notion, as the correlated equilibrium **point predictions are not
+  observed**" (p. 720) — directional predictions hold, point predictions do not. Plus the Bayes'-rule
+  confound above, and a framing caveat (footnote 11, p. 708): "We acknowledge the possibility that
+  our use of the term '**recommendations**' itself might have influenced subjects to follow them."
+- **Relevance to this FYP:** four things, two of which are only visible in the full text.
+  - **A realistic compliance bar.** "it is **not necessary for recommendations always to be
+    followed** in order for them to have an effect. Recommendations in these treatments were followed
+    only roughly **70%–75%** of the time, but this was enough to have a significant effect on the
+    distribution of outcomes" (p. 719). [inference] The FYP does not need universal obedience for its
+    extracted rule to change the simulation.
+  - **A constraint on which rules are worth extracting.** "it is particularly difficult to induce
+    subjects to follow recommendations based on correlated equilibria that are Pareto inferior to the
+    available Nash equilibria. This finding would seem to **greatly limit the class of empirically
+    relevant correlated equilibria to those that Pareto improve upon the set of Nash equilibria**"
+    (p. 720).
+  - **⚠ The signal must be supplied, not discovered.** "when subjects do not receive recommendations,
+    their choices can be described fairly well… by mixed-strategy Nash equilibrium. This result
+    suggests that **theoretical rationales for correlated equilibria that do not rely on extrinsic,
+    third-party recommendations… might be difficult to observe in practice**" (p. 719), though the
+    authors note fixed pairings or communication might have changed this. [inference] Humans did
+    **not** invent the coordinating convention for themselves. This corroborates, from a different
+    literature, the spatial-network failure recorded in
+    [`g2-norm-emergence.md`](g2-norm-emergence.md), and is a further argument for installing the
+    rule offline rather than hoping it emerges.
+  - **⚠ An open question that is almost a project brief** (p. 720): the authors ask whether "**the
+    form of recommendations matters**" and whether "the message space for recommendations [must]
+    correspond precisely to the action space, or might it be larger… or consist of a set of messages
+    with no clear mapping to the action space". [inference] An LLM is exactly a device that issues
+    recommendations in natural language over an unbounded message space. This also connects to the
+    strategy-label presentation dispute in
+    [`g5-llm-agents-game-theory.md`](g5-llm-agents-game-theory.md) §2.
+- **⚠ Two citation errors in its reference list** (p. 721), recorded because independent verification
+  is this review's method: Gul is cited in the body as "Gul (1988)" (p. 702) but listed as
+  *Econometrica* **66** (1998); and Hart & Mas-Colell's "A Simple Adaptive Procedure Leading to
+  Correlated Equilibrium" is listed as *Econometrica* **60** (2000) — volume 60 is 1992, and the 2000
+  paper is volume 68. Use Crossref, not this list, if citing either.
 - **BibTeX:** `duffy2010correlated`.
 
 ### [MestertonGibbons-IteratedHDRevisited]: The Iterated Hawk–Dove Game Revisited: The Effect of Ownership Uncertainty on Bourgeois as a Pure Convention
@@ -488,8 +552,8 @@ existence**, and explicitly **not discharged as to content**.
 
 | Criterion | Status |
 |---|---|
-| ≥ 2 qualifying entries | **Met** — 3 fully-read entries (Foley, Chen, Hall), plus Duffy & Feltovich read at abstract level |
-| Every listed paper independently opened | **Partially met.** 3 opened in full; 1 at abstract level; 6 confirmed bibliographically only. Each is labelled. Nothing is cited *for content* from another paper's reference list. |
+| ≥ 2 qualifying entries | **Met** — **4** fully-read entries (Foley, Chen, Hall, and — since 2026-10-02 — Duffy & Feltovich) |
+| Every listed paper independently opened | **Partially met.** **4** opened in full (Duffy & Feltovich upgraded from abstract-only on 2026-10-02); 6 confirmed bibliographically only. Each is labelled. Nothing is cited *for content* from another paper's reference list. |
 | Peer-review status recorded | Met for all 10 |
 | Every claim carries a locator | Met for the fully-read entries. For §2 entries **no body locators are given at all**, by design |
 | Information the rule requires, recorded | Met for all entries where a rule exists |

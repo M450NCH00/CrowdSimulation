@@ -149,6 +149,50 @@ found in the literature, each sourced. The gating test for every paper:
   requires.
 - Next step: PR.
 
+### 2026-10-02 - Three previously-unobtainable papers supplied by the user, read, and folded in
+- What I did: the user supplied PDFs for Camara et al. (2018, Measuring Behavior), Duffy & Feltovich
+  (2010, IER) and Johora & Mueller (2018, IEEE ITSC), and reported Maynard Smith & Parker (1976) and
+  Mesterton-Gibbons et al. (2014) as unobtainable. Cached all three under `refs/`, read each in full,
+  verified every quoted passage against the extracted text, and wrote
+  `literature/game-theory/conflict-avoidance-shortlist.md`.
+- Why: the user asked for a filtered shortlist against a sharper criterion than the issue's -
+  *rules agents follow so that conflict does not arise in the first place* - plus detailed summaries.
+- Result / what I found:
+  - **A distinction the sub-area files had not made:** the shortlist splits into **ex-ante**
+    (the clash never arises) and **ex-post** (the clash happens, then a procedure picks a winner).
+    Two of my earlier top picks - Bouzat & Kuperman, Duffy & Feltovich - are ex-post. Said so.
+  - **Johora & Mueller is the most transferable paper in the whole review.** Three-layer simulator
+    (A* / social-force reactive rules / one-shot Stackelberg games), validated against 117 real
+    conflict scenarios from Hamburg video. It contains an **ablation** (section IV-b): with the game
+    layer removed, "all cars deviate from their trajectory instead of stopping and pedestrians
+    sometimes go back and forth" - i.e. removing the rule layer reproduces the exact deadlock this
+    FYP targets. And its **12-parameter payoff function is explicitly uncalibrated** (section
+    III-C-1), which is a precisely-shaped opening for LLM-elicited payoffs.
+  - **Camara et al. gives the FYP's own method template** - define a game, leave the human-preference
+    parameters free, measure them, fold into a controller - and a warning: the fitted optimum was
+    (U_crash, U_time) ~ (0, 30), i.e. participants behaved as though crashing were free, which the
+    authors attribute to the board-game framing (section 4). A text prompt to an LLM is at least as
+    artificial a frame.
+  - **Duffy & Feltovich at full text changed one of my claims.** The abstract-only entry recorded
+    that recommendations work when payoff-enhancing. The full text adds a finding I could not see
+    before: **no correlated equilibrium arose spontaneously without the mediator** (p. 719). The
+    signal has to be supplied. Also found two citation errors in its reference list (Gul, and
+    Hart & Mas-Colell), recorded.
+  - Found an **open question in Duffy & Feltovich (p. 720)** that reads as a brief for this FYP:
+    does the *form* of a recommendation matter, and must the message space match the action space?
+    An LLM is exactly a natural-language recommendation device over an unbounded message space.
+- Housekeeping, so the read-depth labels stay honest: upgraded the Duffy entry in G1 from
+  abstract-only to full text; filled in the Johora entry in G4, which was previously a
+  confirmed-but-unopened lead with blank template fields; added a Camara 2018 entry to G4; corrected
+  the Fox human-validation bullet, which had attributed the human fit to the T-ITS survey's summary;
+  added rules **R12-R14** and a fifth correspondence to the rule catalogue; updated the acquisition
+  list in `search-log.md` section 9; added `camara2018empirical` to the bib and rewrote two notes.
+- Verified: all 30 paper-handle cross-references resolve, all 37 bib keys referenced in prose are
+  defined, 0 broken inter-file links, no stale "not opened" claims remain for the three acquired
+  papers.
+- Next step: none outstanding for this request. The two still-missing papers both bear on risk R6
+  (whether an arrival-order rule exists in this literature).
+
 ## Open questions / risks
 
 Carried forward into `literature/game-theory/search-log.md` section 10, which is the
