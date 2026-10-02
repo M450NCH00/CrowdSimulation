@@ -293,21 +293,19 @@ one entry states the scaling problem in a single sentence that the FYP should qu
   agents — but the paper makes no such claim and I am not attributing one to it. Note the model is
   solvable **offline** into a lookup table over (*y*, *x*, *t*), which is the property that matters
   for the FYP.
-- **Validated against human behaviour:** **not in this paper** — but yes in the follow-up, which is
-  why the chain matters. [Camara-PedestrianModelsII] §IV-A-1 (p. 12) reports: "Camara et al. [41],
-  [34] evaluated the model [75] by fitting one parameter to **controlled laboratory experiments
-  where pedestrians were asked to play sequential chicken**. This behavioural parameter was found to
-  be a **ratio between the utility of avoiding a collision and the utility of saving time**." The
-  follow-up papers are confirmed to exist from the survey's reference list — Camara, Romano,
-  Markkula, Madigan, Merat & Fox, "Empirical game theory of pedestrian interaction for autonomous
-  vehicles", *Proc. Measuring Behavior* 2018 (survey ref [41]); and Camara, Cosar, Bellotto, Merat &
-  Fox, "Towards pedestrian-AV interaction: method for elucidating pedestrian preferences", *Proc.
-  IEEE/RSJ IROS Workshops* 2018 (survey ref [34]) — but ⚠ **neither was opened**, so the human-fit
-  claim is recorded **as the survey states it**, attributed to the survey, and is **not** treated as
-  a direct reading of the experiment. A related published follow-up was independently confirmed via
-  Crossref: Camara, Cosar, Bellotto & Merat, "Continuous Game Theory Pedestrian Modelling Method for
-  Autonomous Vehicles", in *Human Factors in Intelligent Vehicles*, 2022,
-  doi:10.1201/9781003338475-1 — also **not opened**.
+- **Validated against human behaviour:** **not in this paper, but yes in its follow-up — and that
+  follow-up has now been read at source.** [Camara-EmpiricalGT] (*Proc. Measuring Behavior* 2018,
+  pp. 238–244) fits this model's two free parameters to **16 human participants playing a board-game
+  version of sequential chicken**, and reports a fitted optimum of (*U_crash*, *U_time*) ≈ **(0, 30)**
+  — i.e. players behaved as though **crashing was free**. Full entry, including the experimental
+  design and why that result is a warning for this FYP, is in
+  [`conflict-avoidance-shortlist.md`](conflict-avoidance-shortlist.md) §A1.
+  ⚠ *Previously this bullet recorded the human fit only as reported by
+  [Camara-PedestrianModelsII] §IV-A-1; that is no longer necessary.* Two further follow-ups remain
+  **unopened**: Camara et al., "Towards pedestrian-AV interaction: method for elucidating pedestrian
+  preferences", *Proc. IEEE/RSJ IROS Workshops* 2018 (survey ref [34]); and Camara, Cosar, Bellotto &
+  Merat, "Continuous Game Theory Pedestrian Modelling Method for Autonomous Vehicles", in *Human
+  Factors in Intelligent Vehicles*, 2022, doi:10.1201/9781003338475-1.
 - **Assumptions that may not hold in a crowd:** identical and commonly known utility functions (§2,
   p. 433) — which rules out heterogeneous personas as stated; discretised 1 m grid and 1 s turns;
   exactly two agents at right angles; full rationality on both sides, with the authors being
@@ -435,37 +433,170 @@ one entry states the scaling problem in a single sentence that the FYP should qu
 
 ### [Johora-SharedSpaces]: Modeling Interactions of Multimodal Road Users in Shared Spaces
 
-- **Authors / Year / Venue:** Fatema T. Johora, Jörg P. Müller / 2018 / *2018 21st International
-  Conference on Intelligent Transportation Systems* (**IEEE ITSC**), pp. 3568–3574.
+> ⚠ **UPGRADED 2026-10-02.** This entry was previously a **confirmed-but-unopened lead**, with its
+> template fields deliberately left blank. The full text was supplied by the user and has been read.
+> The entry is rewritten below. A fuller treatment — including the ablation experiment, the
+> validation numbers and the FYP implications — is in
+> [`conflict-avoidance-shortlist.md`](conflict-avoidance-shortlist.md) §A2.
+
+- **Authors / Year / Venue:** Fatema T. Johora, Jörg P. Müller (TU Clausthal; DFG Research Training
+  Group SocialCars, GRK 1931) / 2018 / *2018 21st International Conference on Intelligent
+  Transportation Systems* (**IEEE ITSC**), Maui, Hawaii, 4–7 November 2018, pp. 3568–3574.
 - **Link:** doi:[10.1109/ITSC.2018.8569687](https://doi.org/10.1109/ITSC.2018.8569687)
-- **Peer-review status:** **published**, peer-reviewed conference proceedings (IEEE). Fields
-  confirmed from Crossref (`refs/gt_crossref_all.json`, key `johora2018`).
-- **Verified:** **bibliographic record only.** IEEE Xplore is paywalled and no open author copy was
-  located. **Full text not opened.** A related confirmed record — Johora's 2022 Springer monograph
-  *Modeling Interactions among Pedestrians and Cars in Shared Spaces*,
-  doi:10.1007/978-3-658-38345-9 — was also **not** opened.
-- **How it was found:** mined from [Camara-PedestrianModelsII] §IV-A-2 (its reference [109]), as the
-  issue instructed, and **independently confirmed to exist** via Crossref.
-- **Sub-area:** G4
-- **Tags:** none (2018)
-- **What is recorded, and how it is attributed:** because I did not open the paper, everything below
-  is **as reported by [Camara-PedestrianModelsII] §IV-A-2, p. 12**, and is attributed to the survey,
-  not to Johora & Müller:
-  > "Johora and Müller [109] proposed a three-layer trajectory prediction model composed of a
-  > trajectory planner, a force-based (social force) model and a game theoretic decision model. The
-  > game theory model is based on **Stackelberg games, a sequential leader-follower game** where
-  > pedestrians have three different possible actions: **continue, decelerate and deviate** and the
-  > car has two possible actions: **continue and decelerate**. This model is able to **handle
-  > several interactions at the same time**."
-- **Why it is listed anyway:** the issue specifically asked for "the Stackelberg leader-follower
-  pedestrian model", and this is it. Three properties make it worth acquiring: the **discrete action
-  set** (continue / decelerate / deviate) is exactly the vocabulary a crowd-simulation rule needs;
-  the **leader–follower asymmetry** is a priority rule of the kind G1 is about; and the survey's
-  claim that it handles several interactions simultaneously speaks to the scaling question.
-- **⚠ No template fields are filled in**, because filling them from a survey's one-paragraph summary
-  would be precisely the secondhand sourcing the issue forbids. It is listed as a **confirmed,
-  unacquired lead** and flagged in [`search-log.md`](search-log.md) as an acquisition target.
+- **Peer-review status:** **published**, peer-reviewed conference proceedings (IEEE). Self-described
+  in §V as a "work-in-progress paper".
+- **Verified:** **yes — full text**, cached as `refs/gt_johora2018_itsc.pdf` (text at `.txt`).
+  Locators are to numbered sections and the printed page numbers 3568–3574.
+- **Sub-area:** G4 · **Tags:** none (2018) · **Type:** simulation, validated against real video data
+- **The game or conflict modelled:** priority negotiation in **shared spaces**, where "motorized and
+  non-motorized road users share the same space with **equal priority**. Their movements are **not
+  regulated by traffic rules**" (Abstract); coordination runs on "social protocols (e.g. courtesy
+  behavior) and informal rules" instead (§I). The paper adopts a formal definition of a conflict,
+  quoted from Gettman & Head: "an observable situation in which two or more road users approach each
+  other in time and space to such an extent that there is a **risk of collision, if their movements
+  remain unchanged**" (§II). Parties: two or more. Payoffs are **ordinal, from 2 to −100**, with
+  mutual Continue (a collision) at (−100, −100) (figure 2a).
+- **The rule or solution concept:** a **three-layer architecture** (§III), in which the conflict is
+  avoided rather than arbitrated:
+  1. **Trajectory planning** (§III-A) — visibility graph plus **A\***, with path vertices nudged away
+     from obstacles.
+  2. **Force-based modelling** (§III-B) — the classical social force model extended with three
+     **reactive rules stated as explicit angular conditions**. E.g. car-to-pedestrian: "If the
+     nearest conflict of a car driver α is with pedestrian(s) β and β has already started moving in
+     front of α or is very close to α, then α **decelerates to let β pass**. This type of interaction
+     only happens if θ ≤ 15 ‖ θ ≥ 345" (§III-B-a). Courtesy behaviour is
+     `I^courtesy_αβ = s_current/2`, firing when θ_{ē_α n̂_βα} ≤ 20 ‖ ≥ 340 **and**
+     70 < θ_{ē_β n̂_βα} < 100 ‖ 260 < θ < 290 (§III-B-c). [inference] These are literally
+     `DO : S → A` functions over observable geometry — the form [Shoham-SocialLaws] defines.
+  3. **Game-theoretic decision** (§III-C) — "We use **one-shot Stackelberg games**, which are
+     sequential leader-follower games, where the leader player commits to an action first; then
+     followers choose an action to optimize their utility considering the action chosen by the
+     leader." Solved by **subgame perfect Nash equilibrium** via backward induction.
+  **Action sets** (§III-B): **Continue**, **Decelerate**, and **Deviate** (pedestrians only — cars
+  are excluded "because of the non-holonomic constraints of the vehicular movement").
+- **Information the rule requires:** for the reactive layer, **relative angle and distance to the
+  nearest conflicting agent**, within a **180° field of view** (§III-D). For the game layer, six
+  observable boolean factors *x₁…x₆* (§III-C-1): whether the other agent is moving below normal
+  speed; whether the number of active interactions is below *N* = 2; **how many give-ways the agent
+  has already allowed** (*G_α* < *M* = 3); whether the agent is a car following another car; whether
+  it is a pedestrian in a group; and whether it is a car followed by another car.
+- **One-shot or repeated:** **one-shot.** "For each implicit interaction only one game is played and
+  the games are **independent of each other**" (§III-C). No history between encounters, except that
+  *G_α* counts prior give-ways — and that counter is **not observed**: "We generate the value of
+  *G_α* randomly" (§III-C-1).
+- **Communication required:** **none.** Explicit interaction is defined in the taxonomy but
+  explicitly excluded: "we do not consider it in this paper" (§II). Simple interactions "are dealt
+  with by local action and **does not require synchronization or communication**" (§III-D).
+  **Candidate for the FYP's runtime rule.**
+- **Scalability:** partially stated, and the authors flag it as their top open problem. Within the
+  model, the host agent deliberately restricts each game to one leader and its followers, because
+  otherwise "the host may need to consider **all possible subsets of conflicts as one game
+  (worst-case scenario)**" (§III-D). In §V: "**Most importantly, we shall study larger scenarios with
+  larger numbers interactions. Doing so, we shall explore the scalability of various interaction
+  types**… In particular, **more efficient algorithms for recognizing, framing and resolving
+  conflicts interactions will be required** for realistically simulating larger shared space
+  scenarios." **No agent counts or timings are given** — `[not stated in paper]`.
+- **Validated against human behaviour:** **yes — against real observational data.** **117 conflict
+  scenarios** from video of a real shared space in **Hamburg** (§IV), simulated in **LightJason**, a
+  Java BDI multi-agent framework. "The trajectories of real and simulated road users closely match"
+  (§IV). ⚠ But the calibration gap is substantial and the authors report it: mean/SD speeds are
+  **2.779 / 2.966 for simulated cars vs 1.27 / 1.007 for real cars**, and **0.8469 / 0.7813 for
+  simulated pedestrians vs 0.502 / 0.2526 for real pedestrians** (§IV) — simulated agents move
+  roughly twice as fast as the ones they are validated against.
+- **⚠ The ablation, and the reason this entry matters most to the FYP.** Scenario 2 was re-run with
+  the game-theoretic layer **switched off**, leaving only the social force model: "In Figure 5e **all
+  cars deviate from their trajectory instead of stopping and pedestrians sometimes go back and forth
+  and sometimes stop**" (§IV-b). [inference] "Go back and forth" is the deadlock dance. This is a
+  published, controlled demonstration that **removing the rule layer reproduces exactly the stall
+  this FYP exists to eliminate, and restoring it fixes the behaviour.**
+- **Assumptions that may not hold in a crowd:** a **centralised host agent** collecting conflicts
+  across the environment each cycle (§III-D); follower-to-follower and follower-to-other-agent
+  conflicts excluded from each game (§III-D); all followers forced to take the same action (§III-C);
+  the car always selected as leader because it is faster (§III-D); and **homogeneous agents within
+  type** — every pedestrian shares one payoff parameterisation.
+- **Limitations stated by the authors:** the big one is that the payoff function is **uncalibrated**.
+  "As we were not able to determine the parameters *F₁*…*F₁₂* based on a substantial amount of real
+  interaction scenarios, there remains a considerable doubt about providing correct values for other
+  and more complex scenarios. Hence… **we do not present the values of these parameters in this
+  paper**" (§III-C-1). *N* and *M* "were chosen in a '**trial-and-error**' manner" (§III-C-1). Future
+  work proposes "calibrating and validating the model parameters using **genetic algorithms**" (§V),
+  plus adding explicit interaction and pedestrian group dynamics, and the scalability study quoted
+  above.
+- **Relevance to this FYP:** the single most directly transferable paper in the review.
+  - **The architecture to copy**: cheap reactive rules for the common cases, solved games only for
+    genuine ambiguity, path planning underneath — already validated on real data.
+  - **⚠ A precisely-shaped contribution**: the model has a **12-parameter payoff function keyed to
+    six observable factors and openly cannot calibrate it**. [inference] The FYP's alternative to
+    their proposed genetic algorithm is to **elicit those payoffs from an LLM, per persona and per
+    scenario** — a direct comparison on an existing validated simulator. The factors suit an LLM
+    unusually well: *G_α* ("how many times have I already given way?") is currently **random**, and
+    group membership and being-followed are social-context judgements.
+  - **The evaluation template**: run with the rule layer, run without, show the dithering returns
+    (§IV-b).
+  - **A discrete action vocabulary** — {continue, decelerate, deviate} — that maps onto
+    `dataset/action_space.yaml`.
+  - **The scalability problem stated as a peer-reviewed paper's own top priority** (§V), which is a
+    strong justification sentence for the FYP's introduction.
 - **BibTeX:** `johora2018modeling`.
+
+---
+
+### [Camara-EmpiricalGT]: Empirical game theory of pedestrian interaction for autonomous vehicles
+
+> **Added 2026-10-02**, from a PDF supplied by the user. This is the human-participant fit of
+> [Fox-SequentialChicken]. Full treatment in
+> [`conflict-avoidance-shortlist.md`](conflict-avoidance-shortlist.md) §A1; summarised here so G4 is
+> self-contained.
+
+- **Authors / Year / Venue:** Fanta Camara, Richard Romano, Gustav Markkula, Ruth Madigan, Natasha
+  Merat, Charles Fox (ITS Leeds; University of Lincoln; Ibex Automation Ltd) / 2018 / *Proceedings of
+  Measuring Behavior 2018*, Manchester, 6–8 June 2018, pp. 238–244. ISBN 978-1-910029-39-8.
+- **Peer-review status:** **published**, peer-reviewed conference proceedings.
+- **Verified:** **yes — full text**, cached as `refs/gt_camara2018_measuringbehavior.pdf`.
+  ⚠ This is the **accepted version** (White Rose eprint 129303) and carries no printed page numbers,
+  so locators are to **numbered sections**. Two figures are images the text layer does not contain;
+  numbers taken from them are flagged at point of use.
+- **Sub-area:** G4 · **Type:** human experiment + method paper
+- **The game modelled:** Sequential Chicken, as in [Fox-SequentialChicken]. "It assumes that **no
+  lateral motion is permitted**, and that there is **no communication between the agents other than
+  seeing each other's positions**" (§2.1).
+- **The rule:** the precomputed optimal strategy — and §2.1 records the simplification that matters
+  for implementation: "the solution may further **drop all dependency on time *t*** so that state
+  values and optimal strategies becomes **functions only of the player positions (*y*, *x*)**."
+  [inference] A 2-D lookup table, which is about as cheap as a runtime rule gets.
+- **The experiment:** "Sixteen participants aged from 22 to 48 were divided into 8 groups of 2
+  players" (§2.2), playing a **board-game** version of Sequential Chicken, 10 minutes per group, under
+  University of Lincoln ethics. Two conditions: a **natural game** (goal: "avoid a collision and to
+  be the first to cross over this intersection as quickly as possible"), and a **chocolate game** with
+  explicit rewards (two chocolates to the winner, one to the second, none to either on a collision).
+  24 games each, 48 total. Parameters (*U_crash*, *U_time*) were inferred by Bayesian inference with a
+  **noise mixture** (*s* = 1/10, to stop zero-probability observations being "catastrophic for any
+  Bayesian model of real data", §2.3) and a **Gaussian Process** fitted to the sampled
+  log-likelihoods.
+- **Findings:** **13 collisions in 48 games**, more in the chocolate condition than the natural one
+  (§3; counts read from the Table 2 image). The GP optimum sits around (*U_crash*, *U_time*) =
+  **(0, 30)** in both conditions (§3; figure 3 panel titles, read from the image). The authors'
+  reading: "it is **surprising to see a preference towards time-saving over crash avoidance** in the
+  players… This may be because the **board-game-like nature of the experimental setting encourages
+  the players to think in terms of winning and losing**" (§4). Also: "it may only be **the ratio
+  between the two parameters** which is important rather than their absolute values" (§4).
+- **Scalability:** `[not stated in paper]`. **Validated against humans:** yes, *n* = 16.
+- **Limitations stated by the authors (§4):** the setup is not claimed to be realistic; "The number of
+  experiments performed was quite small"; wanted extensions are continuous positions and speeds,
+  uncertain beliefs about the other player's utility, lateral motion, and real CCTV data.
+- **Relevance to this FYP:**
+  - **The method template**: "The model can be trained on human behavior then **transferred into a
+    controller to specify new robotic behaviors**" (§4) — the FYP substitutes an LLM for the humans.
+  - **A named scalar target for elicitation**: the collision-avoidance / time-saving ratio.
+  - **⚠ A warning about elicitation framing.** A fitted *U_crash* ≈ 0 means participants behaved as
+    though crashing was free, because the game framing made them think about winning (§4).
+    [inference] A text prompt to an LLM is at least as artificial a frame as a board game.
+  - **The deadlock, named**: "**Two polite road users can be almost as dangerous as two dominant
+    ones — by continually trying to yield to one another they get closer to a collision without the
+    decision being made**" (§1). And the reason "always yield" fails, with field evidence from an
+    autonomous minibus trial in La Rochelle and Trikala: road users "would regularly take advantage
+    of the AV to push in front of it" (§1).
+- **BibTeX:** `camara2018empirical`.
 
 ---
 
@@ -473,8 +604,8 @@ one entry states the scaling problem in a single sentence that the FYP should qu
 
 | | |
 |---|---|
-| **Qualifying entries** | **4 fully-read** (Bonnemain 2023, Camara 2021, Fox 2018, Bouzat & Kuperman 2014), plus 1 confirmed-but-unacquired lead (Johora & Müller 2018) — **criterion met** |
-| **Validated against human data** | **Bonnemain 2023 only**, directly (figure 1, column 4: controlled experiments, density-matched at 2.5 ped/m²). Fox 2018 has human validation **downstream**, reported by the survey but not read at source. The other two: no. |
+| **Qualifying entries** | **6 fully-read** (Bonnemain 2023, Camara 2021, Fox 2018, Bouzat & Kuperman 2014, and — since 2026-10-02 — Johora & Müller 2018 and Camara et al. 2018) — **criterion met** |
+| **Validated against human data** | **Three now.** Bonnemain 2023 against controlled crowd experiments (figure 1 col. 4, density-matched at 2.5 ped/m²); **Camara et al. 2018** fits the sequential-chicken model to 16 human participants (read at source since 2026-10-02); **Johora & Müller 2018** against 117 real conflict scenarios from Hamburg video. Bouzat & Kuperman and the survey itself: no. |
 | **Scalability stated** | **Bonnemain 2023** — explicit: *N*-agent game theory "becomes intractable when the number of interacting agents grows" (§1), solved by reducing to two *N*-independent PDEs (§2). **Camara 2021** — "infinite computational regress" for higher-order models (§IV-A). Fox and Bouzat: `[not stated in paper]`. |
 | **Most transferable rule** | **Bouzat & Kuperman's cell-contention matrix** — multi-party, one-shot, communication-free, already in simulator-subroutine form |
 | **Most structurally relevant** | **Fox et al.'s sequential chicken** — one-shot, no history, position-only, precomputable offline |
