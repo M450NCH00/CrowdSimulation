@@ -33,7 +33,28 @@ experiment code until the literature review is complete and discussed.**
 | 5 | Validate the pattern against real data or sociology | **coding scheme drafted** (issue #12) — `literature/human-conflict-resolution/` |
 | 5a | Demographic personas: realism vs LLM bias | **delivered** (issue #16) — `literature/demographic-personas/` |
 | 5b | Game theory: communication-free conflict rules | **delivered** (issue #20) — `literature/game-theory/` |
+| 5c | Implemented rules in simulators, games, robots, traffic | **delivered** (issue #22) — `literature/simulation-rules/` |
 | 6 | Bridge into CrowdGym — `integration/crowdgym_mapping.md` | not started |
+
+Three findings from the simulation-rules review (issue #22), all drafts needing supervisor
+sign-off — see `literature/simulation-rules/`. The review is seed-led (27 sources, 5 papers
+unobtained), so read these as findings about what was read, not about the field:
+
+- **The mechanism exists; the precedence order is the missing piece.** Avoidance rules for
+  pedestrians and game characters stall in symmetric conflicts — six sources report it and
+  one proves why. Arbitration rules that fix this exist for grid robots, for vehicles, and
+  in one case for the same kind of continuous-space agent. But the order they apply ("who
+  goes first") is a random draw, an arbitrary identifier, or first-come-first-served in
+  almost every rule read, and is called arbitrary by its own authors. See
+  `research-gap.md` §4–§5.
+- **Issue #20's open question is answered: an arrival-order rule does exist.** It is the
+  standard baseline for unsignalised intersections — and the one paper with numbers shows
+  it performing badly under load (delay 1.3 s → 39.8 s as demand doubles). See
+  `rule-catalogue-simulation.md` §3.
+- **A precedence rule's content is local, not universal.** The one rule taken from an
+  outside source copies a national traffic code and notes that other countries differ
+  ("left in Japan, right in Australia"). For pedestrians there is no statute to copy —
+  which is the opening for a Singapore-specific, elicited rule.
 
 Three findings from the game-theory review (issue #20) that bear on the project's
 direction, all needing supervisor sign-off — see `literature/game-theory/`:
@@ -105,6 +126,18 @@ CrowdSimulation/
       candidate-rule-catalogue.md        *** 11 candidate runtime rules, all sourced ***
       search-log.md                      what was searched; framing check; acquisition list
       refs-game-theory.bib               36 entries, each with read-depth recorded
+    simulation-rules/               issue #22: rules as implemented in working systems
+      s1-crowd-simulation.md             pedestrian / crowd models (6 entries)
+      s2-games.md                        games and engines (4 entries, industry only)
+      s3-mapf-robotics.md                path finding and multi-robot navigation (10 entries)
+      s4-traffic-vehicles.md             intersections, merging, right-of-way (7 entries)
+      rule-catalogue-simulation.md       *** 35 implemented rules, all sourced, none merged ***
+      category-summary.md                avoid / communicate / arbitrate counts + hard cases
+      research-gap.md                    the gap, derived from the entries, with its conditions
+      pre-window-foundations.md          pre-2016 methods as pointers only (no summaries)
+      missing-papers.md                  5 papers + 1 doc that could not be obtained
+      search-log.md                      searches run, mistakes caught, open risks
+      refs-simulation-rules.bib          records for every source, with the copy read
     (see also demographic-personas/, human-conflict-resolution/,
      llm-conflict-resolution/, paper-summaries/ from issues #8/#12/#14/#16/#18)
   pipeline/

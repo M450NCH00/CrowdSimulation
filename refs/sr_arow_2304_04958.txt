@@ -1,0 +1,1297 @@
+                                                                                                                                                                                                                                                                     1
+
+                                            AROW: V2X-based Automated Right-of-Way
+                                        Algorithm for Cooperative Intersection Management
+
+                                                                   Ghayoor Shah1, Danyang Tian2, Ehsan Moradi-Pari2, Yaser P. Fallah1
+
+arXiv:2304.04958v2 [cs.NI] 17 Apr 2024     Abstract--Research in Cooperative Intersection Management           and 2007 occurred on intersections, out of which, insufficient
+                                        (CIM), utilizing Vehicle-to-Everything (V2X) communication             situational awareness and ambiguity over intersection priority
+                                        among Connected and/or Autonomous Vehicles (CAVs), is crucial          constituted for 44.1% and 8.4%, respectively [6]. Similarly, it
+                                        for enhancing intersection safety and driving experience. CAVs         was reported that in the United States and Europe, around 40%
+                                        can transceive basic and/or advanced safety information, thereby       of all traffic accidents occurred at intersections [7]. Based on
+                                        improving situational awareness at intersections. The focus of         the National Highway Traffic Safety Administration (NHTSA)
+                                        this study is on unsignalized intersections, particularly Stop         report [8] conducted in 2015, around 95% of the total vehicle
+                                        Controlled-Intersections (SC-Is), where one of the main reasons        crashes in the US from 2005 to 2007 were a consequence of
+                                        involving crashes is the ambiguity among CAVs in SC-I crossing         human error, out of which, around 35% occurred due to bad
+                                        priority upon arriving at similar time intervals. Numerous studies     driver decisions. Given these studies, it is critical to investigate
+                                        have been performed on CIM for unsignalized intersections              intelligent traffic management systems.
+                                        based on centralized and distributed systems in the presence and
+                                        absence of Road-Side Unit (RSU), respectively. However, most              In this regard, Cooperative Intersection Management (CIM)
+                                        of these studies are focused towards replacing SC-I where the          systems have been a major source of interest in the re-
+                                        scheduler provides spatio-temporal or sequence-based reserva-          search community [9]­[12] for signalized and unsignalized
+                                        tion to CAVs, or where it controls CAVs via kinematic commands.        intersections. CIM systems are used by Connected and/or
+                                        These methods cause CAVs to arrive at the intersection at non-         Autonomous Vehicles (CAVs) to improve the overall driver
+                                        conflicting times and cross without stopping. This logic is severely   experience. CAVs employ Vehicle-to-Everything (V2X) com-
+                                        limited in real-world mixed traffic comprising human drivers           munication [13]­[16] using their On-Board Units (OBUs) to
+                                        where kinematic commands and other reservations cannot be              enhance situational awareness and improve safety standards
+                                        implemented as intended. Thus, given the existence of SC-Is            while making driving decisions. Although there is abundant
+                                        and mixed traffic, it is significant to develop CIM systems            literature on CIM for signalized intersections [17]­[22], the
+                                        incorporating SC-I rules while assigning crossing priorities and       focus of this study is on unsignalized intersections, particularly
+                                        resolving the related ambiguity. In this regard, we propose a          Stop Controlled-Intersections (SC-Is) which are major source
+                                        distributed Automated Right-of-Way (AROW) algorithm for CIM            of crashes in unsignalized intersections [4]. One of the main
+                                        to assign explicit SC-I crossing turns to CAVs and mitigate            reasons involving SC-I crashes is the ambiguity in SC-I
+                                        hazardous scenarios due to ambiguity towards crossing prior-           crossing priority [6] when multiple CAVs approach the SC-
+                                        ity. The algorithm is validated with extensive experiments for         I at similar time intervals. To the authors' best knowledge
+                                        its functionality, scalability, and robustness towards CAV non-        and as explained below, none of the related works focus on
+                                        compliance, and it outperforms the current solutions.                  unsignalized CIM systems explicitly for SC-I with a focus on
+                                                                                                               ambiguity mitigation, which is one of the main objectives of
+                                           Index Terms--Intersection Management, Connected Vehicle             this work.
+                                        Applications, V2X, V2V, Right-of-Way, Stop-Controlled Intersec-
+                                        tions                                                                     CIM systems for unsignalized intersections can be generally
+                                                                                                               divided into two categories: centralized and distributed CIM.
+                                                                  I. INTRODUCTION                              Centralized CIM systems utilize Road-Side Unit (RSU) to
+                                                                                                               function as an intersection manager for passing priorities and
+                                        I NTERSECTION management is one of the most signifi-                   information about nearby CAVs. On the other hand, distributed
+                                           cant and challenging topics for safe and efficient driving          CIM systems solely rely on inter-vehicular communication
+                                        experience. Intersections can be mainly divided into two               and choose one of the CAVs as an arbitrator that can assign
+                                        categories, i.e., signalized and unsignalized intersections. Sig-      intersection priorities without the usage of any RSU. Numer-
+                                        nalized intersections comprise of traffic lights, whereas the          ous studies exist for centralized unsignalized CIM [23]­[28].
+                                        unsignalized intersections consists of stop or yield signs, or in      However, the main issue with centralized CIM is that RSUs
+                                        some instances, no signs at all. The ever-increasing vehicles          can suffer deadlocks in terms of memory limitations in the
+                                        on roads can lead to congestion [1], traffic delays [2], and           case of high density traffic, thereby making them unfeasible
+                                        economic and societal costs due to crashes [3]. In this context,       in real-life scenarios. Secondly, RSU equipment needs to
+                                        unsignalized [4] and signalized [5] intersections have been            be installed on all unsignalized intersections in addition to
+                                        found to be hazardous and inefficient towards catering large           the OBUs within CAVs, hence these systems are costly and
+                                        volumes of traffic.                                                    currently offer limited scalability on roads. Given these issues,
+                                                                                                               distributed CIM [29]­[32] offers an economic and scalable
+                                           According to the United States National Motor Vehicle
+                                        Causation Survey, around 35% of the crashes between 2005
+
+                                           1 Connected & Autonomous Vehicle Research Lab (CAVREL), University
+                                        of Central Florida, Orlando, FL, USA. ghayoor.shah@ucf.edu
+
+                                           2 Honda Research Institute, Ann Arbor, MI
+                                                                                                                                2
+
+TABLE I: Tabular comparison of characteristics of AROW and
+related works. 'hybrid' refers to network containing both centralized
+and distributed system.
+
+Works Intersection Network SC-I based? Considers mixed autonomy CAVs?  dist
+
+[17] signalized centralized N/A     ×
+
+[18] signalized centralized N/A     ×
+
+[19] signalized hybrid         N/A  
+
+[20] signalized hybrid         N/A  
+
+[21] signalized centralized N/A     
+
+[22] signalized centralized N/A     
+
+[23] unsignalized centralized ×     ×                                                                                detthresh
+                                                                       HV
+[24] unsignalized hybrid       ×    ×
+
+[25] unsignalized centralized ×     
+
+[26] unsignalized centralized ×     
+
+[27] unsignalized centralized ×     ×                                  VF                                                       VO V2X
+
+[28] unsignalized hybrid       ×    ×
+
+[29] unsignalized distributed ×     ×
+
+[30] unsignalized distributed ×     ×                                  Fig. 1: Bird-eye view of a Stop Controlled-Intersection (SC-I) during
+                                                                       application detection phase.
+[31] unsignalized distributed ×     ×
+
+[32] unsignalized distributed ×     ×
+
+AROW unsignalized distributed       
+
+alternative since it does not rely on RSUs for its operation,                which is achieved by transmitting a series of DIMs where
+and hence is the basis of this work as well.                                 CAVs arbitrate and assign distinct SC-I passing priorities
+                                                                             to each other. The distributed nature of AROW allows
+   One common feature in most existing centralized and                       it to be scalable for high density traffic scenarios which
+distributed algorithms for unsignalized intersections is that                may not be possible using a centralized RSU given its
+they are aimed at replacing the SC-I. This is achieved by                    communication bandwidth and memory limitations.
+the scheduler either providing spatio-temporal or sequence-               · AROW is the first distributed algorithm for CIM that
+based reservation of intersection, or by requiring control of                does not require low-level vehicle control such as specific
+CAVs. Requiring control refers to the assigned scheduler                     kinematic commands, and is equipped to abide by the SC-
+sending kinematic commands instructing CAVs to accelerate                    I rules and allow explicit passing turns, while handling
+or decelerate varyingly so as to arrive at the intersection at               any unpredictability caused by driver behavior. This al-
+non-conflicting times. By using any of these techniques, the                 lows AROW to be feasible for mixed traffic scenarios as
+main aim is to mitigate any collision scenarios and allow                    opposed to other works in the literature.
+the CAVs to possibly pass the intersection without adhering               · The proposed AROW algorithm is capable of handling
+to the general SC-I right-of-way rules of stopping before                    any level of non-compliance by CAVs in terms of SC-I
+passing [33]. Although these solutions are effective for fully               crossing priorities and outperforms related methods from
+autonomous traffic, however, they are severely limited in                    the literature in terms of ambiguity mitigation.
+mixed traffic comprising of autonomous and human-operated
+vehicles, where kinematic commands or spatio-temporal reser-                                   II. RELATED WORKS
+vation cannot be strictly implementable by human drivers.
+Given that SC-Is continue to be an integral part of traffic               CIM systems for unsignalized intersections can be divided
+control and can encompass mixed traffic, it is significant to          into centralized and distributed systems. Although there are
+develop CIM systems that incorporate the rules of SC-I and             numerous studies in the literature as mentioned below where
+are focused towards assigning passing priorities with the aim          CIM systems provide safe and efficient solutions for unsignal-
+of mitigating ambiguity among CAVs when they arrive at the             ized intersections in general, none are specifically focused
+SC-I at similar times.                                                 towards SC-Is and the inherent ambiguity in crossing priority,
+                                                                       specially in mixed traffic scenarios. This is precisely the focus
+   Therefore, to address this, we propose a distributed CIM al-        of this study by proposing AROW algorithm that can be
+gorithm for SC-Is namely Automated Right-of-Way (AROW)                 operated within the DMS framework. Table I compares the
+that utilizes an earlier designed and implemented Driver Mes-          characteristics of AROW with the related works.
+senger System (DMS) [34], [35] based on the relevant source
+material [36]. CAVs can employ AROW in SC-I to negotiate               A. Centralized CIM for unsignalized intersections
+SC-I crossing priorities in the form of explicit passing turns
+through Driver Intention Messages (DIMs) and avoid any                    Numerous studies offer different centralized CIM algo-
+potential for ambiguity. The proposed algorithm is robust              rithms. Dresner et al. [23] utilize cooperative resource
+to any non-compliance from CAVs and not only assists in                reservation where CAVs reserve space tiles in the vicinity
+mitigating ambiguity, but also in promoting fairness when it           of the intersection at specific times, thereby ensuring no
+comes to SC-I crossing, even for large-scale CAV scenarios.            conflict in intersection crossing. Studies in [25], [26] focus
+                                                                       on sequenced-based centralized CIM algorithms for safe tra-
+   Our contributions are as follows:                                   jectory planning where the RSU assigns right-of-way to CAVs.
+                                                                       The work in [27] introduces a heuristic-based centralized
+   · We propose a V2X-based distributed algorithm AROW                 CIM for CAVs that surpasses adaptive and static signalized
+      for CIM at SC-Is to mitigate hazardous traffic scenarios         intersections. Some works [24], [28] also suggest a hybrid
+      arising due to ambiguity towards SC-I crossing priority,
+                                                                                                            3
+
+CIM architecture to centrally allocate time slots using RSU        B. Application Detection
+and distributedly adjust CAV control for conflict-free crossing
+of CAVs through the intersection. However, given the earlier-         This module is tasked with utilizing the updated local object
+mentioned constraints concerning centralized CIM systems           map and deciding if the HV is currently in one or more of the
+due to RSU, distributed methods provide a cost-effective and       pre-defined applications within DMS. Once identified, DMS
+scalable alternative, and thus are focused in this study as well.  executes the corresponding application thread for the next
+                                                                   application-specific tasks. In this study, we assume a four-way
+B. Distributed CIM for unsignalized intersections                  allway SC-I where each of the lanes connecting to the SC-I
+                                                                   is a singular lane. However, the logic presented throughout in
+   There is sparse literature on related distributed CIM for       this study along with the proposed AROW algorithm can be
+unsignalized intersections. VanMiddlesworth et al. [29] use        applied to any kind of SC-I. Figure 1 shows an example of
+distributed CIM to navigate through unsignalized intersection,     the SC-I used for this study.
+however, it is only feasible for a low number of CAVs.
+Secondly, although the authors discuss possible CAV non-              Since only GPS and V2X communication in the form of
+compliance consideration, however, they do not provide a           Basic Safety Messages (BSMs) are utilized in the creation of
+mechanism to test it and confirm the robustness of the system.     the local object map, this study uses a pre-configured map
+Li et al. [30] implement a distributed cooperative scheduling      setting with an SC-I whose location is already known by all
+algorithm using trajectory planning for CAVs within a safe         the participating CAVs as ground-truth. Therefore, as CAVs
+pattern to cross an intersection. Similarly, Katriniok et al.      approach the SC-I, they can utilize the known ground truth
+[31] investigate a distributed trajectory planning based sys-      location of the SC-I to determine their distance (dist) from the
+tem where each CAV solves a non-linear Model Predictive            SC-I and thus, the stop sign. The application detection block
+Control (MPC) and shares its planned path with other CAVs.         considers HV to be within an SC-I application and trigger its
+Hassan et al. [32] present a distributed heuristic-based           application block as long as (1) below is satisfied:
+algorithm for CIM that outperforms the traditional First-in-
+First-Out (FIFO) approach at unsignalized intersections in         dist  detthresh                          (1)
+terms of average intersection time delay in low and medium
+traffic, however, the performance highly deteriorates in high      where dist is the distance of HV from the stop sign in its
+density traffic, hence the algorithm is not scalable, as shown     lane and detthresh is the SC-I application detecting distance
+in our performance comparison later in the study.                  threshold. detthresh is one of the configurable parameters of
+                                                                   SC-I as explained in later sections.
+          III. DRIVER MESSENGER SYSTEM (DMS)
+                                                                      Another objective for HV within the application detection
+   DMS allows CAVs to utilize sensor data and V2X com-             block upon approaching an SC-I is to detect whether it is
+munication to share application-specific Over-the-Air (OTA)        the leading CAV in its lane to reach the stop sign or if it is
+DIMs between Host Vehicle (HV) and Target Remote Vehicles          following another CAV in front of it. As shown in Figure 1,
+(RVs). For this study, HV is the term used to refer to one         HV can be described in a typical SC-I scenario as shown in
+particular reference CAV out of all the CAVs in the scenario.      (2) below:
+Since DMS and all its encompassing applications such as
+the SC-I application in this study are distributed, every CAV      HV = vL  VL if leading, dist  detthresh  (2)
+in the scenario runs the system within its respective OBU.         vF  VF if following, dist  detthresh
+However, we just fix and denote a particular CAV as the
+HV and visualize the working of the application and the            where vL is the leading CAV in a particular lane while
+underlying algorithm, AROW in this case, from its perspective.     approaching an SC-I and it satisfies (1) and VL is the current
+DMS is essentially divided into four main components, which        updated set of all leading CAVs in a SC-I. On the other hand,
+have been previously explained in detail by the authors [34].      CAV vF is following another CAV in front while approaching
+Relevant details of these components specific to the application   an SC-I while also satisfying (1) and VF is the set of all
+in focus are mentioned in the following.                           following CAVs in an SC-I. If HV satisfies (1) and has a
+                                                                   preceding and leading CAV, it is still classified in set VF . Since
+A. Local Object Map                                                AROW arbitration is only performed among CAVs in set VL,
+                                                                   it is sufficient to group all non-leading CAVs satisfying (1)
+   This is the first module within DMS and it creates and          to set VF . Finally, CAV vO in set VO may or may not be the
+updates a local object map to localize the HV and the nearby       leading CAV however it does not satisfy (1), and thus does not
+RVs around it. For this paper, the authors only utilize GPS        qualify for SC-I application. As explained in the next section,
+and V2X communication to create and update the local object        finding the state of HV and its proximity to an upcoming SC-I
+map and localize the CAVs. It is assumed that all participating    as per (2) is significant to determine its priority in the proposed
+vehicles in any scenario are connected and that there are          AROW algorithm, especially in scenarios where there are
+no communication losses due to congestion or bad resource          queues of CAVs approaching an SC-I.
+allocation.
+                                                                   C. Application Block
+
+                                                                      Once the application detection block identifies that the HV
+                                                                   is approaching an SC-I (1), DMS within HV triggers the
+                                                                   application execution block of SC-I. This block contains the
+                                                                                                                                                  4
+
+proposed AROW algorithm whose main goal is to identify              TABLE II: AROW Variables and Descriptions.
+fellow CAVs at the SC-I through the local object map and
+negotiate SC-I crossing turns of all CAVs in consideration by       S0                         Stages
+a series of DIMs. It should be noted that all CAVs in this          S1
+study are assumed to be equipped with DMS and thus the              S21                                                             Not in SC-I
+same AROW algorithm is going to be executed for all CAVs            S22                                                         SC-I Discovery
+approaching an SC-I.                                                S23                                                          varb Selection
+                                                                    S31                                                   varb Announcement
+D. V2X Communication                                                S32                                                       varb Acceptance
+                                                                    S41                                                       Turn Scheduling)
+   This block is responsible for transmitting and receiving         S42                                                       Turn Acceptance
+DIMs to and from the HV, respectively. DIMs are application-        SW                                       Exit SC-I + Assign New varb
+specific and their structure and content varies for every specific
+application within DMS. The details of DIM structure and            AROW1                                                              Exit SC-I
+encoding/decoding procedures are not the focus of this paper        AROW2                             Wait for current AROW completion
+and thus are not included.                                          ACK2
+                                                                    AROW3                DIMs and ACKs
+IV. AUTOMATED RIGHT-OF-WAY (AROW) ALGORITHM                         ACK3
+                                                                    AROW41                                             SC-I introduction (S1)
+   Table II serves as a reference for all variables used within     AROW42                                        varb announcement (S22)
+AROW and their descriptions throughout this study. AROW             AROW5                             Acknowledgment of AROW2 (S23)
+algorithm is executed inside the application module of SC-I         AROWwait                                     varb turn scheduling (S31)
+within DMS where CAVs can utilize DIMs to assign priorities                                           Acknowledgment of AROW3 (S32)
+to cross an SC-I and reduce ambiguity. The SC-I application         T1                 varb in-turn SC-I exit + assign new varb (S41)
+module within a HV is executed as soon as it satisfies (1) and      T2
+it can be referred to as belonging to either VL or VF as per        T3                                                In-turn SC-I exit (S42)
+(2). On an abstract level, AROW considers the current total         T turn                    Out-of-turn SC-I exit (S22,S23,S31,S32)
+competing vehicles (VT ) at an SC-I such as shown in (3),           T wait             Request CAVs in VS to wait for current AROW
+
+VT = VL  VF  (3)                                                    VL            Clock Constraints/Durations
+                                                                    VF
+and it operates by assigning one of the VL as the arbitrator        VO                                                          Timeout for S1
+CAV (varb) such that varb  VL can assign priorities in the          VT                                                  Timeout for S22/S23
+form of turns to all CAVs within VL. One of the main                VP                                                  Timeout for S31/S32
+contributions of AROW is that it is equipped to assign distinct     VS                                                  Timeout for S41/S42
+crossing turns such that there is no duplicity and ambiguity.       HV
+Secondly, it is also capable of countering situations where         dist                                                      Timeout for SW
+some participating CAVs in an SC-I scenario can turn out to         detthresh
+be non-compliant with the rules of AROW and turns assigned          varb            Sets / Model Parameters
+by varb.                                                            N Cstages
+                                                                    N Cprob                             Set of leading CAVs satisfying (1)
+   AROW comprises of several stages given the involved              AROWcount                        Set of following CAVs satisfying (1)
+complexity and the task of maintaining resolution among mul-        AROWthresh
+tiple independent CAVs. Each stage within AROW involves                                                      Set of CAVs not satisfying (1)
+transceiving of stage-specific DIMs and/or acknowledgment           H1                                              Union set of VL and VF
+(ACK) signals.                                                      H2
+                                                                    H3                      Set of primary CAVs part of current AROW
+A. Stage 0 (S0) - Not in SC-I                                                       Set of secondary CAVs not part of current AROW
+                                                                    M
+   This is the idle stage of AROW and the HV stays in this          S                                                    Fixed reference CAV
+stage as long as it does not satisfy (1).                           S0                                               Distance of HV to SC-I
+                                                                    A                                     SC-I detection distance threshold
+                                                                    T                                   Arbitrator CAV for current AROW
+                                                                    X                    Non-compliance stages (S22, S23, S31, S32)
+                                                                    (T )                                         Non-compliance probability
+                                                                    I (s)                     Counter for consecutive AROW repetitions
+                                                                    E                                          Threshold for AROWcount
+                                                                    
+                                                                    N                        Heuristics
+
+                                                                                Heuristic in S21 for varb selection of current AROW
+                                                                                              Heuristic in S31 for SC-I turn assignment
+
+                                                                                   Heuristic in S41 for varb selection of next AROW
+                                                                                        Timed Automaton
+
+                                                                                                                                      Automaton
+                                                                                                                                Set of locations
+                                                                                                Set of initial start location(s) (S0 = S0)
+                                                                                                                         Set of input symbols
+                                                                                                                  Singular clock used in M
+                                                                                                                      Set of clocks (X = T )
+                                                                                                              Set of clock constraints on T
+                                                                                                      Mapping between s  S and (T )
+                                                                                                  Set of switches between locations in S
+                                                                                     Set of clock(s) to be reset during switch (  T )
+                                                                                                                     Transition system of M
+
+B. Stage 1 (S1) - SC-I Discovery                                    AROW process can be assumed to broadcast a similar AROW1
+                                                                    DIM. After broadcasting AROW1, the HV waits for a pre-
+   This is the first step in the execution of AROW where the        configured duration/clock-constraint T 1 to receive any DIMs
+HV satisfies (1) and broadcasts a discovery DIM known as            from other CAVs in VT . The two types of receiving DIMs
+AROW1. On a high-level, in addition to HV's basic safety            under focus in this stage are AROW1s from CAVs that have
+and identification data, the contents of this DIM can be            also just initiated AROW algorithm or AROWwait from varb.
+considered to highlight the detection of SC-I by the HV
+and the initiation of AROW algorithm within its DMS. Also,             Towards the end of duration T 1, if the HV does not receive
+this DIM includes information pertaining to whether currently       any DIM, then it can be considered that there are no fellow
+HV  VL|| HV  VF . Just like the HV, any CAV starting its            CAVs at the SC-I besides the HV itself. This triggers DMS to
+                                                                                                                           5
+
+effectively terminate AROW and the HV is instructed by its                                    v4
+DMS to cross the SC-I without AROW and switch to S0.
+On the other hand, if HV receives AROW1(s) from other                AROW2: I am                   ACK2
+CAVs but no AROWwait, then this signifies that there is no
+varb present at SC-I but there are fellow competing CAVs             the varb as per          v1          v2
+that arrived at the SC-I at similar times as that of the HV,
+and that the AROW process should proceed into next stage,            H1                           ACK2                 v6
+i.e. S21. Finally, if the HV receives AROWwait from varb,
+this signals that there is a current AROW process going on                                v0                      ACK2
+where varb is arbitrating and negotiating SC-I crossing turns
+among a group of CAVs (VP ) that arrived at the SC-I at least    v7      v5
+T 1 time before the HV. AROWwait is sent by varb to any
+CAV broadcasting AROW1 to signal it to wait for the current                           HV
+AROW process to end before this CAV can participate for its
+own turn assignment. As detailed in the next sub-section, as                                  v3
+soon as varb is assigned in S21 and until all its tasks in AROW
+are accomplished, varb maintains two updating sets in which                                                   VS  VO V2X
+it divides the CAVs from VT such that:
+                                                                 Fig. 2: Example scenario during HV's varb announcement in stage
+   · VP : Set containing primary CAVs that are part of the       S22. HV had previously broadcasted its AROW2 DIM and the other
+      current AROW procedure. These are always the leading       competing CAVs in VP are now sending their ACK2 signals.
+      CAVs.
+                                                                       approaches for tie-breaking can also be employed such as
+   · VS: Set containing secondary CAVs that are instructed             unique CAV Vehicle Identification Number (VIN), etc.
+      to wait for the current AROW procedure to finish before
+      they can be considered for arbitration. These can either   Following this same H1, it can be guaranteed that all CAVs
+      be following CAVs or leading CAVs that arrive during an    in VL will choose the same CAV as varb. It should be noted
+      ongoing AROW.                                              that no DIM transmission or reception occurs in S21 and that
+                                                                 it is simply a computational stage where a varb is chosen for
+   At any time within AROW, arbitration is always performed      the rest of the current arbitration round.
+among CAVs that are present in VP . Therefore, if HV receives
+AROWwait from varb, then this indicates that HV needs to            Particular attention needs to be given to the fact that during
+move to AROW Stage Wait (SW ) and wait for the current           this process of varb selection, only CAVs that are considered
+arbitration to end. In this case, HV is also added to VS as      are the ones that were a part of VL up until the end of duration
+it is not one of the CAVs considered for the current round       T 1. In other words, any new CAVs that entered the SC-I
+of arbitration. Further details of SW and its operation is       application after the current AROW process considering CAVs
+described later in Section IV-K.                                 in VL has already moved on from S1 would not be considered
+                                                                 in the current arbitration selection process even if it is now a
+C. Stage 21 (S21) - varb Selection                               part of VL, since priority is given to CAVs that arrived at
+                                                                 similar times in S1 and have already passed to the next stage.
+   In the case that HV receives at least one AROW1 from a
+fellow CAV but no AROWwait from varb, AROW enters S21               Whoever is chosen as the varb in this stage as per H1, the
+in which a single CAV from VL is chosen as varb for the          first task that it needs to perform is to divide up CAVs in
+remainder of the AROW process until varb crosses the SC-         VT into VP and VS, as mentioned in the previous sub-section.
+I on its assigned turn. Based on a fixed heuristic H1 within     All the CAVs as part of the current arbitrator process in S21
+DMS of every CAV in set VL, one of the CAVs is chosen            are included in VP whereas all the CAVs in VF are added to
+as varb. To ensure that all participating CAVs in VL choose      VS. Also, if any CAV enters SC-I and its S1 as a vL or vF
+the same varb and there is no duplication, there is a single     while the current AROW process is going on in any stage after
+heuristic stored within DMS of all CAVs. For this study, the     S1, it would be directly entered in set VS by varb. At every
+heuristic H1 is as follows:                                      timestamp throughout AROW, whenever any CAV enters or
+                                                                 leaves SC-I, varb always updates both VP and VS.
+   · H1: The last arriving CAV denoted from the timestamp
+      at which it entered SC-I application by satisfying (1)        Finally, during S21, if the HV is chosen to be the varb as
+      and initiated its AROW, is chosen as varb. If two or       per H1, then it goes into S22 and all the other CAVs in VP
+      more CAVs arrive at the same timestamp, then their         proceed to their S23, and vice-versa.
+      unique CAV identification numbers such as Medium
+      Access Control (MAC) addresses can be utilized as tie      D. Stage 22 (S22) - varb Announcement
+      breaker and the CAV with an alphanumeric character
+      containing the lowest ASCII value at the first index with     In S22, the HV broadcasts AROW2 DIM in which it
+      differing characters by process of elimination can be      informs all the CAVs in VP that it has been chosen as varb.
+      chosen as varb. Depending on user preference, alternative  After broadcasting AROW2, the HV waits for duration T 2 to
+                                                                 receive acknowledgment signal ACK2 from CAVs in VP as
+                                                                 an acceptance of HV as varb. Figure 2 shows an example
+                                                                 of AROW in S22 with HV as varb. After the completion
+                                                                 of T 2, if HV receives ACK2 from all VP , then HV moves
+                                                                 to S31, whereas the non-arbitrator CAVs in VP move to
+                                                                 S32. Alternatively, if there is non-compliance where one or
+                                                                                                                           6
+
+        v4             AROW5: I                                                                v4
+
+                       crossed SC-I                                  AROW3:                        ACK3
+
+                       out of turn                                   Turn order =                         v2
+
+                                     v6                              {v1, v0, v3, v2}          v1  ACK3                v6
+                                                                       as per H2
+                       v2                                                                                         ACK3
+                   v1
+        v0                                                                                 v0
+
+v7  v5                                                           v7          v5
+
+    HV                                                                                 HV
+
+        v3                                                                                     v3
+
+                           VS        VO V2X                                                                   VS  VO V2X
+
+Fig. 3: Non-compliance scenario in AROW with HV as varb. One of  Fig. 4: Example scenario during HV's varb turn assignment in stage
+the CAVs in VP has become non-compliant and prematurely exited   S31. HV had previously broadcasted its AROW3 DIM and the other
+the SC-I upon which the DMS within it has broadcasted the AROW5  competing CAVs in VP are now sending their ACK3 signals.
+DIM.
+
+more CAVs other than HV in VP leave the SC-I prematurely,        utilize a camera to identify if it has already passed the SC-I to
+the other compliant CAVs in VP along with any new CAVs           broadcast AROW5, however, since we only utilize V2X as the
+in VL that are not yet part of VP can re-start AROW by           data source for this study, the ground truth data of the SC-I
+going back to S1. The number of times the compliant CAVs         is utilized for the purpose of identifying an exit from an SC-I
+can consecutively repeat a particular round of AROW in           and broadcasting AROW5 DIM. In this study, non-compliance
+face of non-compliance is determined by the pre-configured       can occur to any CAV in VP during AROW including varb.
+AROWthresh, as shown in the equation below:                      The only exception to this is the HV itself. In other words,
+                                                                 we always assume that the HV is always fully compliant. To
+    AROWcount  AROWthresh                (4)                     evaluate the impact of non-compliance, it is probabilistically
+                                                                 applied (N Cprob) to each CAV independently when it is in
+where AROWcount is the counter to keep track of the consec-      each of the four stages in N Cstages.
+utive repetitions. As soon as (4) is not satisfied, DMS within
+all compliant CAVs in VP switches to S0 and the CAVs can         G. Stage 31 (S31) - Turn Scheduling
+cross the SC-I manually without the assistance of AROW.
+                                                                    HV can arrive in S31 from either the parent stage S22 or
+E. Stage 23 (S23) - varb Acceptance                              SW . The details of switching from the latter parent stage are
+                                                                 explained later under the subsection of SW . In the case of
+   In S23, since the HV is not chosen as varb, it waits for      parent stage S22, if the HV receives ACK2 signal from all
+T 2 to receive AROW2 DIM from varb, and upon reception, it       CAVs in VP after its selection as varb, HV moves into S31
+needs to send an ACK2. Towards the end of T 2, if all CAVs       while the other CAVs in VP move to S32. This is the stage
+in VP along with HV are compliant, then AROW moves HV            where the HV as varb assigns turns to all CAVs in VP to cross
+into S32 along with other CAVs in VP that are not varb. At the   the SC-I based on a fixed pre-configured heuristic H2. Figure
+same time, AROW within varb moves it from S22 into S31           4 shows an example of AROW in this stage. The main goal
+as explained in the previous subsection. However, if there is    behind choosing any heuristic is to ensure that distinct turns
+any non-compliance by a CAV in VP or varb itself, then the       are assigned to each CAV and that there is no duplication. The
+AROW within HV and other compliant CAVs in VP requires           heuristic H2 used for this study is defined as follows:
+to break the current AROW process and move to either S1 or
+S0 depending on (4), as explained in the previous subsection.       · H2: varb assigns turns based on the arrival timestamp of
+                                                                       every CAV in VP and prioritizes CAVs that arrived earlier
+F. Non-Compliance                                                      at the SC-I. In the situation where more than one CAV
+                                                                       carries identical arrival timestamp, varb can randomly
+   Non-compliance is a condition within AROW that can                  assign turns among them.
+occur when a CAV is in any of four stages defined as
+N Cstages = {S22, S23, S31, S32}. A CAV in VP is said to be      As it can be observed in H2 description, the tie-breaking is
+non-compliant whenever it crosses an SC-I prior to its assigned  performed by random selection. Based on user preference, it
+turn. Whenever it does, the out-of-turn CAV broadcasts an        can be changed to some other heuristic too. For instance, the
+AROW5 exit DIM. This DIM is used by varb and other CAVs          tie-breaking rules can also be governed by using the unique
+in VP to identify a non-compliant CAV. Figure 3 shows an         CAV identification numbers as done for H1. It should be noted
+example of non-compliance where one of the CAVs in VP            that this notion furthers the proposed argument that AROW can
+decides to leave during S22 where turns have not even been       incorporate any heuristic H2 for turn-assignment as per user
+assigned yet. As soon as AROW within that CAV detects the        preferences, as long as all CAVs contain this same heuristic.
+untimely exit, it broadcasts AROW5. Usually, DMS would
+                                                                    The turn assignment information is enclosed within AROW3
+                                                                 DIM and broadcasted. Once received, the CAVs in VP are re-
+                                                                 quired to reply with an ACK3 acknowledgment to confirm the
+                                                                                         7
+
+                                                                    in VT that it is leaving the SC-I, and then its AROW moves
+                                                                    to S0.
+
+       AROW41:                  v4
+Exiting SC-I in turn, v4
+
+is next varb as per H3                                              K. Stage Wait (SW ) - Wait for current AROW completion
+
+                            v0          v2      v6                     If HV arrives at SC-I by satisfying (1) with an ongoing
+                                                                    AROW arbitration round, then the varb instructs HV via
+v7                      v5                                          AROWwait to wait in SW as one of VS. If the current
+                                                                    AROW concludes successfully without any non-compliance,
+    HV                      v1      v3                              then depending on the set VS, the HV can either move to S0,
+                                                                    S31, or S32. If HV is the only CAV in VS, then AROW is
+                                            VS      VO V2X          not required and HV can manually pass the SC-I, thus HV
+                                                                    moves to S0. In the case of presence of other CAVs in VS,
+Fig. 5: Example scenario during HV's varb exiting SC-I on its turn  HV can move to S31 if varb of the concluding AROW has
+and broadcasting AROW41 DIM in stage S41 and assigning new          chosen HV to be the new varb via AROW41 DIM, otherwise, it
+varb for next AROW round.                                           transitions to S32. The process of assigning new varb assists
+                                                                    in optimizing AROW since it avoids the need for CAVs to
+corresponding turn assignment. After broadcasting AROW3,            utilize AROW from the beginning stage of S1. Finally, if there
+HV waits for duration T 3. Towards the end of T 3, if the HV        is non-compliance among competing CAVs in VP while HV
+receives ACK3 signals from all relevant CAVs, then it moves         is in SW and (4) is not satisfied which means that all CAVs
+towards S41. On the other hand, if there is non-compliance by       in VP collectively eliminate AROW and manually pass SC-I,
+any CAV, then depending on (4), HV either moves to S1 to            then HV along with others CAVs in VS move to S1 to initiate
+restart AROW or to S0 where it disables AROW to manually            AROW from the beginning.
+pass the SC-I.
+                                                                      V. AROW IMPLEMENTATION AS A TIMED AUTOMATON
+H. Stage 32 (S32) - Turn Acceptance
+                                                                       This section provides details into the earlier-introduced
+   After passing S23, HV moves into S32 where, similar to           stages within AROW and shows their functionality as dis-
+that in S23, it waits for varb to send a AROW3 DIM that             tinguishable states. AROW can be modeled as a timed au-
+contains the turn assignment for the HV among other CAVs            tomaton [37], [38] that allows it to be within a particular
+in VP . Upon receiving AROW3, HV sends an ACK3 signal               state at any specific time due to clock constraints. Figure
+to acknowledge the reception. Once T 3 is elapsed and there         6 represents AROW as a timed automaton. The automa-
+is no non-compliance, the HV moves into S42. However, just          ton consists of nodes called locations and edges known as
+like in S23, if any CAV in VP or varb becomes non-compliant,        switches. Formally, the automaton can be described as a tuple
+then HV moves into S1 or S0 depending on (4).                       M = S, S0, A, X, I, E where
+
+I. Stage 41 (S41) - Exit SC-I + Assign New varb                        · S is a finite set of all locations within M and it can be
+                                                                          defined as
+   S41 is the ultimate stage for HV as varb in AROW, as
+shown in Figure 5. By the time the HV arrives in this stage             S = {SW, S0, S1, S21, S22, S23, S31, S32, S41, S42}
+and the other CAVs in VP arrive in the corresponding S42, the                                                                            (5)
+turns have already been assigned to all involved CAVs along
+with the HV. HV stays in this stage until the arrival of its          Each location in S defines a particular AROW stage
+turn to cross the SC-I. Upon exiting the SC-I, the HV needs           which has been explained in detail in the previous sec-
+to perform one last task in its role as varb i.e. to choose a         tion. Figure 6 provides a description highlight for each
+new varb as per a pre-defined heuristic H3. For simplicity,           location.
+this study uses H1 as the heuristic for choosing new varb, i.e.     · S0  S is a set of initial locations. For AROW system,
+(H3 = H1 ). If there are any CAVs in VS waiting at the SC-
+I for the current AROW procedure involving HV and VP to             S0 = {S0}            (6)
+terminate, then HV as varb needs to select one of CAVs in VS
+to become the new varb. After selecting new varb, HV crosses          This is also the location where AROW is typically
+the SC-I, and broadcasts AROW41 DIM indicating to all other           deactivated which means that whenever HV is in this
+CAVs in VT that it is exiting SC-I along with the information         location, it is not approaching a nearby SC-I.
+pertaining to new varb. Finally, AROW within HV moves to            · A is a finite set of input symbols,
+S0 as the idle stage.
+                                                                    A = {ass | s, s  S}  (7)
+J. Stage 42 (S42) - Exit SC-I
+                                                                      All the possible s and s for the input symbols can be
+   Similar to S41, HV waits for its turn to pass the SC-I. Once       viewed in Figure 6.
+it does, it broadcasts a final AROW42 DIM, indicating to CAVs       · X is a finite set of clocks. The transition system for
+                                                                      AROW only utilizes a singular clock T , hence X = T .
+                                                                    · I is a mapping that assigns locations within M with clock
+                                                                      constraints in set (T ) as shown in (8). These are the
+                                                                                                                                                                                            8
+
+                   SW                                                                    SC-I not detected   Received AROW41 from varb &&                       State Name
+                                                                                                                 HV is not new varb,                             Description
+Wait for current AROW completion in VS                         Received no AROW1                                    (T : = T1 + T2)                          (Clock Constraint)
+                    (T < Twait)                                       from VL
+                                                                                                                                                                       Action,
+                                                                                                         S0                                                   (Clock Assignment)
+
+Received AROWwait from varb                                    Check Updated Local Object Map                                                                        Received AROW5 &&
+                                                                                                                                                                  AROWcount >= AROWthresh,
+                                   Received AROW5,                               SC-I detected,
+                                           (T : = 0)                                 (T := 0)                                                                        Pass SC-I w/o AROW
+
+Received AROW41 from varb &&                                                                             Received no AROW1 from VL &&
+          HV is new varb,                                                                                    no AROWwait from varb
+           (T : = T1 + T2)
+                                                                                               S1
+
+                                                                                        Broadcast AROW1
+                                                                                               (T < T1)
+
+                                                                                              Received AROW1(s) from VL &&
+                                                                                                    no AROWwait from varb
+
+                                                         Received AROW5 &&                               S21                                  Received AROW5 &&
+                                                      AROWcount >= AROWthresh,                Choose varb based on H1                      AROWcount >= AROWthresh,
+
+                                                         Pass SC-I w/o AROW                                                                   Pass SC-I w/o AROW
+
+   Received AROW5 &&                                                      Received AROW5 &&                                            Received AROW5 &&       Received AROW5 &&
+AROWcount >= AROWthresh,                                             AROWcount < AROWthresh,                                        AROWcount < AROWthresh,  AROWcount < AROWthresh,
+
+   Pass SC-I w/o AROW                                                               (T := 0)                                                     (T := 0)                (T := 0)
+
+                                                                                              HV is varb         HV is not varb
+
+  Received AROW5 &&                                                   S22                                                                  S23
+AROWcount < AROWthresh,
+                                                               Broadcast AROW2                                            Broadcast ACK2 if received AROW2
+           (T := 0)                                               (T < T1 + T2)                                                          (T < T1 + T2)
+
+                       Received all ACK2(s) from VP                                                                                        Received AROW2
+
+       S31                                                                                                                                             S32
+
+Broadcast AROW3                                                                                                                            Broadcast ACK3 if received
+(T < T1 + T2 + T3)                                                                                                                                     AROW3
+
+                         Received all ACK3(s) from VP                                                                                            (T < T1 + T2 + T3)       Pass SC-I w/ AROW
+
+Pass SC-I w/ AROW                                                                                                                                         Received AROW3
+
+                                       S41                                                                                                                              S42
+                                 Assign new varb from VS
+                                                                                                                                                                Broadcast AROW42
+                                       Broadcast AROW41                                                                                                      (T = T1 + T2 + T3 + Tturn)
+                                   (T = T1 + T2 + T3 + Tturn)
+
+                                                      Fig. 6: AROW algorithm expressed as a timed automaton.
+
+  same constraints that were previously defined as durations                                                 transition edge from location s to s over a symbol ass .
+  in Section IV.                                                                                             A switch can contain the set   T that allows T to be
+
+            (T ) = { T 1, T 1 + T 2, T 1 + T 2 + T 3,                                                        reset to a particular value with this switch. There exist
+                                                                     (8)
+                                                                                                             some switches within M in which the clock T is reset,
+                          T 1 + T 2 + T 3 + T turn, T wait}                                                  hence, non-empty . All such instances where ess  E
+                                                                                                             switches contain a clock T reset are mentioned in (9):
+  These constraints are included in specific locations within
+  the description blocks as observable in Figure 6. I maps                                                   T=  0          if s = S1, s  {S0, S22, S23, S31, S32, SW },
+  these constraints from (T ) on select locations within                                                         T1 + T2    if s = SW, s  {S31, S32}
+  M as mentioned below:
+                                                                                                                                ess                                                         (9)
+  ­ S1 : T < T1                                                                                                                 an
+  ­ S22, S23 : T < T 1 + T 2                                                                                 Every s and s in              mentioned above   corresponds to                 the
+  ­ S31, S32 : T < T 1 + T 2 + T 3                                                                           switch containing             input symbol ass   A as in (7).
+  ­ S41, S42 : T < T 1 + T 2 + T 3 + T turn
+  ­ SW : T < T wait                                                                              N is the transition system of M. State of N can be
+  All locations within M not mentioned in the mapping                                         described as a pair (s, T ) where s  S denotes the current
+  above can be considered as not possessing any clock                                         location and T is the clock such that it satisfies the clock
+  constraint.                                                                                 constraint mapped to s by I(s). A transition can be described
+· E  S X A X (T ) X S is a set of switches between                                            in two ways:
+  locations within M. A switch s, ass , , s represents a
+                                                                                              · In the case of self-transition where a transition state
+                                                                                                                              9
+
+TABLE III: SUMO simulation parameters.                                 TABLE IV: AROW configurable parameters.
+
+Experiment Duration                     50000s                         detthresh                                       10m
+No. of CAVs (nveh)                     4, 8, 16                        BSM Periodicity                {100,600}ms [42]
+Car-Following Model                Krauss [39]                         Resource Reservation Interval
+Maximum Vehicle Speed                    70 m/s                        T1                                     100ms [43]
+                                        2.6m/s2                        T2                                                 2s
+Vehicle Acceleration                    4.5m/s2                        T3                                                 2s
+                                                                       N Cprob                                            2s
+Vehicle Deceleration                         0.5                       AROWthresh
+Sigma (Driver Imperfection)                2.5m                                                               0, 0.1, 0.25
+minGap (Empty space after leader)                                                                                          2
+CAV length                                   5m
+No. of lanes/road segment                       1
+
+returns to itself due to clock constraint,                         two CAVs per lane to be included in the AROW process given
+                                                                   the CAV length mentioned in Table III. On the other hand,
+Nss : (s, T ) - (s, T + ),                         (10)            AROWthresh = 2 to provide compliant CAVs with at most
+                                                                   two consecutive chances to use AROW to eliminate ambiguity
+  where the clock increment  is such that T +  satisfies           in the face of non-compliance. AROWthresh should not be
+  the clock constraint set by I(s) mapping. Also, the source       set to a really high value since it can then unfairly penalize
+  and destination location is s signifying the self-transition.    compliant CAVs for following AROW rules since they will
+· In the case of transition switch from one location s to          end up spending more time waiting to pass the SC-I.
+  another s based on ess  E,
+                                                                      As explained earlier, T 1 is the clock constraint used by a
+Nss : (s, T ) -a-ss (s, T [ := y]),                (11)            CAV during discovery stage S1 of AROW. T 1 for this study
+                                                                   is set to 2s to allow realistic chance for one or more CAVs to
+where ass is part of the transition edge ess . Also, s and         initiate AROW and these CAVs can then enter in an arbitration
+s are the source and destination locations, respectively.          as mentioned in the AROW logic explained in the previous
+y represents the reset of the clock upon reaching the              sections. T 2 is the clock constraint used to control how long
+destination location.                                              a CAV stays in S22 or S23 while undergoing AROW process.
+                                                                   The experimental value of T 2 is chosen to be 2s for CAVs
+   This transition system will be repeatedly utilized for analy-   in S22 and S23. The realistic value for T 2 can be further
+                                                                   reduced and optimized based on the inherent communication
+sis in the next sections. The focus will be on transitions caused  latencies of the V2X technology in use. This optimization is
+by location switches and will generally be mentioned as Nss        the subject of a future study related to this topic. The same
+for simplicity.                                                    logic is applied to choosing the value for T 3.
+
+                  VI. EXPERIMENTAL RESULTS                         B. Analysis and Results
+
+A. Simulation and AROW Configuration Parameters                       1) AROW Performance under Full Compliance (N Cprob =
+                                                                   0): The first goal using simulations is to prove the complete-
+   To test AROW and provide experimental details regarding         ness of the logic of AROW. To achieve this, the simulations
+its functionality, the transition system M defined in the          using AROW with parameters mentioned in Tables III and
+last section is modeled and tested using the Simulation of         IV are run and each state's frequency and transitions are
+Urban Mobility (SUMO) traffic simulator [40]. The simulation       independently logged throughout the simulation duration. For
+parameters specific to SUMO are mentioned in Table III.            this set of simulations, all the participating CAVs are set to
+These parameters can be configured as per user preference.         be fully compliant, i.e. NCprob = 0. It should be noted that
+The road topology used for this study considers a four-way         the terms `state frequency' and `state transitions' are used
+allway SC-I attached to four single-lane road segments. Each       instead of `location frequency' and `location transition' to
+end of the four road segments from SC-I is about 51.2m in          specify that these values have been collected over time in a
+length and connected to a circular round-about to facilitate       simulation whenever the clock constraints for each transition
+CAVs to drive in an endless loop and repeatedly pass through       are fulfilled as mentioned earlier in the description of the timed
+the SC-I in the center for the entirety of the simulation. In      automaton M of AROW. The results of these simulations are
+order for the AROW algorithm to interact in real-time with         shown in Figure 7 and Table V. Figure 7 shows the state
+SUMO simulation, the authors utilize Traffic Control Interface
+(TraCI) [41]. To test a variety of use-cases, the study utilizes   TABLE V: Raw state frequencies from simulations in Figure 7 with
+different number of CAVs, i.e. nveh = 4, 8, or 16. Given the       full compliance (N Cprob = 0).
+road topology, these values of nveh can be considered as low,
+medium, and high density traffic, respectively.                    nveh SW S0 S1 S21 S22 S23 S31 S32 S41 S42 Total
+
+   Table IV shows the values assigned to the configurable          4    814 1577 1577 256 130 126 211 201 211 201 5304
+parameters of AROW for this study. The detthresh is chosen to          15.35 29.73 29.73 4.83 2.45 2.38 3.98 3.79 3.98 3.79 100%
+be 10m with aim to: (i) allow the CAVs to initiate the process
+of AROW in advance so that generally the CAV is assigned           8   1146 1159 1159 12 4 8 400 675 400 675 5638
+its turn to leave SC-I by the time it arrives at the stop sign,        20.33 20.56 20.56 0.21 0.07 0.14 7.09 11.97 7.09 11.97 100%
+provided there is no non-compliance, and (ii) to allow up to
+                                                                   16   587 588 588 1          0   1 167 421 167 421 2941
+                                                                       19.96 19.99 19.99 0.03  0  0.03 5.68 14.31 5.68 14.31 100%
+                                                                       10
+
+Fig. 7: State transition comparison for simulations with full compli-  sition matrix also shows one outgoing transition switch NSS3411
+ance (N Cprob = 0).                                                    from S31 worth 3.98% which is again equal to the incoming
+                                                                       transitions to S31 and also its percentage frequency. The
+transitions matrices represented as heat maps and based on the         equality between incoming and outgoing transition switches
+transition system N of AROW. The x-axis and y-axis denote
+the destination and source locations, respectively. In addition        can be observed for all locations in all traffic scenarios, except
+to Figure 7, Table V provides the state frequency in terms of
+raw numbers and percentages for each location.                         for minuscule differences due to rounding in percentages. All
+
+   For each of the three simulations, Table V shows state              the transitions in the matrices can also be observed to be in
+frequency of each location and the transition matrix provides
+the outgoing and incoming transition switches from that                line with those in the timed automaton M and use switches
+location, respectively. For example, for nveh = 4, S31 has
+a percentage frequency of 3.98% and the transition matrix              E corresponding to input symbols A in Figure 6, thereby
+clarifies this frequency by showing that S31 has two incoming
+transition switches NSSW31 and NSS2321 , with frequencies of 1.53%     ensuring that the experimental operation is corresponding to
+and 2.45%, respectively, that add up to 3.98%, equal to state
+frequency of S31 as shown in Table V. Additionally, the tran-          the AROW theory. Finally, all transitions within each matrix
+
+                                                                       along with the state frequency percentages in Table V add up
+
+                                                                       to 100%, barring rounding errors.
+                                                                          Comparing the three simulations, it can be first observed
+
+                                                                       that as the value of nveh increases from 4 to 8, the total raw
+                                                                       frequency increases by a small margin as shown in Table V.
+
+                                                                       This is mainly due to the fact that this higher number of CAVs
+
+                                                                       in the scenario increases the frequency of HV's transition to
+
+                                                                       SW upon its arrival at the SC-I in focus. Furthermore, as
+
+                                                                       nveh increases to 16, there is a sharp reduction in the total
+                                                                       raw frequency which is caused by a reduction in the count
+
+                                                                       of S0 and S1. This is mainly because as nveh increases,
+                                                                       there is a higher congestion at the SC-I in focus. Thus, the
+
+                                                                       HV spends more time to get through SC-I and hence, fewer
+                                                                       transitions switches of NSS01 from S0 to S1 in the given
+                                                                       simulation duration. The percentage equality of S0 and S1
+                                                                       in every simulation also attests to the 100% NSS01 transition as
+                                                                       shown in the graph M in Figure 6.
+
+                                                                          From S1, the transition NSS10 to S0 occurs when the HV is
+                                                                       unaccompanied by any fellow competing CAV at the SC-I, and
+
+                                                                       in this case, the HV passes SC-I without AROW. As expected,
+                                                                       the matrix for nveh = 4 shows NSS01 transition frequency of
+                                                                       9.56%, which goes to almost 0% in the case of nveh = 8, 16
+                                                                       since with more CAVs, there is a lesser probability of HV
+
+                                                                       approaching the SC-I in focus without any competition. On
+                                                                       the other hand, the transition NSS1W occurs when HV initiates
+                                                                       AROW in the middle of an ongoing AROW round among
+
+                                                                       CAVs in VP . In this case, varb instructs HV to wait in SW . It
+                                                                       can be seen in both the percentage state frequency and matrices
+                                                                       that the frequency of NSS1W is higher for nveh = 8, 16 because
+                                                                       as nveh increases, there is a higher probability that HV would
+                                                                       arrive at SC-I in focus and initiate in the presence of other
+
+                                                                       CAVs.
+                                                                          One more transition possibility from S1 is NSS121 . NSS121
+
+                                                                       occurs when HV is accompanied by other competing CAVs
+
+                                                                       in VL in SC-I and there is no varb present. In this case, the
+                                                                       CAVs along with HV need to follow AROW and elect a varb.
+                                                                       Again, as nveh increases, there is a higher probability of a
+                                                                       varb already present upon the arrival of HV, thus the frequency
+                                                                       of NSS121 . reduces. This is why NSS121 frequency for nveh =
+                                                                       4 is 4.83% whereas it drops to just 0.21% and 0.03% for
+
+                                                                       nveh = 8 and nveh = 16, respectively. From S21, the only
+                                                                       transitions are NSS2212 and NSS2213 to S22 and S23, respectively.
+                                                                       These transitions can be seen in the transition matrices and
+
+                                                                       for the same afore-mentioned reason of a higher frequency of
+                                                                       NSS121 for nveh = 4, we can also observe a higher frequency
+                                                                       of NSS2212 and NSS2213 for nveh = 4 that sum to the total state
+                                                                       frequency of NSS121 . Similarly, the transitions from S22 and
+                                                                                                                                                     11
+
+S23 are NSS2321 and NSS2332 to S31 and S32, respectively, and           where P (HVi) is the probability that HV is in stage i,
+carry a higher frequency in the case of nveh = 4 as compared            P (N Cm|HVi) is the conditional probability that there are m
+to other scenarios. It should be noted that since N Cprob = 0           non-compliant CAVs when HV is in stage i, and P (CVj)
+in this set of three simulations, the transitions NSS202 , NSS212 ,     is the probability of HV in the current AROW round with
+NSS203 , and NSS213 are all 0%.                                         j competing CAVs. P (CVj) uses the outermost sum where
+                                                                        CV  VP and nCV is the total number of competing CAVs
+   For SW , the transitions are NSSW0 , NSSW1 , NSSW31 , and NSSW32 .   to the HV during a singular round of AROW. Considering
+NSSW0 occurs in the cases when HV is ready to switch from
+SW upon the conclusion of current AROW round of other                   the experimental topology for this study where competing
+CAVs in VP , however, there is no other waiting CAV besides
+HV, thus AROW is not required for HV. As expected, this                 CAVs can be on any of the single-lane roads of the SC-
+transition majorly occurs in nveh = 4 scenario with less                I, nCV can be ranged as 1  j  3. For every j in the
+CAVs (12.41%), and the other scenarios with higher CAVs,                outermost sum, the inner sum aggregates P (N Cm|HVi) in
+the frequency of NSSW0 reduces rapidly. The transition NSSW1            range 1  m  j. Finally, over every m, the inner-most
+is 0% for all scenarios here since all CAVs are fully compliant         sum aggregates P (HVi) where i is every location defined in
+(N Cprob = 0). The transitions NSSW31 and NSSW32 occur in the           N Cstages, i.e. N Cstages = {S22, S23, S31, S32}. As can be
+cases when HV, along with other waiting CAVs in VS is ready             observed in (12), the probability P (N C) is calculated from
+to switch out from SW upon the conclusion of the current
+AROW round and the varb has chosen one of the CAVs from                 the perspective of the HV due to the easiness of calculations.
+VP to become the new varb. If HV is chosen as the new                   For example, if HV is in S22, we can already infer that other
+varb, then it follows NSSW31 , otherwise it uses NSSW32 as per          CAVs in VP will be in S23, or if HV is in S23, we can then
+AROW rules. As shown in the Figure 7 transition matrices,               infer that one of the CAVs in VP other than HV has been
+these transitions contain higher frequencies as nveh increases,         chosen as varb and has proceeded to S22, whereas remaining
+simply due to the earlier-stated argument that a higher number          CAVs have moved to S23 along with HV. The same logic can
+                                                                        be applied for HV being in S31 or S32.
+of competing CAVs creates a higher probability of CAVs in
+SW .                                                                       P (CVj) is non-deterministic since it is not possible to
+                                                                        predict the specific number of competing CAVs to HV at
+   Finally, from S31 and S32, the only valid transitions in the
+case of N Cprob = 0 are NSS3411 and NSS3422 , respectively. For         a specific time, and thus in this experiment, we rely on
+the same reason, the transitions NSS311 , NSS301 , NSS312 , and NSS302
+are 0%. With the increase of nveh, there are more instances             simulations to estimate it. On the other hand, when calculating
+of competing CAVs with HV, and thus the percentage of                   probability P (N Cm|HVi) and given the set N Cstages, it can
+NSS3411 and NSS3422 also rises. Once CAVs successfully conclude         be observed that P (N Cm|HVS22 ) = P (N Cm|HVS23 ) and
+AROW in S41 or S42, AROW is transitioned back to S0 using               similarly, P (N Cm|HVS31 ) = P (N Cm|HVS32 ). On a high-
+transitions NSS401 and NSS402 , respectively.                           level, P (N Cm|HVi) can be defined as a binomial distribution
+                                                                        as shown below in (13):
+   2) AROW Performance under Non-Compliance Scenarios:
+                                                                        P (N Cm|HVi) =     j       P (N C|HVi)m (1-P (N C|HVi))(j-m)
+      a) Theoretical analysis of Non-Compliance: To in-                                    m
+
+crease robustness, AROW considers the occurrence of non-                                                                                             (13)
+
+compliance and allows compliant CAVs to still reduce am-                where  j  =           j!      is  the  binomial  coefficient         represent-
+                                                                               m        m!(j-m)!
+biguity and safely pass SC-I. To show the impact of non-
+                                                                        ing the different combinations of m non-compliant CAVs,
+compliance, this study randomly assigns non-compliance prob-
+ability, i.e., N Cprob, to each CAV except HV every time they           P (N C|HVi) = N Cprob, P (N C|HVi)m is the probability of
+engage in AROW. There are two values used for experimenta-              m non-compliant CAVs, and (1 - P (N C|HVi))(j-m) is the
+tion purposes, i.e. N Cprob = 0.1, or 0.25. Even higher values
+can be chosen, but for the purposes of this paper, these values         probability of (j-m) CAVs being compliant. Finally, P (HVi)
+are sufficient to show the collective impact of N Cprob on
+AROW. In theory, N Cprob is designed to be independently                is calculated as:
+applied to each CAV during each of the stages in N Cstages.
+                                                                                        (NSS121  )    +  P  (NSS1W  )P  (NSSW1  )P  (NSS121  +))P    (NSS2212  )
+   To show the collective impact of N Cprob on a typical round                    (P
+of AROW, we use a metric P (N C) which is the probability                         
+
+that at least one CAV becomes non-compliant throughout a                          
+
+singular round of AROW. Using the law of total probability                                                                                      if i = S22,
+P (X) = n P (X  Yn), we calculate P (N C) below:                                  
+                                                                                  
+
+                                                                                  
+
+                                                                                        (NSS121    )  +  P  (NSS1W  )P  (NSSW1  )P  (NSS121  +  ))P  (NSS2213  )
+                                                                                  
+                                                                                  (P
+                                                                                  
+
+                                                                                                                                                if i = S23,
+
+                                                                                                      P (HVS22 )PC (S22) + P (NSS1W )P (NSSW31 )
+                                                                        P (HVi) =
+
+                                                                                  
+                                                                                  
+                                                                                  
+
+                                                                                  
+
+                                                                                                                                                if i = S31,
+                                                                                  
+                                                                                  
+
+                                                                                  
+
+                                                                                                      P (HVS23 )PC (S23) + P (NSS1W )P (NSSW32 )
+                                                                                  
+                                                                                  
+                                                                                  
+                                                                                  
+
+                                                                                  
+
+                                                                                                                                                if i = S32
+
+                                                                                                                                                     (14)
+
+                                                                        where
+
+                      nCV   j N Cstages                                                 PC (k) = (1 - P (N C|HVk))j                                  (15)
+
+P (N C) =                                P (HVi)P (N Cm|HVi)P (CVj),       As observable in (14), P (HVi) yields different values
+                                                                        depending on the specific location and its parent locations. For
+                         j  m  i
+
+                                         (12)
+                                                                                                                                                 12
+
+                      Fig. 8: Comparison between PT (N C) and PE(N C).
+
+TABLE VI: Tabular comparison between PT (N C) and                                                             TABLE VII: Percentages of competing CAVs (CV s) during AROW
+PE(N C).                                                                                                      rounds for non-compliance scenarios (N Cprob = 0.1, N Cprob =
+                                                                                                              0.25).
+nveh         N Cprob  PT (N C)                               PE (N C)
+   4             0.1       0.17                                   0.17                                                       Percentage of CV s
+   8            0.25       0.39                                   0.35
+  16             0.1       0.21                                    0.2                                        nveh  N Cprob  1  2  3
+                0.25       0.49                                   0.46                                           4      0.1
+                 0.1       0.29                                   0.29                                           8     0.25  88 10.7 1.3
+                0.25       0.68                                   0.68                                          16      0.1
+                                                                                                                       0.25  90.6 8.8 0.6
+                                                                                                                        0.1
+                                                                                                                       0.25  25.1 57.7 17.2
+
+                                                                                                                             34.4 54.8 10.8
+
+                                                                                                                             0.9 29.3 69.8
+
+                                                                                                                             3.3 29.7 67
+
+iins sdtaenpceen,dPen(tHonVSe2it2h)eor rththeediprreocbtatbrailnitsyititohnatNHSSV121arroivr esseqinueSn2c2e  mental P (N C), i.e. PE(N C) and PT (N C), as shown
+of transitions NSS1W , NSSW1 , and NSS121 +. After considering the                                            in Figure 8. It should be noted that the earlier-mentioned
+                                                                                                              non-deterministic probabilities that are needed to calculate
+possibilities of HV arriving at S21, the result is multiplied                                                 PT (N C) are taken from the simulations for each scenario as
+bNy SPS12(1N SS=2212)NtSoS12c1alc+ulatNe SSP121(H+V,Sa2n2d)                                                   known probabilities. As observable in all simulation results in
+                                                             It should be noted     that                      Figure 8, PE(N C) converges to PT (N C) as the simulation
+                                                             these transitions are  sep-                      moves ahead in time, which proves that AROW correctly
+                                                                                                              considers the impact of N Cprob and the experimental results
+arated out due to probability calculations. P (HVS23 ) is also                                                match with that of the theoretical concept. This also shows
+                                                                                                              that the simulation duration and logging data size are suffi-
+similarly calculated for HV in S23. Calculating P (HVS31 ) and                                                cient to validate that the AROW algorithm has no deadlocks
+                                                                                                              among a variation of scenarios. Table VI points to the same
+P (HVS32 ) is comparatively more complex because in addition                                                  convergence in tabular form as PT (N C) and PE(N C) are
+                                                                                                              very similar to each other towards the end of the simulation
+to arriving at S31 or S32 from S22 or S23 using transitions                                                   duration. For all simulation scenarios, it can be generally
+NSS2321 or NSS2332 , respectively, HV can also arrive at S31 or                                               viewed that as expected, an increase in N Cprob results in an
+S32 from the wait stage SW using transitions NSSW31 , or NSSW32 ,                                             increase in the overall PT (N C) and PE(N C). Secondly,
+                                                                                                              an increase in nveh also increases PT (N C) and PE(N C)
+respectively. In addition, in the cases of HV arriving at S31 or                                              for both values of N Cprob since more nveh results in more
+                                                                                                              competing CAVs with HV during every AROW round. As
+S32 from S22 or S23, it is also necessary for all competing                                                   evident from Table VII, as we increase nveh for both values of
+                                                                                                              N Cprob, the percentage of AROW rounds involving HV with
+CAVs to HV to be compliant in the parent locations S22                                                        a higher number of competing CAVs rises. For instance, with
+                                                                                                              simulations scenarios where nveh = 4, the highest percentage
+or S23, respectively. This can be calculated probabilistically                                                of AROW rounds for HV are with 1 competing CAV. For
+                                                                                                              nveh = 8, 16, the highest percentage changes to 2 and 3
+using (15).                                                                                                   competing CAVs, respectively. Therefore, this explains why
+                                                                                                              PT (N C) and PE(N C) increase with the increase in nveh.
+   Given j which is the number of competing CAVs to HV in
+                                                                                                                 After establishing the fact that the theoretical impact of
+the current iteration of (12), some probabilities in (14) such
+as P (NSS2212 ), P (NSS2213 ), P (NSSW31 ), and P (NSSW32 ) can be deter-
+mined probabilistically, whereas other remaining probabilities
+such as P (NSS121 ), P (NSS121 +), P (NSS1W ), and P (NSSW1 ) are
+non-deterministic since they totally depend on the particular
+
+scenario. Finally, since we are calculating P (N C) where it
+is assumed that 1  nCV  3, thus P (NSS121 +) is always
+assumed to be 1.
+
+      b) Experimental Analysis of Non-Compliance: Given the
+parameters in Tables III and IV and (12), (13), (14), and (15),
+we run a total of six simulations using different values of
+nveh and N Cprob and compare the theoretical and experi-
+                                                                                                   13
+
+Fig. 9: State transition comparison for non-compliance scenarios (N Cprob = 0.1, N Cprob = 0.25).
+
+N Cprob matches with that of the experimental results, we                        AROW until (4) is being satisfied. This is the reason why
+analyze the effect of N Cprob on AROW performance in terms                       the transitions NSS2212 and NSS2213 yield higher percentages with
+of the state transitions. For this reason, Figure 9 displays the                 N Cprob = 0.25 than N Cprob = 0.1, which in turn yields higher
+state transition matrices in the form of heat maps for different
+values of nveh and N Cprob. Most transitions and trends in                       percentages than N Cprob = 0. The same reasoning is also
+the heat maps in Figures 7 and 9 are similar except for the                      responsible for the increase in percentages of NSS2321 and NSS2332
+transitions involving N Cstages. The first major difference is                   in the cases of N Cprob = 0.25 than N Cprob = 0.1.
+that the heat maps in Figure 9 contain non-zero transitions in
+NSS202 , NSS212 , NSS203 , NSS213 , NSS301 , NSS311 , NSS302 , and NSS312 , due     Next, for any nveh in Figure 9, as N Cprob increases, so does
+to N Cprob, as opposed to the same transitions which were all
+0% in the heat maps in Figure 7 due to full compliance.                          the percentage of non-compliance related transitions from any
+                                                                                 of the N Cstages. For example, it can be observed that NSS212 is
+   It has been mentioned that in the case of non-zero N Cprob,                   higher for N Cprob =0.25 as compare to that for N Cprob =0.1.
+AROW within every compliant competing CAV utilizes                               The same is the case with NSS202 , NSS213 , NSS203 , NSS311 , NSS301 ,
+AROWthresh so that in the cases of non-compliance by                             NSS312 , and NSS302 . This can also be understood by analyzing
+some other CAV(s), it does not need to withdraw from using                       that for any nveh, the total non-compliance percentage by
+AROW altogether and transition to S0 but instead re-attempt                      taking the sum of NSS212 , NSS202 NSS213 NSS203 NSS311 NSS301 NSS312
+                                                                                 and NSS302 increases with the rise in N Cprob according to the
+                                                                                 P (N C) analysis earlier. Also, as nveh rises, this denotes
+                                                                                                                              14
+
+that there will be more competing CAVs to HV and thus the               · For fairness-based metric, the vehicle clearance time
+                                                                           (Tclearance) is calculated for a set of leading competing
+percentages of the above-mentioned transitions increase even               vehicles at an intersection that arrive within T 1 of each
+                                                                           other. This is the time difference between the first vehicle
+further.                                                                   in the set entering the junction and the last vehicle in the
+   In addition, it can also be observed that for nveh = 8,                 set exiting the junction. SC-I junction can be described as
+                                                                           the region within the SC-I past the stop sign. Tclearance
+16, the heat maps display a higher percentages for NSS311 and              can be described as:
+NSS312 as compared to NSS301 and NSS302 respectively. As nveh
+increases, so does the percentage of NSS1W since there is a                     Tclearance = max(DTexit ) - min(DTarrive ) (16)
+higher probability that HV would encounter CAVs competing
+                                                                           where DTarrive and DTexit are the sets for the junction
+for AROW when it arrives at the SC-I. This in turn explains                arrival and departure timestamp of the set of vehicles,
+the increase in the percentages of NSSW31 and NSSW32 where HV              respectively.
+goes from SW directly to S31 or S32 towards the end of
+the successful preceding AROW. Recalling the logic behind               For namb, AROW is compared to our implementation of the
+AROWthresh, this means that as the HV arrives at S31 or S32,         algorithm in [32], which we refer to as Delay-based Coopera-
+its AROWthresh is still 0, and thus if there is non-compliance       tive Intersection Management (DCIM), and the allway stop
+and (4) holds true, HV would restart its AROW and use NSS311         intersection management method from SUMO. The allway
+and NSS312 to transition to S1 rather than transitioning to S0 and   method is similar to the real-life human behavior at an SC-I.
+disable its AROW. This behavior can be observed for both non-        The default rules of allway stop within SUMO are according to
+zero N Cprob values. For the same reason, the percentages of         the general right-of-way rules [33]. To avoid any confusion, it
+NSS202 and NSS203 are higher than that of NSS212 and NSS213 because  should be noted that only those vehicles utilizing AROW and
+as HV reaches S22 or S23, it is probable that due to the non-        DCIM are denoted as CAVs. Table VIII provides a tabular
+compliance in the previous AROW round, the AROWcount is              comparison of namb instances of AROW, DCIM, and allway.
+close to reaching AROWthresh, and thus a non-compliance              This table contains percentages of competing vehicles entering
+here would mean that HV would disable its AROW. These                the SC-I together from different lanes. There are three different
+behaviors are not viewable in the case of nveh = 4 simply            instances of competing vehicles simultaneously entering the
+because there are not enough CAVs in the scenario to force           SC-I, i.e. 1, 2, or 3. All these instances are represented as a
+HV to transition to SW upon arriving at the SC-I.                    separate column for each of the AROW, DCIM, and allway
+                                                                     scenarios. In the case of 1 competing vehicle, this includes
+   Finally, Figure 9 also shows that for any nveh, the percent-      all instances where only a single vehicle entered the SC-I in
+age of NSS3411 and NSS3422 reduces with the increase of N Cprob      foucs, thus in such cases, there are no namb instances. On
+and that is a direct consequence of N Cprob as it reduces the        the other hand, the columns of 2 and 3 denote the cases of
+probability of a successful AROW completion.                         2 and 3 competing vehicles entering simultaneously within
+                                                                     an SC-I as a result of ambiguity, thus, these instances are
+      c) Significance of the convergence of PE(N C) with             denoted as namb in Table VIII. For each nveh, there is one
+PT (N C): As shown in Figure 8, the convergence of                   scenario for each of DCIM, and allway, whereas there are three
+PE(N C) with PT (N C) under varying levels of non-                   scenarios for AROW for each of the non-compliance values,
+compliance at different stages of AROW and with different            i.e. N Cprob = 0, 0.1, and 0.25.
+
+number of competing CAVs can be very useful in the context              On a high-level, it can be observed that AROW has the
+                                                                     least percentage of false-start instances due to ambiguity, i.e.
+of AROW. Firstly, it allows further testing of different AROW        namb, followed by DCIM and then the default allway, which
+                                                                     performs the worst. In the case of DCIM, since its main focus
+scenarios in the future using the theoretical calculations           is on time delay reduction and not ambiguity mitigation as
+                                                                     mentioned in Section I, there are limitations in its logic in
+as a proxy without explicitly running the simulations and
+
+obtaining experimental data. This can potentially accelerate
+
+the development and scalability of AROW as an application
+
+for CAVs on commercial roads. Secondly, the theoretical
+
+analysis obtained from any given test scenario of AROW can
+
+be utilized as a reference to detect any anomalies whether it
+
+is due to the implementation of that scenario or any specific
+
+CAV agent and its behavior.
+
+   3) AROW Impact based on Evaluation Metrics: The impact            TABLE VIII: Tabular comparison of SC-I scenarios with false-starts
+of AROW is evaluated on the basis of ambiguity mitigation            due to ambiguity (namb) using AROW, allway, and DCIM. Each
+and fairness. The main contribution of AROW is to reduce             method contains instances with 1, 2, or 3 competing vehicles and
+the ambiguity that drivers may face upon arriving at the SC-I        instances of 2 and 3 CAVs constitute namb cases.
+at close time intervals to each other. This in turn can allow
+fairness in terms of SC-I crossing priority assignments. In this                    Competing Vehicles inside SC-I (%)
+regard, the two metrics are mentioned below:
+                                                                     nveh           AROW           DCIM  Allway
+   · For ambiguity reduction, we calculate the frequency of             4
+      ambiguous instances (namb) at SC-I where vehicles arrive          8  N Cprob           namb  namb  namb
+      at close intervals of each other. namb is characterized by       16      0    1 23 1         231   23
+      the number of false starts by vehicles in situations where              0.1
+      the right-of-way is not clearly evident.                                      100 0 0
+                                                                             0.25
+                                                                               0    100 0 0 97.3 2.7 0 96 3.8 0.2
+                                                                              0.1
+                                                                                    99.8 0.2 0
+                                                                             0.25
+                                                                               0    100 0 0
+                                                                              0.1
+                                                                                    99.4 0.5 0.1 91.6 8.3 0.1 84.5 14.8 0.7
+                                                                             0.25
+                                                                                    96.9 2.5 0.6
+
+                                                                                    100 0 0
+
+                                                                                    97.8 0.9 1.3 86.1 13.5 0.4 82.2 16.9 0.9
+
+                                                                                    89.9 7.2 2.9
+                                                                                                         15
+
+Fig. 10: CDF comparison of vehicle clearance time (Tclearance) between AROW, traffic light, and allway.
+
+assigning priorities as described in the Tclearance comparison    15.5% of namb. Same trend can be observed in the case of
+that can induce ambiguity. On such related limitation is that     nveh = 16 where AROW encounters the least amount of namb
+DCIM can assign similar priorities to multiple vehicles from      even when it is faced with a high N Cprob, followed by DCIM
+different lanes having the same traffic load and SC-I arrival     which performs better than the default non-cooperative allway.
+timestamp. This limitation is the reason behind the increase in
+namb instances using DCIM as compared to AROW. However,              In addition to ambiguity reduction, AROW also promotes
+DCIM still outperforms the default allway scenarios since it is   fairness among competing vehicles at an SC-I without nec-
+still a V2X based algorithm where cooperation among CAVs          essarily causing additional delays. Figure 10 compares the
+reduces numerous namb instance which otherwise occur using        Tclearance CDF of AROW to DCIM, along with allway and
+the non-cooperative default allway that have the most namb        traffic signal methods from SUMO. The results from traffic
+instances.                                                        light based intersection have been included to serve as a
+                                                                  baseline. For nveh = 4, 8, the Tclearance of AROW with
+   More specifically, Table VIII shows that for any nveh, in the  N Cprob = 0, DCIM, and allway are similar to each other and
+case of AROW with N Cprob = 0, instances with 1 competing         they significantly outperform traffic light-based intersection.
+CAV within SC-I at any time throughout the simulations            With N Cprob = 0.1, 0.25, there appears to be a slight
+constitute for 100% of the scenarios, thus no namb. However,      degradation in Tclearance for AROW, which is expected since
+this is not the case with non-zero N Cprob = 0.1, 0.25 where      compliant CAVs re-run AROW in the face of non-compliance
+we observe some namb instances. Non-zero N Cprob means            until (4) is satisfied. And the tradeoff for this as explained
+that there can be cases of repetitive non-compliance which        above is the reduction in namb instances for AROW as
+can satisfy (4) and disable AROW. Once AROW is disabled,          compared to other methods. In the case of high density traffic
+the remaining compliant CAVs can follow any default heuristic     (nveh = 16), the Tclearance of AROW with N Cprob = 0
+to manually pass the SC-I. For this study, the default heuristic  and allway are still similar and as expected, the Tclearance of
+is set to FIFO which is usual for real-life non-cooperative       AROW slightly degrades with N Cprob = 0.1, 0.25. However,
+SC-I scenarios. However, such scenarios with CAVs manu-           there is a significant deterioration in the Tclearance of DCIM,
+ally passing the SC-I can cause ambiguity and thus, namb          which is due to its limitations as explained below.
+instances. Given this, as N Cprob rises, we should experience
+higher cases of disabled AROW and higher namb instances              Firstly, DCIM aims to replace SC-I by assigning time-
+with 2 or 3 competing CAVs entering as a false start due to       delaying instructions to CAVs so that they can varyingly
+ambiguity, which is precisely what we observe in Table VIII.      decelerate and arrive at the intersection at different times,
+                                                                  thereby crossing the intersection without stopping to let other
+   However, despite this, the percentage of namb instances        CAVs pass. Although this logic can work in low and medium
+within AROW is still far lower as compare to allway and           density traffic scenarios where CAVs have enough distance
+DCIM. In the case of nveh = 4, there is 0.2% instances            headway to decelerate and arrive at the SC-I when it is not
+of 2 competing CAVs when N Cprob = 0.25, while for the            occupied, however, the same is not the case in high density
+same nveh = 4, DCIM has 2.7% of namb cases which further          traffic with limited or no headway, where CAVs will most
+rises to 4% for allway with 3.8% and 0.2% of cases with 2         likely encounter higher priority CAVs at SC-I and thus, would
+and 3 competing vehicles, respectively. Similarly, in the case    have to stop and wait. This causes the CAVs in DCIM to
+of nveh = 8, AROW has a total namb instances of 0.6% in           possess a higher time delay which partly contributes to the
+the case of N Cprob = 0.1 which rises to only 3.1% with           deterioration of Tclearance for nveh = 16 as visible in Figure
+N Cprob = 0.25. This is far lesser when compared to DCIM          10. Secondly, to enable smooth traffic flow and reduce time
+for nveh = 8 which contains a total of 8.4% of namb scenarios.    delay, DCIM also contains the logic of assigning a higher
+And as expected, allway performs the poorest with a total of      intersection crossing priority to CAVs that belong to lane
+                                                                   16
+
+with a higher CAV load. This logic is also limited since for       the relevant metrics since the core logic of AROW is capable
+high density and uneven traffic as for nveh = 16, CAVs
+belonging to lesser priority lanes can potentially wait for a      of handling CAVs with different priorities. Fourthly, AROW
+long time until their lane can get priority to pass, which causes
+the Tclearance to rise. Thirdly, in the case of conflict where     performance against non-compliance can also be potentially
+multiple CAVs arrive at SC-I at the same time despite the
+scheduling, a scenario that can occur quite often for nveh =       improved by learning the non-compliance behavior of differ-
+16, DCIM follows the same principle of giving priority to
+CAVs in the higher-priority lanes and it schedules the lesser      ent CAVs and predicting non-compliance in any given SC-
+priority CAVs at the earliest possible empty slot. This is also    I scenario. Finally, the timeouts T 1, T 2, and T 3 can be
+a major limitation of DCIM since in the case of high density
+traffic where there are limited or no empty slots at SC-I, a       optimized by conducting analysis on communication latencies
+lesser priority CAV can potentially wait at the SC-I for a long
+time and cause a high Tclearance. Thus, in terms of fairness       using different V2X technologies.
+which is the basis of the metric Tclearance in this study, DCIM
+is not suitable while AROW can easily handle high density                                       REFERENCES
+traffic and remain fair to CAVs based on their arrival at the
+SC-I, while mitigating ambiguity.                                   [1] C. B. Rafter, B. Anvari, and S. Box, "Traffic responsive intersection
+                                                                         control algorithm using gps data," in 2017 IEEE 20th International
+                         VII. CONCLUSION                                 Conference on Intelligent Transportation Systems (ITSC). IEEE, 2017,
+                                                                         pp. 1­6.
+   This study proposes a V2X-based distributed AROW al-
+gorithm for CIM to reduce priority-related ambiguity at SC-         [2] Y. Rahmati and A. Talebpour, "Towards a collaborative connected, au-
+Is. The algorithm utilizes cooperative DMS where CAVs use                tomated driving environment: A game theory based decision framework
+V2X to communicate with each other and negotiate SC-I                    for unprotected left turn maneuvers," in 2017 IEEE Intelligent Vehicles
+crossing priorities in the form of DIMs. AROW is scalable                Symposium (IV). IEEE, 2017, pp. 1316­1321.
+for high density traffic and is capable of handling varying
+levels of driver non-compliance towards assigned priorities.        [3] L. Blincoe, T. R. Miller, E. Zaloshnja, and B. A. Lawrence, "The
+We provide details for all stages within AROW and also                   economic and societal impact of motor vehicle crashes, 2010 (revised),"
+implement it in terms of a timed automaton. Later, we run                Tech. Rep., 2015.
+several simulation scenarios involving various levels of CAVs
+and non-compliance probabilities to prove the completeness          [4] R. A. Retting, H. B. Weinstein, and M. G. Solomon, "Analysis of
+and robustness of AROW. The paper iterates the accuracy of               motor-vehicle crashes at stop signs in four us cities," Journal of Safety
+the proposed algorithm by showing close similarities between             Research, vol. 34, no. 5, pp. 485­489, 2003.
+the theoretical calculations and experimental results. Finally,
+AROW is evaluated on the basis of ambiguity mitigation and          [5] M.-k. Shi, H. Jiang, and S.-h. Li, "An intelligent traffic-flow-based
+intersection clearance time as compared to a related work                real-time vehicles scheduling algorithm at intersection," in 2016 14th
+(DCIM), traffic light intersection, and allway based SC-I from           International Conference on Control, Automation, Robotics and Vision
+SUMO. In terms of ambiguity mitigation, AROW is observed                 (ICARCV). IEEE, 2016, pp. 1­5.
+to outperform all the other methods for all CAVs and non-
+compliance scenarios. In terms of clearance time, AROW              [6] E.-H. Choi, "Crash factors in intersection-related crashes: An on-scene
+outperforms DCIM and traffic lights for all scenarios while              perspective," 2010.
+it performs similar to allway with no non-compliance and a
+slight comparative degradation in non-compliance scenarios          [7] R. Azimi, G. Bhatia, R. R. Rajkumar, and P. Mudalige, "Stip: Spatio-
+due to compliant CAVs within AROW restarting the process in              temporal intersection protocols for autonomous vehicles," in 2014
+the face of non-compliance by any of the participating CAVs.             ACM/IEEE international conference on cyber-physical systems (ICCPS).
+                                                                         IEEE, 2014, pp. 1­12.
+                       VIII. FUTURE WORKS
+                                                                    [8] S. Singh, "Critical reasons for crashes investigated in the national motor
+   We plan to test AROW under real-life conditions by em-                vehicle crash causation survey," Tech. Rep., 2015.
+bedding the DMS and the underlying AROW on to the test
+hardware. Secondly, AROW can be stress-tested under varying         [9] L. Chen and C. Englund, "Cooperative intersection management: A
+levels of congested channels and communication losses to                 survey," IEEE transactions on intelligent transportation systems, vol. 17,
+further improve the robustness of the algorithm. Current study           no. 2, pp. 570­586, 2015.
+assumes full connectivity, which can be relaxed to show
+the robustness of AROW in the presence of connected and            [10] E. Namazi, J. Li, and C. Lu, "Intelligent intersection management sys-
+non-connected vehicles along with CAVs that have disabled                tems considering autonomous vehicles: A systematic literature review,"
+AROW. Thirdly, we can also incorporate emergency CAVs in                 IEEE Access, vol. 7, pp. 91 946­91 965, 2019.
+the simulations and evaluate the performance with respect to
+                                                                   [11] Z. Zhong, M. Nejad, and E. E. Lee, "Autonomous and semiautonomous
+                                                                         intersection management: A survey," IEEE Intelligent Transportation
+                                                                         Systems Magazine, vol. 13, no. 2, pp. 53­70, 2020.
+
+                                                                   [12] A. Gholamhosseinian and J. Seitz, "A comprehensive survey on coop-
+                                                                         erative intersection management for heterogeneous connected vehicles,"
+                                                                         IEEE Access, vol. 10, pp. 7937­7972, 2022.
+
+                                                                   [13] J. B. Kenney, "Dedicated short-range communications (dsrc) standards
+                                                                         in the united states," Proceedings of the IEEE, vol. 99, no. 7, pp. 1162­
+                                                                         1182, July 2011.
+
+                                                                   [14] 3GPP, "Evolved universal terrestrial radio access (e-utra); physical layer
+                                                                         procedures (v14.7.0)," vol. 3GPP. TS 36.213, June 2018.
+
+                                                                   [15] G. Shah, R. Valiente, N. Gupta, S. O. Gani, B. Toghi, Y. P. Fallah,
+                                                                         and S. D. Gupta, "Real-time hardware-in-the-loop emulation framework
+                                                                         for dsrc-based connected vehicle applications," in 2019 IEEE 2nd
+                                                                         Connected and Automated Vehicles Symposium (CAVS). IEEE, 2019,
+                                                                         pp. 1­6.
+
+                                                                   [16] G. Shah, M. Saifuddin, Y. P. Fallah, and S. D. Gupta, "Rve-cv2x: A
+                                                                         scalable emulation framework for real-time evaluation of cv2x-based
+                                                                         connected vehicle applications," in 2020 IEEE Vehicular Networking
+                                                                         Conference (VNC). IEEE, 2020, pp. 1­8.
+
+                                                                   [17] J.-D. Schmo¨cker, S. Ahuja, and M. G. Bell, "Multi-objective signal
+                                                                         control of urban junctions­framework and a london case study," Trans-
+                                                                         portation Research Part C: Emerging Technologies, vol. 16, no. 4, pp.
+                                                                         454­470, 2008.
+
+                                                                   [18] D. DeVoe and R. W. Wall, "A distributed smart signal architecture
+                                                                         for traffic signal controls," in 2008 IEEE International Symposium on
+                                                                         Industrial Electronics. IEEE, 2008, pp. 2060­2065.
+
+                                                                   [19] H.-J. Chang and G.-T. Park, "A study on traffic signal control at
+                                                                         signalized intersections in vehicular ad hoc networks," Ad Hoc Networks,
+                                                                         vol. 11, no. 7, pp. 2115­2124, 2013.
+                                                                                 17
+
+[20] M. Buinevich, A. Spirkina, V. Elagin, S. Tarakanov, and A. Vladyko,               simulators," in Proceedings of the 11th communications and networking
+      "V2x-based intersection priority management," in 2021 Systems of                 simulation symposium, 2008, pp. 155­163.
+      Signals Generating and Processing in the Field of on Board Communi-        [42] S. International, "Lte vehicle-to-everything (lte-v2x) deployment profiles
+      cations. IEEE, 2021, pp. 1­7.                                                    and radio parameters for single radio channel multi-service coexistence,"
+                                                                                       Society of Automotive Engineers, Standard J3161, 04 2022.
+[21] S. Gutesa, J. Lee, and D. Besenski, "Development and evaluation of          [43] B. Toghi, M. Saifuddin, H. N. Mahjoub, M. O. Mughal, Y. P. Fallah,
+      cooperative intersection management algorithm under connected and                J. Rao, and S. Das, "Multiple access in cellular v2x: Performance anal-
+      automated vehicles environment," Transportation research record, vol.            ysis in highly congested vehicular networks," in 2018 IEEE Vehicular
+      2675, no. 7, pp. 94­104, 2021.                                                   Networking Conference (VNC). IEEE, 2018, pp. 1­8.
+
+[22] A. Parks-Young and G. Sharon, "Intersection management protocol for                                        Ghayoor Shah is a Ph.D. candidate at the University
+      mixed autonomous and human-operated vehicles," IEEE Transactions on                                       of Central Florida. He received the B.Sc. degree in
+      Intelligent Transportation Systems, vol. 23, no. 10, pp. 18 315­18 325,                                   Computer Engineering from University of Illinois
+      2022.                                                                                                     at Urbana-Champaign in 2018. He has previously
+                                                                                                                worked as a mobility engineering intern at Phantom
+[23] K. Dresner and P. Stone, "Multiagent traffic management: A reservation-                                    Auto and as a research intern at Ford Motor Com-
+      based intersection control mechanism," in Autonomous Agents and                                           pany. His research interests include Connected and
+      Multiagent Systems, International Joint Conference on, vol. 3. Citeseer,                                  Autonomous Vehicles (CAVs), scalability analysis
+      2004, pp. 530­537.                                                                                        of V2X, and applications of artificial intelligence to
+                                                                                                                cooperative driving.
+[24] H. Kowshik, D. Caveney, and P. Kumar, "Provable systemwide safety
+      in intelligent intersections," IEEE transactions on vehicular technology,                                 Danyang Tian earned her Ph.D. degree in electri-
+      vol. 60, no. 3, pp. 804­818, 2011.                                                                        cal engineering from the University of California,
+                                                                                                                Riverside, in 2018. She is currently a scientist at
+[25] F. Perronnet, A. Abbas-Turki, J. Buisson, A. El Moudni, R. Zeo, and                                        Honda Research Institute USA, Inc. Her research
+      M. Ahmane, "Cooperative intersection management: Real implemen-                                           interests include connected and automated vehicles,
+      tation and feasibility study of a sequence based protocol for urban                                       vehicular communication systems, and driver behav-
+      applications," in 2012 15th international IEEE conference on intelligent                                  ior modeling, application design and development
+      transportation systems. IEEE, 2012, pp. 42­47.                                                            of connected and automated vehicles, vehicle-to-
+                                                                                                                everything (V2X) communication technologies. She
+[26] J. Wu, A. Abbas-Turki, and A. El Moudni, "Cooperative driving: an                                          serves as chair in the SAE International V2X Vehic-
+      ant colony system for autonomous intersection management," Applied                                        ular Applications Technical Committee.
+      Intelligence, vol. 37, pp. 207­222, 2012.
+                                                                                                                Ehsan Moradi-Pari is a lead principal scientist and
+[27] Y. Li and Q. Liu, "Intersection management for autonomous vehicles                                         communication/data research group lead at Honda
+      with vehicle-to-infrastructure communication," PLoS one, vol. 15, no. 7,                                  Research Institute (HRI-US). His current research is
+      p. e0235644, 2020.                                                                                        focused on vehicle-to-vehicle (V2V) and vehicle-to-
+                                                                                                                infrastructure (V2I) communications based on short-
+[28] J. Gregoire and E. Frazzoli, "Hybrid centralized/distributed autonomous                                    range communication and cellular technologies. He
+      intersection control: Using a job scheduler as a planner and inheriting                                   serves as Honda lead and representative for V2V
+      its efficiency guarantees," in 2016 IEEE 55th Conference on Decision                                      and V2I precompetitive research such as Vehicle-to-
+      and Control (CDC). IEEE, 2016, pp. 2549­2554.                                                             Vehicle Systems Engineering and Vehicle Integra-
+                                                                                                                tion Research for Deployment, Cooperative Adaptive
+[29] M. VanMiddlesworth, K. Dresner, and P. Stone, "Replacing the stop                                          Cruise Control, and 5G Automotive Association
+      sign: Unmanaged intersection control for autonomous vehicles," in          (5GAA). He has spearheaded Honda's efforts and preparations to accelerate
+      Proceedings of the 7th international joint conference on Autonomous        connected automated vehicle deployment in the United States and the state
+      agents and multiagent systems-Volume 3, 2008, pp. 1413­1416.               of Ohio where he led the team to design and deploy the first-of-its-kind
+                                                                                 smart intersection concept in Marysville, Ohio. Dr. Moradi-Pari has several
+[30] L. Li and F.-Y. Wang, "Cooperative driving at blind crossings using in-     publications in internationally refereed journals, conference proceedings,
+      tervehicle communication," IEEE Transactions on Vehicular technology,      and book chapters in the area of designing communication protocols and
+      vol. 55, no. 6, pp. 1712­1724, 2006.                                       applications for connected and automated vehicles and modeling/analysis of
+                                                                                 intelligent transportation systems
+[31] A. Katriniok, P. Sopasakis, M. Schuurmans, and P. Patrinos, "Nonlinear
+      model predictive control for distributed motion planning in road inter-                                   Yaser P. Fallah is an Associate Professor in the ECE
+      sections using panoc," in 2019 IEEE 58th Conference on Decision and                                       Department at the University of Central Florida. He
+      Control (CDC). IEEE, 2019, pp. 5272­5278.                                                                 received the Ph.D. degree from the University of
+                                                                                                                British Columbia, Vancouver, BC, Canada, in 2007.
+[32] A. A. Hassan and H. A. Rakha, "A fully-distributed heuristic algorithm                                     From 2008 to 2011, he was a Research Scientist with
+      for control of autonomous vehicle movements at isolated intersections,"                                   the Institute of Transportation Studies, University
+      International Journal of Transportation Science and Technology, vol. 3,                                   of California Berkeley, Berkeley, CA, USA. His
+      no. 4, pp. 297­309, 2014.                                                                                 research, sponsored by industry, USDoT, and NSF,
+                                                                                                                is focused on intelligent transportation systems and
+[33] U.S. Department of Transportation, Federal Highway Administration,                                         automated and networked vehicle safety systems.
+      "Manual on uniform traffic control devices (mutcd)," Online,
+      2003, accessed on March 26, 2023. [Online]. Available: https:
+      //mutcd.fhwa.dot.gov/htm/2003r1/part2/part2b1.htm#section2B04
+
+[34] G. Shah, S. Shahram, Y. Fallah, D. Tian, and E. Moradi-Pari, "Enabling
+      a cooperative driver messenger system for lane change assistance ap-
+      plication," in 2022 IEEE 25th International Conference on Intelligent
+      Transportation Systems (ITSC). IEEE, 2022, pp. 4320­4327.
+
+[35] D. Tian, E. M. Pari, G. Shah, S. Shahram, and Y. P. Fallah, "Systems and
+      methods for a point-to-point driver messenger for advanced cooperative
+      situational awareness," Sep. 21 2023, uS Patent App. 18/184,446.
+
+[36] S. Rajab, S. Bai, S. Saigusa, J. Keller, A. Pradhan, S. Bao, and
+      J. Sullivan, "Driver to driver (d2d) personalized messaging based on
+      connected vehicles: Concept evaluation via simulation," 2017.
+
+[37] R. Alur and D. L. Dill, "A theory of timed automata," Theoretical
+      computer science, vol. 126, no. 2, pp. 183­235, 1994.
+
+[38] R. Alur, "Timed automata," in International Conference on Computer
+      Aided Verification. Springer, 1999, pp. 8­22.
+
+[39] S. Krauß, P. Wagner, and C. Gawron, "Metastable states in a microscopic
+      model of traffic flow," Physical Review E, vol. 55, no. 5, p. 5597, 1997.
+
+[40] P. A. Lopez, M. Behrisch, L. Bieker-Walz, J. Erdmann, Y.-P. Flo¨ttero¨d,
+      R. Hilbrich, L. Lu¨cken, J. Rummel, P. Wagner, and E. Wießner,
+      "Microscopic traffic simulation using sumo," in The 21st IEEE
+      International Conference on Intelligent Transportation Systems. IEEE,
+      2018. [Online]. Available: https://elib.dlr.de/124092/
+
+[41] A. Wegener, M. Pio´rkowski, M. Raya, H. Hellbru¨ck, S. Fischer, and
+      J.-P. Hubaux, "Traci: an interface for coupling road traffic and network
+

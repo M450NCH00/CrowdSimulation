@@ -1,0 +1,483 @@
+                                                                                                                                                                                                                                                               1
+
+                                       Cooperative Driving at Unsignalized Intersections
+                                                          Using Tree Search
+
+                                                             Huile Xu, Yi Zhang, Member, IEEE, Li Li, Fellow, IEEE, and Weixia Li
+
+arXiv:1902.01024v1 [cs.MA] 4 Feb 2019     Abstract--In this paper, we propose a new cooperative driv-                special (partial) passing order. The equivalent objective is to
+                                       ing strategy for connected and automated vehicles (CAVs) at                   find the leaf node corresponds to the minimum total delay of
+                                       unsignalized intersections. Based on the tree representation of               all CAVs [4], [5]. It was shown in [9] that some planning based
+                                       the solution space for the passing order, we combine Monte                    strategies work well for ramp metering scenarios. However,
+                                       Carlo tree search (MCTS) and some heuristic rules to find a                   the time to enumerate all the nodes increases sharply as
+                                       nearly global-optimal passing order (leaf node) within a very                 the number of vehicles increases, especially for unsignalized
+                                       short planning time. Testing results show that this new strategy              intersection scenarios. This problem hinders their applications
+                                       can keep a good tradeoff between performance and computation                  in practice.
+                                       flexibility.
+                                                                                                                        Ad hoc negotiation based strategies aim to find an accept-
+                                          Index Terms--Connected and Automated Vehicles (CAVs),                      able passing order using some heuristic rules within a very
+                                       cooperative driving, unsignalized intersection, Monte Carlo tree              short time. For example, Stone et al. proposed autonomous
+                                       search (MCTS).                                                                intersection management (AIM) cooperative driving strategy
+                                                                                                                     which divides the intersection into grids (resources) and
+                                                                 I. INTRODUCTION                                     assigns these grids to CAVs in a roughly First-In-First-Out
+                                                                                                                     (FIFO) manner [10], [11]. This strategy has several variations,
+                                       C ONNECTED and Automated Vehicles (CAVs) are be-                              including reservation strategy [12]. However, as shown in [6],
+                                             lieved to be a key role in the next-generation transporta-              the passing orders found by ad hoc negotiation based strategies
+                                       tion systems [1]. With the aid of vehicle-to-vehicle (V2V)                    were not good enough in many situations.
+                                       communication, CAVs can share their driving states (position,
+                                       velocity, etc.) and intentions with adjacent vehicles [2], [3] to                To keep a good tradeoff between performance and computa-
+                                       better coordinate their motions to alleviate traffic congestion               tion flexibility, we propose a new cooperative driving strategy
+                                       and improve traffic safety.                                                   based on the tree representation of the solution space for the
+                                                                                                                     passing order. Its key idea is to use the limited planning time to
+                                          In the last decade, various strategies had been proposed                   explore the nodes that are potential to be the optimal solution.
+                                       to make optimal coordination for CAVs at a typical driving                    To this end, we combine Monte Carlo tree search (MCTS)
+                                       scenario: unsignalized intersection. It is pointed out in [4] and             and some heuristic rules to accelerate the searching process,
+                                       [5] that the key problem is to determine the optimal order of                 since the solution space of this problem has special structures
+                                       CAVs that passed the intersection. As summarized in [6], there                to be exploited. Testing results show that we can find a nearly
+                                       are two kinds of cooperative driving strategies, planning based               global-optimal passing order within a short enough planning
+                                       and ad hoc negotiation based, for determining the passing                     time.
+                                       order.
+                                                                                                                        To give a better presentation of our finding, the rest of this
+                                          Planning based strategies aim to enumerate all possible                    paper is arranged as follows. Section II formulates the problem
+                                       passing orders to find the globally optimal solution [7]. There               and briefly reviews the existing strategies. Section III presents
+                                       are two equivalent formulations of the problem. Most state-of-                the new strategy. Section IV validates the effectiveness of the
+                                       the-art studies formulate the problem as a mixed integer linear               proposed strategy via numerical testing results. Finally, Section
+                                       programming problem of vehicles' passing time scheduling                      V gives concluding remarks.
+                                       [1], [8]. The objective is usually set to minimize the total
+                                       delay of all CAVs. Li et al. showed that we can also view this                                   II. PROBLEM FORMULATION
+                                       problem as a tree search problem. Each tree node indicates a
+                                                                                                                        Fig. 1 shows a typical intersection scenario with multiple
+                                          Manuscript received in February 4, 2019; This work was supported in part   lanes in each leg. The area within the circle is called the
+                                       by National Natural Science Foundation of China under Grant 61673233,         control zone, and the shadow area is called the conflict
+                                       61790565, 61603005, and the Beijing Municipal Commission of Transport         zone where lateral collisions might happen. According to the
+                                       Program under Grant ZC179074Z. (Corresponding author is Li Li).               geometry of the intersection, the conflict zone can be further
+                                                                                                                     divided into several conflict subzones.
+                                          H. Xu is with Department of Automation, Tsinghua University, Beijing
+                                       100084, China. (E-mail: hl-xu16@mails.tsinghua.edu.cn)                           We assign each vehicle that enters the control zone a unique
+                                                                                                                     identity Vi. We also use the set Zi to denote the conflict
+                                          Y. Zhang is with Department of Automation, BNRist, Tsinghua University,    subzones that Vi will pass through. For example, Zi = {4, 1}
+                                       Beijing 100084, China and also with Berkeley Shenzhen Institute (TBSI),       means Vi will pass through Conflict Subzone 4 and Conflict
+                                       Tower C2, Nanshan Intelligence Park 1001, Xueyuan Blvd., Nanshan District,    Subzone 1 in sequence.
+                                       Shenzhen 518055, China. (E-mail: zhyi@tsinghua.edu.cn)
+
+                                          L. Li is with Department of Automation, BNRist, Tsinghua University, Bei-
+                                       jing 100084, China. (Tel:+86(10)62782071, E-mail: li-li@tsinghua.edu.cn).
+
+                                          W. Li is with Department of Automation, Tsinghua University, Beijing
+                                       100084, China. (E-mail: wx-li11@mails.tsinghua.edu.cn)
+                                                                                                                                                                                                  2
+
+                                          Lane 10                                               4
+                                   Lane 11
+                            Lane 12                                                             E
+
+             Conflict Zone                         Control Zone                                 C
+
+Lane 1                                                          Lane 9                                                                                                                  D      3
+Lane 2                                                          Lane 8
+Lane 3                                                          Lane 7       1     A
+
+                                                   Lane 4
+                                                          Lane 5
+                                                                 Lane 6
+
+                                                                                                                                                                                B
+                                                                                                                                            2
+
+                                                                             Fig. 2. An intersection scenario with 5 vehicles.
+
+Fig. 1. A typical intersection scenario.                                     indicates the first vehicle in a special passing order. The nodes
+                                                                             in the third layer refer to one string consisting of two indices
+   To simplify the problem, we adopt the following assump-                   symbols that indicate the first two vehicles in a special passing
+tions:                                                                       order. Similarly, the child nodes expand their child nodes, and
+                                                                             all possible passing order are generated as leaf nodes in the
+   · Each vehicle instantly and thoroughly shares its driving                bottom layer of the solution tree as shown in Fig. 3.
+      states (position, velocity, etc.) and intentions with other
+      vehicles via vehicle-to-vehicle (V2V) communication.                                      Root
+
+   · Changing lane maneuver is prohibited in the control zone                   A          B          C                                                                                 D
+      to ensure vehicle safety.
+                                                                                      CA        CB                                                                                 CD      CE
+   · Similar to [12] and [13], the velocities of vehicles are
+      constant when passing through the conflict zone.
+
+   The cooperative driving strategy aims to minimize the total
+delay of vehicles by scheduling the velocity and acceleration
+profiles of all vehicles [14]. So, we can get the following
+optimization problem
+
+n                                                                                     CBA       CBD                                                                                CBE
+
+min J = (tassign,i,Zi(1) - tmin,i,Zi(1))                                (1)
+
+i=1
+
+where tassign,i,z is the desired arrival time to the conflict                             CBDA        CBDE
+subzone z for Vi, tmin,i,z is the minimum arrival time to the
+conflict subzone z when Vi travels at the maximum velocity                            CBDAE           CBDEA
+and the maximum acceleration, Zi(1) is the first element in
+the set Zi, n is the number of vehicles in the control zone.                 Fig. 3. The solution tree stemmed from the intersection scenario shown in
+                                                                             Fig. 2. The leaf nodes in the bottom layer represent the complete passing
+   To directly attack Problem (1) often leads to a mixed integer             orders for all vehicles.
+linear programming (MILP) problem whose computation time
+increases exponentially with the increase of the number of                      If a (partial) passing order is given, the desired arrival times
+vehicles [8], [9].                                                           for all the vehicles that has been covered in this (partial)
+                                                                             passing order can be directly derived by the following Passing
+   Noticing that the traffic efficiency mainly depends on the                Order to Trajectory Interpretation Algorithm. Our objective
+passing order of vehicles [6], we can formulate the whole                    turns to seek the leaf node that corresponds to the shortest
+problem as a tree search problem in the solution space that                  total delay. Moreover, the total delay values of leaf nodes can
+consists of all possible passing orders. Each leaf node repre-               be used to evaluate the potential of their parent nodes in a
+sents a passing order of vehicles which can also be denoted                  backpropagation way. This method provides us a chance to
+as a string [5]. For example, string CAB means vehicle C,                    find a nearly global-optimal leaf node but only search a small
+vehicle A, and vehicle B enter the conflict zone sequentially.               part of the whole tree.
+
+   Let us take the intersection scenario shown in Fig. 2 as an                  In Algorithm 1, P (i) is the ith element in the input (partial)
+example to explain how to build the tree representation of the               passing order, tmax,z is the largest arrival time that the subzone
+solution space gradually . At first, we set the passing order in
+the root node to be empty. Then, each direct child node of the
+root node (in the second layer) refers to one index symbol that
+                                                                                         3
+
+Algorithm 1 Passing Order to Trajectory Interpretation             Here, an expandable node refers to a node that is not a
+                                                                   leaf node and has unvisited child nodes.
+Input: A (partial) passing order P                                 This child node selection policy is suggested in the field
+
+Output: The total delay J of the covered vehicles and their
+
+    arrival times tassign                                              of computer Go and is called UCB1 [18]. The first term
+                                                                       in the equation encourages to select the child node that is
+1: for each i  [1, length(P )] do                                      currently believed to be optimal, while the second term
+                                                                       encourages to explore more child nodes.
+2: for each z  Zi do                                               2) Expansion: We randomly select one unvisited child node
+                                                                       of the most urgent expandable node to be a new node
+3:        Vj is the last vehicle that passed through subzone z         that is added to the tree.
+
+4:        tassign,P (i),z = max(tmin,P (i),z , tmax,z + j,a)
+
+5: end for                                                         3) Simulation: We run several rollout simulations to de-
+                                                                       termine a complete passing order based on the partial
+6: Adjust tassign,P (i),z according to the constraint: the             passing order represented by the current new node to
+                                                                       evaluate the potential of the new node.
+    velocity of Vi in the conflict zone is constant.                   The classical MCTS randomly samples and adds the
+                                                                       uncovered vehicles into the passing order string one by
+7: for each z  Zi do                                                   one, until we find a complete passing order string and
+
+8:        tmax,z = tassign,P (i),z
+
+9: end for
+
+10: end for                                                        reach the maximum depth of the tree from the current
+                                                                   new node without branching [16]. For example, when
+11: J =   length(P  )  tassign,P                                   we apply random sampling policy to the node CB shown
+          i=1                                                      in Fig. 4, we can randomly expand a direct child node
+                                  (i),Zi (1)                       in its next layer; say node CBA. The node CBA will
+                                                                   be further expanded by repeating such a process until
+z has been occupied. j,a is the minimum safety gap between         a leaf node (e.g., node CBADE) is reached. Finally, the
+two consecutive vehicles passing through the same subzone.
+Obviously, the time complexity of Algorithm 1 is O(n).             partial passing order will be evaluated by all its simulated
+A detailed explanation of Algorithm 1 can be found in our          off-spring leaf nodes (passing orders). Sometimes, the
+previous report [7].                                               generated passing order is not invalid, because it may
+                                                                   violate the prohibition of lane change, such solutions will
+ III. MCTS BASED COOPERATIVE DRIVING STRATEGIES                    be discarded after check.
+                                                                   After simulation, we update the scores of the current new
+   It is usually impossible to expand all the nodes of the         node as follows:
+solution tree within the limited computation budget, when
+there are lots of vehicles in the control zone. In this paper, we    i Apply Algorithm 1 to calculate the total delay J¯i
+use MCTS + heuristic rules to select nodes with the potential          of the partial order corresponds with the current new
+to be the optimal solution. The recent success of the MCTS             node.
+method in the game of Go shows it is an effective way to deal
+with such problems [15], [16].                                      ii Apply Algorithm 1 to calculate the total delay J^i of
+                                                                       the partial order corresponds with the best off-spring
+                                                                       node of the current new node via simulation.
+
+                                                                   iii Calculate the score Qi of the current new node as
+
+A. The Classical MCTS Based Strategy                               Qi = J¯i + (1 - )J^i  (3)
+
+   In MCTS, each node in the formulated tree will be assigned              where  is a weighting parameter. Since Qi  [0, 1],
+a score to evaluate its potential. The score of a leaf node is             we normalize J¯i and J^i into [0, 1] before updating
+equal to the total delay of its corresponding passing order.               Qi.
+MCTS uses these scores to determine which branch of tree to
+explore.                                                           4) Backpropagation: The simulation result is backpropa-
+                                                                       gated through the selected nodes to update the scores of
+   Generally, MCTS gradually builds a search tree in an                all its parent nodes.
+iteration way. One iteration consists of four steps: selection,
+expansion, simulation, and backpropagation [17]; see Fig. 4.          During the building process of the search tree, the state-of-
+                                                                   the-art best passing order is continuously updated. As soon as
+1) Selection: Starting at the root node, we select the most        the computation budget is reached, the search terminates and
+                                                                   returns the state-of-the-art best passing order. The planned ar-
+    urgent expandable node based on the following policy           rival times of vehicles can be determined by using Algorithm
+                                                                   1. The velocity and acceleration profiles of each vehicle plan
+    [18]                                                           will be finally calculated by using the motion planning method
+                                                                   proposed in [14].
+                       arg max Qi + C         ln n            (2)
+                                                                      We can see that the performance of the proposed strategy
+                             i                ni                   is influenced by the choice of the parameters including the
+                                                                   maximum search time and two weighting parameters C and
+    where Qi is the score of child node i and the value of
+    Qi is within [0, 1]. n is the number of times the current
+    node has been visited, ni is the number of times child
+    node i has been visited, and C is a weighting parameter.
+
+    The child node with the largest total score is selected.
+                                                                                                                      4
+
+   Selection        Expansion                                                Simulation              Backpropagation
+
+      Root                Root                                                   Root                    Root
+
+A  B      C   D  A  B  C                                               D  A  B  C        D        A  B  C  D
+
+      CA               CA CB                                                 CA CB                      CA CB
+
+                                                                             Simulation Policy
+
+                                                                                  A Leaf Node
+                                                                               (A Passing Order)
+
+Fig. 4. One iteration of the MCTS based cooperative driving strategy.
+
+. We will discuss how to choose these parameters in Section               Algorithm 2 Heuristic Simulation Policy
+IV below.
+                                                                          Input: Locations and velocities of all vehicles
+B. The MCTS + Heuristic Rules                                             Output: A possible passing order
+
+   As aforementioned, the classical MCTS strategy uses ran-                1: Among all uncovered vehicles, we select the vehicles
+dom sampling to generate a leaf node (a passing order) in                      which are the closest to the conflict zone in each lane
+the simulation step. However, because of the huge number                       as candidate vehicles and calculate their arrival times to
+of possible passing orders, the passing orders generated by                    all conflict subzones.
+random sampling cannot help us quickly capture the real
+potential of a node during simulation.                                     2: If there exists a candidate vehicle whose arrival times to
+                                                                               all conflict subzones are all the smallest, we add it into
+   Thus, we propose the following heuristic rules to help                      the passing order string. If not, we randomly select one
+decide which nodes (vehicles) should be expanded (added into                   vehicle among all candidate vehicles and add it into the
+the candidate passing order string) during simulation. Heuristic               passing order string.
+rule 1 helps to quickly prune the invalid passing order [5].
+Heuristic rule 2 determines the vehicle among the candidates               3: Then we repeat the steps 1 and 2 until a complete passing
+to be chosen.                                                                  order string is generated.
+
+  1) For the vehicles on the same lane, the vehicle which is               4: The objective value (1) of the generated passing order can
+      the closest to the conflict zone should be added earlier                 be easily derived by Algorithm 1 and denoted as q2,i.
+      than other vehicles since changing lane maneuver is
+      prohibited.                                                         is assumed to be a Poisson process. We vary the mean value
+                                                                          of this Poisson process to test the performance of the proposed
+  2) For the vehicles passing through the same conflict sub-              strategy under different traffic demands. The vehicles arrival
+      zone, the vehicle with a less desired arrival time should           rates at all lanes are the same unless otherwise specified. It
+      be added earlier.                                                   should be pointed out that we had tested other intersections
+                                                                          with different road geometries and various vehicle arrival
+   The simulation step can be summarized as Algorithm 2. We               patterns, but the conclusions remain unchanged.
+can see that the classic MCTS applies random sampling in both
+expansion and simulation steps; while our MCTS + heuristic                   To accurately describe the total delays of vehicles, we adopt
+rules applies random sampling only in expansion step.                     the point-queue model in the simulation [6], [19]. The model
+                                                                          assumes vehicles travel in free flow state until it gets to the
+   The Ad hoc negotiation based strategies organize all the               boundary of the intersection we study. If the preceding vehicle
+vehicles according to the FIFO principle. In contrast, the new            leaves enough spaces, the first vehicle in the point-queue will
+simulation policy tends to organize just a part of vehicles               dequeue and enter the intersection. Otherwise, it will stay in
+(the vehicles uncovered in the current partial passing order)             the virtual queue. Each lane has an independent point-queue.
+according to the FIFO strategy. This trick helps to avoid the
+convergence to a over-greedy solution.                                       In this paper, we reschedule the passing order of all the
+                                                                          vehicles within the control zone every 2 seconds. As sug-
+                    IV. SIMULATION RESULTS                                gested in [6], we set the minimum safety gap between two
+                                                                          consecutive vehicles passing through the same subzone as a
+A. Simulation Settings                                                    slightly enlarged constant as
+
+   We design three experiments to determine the best parame-                                
+ter set for the new cooperative driving strategy and compare it                             1.5s a = 1 (go straight)
+with some classical ones. These experiments are conducted for                               
+the intersection with three lanes in each leg shown in Fig. 1.
+The mandatory signs stipulate the permitted directions for each                 j,a = 2s a = 2 (turn left)            (4)
+lane. According to the geometry of the intersection, the conflict
+zone is further divided into 36 subzones. The vehicles arrival                              1.5s a = 3 (turn right)
+
+                                                                          to avoid the collisions caused by position measurement errors
+                                                                          and communication delay.
+                                                                                                                                                                                           5
+
+B. The Choice of Parameters
+
+   In this paper, we consider two performance indices: the
+delay J of the given n vehicles and the traffic throughput (the
+number of vehicles that has passed the intersection control
+zone) within a given time interval to compare different coop-
+erative driving strategies. Specially, we highlight the decreased
+ratio of the total delay if being compared withe baseline
+solution that is gotten by the FIFO strategy
+
+                = JF IF O - JMCT S                     (5)
+                               JF IF O
+
+where JF IF O is the objective value of the FIFO passing order,
+and JMCT S is the objective value of the best passing order
+from the MCTS based strategy.
+
+To determine the best parameter setting of the new MCTS +               Fig. 6. The results of the improvement rates with respect to the number of
+                                                                        searched nodes for the intersection shown in Fig.1.
+heuristic rules, we first fix the time budget as 0.1 s and vary 
+                                                                        through searching 1000 nodes. For most intersection scenarios,
+and C from 0 to 1. To better understand the performance of the          1000 nodes can be searched within 0.1 s in our personal
+                                                                        computer, so we set the maximum search time as 0.1 s for
+strategy under different traffic conditions, we vary the vehicle        the following experiments.
+
+arrival rate to generate a series of intersection scenarios with
+
+different number of vehicles.
+
+0.165
+
+               Best Parameter Setting
+
+                                                                        C. Comparisons of Different Cooperative Driving Strategies
+
+0.16                                                                    To further clarify the difference between the FIFO strategy
+
+                                                                        and our new strategy, we study a typical intersection scenario
+
+                                                                        with single lane in each leg and 20 vehicles. We calculate the
+
+                                                                        objective values for all the valid solutions (passing orders) and
+
+0.155                                                                   plot them in a histogram manner; see Fig. 1.
+
+1
+
+                                                                                                                                                          1.8
+   0.5
+
+                                                                                         1.6
+
+       0       0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9  1                                    1.4
+            0
+
+                                                                                         1.2
+
+Fig. 5. The improvement rate of the MCTS based strategy with different  Probability (%)  1
+parameter settings for the intersection shown in Fig.1.
+                                                                                         0.8
+   Fig. 5 gives the improvement rates for the intersection
+shown in Fig.1 with 30 vehicles. We can see that a significant                           0.6
+improvement can be achieved even with the worst parameter
+setting. The parameter C and  are not so critical but may still                 0.4                                                                               350  400  450  500  550
+influence the balance between exploitation and exploration,
+partly because we use heuristic rules in simulation step to             0.15                                                                                   340
+reduce the influence of random sampling. We further study
+the scenarios with other numbers of vehicles and the results             0.1 0.2
+are all similar. Thus, in the rest of this paper, we set  = 0.85
+and C = 0.05.                                                           0.05
+
+   Then, to determine an appropriate time budget, we vary the               0
+time limits of tree search. To eliminate the influence of the
+computing power of the device, we examine the improvement                          300
+rates with respect to the number of nodes that has been
+searched.                                                                   310 320 330
+
+   It can be seen from Fig. 6 that the improvement rate                 Fig. 7. The histogram of all solution values for a single lane intersection
+increases significantly when the number of searched nodes               scenario with 20 vehicles.
+increases from 10 to 1000. However, the improvement rate
+soon becomes saturated after that. Thus, we believe that the               It is clear that the solution found by the MCTS based
+proposed strategy can obtain a good enough passing order                strategy is nearly the same as the global optimal solution found
+                                                                        by the enumeration based strategy, while the computation time
+                                                                        of the MCTS based strategy is much less. For the FIFO based
+                                                                        strategy, the computation time is the least, but the solution
+                                                                        is far away from the optimal solution. The solution found by
+                                                                        the MCTS based strategy ranks 648th in the nearly 10 billion
+                                                                        solutions; while the solution of the FIFO based strategy ranks
+                                                                        4563421793th.
+
+                                                                           We then carry out another comparison for the intersection
+                                                                        shown in Fig. 1, where the average arrival rate is varied to
+                                                                             6
+
+explore the influence of different traffic demands. For each                 scenario and find a nearly optimal solution with a short
+arrival rate, we simulate 20-minute. It is obvious that our new              time. Although we only discuss the schedule of vehicles at
+strategy further reduces the average delay and improves the                  unsignalized intersections, this method can be easily adapted
+traffic throughput in all situations.                                        to other scenarios (e.g., ramping areas and working zones). We
+                                                                             are currently building several automated vehicle prototypes so
+                                         TABLE I                             that we can test our new strategy in field studies in the near
+       COMPARISON RESULTS OF DIFFERENT COOPERATIVE DRIVING                   future.
+
+                                                 STRATEGIES
+
+Arrival rate Strategies  Average delay     Traffic                                                        REFERENCES
+veh/(lane*h)                    (s)     Throughput
+                                                                             [1] P. T. Li and X. Zhou, "Recasting and optimizing intersection automa-
+                                           (veh)                                  tion as a connected-and-automated-vehicle (cav) scheduling problem:
+                                                                                  A sequential branch-and-bound search approach in phase-time-traffic
+     FIFO                1.3053         589                                       hypernetwork," Transportation Research Part B: Methodological, vol.
+                                                                                  105, pp. 479­506, 2017.
+150  MCTS                0.4499         605
+                                                                             [2] L. Li, D. Wen, and D. Yao, "A survey of traffic control with vehicular
+     FIFO                39.8313        1095                                      communications," IEEE Transactions on Intelligent Transportation Sys-
+                         1.1407         1168                                      tems, vol. 15, no. 1, pp. 425­432, 2014.
+300  MCTS
+                                                                             [3] T. Sukuvaara and P. Nurmi, "Wireless traffic service platform for com-
+     FIFO                41.6996        1205                                      bined vehicle-to-vehicle and vehicle-to-infrastructure communications,"
+                         4.8743         1766                                      IEEE Wireless Communications, vol. 16, no. 6, 2009.
+450  MCTS
+                                                                             [4] S. I. Guler, M. Menendez, and L. Meier, "Using connected vehicle
+ The computation time of the MCTS based strategy is 0.1s.                         technology to improve the efficiency of intersections," Transportation
+                                                                                  Research Part C: Emerging Technologies, vol. 46, pp. 121­131, 2014.
+D. A Further Look into the Structure of the Obtained Search
+Tree                                                                         [5] L. Li and F. Wang, "Cooperative driving at blind crossings using in-
+                                                                                  tervehicle communication," IEEE Transactions on Vehicular technology,
+   Fig. 8 shows the formulated search tree of our new strategy                    vol. 55, no. 6, pp. 1712­1724, 2006.
+for an intersection scenario with 50 vehicles. Similar to
+the classical MCTS strategy, our new strategy tends to first                 [6] Y. Meng, L. Li, F. Wang, K. Li, and Z. Li, "Analysis of cooperative
+find some promising branches (partial passing orders) of the                      driving strategies for nonsignalized intersections," IEEE Transactions on
+tree and spends most search time to further explore these                         Vehicular Technology, vol. 67, no. 4, pp. 2900­2911, 2018.
+branches. However, the search tree generated by the classical
+MCTS strategy contains much more unnecessary leaf nodes.                     [7] H. Xu, S. Feng, Y. Zhang, and L. Li, "A grouping based coop-
+In contrast, when the heuristic rules are introduced, only a                      erative driving strategy for cavs merging problems," arXiv preprint
+very small number of leaf nodes will be finally reached. For                      arXiv:1804.01250, 2018.
+this case, although there are more than 1046 possible passing
+orders, only about two thousands passing orders are explored                 [8] E. R. Mu¨ller, R. C. Carlson, and W. K. Junior, "Intersection control for
+by our new strategy within 0.1 s. This difference explains why                    automated vehicles with milp," IFAC-PapersOnLine, vol. 49, no. 3, pp.
+the classical MCTS needs much more time to find a good                            37­42, 2016.
+enough passing order.
+                                                                             [9] L. Chen and C. Englund, "Cooperative intersection management: a
+Fig. 8. The structure of a search tree for an intersection scenario with 50       survey," IEEE Transactions on Intelligent Transportation Systems, vol. 17,
+vehicles.                                                                         no. 2, pp. 570­586, 2016.
+
+                           V. CONCLUSION                                     [10] K. Dresner and P. Stone, "Multiagent traffic management: A reservation-
+   In this paper, we propose a cooperative driving strategy that                  based intersection control mechanism," in Proceedings of the Third
+combines Monte Carlo simulation and heuristic rule simulation                     International Joint Conference on Autonomous Agents and Multiagent
+to accelerate the search of the passing order. This new method                    Systems-Volume 2. IEEE Computer Society, 2004, pp. 530­537.
+can quickly learn the tree structure knowledge of the given
+                                                                             [11] ----, "A multiagent approach to autonomous intersection management,"
+                                                                                  Journal of artificial intelligence research, vol. 31, pp. 591­656, 2008.
+
+                                                                             [12] M. Choi, A. Rubenecia, and H. H. Choi, "Reservation-based cooperative
+                                                                                  traffic management at an intersection of multi-lane roads," in Information
+                                                                                  Networking (ICOIN), 2018 International Conference on. IEEE, 2018,
+                                                                                  pp. 456­460.
+
+                                                                             [13] Y. Zhang, A. A. Malikopoulos, and C. G. Cassandras, "Decentralized
+                                                                                  optimal control for connected automated vehicles at intersections includ-
+                                                                                  ing left and right turns," arXiv preprint arXiv:1703.06956, 2017.
+
+                                                                             [14] A. A. Malikopoulos, C. G. Cassandras, and Y. J. Zhang, "A decentralized
+                                                                                  energy-optimal control framework for connected automated vehicles at
+                                                                                  signal-free intersections," Automatica, vol. 93, pp. 244­256, 2018.
+
+                                                                             [15] M. Enzenberger, M. Muller, B. Arneson, and R. Segal, "Fuegolan open-
+                                                                                  source framework for board games and go engine based on monte carlo
+                                                                                  tree search," IEEE Transactions on Computational Intelligence and AI in
+                                                                                  Games, vol. 2, no. 4, pp. 259­270, 2010.
+
+                                                                             [16] D. Silver, J. Schrittwieser, K. Simonyan, I. Antonoglou, A. Huang,
+                                                                                  A. Guez, T. Hubert, L. Baker, M. Lai, A. Bolton et al., "Mastering the
+                                                                                  game of go without human knowledge," Nature, vol. 550, no. 7676, pp.
+                                                                                  354­359, 2017.
+
+                                                                             [17] C. B. Browne, E. Powley, D. Whitehouse, S. M. Lucas, P. I. Cowling,
+                                                                                  P. Rohlfshagen, S. Tavener, D. Perez, S. Samothrakis, and S. Colton,
+                                                                                  "A survey of monte carlo tree search methods," IEEE Transactions on
+                                                                                  Computational Intelligence and AI in games, vol. 4, no. 1, pp. 1­43,
+                                                                                  2012.
+
+                                                                             [18] L. Kocsis and C. Szepesva´ri, "Bandit based monte-carlo planning," in
+                                                                                  European conference on machine learning. Springer, 2006, pp. 282­293.
+
+                                                                             [19] X. J. Ban, J. Pang, H. X. Liu, and R. Ma, "Continuous-time point-queue
+                                                                                  models in dynamic network loading," Transportation Research Part B:
+                                                                                  Methodological, vol. 46, no. 3, pp. 360­380, 2012.
+

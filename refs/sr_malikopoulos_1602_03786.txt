@@ -1,0 +1,1196 @@
+                                             A Decentralized Energy-Optimal Control Framework for
+                                          Connected Automated Vehicles at Signal-Free Intersections
+
+arXiv:1602.03786v8 [math.OC] 31 Mar 2018           Andreas A. Malikopoulos a, Christos G. Cassandras b, Yue J. Zhang b
+
+                                          aDepartment of Mechanical Engineering, University of Delaware, 126 Spencer Lab, 130 Academy Street, Newark, DE, 19716,
+                                                                                                                          USA
+
+                                          bDivision of Systems Engineering and Center for Information and Systems Engineering, Boston University, 15 Saint Mary's
+                                                                                                      Street, Brookline, MA, 02446, USA
+
+                                          Abstract
+
+                                          We address the problem of optimally controlling connected and automated vehicles (CAVs) crossing an urban intersection
+                                          without any explicit traffic signaling, so as to minimize energy consumption subject to a throughput maximization requirement.
+                                          We show that the solution of the throughput maximization problem depends only on the hard safety constraints imposed on
+                                          CAVs and its structure enables a decentralized optimal control problem formulation for energy minimization. We present a
+                                          complete analytical solution of these decentralized problems and derive conditions under which feasible solutions satisfying
+                                          all safety constraints always exist. The effectiveness of the proposed solution is illustrated through simulation which shows
+                                          substantial dual benefits of the proposed decentralized framework by allowing CAVs to conserve momentum and fuel while
+                                          also improving travel time.
+
+                                          Key words: Connected and automated vehicles; decentralized optimal control; autonomous intersections; traffic flow; motion
+                                          planning; energy usage; safety.
+
+                                          1 Introduction                                               resulting in a total cost estimated at $160 billion; see
+                                                                                                       Schrank et al. (2015). From a control and optimization
+                                          Next generation transportation networks are typical          standpoint, the challenge is to develop mechanisms that
+                                          cyber-physical systems where event-driven components         expand capacity without affecting the existing road in-
+                                          monitor and control physical entities online. We are         frastructure, specifically by tighter spacing of vehicles
+                                          currently witnessing an increasing integration of energy,    in roadways and better control at the weakest links of
+                                          transportation, and cyber networks, which, coupled           a transportation system: the bottleneck points defined
+                                          with human interactions, is giving rise to a new level of    by intersections, merging roadways, and speed reduc-
+                                          complexity in the transportation network and necessi-        tion zones; see Malikopoulos and Aguilar (2013), Mar-
+                                          tates new control and optimization approaches.               giotta and Snyder (2011). An automated highway system
+                                                                                                       (AHS) can alleviate congestion, reduce energy use and
+                                          The alarming state of current transportation systems         emissions, and improve safety by significantly increasing
+                                          is well documented. In 2014, congestion caused vehicles      traffic flow as a result of closer packing of automatically
+                                          in urban areas to spend 6.9 billion additional hours on      controlled vehicles. Forming "platoons" of vehicles trav-
+                                          the road at a cost of an extra 3.1 billion gallons of fuel,  eling at high speed is a popular system-level approach
+                                                                                                       to address traffic congestion that gained momentum in
+                                             This research was supported by the US Department of       the 1990s; see Rajamani et al. (2000); Shladover et al.
+                                          Energy's (DOE) SMART Mobility Initiative. The work of        (1991). More recently, a study in Tachet et al. (2016) in-
+                                          Cassandras and Zhang is supported in part by NSF un-         dicated that transitioning from intersections with traffic
+                                          der grants CNS-1239021, ECCS-1509084, CNS-1645681, and       lights to autonomous ones has the potential of doubling
+                                          IIP-1430145, by AFOSR under grant FA9550-15-1-0471, by       capacity and reducing delays.
+                                          The MathWorks and by Bosch.
+                                                                                                       Connected and automated vehicles (CAVs) provide the
+                                             Email addresses: andreas@udel.edu (Andreas A.             most intriguing opportunity for enabling users to bet-
+                                          Malikopoulos), cgc@bu.edu (Christos G. Cassandras),          ter monitor transportation network conditions and to
+                                          joycez@bu.edu (Yue J. Zhang).
+
+                                          Preprint submitted to Automatica                             3 April 2018
+improve traffic flow. CAVs can be controlled at differ-           collision avoidance. A detailed discussion of research ef-
+ent transportation segments, e.g., intersections, merging         forts in this area can be found in Rios-Torres and Ma-
+roadways, roundabouts, speed reduction zones and can              likopoulos (2017a).
+assist drivers in making better operating decisions to
+improve safety and reduce pollution, energy consump-              The first contribution of the paper is the formulation
+tion, and travel delays. One of the very early efforts in         of an energy minimization optimal control problem for
+this direction was proposed in Athans (1969) and Levine           CAVs where the time for each CAV to cross the intersec-
+and Athans (1966) where the merging problem was for-              tion is first determined as the solution of a throughput
+mulated as a linear optimal regulator to control a sin-           maximization problem. We show that the solution struc-
+gle string of vehicles. Varaiya (1993) has also discussed         ture of the latter problem enables a decentralized en-
+extensively the key features of an automated intelligent          ergy minimization optimal control problem formulation
+vehicle-highway system (IVHS) and proposed a related              whose terminal time depends only on a "neighboring"
+control system architecture.                                      CAV set. An analytical solution of each CAV's optimal
+                                                                  control problem without considering state and control
+In this paper, we address the problem of optimally con-           constraints was presented in Rios-Torres et al. (2015),
+trolling CAVs crossing an urban intersection without              Rios-Torres and Malikopoulos (2017b), Ntousakis et al.
+any explicit traffic signaling so as to minimize energy           (2016) for CAVs at highway on-ramps, and in Zhang
+consumption subject to a throughput maximization re-              et al. (2016) for two adjacent intersections. Unlike all
+quirement and to hard safety constraints. The impli-              these prior formulations, we specify the explicit connec-
+cations of this approach are that vehicles do not have            tion between the energy minimization and throughput
+to come to a full stop at the intersection, thereby con-          maximization problems, do not impose constraints on
+serving momentum and fuel while also improving travel             the terminal CAV speeds, and present a complete ana-
+time. Moreover, by optimizing each vehicle's accelera-            lytical solution that includes all state and control con-
+tion/deceleration, we minimize transient engine opera-            straints. Ensuring that a feasible solution to each CAV
+tion, thus we have additional benefits in fuel consump-           decentralized optimal control problem exists is nontriv-
+tion. Several research efforts have been reported in the          ial, as discussed in Zhang et al. (2017a). Thus, another
+literature proposing either centralized (if there is at least     contribution is showing that this solution depends on
+one task in the system that is globally decided for all ve-       the arrival time of a CAV at a "control zone" defined for
+hicles by a single central controller) or decentralized ap-       the intersection and on its initial speed and then pro-
+proaches for coordinating CAVs at intersections. Dres-            viding a proof (not given in Zhang et al. (2017a)) of the
+ner and Stone (2004) proposed the use of a centralized            existence of a nonempty feasibility region in the space
+reservation scheme to control a single intersection of two        defined by this arrival time and initial speed.
+roads with no turns allowed. Since then, numerous cen-
+tralized approaches have been reported in the literature,         The paper is organized as follows. In Section II, we in-
+e.g., de La Fortelle (2010); Dresner and Stone (2008);            troduce the modeling framework, formulate the energy-
+Huang et al. (2012), to achieve safe and efficient control        minimization optimal control problem and establish its
+of traffic through intersections. Some approaches have            connection to throughput maximization. In Section III,
+focused on coordinating vehicles to improve the travel            we present the decentralized control framework, derive
+time, e.g., Yan et al. (2009); Zhu and Ukkusuri (2015);           a closed-form analytical solution for each decentralized
+Zohdy et al. (2012). Others have considered minimizing            problem, and show the existence of feasible solutions
+the overlap in the position of vehicles inside the inter-         ensuring that all safety constraints remain inactive. Fi-
+section rather than arrival time; see Lee et al. (2013).          nally, we provide simulation results in Section IV il-
+Kim and Kumar (2014) proposed an approach based on                lustrating the effectiveness of the proposed solution in
+model predictive control that allows each vehicle to opti-        terms of significant reductions in both fuel consumption
+mize its movement locally with respect to any objective           and travel time. Concluding remarks are given in Sec-
+of interest. Miculescu and Karaman (2014) used queue-             tion V.
+ing theory and modeled the problem as a polling system
+that determines the sequence of times assigned to the             2 Problem Formulation
+vehicles on each road.
+                                                                  We consider an intersection (Fig. 1) where the region at
+In decentralized approaches, each vehicle determines its          its center is called Merging Zone (MZ) and is the area of
+own control policy based on the information received              potential lateral collision of vehicles. Although this is not
+from other vehicles on the road or from a coordinator.            restrictive, we consider the MZ to be a square of side S.
+Alonso et al. (2011) proposed two conflict resolution             The intersection has a Control Zone (CZ) and a coordi-
+schemes in which an autonomous vehicle can make a de-             nator that can communicate with the vehicles traveling
+cision about the appropriate order of crossing the inter-         inside the CZ. Note that the coordinator is not involved
+section to avoid collision with other manually driven ve-         in any decision for any CAV and only enables commu-
+hicles. Colombo and Del Vecchio (2014) constructed the            nication of appropriate information among CAVs. The
+invariant set for the control inputs that ensure lateral
+
+                                                               2
+                                                                       2.1 Vehicle Model, Constraints, and Assumptions
+
+                                                                       For simplicity, we represent the dynamics of each CAV
+                                                                       i  N (t), moving along a specified lane through second
+                                                                       order dynamics
+
+                                                                       pi = vi(t), pi(t0i ) = 0                         (2)
+                                                                       vi = ui(t), vi(ti0) given
+
+                                                                       where ti0 is the time when CAV i enters the CZ, and
+                                                                       pi(t)  Pi, vi(t)  Vi, ui(t)  Ui denote the position,
+                                                                       speed and acceleration/deceleration (control input) of
+
+                                                                       each CAV i inside the CZ. The sets Pi, Vi and Ui, i 
+                                                                       N (t), are complete and totally bounded subsets of R.
+                                                                       The state space Pi × Vi is closed with respect to the
+                                                                       induced topology, thus, it is compact.
+
+Fig. 1. Intersection with connected and automated vehicles.            We need to ensure that for any initial time and state
+                                                                       (ti0, pi0, vi0) and every admissible control u(t), the system
+distance from the entry of the CZ to the entry of the                  (2) has a unique solution (pi(t), vi(t)) on some interval
+MZ is L and it is assumed to be the same for all CZ en-                [ti0, tm i ], where tm i is the time that vehicle i  N (t) enters
+try points. The value of L depends on the coordinator's                the MZ. To ensure that the control input and vehicle
+communication range capability with the CAVs, while
+S is the physical length of a typical intersection. In this            speed are within a given admissible range, the following
+paper, we limit ourselves to the case of no lane changes
+and no turns allowed.                                                  constraints are imposed:
+
+                                                                       ui,min ui(t) ui,max, and                         (3)
+                                                                             0 vmin vi(t) vmax, t  [ti0, tm i ],
+
+Let N (t)  N be the number of CAVs inside the CZ                       where ui,min, ui,max are the minimum and maximum
+at time t  R+ and N (t) = {1, . . . , N (t)} be a queue                control inputs (maximum deceleration/acceleration) for
+                                                                       each vehicle i  N (t), and vmin, vmax are the minimum
+which designates the order in which these vehicles will                and maximum speed limits respectively. For simplicity,
+be entering the MZ. Thus, letting tm i be the assigned                 in the sequel we do not consider vehicle diversity and
+time for vehicle i to enter the MZ, we require that                    thus set ui,min = umin and ui,max = umax.
+
+tm i  tm i-1, i  N (t), i > 1.  (1)                                    Definition 1 Depending on its physical location inside
+                                                                       the CZ, CAV i - 1  N (t) belongs to only one of the
+There is a number of ways to satisfy (1). For example, we              following four subsets of N (t) with respect to CAV i: 1)
+                                                                       Ri(t) contains all CAVs traveling on the same road as
+may impose a strict first-in-first-out queueing structure,             i and towards the same direction but on different lanes
+                                                                       (e.g., R6(t) contains CAV 4 in Fig. 1), 2) Li(t) contains
+where each vehicle must enter the MZ in the same order                 all CAVs traveling on the same road and lane as vehicle i
+it entered the CZ. More generally, however, tim may be                 (e.g., L6(t) contains CAV 5 in Fig. 1), 3) Ci(t) contains
+determined for each vehicle i at time t0i when the vehicle             all CAVs traveling on different roads from i and having
+enters the CZ and N (t0i ) = {1, . . . , i - 1}. If tm i > tm i-1,     destinations that can cause collision at the MZ, (e.g.,
+then the order in the queue is preserved. If, on the other             C6(t) contains CAV 2 in Fig. 1), and 4) Oi(t) contains
+hand, there exists some j  N (ti0), where j < i - 1, such              all CAVs traveling on the same road as i and opposite
+that tm j > tim > tm j-1, then the order is updated so that            destinations that cannot, however, cause collision at the
+CAV i is placed in the jth queue position. The policy                  MZ (e.g., O6(t) contains CAV 3 in Fig. 1).
+
+through which the order ("schedule") is specified may                  Based on this definition, it is clear that a rear-end colli-
+                                                                       sion can only arise if CAV k  Li(t) is directly ahead of
+be the result of a higher level optimization problem as                i. Thus, to ensure the absence of any rear-end collision,
+long as the condition tm i  tm i-1 is preserved in between             we assume a predefined safe distance  < S and impose
+CAV arrival events at the CZ. In what follows, we will                 the rear-end safety constraint
+adopt a specific scheme for determining tim (upon arrival
+of CAV i) based on our problem formulation, without                    si(t) = pk(t) - pi(t) , t  [t0i , tfi ], k  Li(t) (4)
+affecting tm 1 , . . . , tm i-1, but we emphasize that our analy-
+sis is not restricted by the policy designating the order
+
+of the vehicles within the queue N (t).
+
+                                                                    3
+where tfi is the time that CAV i  N (t) exits the MZ.                 the measurements and/or delays is bounded. For exam-
+The rear-end safety constraint is usually expressed in                ple, we can determine upper bounds on the state uncer-
+terms of the allowable headway [Rajamani (2012)], i.e.,               tainties as a result of sensing or communication errors
+a time gap that is a function of speed. However, since we             and delays, and incorporate these into more conserva-
+consider urban intersections, the average speed does not              tive safety constraints.
+exhibit significant variations. Therefore, we can trans-
+late the allowable headway to a safe inter-vehicle dis-               For simplicity of notation in the remainder of the paper,
+tance. In the rest of the paper, we reserve the symbol                we will write vi(ti0)  vi0, vi(tm i )  vim and vi(tif )  vif .
+k to denote the CAV which is physically immediately
+ahead of i in the same lane.
+
+A lateral collision involving CAV i may occur only if                 2.2 Energy Minimization Problem Formulation
+
+some CAV j = i belongs to Ci(t). This leads to the                    We begin by considering the controllable accelera-
+following definition:
+                                                                      tion/deceleration ui(t) of each CAV i which minimizes
+Definition 2 For each CAV i  N (t), we define the set                 the following cost functional:
+
+i that includes all time instants when a lateral collision
+involving CAV i is possible:
+
+                                                                      Ji(ui(t), tim) =  tm i
+
+i t | t  [tim, tfi ] .              (5)                                                       Ci(ui(t))dt,                         (8)
+
+                                                                                        t0i
+
+                                                                      subject to : (2), (3), (4), (6), pi(ti0) = 0, pi(tim) = L,
+
+Consequently, to avoid a lateral collision for any two ve-            and given ti0, vi0, tim.
+hicles i, j  N (t) on different roads, the following con-
+straint should hold                                                   We view Ci(ui(t)) as a measure of the energy, which is a
+                                                                      function of the control input (acceleration/deceleration)
+
+i  j = , t  [tim, tif ], j  Ci(t).  (6)                               consumed by CAV i in traveling between pi(ti0) = 0
+                                                                      and pi(tim) = L; see Malikopoulos (2011). A special case
+This constraint implies that no two CAVs from different               arises when the cost function is the L2-norm of the con-
+roads which may lead to a lateral collision are allowed to
+be in the MZ at the same time. If the length of the MZ is             trol input in [ti0, tim] and Ci(ui(t))  =  1  ui2  (t).  In  this
+large, then this constraint might not be realistic, but it                                                       2
+can be modified appropriately as described in Remark 2.               case, we minimize transient engine operation, thus we
+
+                                                                      can have direct benefits in fuel consumption and emis-
+
+                                                                      sions since internal combustion engines are optimized
+
+                                                                      over steady state operating points (constant torque and
+
+In the modeling framework described above, we impose                  speed); see Rios-Torres and Malikopoulos (2017b) and
+the following assumptions:
+                                                                      Malikopoulos (2013). In this problem, t0i , vi0 are known
+Assumption 1 For CAV i, none of the constraints (3)-                  upon arrival of CAV i at the CZ and tm i is also speci-
+(4) is active at ti0.                                                 fied. Clearly, not all tim can satisfy the safety constraints
+                                                                      (4) and (6). Moreover, in general, a value of tm i that satis-
+Assumption 2 The speed of the CAVs inside the MZ                      fies (4) and (6) may depend on other CAVs j = i; there-
+is constant, i.e., vi(t) = vi(tm i ) = vi(tfi ), t  [tm i , tif ]
+This implies that                                                     fore, it may not be possible for CAV i to solve (8) in a
+
+                                                                      decentralized manner, i.e., based only on local informa-
+
+                                                                      tion. We address the question of specifying appropriate
+
+                                                                      tm i for each instance of (8) in what follows.
+
+tif  =  tim  +     S                (7)                               Before proceeding, we note that the obvious uncon-
+                vi(tm i ) .                                           strained solution to (8) is ui(t) = 0 for all t  [t0i , tm i ].
+                                                                      This applies to i = 1 since, in this case, (4) and (6) are
+Assumption 3 Each CAV i has proximity sensors and
+can measure local information without errors or delays.               inactive, since it is not constrained by any prior CAV
+                                                                      in the queue, and t1m variable. This also implies that
+Assumption 1 ensures that the initial state and control               v1(t) = vi0 for all t  [t0i , tim] and tm 1 = L/vi0.
+input are feasible. Enforcing this is nontrivial and we
+address the issue in Section 3.2. The second assumption               We now turn our attention to the problem of maximiz-
+is intended to enhance safety awareness, but it could be              ing the traffic throughput at the intersection, in terms
+modified appropriately, if necessary, as discussed in Sec-            of minimizing the gaps between the vehicles in a given
+tion 2.2. The third assumption may be strong, but it is               queue N (t) (see Fig. 1), under the hard safety constraints
+relatively straightforward to relax as long as the noise in           (4) and (6). Thus, setting t(2:N(t)) = [tm 2 . . . tNm(t)], we
+
+                                                                   4
+define the following optimization problem:                                 of each energy minimization problem. In what follows,
+                                                                           we show that this solution has a simple iterative struc-
+N (t)                                                                      ture and depends only on the hard safety constraints
+                                                                           (4) and (6), as well as the state and control constraints
+ min           tim - tim-1  = min       tm N(t) - t1m ,  (9)               (3). We begin by ignoring the latter to obtain the fol-
+                                                                           lowing result.
+t(2:N(t)) i=2                   tN (t)
+
+               subject to : (1), (3), (4), (6).
+
+where t1m is not included since it is obtained from the                    Lemma 1 Suppose that the constraints (3) are inactive
+solution of (8) when i = 1, i.e., t1m = L/vi0. The equiv-                  in (11). Then, the solution t = [t2m , . . . , tm N ] of prob-
+alence between the two expressions in (9) (due to the                      lem (11) is determined through the following recursive
+cancellation of all terms in the sum except the first and
+last) reflects the equivalence between minimizing the to-                  structure over i = 2, . . . , N :
+tal time to process all CAVs in the queue and the average
+interarrival time of CAVs at the MZ.                                                      max{tm i-1      ,  tm k   +          }  if      i  -   1    Ri(t)     Oi(t)
+                                                                                                                       vkm
+                                                                                     
+                                                                                     
+
+                                                                                     
+
+                                                                           tm i   =   tim-1       +                               if i - 1  Li
+                                                                                                       vim-1
+                                                                                     
+As stated in (9), the problem does not incorporate con-                                   tm i-1  +      S                        if i - 1  Ci
+straints on tm i , i = 2, . . . , N (t), that are imposed by the                                       vim-1
+CAV dynamics. In other words, we should write tm i =                                 
+tm i (u(1:i)(t)) where u(1:i)(t) = [u1(t; tm 1 ) . . . ui(t; tim)] de-
+                                                                                                                                                                (12)
+notes the controls applied to all CAVs i = 1, . . . , N (t)
+over [t0i , tim] for any given ti0, tm i . Let Ai denote a set of          where k = max{j : j  Li(t), j = 1, . . . , i - 2} < i is the
+feasible controls:                                                         CAV which is physically immediately ahead of i in the
+
+                                                                           same lane.
+
+                                                                           Proof: See Appendix.
+
+Ai ui(t; tm i )  Ui subject to:                          (10)              Remark 2 The lateral collision constraint (6) allows
+
+(1), (2), (3), (4), (6), pi(ti0) = 0, pi(tim) = L,                         only one CAV at a time to be inside the MZ. If the length
+
+               and given t0i , vi0, tm i .                                 of the MZ is large, however, then this constraint may
+
+                                                                           become overly conservative, since it results in dissipating
+
+                                                                           space and road capacity. The constraint can be modified
+
+Then, we rewrite (9) as                                                    appropriately and (52) in Case 3 above can be rewritten
+
+                                                                           as                          tm i            tim-1             r
+                                                                                                                                       vim-1
+N (t)                                                                                                           =              +                                (13)
+
+ min           tm i (u(1:i)(t)) - tm i-1(u(1:i-1)(t))    (11)              with any desired distance r < S between CAVs inside the
+
+t(2:N(t)) i=2                                                              MZ.
+
+= min          tm N(t)(u(1:N(t))(t)) - tm 1 (u(1)(t)) ,                    Next, we relax the assumption made in Lemma 1 that
+                                                                           constraints (3) are inactive in (11) and derive a recursive
+    tN (t)                                                                 equation for the determination of t = [tm 2  , . . . , tNm ].
+
+subject to : ui(t; tm i )  Ai, i  N (t), (1), (3), (4), (6).               Theorem 1 The solution t = [tm 1  , . . . , tm N ] of prob-
+                                                                           lem (11) is recursively determined through
+Remark 1 As pointed out earlier, the solution of (8)
+for i = 1 is u1(t) = 0 resulting in v1(t) = vi0 and                                       t1m                                                if i = 1
+tm 1  = L/vi0. On the other hand, if we were to solve                                
+(11) for i = 1 setting tm 0 = 0, the solution would be
+t1m = t1m = L/vmax. This indicates a degree of freedom                               
+in the selection of tm 1 which can be used to trade off the
+energy minimization and throughput maximization (con-                                             {tim-1, tm k                    tci
+gestion reduction) objectives. Thus, t1m may be viewed                                                                 vkm
+as a parameter one can adjust to solve the subsequent                      tm i           max                       +          ,       }     if  i-1     Ri(t)  Oi(t)
+                                                                                                                                             if  i-1     Li
+CAV problems placing a desired amount of emphasis on                                 
+
+throughput relative to energy consumption.                                        =   max         {tm i-1    +         ,  tic  }
+                                                                                                                vim-1
+                                                                                     
+
+                                                                                          max     {tm i-1    +    S    ,  tci }              if i - 1  Ci
+                                                                                                                vim-1
+                                                                                     
+
+                                                                                                                                                                (14)
+
+                                                                           where     tci  =  t 1 1  vim =vmax       +  ti2(1   -       1 ) vim=vmax      and
+
+                                                                                              i
+
+The solution of (11) provides a sequence {tm 2 , . . . , tNm(t)}                          t1i  =  t0i  +     L         +  (vmax - vi0)2                         (15)
+which designates the MZ arrival times of all CAVs in the                                                   vmax           2ui,maxvmax                           (16)
+current queue so as to minimize the total time needed
+for them to clear the intersection (recalling Assumption                                  ti2  =  t0i  +   [2Lui,max + (vi0)2]1/2                     -  vi0
+2, the time through the MZ is fixed), hence maximizing                                                                  ui,max
+the throughput over the current N (t) CAVs. This solu-
+tion may then be used in (8) to specify the terminal time
+
+                                                                        5
+Proof: See Appendix.                                                        symbol k to denote such a CAV relative to i). The last
+                                                                            element above, tm i  , is the time targeted for CAV i to
+It follows from Theorem 1 that tm i  is always recursively                  enter the MZ and is given in (14) depending on the value
+determined from tm i-1 and vim-1 and possibly tm k  , vkm
+where vim-1 and vkm depend on the specific controls used                    of Qi.
+when solving problem (11). However, note that there is
+no guarantee that there exist feasible controls satisfying                  Note that once CAV i enters the CZ, then immediately
+all constraints in (10) over all t  [ti0, tim]. In fact, as we
+will discuss in Section 3.2, it is easy to see that the safety              all information in Yi(t) becomes available to i: pi(t), vi(t)
+constraint (4) may not hold depending on the initial                        are read from its sensors; Qi is assigned by the coordi-
+conditions (ti0, vi0) for CAV i. We will show, however, in                  nator, as is the value of k based on which si(t) is also
+Theorem 2 that there exists a nonempty feasible region                      evaluated; tm i  can also be computed at that time based
+Fi  R2 of initial conditions (t0i , vi0) such that si(t)                    on the information the vehicle i receives from i - 1. The
+ for all t  (t0i , tm i ) so that all safety constraints are                recursion on tm i  is initialized whenever a vehicle enters
+guaranteed to hold throughout [t0i , tm i ].                                the CZ. In this case, tm 1 can be externally assigned as the
+                                                                            desired exit time of this vehicle whose behavior is un-
+We are now in a position to return to the energy min-
+imization problem (8) with the value of tim for any i =                     constrained (as discussed in the previous section). Thus,
+1, . . . , N (t) specified through (14) in a recursive manner.              the time t1m is available through Y1(t).
+This allows us to solve these problems in a decentralized
+manner as detailed in the next section.                                     Since the coordinator is not involved in any control de-
+
+3 Decentralized Framework                                                   cision, from Theorem 1 we can formulate N (t) sequen-
+
+The results in the previous section allow us to address                     tial decentralized tractable problems of the form (8) that
+the optimal control problem (8) within a decentralized
+framework. However, to establish this framework, we                         may be solved online. As already discussed, a special
+need a communication structure between CAVs with a                          case of (8) arises when the cost function is the L2-norm
+"coordinator" whose task is to handle the information                       of the control input in [ti0, tm i  ] which we shall henceforth
+between them. In particular, when a CAV i reaches the                       consider. Thus, the decentralized problem for each CAV
+CZ of the intersection at some instant t, the coordinator
+assigns to it a unique identity as follows.                                 i is formulated as follows:
+
+Let M (t)  N be the cumulative number of CAVs that                                1   tim              (18)
+have entered the CZ by time t. Note that M (t) is in-                       min
+creasing in t and can be reset to M (t) = 0 only if no                      ui(t) 2        ui2(t) dt,
+CAVs are inside the CZ. The unique identity that the co-
+ordinator assigns to each CAV is a triplet (w, i, j) where                           t0i
+w = M (t) + 1 is a unique index, i is the position of the
+vehicle in the current queue N (t), and j  {1, . . . , 4} is                subject to : (2), (3), (14), pi(ti0) = 0, pi(tim ) = L, and
+an integer based on a one-to-one mapping from {Ri(t),
+Li(t), Ci(t), Oi(t)} onto {1, . . . , 4} that indicates the po-             given t0i , vi0.
+sitional relationship between CAVs i - 1 and i. If two
+or more CAVs enter the CZ at the same time, then the                        Observe that we have omitted the rear end safety con-
+coordinator assigns randomly the index w.
+                                                                            straint (4) and the lateral collision constraint (6). The
+Definition 3 For each vehicle i entering a CZ, we define                    latter applies to the MZ and affects (18) only at t = tm i 
+the information set Yi(t) as                                                which is implicitly handled by the selection of tm i  in
+                                                                            (14). The former, on the other hand, must be satisfied
+  Yi(t) pi(t), vi(t), w, Qi, si(t), tim , t  [ti0, tim ],                   for all t  [ti0, tim ], whereas (14) only guarantees that it
+                                                                   (17)     is satisfied at t = tim . It is omitted here because we will
+                                                                            show that the solution of (18) guarantees that this con-
+where pi(t), vi(t) are the position and speed of CAV i                      straint indeed holds throughout [ti0, tm i  ] under proper
+inside the CZ; w and Qi  {1, . . . , 4} are the unique index                initial conditions (t0i , vi0); note that the constraint also
+and the queue subset (Definition 1) assigned to CAV i by                    holds in [tm i  , tfi ] under Assumption 2.
+the coordinator; and si(t) = pk(t) - pi(t) is the distance
+between CAV i and some CAV k which is immediately                           3.1 Analytical solution of the decentralized optimal con-
+ahead of i in the same lane (recall that we reserve the                            trol problem
+
+                                                                            For the analytical solution of (18) and its online im-
+                                                                            plementation, we apply Hamiltonian analysis under As-
+                                                                            sumption 1, i.e., when the CAVs enter the CZ none of
+                                                                            the constraints is active. We stress that this is not in
+                                                                            general true. For example, a CAV may enter the CZ with
+                                                                            speed higher than the speed limit. In this case, a solution
+                                                                            of the optimal control problem is infeasible. A feasibil-
+                                                                            ity analysis for CAVs to satisfy such initial conditions is
+                                                                            discussed in Section 3.2 where we show that a feasible
+
+                                                                         6
+region Fi  R2 of initial conditions (ti0, vi0) for CAV i                             1. Control and State Constraints not Active. In
+exists such that si(t)  for all t  [t0i , tm i ]; a feasibility
+enforcement analysis to ensure the existence of feasible                             this case, we have µia = µib = µci = µdi = 0. Applying
+                                                                                     (26), the optimal control is given by
+and optimal solutions is given in Zhang et al. (2017a).
+
+                                                                                                       ui + iv = 0, i  N (t).                                     (27)
+
+From (18), the state equations (2), and the control/state                            and the Euler-Lagrange equations yield (24) and
+constraints (3), for each vehicle i  N (t) the Hamilto-
+nian function with the state and control constraints ad-                                                     vi     =   - Hi         =   -pi .                    (28)
+joined is                                                                                                                  vi
+
+         Hi t, p(t), v(t), u(t)     =  1  u2i   +  ip  ·  vi  +  iv  ·  ui           From (24) we have pi = ai and (28) implies iv =
+                                       2                                             -(ait + bi), where ai and bi are integration constants.
+                                                                                     Consequently, the optimal control input (accelera-
++µai · (ui - umax) + µib · (umin - ui) + µci · (vi - vmax)
+                                                                                     tion/deceleration) as a function of time is given by
+                      +µid · (vmin - vi),                                   (19)
+
+where ip and vi are the costates, and µT is a vector of                                                          ui(t) = ait + bi.                                (29)
+Lagrange multipliers with
+
+            µai =        > 0, ui(t) - umax = 0,                             (20)     Substituting this equation into the vehicle dynamics (2)
+                         = 0, ui(t) - umax < 0,                                      we can find the optimal speed and position for each ve-
+                                                                                     hicle, namely
+
+            µib = > 0, umin - ui(t) = 0,                                                               vi(t)        =   1   ai  t2  +   bit   +  ci               (30)
+                                                                                                                        2
+                                                                            (21)
+
+                         = 0, umin - ui(t) < 0,                                                                  1              1
+                                                                                                                 6              2
+                         > 0, vi(t) - vmax = 0,                                                  pi (t)  =          ai  t3  +       bi  t2  +  cit  +  di,        (31)
+                         = 0, vi(t) - vmax < 0,
+            µci =                                                           (22)     where ci and di are integration constants. These fours
+                                                                                     constants above can be computed by using the initial and
+
+                         > 0, vmin - vi(t) = 0,                                      final conditions in (18). In particular, using (30) with
+                         = 0, vmin - vi(t) < 0.
+            µid =                                                           (23)     the initial condition vi(ti0) = vi0, (31) with the initial
+                                                                                     and terminal conditions pi(t0i ) = 0, pi(tim) = L, and the
+The Euler-Lagrange equations become                                                  boundary condition of the costate vi (tim) = -ui(tm i ) =
+                                                                                     0, we can form the system of four equations of the form
+
+                                                                                     Tibi = qi:
+
+                       ip    =   - Hi      =    0,                          (24)
+                                    pi
+
+                                                                                       1            1                                                           
+                                                                                       6            2
+and                                                                                       (ti0)3       (t0i )2      ti0 1            ai              pi(t0i )
+
+                                                                                       1  (t0i )2      ti0                                           vi(ti0)    
+                                                                                       2                                                                        
+                         -ip     ,         vi(t) - vmax < 0 and                                                     1   0       .    bi     =                     (32)
+                                                                                                                                   
+                      
+                                                                                       1  (tim  )3  1  (tm i )2  tim    1            ci              pi(tm i )  
+                                                                                       6            2                                                           
+                      
+
+                      
+
+            - Hi                           vmin - vi(t) < 0,                                                                                                    
+               vi                          vi(t) - vmax = 0,
+     iv
+         =         =     -pi     - µic,                                                   -tm i -1 0 0                               di              vi (tim)
+
+                      
+                      
+
+                      
+
+                         -ip     +  µdi ,  vmin     -  vi(t)     =  0,               where tm i is specified by (14). Note that since (32) can be
+                                                                                     computed online, the controller may re-evaluate the four
+                      
+                                                                                     constants in the form ai(t, pi, vi), bi(t, pi, vi), ci(t, pi, vi),
+                                                                            (25)     and di(t, pi, vi) at any time t > t0i to get
+
+with boundary conditions pi(ti0) = 0, pi(tm i ) = L,                                 bi(t, pi(t), vi(t)) = (Ti)-1.qi(t, pi(t), vi(t)) (33)
+vi (tim) = 0, given initial conditions ti0, vi(t0i ), and tim
+specified by (14). The necessary condition for optimality
+
+is          Hi
+            ui
+                      =  ui  + iv      +   µai  - µbi  =  0,                (26)     and update (29) as follows
+
+To address this problem, constrained and unconstrained
+
+arcs need to be pieced together to satisfy (24) through                              ui (t, pi(t), vi(t)) = ai(t, pi(t), vi(t))t + bi(t, pi(t), vi(t)).
+                                                                                                                                                        (34)
+(26). Based on our state and control constraints (3) and
+                                                                                     Thus, feedback can be indirectly provided through the
+boundary conditions, the optimal solution is the result
+                                                                                     re-calculation of the vector bi(t, pi(t), vi(t)) in (33).
+of different combinations of the following possible arcs.
+
+                                                                                  7
+2. Control Constraint Active, ui(t) = umax. Sup-               4. Control Constraints Active, ui(t) = umin. Sup-
+pose that at time t = t1, (29) becomes                         pose that at time t = t1, (29) becomes ui(t) = umin
+                                                               while vmin < vi(t) < vmax. In this case, the Hamilto-
+       ui(t) = umax, t  t1.                         (35)
+                                                               nian is continuous at t = t1 (entry point of the control
+
+                                                               constrained arc). It follows from (2) that for t  t1
+
+while vmin < vi(t) < vmax. In this case, the Hamilto-          vi(t) = umin t + fi,                     (43)
+nian is continuous at t = t1 (entry point of the control
+constrained arc). Substituting the last equation into the      pi (t)  =  1       t2  +  fi  t  +  ei,  (44)
+                                                                          2 umin
+vehicle dynamics (2), we can find the optimal speed and
+
+position of each vehicle, namely
+
+          vi(t) = umax t + fi,                      (36)       where fi and ei are constants of integration that can be
+                                                               computed easily since we know the speed and position
+pi (t) =  1           t2  + fi  t + ei,    t   t1   (37)
+          2 umax                                               of the vehicle at time t = t1.
+
+where fi and ei are constants of integration that can be       5. Control and State Constraints Active, ui(t) =
+computed easily since we know the speed and position           umin and vi(t) = vmin. Suppose that at time t = t2 > t1
+                                                               (exit point of the control constrained arc and entry point
+of the vehicle at time t = t1.
+                                                               of the state variable constrained arc), (43) becomes equal
+3. Control and State Constraints Active, ui(t) =               to vmin. Then from (2) we have vi = ui(t) = 0 for
+                                                               t > t2, and the Hamiltonian is discontinuous at t =
+umax and vi(t) = vmax. Suppose that at time t = t2 >           t2 (corner). Substituting ui (t) = 0 for t > t2 into the
+                                                               vehicle dynamics equations (2) we can find the optimal
+t1 (exit point of the control constrained arc and entry
+                                                               speed and position of each vehicle for t  t2, namely
+point of the state variable constrained arc), (36) becomes
+vi(t) = vmax. Then from (2) we have vi = ui (t) = 0 for                pi(t) = vmin t + ri              (45)
+t > t2, and the Hamiltonian is discontinuous at t = t2
+(entry point of the state constrained arc vi(t) = vmax);       where ri is the constant of integration that can be com-
+see Bryson (1975). It follows from (2) that for t  t2          puted from the position of the vehicle at t = t-2 .
+
+          pi(t) = vmax t + ri,                      (38)
+
+where ri is the constant of integration that can be com-       If at time t = t3 > t2 (exit point of the corner) the state
+puted from the position of the vehicle at t = t-2 .            variable constraint becomes inactive again, i.e., vmin <
+                                                               vi(t) < vmax, then the Hamiltonian and costates are
+Given certain terminal constraints, it is possible that        continuous at t = t3. The analysis follows the discussion
+                                                               at the exit point of the corner in the case where ui(t) =
+the state variable constraint becomes inactive again; see      umax and vi(t) = vmax, and the optimal control input,
+                                                               speed, and position are given by (40)-(42).
+Bryson (1975). If this happens at time t = t3 > t2 (exit
+point of the corner) the state variable constraint be-         6. State Constraints Active, vi(t) = vmax. Suppose
+                                                               that at time t = t1, (30) becomes vi(t) = vmax while
+comes inactive again, i.e., vmin < vi(t) < vmax, then the      umin < ui(t) < umax. Then from (2) we have vi =
+Hamiltonian and costates are continuous at t = t3, i.e.,       ui (t) = 0 for t > t1, and the Hamiltonian is discontin-
+H(t3-) = H(t+3 ), pi (t-3 ) = ip(t3+) = gi, and iv(t-3 ) =     uous at t = t1. Substituting ui(t) = 0 into the vehicle
+iv(t+3 ) = -(git + hi), where gi and hi are constants of       dynamics equations (2) we can also find the optimal po-
+integration. Hence
+                                                               sition of each vehicle for t  t1, namely
+-  1      ui(t)    =  gi(vmax      -  vi(t)).       (39)
+   2
+
+                                                               pi(t) = vmax t + ri                      (46)
+
+The optimal control input, speed, and position are             where ri is the constant of integration that can be com-
+                                                               puted from the position of the vehicle at t = t1-.
+             ui (t) = git + hi,                     (40)
+
+   vi(t)        =  1  git2   +  hit  +  qi,         (41)       If at time t = t3 > t2 (exit point of the state constrained
+                   2                                           arc) the state variable constraint becomes inactive again,
+
+pi(t)     =  1  git3  +   1  hit2  +  qit  +  si,   (42)       i.e., vmin < vi(t) < vmax, then the Hamiltonian and
+             6            2                                    costates are continuous at t = t3. The analysis follows
+                                                               the discussion at the exit point of the state constrained
+where the constants of integration gi, hi, qi, and si can
+                                                               arc in the case where ui(t) = umax and vi(t) = vmax,
+be computed from the control, speed, and position of the       and the optimal control input, speed, and position are
+vehicle at t = t-3 and (39) at t = t+3 .
+                                                               given by (40)-(42).
+
+                                                            8
+7. State Constraints Active, vi(t) = vmin. Suppose
+that at time t = t1, (30) becomes vi(t) = vmin (entry
+point of the state variable constrained arc) while umin <
+ui(t) < umax. Then from (2) we have vi = ui(t) = 0 for
+t > t1, and the Hamiltonian is discontinuous at t = t1.
+
+It follows from (2) that for t  t1
+
+pi (t) = vmin t + ri  (47)
+
+where ri is the constant of integration that can be com-        Fig. 2. Example of safety constraint violation by CAV 3 when
+puted from the position of the vehicle at t = t-1 . The          = 10.
+analysis is similar to the case where ui(t) = umax and
+                                                                3.2 Feasibility analysis for safety constraints
+vi(t) = vmax, and the optimal control input, speed, and
+                                                                As already pointed out, the decentralized problem
+position are given by (40)-(42).                                (18) does not explicitly include the safety constraints
+                                                                (4) and (6). While the latter holds by the construction
+To derive the analytical solution of (18), we follow the        of tim in (14) and is needed only over [tm i , tfi ], the former
+standard methodology used in optimal control prob-              is not guaranteed to hold for all t  [ti0, tm i ]. We begin
+lems with interior point state and/or control constraints.      with a simple example of how (4) may be violated un-
+Namely, we first start with the unconstrained arc and           der the optimal control (29). This is illustrated in Fig.
+derive the solution using (32). If the solution violates        2 with  = 10 for two CAVs that follow each other in
+any of the state or control constraints, then the uncon-        the same lane within the CZ. We can see that while (4)
+strained arc is pieced together with the arc correspond-        is eventually satisfied, due to the constraints imposed
+ing to the violated constraint, and we re-solve the prob-       on the solution of (18) through (6), the controller (29)
+lem with the two arcs pieced together. The two arcs yield       is unable to maintain (4) throughout the CZ. What is
+a set of algebraic equations which are solved simulta-          noteworthy in Fig. 2 is that (4) is violated by CAV 3 at
+neously using the boundary conditions of (18) and in-           an interval which is interior to [t30, tf3 ], i.e., the form of
+terior conditions between the arcs. If the resulting so-        the optimal control solution (29) causes this violation
+lution, which includes the determination of the optimal         even though the constraint is initially satisfied at t30 = 5
+switching time from one arc to the next one, violates           in Fig. 2.
+another constraint, then the last two arcs are pieced to-
+gether with the arc corresponding to the new violated           Recall that we use k to denote the CAV physically pre-
+constraint, and we re-solve the problem with the three          ceding i on the same lane, and that i - 1 is the CAV
+arcs pieced together. The three arcs will yield a new set       ahead of i in the queue. Clearly, k i-1; when k = i-1,
+of algebraic equations that need to be solved simultane-        then i follows i - 1 in the same lane, whereas if i - 1
+ously using the boundary conditions of (18) and interior        is on a different lane from i, then k < i - 1. Using this
+conditions between the arcs. The resulting solution in-         notation, the following theorem asserts that we can al-
+cludes the optimal switching time from one arc to the           ways find initial conditions (t0i , vi0) which guarantee the
+next one. The process is repeated until the solution does       safety constraint (4) holds throughout the CZ under the
+not violate any other constraints.                              decentralized optimal control, even though (4) is not ex-
+                                                                plicitly included in (18).
+Remark 3 The simple nature of the optimal control and
+states in (29) through (31) makes the online solution of        Theorem 2 There exists a nonempty feasible region
+(18) computationally feasible, even with the additional         Fi  R2 of initial conditions (ti0, vi0) for CAV i such
+burden of checking for active constraints in Cases 2)           that, under the decentralized optimal control, si(t) 
+through 7). However, there is an additional feature of          holds for all t  [ti0, tm i ] given initial and final conditions
+the solution that we can exploit, i.e., the fact that the       t0k, vk0, tm k , vkm for CAV k.
+control structure for CAV i remains unchanged until an
+"event" e.g., unexpected braking by the preceding vehi-         Proof: See Appendix.
+cle, rescheduling of the crossing order by the coordinator,
+etc.) occurs that affects its behavior. Therefore, there is     For any set of initial conditions which are feasible, our
+no need for a time-driven controller implementation such        analysis gives an optimal control solution, possibly with
+that ui (t) is repeatedly re-evaluated. Rather, an event-       a constrained arc. The case which applies depends on
+driven controller may be used without affecting its op-
+timality properties under conditions such as those de-
+scribed in Zhong and Cassandras (2010).
+
+                                                             9
+the choice of initial conditions. In other words, our anal-      Fig. 3. Optimal control input signal of the first 20 vehicles
+ysis provides a map from the feasible region to a set of         in the queue.
+optimal controls for CAV i which all satisfy the safety in-
+equality. Theorem 2 asserts that as long as we can drive               Fig. 4. Speed of the first 20 vehicles in the queue.
+the CAV to a feasible initial point, there exists a solu-
+tion satisfying the safety inequality over the entire CZ         In this study, we do not consider the coupling of the two
+and MZ which may or may not include a constrained arc.           intersections. The vehicle arrival rate is assumed to be
+There are two possible ways to deal with the feasibil-           given by a Poisson process with  = 450 veh/h for each
+ity issue. One approach is to guide the CAV through an           lane. A comparison to the baseline scenario using traffic
+appropriately designed "Feasibility Enforcement Zone"            lights is shown in Fig. 5. The fuel consumption improve-
+(FEZ) that precedes the CZ and to make adjustments so            ment was 46.6%, while the travel time was improved by
+as to attain a feasible initial condition when it reaches        30.9%. The fuel consumption improvement is due to the
+the CZ. The associated feasibility enforcement analysis          following reasons: (1) the vehicles do not come to a full
+and the design process of a FEZ are extensively discussed        stop, thereby conserving momentum, and (2) each vehi-
+in Zhang et al. (2017a). Alternatively, if a FEZ is not re-      cle travels with the minimum acceleration/deceleration
+alizable and a CAV arrives with (t0i , vi0) / Fi, then the       inside the CZ so that transient engine operation is min-
+decentralized nature of (18) allows us to forego its opti-       imized with direct benefits in fuel consumption.
+mal control and settle for a non-optimal but safe control
+instead with some tim which is supplied to CAV i + 1 so
+as to continue the use of (29) for all subsequent CAVs.
+
+4 Simulation Results
+
+To evaluate the effectiveness of the proposed solution, we
+considered the following two case studies: (1) coordina-
+tion of 20 vehicles, (2) coordination of 448 vehicles. For
+the first study we used MATLAB and for the second one
+we used VISSIM, a microscopic multi-modal traffic flow
+commercial simulation software package. The proposed
+solution was compared to a baseline scenario, where the
+intersection has traffic lights with fixed switching times.
+To quantify the impact of the vehicle coordination on
+fuel consumption, we used the polynomial metamodel
+proposed in Kamal et al. (2013) that yields vehicle fuel
+consumption as a function of the speed, v(t), and control
+input, u(t).
+
+In the first case study, we considered a single intersec-
+tion, where the length of the MZ, S, is 30m and the
+length of the CZ, L, is 400m. The minimum safe dis-
+tance, , between two vehicles was set to be 10m. The
+maximum and minimum speed limits are 13 m/s and
+0, respectively. The maximum acceleration limit is 0.2
+m/s2 and the maximum deceleration is set to be arbi-
+trarily large. The control input and the optimal speed
+for each vehicle in the queue is shown in Fig. 3 and 4.
+Note that CAV # 16 violates both the control constraint
+u(t)  umax and the state constraint v(t)  vmax.
+
+In the second case study, we considered two actual in-
+tersections in tandem located in Boston. For each direc-
+tion, only one lane is considered. We set L = 245 m and
+S = 35 m for both intersections. As the shapes of the ac-
+tual intersections are not regular, the distance between
+them is not the same for different directions; in particu-
+lar, the distance in the lane where the traffic flow com-
+ing from the east is 160 m, whereas the distance in the
+lane where the traffic flow goes from the west is 145 m.
+
+                                                             10
+                                                                  that is being exploited and which will eventually lead to
+                                                                  event-driven controllers.
+
+Fig. 5. Fuel consumption and average travel time improve-         The first-in-first-out queue imposes several limitations
+ment.                                                             that can become even more apparent in heavy-volume
+                                                                  traffic situations. An important direction for future
+5 Concluding Remarks and Future Work                              research is to relax the first-in-first-out queue and es-
+                                                                  tablish a higher-level dynamic optimization problem
+We have addressed the problem of optimally control-               the solution of which would yield online the optimal
+ling CAVs crossing an urban intersection without any              "scheduling" for the CAVs to cross the intersection. Fu-
+explicit traffic signaling. The objective was to minimize         ture research should also consider different penetrations
+energy consumption subject to a throughput maximiza-              of CAVs, which can alter significantly the efficiency of
+tion requirement and hard safety constraints. We have             the entire system, e.g., what is the critical traffic flow
+shown that the solution of the latter depends only on             rate beyond which the benefits of CAVs reach their
+the hard safety constraints imposed on CAVs and that              limit? In fact, as the arrival rates increase, the opti-
+its structure enables a decentralized energy minimiza-            mization process may result in occasional stopping and
+tion optimal control problem formulation whose termi-             restarting due to the implicit state constraint vi(t)  0.
+nal time depends only on a "neighboring" set of CAVs.             Although it is relatively straightforward to extend our
+We presented a complete analytical solution of these de-          results to the case where the perfect information as-
+centralized problems and derived conditions under which           sumption is relaxed, future research needs to be directed
+feasible solutions satisfying all safety constraints always       at the implications of errors and/or delays.
+exist. The effectiveness of the proposed solution was val-
+idated through simulation which showed that the bene-             Appendix
+fits of the proposed framework are substantial.
+                                                                  A. Proof of Lemma 1
+In our decentralized framework, we considered full pen-
+etration of identical CAVs having access to perfect in-           Using the second form of the objective function in (11)
+formation (no errors or delays). We also did not consider
+lane changing, turns or pedestrians. Ongoing research             and recalling that t1m is fixed by the unconstrained con-
+is considering turns [see Zhang et al. (2017b)] and lane          trol u1(t)  U1, the solution t is obtained by minimiz-
+changing in the intersection with a diverse set of CAVs           ing tim for every i = 2, . . . , N . There are three cases to
+and exploring the associated tradeoffs between the in-            consider:
+tersection throughput and fuel consumption of each in-
+dividual vehicle. Another issue that we are considering           Case 1 : If i - 1  Ri(t)  Oi(t), then (6) cannot become
+is the potential rear-end collision that would occur in-
+side the MZ if the terminal speeds of two vehicles i and          active. On the other hand, (4) may become active if there
+k traveling on the same lane are different. If this case
+arises, there are two possible approaches to adopt. The           exists some k  Li(t) such that k  Ri-1(t)  Oi-1(t),
+first approach is to set vi(tm i ) = vk(tm k ) and solve the
+optimal control problem for CAV i with a specified ter-           thus creating an interdependence between i and i - 1
+minal speed. Alternatively, we can simply forgo the as-
+sumption of constant speed in the MZ and ensure the               through k. If this happens, (4) implies that pk(tm i ) -
+absence of rear-end collision. We are also investigating                                                                                   
+the implications of the proposed approach to adjacent             pi(tm i ) = L + vkm(tim - tkm) - L         , hence        tm i - tkm    vkm  .
+intersections and a feasibility enforcement to ensure that        Therefore, tim is minimized by           setting
+each CAV starts from a feasible state; see Zhang et al.
+(2017a). The fact that the control structure for each                                      tim  =  tm k    +                              (48)
+CAV remains unchanged until an "event" occurs that af-                                                        vkm
+fects its behavior is an additional feature of the solution
+                                                                  Recalling that tm i - tim-1  0 from (1), it follows that the
+                                                                  optimal value of tim in this case is given by
+
+                                                                               tm i     =  max{tim-1, tm k       +                        (49)
+                                                                                                                    vkm }.
+
+                                                                  Case 2 : If i - 1  Li(t), then (6) cannot become active,
+                                                                  but constraint (4) can. It follows that (49) applies with
+
+                                                                  k = i - 1, yielding
+
+                                                                                        tim   =    tm i-1  +                              (50)
+                                                                                                              vim-1 .
+
+                                                                  Case 3 : If i - 1  Ci(t), then constraint (6) can become
+
+                                                                  active.  It  follows  that  tim    tif-1    =  tm i-1  +    S    .  Including
+                                                                                                                            vim-1
+
+                                                              11
+the possibility that (4) becomes active if there exists                                          Case 1: No state or control constraint is active for either
+
+some k  Li(t) such that k  Ri-1(t)  Oi-1(t), and                                                 k or i over [ti0, tm i ]. By using (31), (32) and the definition
+recalling (1), we have                                                                           si(t) = pk(t) - pi(t), under optimal control we can write
+
+                tm i     =  max{tm i-1     +   S      ,  tkm   +                     (51)        si(t; ti0, vi0) = si(t, tm i , vim, tk0 , vk0, tm k , vkm; ti0, vi0)
+                                              vim-1               vkm }.
+
+Observe that if such k  Li(t) exists, then k  Ci-1(t),                                           = A(t, tm i , vim, t0k, vk0, tkm, vkm; t0i , vi0)t3
+
+since k and i are in the same lane. Therefore, i - 1 and                                                 +B(t, tim, vim, tk0 , vk0, tm k , vkm; t0i , vi0)t2
+
+k   <  i   -    1  must     also   satisfy    (6),    i.e.,    tim-1      tm k    +   S   ,              +C(t, tm i , vim, tk0 , vk0, tm k , vkm; t0i , vi0)t
+                                                                                     vkm
+hence tim-1 +                    tm k                          > tkm                                     +D(t, tim, vim, t0k, vk0, tm k , vkm; t0i , vi0),             (53)
+                         S               +   S    +     S             +           ,  since
+                       vim-1                vkm       vim-1                  vkm
+
+S > . It follows that
+
+                                 tim  =  tm i-1  +     S                             (52)        where A, B, C and D are functions defined over t 
+                                                      vim-1 .                                    [ti0, tm i ]. Recall that CAV k is cruising in the MZ, so that
+                                                                                                 (29) through (31) do not apply for k over [tkm, tm i ] leading
+Combining (49), (50) and (52) we obtain (12).                                                    to different expressions for A, B, C and D. Therefore,
+                                                                                                 we consider two further subcases, one for [t0i , tkm] and the
+B. Proof of Theorem 1                                                                            other for [tkm, tim]. For ease of notation, in the sequel we
+                                                                                                 replace (t0i , vi0) by (, ).
+When constraints (3) are allowed to be active in (11),
+                                                                                                 Case 1.1: t  [ti0, tm k ]. In this case, si(t; , ) is a cubic
+then the values of tm i determined through Lemma 1 may                                           polynomial inheriting the cubic structure of (31). We can
+not be attainable in minimizing tm i - t1m. Thus, we seek                                        solve (32) for the coefficients ak, bk, ck, dk, ai, bi, ci and
+a lower bound to tim, which is independent of these con-                                         di using the initial and final conditions of CAVs k and
+straints. There are two cases to consider depending on                                           i. Then, denoting A, B, C and D as A1(, v), B1(, v),
+                                                                                                 C1(, v) and D1(, v) for t  [t0i , tm k ], these are explicitly
+ti0 and on whether CAV i can reach vmax prior to tim-1                                           given by
+or not:
+
+(i) If CAV i enters the CZ at t0i , accelerates with umax
+
+until it reaches vmax and then cruises at this speed until
+
+it leaves the MZ at time t1i f , it was shown in Zhang                                           A1(, )     =  (tk0   1              + (vkm   +  vk0)(tk0      - tkm))
+                                                               . From (vmax-vi0)2                                    - tkm)3 (2L
+et  al. (2016)         that t1i f     =    t0i +  L+S    +
+                                                  vmax         2umax vmax
+                                                                                                             1
+Assumption           2,     the  time  it  reaches    the    MZ   is  t1i f  -     S   =         -          - tim)3     (2L  +    (vim  +  )(     -    tm i )),
+                                                                                 vmax              (
+ti1 in (15).
+
+(ii) If CAV i accelerates with umax but reaches the MZ
+at tim with speed vi(tm i ) < vmax, it was shown in Zhang
+et al. (2016) that it leaves the MZ at time ti2f = ti0 +
+vi (tim )-vi0                                                                                    B1(,          )     =  - (t0k   1         [3L(t0k    +  tkm)
+   umax         +       S        where     vi(tm i )  =        2Lui,max + (vi0)2.                                               - tm k )3
+                     vi (tim )
+                                                                                                 +(vk0(t0k + 2tm k ) + vkm(2t0k + tkm))(tk0 - tm k )]
+From Assumption 2, the time it reaches the MZ is t2i f -
+   S            ti2
+vi(tm i )  =         in  (16).                                                                                    +      1        [3L(     +  tm i )
+                                                                                                                    (   - tim)3
+
+Thus,      tci  =    t 1 1vim =vmax   + ti2(1 - 1vim=vmax )           (1  is  the    indi-       +(( + 2tim) + vim(2 + tm i ))( - tim)],
+
+                      i
+
+cator function) is a lower bound of tif regardless of the so-
+
+lution of (11). Combining this lower bound with Lemma
+
+1, we immediately obtain (14) including t1m which is a
+
+free variable dependent on A1.                                                                                     1
+                                                                                                                  - tkm)3
+                                                                                                 C1(, )  =  (tk0           [6t0k  tkmL  +  [(vk0((tkm    )2  + 2tk0 tkm)
+
+C. Proof of Theorem 2
+
+                                                                                                            +vkm((tk0 )2 + 2tm k t0k))](t0k - tm k )]
+
+To prove the existence of the feasible region, there are                                         -           1       [6 tm i L    +  [(((tm i )2    +  2 tm i )
+two cases to consider, depending on whether any state or                                           (        - tim)3
+control constraint for either CAV i or k becomes active
+in the CZ.                                                                                                  +vim(( )2 + 2tim ))]( - tm i )],
+
+                                                                                             12
+D1(, )        =  (tk0   1       [L((t0k  )3  - 3(tk0 )2tkm)             We can obtain expressions for the first and the second
+                       - tkm)3
+                                                                        derivative of si(t; , ), si(t; , ) and s¨i(t; , ) respec-
+-(vk0tk0 (tm k )2 + vkm(t0k)2tkm)(t0k - tkm)]                           tively, from (53), as follows:
+
+           -     1       [L(( )3   -  3( )2tim)                         si(t; , ) = vk(t) - vi(t) = 3A1(, )t2 + 2B1(, )t
+             (  - tim)3
+                                                                                           +C1(, ),                     (57)
+        -( (tm i )2 + vim( )2tim)( - tm i )].                (54)
+                                                                        s¨i(t; , ) = uk(t) - ui(t) = 6A1(, )t + 2B1(, ).
+                                                                                                                                        (58)
+
+Note that in (53) we write si(t; , v) (recall that (t0i , vi0)          Clearly, we can determine ti  arg mint[,tkm]{si(t; , )}
+(, v)) to emphasize the dependence of si(t) on these ini-               as the solution of si(t; , ) = 0 with s¨i(t; , ) 0,
+tial conditions for CAV i, i.e., we give a parametric char-             unless si(, ) occurs at the boundaries, i.e., ti =  or
+                                                                        ti = tkm. Thus, there are three cases to consider:
+acterization of si(t) through (, v). Aside from (, v), the
+function si(t) also depends on two groups of arguments:                 Case 1.1.A: ti =  . In this case,
+(i) tk0 , vk0, tm k and vkm  vk(tkf ) = vk(tkm) are quantities
+associated with CAV k. Since k < i, all information re-                                    si(, ) = si( ; , )           (59)
+
+lated to this CAV is available and is fixed throughout                  = A1(, ) 3 + B1(, ) 2 + C1(, ) + D1(, ) 
+[t0i , tm i ]. (ii) tim and vim  vi(tfi ) = vi(tim) are quantities
+which can also be determined through CAV k or i - 1.
+
+To summarize, si(t; , v) varies only with t and (, v)                   and we can satisfy si(, )  for any  as long as a
+with all remaining arguments being known to CAV i.                      feasible  is determined. Since at t =  , we have pi( ) =
+First, observing that the first half of each of the coef-               0 and using the definition of si(t) = pk(t) - pi(t) and
+ficient expressions in (54) (which is derived by solving                (55), we get
+(31) and (32) for CAV k) is a constant fully determined
+by information provided by CAV k, we can rewrite these                  si( ) = pk( ) = KA1  3 + KB1  2 + KC1  + KD1 .
+as KA1 , KB1 , KC1 , KD1 . Therefore, pk(t) in (31) can be
+expressed as                                                            Observe that if
+                                                                                                      pk( ) 
+pk(t) = KA1 t3 + KB1 t2 + KC1 t + KD1 .                      (55)
+                                                                        then CAV i enters the CZ at a safe distance from its
+Next, the second half of the coefficients can be expressed              preceding CAV k and since ti =  , we have si(t; , ) 
+                                                                        for all t  [, tm k ]. Thus, it suffices to select  tk , where
+through polynomials in either  or  explicitly derived                   tk is the smallest real root of pk( ) -  = 0.
+
+by solving (31) and (32) for CAV i. We will use the                     Case 1.1.B : ti = tkm. In this case,
+
+notation PX,n( ), PX,n() to represent polynomials of                                    si (, ) = si(tkm; , )           (60)
+degree n = 1, 2, 3 and X  {A1, B1, C1, D1}. Similarly,
+we set Q3( ) = ( - tim)3. Thus, for the coefficients in
+Eq. (54), we get
+
+                                                                        = A1(, )(tm k )3 + B1(, )(tm k )2 + C1(, )tm k
+
+A1(, )           =  KA1  +  PA1,1( )PA1,1() ,                                              +D1(, ) 
+                                   Q3( )
+
+B1(, )           =  KB1  +  PB1,2( )PB1,1() ,                           Thus, the feasibility region Fi is defined by all (, ) such
+                                   Q3( )                                that si(tkm; , ) -   0 in the (, ) space.
+                                                                        Case 1.1.C : ti = t1  (, tkm). This case only arises if
+C1(, )     =  KC1   +  PC1,3( )    + PC1,2( )PC1,1() ,                  the discriminant Di(, ) of (57) is positive, i.e.,
+                                     Q3( )
+                                                                           Di(, ) = 4B1(, )2 - 12A1(, )C1(, ) > 0 (61)
+D1(, )  =  KD1   +  PD1,3( )    +  PD1,2( )PD1,1() .         (56)
+                                   Q3( )
+
+Note that pk(t) in (55) involves only the K terms, while                and we get
+the analogous cubic polynomial for pi(t) involves only
+the P and Q terms.                                                                  t1  =  -2B1(, ) ± Di(, )            (62)
+                                                                                                    6A1(, )
+Our goal is to ensure that si(t; , )  for all t  [, tm k ]
+(recall that t0i   ). We can guarantee this by ensur-                   In addition, we must have
+ing that si (, )  mint[,tm k ]{si(t; , )} . Thus,
+we shift our attention to the determination of si(, ).                   < t1 < tkm, si(t1; , ) = 0, s¨i(t1; , ) 0 (63)
+
+                                                                    13
+Therefore, the feasibility region Fi is defined by all (, )                              may experience an active constraint, all different combi-
+such that                                                                                nations need to be considered. We analyze a few in what
+                                                                                         follows since it is clear that the remaining cases are han-
+                  si(, ) = si(t1; , )                                                    dled in a similar fashion.
+      = A1(, )(t1)3+B1(, )(t1)2 + C1(, )t1 (64)
+                                                                                         Case 2.1: vk(t) = vmax over an optimal trajectory arc,
+                          +D1(, )                                                        while CAV i is unconstrained. In this case, (29)-(31) no
+
+in conjunction with (62)-(63).                                                           longer apply for CAV k and the coefficients in (54) are
+
+Case 1.2: t  (tm k , tm i ]. Over this interval, vk(t) = vkm                             affected similar to Case 1.2, except that the fixed speed
+                                                                                         vkm is now vmax.
+
+by Assumption 2. Therefore, (29)-(31) no longer apply:                                   First, consider the interval [, tm k ]. Following the Hamil-
+                                                                                         tonian analysis in Section 3.1, let tIk be the time CAV
+(29)  becomes   pukk((tt))==L0+,  (30)   b-etckmom). eEsvvaklu(ta)ti=ngvskmi(ta)n=d      k enters the constrained arc with vk(t) = vmax and tkE
+(31)  becomes                     vkm(t                                                  be the time it exits this arc (see subfigure (a) in Fig. 6).
+
+pk(t) - pi(t) in this case yields the following coefficients
+
+in (54):
+
+                                                                                         The trajectory of CAV k consists of three arcs as follows.
+
+                                                                                         First, for t  [, tIk], A1, B1, C1 and D1 are defined ex-
+                                                                                                                      fvokr(tt)=[tvIkm, taEkx]a, n(2d9()3-(13)1b)eacroemrees-
+A2(,  )   =  -      1       (2L   +  (vim    +  )(  -  tim)),                            actly as in (54).  Second,
+               (   - tim)3                                                               placed by uk(t)    = 0, and
+
+                                                                                         pk(t) = pk(tIk) + vmax(t - tIk), where pk(tkI ) can be deter-
+                                                                                         mined before CAV i enters the CZ. The form of the coef-
+B2(, )    =        1              +  tm i )  +  ((  +  2tim)
+             (    - tim)3 [3L(                                                           ficients in (54) is modified the same way as in (65), with
+
+          + vim(2 + tm i ))( - tim)],                                                    vkm and L replaced by vmax and pk(tIk). It follows that
+                                                                                         KA1 , KB1 , KC1 and KD1 in (56) should also be modified
+C2(,  )   =  vkm  -  (   1        [6 timL    +  [(((tim)2  +   2 tm i )                  accordingly, with KA2 = KB2 = 0, KC2 = vmax and
+                        - tim)3                                                          KD2 = pk(tIk) - vmaxtIk. The final arc is for t  [tEk , tkm],
+                                                                                         when CAV k returns to an unconstrained arc. The form
+          + vim(( )2 + 2tim ))]( - tim)],
+                                                                                         of the coefficients in (54) does not change, except that
+                                   1
+D2(,  )   =  L  -  vkmtm k  -  (  - tm i )3  [L(( )3  -  3( )2tim)                       A1, B1, C1 and D1 should be replaced by A3, B3, C3 and
+
+          - ( (tim)2 + vim( )2tim)( - tm i )].                                           D3 since the value of the coefficients may differ for dif-
+                                                                 (65)
+                                                                                         ferent unconstrained arcs.
+
+It follows that KA1 , KB1 , KC1 and KD1 in (56) should be                                As in Case 1.1, we next consider ti  arg mint[,tm k ]
+modified accordingly, giving KA2 = KB2 = 0, KC2 = vkm                                    {si(t; , )} and there are three cases.
+and KD2 = L - vkmtkm. Since we are assuming that no
+control or state constraints are active for CAV i, the                                   Case 2.1.A: ti =  . As in Case 1.1.A, it suffices to select
+                                                                                          tk where tk is the smallest real root of pk( ) = .
+designated final time tim under optimal control satisfies
+(12), i.e., si(tim)  . Thus, we only need to consider the                                Case 2.1.B:   ti = tkm. As    in  Case 1.1.B, the feasibility
+subcase where si(, ) occurs in (tm k , tim) and we have                                  region Fi is  defined by all  (   , ) such that si(tkm; , ) -
+
+                  ti = t2, t2  (tkm, tim).                                                 0 in the (, ) space, with A1, B1, C1 and D1 being
+
+Proceeding as in Case 1.1.C, the feasibility region Fi is                                replaced by A3, B3, C3 and D3.
+defined by all (, ) such that
+                                                                                         Case 2.1.C: ti = t1  (, tkm). This case may only arise
+                     si(, ) = si(t2; , )                       (66)                      for t  (, tIk). As in Case 1.1.C, the feasibility region Fi
+                                                                                         is defined by
+      = A2(, )(t2)3 + B2(, )(t2)2 + C2(, )t2
+
+                        +D2(, )                                                                             si(, ) = si(t1; , )  (67)
+
+in conjunction with (62)-(63), with A1, B1, C1 and D1                                    = A1(, )(t1)3 + B1(, )(t1)2 + C1(, )t1
+replaced by A2, B2, C2 and D2, and with  < t1 < tm k
+replaced by tkm < t2 < tm i .                                                                               +D1(, ) 
+
+Case 2: At least one of the state and control constraints                                in conjunction with (62)-(63) with  < t1 < tkm being
+is active over [, tim]. As discussed in Section 3.1, there                               replaced by  < t1 < tkI .
+are several cases to consider when state and/or control                                  For t  (tm k , tim], the analysis is exactly the same as the
+                                                                                         way we handle Case 1.2, with A2, B2, C2 and D2 being
+constraints are active. Since one or both CAVs k and i
+
+                                                                                     14
+replaced by A4, B4, C4 and D4. The feasibility region Fi
+is defined by
+
+             si (, ) = si(t2; , )                (68)
+
+    = A4(, )(t2)3 + B4(, )(t2)2 + C4(, )t2
+
+             +D4(, ) 
+
+in conjunction with (62)-(63).
+
+Case 2.2: CAV k is unconstrained and ui (t) = umin over
+an optimal trajectory arc. Since there are many subcases
+
+and each can be similarly handled, we only consider one
+subcase where CAV i enters the constrained arc at tm k
+(see subfigure (b) in Fig. 6).
+
+Since both CAV k and i are unconstrained in [, tm k ], the
+form of the coefficients in (54) does not change, and the
+
+feasibility region for Cases 2.2.A, 2.2.B and 2.2.C can
+
+be derived in the same way as Case 1.1.A, 1.1.B and
+
+1.1.C. For t  (tm k , tim], CAV i is deceleraing at a con-
+stant value ui (t) = umin. Thus, (29)-(31) are replaced
+by ui(t) = umin, vi(t) =        vi(tkm)  v+i(utm km)inc(atn-btem k d)eatenrd-
+pi (t) = L + vi(t)(t - tm k ),  where                                              Fig. 6. Cases when the state and/or control constraints are
+                                                                                   active.
+mined given (, v). The coefficients in (54) are modifed
+                                                                                                  Fig. 7. Feasible and infeasible region
+as follows:                                                                        with  = 10, L = 400, and CAV k is the first vehicle in
+                                                                                   the CZ and is driving at the constant speed vk0 = vkm = 10.
+             A2(, ) = 0,                                                           The color bar in Fig. 7 indicates the value of si (t) and the
+                                                                                   yellow region, determined by (64), represents the feasi-
+                          1                                                        ble region, while the non-yellow region represents the in-
+             B2(, ) = - 2 umin,                                                    feasible region. The black curve is the boundary between
+                                                 (69)                              the two regions and is not linear in general. This bound-
+                                                                                   ary curve shifts depending on the different cases we have
+             C2(, ) = vkm - vi(tkm) + umintkm,                                     considered in the proof of Theorem 2. This example also
+                                                                                   illustrates that we can always find a nonempty feasible
+             D2(, ) = -vkmtm k .                                                   region since we can select points to the right of the curve
+                                                                                   corresponding to CAV i entry times in the CZ which can
+For t  (tkm, tm i ], CAV k is cruising at the speed vkm and                        be arbitrarily large.
+CAV i keeps decelerating until it reaches vim. Therefore,
+si may only occur at tm i and we have                                              References
+
+             si (, ) = si(tim; , )               (70)                              J. Alonso, V. Milan´es, J. P´erez, E. Onieva, C. Gonz´alez,
+                                                                                      and T. de Pedro. Autonomous vehicle control systems
+    = A2(, )(tim)3 + B2(, )(tm i )2 + C2(, )tim                                       for safe crossroads. Transportation Research Part C:
+                                                                                      Emerging Technologies, 19(6):1095­1110, Dec. 2011.
+             +D2(, ) 
+                                                                                   M. Athans. A unified approach to the vehicle-merging
+Thus, the feasibility region Fi is defined by all (, ) such
+that si(tm i ; , ) -   0 in the (, ) space.
+
+All remaining cases are similarly handled and in each
+case a feasibility region Fi is defined by all (, ) satis-
+fying an inequality of the form si(; , ) -   0 for an
+appropriate value of  and coefficients in (53).
+
+To complete the proof, we show that feasibility region Fi
+
+is always nonempty. This is easily established by consid-
+
+ering a point (, ) such that vmin <  < vmax (which
+
+is  possible by Assumption   1) and    = tkf : since pk(tkf )  =
+L   + S and pi( ) = 0, it    follows  that si( ) > S >         .
+
+Obviously, any such (, ) is feasible.
+
+Remark 4 To illustrate the feasible region and provide
+some intuition, we give a numerical example (see Fig. 7),
+
+                                                                               15
+   problem. Transportation Research, 3(1):123­133,                 Federal Highway Administration, 2011.
+   1969. ISSN 00411647. doi: 10.1016/0041-1647(69)              D. Miculescu and S. Karaman. Polling-Systems-
+   90109-9.
+A. E. Bryson. Applied optimal control: optimization,               Based Control of High-Performance Provably-Safe
+   estimation and control. CRC Press, 1975.                        Autonomous Intersections. In 53rd IEEE Conference
+A. Colombo and D. Del Vecchio. Least Restrictive                   on Decision and Control, 2014.
+   Supervisors for Intersection Collision Avoidance: A          I. A. Ntousakis, I. K. Nikolos, and M. Papageorgiou.
+   Scheduling Approach. IEEE Transactions on Auto-                 Optimal vehicle trajectory planning in the context
+   matic Control, Provisiona, 2014.                                of cooperative merging on highways. Transportation
+A. de La Fortelle. Analysis of reservation algorithms for          Research Part C: Emerging Technologies, 71:464­488,
+   cooperative planning at intersections. 13th Interna-            2016.
+   tional IEEE Conference on Intelligent Transportation         R. Rajamani. Vehicle Dynamics and Control. Springer,
+   Systems, pages 445­449, Sept. 2010.                             2012.
+K. Dresner and P. Stone. Multiagent traffic manage-             R. Rajamani, H.-S. Tan, B. K. Law, and W.-B. Zhang.
+   ment: a reservation-based intersection control mecha-           Demonstration of integrated longitudinal and lateral
+   nism. In Proceedings of the Third International Joint           control for the operation of automated vehicles in pla-
+   Conference on Autonomous Agents and Multiagents                 toons. IEEE Transactions on Control Systems Tech-
+   Systems, pages 530­537, 2004.                                   nology, 8(4):695­708, 2000.
+K. Dresner and P. Stone. A Multiagent Approach to               J. Rios-Torres and A. A. Malikopoulos. A survey on the
+   Autonomous Intersection Management. Journal of                  coordination of connected and automated vehicles at
+   Artificial Intelligence Research, 31:591­653, 2008.             intersections and merging at highway on-ramps. IEEE
+S. Huang, A. Sadek, and Y. Zhao. Assessing the Mobil-              Transactions on Intelligent Transportation Systems,
+   ity and Environmental Benefits of Reservation-Based             18(5):1066­1077, 2017a.
+   Intelligent Intersections Using an Integrated Simula-        J. Rios-Torres and A. A. Malikopoulos. Automated
+   tor. IEEE Transactions on Intelligent Transportation            and cooperative vehicle merging at highway on-ramps.
+   Systems, 13(3):1201,1214, 2012. doi: 10.1109/TITS.              IEEE Transactions on Intelligent Transportation Sys-
+   2012.2186442.                                                   tems, 18(4):780­789, 2017b.
+M. Kamal, M. Mukai, J. Murata, and T. Kawabe. Model             J. Rios-Torres, A. A. Malikopoulos, and P. Pisu. Online
+   Predictive Control of Vehicles on Urban Roads for Im-           Optimal Control of Connected Vehicles for Efficient
+   proved Fuel Economy. IEEE Transactions on Con-                  Traffic Flow at Merging Roads. In 2015 IEEE 18th In-
+   trol Systems Technology, 21(3):831­841, 2013. doi:              ternational Conference on Intelligent Transportation
+   10.1109/TCST.2012.2198478.                                      Systems, pages 2432­2437, 2015.
+K.-D. Kim and P. Kumar. An MPC-Based Approach                   B. Schrank, B. Eisele, T. Lomax, and J. Bak. 2015 Urban
+   to Provable System-Wide Safety and Liveness of Au-              Mobility Scorecard. Technical report, Texas A& M
+   tonomous Ground Traffic. IEEE Transactions on Au-               Transportation Institute, 2015.
+   tomatic Control, 59(12):3341­3356, 2014. doi: 10.            S. E. Shladover, C. A. Desoer, J. K. Hedrick,
+   1109/TAC.2014.2351911.                                          M. Tomizuka, J. Walrand, W.-B. Zhang, D. H. McMa-
+J. Lee, B. B. Park, K. Malakorn, and J. J. So. Sustain-            hon, H. Peng, S. Sheikholeslam, and N. McKeown.
+   ability assessments of cooperative vehicle intersection         Automated vehicle control developments in the PATH
+   control at an urban corridor. Transportation Research           program. IEEE Transactions on Vehicular Technol-
+   Part C: Emerging Technologies, 32:193­206, 2013.                ogy, 40(1):114­130, 1991.
+W. Levine and M. Athans. On the optimal error reg-              R. Tachet, P. Santi, S. Sobolevsky, L. I. Reyes-Castro,
+   ulation of a string of moving vehicles. IEEE Trans-             E. Frazzoli, D. Helbing, and C. Ratti. Revisiting street
+   actions on Automatic Control, 11(3):355­361, 1966.              intersections using slot-based systems. PLOS ONE,
+   ISSN 0018-9286. doi: 10.1109/TAC.1966.1098376.                  11(3), 2016.
+A. A. Malikopoulos. Real-Time, Self-Learning Identi-            P. Varaiya. Smart cars on smart roads: problems of
+   fication and Stochastic Optimal Control of Advanced             control. IEEE Transactions on Automatic Control, 38
+   Powertrain Systems. ProQuest, 2011.                             (2):195­207, 1993.
+A. A. Malikopoulos. Stochastic optimal control for series       F. Yan, M. Dridi, and A. El Moudni. Autonomous ve-
+   hybrid electric vehicles. In American Control Confer-           hicle sequencing algorithm at isolated intersections.
+   ence (ACC), 2013, pages 1189­1194. IEEE, 2013.                  2009 12th International IEEE Conference on Intelli-
+A. A. Malikopoulos and J. P. Aguilar. An Opti-                     gent Transportation Systems, pages 1­6, 2009.
+   mization Framework for Driver Feedback Systems.              Y. Zhang, A. A. Malikopoulos, and C. G. Cassan-
+   IEEE Transactions on Intelligent Transportation Sys-            dras. Optimal control and coordination of connected
+   tems, 14(2):955­964, 2013. doi: 10.1109/TITS.2013.              and automated vehicles at urban traffic intersections.
+   2248058.                                                        In Proceedings of the American Control Conference,
+R. Margiotta and D. Snyder. An agency guide on how                 pages 6227­6232, 2016.
+   to establish localized congestion mitigation programs.       Y. Zhang, C. G. Cassandras, and A. A. Malikopoulos.
+   Technical report, U.S. Department of Transportation.            Optimal control of connected automated vehicles at
+                                                                   urban traffic intersections: A feasibility enforcement
+
+                                                            16
+   analysis. In Proceedings of the 2017 American Control
+   Conference, pages 3548­3553, 2017a.
+Y. Zhang, A. A. Malikopoulos, and C. G. Cassandras.
+   Decentralized optimal control for connected auto-
+   mated vehicles at intersections including left and right
+   turns. In 56th IEEE Conference on Decision and Con-
+   trol, pages 4228­4433, 2017b.
+M. Zhong and C. G. Cassandras. Asynchronous dis-
+   tributed optimization with event-driven communica-
+   tion. IEEE Transactions on Automatic Control, 55
+   (12):2735­2750, 2010.
+F. Zhu and S. V. Ukkusuri. A linear programming for-
+   mulation for autonomous intersection control within a
+   dynamic traffic assignment and connected vehicle en-
+   vironment. Transportation Research Part C: Emerg-
+   ing Technologies, Jan. 2015. ISSN 0968090X. doi:
+   10.1016/j.trc.2015.01.006.
+I. H. Zohdy, R. K. Kamalanathsharma, and H. Rakha.
+   Intersection management for autonomous vehicles us-
+   ing iCACC. 2012 15th International IEEE Conference
+   on Intelligent Transportation Systems, pages 1109­
+   1114, 2012.
+
+                                                                          17
+

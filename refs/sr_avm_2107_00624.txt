@@ -1,0 +1,1113 @@
+Anticipation in a velocity-based model for pedestrian dynamics
+
+                    Qiancheng Xua,, Mohcine Chraibia, Armin Seyfrieda,b
+
+                                          aInstitute for Advanced Simulation,
+                                Forschungszentrum Ju¨lich, 52425 Ju¨lich, Germany
+
+                                   bSchool of Architecture and Civil Engineering,
+                               University of Wuppertal, 42119 Wuppertal, Germany
+
+Abstract
+
+    Lane formation in bidirectional pedestrian streams is based on a stimulus-response mech-
+anism and strategies of navigation in a fast-changing environment. Although microscopic
+models that only guarantee volume exclusion can qualitatively reproduce this phenomenon,
+they are not sufficient for a quantitative description. To quantitatively describe this phe-
+nomenon, a minimal anticipatory collision-free velocity model is introduced. Compared to
+the original velocity model, the new model reduces the occurrence of gridlocks and repro-
+duces the movement of pedestrians more realistically. For a quantitative description of the
+phenomenon, the definition of an order parameter is used to describe the formation of lanes
+at transient states and to show that the proposed model compares relatively well with ex-
+perimental data. Furthermore, the model is validated by the experimental fundamental
+diagrams of bidirectional flows.
+
+Keywords: anticipation, velocity-based model, pedestrian dynamics, bidirectional flow,
+lane formation
+
+1. Introduction
+
+    In bidirectional flow situations, pedestrians self-organize into dynamically varying and
+separated lanes [1, 2, 3, 4, 5, 6]. Although the mechanisms behind this apparently organized
+separation of the crowd are not known for certain and in many cases may seem random, we
+observe that this formation leads to a reduction in collisions and thus increases the speed.
+Unlike with car traffic, where stable lanes are predetermined by the restrictions established
+by the infrastructure, in pedestrian dynamics, lanes are formed dynamically and naturally
+with neither external synchronization nor any prior agreement between pedestrians.
+
+    We also see lane formation in systems of inanimate particles [7, 8, 9], where models
+ensuring volume exclusion are sufficient to reproduce the phenomenon. Therefore, with
+a simple social force model considering the repulsion between particles, Helbing et al. [10]
+
+    corresponding author
+     Email addresses: q.xu@fz-juelich.de (Qiancheng Xu), m.chraibi@fz-juelich.de (Mohcine
+Chraibi), a.seyfried@fz-juelich.de (Armin Seyfried)
+
+Preprint submitted to Elsevier  July 2, 2021
+qualitatively reproduced the lane formation in a corridor with periodic boundary conditions.
+They attributed two reasons to this phenomenon, the sideways movement, which separates
+agents moving in opposite directions, and the weak interaction between agents moving in
+the same lane, which maintains the lanes that have been formed [2]. However, pedestrians
+usually avoid collisions by using a stimulus-response mechanism to anticipate changes in the
+environment. Therefore, it is clear that a model based solely on volume exclusion is over-
+simplified and not suitable for quantitatively reproducing the lane formation in pedestrian
+systems.
+
+    Pedestrians anticipate the changes in their environment by predicting the movement of
+neighboring pedestrians and they take this information into account in their steering to
+avoid imminent collisions. The effect of anticipation on the movement of pedestrians in
+bidirectional flows has been discussed and addressed in several works to date. For instance,
+Suma et al. [11] conducted a bidirectional flow experiment where participants are asked to
+use cell phones (weak anticipation) or move cautiously (excessive anticipation), to study
+how anticipation affects the movement of pedestrians. They found anticipation significantly
+affects the time it takes for pedestrians to pass through the corridor, and there is an optimal
+degree of anticipation to realize the minimum passing time. However, since the scale of the
+experiment was small, the lane formation was not analyzed quantitatively. Consequently,
+the authors proposed an anticipation floor field cellular automata model, which considers
+the area occupied by agents in the future, to give a more realistic picture of the behavior
+of agents in the bidirectional flow simulation. The model was further analyzed in [12] by
+using an order parameter, which is originally used to detect lanes in a colloidal suspen-
+sion [13]. A quantitative analysis showed that the model with anticipation can reproduce
+lane formation in higher density situations than the model without anticipation. Bailo et
+al. [14] also proposed a microscopic model with anticipation, which takes into consideration
+the time to collision between agents. Murakami et al. [15] performed the bidirectional ex-
+periment in a corridor with open boundary conditions, and they observed that the sideways
+movement of pedestrians before lane formation can be described in terms of the L´evy walk
+process. Therefore, the authors suggested that this sideways movement is strongly related
+to lane formation. Moreover, they assumed the most likely action underlying the sideways
+movement is anticipation. Then, the relationship between anticipation and lane formation
+is further studied in [16] through a larger scale bidirectional flow experiment, where pedes-
+trians distracted by cell phones are located at different positions to represent situations with
+different degrees of anticipation. They found anticipation favors the formation of lanes in
+bidirectional flow situations.
+
+    An additional strategy to avoid collisions is preferring to follow pedestrians moving in
+the same direction. This strategy is part of the anticipation process to reduce collisions
+but it reduces the probability of conflicts in a larger time scale than the strategy that only
+avoids collisions with neighboring pedestrians. A model that supports this statement was
+published by Isobe et al. [17] who using a bidirectional flow experiment with open boundary
+conditions, measured the mean time for pedestrians to pass through the corridor and the
+mean speed of pedestrians during the process. The authors proposed a lattice gas model
+taking into account the strategy of following others. The front area of an agent is divided
+
+                                                          2
+into three parts and the agent tends to move into the area that contains the highest number
+of agents moving in the same direction. This model reproduces lane formation and the
+measured experimental data very well.
+
+    In addition, the effect of various factors such as flow ratio and heterogeneity of agents
+on lane formation were studied in several works. Mossaid et al. [18] performed a bidirec-
+tional flow experiment in a ring-shaped corridor to realize periodic boundary conditions.
+The authors discovered the dynamic and transient nature of lane formation is due to the
+heterogeneity of pedestrians' walking speed, and the lane is stable when all pedestrians move
+at the same speed. This conclusion was validated using computer simulations. Feliciani et
+al. [19] conducted a bidirectional flow experiment in a corridor with open boundary condi-
+tions, where various flow ratios of pedestrians in two directions were adopted. Their result
+shows that, once lanes are formed, a balanced bidirectional flow, i.e., when the number of
+pedestrians moving in both directions is equal, is the most stable situation.
+
+    Another phenomenon related to bidirectional flow is the jamming transition, also called
+gridlock, appearing at a critical density. Muramatsu et al. [20] used a lattice gas model
+without backstepping to study the jamming transition in bidirectional pedestrian flow with
+open boundary conditions. They found the jamming transition does not depend on the
+corridor size but it is affected by the strength of the drift (the preference to move in the
+desired direction) and the traffic rule adopted (such as keep to the right). Fang et al. [21]
+adopted a cellular automata model with backstepping and the right-hand side rule. They
+observed the critical density of jamming transition increases with a higher probability of
+backstepping. Nowak et al. [12] studied the phenomenon with the anticipation floor field
+cellular automata model proposed in [11]. They discovered the anticipation mechanism in
+the model suppresses the formation of jamming (facilitating the formation of lanes), which
+leads to an increase in the critical density of the jamming transition. However, the jamming
+transition is only observed in computer simulations.
+
+    Furthermore, the fundamental diagram is used to analyze bidirectional streams. In some
+early studies summarized in [22], it is believed that there is no clear or only a small differ-
+ence between uni- and bidirectional flows. Helbing et al. [23] concluded that bidirectional
+flows are more efficient than unidirectional flows. The possible reason behind this is better
+coordination between people in bidirectional situations (lane formation). Kretz et al. [24]
+also found that pedestrians use space more efficiently in bidirectional situations. Subse-
+quently, Zhang et al. [22] carried out both uni- and bidirectional flow experiments under
+laboratory conditions. A clear difference between the fundamental diagrams of uni- and
+bidirectional flows is observed when the density is higher than 1.0 m-2. The specific flow
+reaches a peak with increasing density in the unidirectional flow, whereas a plateau is formed
+in the bidirectional flow. However, there are no experimental data for densities higher than
+4.5 m-2.
+
+    In order to reproduce bidirectional flow quantitatively, the anticipation velocity model
+(AVM) for pedestrian dynamics is proposed. The action anticipating changes of neighboring
+pedestrians' positions and the strategy of following others are covered in this model. The
+new model is compared to two similar models from the literature, the collision-free speed
+model and generalized collision-free velocity model, and we highlight the reasons behind the
+
+                                                          3
+difference. Moreover, we use the AVM to study the jamming transition, lane formation, and
+fundamental diagrams in bidirectional flow scenarios. In the following section, the AVM is
+described.
+
+2. Definition of the anticipation velocity model
+
+    In this model, an agent is represented as a disk with a constant radius r. The position and
+velocity of pedestrian i are denoted by xi and vi, respectively, where vi = x i. Furthermore,
+vi = ei · vi, where ei and vi denote the direction of movement and the speed of agent i,
+respectively. Both variables are modeled differently as explained in the following subsections.
+
+2.1. Submodel for operational navigation
+
+    The direction of movement of agent i is determined by its desired direction which is a unit
+vector denoted by ei0 pointing towards its target. The determination of the target follows
+various tactical strategies, which is not the subject of the present study. For operational
+navigation to avoid collisions and obstructions, in the presence of other agents, the direction
+of i will deviate from its desired direction ei0. To consider anticipation, the process can be
+divided into the following parts: a. perception of the actual situation, b. prediction of a
+future situation, and c. selection of a strategy leading to an action.
+
+    a. Perception of the actual situation: To consider restrictions using visual perception, it
+is assumed that only agents located in the union of two half-planes, where i is moving or
+intends to move, affect its direction. The set containing all agents who have an impact on
+i's direction of movement is
+
+Ni(t) = j, ei(t) · ei,j(t) > 0 or ei0(t) · ei,j(t) > 0 ,       (1)
+
+where ei,j denotes the unit vector from i to j.
+    b. Prediction of a future situation: To consider the prediction, it is assumed that the
+
+strength of j's impact on i is a function of the predicted distance between these two agents at
+a particular time point. Given a time constant ta, which can be interpreted as the prediction
+time, the predicted distance is defined as
+
+sia,j(t + ta) = max 2r, xja(t + ta) - xia(t + ta) · ei,j(t) ,  (2)
+
+where xia(t + ta) = xi(t) + vi(t) · ta. See Figure 1.
+
+4
+Figure 1: An example of sai,j(t + ta), the predicted distance between agents i (xi, vi) and j (xj, vj). When
+pedestrians move towards each other their predicted distance is smaller than the actual distance.
+
+c. Selection of a strategy leading to an action: After the introduction of the predicted
+
+distance in Eq. 2, the strength of the impact from agent j on the direction of movement of
+
+agent i is defined as
+
+                       Ri,j(t) = i,j(t) · exp  2r - sai,j(t + ta)  ,      (3)
+                                                       D
+
+where D > 0 is a constant parameter used to calibrate the range of the impact from neighbors
+and i,j is a directional dependency used to vary the strength of impact from different
+neighbors (see Eq. 4).
+
+                       i,j(t) = k  1 + 1 - ei0(t) · ej(t)  , k > 0,       (4)
+                                                 2
+
+where i,j is minimal (k) when both vectors ei0 and ej are aligned and is maximum (2k)
+when they are anti-aligned, which means that agents influence each other's direction strongly
+in bidirectional scenarios. Here, i,j means agents have a high tendency to follow the agents
+who move in the same direction. When this strategy is used, the probability of further
+conflicts is reduced.
+
+    The direction of the impact from agent j on i's direction of the movement is defined as
+
+                       ni,j(t) = - sign eia,j(t + ta) · ei0(t) · ei0(t),  (5)
+
+where eia,j(t + ta) = xja(t + ta) - xi(t). The direction of ni,j depends on the predicted position
+of agent j after a period of time ta. Note that when this predicted position is aligned with
+the desired direction of i, the direction of ni,j(t) in Eq. 5 is chosen randomly as ei0 or
+-ei0. See Figure 2. This rule prevents agents from moving in the opposite direction to the
+desired direction.
+
+                                                          5
+Figure 2: The direction of the impact from j on the direction of movement of i (ni,j) according to Eq. 5.
+
+Finally, Eq. 3 and Eq. 5 yield the optimal direction of agent i as
+
+                          eid(t) = u ei0(t) +          Rj,i(t) · nj,i(t) ,     (6)
+
+                                               jNi(t)
+
+where u is a normalization constant such that eid = 1. Then, the direction of movement
+
+of agent i is updated as
+
+                                dei(t) = eid(t) - ei(t) ,                      (7)
+                                dt                   
+
+where  is a relaxation parameter adjusting the rate of the turning process from the current
+
+direction ei to the optimal direction eid.
+
+2.2. Submodel for the speed
+
+After obtaining the new direction of the movement according to Eq. 7, the set of neighbors
+
+that are imminently colliding with i is defined as
+
+                          Ji =  j, ei · ei,j  0 and    ei  · ei,j     2r    ,  (8)
+                                                                   
+
+                                                                      si,j
+
+where si,j is the current distance between i and j. Therefore, the maximum distance that
+agent i can move in the direction without overlapping other agents is
+
+                                si = min si,j - 2r.                            (9)
+                                            jJi
+
+Finally, the speed of agent i in the new direction is
+
+                                vi = min    vi0,  max  0, si       ,           (10)
+                                                          T
+
+where vi0 is the free speed of agent i, and T > 0 is the slope of the speed-headway relationship.
+The speed submodel used here is the same as in the generalized collision-free velocity model.
+
+                                                  6
+3. Test with two interacting agents
+
+    Binary interaction scenarios with the collision-free speed model (CSM), the generalized
+collision-free velocity model (GCVM), and the AVM, respectively, are studied to assess the
+models' ability. The three models adopt the same speed submodel but different submodels
+for operational navigation. In both the CSM and the GCVM, the strength of the effect from
+agent j on agent i's direction of movement is a function of the distance between the two
+agents. As for the direction of this effect, in the CSM it is from j to i, while in the GCVM
+it is obtained with Eq. 5 (ta = 0 s). A detailed introduction to the CSM can be found in [25]
+and to the GCVM in [26]. The parameters of these models are summarized in Table 1.
+
+ CSM  r [m]  k Eq. 4  D [m] Eq. 3  T [s] Eq.10  t [s]   [s] Eq. 7  ta [s]
+GCVM  0.18       3         0.1         1.06      0.05       \        \
+ AVM                                                                 \
+                                                           0.3       1
+
+Table 1: The parameters of the models in binary interaction simulations. Here, r is the radius of agents, t
+is the time step size, and ta is the prediction time. The simulation in the present study is conducted using
+the Euler scheme. Parameter values of the CSM and the GCVM are obtained from [26].
+
+                              (a)
+
+             y [m]  1                          AVM i
+                    0                          AVM j
+                    1         2 x [4m] 6       CSM i
+                                    (b)        CSM j
+                    1                         GCVM i
+                    0                         GCVM j
+                    1                     8 10
+
+                    1
+                    0
+                    1
+
+                          20
+
+Figure 3: (a): Scenario 1, agent i walks behind agent j. The two agents have the same desired direction but
+the free speed of agent i is higher than that of agent j. (b): The trajectory of agents. The position of agents
+at different times is represented by the disk, and the transparency of these disks increases with increasing
+time. When the AVM is used, overtaking starts earlier.
+
+                                                          7
+    The first scenario is that agent i walks behind agent j, which is shown in Figure 3(a).
+The agents have the same desired direction, but the free speed of agent i is higher than
+that of agent j. The trajectory of the agents in the first scenario is shown in Figure 3(b).
+In the simulation using the GCVM and the AVM, agent i overtakes agent j by adjusting
+the direction of movement. In the CSM, however, no overtaking is observed. Moreover,
+compared to the GCVM, the overtaking in the AVM occurs earlier.
+
+    The second scenario, more relevant to bidirectional flow, depicts two agents having the
+same free speed with opposite desired directions (see Figure 4(a)). The trajectory of the
+agents in the second scenario is shown in Figure 4(b). Here again, it is observed that with
+the GCVM and the AVM, agents i and j both change their paths to avoid the imminent
+conflict, although this maneuver occurs earlier in the AVM than in the GCVM. In the CSM,
+the two agents are unable to pass each other.
+
+                (a)
+
+       1                       AVM i
+                               AVM j
+       0
+
+       1
+
+       1                       CSM i
+                               CSM j
+y [m]  0
+
+       1
+
+       1                       GCVM i
+                               GCVM j
+       0
+
+       1
+
+          6  4  2 x [0m] 2  4  6
+
+                (b)
+
+Figure 4: (a): Scenario 2, agent i and agent j move toward each other. The two agents have the same free
+speed but opposite desired directions. (b): The trajectory of agents. The position of agents at different
+times is represented by the disk, and the transparency of these disks increases with increasing time. Evasive
+movement starts earlier when the AVM is used.
+
+    In the last scenario (see Figure 5(a)), the paths cross at right angles. The free speeds
+of the two agents are very similar but not quite equal to avoid the symmetric movement of
+the two agents. The trajectory of the agents in the last scenario is shown in Figure 5(b).
+When the AVM is used, the agents deviate slightly from the desired direction to the target
+and avoid collision.
+
+                8
+            4  AVM i  CSM i  GCVM i
+                             GCVM j
+            2  AVM j  CSM j
+
+     y [m]  0
+
+            2
+
+            4 4 2 0 2 4 4 2 x [0m] 2 4 4 2 0 2 4
+
+(a)                   (b)
+
+Figure 5: (a): Scenario 3, agent i and agent j move across each other's path. The free speeds of the two
+agents are very close but not equal and their desired directions are perpendicular to each other. (b): The
+trajectory of agents. The position of agents at different times is represented by the disk, and the transparency
+of these disks increases with increasing time.
+
+    In all cases, it can be concluded that, without introducing noise terms into the models,
+the movement of agents in the simulation using the AVM is closer to reality than using the
+CSM and the GCVM, where agents have difficulty overtaking or performing realistic evasive
+movements.
+
+4. Bidirectional flow simulations with periodic boundary conditions
+
+4.1. States of bidirectional flow
+
+    The bidirectional flow simulation is performed for a corridor shown in Figure 6. For the
+initial conditions of a simulation, the agents are randomly distributed in the gray waiting
+areas. The same number of agents were placed at the left and the right sides of the corridor.
+After the simulation starts, agents in the left waiting area move toward the right, and vice
+versa. Different initial conditions of agents' desired direction e 0 were compared before
+performing the simulations in this section. Since no significant difference could be observed
+between the simulation results of ordered and unordered initial conditions, agents' desired
+direction e 0 were set parallel to the horizontal walls of the corridor. The free speeds of
+agents are normally distributed N  (1.55, 0.182) m s-1 according to [22]. All simulations
+presented in this section are performed with periodic boundary conditions in the walking
+direction of the agents. Each simulation lasts 400 s.
+
+     Figure 6: The corridor for bidirectional flow simulations.
+
+                                   9
+    Based on the approach used in [12], the patterns emerging in our simulations are classified
+into four different states, which are local jamming, global jamming, lane formation, and
+disorder (see Figure 7). Local jamming and global jamming are both categorized as jamming
+states, whereas lane formation and disorder are grouped into the moving states. If the
+average speed of an agent over 10 s is less than v0/100, it is indicated as a static agent.
+Using this definition, a simulation is considered to be in the jamming state when the number
+of static agents in the simulation is equal to or greater than 2 (Nstatic  2); otherwise, the
+simulation is considered to be in a moving state. Note, although 400 s is usually long enough
+to reach the steady state of the simulation, the jamming or moving state of a simulation
+still has a certain probability of being transient. The number of static agents in the four
+simulations in Figure 7 are 29 (local jamming), 80 (global jamming), 0 (lane formation),
+and 0 (disorder), respectively.
+
+                                                                    (a)
+
+                                                                    (b)
+
+                                                                    (c)
+
+                                                                    (d)
+Figure 7: Different states of bidirectional flow simulations with periodic boundary conditions. (a): Local
+jamming. (b): Global jamming. (c): Lane formation. (d): Disorder.
+
+    In this section (Figures 8, 9, and 10(a)), each simulation is performed for M = 30 times
+with different distributions of agents in the waiting areas, then the jamming probability Pjam
+
+                                                         10
+is calculated as
+
+                                     Pjam = Sjam/M,                  (11)
+
+where Sjam is the number of simulations leading to a jamming state.
+
+To further distinguish between the states of lane formation and disorder, the quantity 
+
+defined in [27] is introduced as
+
+                                              1N   i,                (12)
+                                     =
+                                           N  i=1
+
+with                                 (Nisame  - Nidiff)2
+                                     (Nisame  + Nidiff)2
+                  i               =                        [0, 1],   (13)
+
+where Nisame is the set of all agents initially in the same waiting area as agent i and currently
+moving in i's lane and Nidiff is the set of all agents initially in a different waiting area to
+agent i and currently moving in i's lane. The expressions of Nisame and Nidiff are
+
+                  Nisame = j, |yj - yi| < 3r/2 and ei0 · ej0 > 0 ,   (14)
+
+                  Nidiff = j, |yj - yi| < 3r/2 and ei0 · ej0 < 0 ,   (15)
+
+where yi is the vertical position of agent i.
+     is an indicator of how pronounced lanes are formed in a simulation. Knowing that an
+
+order parameter is only measured at steady states,  is used here to compare models with
+respect to their performance of describing the transient state of lane formation. The values
+of  in the four simulations in Figure 7 are 0.66 (local jamming), 0.18 (global jamming),
+1.00 (lane formation), and 0.31 (disorder), respectively. Nevertheless, there is no specific
+boundary to clearly distinguish between the states of lane formation and disorder.
+
+4.2. Jamming transition
+
+    To study the jamming transition in bidirectional flow, simulations are performed with
+the AVM, the CSM, and the GCVM, respectively. The parameters of models are shown in
+Table 1. For each model, simulations are performed with different numbers of agents ranging
+from 20 to 200 (10 to 100 in each waiting area).
+
+    The relationship between Pjam and global, the global density of agents in the corridor, for
+different models is shown in Figure 8. The value of global is equal to the number of agents
+divided by the area of the corridor. With an increase in global, a transition from moving
+states (Pjam = 0) to jamming states (Pjam = 1) is observed in the simulation of all three
+models. However, with the AVM, the transition occurs at a higher value of global compared
+to the other two models, which indicates the model's ability to reproduce lane formation
+even at higher density values.
+
+                                              11
+      1.0  CSM
+
+      0.8  GCVM
+           AVM
+
+Pjam  0.6
+
+      0.4
+
+      0.2
+
+      0.0
+        0.0 0.2 0.4 0.6 0.8 1.0 1.2 1.4 1.6 1.8 2.0
+                           global [m 2]
+
+Figure 8: The relationship between Pjam and global for different models.
+
+4.3. Parametric study
+
+    Parameters k and D are used to calibrate the strength and range of the impact from
+neighbors to the direction of movement in all three models (the CSM, the GCVM, and the
+AVM). Although the definitions vary slightly between the three models, higher values of
+k and larger D always led to agents being more stimulated to deviate from their desired
+directions. In this section, the effect of k and D on the jamming probability Pjam is studied
+for each of the three models.
+
+    For each model, simulations are performed with different values of k (1, 2, 3, 4, 5, and
+6) and different values of D (0.01, 0.02, 0.05, 0.10, 0.20 m). To ensure simulations with
+jamming and moving states, the global density of agents global is set close to the critical
+density between the moving state and the jamming state (see Figure 8). The number of
+agents is 100 (global  0.96 m-2) for the simulations using the CSM, 60 (global  0.58 m-2)
+for the simulations using the GCVM, and 140 (global  1.35 m-2) for the simulations using
+the AVM. Other parameters of the three models are given in Table 1.
+
+    The jamming probability of the simulation using the CSM and the GCVM is shown in
+Figures 9(a) and 9(b), respectively. Generally speaking, the value of Pjam in the simulation
+using the CSM and the GCVM decreases with increasing k and D, which means that the
+jamming probability decreases with increasing impact from neighbors on the direction of
+movement. However, the value of Pjam in the simulation using the AVM shows a different
+trend (see Figure 9(c)). When the value of D is small (0.01, 0.02, and 0.05 m), the value
+of Pjam changes slightly. With a larger value of D (0.1 m), the value of Pjam increases with
+increasing k. Note that when the value of D is large enough (0.2 m), the value of Pjam is
+close to 1 and the effect of k is marginal again. Generally, in the AVM, with increasing
+impact from neighbors on the direction of movement, the jamming probability increases.
+
+                 12
+1.0                   1.0                                                                     1.0       0.01 m
+                                                                                                        0.02 m
+0.8                   0.8                                                                     0.8
+
+0.6  0.01 m           0.6  0.01 m                                                             0.6       0.05 m
+Pjam                                                                                                    0.10 m
+                                            Pjam                                                        0.20 m
+                                                                                        Pjam
+0.4  0.02 m           0.4  0.02 m                                                             0.4
+     0.05 m                0.05 m
+0.2  0.10 m           0.2  0.10 m                                                             0.2
+     0.20 m           0.0  0.20 m
+0.0  1 2 3k 4 5 6           1 2 k3 4 5 6                                                      0.0 1 2 3 k 4 5 6
+
+     (a)                      (b)                                                                  (c)
+
+Figure 9: The relationship between Pjam and k for different values of D. The mean value of D can be read
+in the legend. (a): CSM. (b): GCVM. (c): AVM.
+
+    On the basis of all combinations of k and D in Figure 9, the set of parameters that leads
+to the minimal Pjam is identified for each model and shown in Table 2.
+
+                           CSM GCVM AVM
+
+                   k       6       4      6
+
+                   D [m] 0.2 0.2 0.01
+
+     Table 2: The set of k and D that leads to the minimal Pjam in Figure 9.
+
+4.4. Lane formation
+
+    The values of k and D from Table 2, together with other parameter values from Table 1,
+are used for a comparative study of lane formation in the three models. For each model,
+simulations are performed with different numbers of agents from 20 to 300 (global from
+0.19 to 2.8 m-2). The relationship between Pjam and global for different models is shown in
+Figure 10(a). Compared to Figure 8, the jamming probability Pjam is significantly reduced
+in the simulation using the CSM and the AVM by adopting the optimal values of k and D.
+The GCVM, however, does not show any improvement.
+
+    Furthermore, to gain a better insights into the lane formation phenomenon, the average
+value of  in the last 10 s of each simulation is calculated. First, simulations are classified
+as "jamming" or "moving" according to their states. Then, the mean value and standard
+deviation of  in the simulations with the moving state are calculated for each model and
+each density. The variations in  with respect to the global densities are shown in Fig-
+ure 10(b). For all the three models, when global < 1.0 m-2, the values of  in the moving
+states are always close to 1, which indicates that, in this case, lanes are always formed.
+When global > 1.0 m-2, for the moving states, the value of  is unavailable in the GCVM,
+and the values in the AVM are significantly higher than in the CSM. This indicates that,
+although both are in the moving states, the AVM reproduces lane formation much better.
+
+                              13
+           1.0                                1.0
+
+           0.8                                0.8
+
+Pjam       0.6        CSM                     0.6
+                      GCVM
+                      AVM
+           0.4
+
+           0.2                                0.4  CSM
+                                                   GCVM
+                                                   AVM
+           0.0                                0.2
+             0.0 0.5 1.0 1.5 2.0 2.5 3.0      0.0 0.5 1.0 1.5 2.0 2.5 3.0
+                                global [m 2]             global [m 2]
+
+                      (a)                                (b)
+
+Figure 10: Using the values of k and D from Table 2. (a): The relationship between Pjam and  for different
+models. (b): The mean value and standard deviation of  in the simulations with the moving state, for
+each model and each density.
+
+    The quantity  is a reliable indicator of the formation of lanes in a simulation. Since
+it changes in time, an artificial threshold of 0.8 for  is introduced to describe how fast
+lanes are developed. The time when the value of  first exceeds the threshold is denoted by
+tlane. The mean value and standard deviation of tlane in simulations with the moving state
+are calculated for each model and each density. See Figure 11(a). For all three models, the
+mean value of tlane increases with increasing global, which is to be expected. Moreover, lanes
+form much faster in the simulation using the AVM than with the other models.
+
+           300  CSM                           1.0
+                GCVM
+           250  AVM                           0.8
+
+tlane [s]  200                                0.6        CSM
+                                                         GCVM
+           150                                           AVM
+                                              0.4        Experiment
+           100
+
+           50                                 0.2
+
+           0                                  0.00 25 50 75 t1[0s0] 125 150 175 200
+
+           0.0 0.5 1.0 1.5 2.0 2.5 3.0
+                              global [m 2]
+
+                      (a)                                (b)
+
+Figure 11: (a) The mean value and standard deviation of tlane in the simulations with the moving state, for
+
+each model and each density. (b):The relationship between the value of  and the simulation time t of three
+simulations using different models (global=1.92 m-2) and an experiment [22].
+
+Three single simulations using different models are further compared with bidirectional
+                                                     14
+flow experiment [22]. Figure 11(b) shows the time series of  in the first 200 s. Here, 
+continues to increase to 1 and then remains stable in the simulation using the AVM, while it
+keeps fluctuating below 0.7 for the CSM. For the GCVM, the quantity  is stable at a low
+value, indicating a lack of any lane formation. The possible reason for the difference between
+the AVM and the CSM here is that the moving state of the AVM can be attributed to the
+strategy of following, while the moving state of the CSM is due to agents pushing each other
+aside. This behavior is also reflected in the snapshots of the three simulations at different
+times, shown in Figure 12. The experiment compared in Figure 11(b) is performed in a
+3.6 m corridor under open boundary conditions and it records the trajectories of pedestrians
+in the 8 m length measurement area. The steady density of pedestrians in the measurement
+area is around 2 m-2. The value  for pedestrians in the measurement area is calculated
+and the lane formation occurs even earlier in the experiment than in the simulation. It
+could not be excluded that, in the experiment, the formation of lanes starts even outside of
+the measurement area. Thus, the comparability of experiments and simulations is limited.
+However, a comparison of the time series of , in particular, the increase in  over time,
+provides a rough estimate whether the time in which the system switches from an unordered
+state without lanes to an ordered state with lanes has the same order of magnitude.
+
+t=0 s
+
+t=5 s
+
+t = 10 s
+
+t = 20 s
+
+t = 40 s
+
+t = 100 s            GCVM
+
+t = 200 s  AVM  CSM  GCVM
+
+           AVM  CSM  GCVM
+
+Figure 12: The snapshot of the simulations using the AVM, the CSM, and the GCVM (from left to right).
+From top to bottom: t = 0, 5, 10, 20, 40, 100, and 200 s.
+
+5. Validation of the AVM using the fundamental diagram
+
+    After the AVM was compared to two other models and showed its ability to produce
+lane formation reasonably, the model was then validated with respect to the fundamental
+diagram. For this purpose, the fundamental diagram (FD) obtained from bidirectional flow
+experiments in [22, 28] was used to calibrate the parameters of the AVM. Bidirectional flow
+simulations with open boundary conditions were performed in a corridor shown in Figure 6.
+The same number of agents were placed at the left and the right side of the corridor. The
+number of agents is varied in different simulations to realize different local densities in
+
+                                                         15
+the corridor. Agents in the left waiting area move toward the right, and vice versa. The
+simulation ends when all agents leave the corridor. The calibration was performed manually
+and resulted in the set of parameters listed in Table 3.
+
+Flow types           v0 [m s-1]   r [m] k D [m] T [s]  [s] ta [s]
+
+Bidirectional   N  (1.55, 0.182)  0.18                                   6  0.01  0.6  0.3 0.75
+Unidirectional                                                                    0.5
+
+                Table 3: Validated parameters of the AVM.
+
+    The FD obtained by simulations and experiments are compared in Figure 13. The speed
+v, the local density local, and the specific flow Js = local · v in both the simulation and the
+experiment are measured from trajectories of pedestrians or agents using the same method.
+The measurement method is proposed in [28], where the local density is measured using the
+Voronoi method and the measured speed is the projection of the real speed in the horizontal
+direction. The FD obtained from the simulation is consistent with the FD obtained from
+the experiment.
+
+1.8                  Simulation                                     1.8                Simulation
+                                                                    1.6                Experiment
+1.6                  Experiment
+
+1.4                                                                 1.4
+
+1.2                                                                 1.2
+
+1.0v [m s 1]                                                        1.0
+                                                      Js [m 1 s 1]
+0.8                                                                 0.8
+
+0.6                                                                 0.6
+
+0.4                                                                 0.4
+
+0.2                                                                 0.2
+
+0.0                                                                 0.0
+    01234567                                                            01234567
+                    local [m 2]                                                         local [m 2]
+
+                (a)                                                               (b)
+
+Figure 13: The fundamental diagram of bidirectional flow from the experiment and the simulation. (a)
+Density-velocity. (b) Density-specific flow.
+
+    As well as the quantitative comparison of the FD, the process of lane formation in the
+simulation is qualitatively compared to the experiment (see Figure 14). The trajectory
+snapshots of a simulation and a bidirectional flow experiment in a 4 m wide corridor are
+compared. Note that the trajectories of the experiment are superimposed by the swaying
+of the head movement due to the bipedal movement in steps, which is not covered by the
+model. Moreover, the course of lane formation in the simulation is similar in time to the
+experiment.
+
+                                                         16
+    t=1 s
+
+    t=3 s
+
+    t=5 s
+
+    t = 10 s                                                     Simulation
+
+    t = 15 s             Experiment                              Simulation
+
+                         Experiment                              Simulation
+
+Figure 14: The trajectory snapshots of an experiment (left) and a simulation (right). Top to bottom: t =
+1, 3, 5, 10, and 15 s.
+
+    The first 50 s trajectories of agents in the simulation and pedestrians in the experiment are
+shown in Figure 15. Four lanes can be observed in both the experiment and the simulation.
+
+4                                    4
+
+3                                    3
+
+y [m]2                                                     2
+                                                      y [m]
+1                                                          1
+
+00  2         4 x [m] 6  8 10        00                       2  4 x [m] 6   8 10
+
+              (a)                                                (b)
+
+Figure 15: The trajectories of pedestrians (agents) in the first 50 s. (a) Experiment. (b) Simulation.
+
+    The fundamental diagram of the unidirectional flow was then reproduced with the cal-
+ibrated parameters listed in Table 3. The FD of uni- and bidirectional flow obtained by
+simulations with the AVM are shown in Figure 16(a). The specific flow reaches a peak
+with increasing local density local in the unidirectional flow simulation, where a plateau is
+formed in the bidirectional flow simulation. The difference is in line with the observation in
+the experiment [22]. See Figure 16(b). Note that the experimental data for higher densities
+than 4.5 m-2 cannot be reached. Data from simulations and experiments show different
+scatter. The larger scatter at the congested regime indicates that real pedestrians steer
+more smoothly at high densities than the agents modeled by the AVM. One possible reason
+for this discrepancy is that the agents in the model always jostle to move further and are
+apparently unaware of the strategy of simply standing still.
+
+                                                         17
+2.0       Bidirectional (Sim)                                       2.0  Bidirectional (Exp)
+1.8       Unidirectional (Sim)                                      1.8  Unidirectional (Exp)
+
+1.6                                                                 1.6
+
+1.4                                                                 1.4
+
+1.2                                                                 1.2
+Js [m 1 s 1]
+                                                      Js [m 1 s 1]1.01.0
+
+0.8                                                                 0.8
+
+0.6                                                                 0.6
+
+0.4                                                                 0.4
+
+0.2                                                                 0.2
+
+0.00 1 2 3 4 5 6 7                                                  0.00 1 2 3 4 5 6 7
+                    local [m 2]                                                         local [m 2]
+
+     (a)                                                                 (b)
+
+Figure 16: The fundamental diagram of uni- and bidirectional flow. (a) The relation between the local
+density and the specific flow in the simulation. (b) The relation between the local density and the specific
+flow in the experiment.
+
+6. Conclusion
+
+    A new velocity model is proposed to take into consideration anticipation of pedestrians.
+For this, the process of anticipation is divided into three parts: perception of the actual
+situation, prediction of a future situation and selection of a strategy leading to an action.
+
+    First, the AVM is compared to the two other velocity-based models (the generalized
+collision-free velocity model (GCVM), and the collision-free speed model (CSM)) in binary
+interaction scenarios. Even in these simplified situations, the simulated trajectories of agents
+show that the AVM can reproduce the movement of pedestrians more realistically than the
+other two models.
+
+    In a second step, these models are compared in the bidirectional flow scenario with
+periodic boundary conditions. Simulations are classified as jamming state or moving state,
+according to the number of static, or blocked, agents in the simulation. Compared to the
+other two models, the critical density between the moving states and jamming states is
+shifted to higher values using the AVM. This indicates that the AVM prevents imminent
+collisions better than the other models.
+
+    The influence of the parameters describing the effect from neighbors in the three models is
+studied in bidirectional flow scenarios. Only for the AVM does an increase in the impact from
+neighbors in the direction of movement lead to an increase in the jamming probability. The
+opposite occurs when the CSM and the GCVM are used. The bidirectional flow simulation
+with periodic boundary conditions is then performed using the set of parameters that leads
+to the minimum jamming probability. The jamming probability is significantly reduced in
+the simulation using the CSM and the AVM by adopting the new parameters but there is
+little change in the simulation using the GCVM.
+
+                                                         18
+    After this, the quantity , describing the degree of order given by lanes, is adopted to
+analyze the formation of lanes quantitatively. In line with experimental results of high-
+density situations, the AVM leads to the formation of lanes much faster than the CSM. One
+possible reason for this difference here is that the moving state of the AVM can be attributed
+to the strategy of following, while the moving state of the CSM could be associated with
+agents pushing each other aside.
+
+    Finally, the AVM is validated using the fundamental diagram (FD). After calibration
+based on the bidirectional FD, the FD for unidirectional flow is correctly reproduced by
+simulation using the AVM. The difference between the FD of uni- and bidirectional flow is
+also well reproduced. Moreover, the course of lane formation in time and the shape of the
+formed lanes in the simulations with the AVM are similar to those in the experiments.
+
+    Additional analyses using the AVM in the bidirectional flow simulation with periodic
+boundary conditions are conducted. In Appendix A, the decisive factors leading to im-
+proved performance in the simulation using the AVM are studied. The result shows that
+the prediction of the future situation and the strategy of following are both significant for
+reducing the jamming probability, and there is an optimal prediction time to realize the
+minimum jamming probability. In Appendix B, simulations are performed in corridors
+with different widths. When the corridor is wider than 2 m, the effect of the corridor width
+on the jamming probability is insignificant. In addition, the heterogeneity of agents' free
+speed is studied in Appendix C, where the jamming probability decreases with increasing
+heterogeneity of the free speed of agents.
+
+Acknowledgments
+
+    The authors are grateful to the HGF for providing funding within the knowledge transfer
+project under Grant No. WT-0105. Qiancheng Xu wishes to express his thanks for the
+funding support received from the China Scholarship Council (Grant No. 201706060186).
+We would also like to thank Antoine Tordeux for his very useful comments and consultations.
+
+Appendix A. Decisive factors in the anticipation velocity model
+
+    Using the AVM reduces the jamming probability and favors the formation of lanes in
+bidirectional flow simulations. The possible causes for the improvement are the prediction
+time ta, and the dynamic i,j reflecting pedestrians' preference to follow others moving in
+the same direction. To identify the decisive factor of this improvement, simulations are
+performed in periodic boundary conditions with dynamic i,j and constant i,j (i,j = k),
+respectively. For each case, different values of ta (0, 0.2, 0.5, 1.0, 1.5, and 2 s) are adopted.
+The simulation scenario is the corridor shown in Figure 6. The free speeds of agents are
+normally distributed N  (1.55, 0.182) m s-1. The number of agents in each simulation
+is 140 (  1.35 m-2). This corresponds to the global density where the transition from
+moving states (Pjam = 0) to jamming states (Pjam = 1) occurs in the simulation using the
+AVM. The other parameters of the AVM are shown in Table 1.
+
+                                                         19
+      1.0                                        1.0
+
+      0.9                                        0.8  constant i,j (J)
+                                                      dynamic i,j (J)
+Pjam  0.8                                        0.6  constant i,j (M)
+
+                                                 0.4  dynamic i,j (M)
+
+      0.7  constant i,j                          0.2
+
+      0.6  dynamic i,j                           0.0
+
+           0.0 0.2 0.5   ta1.[0s]  1.5  2.0           0.0 0.2 0.5  ta1.[0s]  1.5  2.0
+
+                         (a)                                       (b)
+
+Figure A.17: (a): The relationship between the jamming probability Pjam and the prediction time ta for
+
+dynamic and constant i,j. (b): Mean value and standard deviation of  in the simulation with jamming
+(J) and moving (M) states for each value of ta and each i,j (dynamic and constant).
+
+    The relationship between the jamming probability Pjam and the prediction time ta for
+dynamic and constant i,j is shown in Figure 17(a). The same tendency of Pjam is observed
+in the simulation with dynamic and constant i,j. As ta increases, Pjam decreases until ta
+reaches a specific value, then it increases. Moreover, the effect of the prediction time ta on
+
+the jamming probability Pjam is more significant in the simulation with dynamic i,j than
+with constant i,j.
+
+    The mean value and standard deviation of  in the simulation with jamming and moving
+states are calculated for each ta and each i,j (dynamic and constant). See Figure 17(b).
+The values of  are close to 1 in the moving state and less than 0.3 in the jamming state.
+Neither the prediction time ta nor the coefficient i,j affects the formation of lanes in the
+simulation with the moving state.
+
+    In conclusion, the prediction time ta and the dynamic i,j both contribute to reducing
+the jamming probability in the bidirectional flow simulation. Moreover, a longer prediction
+time does not mean a lower jamming probability. An appropriate prediction time ta can
+
+reduce the jamming probability. A similar conclusion also drawn from [11] is that there is
+
+an optimal strength of anticipation to realize the smoothest counterflow.
+
+Appendix B. Width of the corridor
+
+    A transition from moving states (Pjam = 0) to jamming states (Pjam = 1) occurs with an
+increase of global (the global density of agents) in the bidirectional flow simulations. In this
+appendix, the effect of the corridor width on this transition is studied. Six corridors with
+different widths (1, 2, 3, 4, 5, and 6 m) are simulated. Apart from the width, these corridors
+are identical to the corridor shown in Figure 6. For each corridor, simulations are performed
+in periodic boundary conditions with different values of global (0.31, 0.62, 0.92, 1,23, 1.54,
+
+                                             20
+or 1.85 m-2). The simulation is performed with the AVM using the parameters in Table 1.
+The free speeds of agents are normally distributed N  (1.55, 0.182) m s-1.
+
+      1.0                                          1.0
+
+      0.8
+
+      0.6                                          0.8
+
+Pjam                     1m                        0.6 1            1 m (M)
+                         2m                                         2 m (M)
+      0.4                3m                                         3 m (M)
+                                                                    4 m (M)
+      0.2                4m                        0.4    0.3       5 m (M)
+                         5m
+                         6m                                         6 m (M)
+      0.0                                          0.2
+      0.0 0.2 0.4 0.6 0.8 1.0 1.2 1.4 1.6 1.8 2.0  0.0 0.2 0.4 0.6 0.8 1.0 1.2 1.4 1.6 1.8 2.0
+           global [m 2]                                               global [m 2]
+
+           (a)                                                 (b)
+
+Figure B.18: The numbers in the legend give the width of the corridor. (a): Relationship between the
+jamming probability Pjam and the global density global for corridors with different widths. (b): Mean value
+and standard deviation of  in the simulation with the moving state (M), for each corridor and each global
+density global.
+
+    The relationship between the jamming probability Pjam and the global density global for
+corridors with different widths is shown in Figure 18(a). The transition from moving states
+to jamming states is observed in the simulation with all corridors except for the corridor of
+1 m width. When the width of the corridor is 1 m, the value of Pjam is close to 1 even if the
+global density is very low. One possible reason for this is that the effect of walls prevents
+agents from using the full width of the corridor.
+
+    The mean value and standard deviation of  in the simulation with the moving state are
+calculated for each corridor and each value of global. See Figure 18(b). When the width of
+the corridor is 1 m and global = 0.31 m-2, the value of  is lower than in other situations. In
+addition to this, there is no significant difference between the value of  in other simulations
+with the moving state, which is always close to 1.
+
+Appendix C. Heterogeneity of the free speed of the agents
+
+    To analyze the influence of the heterogeneity of agents, the free speed is chosen according
+to a normal distribution. A larger standard deviation of the distribution corresponds to a
+higher heterogeneity in the free speed of agents. In other sections, the normal distribution
+N  (1.55, 0.182) m s-1 obtained from the experiment in [22] is used. In this subsection,
+normal distributions with the same mean value (1.55 m s-1) but different standard devia-
+tions (0, 0.09, 0.18, 0.36, or 0.54 m s-1), which is denoted by , are adopted in this analysis.
+Simulations are performed with periodic boundary conditions in the corridor shown in Fig-
+ure 6. The number of agents is 140 in each simulation (  1.35 m-2). It corresponds to
+
+                                                         21
+the global density, where the transition from moving states (Pjam = 0) to jamming states
+(Pjam = 1) occurs in the simulation using the AVM. Other parameters of AVM are shown
+in Table 1.
+
+      0.8                                  1.0
+
+      0.7                                  0.8
+
+      0.6                                  0.6  Jamming
+                                                Moving
+Pjam  0.5
+                                           0.4
+      0.4
+                                           0.2
+      0.3
+                                           0.0
+      0.2 0.00 0.09 0.18 [m/s] 0.36
+                                     0.54       0.00 0.09 0.18 [m/s] 0.36  0.54
+
+           (a)                                           (b)
+
+Figure C.19: (a): The relationship between the jamming probability Pjam and the standard deviation .
+(b): The mean value and standard deviation of  in the simulation with jamming and moving states, for
+each value of .
+
+    The relationship between the jamming probability Pjam and the standard deviation  is
+shown in Figure 19(a). The value of Pjam decreases as  increases. The mean value and
+standard deviation of  in the simulation with jamming and moving states are calculated
+for each value of . See Figure 19(b). The value of  in the moving state is higher than
+in the jamming state. Moreover, there is no significant difference between the value of 
+in the simulation with the moving state, which is always all close to 1. In conclusion, with
+increasing heterogeneity of the free speed of agents, the jamming probability decreases, but
+the formation of lanes in the simulation with the moving state is not affected.
+
+References
+
+ [1] K. Yamori, Going with the flow: Micro­macro dynamics in the macrobehavioral patterns of pedestrian
+      crowds., Psychological review 105 (3) (1998) 530.
+
+ [2] D. Helbing, P. Molna´r, I. J. Farkas, K. Bolay, Self-organizing pedestrian movement, Environment and
+      planning B: planning and design 28 (3) (2001) 361­383.
+
+ [3] S. Hoogendoorn, W. Daamen, Self-organization in pedestrian flow, in: Traffic and Granular Flow'03,
+      Springer, 2005, pp. 373­382.
+
+ [4] C. Feliciani, H. Murakami, K. Nishinari, A universal function for capacity of bidirectional pedestrian
+      streams: Filling the gaps in the literature, PloS one 13 (12) (2018) e0208496.
+
+ [5] M. Boltes, J. Zhang, A. Tordeux, A. Schadschneider, A. Seyfried, Empirical results of pedestrian and
+      evacuation dynamics, Encyclopedia of complexity and systems science (2018) 1­29.
+
+ [6] J. Adrian, M. Amos, M. Baratchi, M. Beermann, N. Bode, M. Boltes, A. Corbetta, G. Dezecache,
+      J. Drury, Z. Fu, et al., A glossary for research on human crowd dynamics, Collective Dynamics 4 (A19)
+      (2019) 1­13.
+
+                                                         22
+ [7] J. Dzubiella, G. Hoffmann, H. L¨owen, Lane formation in colloidal mixtures driven by an external field,
+      Physical Review E 65 (2) (2002) 021402.
+
+ [8] M. E. Leunissen, C. G. Christova, A.-P. Hynninen, C. P. Royall, A. I. Campbell, A. Imhof, M. Dijkstra,
+      R. Van Roij, A. Van Blaaderen, Ionic colloidal crystals of oppositely charged particles, Nature 437 (7056)
+      (2005) 235­240.
+
+ [9] K. Su¨tterlin, A. Wysocki, A. Ivlev, C. R¨ath, H. Thomas, M. Rubin-Zuzic, W. Goedheer, V. Fortov,
+      A. Lipaev, V. Molotkov, et al., Dynamics of lane formation in driven binary complex plasmas, Physical
+      review letters 102 (8) (2009) 085003.
+
+[10] D. Helbing, P. Molnar, Social force model for pedestrian dynamics, Physical review E 51 (5) (1995)
+      4282.
+
+[11] Y. Suma, D. Yanagisawa, K. Nishinari, Anticipation effect in pedestrian dynamics: Modeling and
+      experiments, Physica A: Statistical Mechanics and its Applications 391 (1-2) (2012) 248­263.
+
+[12] S. Nowak, A. Schadschneider, Quantitative analysis of pedestrian counterflow in a cellular automaton
+      model, Physical review E 85 (6) (2012) 066128.
+
+[13] M. Rex, H. L¨owen, Lane formation in oppositely charged colloids driven by an electric field: Chaining
+      and two-dimensional crystallization, Physical review E 75 (5) (2007) 051402.
+
+[14] R. Bailo, J. A. Carrillo, P. Degond, Pedestrian models based on rational behaviour, in: Crowd Dynam-
+      ics, Volume 1, Springer, 2018, pp. 259­292.
+
+[15] H. Murakami, C. Feliciani, K. Nishinari, L´evy walk process in self-organization of pedestrian crowds,
+      Journal of the Royal Society Interface 16 (153) (2019) 20180939.
+
+[16] H. Murakami, C. Feliciani, Y. Nishiyama, K. Nishinari, Mutual anticipation can contribute to self-
+      organization in human crowds, Science Advances 7 (12) (2021).
+
+[17] M. Isobe, T. Adachi, T. Nagatani, Experiment and simulation of pedestrian counter flow, Physica A:
+      Statistical Mechanics and its Applications 336 (3-4) (2004) 638­650.
+
+[18] M. Moussaid, E. G. Guillot, M. Moreau, J. Fehrenbach, O. Chabiron, S. Lemercier, J. Pettr´e, C. Appert-
+      Rolland, P. Degond, G. Theraulaz, Traffic instabilities in self-organized pedestrian crowds, PLoS Com-
+      put Biol 8 (3) (2012) e1002442.
+
+[19] C. Feliciani, K. Nishinari, Empirical analysis of the lane formation process in bidirectional pedestrian
+      flow, Physical Review E 94 (3) (2016) 032304.
+
+[20] M. Muramatsu, T. Irie, T. Nagatani, Jamming transition in pedestrian counter flow, Physica A: Sta-
+      tistical Mechanics and its Applications 267 (3-4) (1999) 487­498.
+
+[21] F. Weifeng, Y. Lizhong, F. Weicheng, Simulation of bi-direction pedestrian movement using a cellular
+      automata model, Physica A: Statistical Mechanics and its Applications 321 (3-4) (2003) 633­640.
+
+[22] J. Zhang, W. Klingsch, A. Schadschneider, A. Seyfried, Ordering in bidirectional pedestrian flows and
+      its influence on the fundamental diagram, Journal of Statistical Mechanics: Theory and Experiment
+      2012 (02) (2012) P02002.
+
+[23] D. Helbing, L. Buzna, A. Johansson, T. Werner, Self-organized pedestrian crowd dynamics: Experi-
+      ments, simulations, and design solutions, Transportation science 39 (1) (2005) 1­24.
+
+[24] T. Kretz, A. Gru¨nebohm, M. Kaufman, F. Mazur, M. Schreckenberg, Experimental study of pedestrian
+      counterflow in a corridor, Journal of Statistical Mechanics: Theory and Experiment 2006 (10) (2006)
+      P10001.
+
+[25] A. Tordeux, M. Chraibi, A. Seyfried, Collision-free speed model for pedestrian dynamics, in: Traffic
+      and Granular Flow'15, Springer, 2016, pp. 225­232.
+
+[26] Q. Xu, M. Chraibi, A. Tordeux, J. Zhang, Generalized collision-free velocity model for pedestrian
+      dynamics, Physica A: Statistical Mechanics and its Applications 535 (2019) 122521.
+
+[27] C. von Kru¨chten, Development of a cognitive and decision-based model for pedestrian dynamics, Ph.D.
+      thesis, Universit¨ats-und Stadtbibliothek K¨oln (2019).
+
+[28] S. Cao, A. Seyfried, J. Zhang, S. Holl, W. Song, Fundamental diagrams for multidirectional pedestrian
+      flows, Journal of Statistical Mechanics: Theory and Experiment 2017 (3) (2017) 033404.
+
+                                                         23
+
