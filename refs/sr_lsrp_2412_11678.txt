@@ -1,0 +1,758 @@
+                                                    Loosely Synchronized Rule-Based Planning for
+                                               Multi-Agent Path Finding with Asynchronous Actions
+
+                                                            Shuai Zhou2*, Shizhe Zhao1, Zhongqiang Ren1,3
+
+                                                              1UM-SJTU Joint Institute, Shanghai Jiao Tong University, China
+                                        2SHIEN-MING WU School of Intelligent Engineering, South China University of Technology, China
+
+                                                            3Department of Automation, Shanghai Jiao Tong University, China
+                                                          davidzhou718@gmail.com, {shizhe.zhao,zhongqiang.ren}@sjtu.edu.cn
+
+arXiv:2412.11678v2 [cs.MA] 21 Dec 2024                                Abstract                                 to unbounded sub-optimal planners (Okumura et al. 2022;
+                                                                                                               De Wilde, Ter Mors, and Witteveen 2013). These planners
+                                           Multi-Agent Path Finding (MAPF) seeks collision-free paths          often rely on the assumption that each action of any agent
+                                           for multiple agents from their respective starting locations to     takes the same duration, i.e., a time unit, and the actions of
+                                           their respective goal locations while minimizing path costs.        all agents are synchronized, in a sense that, the action of each
+                                           Although many MAPF algorithms were developed and can                agent starts at the same discrete time step. This assumption
+                                           handle up to thousands of agents, they usually rely on the as-      limits the application of MAPF planners, especially when
+                                           sumption that each action of the agent takes a time unit, and       the agent speeds are different or an agent has to vary its
+                                           the actions of all agents are synchronized in a sense that the      speed when going through different edges.
+                                           actions of agents start at the same discrete time step, which
+                                           may limit their use in practice. Only a few algorithms were            To get rid of this assumption on synchronous actions,
+                                           developed to address asynchronous actions, and they all lie         MAPF variants such as Continuous-Time MAPF (Andrey-
+                                           on one end of the spectrum, focusing on finding optimal so-         chuk et al. 2022), MAPF with Asynchronous Actions (Ren,
+                                           lutions with limited scalability. This paper develops new plan-     Rathinam, and Choset 2021), MAPFR (Walker, Sturtevant,
+                                           ners that lie on the other end of the spectrum, trading off so-     and Felner 2018) were proposed, and only a few algorithms
+                                           lution quality for scalability, by finding an unbounded sub-        were developed to solve these problems. Most of these al-
+                                           optimal solution for many agents. Our method leverages both         gorithms lie on one end of the spectrum, finding optimal or
+                                           search methods (LSS) in handling asynchronous actions and           bounded sub-optimal solutions at the cost of limited scal-
+                                           rule-based planning methods (PIBT) for MAPF. We analyze             ability as the number of agents grows. To name a few,
+                                           the properties of our method and test it against several base-      Continuous-Time Conflict-Based Search (CCBS) (Andrey-
+                                           lines with up to 1000 agents in various maps. Given a run-          chuk et al. 2022) extends the well-known Conflict-Based
+                                           time limit, our method can handle an order of magnitude more        Search (CBS) to handle various action times and is able
+                                           agents than the baselines with about 25% longer makespan.           to find an optimal solution to the problem. Loosely Syn-
+                                                                                                               chronized Search (LSS) (Ren, Rathinam, and Choset 2021)
+                                        Code -- https://github.com/rap-lab-org/public LSRP                     extends A* and M* (Wagner and Choset 2015) to handle
+                                        Extended version -- https://arxiv.org/abs/2412.11678                   the problem and can be combined with heuristic inflation
+                                                                                                               to obtain bounded sub-optimal solutions. Although these al-
+                                                           1 Introduction                                      gorithms can provide solution quality guarantees, they can
+                                                                                                               handle only a small amount of agents ( 100) within a run-
+                                        Multi-Agent Path Finding (MAPF) computes collision-free                time limit of few minutes. Currently, we are not aware of
+                                        paths for multiple agents from their starting locations to             any algorithm that can scale up to hundreds of agents with
+                                        destinations within a shared environment, while minimiz-               asynchronous actions. This paper seeks to develop new al-
+                                        ing the path costs, which arises in applications such as               gorithms that lie on the other end of the spectrum, trading
+                                        warehouse logistics. Usually the environment is represented            off completeness and solution optimality for scalability.
+                                        by a graph, where vertices represent the location that the
+                                        agent can reach, and edges represent the transition be-                   When all agents' actions are synchronous, the existing
+                                        tween two locations. MAPF is NP-hard to solve to optimal-              MAPF algorithms, such as rule-based planning (Erdmann
+                                        ity (Yu and LaValle 2013), and a variety of MAPF plan-                 and Lozano-Perez 1987; Luna and Bekris 2011; De Wilde,
+                                        ners were developed, ranging from optimal planners (Sharon             Ter Mors, and Witteveen 2013; Okumura et al. 2022), can
+                                        et al. 2015; Wagner and Choset 2015), bounded sub-optimal              readily scale up to thousands of agents by finding an un-
+                                        planners (Barer et al. 2014; Li, Ruml, and Koenig 2021)                bounded sub-optimal solution. However, extending them
+                                                                                                               to handle asynchronous actions introduce additional chal-
+                                            *Shuai Zhou conducted this research during his internship at       lenges: Rule-based planning usually relies on the notion of
+                                        UM-SJTU Joint Institute at Shanghai Jiao Tong University.              time step where all agents take actions and plans forward
+                                                                                                               in a step-by-step fashion. When the actions of agents are
+                                            Corresponding Author.                                              of various duration, there is no notion of planning steps,
+                                        Copyright © 2025, Association for the Advancement of Artificial
+                                        Intelligence (www.aaai.org). All rights reserved.
+
+                                                                                                            1
+and one may have to plan multiple actions for a fast mov-                 Figure 1: (a) shows the occupation of vertices when an agent
+ing agent and only one action for a slow agent. In other                  traverses edge (v1, v2) between times (t1, t2) as shown by
+words, an action with long duration of an agent may af-                   the black arrow. Round brackets represent open intervals,
+fect multiple subsequent actions of another agent, which                  while square brackets represent closed intervals. The black
+thus complicates the interaction among the agents. To han-                vertical lines mean the vertices are occupied during the time
+dle these challenges, we leverage the state space proposed                range. (b) By duration conflict, the agents cannot move,
+in (Ren, Rathinam, and Choset 2021) where times are incor-                while in conventional MAPF (Stern et al. 2019), the agents
+porated, and leverage Priority Inheritance with Backtracking              can move together clockwise or counter-clockwise.
+(PIBT) (Okumura et al. 2022), a recent and fast rule-based
+planner, to this new state space. We introduce a cache mech-              Let g(i(vsi , vgi )) denote the cost of the path, which is de-
+anism to loosely synchronize the actions of agents during the             fined as the sum of duration of edges along the path. Let
+search, when these actions have different, yet close, starting             = (1, 2, . . . , n) represent a joint path of all agents,
+times. We therefore name our approach Loosely Synchro-                    and its cost is the sum of individual path costs of all the
+nized Rule-based Planning (LSRP).                                         agents, i.e., g() = i g(i).
+
+   We analyze the theoretic properties of LSRP and show                      The goal of the Multi-Agent Path Finding with Asyn-
+that LSRP guarantees reachability in graphs when the graph                chronous Actions (MAPF-AA) is to find a conflict-free joint
+satisfies certain conditions. For the experiments, we com-                path  connecting vsi , vgi for all agents i  I, such that
+pare LSRP against several baselines including CCBS (Andr-                 g() reaches the minimum. This work seeks to develop al-
+eychuk et al. 2022) and prioritized planning in various maps              gorithms that can quickly solve MAPF-AA instances with
+from a MAPF benchmark (Stern et al. 2019), and the re-                    many agents by finding a (unbounded) sub-optimal solution.
+sults show that LSRP can solve up to an order of magnitude
+more agents than existing methods with low runtime, de-                   Remark 1 The same definition of occupation and conflict
+spite about 25% longer makespan. Additionally, our asyn-                  was introduced in (Ren, Rathinam, and Choset 2021), which
+chronous planning method produces better solutions, whose                 generalizes the notion of following conflict and cycle conflict
+makespan ranges from 55% to 90% of those planned by ig-                   in (Stern et al. 2019), and is similar to the "mode" in (Oku-
+noring the asynchronous actions.                                          mura, Tamura, and De´fago 2021). Conventional MAPF usu-
+                                                                          ally considers vertex and edge conflicts (Sharon et al. 2015;
+               2 Problem Definition                                       Okumura 2023), which differ from the duration conflict here.
+                                                                          Another related problem definition is MAPF with duration
+Let set I = {1, 2, . . . , N } denote a set of N agents. All              conflict (denoted as MAPF-DC), which replaces the vertex
+agents move in a workspace represented as a finite graph                  and edge conflict in MAPF with duration conflict. MAPF-
+G = (V, E), where the vertex set V represents all possible                DC is a special case of MAPF-AA where the duration is the
+locations of agents and the edge set E  V × V denotes the                 same constant number for any agent and any edge.
+set of all the possible actions that can move an agent between
+a pair of vertices in V . An edge between u, v  V is denoted                                 3 Preliminaries
+as (u, v)  E and the cost of e  E is a finite positive real
+number cost(e)  R+. Let vsi , vgi  V respectively denote                  3.1 Priority Inheritance with Backtracking
+the start and goal location of agent i.
+                                                                          Priority Inheritance with Backtracking (PIBT) plans the ac-
+   All agents share a global clock and start moving from vsi              tions of the agents in a step-by-step manner until all agents
+at t = 0. Let D(i, v1, v2)  R+ denote amount of time (i.e.,               reach their goals. PIBT assigns each agent a changing prior-
+duration) for agent i to go through edge (v1, v2). Note that              ity value. In each step, a planning function is called to plan
+different agents may have different duration when travers-                the next action of the agents based on their current priorities.
+ing the same edge, and the same agent may have different                  This planning function selects actions based on the individ-
+duration when traversing different edges.1                                ual shortest path to the goal of each agent, and actions to-
+                                                                          ward a location closer to the goal are first selected. When
+   When agent i goes through an edge (v1, v2)  E between                  two agents seek to occupy the same position, the higher-
+times (t1, t1 + D(i, v1, v2)), agent i is defined to occupy:              priority agent is able to take this location, and pushes the
+(1) v1 at t = t1, (2) v2 at t = t2 and (3) both v1,v2 within              lower-priority agent to another less desired location. This
+the open interval (t1, t1 + D(i, v1, v2)). Two agents are in              function is applied recursively, where the pushed agent is
+conflict if they occupy the same vertex at the same time.                 planned next and inherits the priority of the pushing agent.
+We refer to this definition of conflict as the duration conflict          When all agents' actions are planned for the current time
+hereafter. Fig. 1 provides an illustration.                               step, PIBT starts a new iteration to plan the next time step.
+
+   Let i denote a path from vsi to vgi via a sequence of
+vertices v  G. Any two vertices vki and vki +1 in i are
+either connected by edge (vi, v+i 1)  E or is a self-loop.
+
+    1As a special case, a self-loop (v, v), v  V indicates a wait-in-
+place action of an agent and its duration D(i, v, v) is the amount
+of waiting time at vertex v, which can be any non-negative real
+number and is to be determined by the planner.
+
+                                                                       2
+   PIBT guarantees that the agent with the highest priority           Algorithm 1: LSRP, LSRP-SWAP
+eventually reaches its goal, at which it becomes the lowest
+priority agent. Therefore, each agent becomes the highest             Input: graph G, starts {vs1, . . . , vsn}, goals {vg1, . . . , vgn}
+priority agent at least once and is able to reach its goal at         Output: paths {1, . . . , n}
+some time step. PIBT requires that for each vertex v  G,
+there is a cycle in G containing v, so that PIBT can plan             1: T  {0}; ST  {s0};   {}
+all agents to their goals. Otherwise, PIBT is incomplete, i.e.,       2: 0  INITPRIORITY()
+PIBT may not be able to find a feasible solution even if the          3:   0
+instance is solvable. PIBT runs fast and can scale to many            4: while T =  do
+agents for MAPF. Our LSRP leverages the idea of PIBT to
+handle a large number of agents.                                      5: sprev  ST .back()
+
+3.2 Loosely Synchronized Search                                       6: if i  I, spi rev.v = vgi then
+
+Loosely Synchronized Search (LSS) extends A* and M*-                  7:   return POSTPROCESS(ST )
+based approaches to solve MAPF-AA by introducing new
+search states that include both the locations and the action          8: for i  I do
+times (i.e., as timestamps) of the agents. Similarly to A*,
+LSS iteratively selects states from an open list, expands the         9:   if spi rev.v = vgi then i  0i
+states to generate new states, prunes states that are in-conflict
+or less promising, and adds remaining states to open for fu-          10:  else i  i + 1
+ture expansion, until a conflict-free joint path for all agents
+is found from the starts to the goals. To expand a state, LSS         11: tmin  T.pop()
+only considers the agent(s) i  I with the smallest times-             12: Icurr  EXTRACTAGENTS(I, tmin, sprev)
+tamps and plan its actions, which increases the timestamp             13: if T =  then
+of agent i. In a future iteration, other agents j = i will be
+planned if the timestamp of j becomes the smallest. Plan-             14:  tnext  T.top()
+ning all agents together may lead to a large branching fac-
+tor and LSS leverage M* to remedy this issue. LSS is com-             15: else
+plete and finds an optimal solution for MAPF-AA but can
+only handle a relatively small amount of agents. Our LSRP             16:  tnext  tmin + miniI,eE D(i, e)
+leverages the state definition and expansion in LSS to handle
+asynchronous actions.                                                 17: snext  GET SNEXT(, Icurr, sprev)
+
+3.3 Other Related Approaches                                          18: for i  Icurr in descending order of i do
+                                                                           if sni ext =  then
+Safe Interval Path Planning (SIPP) (Phillips and Likhachev            19:
+2011) is a single-agent graph search algorithm that can find a
+path from start to goal with the minimum arrival time among           20:       ASY-PUSH(i, {}, tmin, tnext, False)
+dynamic obstacles along known trajectories. SIPP can be
+used together with priority-based planning to handle MAPF-            21:       (or ASY-PUSH-SWAP(i, {}, tmin, tnext, False))
+AA. Specifically, each agent is assigned with a unique pri-
+ority, and the agents are planned from the highest priority to        22: ST .append(snext)
+the lowest using SIPP, where the planned agents are treated           23: Add spi rev.tv for i  I to T
+as dynamic obstacles. This priority-based method is used as
+a baseline in our experiments.                                        24: return failure
+
+   Additionally, CCBS (Andreychuk et al. 2022) is a two-                                    4 Method
+level search algorithm that can be used to handle MAPF-
+AA. CCBS is similar to CBS (Sharon et al. 2015) for MAPF.             4.1 Notation and State Definition
+The high-level search detects conflicts between any pair of
+agents, and resolves conflicts by generating constraints that         Let G = (V, E) = G × G × · · · × G denote the joint graph,
+forbid an agent from using certain vertices within certain            the Cartesian product of N copies of G, where v  V rep-
+time ranges. The low-level search uses SIPP to plan a single-         resents a joint vertex, and e  E represents a joint edge
+agent path subject to the constraints added by the high-level.        that connects a pair of joint vertices. The joint vertices cor-
+CCBS iteratively detects conflicts on the high-level and re-          responding to the start and goal vertices of all the agents
+solves conflicts using the low-level search until no conflict         are vs = (vs1, vs2, · · · , vsn) and vg = (vg1, vg2, · · · , vgn) re-
+is detect along the paths. CCBS is guaranteed to find an op-          spectively. A joint search state (Ren, Rathinam, and Choset
+timal solution if the given problem instance is solvable. In          2021) is s = (s1, s2, . . . , sn), where si is the individual state
+practice, CCBS can handle tens of agents within a few min-            of agent i, which consists of four components: (1) p  V , a
+utes (Andreychuk et al. 2022). This paper uses CCBS as an-            (parent) vertex in G, from which the agent i begin its action;
+other baseline in the experiments.                                    (2) v  V , a vertex in G, at which the agent i arrives; (3) tp,
+                                                                      the timestamp of p, representing the departure from p; (4)
+                                                                      tv, the timestamp of v, representing the arrival time at v.
+
+                                                                         An individual state si = (p, v, tp, tv) describe the location
+                                                                      occupied by agent i within time interval [tp, ts] with a pair
+                                                                      of vertices (p, v). Intuitively, an individual state is also an
+                                                                      action of agent i, where i moves from vertex p to v between
+                                                                      timestamps tp and tv. For the initial state s0, we define p =
+                                                                      v = vsi and tp = tv = 0, i  I. Let  = (1, 2, · · · , N )
+                                                                      denote the priorities of the agents, which are positive real
+                                                                      numbers in [0, 1]. In this paper, we use the dot operator (.) to
+                                                                      retrieve the element inside the variable (e.g. si.tv denote the
+                                                                      arrival time tv of agent i in the individual state si).
+
+                                                                      4.2 Algorithm Overview
+
+                                                                      LSRP is shown in Alg. 1. Let T denote a list of timestamps,
+                                                                      and LSRP initializes T as a list containing only 0, the start-
+
+                                                                   3
+ing timestamp of all agents. Let ST denote a list of joint             Algorithm 2: ASY-PUSH, ASY-PUSH-SWAP
+states, which initially contains only the initial joint state. Let
+ denote a dictionary where the keys are the timestamps and             Input: i, ban, t, tnext, bp
+the values are joint states.  is used to cache the planned ac-         Notation: vi  spi rev.v
+tions of the agents and will be explained later. Then, LSRP             1: C  Neigh(vi)  {vi}
+initializes the priorities of the agents (Line 2), which can be         2: sort C in increasing order of dist(u, vgi ) where u  C
+set in different ways (such as using random numbers).                   3: j  SWAP-REQUIRED-POSSIBLE(i, C[0])
+
+   LSRP plans the actions of the agents iteratively until all          4: if j =  then C.reverse()
+agents reach their goals. LSRP searches in a depth-first fash-
+ion. In each iteration, LSRP retrieves the most recent joint           5: if i > n(n = i)n  I then                   Move vi to second
+state that was added to ST , and denote it as sprev (Line 5). If       6: C.move(vi, 1)
+all agents have reached their goals in sprev, ST now stores a
+list of joint states that brings all agents from vs to vg. LSRP        7: for v  C do
+thus builds a joint path out of ST , which is returned as the so-
+lution (Line 7), and then terminates. Otherwise, LSRP resets           8: if OCCUPIED(v, snext, ban, bp) then continue
+the priorities of the agents that have reached their goals, and
+increase the priority by one for agents that have not reached          9: k  PUSH-REQUIRED()
+their goals yet (Lines 9-10).
+                                                                       10: if k =  then
+   Then, LSRP extracts the next planning timestamp tmin
+from T , which is the minimum timestamp in T , and extracts            11:  ban.append(vi)
+the subset of agents Icurr  I so that for each agent i  I,
+its arrival timestamp tvi in sprev is equal to tmin (Line 12).         12:  twi ait  ASY-PUSH(k, ban, t, tnext, True)
+Intuitively, the agents in Icurr needs to determine their next
+actions at time tmin. Here, tnext is assigned to be the next           13:  if tiwait =  then continue
+planning timestamp in T if T is not empty. Otherwise (T is
+empty), tnext is set to be tmin plus the a small amount of             14:  WAITANDMOVE(i, v, tiwait, snext, )
+time (Lines 13-16). To generate the next joint state based on
+sprev, LSRP first checks if the actions of agents in Icurr have        15:  timove  tiwait + D(i, vi, v)
+been planned and cached in . If so, these cached actions are
+used and the corresponding individual states are generated             16:  if (!bp)  v = C[0]  j =   sjnext =  then
+and added to snext (Line 17). For agents without cached ac-
+tions (Line 19), LSRP invokes a procedure ASY-PUSH to                  17:          WAITANDMOVE(j, vi, tm i ove, snext, )
+plan the next action for that agent.
+                                                                       18:  return tm i ove
+   Finally, the generated next joint state snext is appended
+to the end of ST , and the arrival timestamp spi rev.tv of each        19: if v = vi then
+agent i  I is added to T for future planning.
+                                                                       20:  sni ext  state(vi, v, t, tnext)
+4.3 Recursive Asynchronous Push
+                                                                       21:  return
+ASY-PUSH takes the following inputs: i, the agent to be
+planned; ban, a list of vertices that agent i is banned from           22: timove  t + D(i, vi, v)
+moving to; t, the current timestamp; tnext, the next times-
+tamp; and bp, a boolean value indicating if agent i is being           23: sni ext  state(vi, v, t, tm i ove)
+pushed away by other agents, which stands for "be pushed".
+                                                                       24: if (!bp)  v = C[0]  j =   snj ext =  then
+   At the beginning, ASY-PUSH identifies all adjacent ver-
+tices C that agent i can reach from its current vertex in G.           25:  WAITANDMOVE(j, vi, timove, snext, )
+These vertices in C are sorted based on its distance to the
+agent's goal (Line 1-2, Alg.2). Then, for each of these ver-           26: return tm i ove
+tices from the closest to the furthest, ASY-PUSH checks
+whether the agent can move to that vertex without running              27: return 
+into conflicts with other agents, based on the occupancy sta-
+tus of that vertex (Line 7-27, Alg.2). ASY-PUSH stops as               Algorithm 3: WAITANDMOVE
+soon as a valid vertex (i.e., a vertex that is unoccupied or can
+be made unoccupied through the push operation) is found.               Input: i, v, tiwait, sprev, snext, 
+Specifically, between lines 7-27 in Alg.2, ASY-PUSH may                Notation: vi  siprev.v
+run into one of the following three cases:                              1: sni ext  state(vi, vi, t, twi ait)
+Case 1 Occupied (Line 8): The procedure OCCUPIED re-                    2: timove  twi ait + D(i, vi, v)
+turns true if either one of the following three conditions hold.        3: Add state(vi, v, twi ait, tm i ove) to 
+(1) Vertex v is inside ban, which means agent i cannot be               4: return
+pushed to v. (2) v is occupied by another agent i and i
+                                                                       either has been planned or i is not in Icurr. (3) bp is true
+                                                                       (which indicates that agent i is to be pushed away) and v is
+                                                                       the vertex currently occupied by agent i (i.e., v = spi rev.v).
+                                                                       When OCCUPIED returns true, agent i cannot move to v.
+                                                                       Then, ASY-PUSH ends the current iteration of the for-loop,
+                                                                       and checks the next vertex in C.
+
+                                                                       Case 2 Pushable (Line 9-18): ASY-PUSH invokes PUSH-
+                                                                       REQUIRED to find if vertex v is occupied by another agent
+                                                                       k that satisfy the following two conditions: (1) k  Icurr
+                                                                       and (2) the action of k has not yet been planned (Line 9).
+                                                                       If no such a k is found, ASY-PUSH goes to the "Unoccu-
+                                                                       pied" case as explained next. If such a k is found, the cur-
+                                                                       rent vertex vi occupied by agent i is added to the list ban
+                                                                       so that agent k will not try to push agent i in a future re-
+                                                                       cursive call of ASY-PUSH, which can thus prevent cyclic
+                                                                       push in the recursive ASY-PUSH calls. Then, a recursive
+
+                                                                    4
+call of ASY-PUSH on agent k is invoked and the input ar-                          Figure 2: A toy example illustrating LSRP.
+
+gument bp is marked true, indicating that agent k is pushed             agents are planned and snext is added to ST . The arrival
+                                                                        timestamps tv in any individual state in snext (i.e., {3,5})
+by some other agent. bp is also used in SWAP-related proce-             are added to T for future planning.
+
+dures (Line 3-4,16-17 and 24-25), which will be explained                  In the next iteration of LSRP, the planning timestamp is
+                                                                        tmin = 3 and Icurr is {2, 3}, as agents i = 2, 3 ends
+later. This recursive call returns the timestamp when agent k           their previous actions at t = 3. To plan the next action of
+                                                                        agents 2, 3, LSRP retrieves the move action from  and set
+finished its next action, and agent i has to wait till this times-      s2next = (D, B, 3, 5) for agent 2, which is s2next shown
+tamp, which is denoted as tiwait. Given twi ait, the procedure          in Fig. 2(c). Agent 3 has no cached action in  and is
+WAITANDMOVE is invoked to add both the wait action and                  planned by calling ASY-PUSH. Since agent 3 is at its goal,
+                                                                        ASY-PUSH set agent 3 wait in vertex C until tnext by set-
+the subsequent move action of agent i into , the dictionary             ting sn3ext = (C, C, 3, 5) (Line 19-21,Alg.2). All agents in
+storing all cached actions. Then, the timestamp tm i ove when           Icurr are now planned, and ST ,T are updated. LSRP ends
+agent i reaches v is computed (Line 18 ) and returned.                  this iteration and proceeds. The third planning timestamp is
+                                                                        tmin = 5 and Icurr is {1, 2, 3}. LSRP plans in a similar
+Case 3 Unoccupied (Line 19-26): Vertex v is valid for agent             way, and the movement of the agents is shown in Fig. 2(d).
+i to move into and a successor individual state sinext for              The last timestamp is tmin = 6. In this iteration, in sprev,
+agent i is generated (Line 23). Then, ASY-PUSH returns                  all agents have reached their goals and LSRP terminates.
+the timestamp tm i ove when agent i arrives at v (Line 26).
+                                                                        4.4 Relationship to PIBT and Causal PIBT
+Cache Future Actions During the search,  caches the
+                                                                        LSRP differs from PIBT in the following three aspects:
+planned actions of the agents, and is updated in Alg.3, which           First, PIBT solves MAPF where vertex and edge conflicts
+                                                                        are considered. When one seeks to use PIBT-like approach
+takes an agent i  I, a vertex v  V , the timestamp                      to solve MAPF-DC (with duration conflict), the wait ac-
+tiwait that agent i needs to wait before moving as the in-              tion may need to be considered in a similar way as LSRP
+put. Alg.3 first generates the corresponding individual state           does. Specifically, when two agents i, j  Icurr compete for
+sni ext where agent i waits in place till tiwait(Line 1), and then      the same vertex v, the higher-priority agent starts to move
+calculates time timove when agent i reaches v after the wait            to v until the lower-priority agent is pushed away from v
+(Line 2). Finally, the future individual state corresponding to         and reaches a less desired vertex u. Here, the wait and the
+the move action of agent i from vi to v between timestamps              move action of i are planned together and the move action is
+[tiwait, timove] is generated and stored in .                           cached in  for future execution. In PIBT, agent i can move
+                                                                        to v that is currently occupied by j as soon as j leaves v,
+Toy Example Fig. 2 shows an example in an undirected                    and there is no need for agent i to wait and cache the move
+                                                                        action. Second, different from MAPF-DC, MAPF-AA has
+graph with three agents I = {1, 2, 3} corresponding to the              various durations. As a result, in each iteration (with plan-
+                                                                        ning timestamp t), LSRP plans for agents whose arrival time
+yellow, blue, and red circles. The duration for the agents to           is equal to t, instead of planning all agents as PIBT does.
+                                                                        Third, LSRP also introduces a swap operation for MAPF-
+go through any edge is 1, 2, 3 respectively. S0 shows the               AA, which is demonstrated in Sec. 6.
+initial individual states. The initial priorities of the agents are
+                                                                           Causal PIBT (Okumura, Tamura, and De´fago 2021) ex-
+set to {0.99, 0.66, 0.33} respectively. At timestamp tmin =             tends PIBT to handle delays caused by imperfect execution
+0, Icurr includes all three agents. LSRP calls ASY-PUSH                 of the planned path for MAPF. In the time-independent plan-
+based on their priorities from the largest to the smallest.             ning problem, due to the possible delays, the action duration
+
+   LSRP calls ASY-PUSH with i = 1, and agent 1 attempts
+
+to move to vertex D as D is the closest to its goal. D is
+
+now occupied by agent 2, which leads to a recursive call on
+
+ASY-PUSH with i = 2 to check if agent 2 can be pushed
+
+away (Line 12, Alg.2). In this recursive call on i = 2, agent
+
+2 tries to move to vertex B as B is the closest to its goal,
+
+which is occupied by agent 3, and another recursive call
+
+on ASY-PUSH with i = 3 is conducted. In this recursive
+
+call on ASY-PUSH with i = 3, agent 3 finds its goal ver-
+tex C is unoccupied, and sn3ext = (B, C, 0, 3) is generated,
+which is shown in Fig. 2(b). Here, the returned timestamp
+is t3move = 3, which is the timestamp when agent 3 arrives
+vertex C. Then, the call on ASY-PUSH with i = 2 gets this
+returned timestamp and set it as t2wait = 3, the timestamp
+that agent 2 needs to wait till before moving to vertex D. An
+individual state sn2ext = (D, D, 0, 3) is generated, which is
+sn2ext in Fig. 2(b), and another individual state (D, B, 3, 5) is
+created and stored in , which corresponds to the move ac-
+
+tion of agent 2 from D to B. Finally, the call on ASY-PUSH
+with i = 1 receives tw1 ait = 5, which is the timestamp that
+agent 1 has to wait till before moving to D. An individual
+state sn1ext = (E, E, 0, 5) is generated, corresponding to the
+wait action of agent 1, which is sn1ext in Fig. 2(b). Then an-
+other individual state (E, D, 5, 6) is also created and stored
+
+in  as the future move action of agent 1. Finally, all three
+
+                                                                     5
+Figure 3: An example of LSRP never terminating with only              Sketch Proof 1 In each iteration, LSRP extracts the mini-
+ASY-PUSH. The blue and yellow agents will repeatedly                  mum timestamp tmin from T , and at the end of the itera-
+push each other but will never successfully swap their lo-            tion, the newly added timestamps to T must increase and
+cations to reach their goals.                                         be greater than tmin. As a result, tmin keeps increasing as
+                                                                      LSRP iterates and all agents are planned. Now, consider the
+is unknown until the action is finished. Causal PIBT thus             iterations of LSRP where agent i  Icurr and is planned. In
+plans "passively" by recording the dependency among the               ASY-PUSH, v is check at first. If no other agent (k) occu-
+agents during execution using tree-like data structure. When          pies v, then i reaches v with a duration that is no larger
+one agent moves, Causal PIBT signals all the related agents           than Dmax. Otherwise (i.e., another agent k occupies v),
+based on their dependency. In MAPF-AA, the action dura-               agent i seeks to push k to another vertices which may or
+tion is known, and LSRP thus plans "actively" by looking              may not be occupied by a third agent k. Since the graph is
+ahead into the future given the action duration of the agents,        a c-graph, there must be at least one unoccupied vertex in
+and caches the planned actions when needed. The funda-                the cycle containing the spirev.v, the current vertex occupied
+mental ideas in LSRP and Causal PIBT are related and sim-             by i. In the worst case, all agents are inside this cycle and
+ilar, but the algorithms are different since they are solving         i has to push all other agents before i can reach v, which
+different problems.                                                   takes time at most N · Dmax, where the agent moves to its
+                                                                      subsequent vertex in this cycle one after another.
+                      5 Analysis
+                                                                         Let diam(G) denote the diameter of G, the length of the
+This section discusses the compromise on completeness for             longest path between any pair of vertices in G.
+scalability in LSRP. We borrow two concepts from Causal-
+PIBT (Okumura, Tamura, and De´fago 2021):                             Theorem 2 For a c-graph, LSRP (Alg. 1) returns a set of
+                                                                      conflict-free paths such that for any agent i  I reaches its
+ · Strong termination: there is time point where all agents           goal at a timestamp t with t  diam(G) · N 2 · Dmax.
+   are at their goals.
+                                                                      Sketch Proof 2 From Theorem 1, the agent with the highest
+ · Weak termination: all agents have reached their goals at           priority arrives v within N · Dmax. So agent i arrives vgi
+   least once.                                                        within diam(G) · N · Dmax. Once agent i reaches vgi , its pri-
+                                                                      ority is reset, which must be smaller than the priority of any
+LSRP only guarantees weak termination under conditions.               other agents, and another agent j gains the highest priority
+In this section, the words `reach goal' means that an agent           and is able to reach its goal. This process continues until all
+reaches its goal location but may not stay there afterwards.          agents in I have gained the highest priority at least once,
+                                                                      and reached their goals. Thus, the total time for all agents
+   Given a graph G, a cycle {v1, v2, . . . , v, v1} is a special      to achieve their goals is within diam(G) · N 2 · Dmax.
+path that starts and ends at the same vertex v1. The length
+of a path (or a cycle) is the number of vertices in it. Given                6 Extension with Swap Operation
+a graph G and N agents, if there exists a cycle of length
+ N + 1 for all pairs of adjacent vertices in G, then we call          Since LSRP only guarantees weak termination under con-
+this graph a c-graph. Intuitively, for a c-graph, LSRP guar-          ditions as aforementioned, for MAPF-AA in general, there
+antees that the agent with highest priority can push away             are instances where LSRP never terminates although the in-
+any other agents that block its way to its goal, and reaches          stance is solvable. Fig. 3 shows an example. Assume the yel-
+its goal within finite time. Once the agent reaches its goal, its     low agent has higher initial priority than the blue agent. The
+priority is reset and thus becomes a small value, the priority        yellow agent first pushes the blue agent until reaches goal D.
+of another agent becomes the highest and can move towards             Then, the blue agent has higher priority and pushes the yel-
+its goal. As a result, all agents are able to reach their goals       low agent until reaches goal E. As a result, these two agents
+at a certain time. Note that LSRP initializes all agents with         iteratively push each other and can never successfully swap
+a unique priority, and all agents' priorities are increased by        their locations.
+one in each iteration of LSRP, unless the agent has reached
+its goal. Let i  I denote the agent with the highest pri-                Similar issues also appear in PIBT, which is addressed
+ority when initializing LSRP. Let Dmax denote the largest             by an additional swap operation (Okumura et al. 2022). In-
+duration for any agent and any edge.                                  spired by this, we develop ASY-PUSH-SWAP (Alg. 2).
+                                                                      ASY-PUSH-SWAP takes the same input as ASY-PUSH,
+Theorem 1 In a c-graph, in LSRP, when i  Icurr, let v                 and invokes a procedure SWAP-POSSIBLE-REQUIRED to
+denote the nearest vertex from vgi among all vertices in C,           check if there exists an agent j that needs to swap location
+then i can reach v within time N · Dmax.                              with agent i. If such a j exists, ASY-PUSH-SWAP sorts
+                                                                      the successor vertices in C based on their distance to agent
+                                                                      j's goal from the furthest to the nearest (Line 4, Alg. 1), and
+                                                                      plans the actions of i and j differently: if agent i can move
+                                                                      to the furthest vertex in C, and agent j is not planned, then j
+                                                                      moves to i's current vertex after i vacates it (Line 16-17,24-
+                                                                      25 in Alg. 2). We refer to this variant of LSRP with swap
+                                                                      as LSRP-SWAP. Since LSRP-SWAP alters the order of ver-
+                                                                      tices in C, the analysis in Theorem 1 based on the nearest
+
+                                                                   6
+                                                                    Figure 6: SoC and makespan ratios of LSRP-SWAP
+
+Figure 4: Success rate and runtime results
+
+         Figure 5: SoC and makespan ratios of LSRP                  Figure 7: Solution costs comparison with and without con-
+                                                                    sidering asynchronous actions.
+vertex v of an agent i  Icurr cannot be applied. Theo-
+rem 1 and 2 thus may not hold for LSRP-SWAP.                        the solution obtained is optimal to MAPF-AA. The second
+                                                                    baseline SIPP (see Sec. 3.3) adopts prioritized planning us-
+   SWAP-REQUIRED-POSSIBLE is similar to the concept of              ing SIPP (Phillips and Likhachev 2011) as the single-agent
+the swap operation in PIBT (Okumura 2023). The main dif-            planner. It uses the same initial priority as LSRP and LSRP-
+ference is that LSRP-SWAP must consider the duration con-           SWAP. All tests use Intel i5 CPU with 16GB RAM.
+flict between agents rather than the vertex or edge conflict in
+PIBT. Appendix provides more detail of LSRP-SWAP.                   7.1 Success Rates and Runtime
+
+              7 Experimental Results                                Fig. 4 shows the success rates and runtime of the algo-
+                                                                    rithms. Overall, it is obvious that our LSRP and LSRP-
+Our experiments use three maps and the corresponding in-            SWAP can often handle more than an order of magni-
+stances (starts and goals) from a MAPF benchmark (Stern             tude number of agents than the baselines within the time
+et al. 2019). For each map, we run 25 instances with varying        limit with much smaller runtime. In particular, LSRP-SWAP
+number of agents N , and we set a 30-seconds runtime limit          runs fastest and handles up to 1000 agents in our tests.
+for each instance. We make the grid maps four-connected,            In sparse maps (Empty-16,Den520d), LSRP and LSRP-
+and each agent has a constant duration when going through           SWAP both scale well with respect to N , and the reason
+any edge in the grid. This duration constant of agents vary         is that these graphs have many cycles that make the push
+from 1.0 to 5.0. We implement our LSRP and LSRP-SWAP                operation highly efficient when resolving conflicts between
+in C++, and compare against two baselines. The first base-          the agents. In a cluttered environment (Warehouse), LSRP
+line is a modified CCBS (Andreychuk et al. 2022). The orig-         has similar performance to SIPP while LSRP-SWAP outper-
+inal CCBS implementation considers the shape of the agents          forms both LSRP and SIPP, which shows the advantage of
+and does not allow different agents to have different dura-         the swap operation in comparison with LSRP without swap.
+tions when going through the same edge. We modified this
+public implementation by using the duration conflict and al-        7.2 Solution Quality
+low different agents to have different duration. Note that the
+constraints remain "sound" (Andreychuk et al. 2022), and            Now we examine the solution quality of proposed methods.
+                                                                    We measure the solution quality using both sum of costs
+                                                                    (SoC) and makespan. We compare the solution quality (SoC
+                                                                    and makespan) of LSRP and LSRP-SWAP with baselines
+
+                                                                 7
+(i.e., CCBS and SIPP) respectively. The ratios A/B used for           the multi-agent pathfinding problem. In Proceedings of
+comparison are computed based on the instances from the               the international symposium on combinatorial Search, vol-
+experiment in Sec. 7.1 that were successfully solved by both          ume 5, 19­27.
+planners A and B, where A is LSRP or LSRP-SWAP, and B
+is CCBS or SIPP. The higher the ratio, the better the solution        De Wilde, B.; Ter Mors, A. W.; and Witteveen, C. 2013.
+quality of the baseline B.                                            Push and rotate: cooperative multi-agent path planning. In
+                                                                      Proceedings of the 2013 international conference on Au-
+   As shown in Fig. 5 and 6, the median ratios is about 4x            tonomous agents and multi-agent systems, 87­94.
+in SoC, and 1.25x in makespan, which means LSRP and
+LSRP-SWAP find more expensive solutions than the base-                Erdmann, M.; and Lozano-Perez, T. 1987. On multiple mov-
+lines. It indicates LSRP and LSRP-SWAP achieve high scal-             ing objects. Algorithmica, 2: 477­521.
+ability at the cost of solution quality, while the baselines usu-
+ally find high quality solution with limited scalability. Note        Li, J.; Ruml, W.; and Koenig, S. 2021. Eecbs: A bounded-
+that SIPP solves more instances than CCBS, and the ratios             suboptimal search for multi-agent path finding. In Proceed-
+for CCBS and SIPP are thus calculated based on different              ings of the AAAI conference on artificial intelligence, vol-
+sets of instances. So SIPP sometimes has a higher ratio than          ume 35, 12353­12362.
+the optimal planner CCBS on the map Empty-16.
+                                                                      Luna, R.; and Bekris, K. E. 2011. Push and swap: Fast coop-
+7.3 Impact of Asynchronous Actions                                    erative path-finding with completeness guarantees. In IJCAI,
+                                                                      volume 11, 294­300.
+This compares the solution costs of LSRP and LSRP-SWAP
+when asynchronous actions are considered versus when they             Okumura, K. 2023. Improving LaCAM for Scalable Even-
+are not. We use the same instances as in Sec. 7.1. When               tually Optimal Multi-Agent Pathfinding. In Proceedings of
+ignoring the asynchronous actions, the duration constant of           the Thirty-First International Joint Conference on Artificial
+all agents are set to 5.0, and the resulting MAPF-AA prob-            Intelligence (IJCAI).
+lem becomes MAPF-DC, where all agents have common
+planning timestamps and can be planned in a step-by-step              Okumura, K.; Machida, M.; De´fago, X.; and Tamura, Y.
+manner. Note that even for MAPF-DC, due to the dura-                  2022. Priority Inheritance with Backtracking for Iterative
+tion conflict, PIBT cannot be directly applied as discussed           Multi-agent Path Finding. Artificial Intelligence, 103752.
+in Sec. 4.4. As shown in Fig. 7, by considering the asyn-
+chronous actions, the obtained solutions are usually 30% and          Okumura, K.; Tamura, Y.; and De´fago, X. 2021. Time-
+sometimes up to 75% cheaper than the solutions that ignore            Independent Planning for Multiple Moving Agents. Pro-
+the asynchronous actions. This result verifies the importance         ceedings of the AAAI Conference on Artificial Intelligence,
+of considering asynchronous actions during planning, espe-            35(13): 11299­11307.
+cially when agents have very different duration.
+                                                                      Phillips, M.; and Likhachev, M. 2011. Sipp: Safe interval
+         8 Conclusion and Future Work                                 path planning for dynamic environments. In 2011 IEEE In-
+                                                                      ternational Conference on Robotics and Automation, 5628­
+This paper develops rule-based planners for MAPF-AA by                5635. IEEE.
+leveraging both PIBT for MAPF and LSS to handle asyn-
+chronous actions. The experimental results verify their abil-         Ren, Z.; Rathinam, S.; and Choset, H. 2021. Loosely syn-
+ity to achieve high scalability for up to a thousand agents           chronized search for multi-agent path finding with asyn-
+in various maps, at the cost of solution quality. Future work         chronous actions. In 2021 IEEE/RSJ International Confer-
+includes developing an anytime planner that can further im-           ence on Intelligent Robots and Systems (IROS), 9714­9719.
+prove solution quality within the runtime limit for MAPF-             IEEE.
+AA. Specifically, LSRP can be potentially extended to an
+anytime version that is similar to LaCAM over PIBT (Oku-              Sharon, G.; Stern, R.; Felner, A.; and Sturtevant, N. R. 2015.
+mura 2023). This extension would allow LSRP to iteratively            Conflict-based search for optimal multi-agent pathfinding.
+optimize solution quality within the runtime limit.                   Artificial intelligence, 219: 40­66.
+
+                 Acknowledgements                                     Stern, R.; Sturtevant, N.; Felner, A.; Koenig, S.; Ma, H.;
+                                                                      Walker, T.; Li, J.; Atzmon, D.; Cohen, L.; Kumar, T.; et al.
+This work was supported in part by the Natural Science                2019. Multi-agent pathfinding: Definitions, variants, and
+Foundation of China under Grant 62403313.                             benchmarks. In Proceedings of the International Symposium
+                                                                      on Combinatorial Search, volume 10, 151­158.
+                       References
+                                                                      Wagner, G.; and Choset, H. 2015. Subdimensional expan-
+Andreychuk, A.; Yakovlev, K.; Surynek, P.; Atzmon, D.; and            sion for multirobot path planning. Artificial intelligence,
+Stern, R. 2022. Multi-agent pathfinding with continuous               219: 1­24.
+time. Artificial Intelligence, 305: 103662.
+                                                                      Walker, T. T.; Sturtevant, N. R.; and Felner, A. 2018. Ex-
+Barer, M.; Sharon, G.; Stern, R.; and Felner, A. 2014. Sub-           tended Increasing Cost Tree Search for Non-Unit Cost Do-
+optimal variants of the conflict-based search algorithm for           mains. In IJCAI, 534­540.
+
+                                                                      Yu, J.; and LaValle, S. 2013. Structure and intractability of
+                                                                      optimal multi-robot path planning on graphs. In Proceed-
+                                                                      ings of the AAAI Conference on Artificial Intelligence, vol-
+                                                                      ume 27, 1443­1449.
+
+                                                                   8
+                       Appendix                                         Algorithm 4: SWAP-REQUIRED-POSSIBLE
+
+This section provides the details of LSRP-SWAP, which in-               Input: i, v
+volves first detecting whether two agents need to swap their
+locations, and second planning the actions of the agents to             Notation: i, j, k  I
+achieve the swap. LSRP-SWAP does not consider the du-
+ration conflict between the agents in the detection process.            1: vi  siprev.v
+When planning the actions of the agents to achieve the swap,            2: if v = vi then return 
+the duration conflict is considered on Lines 17 and 25 in Alg.
+2 to let the agents wait and then move when needed.                     3: j  OCCUPANT(v, Icurr, sprev, snext)
+
+   We introduce the following concepts, and some of them                4: if j =  then
+have been mentioned earlier in the main paper.
+                                                                        5:   vj  spj rev.v
+SWAP: SWAP is introduced in (Okumura 2023). It is a pro-
+cess where two agents exchange their current vertices in a              6: if SWAP-CHECK(vj , vi) then
+conflict-free manner through a sequence of actions.
+                                                                        7:           if !SWAP-CHECK(vi, vj ) then
+PUSH: When i applies a PUSH operation on j, j moves to
+another adjacent vertex that is not currently occupied by i,            8:             return j
+then i moves to j's current vertex.
+                                                                        9: for u  Neigh(vi) do
+PULL: This is the reverse operation of PUSH. When i ap-
+plies a PULL operation on j, j moves to i's current vertex              10: k  OCCUPANT(u, Icurr, sprev, snext)
+after i moves to another vertex.                                        11: if k =   skprev.v = v then continue
+                                                                        12: if SWAP-CHECK(vi, v) then
+OCCUPANT is a procedure that is used in Alg. 4 Line 3. It
+takes (v, Icurr, sprev, snext) as the input, and seeks to find          13:          if !SWAP-CHECK(v, vi) then
+an agent j  Icurr that currently occupies v and has not yet
+been planned, according to sprev and snext. If no such an               14:            return k
+agent j exists, OCCUPANT returns an empty set.
+                                                                        15: return 
+           SWAP-REQUIRED-POSSIBLE
+                                                                        Algorithm 5: SWAP-CHECK
+The procedure SWAP-REQUIRED-POSSIBLE is called in
+Alg. 2. Recall that vgi denotes the goal vertex of agent i  I,          Input: vi, vj
+and C denotes a set of vertices that agent i can reach from
+its current vertex, sorted according to the distance from vgi           Notation: i, j  I
+from the nearest to the furthest (Alg. 2).
+                                                                        1: vpl  vi; vpd  vj
+   Alg. 4 takes as input an agent i  I and a vertex v in C
+that is the closest to vgi . Here, sprev, snext, Icurr are "global"     2: while vpl = vj do
+variables that are created on in Alg. 1 at the beginning of
+each iteration of LSRP-SWAP. When v = vi (Line 2), it                   3: n  (Neigh(vpl)).size()
+guarantees that v = vi = vgi , which means agent i reaches
+the goal and i does not need to swap vertices with others               4: for u  Neigh(vpl) do
+to get closer to vgi , and Alg. 4 ends. Otherwise (v = vi), it
+invokes OCCUPANT to find an agent j to swap with.                       5:           if u = vpd then
+
+   If OCCUPANT finds an agent j (j = ), it indicates that,              6:             n-1
+agent i can swap with agent j to get closer to vgi . Then, it
+invokes SWAP-CHECK to check if it is enough to eventually               7:             continue
+swap agents i and j by just using a sequence of pull opera-
+tions of agent j to agent i (Line 6). If SWAP-CHECK returns             8:           vpl  u
+true, it means that i, j cannot be swapped by just using a
+sequence of pull operations. If SWAP-CHECK returns false,               9: if n >= 2 then return false
+it means that i, j can be swapped by just using a sequence
+of pull operations, or agent i, j do not need to be swapped             10: if n <= 0 then return true
+at all. On Line 6, when SWAP-CHECK returns true, another
+SWAP-CHECK is applied (Line 7) to check if agent i, j can               11: if vpd = vgj then
+be swapped by letting agent i pull j. After SWAP-CHECK at
+line 7 returns false, it means that using pull operations can           12:          if argmin(h(i, u))uNeigh(vpl) = vpd then
+swap the agents. Agent j is thus returned and the procedure
+ends (Line 8).                                                          13:            return true
+
+   Subsequently, from Line 9 in Alg. 4, all adjacent vertices           14: vpd  vpl
+of vi are iterated in arbitrary order. In each iteration, it tries
+                                                                        15: return true
+
+                                                                        to find an agent k  Icurr that currently occupies a neigh-
+                                                                        bor vertex u of vi and is not planned yet (Line 10). If u is
+                                                                        unoccupied (i.e., k = ) or u = v (i.e., skprev.v = v), then
+                                                                        these cases are already handled by Lines 3-8, and the cur-
+                                                                        rent iteration of the for loop ends (Line 11). If k is found,
+
+                                                                        on Lines 12-13 in Alg. 4, SWAP-REQUIRED-POSSIBLE first
+                                                                        places agents k and i at vertices vi and v respectively, and
+
+                                                                        then invokes SWAP-CHECK twice (Line 12-13) to check
+                                                                        whether agent k needs to swap with agent i. The first call of
+                                                                        SWAP-CHECK checks whether agents k and i can swap their
+                                                                        locations by repeatedly letting agent k pulls agent i (Line
+
+                                                                        12). If the SWAP-CHECK on Line 12 returns true, which in-
+                                                                        dicates that swap operation cannot be done through agent k's
+
+                                                                        pulling. Then, the second SWAP-CHECK is applied to check
+                                                                        if these two agents can be swapped by letting agent i pulls
+                                                                        agent k (Line 13). When the second SWAP-CHECK returns
+                                                                        false, it indicates that the pull operations can swap agents k
+                                                                        and i. Thus agent k is returned, indicating that agent i needs
+                                                                        to swap with agent k, and the procedure ends (Line 14).
+
+                                                                     9
+   If no such an agent j or k exists, it indicates that either        Figure 8: The two agents with color blue and yellow start
+there is no need for agent i to swap with another agent, or           like (Start), going through a series of collision-free opera-
+there is no way for agent i to swap with another agent. Thus          tions, and finally reach (Goal). The only feasible plan is to
+no agent is returned and Alg. 4 ends (Line 15).                       swap the location of two agents via operations (a), (b) and
+                                                                      (c), where both agents need to move away from their goal lo-
+                    SWAP-CHECK                                        cations. ASY-PUSH cannot find a feasible solution in this
+                                                                      case as it always lead to one of the agent moves towards to
+SWAP-CHECK is a procedure to predict if a sequence of pull            its goal location.
+operations can swap agent i and j. In SWAP-CHECK, let
+vpl  vi, where "pl" stands for pull, indicating that the              ASY-PUSH-SWAP to plan for agent b and y in decreasing
+agent attempts to pull another agent, and let vpd  vj,                order of priority, and agent b is planned at first.
+where "pd" stands for pulled, indicating that the agent is
+pulled by another agent. To do this, we continuously let i               In the ASY-PUSH-SWAP procedure of b, it invokes
+pull j (Line 3-14). Specifically, in each while iteration, all        SWAP-REQUIRED-POSSIBLE with input i = b, v = D,
+neighbor vertices u of the current vertex vpl of the pulling          since vertex D is the closest to b's goal vertex (Line 3, Alg.
+agent i are considered, and u is skipped if u is same as the          2). The procedure finds that agent y occupies D through OC-
+vertex vpd of the agent j that is pulled. If u is different from      CUPANT (Line 3, Alg. 4) and invokes SWAP-CHECK (Line
+vpd, then u is assigned to be the next vertex that the pulling        6, Alg. 4). Here, SWAP-CHECK predicts whether the two
+agent i will move to (Line 8). Then, the pulled agent moves           agents can swap their locations by iteratively moving b to
+to the current vertex of the pulling agent (Line 14). This            y's current vertex and moving y to another vertex. The input
+while loop ends in four cases.                                        to this SWAP-CHECK is that vi = B and vj = D, mean-
+                                                                      ing agent y is at vertex D and agent b is at vertex B. After
+ · (1) Agent i's current vertex has at least 2 neighbor ver-          a few iterations, y arrives at vertex F and b arrives at vertex
+   tices, and i can move to a vertex different from agent j's         E. y finds no vertex to move to other than vertex E that is
+   current vertex. In this case, swap is possible through pull        occupied by agent b (Line 10, Alg. 5). Therefore, additional
+   operations from agent i to agent j, and no other opera-            operation is required, and SWAP-CHECK returns true.
+   tions are required. SWAP-CHECK thus returns false (Line
+   9).                                                                   Then, SWAP-REQUIRED-POSSIBLE invokes another
+                                                                      SWAP-CHECK (Line 7, Alg.4) to predict whether two agents
+ · (2) Agent i has no neighbor vertices besides agent j's             can swap their locations by iteratively moving y to b's cur-
+   current vertex. In this case, solely using push cannot             rent vertex and moving b to another vertex. The input to this
+   achieve swap, and pull operation is thus required. SWAP-           SWAP-CHECK is that agent vi = D and vj = B, meaning
+    CHECK thus returns true (Line 10).                                agent y is at vertex D and agent b is at vertex B. SWAP-
+                                                                      CHECK finds that agent b's current vertex B has two occu-
+ · (3) Let h(i, u) denote the shortest path distance from ver-        pied vertices (A and C) that are different from y's current
+   tex u to agent i's goal vgi . When the pulled agent j is           vertex D, and agent b can move to either of these two occu-
+   at its goal vertex vgi (Line 11), if for the pulling agent         pied vertices. Swapping the location of both agents is thus
+   i, the nearest vertex to its goal vgi among the neighbor           possible since B has two unoccupied neighbor vertices, and
+   vertices Neigh(vpl) of i's current vertex vpl is vpd (Line         SWAP-CHECK thus returns true (Line 9, Alg. 5).
+   12), SWAP-CHECK returns true, and swap operation is
+   required.                                                             After SWAP-CHECK returns true, SWAP-REQUIRED-
+                                                                      POSSIBLE ends and returns agent y (Line 8, Alg. 4), in-
+ · (4) When vpl = vj, it indicates that agent i has pulled            dicating that agent y is able to swap vertices with agent
+   agent j through a cycle (as defined in Sec. 5). It means           b. After SWAP-REQUIRED-POSSIBLE returns agent y, the
+   that the two agents have not swapped their vertices.               ASY-PUSH-SWAP procedure (Line 4, Alg. 2) reverses the
+   Therefore, additional pull operation is required, and true         order of vertices in C to start the swapping process, and
+   is thus returned.                                                  b moves to C[0], which is the vertex C in this toy exam-
+
+                     Toy Example
+
+This section presents an example illustrating how LSRP-
+SWAP solves the instance in Fig. 8 that requires swapping
+the location of two agents in a tree-like graph. Let b denote
+the blue agent and y denote the yellow agent. Initially, agent
+y is assigned with the highest priority, while agent b is as-
+signed with the lowest priority.
+
+LSRP-SWAP for (a) As shown in Fig. 8, starting from
+the initial state (Start), after a few push operations, LSRP-
+SWAP reaches (a). In (a), agent y is at its goal vertex, so
+its priority is reset, while agent b's priority increases by 1.
+Now agent b has the highest priority. LSRP-SWAP invokes
+
+                                                                  10
+ple. Then, agent b pulls y to b's current vertex (Line 24-25,
+Alg. 2) as shown in (b). So far, agents b and y are planned,
+and the LSRP-SWAP procedure for (a) in Fig. 8 ends.
+
+LSRP-SWAP for (b) In the next iteration of LSRP-SWAP,
+when planning for (b) in Fig. 8, agent b, y are both in Icurr
+and are planned in decreasing order of priority. The pro-
+cedure invokes ASY-PUSH-SWAP to plan for agent b at
+first. Here, ASY-PUSH-SWAP seeks to move agent b to
+vertex B and pushes agent y away, thus a recursive call to
+ASY-PUSH-SWAP of agent y is conducted.
+
+   In this recursive call of ASY-PUSH-SWAP on agent y,
+it invokes the SWAP-REQUIRED-POSSIBLE procedure with
+input i = y, v = D, since D is the closest vertex to agent
+y's goal. No agent occupies D, so the procedure arrives at
+Line 9 of Alg. 4. SWAP-REQUIRED-POSSIBLE (Line 9 in
+Alg. 4) iterates all neighbor vertices of y's current vertex B
+(in arbitrary order) . For example, it checks vertex D and
+A and finds they are unoccupied, which means the OC-
+CUPANT procedure (Line 11 in Alg. 4) returns an empty
+set for vertices D and A. Then, when iterating vertex C,
+OCCUPANT finds that agent b occupies vertex C. SWAP-
+REQUIRED-POSSIBLE then predicts the case that agent b
+moves to vertex B after agent y moves to vertex D by in-
+voking SWAP-CHECK with input vi = B, vj = D (Line
+12, Alg. 4). In SWAP-CHECK, after a few while-loop iter-
+ations, agent y reaches vertex F and has no neighbor ver-
+tex to move to, swap is required and true is thus returned
+(Line 10, Alg. 5). Then, SWAP-POSSIBLE is invoked with
+input vi = D, vj = B. In this SWAP-POSSIBLE, it finds
+that when agent b is at vertex B, b has 2 vertices to move
+to, so a swap is possible , true is thus returned (Line 9,
+Alg. 5). After SWAP-POSSIBLE, agent b is returned as the
+return argument k, the agent to swap vertices with agent y,
+and SWAP-REQUIRED-POSSIBLE ends (Line 14, Alg. 4). In
+y's ASY-PUSH-SWAP, its C is reversed, and C[0] = ver-
+tex A. A is identified first; ASY-PUSH-SWAP finds that A
+is unoccupied, thus moving y to A. Agent b moves to B after
+y arrives at A, as shown in (c). Agents b and y are planned,
+and the LSRP-SWAP procedure for (b) ends.
+
+LSRP-SWAP for (c) Starting from (c), after a few while-
+loop iterations of LSRP-SWAP, where push operation is ap-
+plied in each iteration, agents b and y eventually reach their
+goal vertices D and E, respectively. LSRP-SWAP success-
+fully swaps the locations of the two agents.
+
+                                                                           11
+
