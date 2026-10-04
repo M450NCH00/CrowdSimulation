@@ -15,7 +15,7 @@ Companion files: [S1](s1-crowd-simulation.md) · [S2](s2-games.md) · [S3](s3-ma
   paper's own page. How each was found is in [search-log.md](search-log.md) §4.
 - Categories **A / B / C** are the issue's. This is the sub-area the issue expected to "supply
   genuine category B examples", and it does: four of the seven entries are primarily B. One is primarily C ([Pruekprasert-RightOfWay]).
-- **Three of the six entries were read as arXiv copies of papers that are also published.** Each
+- **Five of the seven entries were read as arXiv copies of papers that are also published.** Each
   entry says which; section and equation numbers are the arXiv copy's.
 - `[inference]` marks my judgement, not the paper's claim.
 - **Cross-reference to issue #20.** That review reported that "no arrival-order rule was found in
