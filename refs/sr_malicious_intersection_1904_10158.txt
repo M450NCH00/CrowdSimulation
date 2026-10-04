@@ -1,0 +1,485 @@
+                                       © 2019 IEEE. Personal use of this material is permitted. Permission from IEEE must be obtained for all
+                                       other uses, in any current or future media, including reprinting/republishing this material for advertising
+                                       or promotional purposes, creating new collective works, for resale or redistribution to servers or lists,
+                                       or reuse of any copyrighted component of this work in other works.
+
+arXiv:1904.10158v2 [cs.SY] 3 Oct 2019
+Decision Making for Autonomous Vehicles at Unsignalized
+        Intersection in Presence of Malicious Vehicles
+
+ Sasinee Pruekprasert1, Xiaoyi Zhang1, Jérémy Dubut1,2, Chao Huang1, Masako Kishida1
+
+   Abstract-- In this paper, we investigate the decision making of             algorithm based on the human drivers' data. A cooperative
+autonomous vehicles in an unsignalized intersection in presence                approach is developed for collision avoidance at intersections
+of malicious vehicles, which are vehicles that do not respect the              based on formal control theoretic techniques [7]. However,
+law by not using the proper rules of the right of way. Each                    the approach requires vehicle-to-vehicle communication and
+vehicle computes its control input as a Nash equilibrium of a                  thus is not scalable to general intersection handling. The
+game determined by the priority order based on its own belief:                 principle of reachability-based decision-making approach,
+each of non-malicious vehicle bases its order on the law, while a              which predicts the probability of future collisions using error
+malicious one considers itself as having priority. To illustrate the           propagation, is applicable to frontal collision avoidance at
+effectiveness of our method, we provide numerical simulations,                 intersections [8]. However, this approach may lead to con-
+with different scenarios given by different cases of malicious                 servative results. An intention-aware decision-making model
+vehicles.                                                                      for unsignalized intersections is studied in [9], where drivers'
+                                                                               intentions are modelled using two-layered hidden Markov
+                          I. I                                                 models. However, the intention estimation is deterministic.
+
+   Autonomous vehicles have a promising future of making                          This paper uses game theory for the decision making.
+transportation time effortless and enabling the driver to                      Game theory is the study of decision making where the
+partake in other activities and therefore change everyday life                 players (e.g. vehicles) make choices by maximising their
+across the world. The greatest strength of autonomous vehicle                  own expected utility based on the possible actions of other
+is to avoid traffic accidents caused by human error, and thus                  players. Thus, game theory provides a promising framework
+to improve safety on roadways [1]. With the development of                     for scenarios where interactions are involved and has been
+autonomous vehicles, the focus in research moves towards                       widely used in various areas such as robotics [10] and
+complex traffic scenarios such as intersections.                               economy [11]. There are also many examples of using game
+                                                                               theory in intelligent transport systems. A game theoretic
+   Intersections, at which multiple roads and opposing di-                     approach for modelling the flow of vehicles in a road with
+rections of traffic meet together, are designed to prevent                     lane change is proposed in [12]. A cooperative strategy
+traffic jams by easing the flow of traffic. The intersections                  in non-zero-sum games is applicable to solving conflict
+can be divided into signalized intersections and unsignalized                  situations between two autonomous vehicles in a roundabout
+intersections [2]. The signalized intersections have signs and                 [13]. The decision making based on k-level games are studied
+signals to regulate traffic while the unsignalized intersections               for two autonomous vehicles at unsignalised intersections
+do not. The unsignalized intersections are typically found                     [14] and roundabouts [15]. In our previous work [16],
+where the traffic flow is low. However, they usually have                      we proposed a decision making for multiple autonomous
+higher collision frequencies than the signalized intersections                 vehicles at roundabouts based on Nash equilibria.
+due to driver's indecision. One report of National Highway
+Traffic Safety Administration (NHTSA) in 2011 indicates that                      This paper proposes two main contributions. First, we
+40% of car collisions in the U.S. happen at intersections and                  propose a game-theoretic decision making of multiple au-
+60% of them are related to unsignalized intersections [3].                     tonomous vehicles in an unsignalized intersection using Nash
+It is expected that the autonomous vehicle can efficiently                     equilibria in a perfect information game. Instead of using
+avoid intersection mishap by making appropriate decisions                      the concept of "aggressiveness" value proposed in [16], we
+and orchestrating proper actions without driver's intention.                   determine the decision order of the vehicles based on their
+                                                                               priorities (e.g., based on the rules of the right of way).
+   The decision making by autonomous vehicle at unsignal-                      Second, we consider aggressive and unpredictable driving
+ized intersections is a critical problem. Several approaches                   behaviours of malicious vehicles to simulate the real complex
+have been recently proposed. One common way is to in-                          traffic environment. Before the widespread adoption of the
+vestigate the human behaviour in unsignalized intersection                     autonomous vehicles, the human drivers need to share roads
+in order to create a naturalistic decision process [4], [5].                   with autonomous vehicles. For this reason, we classify the
+For example, [6] proposes a human-like decision-making                         drivers using different levels of maliciousness, describing
+                                                                               vehicles breaking the law, or having irrational behaviours.
+   The authors are supported by ERATO HASUO Metamathematics for
+Systems Design Project (No. JPMJER1603), JST; J. Dubut is also supported          The remainder of this paper is organised as follows. First,
+by Grant-in-aid No. 19K20215, JSPS.                                            we formulate the problem in Section II. The game-theoretic
+                                                                               decision making approach is presented in Section III. Then,
+   1The authors are with the National Institute of Informatics, Hitotsubashi
+2-1-2, Tokyo 101-8430, Japan
+{sasinee, xiaoyi, dubut, chao_huang, kishida}@nii.ac.jp
+
+   2J.D. is also affiliated with the Japanese-French Laboratory for Informat-
+ics
+                                                                           type     angelic       inter. demonic irrational
+                                                                          initial.
+                                                                         S.IV-A     right of way           selfish        none
+                                                                         decision
+                                                                         making     S.II-C        i.e. highest priority
+                                                                           S.III
+                                                                          update       Nash equilibrium                   random
+                                                                         priority
+                                                                         S.IV-B     right of way
+
+                                                                                    +             fitting           none
+
+                                                                                    fitting
+
+Fig. 1. Road occupancy by over-approximation
+
+                                                                         Fig. 2. Summary of the different level of maliciousness
+
+Section IV introduces the design of formalising priorities.              step, assuming the vehicle has constant acceleration ai(t)
+After validating the performance of the proposed method in               between the time steps t and t + 1.
+Section V, Section VI draws the conclusions.
+                                                                         C. Rules for the right of way
+                    II. P
+A. Vehicles at unsignalised intersection                                    For this paper, we use Japanese rules for deciding priorities
+                                                                         of vehicles [18]. Rules are slightly different in other coun-
+   We consider autonomous vehicles in a four-way unsignal-               tries, especially on the side that have more priority (e.g., left
+ized intersection. We assume that vehicles are driving on the            in Japan [18], right in Australia [19]). Each vehicle intending
+left and that there are at most four vehicles at the intersection,       to enter an unsignalized intersection then has to give the right
+entering from different directions. Their decision making                of way to any vehicle (in order of importance):
+depends on the vehicles that are going to enter or are already
+engaged in the intersection, but not on those that have already           A) already engaged in the intersection,
+left the intersection. We also assume that every vehicle knows            B) on its left-hand side,
+which way every other vehicle is intending to use, as every               C) significantly closer to the intersection.
+vehicle declares its intention using their turn signal.
+                                                                         A vehicle can proceed and engage in the intersection, as
+B. Vehicle configurations                                                long as it does not cross the way of a vehicle to which
+                                                                         it should have given the right of way. In Section IV, we
+   We focus on the high-level decision making of autonomous              describe more precisely how we implement these rules in
+vehicles following a precomputed path. For this reason, we               our decision making.
+do not consider the path trackers and the low-level control
+layer in this work. So then, we over-approximate the road                D. Levels of maliciousness
+occupancy of each vehicle using three circles (much as [17],
+see Fig. 1) and assume that the vehicles perfectly follow the               In this paper, we consider four kinds of vehicles (see
+given navigation paths.                                                  Fig. 2):
+
+   Much as [16], we consider the case where the navigation                  · Angelic. Such a vehicle tries to follow the rules of
+path of each vehicle i is fixed and denoted by path(i)                         Section II-C and to avoid any collision.
+{"straight","turn right","turn left"}. Thus, each vehicle can
+only control its acceleration along the given navigation path               · Intermediate. Such a vehicle does not follow the rules
+at each time step. More specifically, at each time step t, each                from Section II-C by initially considering that it has
+vehicle i chooses its acceleration ai(t) in a finite set in order              priority. However, it may give priority to other vehicles
+to minimise their overall cost functions.                                      if the situation requires it.
+
+   The configuration of the vehicle i at time step t is denoted             · Demonic. Such a vehicle is selfish: it does not respect
+by:                                                                            the rules and believes that it always has the priority.
+                                                                               However, it considers other vehicles' behaviours in its
+Xi(t) = [xi(t), yi(t), vi(t), ai(t), stai(t)]  (1)                             decision making.
+
+where (xi(t), yi(t)) is the position of the vehicle i (where (0, 0)         · Irrational. Such a vehicle randomly chooses its acceler-
+is the center of the intersection), vi(t) is its velocity, ai(t) is its        ation at every time step, independently of the situation.
+acceleration, and stai(t)  {"entering" , "inside" , "leaving"}
+                                                                            Our goal is to see how our ego vehicle ­ considered as
+is its current status (i.e., not yet entered, already inside the         angelic ­ behaves in presence of different types of vehicles,
+                                                                         including some that do not respect the rules, at different
+intersection, or far enough from the centre of the intersection)         degrees of severity.
+
+respectively.                                                            E. Structure of the decision making
+   Then, given the control input, that is, the acceleration ai(t),
+                                                                            In the following two sections, we describe more precisely
+the configuration at time step t + 1 is represented by:                  our decision making for autonomous vehicles with different
+                                                                         levels of maliciousness. Our method consists of two main
+Xi(t + 1) = Fi(Xi(t), ai(t)),                  (2)                       components: maintaining priority orders (Section IV), and
+                                                                         computing the control inputs (Section III). Both components
+where the function Fi is computed from the navigation path               depend on the computations of Nash equilibria (Section III-
+and returns the configuration of the vehicle i after one time            A), similarly to our previous paper [16].
+III. C                                ,N                          where
+
+   Other than irrational vehicles, each vehicle determines its                   0                         if stai = "leaving",
+acceleration based on rational decision making. In this sec-                     
+tion, we discuss a game-theoretic approach to the problem,                                                 else if the navigation paths
+similarly to [16]. Using the concept of priority order that                                                of i and k do not collide,
+we will describe more precisely in Section IV, we formulate                                                else if d(k, i)  D,
+the decision making problem as a finite perfect-information                                                else if d(k, i)  Ddanger,
+game. The players are non-cooperative vehicles, and they try                     0                         else if i is minimal for 
+to minimise their cost.                                                                                    i.e. i have highest priority,
+                                                                                 
+                                                                                                           otherwise
+                                                                                 
+                                                                                                                                        (4)
+                                                                                 0
+                                                                  ik  (X,  )  =  Cd  ·  (D  -  d(k,  i))2
+
+                                                                                 
+                                                                                 
+                                                                                 
+                                                                                 
+                                                                                 0
+                                                                                 
+                                                                                 
+                                                                                 
+                                                                                 
+                                                                                 Cn · (D - d(k, i))2
+A. n-player game with perfect information
+                                                                                 
+   We consider 1-round sequential games with perfect and
+complete information G = (P, , (H1, . . . , Hn)) where:           Here, 0 < Cn Cd, 0 < Ddanger < D are given constants.
+
+   · P = {1, . . . , n} is a finite set of players,               The intention is that, as long as there is no danger of
+   ·  is a finite set of strategy profiles,                       collision, the vehicle i does not care about safety, but when
+   · Hj : n  R is the cost function for player j.                 there is a possibility of collision, the closer the vehicle k is,
+                                                                  the more careful the vehicle i is. A special case is when the
+   In such a game, every player chooses a strategy profile        vehicle i has the highest priority, where i cares less about
+from  to minimise its cost function. We are particularly
+interested in Nash equilibria, that is, a set of strategies 1,    safety. This case is in order to break symmetric situations
+. . . , n for every player that is optimal in the sense that for
+every player j, for every strategy j:                             where all vehicles would be too conservative.
+                                                                     3) Velocity: Let vl be the speed limit of the road. We
+      Hj (1, . . . , n)  Hj (1, . . . , j, . . . , n)
+                                                                  define the velocity feature by
+When a total order  on the set of players is given, it is
+possible to compute such a Nash equilibrium by backward               ivelo(X) =        Cu · (vl - vi)2    if vl  v   (5)
+induction: intuitively, the order  gives an order with which                            Co · (vl - vi)2    otherwise
+the players choose their strategy in such a way they ensure
+optimality.                                                       Here, we choose 0 < Cu Co so that each vehicle obeys
+
+   We invite an interested reader to take a look at usual         the law.
+textbooks, much as [20], for more details on game theory.            4) Accumulated cost function: We construct the accumu-
+
+B. Cost functions for the decision making in an intersection      lated cost function based on the receding horizon control
+
+   1) Cost at each time step: We first introduce the cost of      approach [21], which determines the control inputs of the
+a vehicle at each time step, which we call the step-cost. The
+step-cost of the vehicle i is given by                            vehicles based on the predicted future up to a horizon time
+                                                                  step h < .
+
+                                                                     Given a vector of accelerations a = [aj (s)]j N,0sh-1,
+
+                                                                                                       h-1
+
+                                                                  define Kj(X, , a) = s · Sj(X(a, s), ) where  is the
+
+                                                                                                       s=0
+
+                                                                  discounted factor and X(a, s) is defined by induction on s:
+
+                                                                     · X(a, 0) = X,
+                                                                     · X(a, s + 1) = [Fk (Xk (a, s), ak (s)]k N .
+
+                                                                  C. Decision game
+
+Si(X, ) = siafe(X, ) + vielo(X)                         (3)          In a very similar spirit as [16], we describe a collection
+
+where X is a vector of configurations as in (1), i.e.,            of games whose players are the vehicles at the intersection.
+                                                                  Assume that a total order  on the set of vehicles and a
+X       =  [X     ,  .  .  .,  Xn  ]                              vector of configurations X are given. We define the game
+                                                                  GX,  as follows:
+               1
+                                                                     · The set P of players is the set of vehicles.
+and  is a total order on the set of vehicles.                        · The set  is a finite set of acceleration patterns, that is,
+   2) Safety: For each pair of vehicles i and k, let d(k, i) be
+                                                                       a finite subset of Rh, where h is the time horizon.
+the distance between their occupancy, given by the union of          · For every vehicle j, Hj(a) = Kj(X, , a).
+three circles (see Section II-B and Fig. 1).                         · The order is given by .
+
+   With this, we define the safety feature by                     We can then compute a Nash equilibrium using backward
+
+siafe(X, ) = ik (X, ),                                            induction as described in Section III-A. This produces a
+
+                       ki                                         collection of acceleration patterns that we denote by
+
+                                                                      a(X, ) = [aj (s, X, )]j N,0s h-1.
+   The intention of aj(s, X, ) is to be a prediction of the        described by their "aggressiveness" values. In this paper, the
+acceleration of the vehicle j after s time steps, starting from    order is obtained from the rules of the right of way, and by
+the configuration X, considering  as the priority order.           the character angelic/demonic of the cars.
+
+D. Computing control inputs and predicted configurations           A. Initialising priorities
+
+   Consider a vehicle i that is not irrational. At each time          1) Angelic case: Let us assume first that the vehicle i is
+step t, the vehicle i observes the precise configuration X(t)      angelic. In this case, the vehicle i will try to comply to the
+of every car. It also maintains a priority order i,t , a total
+order on the set of vehicles. We will see in Section IV how        rules of the right of way as in Section II-C. For that reason,
+this order is initialised and updated.                             the vehicle i initialises its priority order i,0 by randomly
+
+   From those data, the vehicle i can consider the game            choosing a total order that satisfies the following:
+GX(t), i,t , and then compute a Nash equilibrium as previ-         A) If staj = "inside" and if stak "inside", then j i,0 k.
+ously. We then obtain:                                              B) Else, if the number of vehicles is less than 4 and j is
+
+   · the control input ai(t) of the vehicle i at time step t            "on the left-hand side" of k, j i,0 k.
+     given by ai(0, X(t), i,t ),                                    C) Else, let dj and dk be the distances of j and k from
+
+   · a prediction ai, j(t) by the vehicle i of the acceleration         the centre of the intersection, respectively. If j is sig-
+     of the vehicle j at time step t.                                   nificantly closer to the centre of the intersection than k,
+                                                                        meaning that dk - dj > 2 meters, then j i,0 k.
+   From these predicted accelerations, the vehicle i can              2) Selfish cases: Now, let us assume that the vehicle i is
+compute a prediction of the configuration of the vehicle j
+at time step t + 1 by:                                             demonic or intermediate. Such a vehicle will consider itself
+
+      Xi, j (t + 1) = Fj (Xj (t), ai, j (t))                       as initially having priority, and will not care about other
+                                                                   vehicles. So the vehicle i will initialise its priority order i,0
+E. Resolving deadlocks
+                                                                   by randomly choosing any total order on the set of vehicles
+   The previous subsection described a way of computing the        such that i is the lowest element i i,0 j for all j i.
+control input by solving a game. This method can however
+lead to deadlocks, that is, situations where no vehicle takes      B. Updating the priority predictions
+the decision to go on, and every vehicle waits for others to
+take the lead. This would typically happen when there is a            As explained in Section II-D, demonic vehicles do not
+vehicle in each of the four ways, and that there is no clear
+priority order that would resolve the situation. Formally, for     update their priority order, while intermediate and angelic
+a vehicle i that is not irrational, this case is to be considered  ones do. Thus, if the vehicle i is demonic, we always have
+when:                                                              i,t+1=i,t for any time step t. If the vehicle i is angelic or
+                                                                   intermediate, it will update its priority only when necessary:
+   1) the velocities of all vehicles are zero, and
+   2) the accelerations of all vehicles are precisely predicted    when the priority from the rules of the right of way changes
+
+       using i,t .                                                 and when its predictions are imprecise.
+                                                                      1) Update according to the rules of the right of way: If
+In the theory of concurrent system, it is known that it is
+impossible to avoid such a situation using only deterministic      the vehicle i is angelic, i always updates its priority order
+choices, and a solution is to introduce some randomness to
+resolve the situation [22].                                        whenever the right of way changes. For example, when a
+
+   A vehicle i can unlock the situation in two cases:              vehicle leaves the intersection and when a vehicle that does
+
+   · either when detecting a deadlock and considering having       not have priority enters the intersection. For this case, we
+     the highest priority, that is, i being minimal for i,t ,      update i,t+1 according to the current right of way in the
+                                                                   same way as in Section IV-A. If the rule of the right of way
+   · or when i already detected a deadlock at time t - 1.          does not change at the current time step t, we use i,t+1=i,t .
+In those cases, the vehicle i set its acceleration ai(t + 1)
+without following a Nash equilibrium. Concretely, in our              2) Update due to imprecise predictions: We consider this
+simulations, this vehicle i can set its acceleration ai(t + 1)
+to 10m/s2 with probability 0.25, which will ultimately break       type of update for intermediate vehicles and angelic vehicles
+the symmetry of a deadlock situation.
+                                                                   that do not use the update according to the rules of the right
+IV. F  P                                                           of way at the current time step t + 1. Suppose that i is one of
+
+   Again, other than irrational vehicles, each vehicle assumes     those vehicles. As in Section III-D, given the priority order
+                                                                   i,t and the observed configuration X(t) at the previous time
+some total order. In this section, we describe how each of         step t, the vehicle i can predict the configurations Xi, j(t + 1)
+those vehicles i initialises and updates a total order i,t on      of any other vehicle j. In the case where these predictions
+the set of vehicles. This process depends on the type of           are different from the observed configurations Xj(t + 1), the
+                                                                   vehicle i updates its priority order to fit more closely these
+the vehicle. This is the main difference from [16], where          new observations. To this end, the vehicle i computes the
+the order  was deduced from the behaviours of other cars,          Nash equilibrium of the decision game GX(t),  for any total
+                                                                   order , and choose  as the total order such that:
+
+                                                                      · The difference between predicted and observed acceler-
+
+                                                                        ations is minimal:
+
+                                                                     arg min            |aj (0, Xj (t),  ) - aj (t + 1)|.
+
+                                                                                    jN
+Fig. 3. The unsignalized intersection used for the simulations, the three  Case                   S   TABLE I            Avg. Total time steps
+navigation paths, and the initial positions of each vehicle.                   1                              R              56.87 (5.687s)
+                                                                               2  Collision rate(%)                          53.98 (5.398s)
+                                                                               3            0        Congestion rate(%)      59.09 (5.909s)
+                                                                               4            0                   0            91.88 (9.988s)
+                                                                              1'            0                  0.2           55.43 (5.543s)
+                                                                              2'           0.4                  0            50.58 (5.058s)
+                                                                              3'            0                  4.0           55.81 (5.581s)
+                                                                              4'            0                  0.5           75.82 (7.582s)
+                                                                                            0                  1.4
+                                                                                           1.1                 9.4
+
+                                                                                                               14.3
+
+   · If several  satisfy the first condition, choose the one                  The decision making is performed every 0.1s. The dis-
+     that gives the minimal acceleration ai(0, X(t),  ).                   counted factor for the accumulated cost function is  = 0.8.
+                                                                           The speed limit of the road is vl = 16.7m/s. The constant
+The intention of the second condition is the following: the                parameters are as follows: Cn = 20, Cd = 10300, D = 25 m,
+reason why vehicle i needs to change its priority order is                 Ddanger = 0.5 m, Cu = 1, and Co = 1000.
+because some vehicles are going against its believes (either
+the rules of the right of way for angelic, or selfishness for                 We use the following patterns of acceleration/deceleration
+intermediate). In any case, the vehicle has to be particularly             sequences with a time horizon h = 3. All the accelerations
+careful in the case it is dealing with a demonic or an irrational          in this section are in m/s2.
+vehicle. We also define i,t+1 as follows:
+                                                                              · [-50, -50, -50] for a deceleration,
+   · If ai(0, X(t),  )  ai(0, X(t), i,t ), i,t+1 =  .                         · [0, 0, 0] for no acceleration,
+   · Otherwise, i,t+1 =  with probability 0.25, and                           · [10, 0, 0] for a small acceleration,
+                                                                              · [20, 0, 0] for a strong acceleration.
+      i,t+1 = i,t with probability 0.75.
+                                                                              The accelerations of a irrational vehicle are randomly
+Again the intention of the second case is to be careful in                 selected from the set {-50, 0, 10, 20}.
+a situation where the vehicle would benefit by being more
+aggressive, while in a situation that contradicts its believes.            B. Results and analysis
+
+                    V. E                                                      We perform 2000 simulations for all those cases.
+
+   To verify the effectiveness of our approach, we perform                     1 Four angelic vehicles.
+numerical simulations using Matlab 2018a and 2018b.                            2 Three angelic vehicles and one demonic vehicle.
+                                                                               3 Four intermediate vehicles.
+A. Experiment scenario                                                         4 Three intermediate vehicles and one irrational vehicle.
+                                                                           1000 simulations are done with initial velocity vi(0) = 0
+   We consider four vehicles approaching an unsignalized in-               (cases 1-4), and 1000 simulations with random initial veloc-
+tersection as shown in Fig. 3: each vehicle approaching from               ity depending on the type of the vehicle (cases 1'-4'):
+each entrance. We assume that all vehicles have rectangle
+shapes, and over-approximate the road occupancy of each                       · if the vehicle is demonic or irrational, we randomly
+vehicle using three circles shown in Fig. 1. We consider that                    choose in the interval [0, 16.7]m/s,
+two vehicles collide if their road occupancy areas intersect.
+                                                                              · if the vehicle is angelic or intermediate, we randomly
+   The structure of the intersection and the three navigation                    choose in the interval [0, 6]m/s.
+paths are also illustrated in Fig. 3. The navigation path type
+of each vehicle is randomised. The length and width of each                   Observe that cases 3 and 4 contain no angelic vehicles,
+vehicle are randomised within the range (3.5m, 5.5m) and                   even though we assume that the ego vehicle should be
+(1.5m, 2.1m), respectively. We consider that the navigation                angelic. This is to see how robust the fitting method of
+paths of given two vehicles do not collide only when the                   Section IV-B is for intermediate vehicles.
+two vehicles approach the intersection from the opposite
+directions, and each vehicle either turns left or goes straight.              As presented in Table V-B, we evaluate the simulations by
+                                                                           considering the following criteria. The first column presents
+   For each vehicle i, stai(t) is given as follows:                        the collision percentage. The second column presents the
+   1) stai(t) = "entering" if the vehicle i is approaching                 percentage of the simulations that have congestions, which
+                                                                           are situations such that: 1) there are at least two vehicles,
+       the intersection but none of its part has yet entered               i and j, such that stai(t) = staj(t) = "inside" and 2) the
+       the intersection, i.e., the rectangle that represents the           navigation paths of both vehicles may collide. The third
+       vehicle has not yet intersected the red area in Fig. 3.             column presents the average total time that the vehicles spend
+   2) stai(t) = "leaving" if more than half of the vehicle is              running along their navigation paths.
+       already outside the intersection.
+   3) stai(t) = "inside" otherwise.                                           For cases 1, 2, and 3, all vehicles successfully leave
+                                                                           the intersection without any collisions. Some collisions are
+(a) time step = 9  (b) time step = 16             (c) time step = 20                               R
+
+                   Fig. 4. A dangerous situation                       [1] S. A. Bagloee, M. Tavana, M. Asadi, and T. Oliver, "Autonomous
+                                                                            vehicles: challenges, opportunities, and future implications for trans-
+detected for the case 4, due to the unpredictable behaviour of              portation policies," Journal of modern transportation, vol. 24, no. 4,
+the irrational vehicle. In the cases where the initial velocity             pp. 284­303, 2016.
+is possibly non zero, we detect more congestions, due to the
+fact that vehicles have less time to make their decision before        [2] "Unsignalized intersections," https://safety.fhwa.dot.gov/intersection/
+entering the intersection. However, the total time is shorter               conventional/unsignalized/.
+because each vehicle starts with some initial velocity.
+                                                                       [3] C. Hubmann, M. Becker, D. Althoff, D. Lenz, and C. Stiller, "Decision
+   The results also show that the vehicles may spend less                   making for autonomous driving considering interaction and uncertain
+time in the intersection if some of them are selfish. The case              prediction of surrounding vehicles," in 2017 IEEE Intelligent Vehicles
+2 is particularly interesting because it has fewer time steps               Symposium (IV). IEEE, 2017, pp. 1671­1678.
+than case 1. One possible explanation for this case is that
+the selfish vehicle makes the decision making easier: it will          [4] Y. Liu and U. Ozguner, "Human driver model and driver decision
+force itself through the intersection, so that angelic vehicles             making for intersection driving," in 2007 IEEE Intelligent Vehicles
+have no choice but to let it go first. After this vehicle leaves            Symposium. IEEE, 2007, pp. 642­647.
+the intersection, the decision making with three vehicles is
+much easier.                                                           [5] V. Gadepally, A. Krishnamurthy, and U. Ozguner, "A framework for
+                                                                            estimating driver decisions near intersections," IEEE Transactions on
+   In Fig. 4, we present a dangerous situation of the case 4'.              Intelligent Transportation Systems, vol. 15, no. 2, pp. 637­646, 2014.
+The red vehicle is irrational, while the other three vehicles
+are intermediate. In Fig. 4(a), the red vehicle is entering the        [6] P. De Beaucorps, T. Streubel, A. Verroust-Blondet, F. Nashashibi,
+intersection, while the other three are stopped. However, in                B. Bradai, and P. Resende, "Decision-making for automated vehicles at
+Fig. 4(b), the red vehicle suddenly stops, so the pink vehicle              intersections adapting human-like behavior," in 2017 IEEE Intelligent
+thinks it can enter the intersection. Finally in Fig. 4(c), the red         Vehicles Symposium (IV). IEEE, 2017, pp. 212­217.
+vehicle starts again and the pink vehicle is forced to update
+its priority order as in Section IV-B and gives the way to             [7] M. R. Hafner, D. Cunningham, L. Caminiti, and D. Del Vecchio,
+the red vehicle. This scenario demonstrates that our decision               "Cooperative collision avoidance at intersections: Algorithms and ex-
+making is robust enough to avoid such potential accidents.                  periments," IEEE Transactions on Intelligent Transportation Systems,
+                                                                            vol. 14, no. 3, pp. 1162­1175, 2013.
+                          VI. C
+                                                                       [8] G. R. de Campos, A. H. Runarsson, F. Granum, P. Falcone, and
+   In this paper, we propose a decision making for au-                      K. Alenljung, "Collision avoidance at intersections: A probabilistic
+tonomous vehicles in a unsignalized intersection in presence                threat-assessment and decision-making system for safety interven-
+of selfish and irrational vehicles. The decision is made by                 tions," in 17th International IEEE Conference on Intelligent Trans-
+computing Nash equilibria of sequential games played by                     portation Systems (ITSC). IEEE, 2014, pp. 649­654.
+the vehicles. The decision orders of those games are based
+on the believes of which vehicles have priority: angelic               [9] W. Song, G. Xiong, and H. Chen, "Intention-aware autonomous driv-
+vehicles define their priorities based on the rules of the right            ing decision-making in an uncontrolled intersection," Mathematical
+of way, while malicious ones regard themselves as having                    Problems in Engineering, 2016.
+priority or do not pay any attention to priorities. We consider
+several scenarios where vehicles respecting the law (angelic)         [10] Y. Meng, "Multi-robot searching using game-theory based approach,"
+share the road with selfish vehicles and irrational ones,                   International Journal of Advanced Robotic Systems, vol. 5, no. 4, p. 44,
+which randomly choose their accelerations. We illustrate                    2008.
+those scenarios in our numerical simulations, demonstrating
+its feasibility and the robustness of our decision making in          [11] G. M. Hodgson and K. Huang, "Evolutionary game theory and evolu-
+presence of malicious vehicles. As a future work, systematic                tionary economics: are they different species?" Journal of evolutionary
+experiments based on more sophisticated and practical traffic               economics, vol. 22, no. 2, pp. 345­366, 2012.
+simulators will be conducted to further evaluate our model,
+and more detailed techniques will be adopted to eliminate             [12] A. Talebpour, H. S. Mahmassani, and S. H. Hamdar, "Modeling
+the potential hazards.                                                      lane-changing behavior in a connected environment: A game theory
+                                                                            approach," Transportation Research Procedia, vol. 7, pp. 420­440,
+                                                                            2015.
+
+                                                                      [13] L. Banjanovic-Mehmedovic, E. Halilovic, I. Bosankic, M. Kantardzic,
+                                                                            and S. Kasapovic, "Autonomous vehicle-to-vehicle (v2v) decision
+                                                                            making in roundabout using game theory," Int. J. Adv. Comput. Sci.
+                                                                            Appl, vol. 7, pp. 292­298, 2016.
+
+                                                                      [14] N. Li, I. Kolmanovsky, A. Girard, and Y. Yildiz, "Game theoretic
+                                                                            modeling of vehicle interactions at unsignalized intersections and
+                                                                            application to autonomous vehicle control," in Proceedings of the 2018
+                                                                            Annual American Control Conference (ACC), 2018.
+
+                                                                      [15] R. Tian, S. Li, N. Li, I. Kolmanovsky, A. Girard, and Y. Yildiz,
+                                                                            "Adaptive game-theoretic decision making for autonomous vehicle
+                                                                            control at roundabouts," in Proceedings of the 2018 IEEE Conference
+                                                                            on Decision and Control (CDC), 2018.
+
+                                                                      [16] S. Pruekprasert, J. Dubut, X. Zhang, C. Huang, and M. Kishida, "A
+                                                                            game theoretic approach to decision making for multiple vehicles at
+                                                                            roundabout," arXiv:1904.06224, 2019.
+
+                                                                      [17] M. Cao, R. Wang, J. Wang, and N. Chen, "An integrated MPC
+                                                                            approach for FWIA autonomous ground vehicles with emergency col-
+                                                                            lision avoidance," in Proceedings of the 21st International Conference
+                                                                            on Intelligent Transportation Systems (ITSC), 2018.
+
+                                                                      [18] J. N. P. Agency, "To foreign nationals who drive vehicles in japan (en-
+                                                                            glish language version)," https://www.npa.go.jp/policies/application/
+                                                                            license_renewal/pdf/english.pdf, 2011.
+
+                                                                      [19] N. T. Government, "Road rules in NT," https://nt.gov.au/driving/safety/
+                                                                            road-rules-in-nt, 2015.
+
+                                                                      [20] M. J. Osborne, An introduction to game theory. New York, NY [u.a.]:
+                                                                            Oxford Univ. Press, 2004.
+
+                                                                      [21] W. H Kwon and S. Han, Receding Horizon Control: Model Predictive
+                                                                            Control for State Models. Springer, 2005.
+
+                                                                      [22] D. J. Lehmann and M. O. Rabin, "On the advantages of free choice:
+                                                                            A symmetric and fully distributed solution to the dining philosophers
+                                                                            problem," in Conference Record of the Eighth Annual ACM Symposium
+                                                                            on Principles of Programming Languages (POPL'81), 1981.
+

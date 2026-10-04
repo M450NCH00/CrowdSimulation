@@ -22,7 +22,7 @@ Companion files: [S2](s2-games.md) · [S3](s3-mapf-robotics.md) · [S4](s4-traff
 - `[inference]` marks my judgement, not the paper's claim.
 - **A boundary note for this whole sub-area.** Every method here is a *continuous* avoidance rule,
   so every entry is primarily **A**. That uniformity is a finding, not an oversight; see
-  [category-summary.md](category-summary.md) §2.
+  [category-summary.md](category-summary.md) §3.
 
 Contents: [Charlton-FastCrowd] · [Sung-ArrivalTime] · [Sudkhot-BDI-RVO] · [MartinezBaselga-AVOCADO]
 · [Tordeux-CFSM] · [Xu-AVM] · excluded seed (CrowdVLA) · not-obtained stubs
@@ -211,8 +211,8 @@ Contents: [Charlton-FastCrowd] · [Sung-ArrivalTime] · [Sudkhot-BDI-RVO] · [Ma
   40,000 as the authors' headline claim and flag it as not consistently supported by §5.4.
 - Domain assumptions that limit portability: continuous 2-D; RVO2 underneath; a pre-built
   navigation graph from polygon corners (§3.2).
-- Portability to a generic simulator: [inference] the pattern — "look ahead for density, and if it
-  exceeds a threshold, take a randomised detour" — is domain-free and cheap. It only works where
+- Portability to a generic simulator: [inference] the pattern — *look ahead for density, and if it
+  exceeds a threshold, take a randomised detour* — is domain-free and cheap. It only works where
   there *is* somewhere else to go. In a doorway or a single corridor there is no detour, so it
   cannot resolve the FYP's deadlock cases.
 - Limitations and future work stated by the authors: handle more agents; improve visualisation;
@@ -318,8 +318,8 @@ Contents: [Charlton-FastCrowd] · [Sung-ArrivalTime] · [Sudkhot-BDI-RVO] · [Ma
   continuous 2-D; agents assumed "not competitive" (§III); convex obstacles only without a
   higher-level planner (§V-C).
 - Portability to a generic simulator: [inference] **high, and it carries the idea most relevant to
-  the FYP.** The rule needs only positions and velocities, and it parameterises "who yields, and by
-  how much" as one number per neighbour. A persona could supply that number's prior (`b_i`). The
+  the FYP.** The rule needs only positions and velocities, and it parameterises *who yields, and by
+  how much* as one number per neighbour. A persona could supply that number's prior (`b_i`). The
   paper's own Fig. 6 is the warning: a mis-set prior produces collisions, so a persona-derived
   prior would need the online correction, not a fixed table.
 - Limitations and future work stated by the authors: integrate with a higher-level planner; general
@@ -509,7 +509,7 @@ with the LLM-agent literature and is noted for a later issue; nothing from it is
 - Date attempted: 2026-10-04
 - Status: awaiting PDF from user
 
-### [NOT OBTAINED] Implicit Crowds: Optimization Integrator for Robust Crowd Simulation
+### [NOT OBTAINED] Implicit Crowds
 - Authors / Year / Venue: Ioannis Karamouzas, Nick Sohre, Rahul Narain, Stephen J. Guy / 2017 /
   *ACM Transactions on Graphics* 36(4)
 - Link tried: https://doi.org/10.1145/3072959.3073705 ; https://dl.acm.org/doi/pdf/10.1145/3072959.3073705

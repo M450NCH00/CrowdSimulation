@@ -25,11 +25,11 @@ Companion files: [S1](s1-crowd-simulation.md) · [S2](s2-games.md) · [S4](s4-tr
   collide, because the planner forbids it. I therefore treat **"two agents request the same vertex
   in the planner"** as the conflict state. That is the issue's own wording ("two or more agents
   contest the same cell"). Under that reading, priority-based planners are **C**, not A. This is a
-  judgement call; it is discussed in [category-summary.md](category-summary.md) §3.
+  judgement call; it is discussed in [category-summary.md](category-summary.md) §4.
 
 Contents: [Okumura-PIBT] · [Chakravarty-PIBT-FreeSpace] · [Zhou-LSRP] · [Yang-S2AN] ·
-[Zhang-Mutex] · [Ma-TokenPassing] · [Ma-DCC] · [Grover-Deadlock] · [Wang-MAPFSurvey] ·
-not-obtained stubs
+[Zhang-Mutex] · [Ma-TokenPassing] · [Ma-DCC] · [Grover-Deadlock] · [Dergachev-ORCA-MAPF] ·
+[Wang-MAPFSurvey] · not-obtained stubs
 
 ---
 
@@ -76,7 +76,7 @@ not-obtained stubs
   [§3.1, §4.2; §4.4.1 "Distance evaluation"; §4.5 "PIBT requires agents to know others' priorities"]
 - Tie-breaking: **two explicit mechanisms.** (a) Between agents: each agent has a tie-breaker
   `ε_i ∈ [0, 1)`, "distinct for agents", so that priorities are always unique; the effective order
-  is "longest time since last at goal first", then `ε_i` (§4.2, Alg. 1 lines 2–3). The paper does
+  is *longest time since last at goal first*, then `ε_i` (§4.2, Alg. 1 lines 2–3). The paper does
   not say how `ε_i` is chosen in the base algorithm; in PIBT+ it is set so that agents farther from
   their goal start with higher priority (Algorithm 2 line 2). (b) Between candidate vertices at
   equal distance: "the presence (or absence) of an agent is used as a tie-breaking rule", to avoid
@@ -122,7 +122,7 @@ not-obtained stubs
 - Limitations and future work stated by the authors: asynchrony between agents' moves is "a
   significant gap in practical situations" (§6).
 - Relevance to this FYP: [inference] **reuse as the baseline arbitration rule, and extend the
-  priority.** PIBT's priority is "time since last at goal" plus an arbitrary tie-breaker. That
+  priority.** PIBT's priority is *time since last at goal* plus an arbitrary tie-breaker. That
   tie-breaker is the slot an LLM-elicited, persona-dependent ordering would fill. It also bears on
   the 10,000-agent goal: this is the only paper in the review that reports a timing at that scale.
 - BibTeX: `okumura2022pibt` (and `okumura2019pibt` for the conference version)
@@ -275,7 +275,7 @@ not-obtained stubs
   did not survive extraction; nothing below depends on them.
 - Sub-area: S3
 - **Primary category: C** (secondary: A). **Hard to classify — see
-  [category-summary.md](category-summary.md) §3.**
+  [category-summary.md](category-summary.md) §4.**
 - Category justification: the paper's object is a *priority order* — who plans first and who must
   plan around whom — which is an arbitration rule (C). But in pure prioritised planning the
   lower-priority agent plans around existing paths, so no conflicting pair of plans is ever
@@ -338,8 +338,8 @@ not-obtained stubs
 - Relevance to this FYP: [inference] **contrast case, and a warning.** It shows that replacing a
   hand-written priority with a learned one buys success rate in hard instances but loses the
   properties the FYP wants from an *extracted rule*: interpretability, locality and scale. That is
-  an argument for the FYP's stated direction (extract a rule, then apply it) over "let the model
-  decide each time".
+  an argument for the FYP's stated direction (extract a rule, then apply it) over *let the model
+  decide each time*.
 - BibTeX: `yang2024s2an`
 
 ---
@@ -473,8 +473,9 @@ not-obtained stubs
 - Limitations and future work stated by the authors: `[not stated in paper]` as a limitations
   section; the conclusion restates results (§7).
 - Relevance to this FYP: [inference] the cleanest **category B** exemplar in S3, and useful
-  because [Okumura-PIBT] beats it on both runtime and quality without any shared plan (PIBT §5.2.2)
-  — direct evidence that a no-communication rule can outperform a communication-based one.
+  because [Okumura-PIBT] reports beating it on runtime and being "comparable to or better" on
+  solution quality without any shared plan (PIBT §5.2.2) — evidence, from the competing method's
+  authors, that a no-communication rule can match a communication-based one.
 - BibTeX: `ma2017tokenpassing`
 
 ---
@@ -527,8 +528,8 @@ not-obtained stubs
 - Domain assumptions that limit portability: grid; lock-step; homogeneous agents with shared
   network weights (§IV-C); trained up to 16 agents on 40×40 (§IV-C b).
 - Portability to a generic simulator: [inference] the policy does not port (it is a trained
-  network). The *communication trigger* does: "only consult a neighbour if its presence would
-  change what I do" is a stateable, domain-free rule for deciding when an interaction counts as a
+  network). The *communication trigger* does: *only consult a neighbour if its presence would
+  change what I do* is a stateable, domain-free rule for deciding when an interaction counts as a
   conflict worth resolving.
 - Limitations and future work stated by the authors: the selection cost above; extending to
   centralised-training frameworks; finding the maximum number of agents it can handle. [§V-B, §VI]
@@ -606,7 +607,107 @@ not-obtained stubs
 - Relevance to this FYP: [inference] **the theoretical justification for needing a category C rule
   at all.** It is the strongest source for the claim that an avoidance rule is not enough and an
   arbitration rule must sit behind it — the same two-layer split issue #20's shortlist proposed.
-- BibTeX: `grover2023deadlock`
+- BibTeX: `grover2022deadlock`
+
+---
+
+### [Dergachev-ORCA-MAPF]: Distributed Multi-agent Navigation Based on Reciprocal Collision Avoidance and Locally Confined Multi-agent Path Finding
+
+- Authors / Year / Venue: Stepan Dergachev, Konstantin Yakovlev / 2021 / *2021 IEEE 17th
+  International Conference on Automation Science and Engineering (CASE)*, pp. 1489–1494.
+- Link: https://doi.org/10.1109/CASE49439.2021.9551564 | https://arxiv.org/abs/2107.00246
+- Peer-review status: published at IEEE CASE 2021 (Crossref record
+  `refs/sr_cr_late_additions.json`; the arXiv copy states "This is a preprint of the paper accepted
+  to CASE'21"). Not a seed: found by web search late in the work (query
+  `navmesh local avoidance game engine agents deadlock doorway peer-reviewed paper`), after the
+  first drafts of the synthesis files were written. **It changed two conclusions**; see
+  [search-log.md](search-log.md) §6.
+- Verified: yes (full text read; it is five pages). **Read from**
+  `refs/sr_orca_localmapf_2107_00246.txt` (arXiv v1). ⚠ Fig. 3 (success rates) and Table I did not
+  survive text extraction; the numbers below are from the prose of §I and §V.
+- Sub-area: S3 (continuous-space multi-agent navigation; the paper names "mobile robotics, video
+  games, crowd simulation" as applications, §I).
+- **Primary category: B** (secondary: C and A). **Hard to classify — see
+  [category-summary.md](category-summary.md) §4.**
+- Category justification: three mechanisms in sequence. Normally agents avoid each other with ORCA
+  (A). When a deadlock is detected — a conflict state that already exists — it is resolved by a
+  deterministic procedure, not by bargaining (C). But that procedure runs on information the agents
+  must tell each other: on detection, "the agents involved in deadlock exchange the information on
+  their current positions and desired goals" (§I), and detection itself needs neighbours to report
+  their average speed (§IV-A). Goals and averaged speeds are not inferable from momentary physical
+  state, so by the issue's boundary rule the resolution is B. I apply the same test as for
+  [Shah-AROW]: the outcome depends on the content of the exchange. `[inference]` In a simulator the
+  exchange is unnecessary and the same rule is C.
+- Domain simulated: abstract disc agents moving freely in continuous 2-D space over a known grid
+  map. [§III]
+- The rule, stated precisely:
+  - *Normal mode.* Follow an individually planned any-angle path; set velocity by ORCA (§IV;
+    Algorithm 1 lines 11–12).
+  - *Deadlock detection.* Each step, compute own average speed over the last *k* steps. If it is
+    below `v_low`, ask the agents in communication range for theirs; "If any of the neighbours
+    report its mean speed to be lower than v_low, then the deadlock is considered to be detected"
+    (§IV-A). Parameters used: *k* = 250, `v_low` = 0.001 (§V).
+  - *Who takes part.* The detecting agent's neighbours and their neighbours switch to "MAPF mode"
+    (§IV-B a).
+  - *Local instance.* The bounding rectangle of the participants, plus an offset, overlaid on the
+    grid (§IV-B b). Each participant takes the nearest free cell as its start and, as its goal, the
+    reachable cell nearest its next waypoint — **in priority order, so that a higher-priority agent
+    gets first choice of cell** (§IV-B c).
+  - *Solve.* Every participant runs the same deterministic solver on the same shared model, so all
+    obtain the same plan with "no central controller": Push and Rotate first (fast, always
+    succeeded in their tests), then bounded-suboptimal conflict-based search for a cheaper plan if
+    it finishes within the time cap (§IV, §IV-C). Both solvers are pre-window methods; see
+    [pre-window-foundations.md](pre-window-foundations.md).
+  - *Return.* When all have finished their plans, go back to normal mode (Algorithm 1 lines 19–22).
+    An outside agent that wanders in is added and the instance is rebuilt (lines 23–27).
+- Trigger condition: once contention has occurred — on detected deadlock: at least two
+  neighbouring agents with near-zero average speed over 250 steps. [§IV-A]
+- Information required: neighbours' positions and velocities within 3 cells (for ORCA); neighbours'
+  **reported average speeds**; and, once in MAPF mode, participants' **positions and current
+  waypoint goals**, exchanged; the static grid map, known to all. [§III assumptions 1 and 5; §IV]
+- Tie-breaking: **random.** "Each agent in the MAPF mode is randomly assigned a unique priority"
+  (§IV-B a). The priority decides who gets the nearest start cell and the best goal cell. ⚠ The
+  paper also says the whole procedure is deterministic so that every agent computes the same
+  answer (§IV); **how a random priority is made identical across agents is `[not stated in
+  paper]`.**
+- Guarantees claimed: none for the whole pipeline. ORCA's collision guarantee "under certain mild
+  assumptions" is cited (§II); Push and Rotate is called "a complete, polynomial-time algorithm"
+  (§IV-C); the combination is not proved.
+- Evaluation: four grid maps — two 64×64 "Gaps" maps (two halls joined by 1 or 3 narrow passages),
+  a 64×64 warehouse, a 32×32 rooms map; 5 to 40 agents; **250 instances per agent count**; agents
+  are discs of radius 0.3 cell (0.49 for the avoidance computation); against plain ORCA with path
+  planning ("ORCA*") and the authors' earlier hybrid ("Base") (§V). Success means every agent
+  reaches its goal within 20,000 steps.
+- Does it work: yes in confined maps, and the baseline's failure is the more important result.
+  - "on the Gaps 3 map, our approach was able to solve 99% of tasks involving 40 agents while
+    BASE's success rate was slightly above 70% and **ORCA was not able to solve a single instance
+    in this setup**" (§V).
+  - The headline: success "raises from 10-15% to 95-99% in certain cases" (§I).
+  - On the open Warehouse map the difference "is negligible" — "even basic collision avoidance
+    techniques perform well" where there are no confined passages (§V).
+  - **Not 100%.** The authors' explanation: the transition, when agents move to their grid start
+    cells "relying only on collision avoidance" (§V).
+  - Resolution is frequent and large: up to 95 solver calls for 40 agents on the rooms map; up to
+    32 of 40 agents drawn into one local instance on the single-passage map (§V).
+  - The cheaper-plan solver "failed to find solutions in numerous cases" within the 1 s cap (§V).
+- Validated against real human or real traffic data: no. [§V]
+- Scalability: 40 agents (§V). Runtime `[not stated in paper]` beyond the 1 s cap on solving.
+- Domain assumptions that limit portability: a static grid map known to every agent; homogeneous
+  discs smaller than half a cell; perfect control and perfect sensing within range; agents willing
+  and able to exchange goals. [§III]
+- Portability to a generic simulator: [inference] **high, and this is the architecture the FYP's
+  simulator most resembles.** It is the only source in the review that takes continuous-space,
+  velocity-avoiding agents — the same kind as a pedestrian model — and bolts an arbitration layer
+  onto them. What a simulator would change: drop the message exchange (it already knows goals and
+  speeds), and replace the random priority with something meaningful. The detection rule (two
+  neighbours both stalled over a window) is domain-free and cheap.
+- Limitations and future work stated by the authors: kinematic constraints; unknown environments.
+  [§VI]
+- Relevance to this FYP: [inference] **reuse the structure; the open slot is the priority.** Its
+  architecture — avoid by default, detect a stall, arbitrate locally, resume — is the two-layer
+  split issue #20's shortlist recommended, here implemented and measured. Its precedence order is a
+  random draw.
+- BibTeX: `dergachev2021orcamapf`
 
 ---
 

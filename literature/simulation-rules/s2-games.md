@@ -129,7 +129,7 @@ plainly because the issue forbids counting industry sources toward any peer-revi
   system, only one that works well with your scenarios" (§19.9); predicting collisions in path
   space rather than world space is "as far as we know, intractable in the general case" (§19.7.3).
 - Relevance to this FYP: [inference] **vocabulary and warning.** *Sidedness* is the right name for
-  what a pedestrian tie-break decides, and "keep the passing side the geometry already implies" is
+  what a pedestrian tie-break decides, and *keep the passing side the geometry already implies* is
   a stateable rule the FYP could test an LLM's answers against. The corner deadlock is a shipped
   system's version of the FYP's doorway problem.
 - BibTeX: `sunshinehill2017rvoorca`
@@ -192,7 +192,7 @@ plainly because the issue forbids counting industry sources toward any peer-revi
 - Limitations and future work stated by the author: triangulate the hull interior for local path
   planning; model sub-part velocities if needed. [§15.5]
 - Relevance to this FYP: [inference] minor, but it is the only source in S2 documenting a
-  pedestrian–vehicle rule in a shipped title, and its "go behind a crossing vehicle" heuristic is a
+  pedestrian–vehicle rule in a shipped title, and its *go behind a crossing vehicle* heuristic is a
   concrete, testable claim about human behaviour that the LLM dataset could be checked against.
 - BibTeX: `martel2017acsyndicate`
 
@@ -240,7 +240,7 @@ plainly because the issue forbids counting industry sources toward any peer-revi
   still classify the entry A, because nothing is exchanged *between* agents and no outcome depends
   on a message: the simulator simply exposes its own state to the planner. This is a
   simulator-versus-robot difference that the A/B boundary does not anticipate; raised in
-  [category-summary.md](category-summary.md) §3.
+  [category-summary.md](category-summary.md) §4.
 - Tie-breaking: lowest total score. `[not stated in chapter]` for equal scores. The interesting
   part is that **the weights are per-agent personality traits**: "Likeliness to drive in the
   oncoming traffic", "Likeliness to drive on sidewalks", "Preferred driving speed", and "How

@@ -11,21 +11,22 @@ Companion files: [S1](s1-crowd-simulation.md) · [S2](s2-games.md) · [S3](s3-ma
 
 ## How to read this file
 
-- The issue gave **no seeds** for S4; every entry here was found by search and confirmed from the
+- The issue gave **no seeds** for S4; every entry here was found by me and confirmed from the
   paper's own page. How each was found is in [search-log.md](search-log.md) §4.
 - Categories **A / B / C** are the issue's. This is the sub-area the issue expected to "supply
-  genuine category B examples", and it does: four of the six entries are primarily B.
+  genuine category B examples", and it does: four of the seven entries are primarily B. One is primarily C ([Pruekprasert-RightOfWay]).
 - **Three of the six entries were read as arXiv copies of papers that are also published.** Each
   entry says which; section and equation numbers are the arXiv copy's.
 - `[inference]` marks my judgement, not the paper's claim.
 - **Cross-reference to issue #20.** That review reported that "no arrival-order rule was found in
   anything opened" ([`../game-theory/search-log.md`](../game-theory/search-log.md) §9, and risk R6
   in its §10). **This sub-area contains it.** First-come-first-served appears as the operative rule in [Shah-AROW] and
-  [Malikopoulos-SignalFree], and as the measured baseline in [Xu-TreeSearch]. See
+  [Malikopoulos-SignalFree], and as the measured baseline in [Xu-TreeSearch]; and
+  [Pruekprasert-RightOfWay] gives precedence to whoever is "already engaged in the intersection". See
   [rule-catalogue-simulation.md](rule-catalogue-simulation.md) §3.
 
 Contents: [ShalevShwartz-RSS] · [Malikopoulos-SignalFree] · [Xu-TreeSearch] · [Shah-AROW] ·
-[Ahmed-MergeAssist] · [Mariani-CoordSurvey]
+[Ahmed-MergeAssist] · [Pruekprasert-RightOfWay] · [Mariani-CoordSurvey]
 
 ---
 
@@ -43,7 +44,7 @@ Contents: [ShalevShwartz-RSS] · [Malikopoulos-SignalFree] · [Xu-TreeSearch] ·
   (driving policy, sensing). **Read from** `refs/sr_rss_1708_06374.txt`.
 - Sub-area: S4
 - **Primary category: A** (secondary: C). **Hard to classify — see
-  [category-summary.md](category-summary.md) §3.**
+  [category-summary.md](category-summary.md) §4.**
 - Category justification: the model's core is a *safe distance* each vehicle must keep and a
   *proper response* it must make the moment that distance is lost; if everyone complies "there will
   be no collisions" (Lemma 5, §3.5). The collision — the conflict that matters on a road — is never
@@ -97,8 +98,8 @@ Contents: [ShalevShwartz-RSS] · [Malikopoulos-SignalFree] · [Xu-TreeSearch] ·
   §2 by its heading) and offers proofs instead. No simulation or road data is reported in the
   sections I read; a keyword search of the full text for `experiment` and `simulat` found only
   that argument.
-- Does it work: on its own terms it is proved, not tested. The paper's evidence supports "no
-  collisions if all comply" and nothing about throughput, delay, or what happens when the
+- Does it work: on its own terms it is proved, not tested. The paper's evidence supports *no
+  collisions if all comply* and nothing about throughput, delay, or what happens when the
   both-brake case arises.
 - Validated against real human or real traffic data: no. Its rules are described as formalised
   "common sense" (§3), not as fitted to driver behaviour.
@@ -109,8 +110,8 @@ Contents: [ShalevShwartz-RSS] · [Malikopoulos-SignalFree] · [Xu-TreeSearch] ·
   acceleration bounds; a priority relation supplied by infrastructure; all agents obey the same
   parameters.
 - Portability to a generic simulator: [inference] **the structure ports; the parameters do not.**
-  "Keep a gap you can stop in; when the gap is lost, the non-prioritised party yields; priority is
-  given, not taken" is not specific to cars, and §3.8 already applies it to pedestrians. To move it
+  *Keep a gap you can stop in; when the gap is lost, the non-prioritised party yields; priority is
+  given, not taken* is not specific to cars, and §3.8 already applies it to pedestrians. To move it
   to a crowd, the braking model becomes a stopping-distance model for walkers, and — the hard part
   — the *priority relation* has to come from somewhere, because a corridor has no signs. That
   missing priority relation is precisely what the FYP proposes to elicit.
@@ -118,7 +119,7 @@ Contents: [ShalevShwartz-RSS] · [Malikopoulos-SignalFree] · [Xu-TreeSearch] ·
   were not read.
 - Relevance to this FYP: [inference] **reuse the frame.** It is the most complete written statement
   in this review of a communication-free right-of-way rule, and "given, not taken" is the cleanest
-  available answer to the objection "what if the other agent does not follow the rule".
+  available answer to the objection *what if the other agent does not follow the rule*.
 - BibTeX: `shalevshwartz2017rss`
 
 ---
@@ -195,7 +196,7 @@ Contents: [ShalevShwartz-RSS] · [Malikopoulos-SignalFree] · [Xu-TreeSearch] ·
   higher-level scheduling problem; partial penetration of automated vehicles; errors and delays.
   [§5]
 - Relevance to this FYP: [inference] **baseline, and the anchor for the arrival-order rule.** A
-  peer-reviewed, implemented instance of "whoever arrived first passes first", with a random
+  peer-reviewed, implemented instance of *whoever arrived first passes first*, with a random
   tie-break and the authors' own statement that the rule is the weak point.
 - BibTeX: `malikopoulos2018signalfree`
 
@@ -271,8 +272,8 @@ Contents: [ShalevShwartz-RSS] · [Malikopoulos-SignalFree] · [Xu-TreeSearch] ·
 - Relevance to this FYP: [inference] **the quantitative evidence on the arrival-order rule.**
   Issue #20 found no such rule in the game-theory literature and asked whether that was a gap; this
   paper shows the rule exists, is the field's standard baseline, and is measurably poor under load.
-  That changes the FYP question from "is there an arrival-order rule" to "when does a rule better
-  than arrival order pay off".
+  That changes the FYP question from *is there an arrival-order rule* to *when does a rule better
+  than arrival order pay off*.
 - BibTeX: `xu2020treesearch`
 
 ---
@@ -428,6 +429,116 @@ Contents: [ShalevShwartz-RSS] · [Malikopoulos-SignalFree] · [Xu-TreeSearch] ·
 - Relevance to this FYP: [inference] minor: a second category B exemplar, and a reminder that the
   field-tested system in this review is also the one with the least stated rule.
 - BibTeX: `ahmed2018mergeassist`
+
+---
+
+### [Pruekprasert-RightOfWay]: Decision Making for Autonomous Vehicles at Unsignalized Intersection in Presence of Malicious Vehicles
+
+- Authors / Year / Venue: Sasinee Pruekprasert, Xiaoyi Zhang, Jérémy Dubut, Chao Huang, Masako
+  Kishida / 2019 / *2019 IEEE Intelligent Transportation Systems Conference (ITSC)*, pp. 2299–2304.
+- Link: https://doi.org/10.1109/ITSC.2019.8917132 | https://arxiv.org/abs/1904.10158
+- Peer-review status: published at IEEE ITSC 2019 (Crossref record
+  `refs/sr_cr_late_additions.json`; the arXiv copy carries the 2019 IEEE copyright notice). Found
+  by web search late in the work (query `intersection priority rule autonomous vehicles conflict
+  resolution right-of-way rule-based unsignalized`), after the first drafts of the synthesis files.
+  **It changed two conclusions**; see [search-log.md](search-log.md) §6.
+- Verified: yes (full text read). **Read from** `refs/sr_malicious_intersection_1904_10158.txt`
+  (arXiv v2, 3 Oct 2019). ⚠ Section headings were reduced to their first letters and **Table I's
+  collision and congestion columns were scrambled** in extraction; I report its time-step column,
+  which is aligned, and the prose.
+- Sub-area: S4
+- **Primary category: C** (secondary: B, weakly). **Hard to classify — see
+  [category-summary.md](category-summary.md) §4.**
+- Category justification: several vehicles want the same intersection, and a **priority order taken
+  from right-of-way rules** fixes who decides first; a separate rule fires when all have stopped
+  (§II-C, §III-E, §IV-A). Contention exists and a rule arbitrates — C. There is no vehicle-to-
+  vehicle messaging; the paper dismisses such approaches as "not scalable to general intersection
+  handling" (§I). The weak B element: "every vehicle knows which way every other vehicle is
+  intending to use, as every vehicle declares its intention using their turn signal" (§II-A) — a
+  one-way declared intention, which the issue's boundary rule would count as a channel.
+- Domain simulated: autonomous vehicles at a four-way unsignalised intersection, driving on the
+  left, at most four vehicles, one per approach. [§II-A]
+- The rule, stated precisely:
+  - **The priority order.** A vehicle about to enter must give way, "in order of importance", to
+    any vehicle **(A) already engaged in the intersection, (B) on its left-hand side, (C)
+    significantly closer to the intersection** (§II-C). As implemented (§IV-A.1): if *j* is inside
+    and *k* is not, *j* precedes *k*; else, if there are fewer than four vehicles and *j* is on
+    *k*'s left, *j* precedes *k*; else, if *j* is closer to the centre by **more than 2 metres**,
+    *j* precedes *k*. The vehicle picks at random a total order consistent with these.
+  - **The decision.** Given the order, vehicles choose acceleration patterns as a one-round
+    sequential game of perfect information, solved by backward induction in priority order (§III-A,
+    §III-C). Each vehicle's cost is a safety term that grows as others come within 25 m, plus a
+    speed term (§III-B). The top-priority vehicle's safety cost is waived except in real danger —
+    "in order to break symmetric situations where all vehicles would be too conservative"
+    (§III-B.2).
+  - **Updating.** A rule-following vehicle recomputes the order whenever the right-of-way facts
+    change, and, if others do not behave as predicted, re-fits the order to what it observes
+    (§IV-B).
+  - **The deadlock rule.** If all vehicles are stationary and all were correctly predicted, a
+    vehicle that believes it has top priority — or that saw the deadlock on the previous step —
+    sets its acceleration to 10 m/s² **with probability 0.25** (§III-E).
+- Trigger condition: continuously, every 0.1 s, for vehicles approaching or inside the intersection
+  (§V-A); the deadlock rule once contention has produced a standstill (§III-E).
+- Information required: "the precise configuration" of every vehicle — position, speed,
+  acceleration, and whether it is entering, inside or leaving (§III-D; Eq. 1) — and each vehicle's
+  intended route, from its turn signal (§II-A). No messages.
+- Tie-breaking: **the most explicit in the review, and the only one taken from outside the
+  authors' own design.**
+  - First by presence (already in the intersection), then by side (the vehicle on the left), then
+    by distance (closer by more than 2 m) (§II-C, §IV-A.1).
+  - The source of the rule is traffic law: "we use Japanese rules for deciding priorities of
+    vehicles" (§II-C, citing a National Police Agency guide for foreign drivers).
+  - **The rule is acknowledged to be country-specific:** "Rules are slightly different in other
+    countries, especially on the side that have more priority (e.g., left in Japan, right in
+    Australia)" (§II-C).
+  - **Four vehicles, one on each approach, defeat it** — each has another on its left — which is
+    why the left-hand rule is applied only when "the number of vehicles is less than 4" (§IV-A.1).
+    What remains is a random choice of order, and, at a standstill, the probabilistic rule above.
+  - The paper gives a reason randomness is unavoidable: "it is impossible to avoid such a
+    situation using only deterministic choices, and a solution is to introduce some randomness"
+    (§III-E, citing Lehmann and Rabin's 1981 result on the dining philosophers).
+- Guarantees claimed: none. Robustness is argued from simulation.
+- Evaluation: Matlab; four vehicles; 2,000 simulations, 1,000 from rest and 1,000 with random
+  initial speeds; four mixes — all rule-following ("angelic"); three rule-following and one that
+  always claims priority ("demonic"); four that initially claim priority but adapt
+  ("intermediate"); three intermediate and one choosing accelerations at random ("irrational")
+  (§V-B). Metrics: collision rate, a "congestion" rate (two vehicles with crossing paths inside at
+  once), and total time.
+- Does it work: with rule-followers and with selfish vehicles, yes; not with a random one.
+  - "For cases 1, 2, and 3, all vehicles successfully leave the intersection without any
+    collisions. Some collisions are detected for the case 4, due to the unpredictable behaviour of
+    the irrational vehicle" (§V-B).
+  - **A selfish vehicle makes the intersection faster.** Average total time from rest: 56.87 steps
+    with four rule-followers, **53.98 with one selfish vehicle among them** (Table I). The authors'
+    reading: "the selfish vehicle makes the decision making easier: it will force itself through
+    the intersection, so that angelic vehicles have no choice but to let it go first" (§V-B).
+  - With a random vehicle, time rises to 91.88 steps (Table I).
+  - With non-zero initial speeds there are "more congestions" because vehicles "have less time to
+    make their decision" (§V-B).
+- Validated against real human or real traffic data: no. The rule comes from a driving guide, not
+  from observed drivers. The paper notes that human-behaviour-based approaches exist (§I, its
+  refs. [4]–[6]) and does not use one.
+- Scalability: **four vehicles**, by assumption (§II-A). Computing the order-refit means solving
+  the game "for any total order" (§IV-B.2), which is factorial in the number of vehicles —
+  `[inference]`; the paper does not discuss cost.
+- Domain assumptions that limit portability: one vehicle per approach; fixed paths, control of
+  acceleration only; perfect observation; a finite set of four acceleration patterns (§V-A).
+- Portability to a generic simulator: [inference] **the priority order ports as a pattern; its
+  content does not, and that is the useful lesson.** *Yield to whoever is already in the contested
+  space, then to whoever is on a designated side, then to whoever is clearly nearer* is three
+  tests on observable geometry — a category C rule needing no messages. But the designated side is
+  a legal convention that differs between countries, and for pedestrians there is no statute to
+  read it from. The rule's shape is reusable; its middle term has to be supplied per population.
+- Limitations and future work stated by the authors: "systematic experiments based on more
+  sophisticated and practical traffic simulators", and "more detailed techniques … to eliminate the
+  potential hazards" (§VI).
+- Relevance to this FYP: [inference] **the most directly relevant single paper in S4.** It is an
+  explicit, communication-free precedence rule for a symmetric conflict; it handles agents who
+  break the rule; it shows that the rule's content is a *local social convention* rather than a
+  universal; and it documents exactly where such a rule runs out (four-way symmetry) and what is
+  then done (a coin flip). The FYP's Singapore-specific scope is the pedestrian analogue of
+  "left in Japan, right in Australia".
+- BibTeX: `pruekprasert2019rightofway`
 
 ---
 

@@ -1,0 +1,481 @@
+                                       Distributed Multi-agent Navigation Based on Reciprocal Collision
+                                           Avoidance and Locally Confined Multi-agent Path Finding
+
+                                                                        Stepan Dergachev1 and Konstantin Yakovlev1
+
+                                          Abstract-- Avoiding collisions is the core problem in multi-                           1                      1     3
+                                       agent navigation. In decentralized settings, when agents have                                            3
+                                       limited communication and sensory capabilities, collisions are                                                      2
+                                       typically avoided in a reactive fashion, relying on local ob-                                    4
+                                       servations/communications. Prominent collision avoidance tech-                            2
+                                       niques, e.g. ORCA, are computationally efficient and scale
+arXiv:2107.00246v1 [cs.MA] 1 Jul 2021  well to a large number of agents. However, in numerous                                                                 4
+                                       scenarios, involving navigation through the tight passages or
+                                       confined spaces, deadlocks are likely to occur due to the egoistic                   (a)                    (b)
+                                       behaviour of the agents and as a result, the latter can not
+                                       achieve their goals. To this end, we suggest an application of              1
+                                       the locally confined multi-agent path finding (MAPF) solvers
+                                       that coordinate sub-groups of the agents that appear to be               2     3
+                                       in a deadlock (to detect the latter we suggest a simple, yet
+                                       efficient ad-hoc routine). We present a way to build a grid-                      4
+                                       based MAPF instance, typically required by modern MAPF
+                                       solvers. We evaluate two of them in our experiments, i.e. PUSH                       (c)                    (d)
+                                       AND ROTATE and a bounded-suboptimal version of CONFLICT
+                                       BASED SEARCH (ECBS), and show that their inclusion into                  Fig. 1: Creating and solving a MAPF instance upon
+                                       the navigation pipeline significantly increases the success rate,        the deadlock is discovered. Video is available at:
+                                       from 15% to 99% in certain cases.                                        youtu.be/jE2YrXQ pNs
+
+                                          .
+
+                                                                I. INTRODUCTION                                 agent have them all try to use the passage, causing a traffic
+                                                                                                                jam around the passage. Agents driven by reactive collision
+                                          Multi-agent navigation is a challenging task arising in               avoidance get stuck in a deadlock. They lower down their
+                                       mobile robotics, video games, crowd simulation, etc. The                 velocities to zero to avoid collisions and stop progressing
+                                       approaches to solve this problem can be roughly divided into             towards the goals. Indeed, to reach the goals the agents need
+                                       centralized and decentralized ones. Centralized approaches               to exhibit a form of coordination as some of them have to
+                                       assume that there exists a (central) controller that possesses           yield to the others.
+                                       all the information about the agents and the environment and
+                                       can communicate with the agents. The controller creates a                   In this paper, we study how including locally centralized
+                                       joint collision-free plan and then lets the agents execute it.           multi-agent path finding (MAPF) solvers can mitigate this
+                                       One of the main advantages of such an approach is strong                 problem and increase the chance of mission completion,
+                                       theoretical guarantees.                                                  see Fig. 1-b,c,d. For those solvers to be applied we first
+                                                                                                                design a simple, yet effective deadlock detection mecha-
+                                          When no central controller is present and agents' ob-                 nism. Upon encountering a deadlock a locally-coordinated
+                                       servation and communication capabilities are limited, each               distributed multi-agent system is formed, i.e. the agents
+                                       of them typically plans its path and relies on a collision-              involved in deadlock exchange the information on their
+                                       avoidance mechanism during execution, e.g. Optimal Recip-                current positions and desired goals thus each agent forms
+                                       rocal Collision Avoidance (ORCA) [1]. In many cases, such                and operates with the same (local) world model. Next, we
+                                       techniques work well, i.e. make the agents avoid collisions              propose a method to create a grid-based MAPF instance
+                                       and progress towards their goals. However, in certain sce-               that is consistent with the shared world model and serves
+                                       narios, involving navigation through confined spaces, such               as the input to one of the modern graph-based MAPF
+                                       mechanisms are likely to fail. Consider an example depicted              solvers. Specifically, we suggest using a combination of
+                                       on Fig. 1-a. Two groups of agents have to switch sides using             the two prominent algorithms to solve MAPF: PUSH AND
+                                       a passage. Obviously, the individual (egoistic) plans for each           ROTATE [2] and a bounded-suboptimal version of Conflict
+                                                                                                                Based Search (ECBS) [3]. When the MAPF solution is
+                                       *This work was supported by RFBR, Grant 20-57-00011.                     obtained all agents start following it until all of them reach
+                                       1Stepan Dergachev and Konstantin Yakovlev are with HSE University        the MAPF goals. When this happens they switch back to
+
+                                       and Federal Research Center for Computer Science and Control of Russian
+
+                                       Academy of Sciences. Moscow, Russia.
+
+                                       Corresponding  author    is           Stepan         Dergachev,
+
+                                       sadergachev@edu.hse.ru.
+
+                                       This is a preprint of the paper accepted to CASE'21
+following the individual paths.                                  the absence of collisions under certain mild assumptions [1].
+   This work is based on the preliminary study presented         There are multiple algorithms, based on ORCA, that take
+                                                                 into account the accuracy of localisation and kinematic con-
+in [4]. The main novel contributions are as follows.             straints [16], [17], [18]. Another approach to collision avoid-
+                                                                 ance is based on the construction of the Voronoi cells [19],
+   · We present an original, easy-to-implement, domain-          [20]. These methods involve quadratic programming, thus
+     independent deadlock detection mechanism.                   they are typically slower than ORCA (which relies on linear
+                                                                 programming). On the other hand, they can take into account
+   · We present a novel approach to form a MAPF instance         the high-order dynamics and do not require the knowledge of
+     used to resolve the deadlock.                               the neighbouring agent's velocities. Finally, machine learning
+                                                                 can be used to generate collision avoidance policies [21],
+   · We thoroughly describe these routines and present a         [22].
+     complete pseudo-code of the algorithm.
+                                                                                     III. PROBLEM STATEMENT
+   · We use a combination of the MAPF solvers that com-
+     plement each other when solving MAPF.                          Consider n agents operating in a 2-dimensional workspace,
+                                                                 W , which consists of the free space and the obstacles, Wf ree
+   Our experiments show that in cases when tight passages        and Wobs = W \ Wf ree. Time, T , is discretized, and in each
+are present in the environment the suggested approach sig-       time step each agent can either wait or move into arbitrary
+nificantly outperforms collision avoidance. The success rate     direction by applying the velocity v. The state of the agent
+raises from 10-15% to 95-99% in certain cases.                   i at each time step is defined as pti+1 = pti + vtit, where
+                                                                 pi = (x, y) is the position of the reference point of the agent
+                        II. RELATED WORK                         i in the world coordinate frame. The velocity is bounded for
+                                                                 each agent: vti  Vmi ax.
+   Two lines of research are most relevant to this work: multi-
+agent path finding and decentralized collision avoidance.           A spatio-temporal path (trajectory) for an agent is, for-
+                                                                 mally, a mapping:  : T  Wf ree. It can also be represented
+   There exist a variety of MAPF formulations, which dif-        as a sequence of agent's locations at each time step:  =
+fer in assumptions on how conflicts between the agents           {0, 1, ...}. In this work we are interested in converging
+are defined, how agents behave when reaching their goal          trajectories, i.e. such paths by which an agent reaches a
+locations etc. [5]. Still, the intrinsic assumption, that there  particular location and never moves away from it. Time
+exists a centralized controller for all agents, is dominant in   step, t fin  T , by which an agent reaches its final destination
+MAPF research. This assumption is the key to solve MAPF          defines the cost of the path: c() = t fin. A path is called
+problems optimally by either employing reduction-based           feasible if an agent following it does not collide with the
+techniques [6] or search-based ones, e.g. Conflict-Based         obstacles and the velocity constraints are met. Two feasible
+Search (CBS) [7] which is widely used nowadays to solve          paths are said to be conflict-free if the agents following them
+MAPF optimally. There exist numerous enhancements that           never collide.
+improve the performance of CBS [8], [9]. However, getting
+optimal solutions for a large number of agents under tight          The problem now is to find a set of paths (one for each
+time constraints is still problematic. One way to mitigate       agent) starting at the predefined start locations, ending at the
+this issue is to look for bounded-suboptimal solutions, which    predefined goal locations, s.t. each pair of paths is conflict-
+can be provided by e.g. ECBS [3]. Another way is to use          free. Or, in other words, the problem is to define control
+algorithms that adapt ideas from pebble-motion solvers [10],     inputs, i.e. velocities, s.t. the resulting paths are pairwise
+[2]. These algorithms are extremely fast and scale well to       collision-free. In this work, we are not imposing a strict
+large numbers of agents. However, often the cost of their        requirement on optimizing the cost of the solution, which
+solutions is high. Prioritized planners are known to enjoy       can be defined as either flowtime,  c(i), or makespan,
+the benefits of both approaches ­ they often find close-         max c(i). However, the lower-cost solutions are obviously
+to-optimal solutions in practice and are notably fast and        preferable.
+scalable. However, except for some special cases, they are
+incomplete [11].                                                    In the rest of the paper, we rely on the following assump-
+                                                                 tions, which are not uncommon in the field.
+   Reactive collision avoidance is also an actively studied
+field of research. A wide range of algorithms for collision         1) Workspace, W , is tessellated into a regular grid, G,
+avoidance exist that are different, mainly, in the under-               composed of the blocked and un-blocked cells. The
+lying assumptions regarding movement constraints, obser-                grid is static and known to the agents.
+vation/communication limitations, etc. The most common
+approaches at the moment are the ones that are based                2) The agents are homogeneous. Each agent is repre-
+on the notion of the velocity obstacles. Velocity obstacles             sented as a disk with a radius of less than half of the
+were originally described in [12], and in [13] a method                 cell's size.
+of reciprocal collision avoidance based on the construction
+of reciprocal velocity obstacles (RVO) was presented. After         3) Start and goal locations for each agent are the centers
+that, the velocity-based methods were continuously modified,            of the grid cells.
+the formulations of the problems were supplemented with
+various movement constraints [14], [15]. Among the various          4) Each control is executed perfectly, no stochasticity is
+modifications, the most developed are the ORCA-based                    present. Thus at each time step, an agent's position is
+algorithms, which, in contrast to the RVO, can guarantee
+Algorithm 1: Single agent navigation                              This method is fast to compute and provides guarantees on
+                                                                  collision not to happen in a certain time window.
+    Input: W, G: workspace and its grid representation,
+             start, goal: start/goal location of the agent,          At each time step, an agent gathers information about
+             R: agent's observation/communication range           the states of the agents that are within the communica-
+                                                                  tion/visibility range (neighbours). This data is used not
+1 globalPath  FindIndividualPath(G, start, goal);                 only to choose the velocity but also to detect deadlocks as
+                                                                  described below in Section IV-A. If a deadlock is detected
+2 mode  normal;                                                   an agent initiates switching to the MAPF mode. As a result,
+                                                                  certain agents enter this mode (see Fig. 1-a). These agents
+3 while goal is not reached do                                    share the information about their states and current goals
+                                                                  (waypoints on the geometric paths that they want to reach)
+4   neighbors  GetNeighborsData(R);                               so each of them possesses the same local world model. The
+                                                                  latter is used to create a MAPF instance and solve it (Fig. 1-
+5   if mode = normal then                                         b,c). We emphasize that each agent operates individually
+                                                                  in the MAPF mode and no central controller is introduced.
+6   if AgentInDeadlock(neighbors) then                            However as the operations in this mode are deterministic
+                                                                  and each agent knows the states and goals of other agents,
+7         MAPFSolution  CreateAndSolveMAPF(W, G, neighbors);      the result of forming a MAPF instance and solving it is the
+                                                                  same across all involved agents. Consequently, each agent
+8         localPlan  ExtractIndividualPlan(MAPFSolution);         obtains the same MAPF solution ­ a set of collision-free
+                                                                  plans. It then extracts its individual plan from this solution
+9         mode  moveToMAPFStart;                                  and follows it to resolve the deadlock. After al agents finish
+                                                                  execution of their MAPF plans they switch back to normal
+10  else                                                          mode, i.e. continue moving to the next waypoint on their
+                                                                  geometric path utilizing collision avoidance (Fig. 1-d).
+11        next  ComputeCurGoal(globalPath, W);
+                                                                     The pseudocode of the suggested method is presented in
+12        Vnew  ComputeSafeVelocity(next, neighbors, W);          Alg. 1. The names of the functions are self-explanatory,
+                                                                  e.g. ComputeSaveVelocity stands for determining
+13  if mode = moveToMAPFStart then                                the velocity command to be applied (e.g. by ORCA),
+                                                                  AllAgentsEndMAPF stands for determining whether all
+14  if IsReached(Start(localPlan)) and                            of the agents executing the MAPF plans have reached
+                                                                  their MAPF goals, etc. We will explain how we design
+    AgentsReadyToMAPF(neighbors, MAPFSolution) then               the two most crucial functions, i.e. the one that imple-
+                                                                  ments deadlock detection, AgentInDeadlock, and the
+15        mode  MAPF;                                             one that implements creating and solving a MAPF instance,
+                                                                  CreateAndSolveMAPF, later in Sections IV-A, IV-B.
+16  else
+                                                                     Please note that the pseudocode introduces an additional
+17        Vnew  ComputeSafeVelocity(Start(localPlan), neighbors,  mode ­ moveToMAPFStart mode (Lines 9, 13, 26) and
+                                                                  a procedure to update MAPF instance (Lines 23-27). The
+                 W);                                              former is needed as agents, when switching to MAPF mode,
+                                                                  are likely to be located not at the centers of the grid
+18  if mode = MAPF then                                           cells as they freely move in the workspace when following
+                                                                  geometric paths and avoiding collisions. On the other hand,
+19  if IsReached(Goal(LocalPlan)) and                             MAPF solvers typically rely on a graph representation of the
+                                                                  environment and assume that the MAPF start locations (as
+    AllAgentsEndMAPF(neighbors, MAPFSolution) then                well as the goal ones) are tied to the graph vertices (centers
+                                                                  of the grid cells in our case). Thus before actually executing
+20        mode  normal;                                           the MAPF plans, agents need to reach their MAPF starts
+                                                                  (determined by CreateAndSolveMAPF routine). To this
+21        next  ComputeCurGoal(globalPath, W);                    end, moveToMAPFStart mode is introduced. In this mode,
+                                                                  agents move to their MAPF starts using collision avoidance
+22        Vnew  ComputeSafeVelocity(next, neighbors, W);          as in the normal mode.
+
+23  else if ExternalAgentDetected(neighbors) then                    Updating MAPF is needed in case an agent which is not
+                                                                  part of the group that executes MAPF approaches the agents
+24        MAPFSolution  UpdateMAPF(map, neighbors);               from that group. In this case, the interfering agent is added
+                                                                  to the group and the process of creating and solving MAPF
+25        localPlan  CurrentAgentPlan(MAPFSolution);              is restarted.
+
+26        mode  moveToMAPFStart;
+
+27        Vnew  ComputeSafeVelocity(Start(localPlan), neighbors,
+
+                 W);
+
+28  else
+
+29        Vnew  VelocityByPlan(localPlan);
+
+30  ApplyNewControl(Vnew );
+
+       deterministic and the agent always knows this position.
+   5) Each agent is associated with an observa-
+
+       tion/communication range, R. An agent is able
+       to perfectly recover the states of the other agents,
+       who are located within the range, and exchange
+       information with these agents.
+
+   Overall, in this work, we abstract away from localization
+and communication issues, as well as assume a simplistic
+kinematic model for the agents, to concentrate on the prob-
+lem of finding conflict-free trajectories.
+
+                            IV. METHOD
+
+   Each agent starts with finding an individual geometric path
+to its goal that respects the static obstacles. As the workspace
+is discretized to a grid any algorithm that can find paths on
+grids can be used, e.g. A* [23], JPS [24], R* [25], etc. In
+this work, we suggest using any-angle planners as they build
+shorter paths that contain fewer turns compared to A*. In our
+experiments, we used THETA* [26].
+
+   After the path is built an agent starts following it, i.e. it
+moves from one waypoint to the other by setting the velocity
+appropriately. In case it encounters other agents within the
+observation/communication range collision avoidance proce-
+dure is triggered and the velocity is set up by this procedure.
+In this work, we use ORCA [1] for collision avoidance.
+A. Deadlock Detection                                                   12        4      5
+
+   We suggest the following ad-hoc deadlock detection pro-              1.4 2.2 3.2 4.1
+cedure which is based on simple computations and limited
+information exchange, yet is very efficient in practice (as our         2.8       4.5 5.4
+experiments show). At each time step, an agent computes
+its average speed across the last k time steps, where k                 3.6       5.0
+is the user-specified parameter. If this speed is below the
+certain threshold vlow, which means that the agent does not        (a)       (b)
+progress towards its goal, it requests the average speed of
+the agents that are within its communication range. If any of      Fig. 2: Constructing a MAPF instance. a) Determining the
+the neighbours report its mean speed to be lower than vlow,        MAPF area. b) Estimating the MAPF goal for an agent.
+then the deadlock is considered to be detected. The intuition
+here is that when at least two neighbouring agents do not                c) Setting start and goal locations: Agents choose start
+progress towards their goals it is likely that the main reason     and goal cells in accordance with their priorities. For an agent
+for that is their behaviour.                                       with priority l, we identify the closest un-blocked cell in G
+                                                                   which is not assigned to be the start of the high-priority
+   When implementing the described deadlock detection              agents, i.e. 1, 2, ..., l - 1, and set this cell to be the MAPF
+mechanism special care should be made to the cases when            start for the agent. We denote this cell as sMAPF .
+agents start moving after exiting the MAPF mode. It might
+be the case that an agent was occupying the MAPF goal                 To choose the MAPF goal for an agent we identify all
+waiting for the other agents to finish their plans (Line 19)       cells in G that are reachable from sMAPF and for each such
+with v = 0. So when it switches to normal mode and starts          cell compute the Euclidean distance to the current waypoint
+moving his average speed might be lower than vlow, but this is     on the agent's geometric path, cur (which might be outside
+not a deadlock, obviously. To rule out such cases we suggest       G ). We now choose a cell that minimizes this distance and,
+artificially setting the reported velocity of an agent in MAPF     at the same time, does not coincide with a MAPF goal of
+mode to Vmax.                                                      one of the high-priority agents ­ see Fig. 2-b.
+
+B. Forming MAPF Instance                                           C. Solving MAPF
+
+   MAPF solvers typically rely on the graph model of the              After each agent in the MAPF mode has determined the
+environment and assume that the start and goal locations of        MAPF graph and all the start and goal locations it launches a
+the agents are tied to the graph vertices. Thus, to incorporate    MAPF solver. Essentially any deterministic MAPF solver can
+a MAPF solver into the navigation pipeline we need to i)           be used to obtain a solution. In this work, we suggest using
+determine the graph in which the MAPF solution will be             a combination of PUSH AND ROTATE [2] and ECBS [3]
+sought, ii) determine the start vertices, iii) determine the goal  algorithms. The first one is a complete, polynomial-time
+vertices. Naturally, we also need to determine which agents        algorithm by running which we can promptly get a solution.
+should switch to MAPF mode. Next, we explain how we                Unfortunately, its cost (both measured as makespan or flow-
+implement these procedures in more detail.                         time) is likely to be high as PUSH AND ROTATE by design is
+                                                                   not tailored to minimize any cost objective. Thus we suggest
+      a) Identifying MAPF participants: Consider agent i           invoking a MAPF solver which takes the cost of the solution
+that detects a deadlock. The agents that are switched to           into account afterwards. We use ECBS for this purpose. This
+MAPF mode (via the information exchange) are N(i) and              algorithm guarantees to find bounded-suboptimal solutions.
+N(N(i)), where N stands for the neighbours, i.e. the agents        I.e. given a user-specified bound , it guarantees to return the
+that appear to be within the visibility/communication range.       solution whose cost c satisfies c   · c, where c is the cost
+Each agent in the MAPF mode is randomly assigned a unique          of the optimal solution. Practice-wise we suggest setting up
+priority.                                                          a common time cap for both MAPF solvers and invoke them
+                                                                   sequentially. In case, PUSH AND ROTATE succeeds in finding
+      b) Determine the graph for MAPF: Recall that the             a solution but ECBS does not (due to the time limit) we stick
+workspace is tessellated to a grid G. Naturally, a sub-grid        to the PUSH AND ROTATE solution. In case both algorithms
+of it, G , is the graph for MAPF. To determine G the               succeed we prefer the solution of ECBS. In the worst case,
+agents share their states (x, y) and identify the minimum and      when PUSH AND ROTATE does not succeed we abandon the
+maximum x- and y-coordinates. These four coordinates form          MAPF mode and switch the involved agents back to the
+the rectangular area ­ see Fig. 2a. We extend this area by         normal mode. In this case, the detected deadlock is likely
+adding the user-defined offset. Finally, we overlap this area      not to be eliminated. In practice, we never encountered the
+with the grid and thus identify which cells from the sub-grid      cases when PUSH AND ROTATE was not able to provide a
+G to be used in the MAPF mode. We assume that agents               solution even when the time limit was set to be 1 second
+are allowed to move only between the cardinal cells of G           (which is a very strict time limit for a MAPF solver).
+with the same speed so all moves have a uniform duration.
+This assumption is common in the MAPF community as
+it significantly simplifies algorithms' implementation and
+makes them faster.
+% of succsessfully complited tasks                         Success Rate (Gaps 1)            % of succsessfully complited tasks                         Success Rate (Gaps 3)          % of succsessfully complited tasks                      Success Rate (Warehouse)             % of succsessfully complited tasks                         Success Rate (Rooms)
+                                    100                                                                                         100                                                                                       100                                                                                          100
+
+                                    90                                                                                          90                                                                                        90                                                                                           90
+
+                                    80                                                                                          80                                                                                        80                                                                                           80
+
+                                    70                                                                                          70                                                                                        70                                                                                           70
+
+                                    60                                                                                          60                                                                                        60                                                                                           60
+
+                                    50                                                                                          50                                                                                        50                                                                                           50
+
+                                    40                                                                                          40                                                                                        40                                                                                           40
+
+                                    30                                                                                          30                                                                                        30                                                                                           30
+
+                                    20                                                                                          20                                                                                        20                                                                                           20
+
+                                    10                                                                                          10                                                                                        10                                                                                           10
+
+                                    0                                                                                           0                                                                                         0                                                                                            0                                                40
+                                         10      15      20      25      30         35  40                                      10    15  20  25               30             35  40                                      10  15  20  25  30                            35     40                                      10  15      20  25  30                       35
+
+                                                         Number of agents                                                                 Number of agents                                                                        Number of agents                                                                                 Number of agents
+
+                                                                                Fig. 3: Success rates of the algorithms on different maps used in the experiments.
+
+                                      3 104                           Flowtime                                                        Success Rate                                Flowtime                                                                                  Gaps 1                                             Gaps 3                               Rooms
+                                              ORCA*                                                                                          PnR E-CBS                               PnR E-CBS
+                                                         MAPF (Rooms)                                                                                                100%                                                                 Ag. Nmap f Nag Nmap f Nag Nmap f Nag
+                                    2.5 ORCA*            MAPF (Gaps 1)                                                          100%
+                                                                                                                                 80%                                  80%
+                                                                                                                                 60%                                                                                                      10                                3                                          9       2       4                            15      3
+                                                                                                                                                                      60%
+                                    2                                                                                                                                                                                                     15                                3                                          13      2       5                            30      4
+
+Flowtime                            1.5                                                                                                                                                                                                   20                                4                                          17      5       7                            45      5
+
+                                    1                                                                                           40%                            40%                                                                        25                                5                                          21      5       9                            55      7
+
+                                                                                                                                                                                                                                          30                                6                                          24      7       11 66                                8
+
+                                    0.5                                                                                         20%                            20%                                                                        35                                6                                          27      8       12 79                                8
+
+                                    0                                                                                               0%                         0%                                                                         40                                6                                          32      11      17                           95     10
+                                                                                                                                          Gaps 1 Gaps 3 Rooms        Gaps 1 Gaps 3 Rooms
+                                             10      15      20      25         30  35  40                                                           Maps                       Maps
+
+                                                             Number of agents                                                                                                                                                 TABLE I: MAPF statistics. Nmap f stands for the number of
+                                                                                                                                                                                                                              MAPF calls, Nag ­ for the number of agents involved in
+Fig. 4: Left plot: The break-down between the MAPF mode                                                                                                                                                                       MAPF.
+and the normal mode. Two plots on the right: Statistics of
+the independent MAPF evaluation.
+
+                V. EXPERIMENTAL EVALUATION                                                                                                                                                                                    that combines ORCA collision avoidance with individual
+                                                                                                                                                                                                                              path planning by THETA* algorithm. ORCA*+MAPF ­ a
+   We implemented the suggested algorithm in C++1 and                                                                                                                                                                         method that implements the suggested approach. We also
+evaluated it on a computer equipped with Intel Core i5-                                                                                                                                                                       included into the comparison a method previously introduced
+8259U (2.3 GHz) CPU with 16 GB of RAM.                                                                                                                                                                                        in [4] that also combines a MAPF solver and a collision
+                                                                                                                                                                                                                              avoidance algorithm but is different in the collision detection
+   The four different grid maps were used in our experiments.                                                                                                                                                                 and MAPF formation mechanisms as well as it does not
+The first two maps are sized 64 × 64 and possess a similar                                                                                                                                                                    use a combination of the MAPF solvers. We refer to this
+structure of two halls separated by a wall with a fixed                                                                                                                                                                       method as Base. The time cap for MAPF part of the Base
+number of narrow passages. We refer to these maps as                                                                                                                                                                          and ORCA*+MAPF algorithms was 1 second. To set the
+Gaps i, where i indicates the number of passages in the wall                                                                                                                                                                  parameters for ORCA*+MAPF we ran the algorithm on
+(either 1 or 3 in our experiments). The third map is sized                                                                                                                                                                    a subset of the generated instances and picked the param-
+64×64 and contains 10 prolonged rectangular obstacles with                                                                                                                                                                    eters that resulted in the best performance, i.e. K = 250,
+plenty of free space between them. We refer to this map                                                                                                                                                                       vlow = 0.001 for the deadlock detection and 10 for the sub-
+as Warehouse. Finally, the fourth map is sized 32 × 32                                                                                                                                                                        optimality factor of ECBS.
+and it represents the indoor environment composed of rooms
+with passages between them. This map was taken from                                                                                                                                                                              We ran each algorithm on each instance until either of the
+the MovingAI [5] benchmark commonly used in the MAPF                                                                                                                                                                          conditions met: i) all agents reach their goals, ii) the average
+community. We refer to this map as to Rooms.                                                                                                                                                                                  speed of all agents over the last 1000 time steps is below
+                                                                                                                                                                                                                              0.0001, iii) time step limit of 20 000 is reached. In the first
+   We varied the number of agents from 5 to 40 on each                                                                                                                                                                        case, we treat the outcome as a success.
+map and for each number of agents created 250 different
+instances. For the Gaps map, we placed half of the starts in                                                                                                                                                                     The success rates of the algorithms are presented on Fig. 3
+the left hall with the goal in right one and for the other half                                                                                                                                                               (the higher ­ the better). The suggested approach clearly
+of the agents ­ vice versa. For the other maps, we chose                                                                                                                                                                      outperforms the competitors in all the setups that involve
+starts and goals randomly. Each agent was considered to                                                                                                                                                                       confined spaces and tight passages. E.g. on the Gaps 3 map,
+be a disk of radius 0.3 of a cell width. When computing                                                                                                                                                                       our approach was able to solve 99% of tasks involving 40
+the velocities by collision avoidance algorithm this radius                                                                                                                                                                   agents while BASE's success rate was slightly above 70%
+was considered to be 0.49 (to further minimize the risk of                                                                                                                                                                    and ORCA was not able to solve a single instance in this
+collision by creating an additional safety buffer around each                                                                                                                                                                 setup. The reason why our approach has not achieved 100%
+agent). The observation range of each agent was 3 cells. The                                                                                                                                                                  success might be due to the transition process that occurs
+maximum speed was 0.1 cells per time step.                                                                                                                                                                                    when agents move to their MAPF starts relying only on
+                                                                                                                                                                                                                              collision avoidance. The only map for which the difference
+   We compared the following methods. ORCA* ­ a method                                                                                                                                                                        in success rate is negligible is Warehouse. This is expected
+                                                                                                                                                                                                                              as this map contains large portions of the free space and no
+   1Our code is available at github.com/PathPlanning/                                                                                                                                                                         confined spaces/passages so even basic collision avoidance
+ORCA-algorithm
+techniques perform well.                                                       [4] S. Dergachev, K. Yakovlev, and R. Prakapovich, "A Combination of
+   The leftmost plot on Fig. 4 shows the averaged flowtime                          Theta*, ORCA and Push and Rotate for Multi-agent Navigation," in
+                                                                                    ICR 2020, 2020, pp. 55­66.
+(sum of the trajectories' durations) obtained by our algorithm
+on the two most challenging maps (Rooms and Gaps 1)                            [5] R. Stern, N. R. Sturtevant, A. Felner, S. Koenig, H. Ma, T. T. Walker,
+and the break-down between the MAPF mode and the normal                             J. Li, D. Atzmon, L. Cohen, T. K. S. Kumar, and Others, "Multi-
+one. As one can see the agents spent more time in the MAPF                          agent pathfinding: Definitions, variants, and benchmarks," in SoCS
+mode on Gap 1 map compared to Rooms. A possible                                     2019, 2019, pp. 151­158.
+explanation is that on this former map the agents quickly
+approach the passage in normal mode, then find themselves                      [6] P. Surynek, "Towards optimal cooperative path planning in hard setups
+in a deadlock, create and solve MAPF and spend a significant                        through satisfiability solving," in Pacific Rim International Conference
+portion of time while following the resultant plans. Upon                           on Artificial Intelligence. Springer, 2012, pp. 564­576.
+exiting the MAPF mode they appear very close to their goals
+so the time spent in normal mode while reaching these goals                    [7] G. Sharon, R. Stern, A. Felner, and N. R. Sturtevant., "Conflict-based
+is small again.                                                                     search for optimal multiagent path finding," Artificial Intelligence, vol.
+                                                                                    218, pp. 40­66, 2015.
+   We have also analyzed how often the deadlocks were
+encountered and MAPF solving was triggered. Table I shows                      [8] G. Sharon, R. Stern, A. Felner, and N. R. Sturtevant, "Meta-Agent
+these statistics as well as how many agents were involved in                        Conflict-Based Search For Optimal Multi-Agent Path Finding," SoCS
+MAPF on average. Evidently, the number of MAPF calls                                2012, vol. 1, pp. 97­104, 2012.
+increases with the number of agents. On the Rooms map,
+this number reaches 95 for 40 agents, while on either of the                   [9] E. Boyarski, A. Felner, R. Stern, G. Sharon, O. Betzalel, D. Tolpin,
+Gaps maps it always stays below 12. However, the number                             and E. Shimony, "ICBS: Improved Conflict-Based Search Algorithm
+of agents involved in MAPF is typically higher for the latter                       for Multi-Agent Pathfinding," in IJCAI 2015, 2015, pp. 740­746.
+two maps and can be up to 32 agents for Gaps 1.
+                                                                              [10] P. Surynek, "A novel approach to path planning for multiple robots in
+   We have additionally analyzed the MAPF instances that                            bi-connected graphs," in ICRA 2009, 2009, pp. 3613­3619.
+occurred in the experiments and separately run PUSH AND
+ROTATE and ECBS on them with the time limit set to                            [11] M. C a´p, P. Nova´k, A. Kleiner, and M. Selecky´, "Prioritized planning
+1s (as in the main experiment). The results are shown on                            algorithms for trajectory coordination of multiple mobile robots," IEEE
+Fig. 4 on the right. Evidently, ECBS failed to find solutions                       Transactions on Automation Science and Engineering, vol. 12, no. 3,
+in numerous cases (which is captured by the success rates                           pp. 835­849, 2015.
+plots), however, the cost of its solutions is significantly
+lower compared to PUSH AND ROTATE. Overall, these results                     [12] P. Fiorini and Z. Shiller, "Motion planning in dynamic environments
+confirm that utilizing a combination of planners, as suggested                      using velocity obstacles," The International Journal of Robotics Re-
+in this work, is an adequate approach that allows combining                         search, vol. 17, no. 7, pp. 760­772, 1998.
+the strengths of the considered algorithms.
+                                                                              [13] J. den Berg, M. Lin, and D. Manocha, "Reciprocal velocity obstacles
+                         VI. CONCLUSION                                             for real-time multi-agent navigation," in ICRA 2008). IEEE, 2008,
+                                                                                    pp. 1928­1935.
+   In this work, we have considered the problem of de-
+centralized multi-agent navigation in confined spaces where                   [14] J. Van Den Berg, J. Snape, S. J. Guy, and D. Manocha, "Reciprocal
+deadlocks are likely to occur. We suggested a range of                              collision avoidance with acceleration-velocity obstacles," in ICRA
+techniques to resolve these deadlocks: deadlock identifica-                         2011, 2011, pp. 3475­3482.
+tion, MAPF formation, MAPF solving. We evaluated the
+presented approach in various scenarios and showed that it                    [15] J. Snape, J. Van Den Berg, S. J. Guy, and D. Manocha, "The hybrid
+clearly outperforms the baseline, i.e. the standard state-of-                       reciprocal velocity obstacle," IEEE Transactions on Robotics, vol. 27,
+the-art collision avoidance technique ­ ORCA. A prominent                           no. 4, pp. 696­706, 2011.
+direction of future research is to adopt the suggested method
+to a more challenging problem, e.g. to take into account the                  [16] J. Snape, S. J. Guy, J. Van Den Berg, and D. Manocha, "Smooth
+kinematic constraints of the agents, to lift the assumption on                      coordination and navigation for multiple differential-drive robots," in
+prior knowledge of the environment, etc.                                            Experimental Robotics, 2014, pp. 601­613.
+
+                            REFERENCES                                        [17] J. Snape, J. Van Den Berg, S. J. Guy, and D. Manocha, "Smooth and
+                                                                                    collision-free navigation for multiple robots under differential-drive
+ [1] J. Van Den Berg, S. J. Guy, M. Lin, and D. Manocha, "Reciprocal                constraints," in IROS 2010, 2010, pp. 4584­4589.
+      n-body collision avoidance," in Robotics research, 2011, pp. 3­19.
+                                                                              [18] J. Alonso-Mora, A. Breitenmoser, M. Rufli, P. Beardsley, and R. Sieg-
+ [2] B. De Wilde, A. W. Ter Mors, and C. Witteveen, "Push and rotate:               wart, "Optimal reciprocal collision avoidance for multiple non-
+      Cooperative multi-agent path planning," in AAMAS 2013, vol. 1, 2013,          holonomic robots," in Distributed Autonomous Robotic Systems, 2013,
+      pp. 87­94.                                                                    pp. 203­216.
+
+ [3] M. Barer, G. Sharon, R. Stern, and A. Felner, "Suboptimal variants       [19] D. Zhou, Z. Wang, S. Bandyopadhyay, and M. Schwager, "Fast, on-
+      of the conflict-based search algorithm for the multi-agent pathfinding        line collision avoidance for dynamic vehicles using buffered voronoi
+      problem," in SoCS 2014, vol. 2014-Janua, 2014, pp. 19­27.                     cells," IEEE Robotics and Automation Letters, vol. 2, no. 2, pp. 1047­
+                                                                                    1054, 2017.
+
+                                                                              [20] H. Zhu and J. Alonso-Mora, "B-uavc: Buffered uncertainty-aware
+                                                                                    voronoi cells for probabilistic multi-robot collision avoidance," in MRS
+                                                                                    2019, 2019, pp. 162­168.
+
+                                                                              [21] Y. F. Chen, M. Liu, M. Everett, and J. P. How, "Decentralized non-
+                                                                                    communicating multiagent collision avoidance with deep reinforce-
+                                                                                    ment learning," in ICRA 2017, 2017, pp. 285­292.
+
+                                                                              [22] P. Long, T. Fanl, X. Liao, W. Liu, H. Zhang, and J. Pan, "Towards
+                                                                                    optimally decentralized multi-robot collision avoidance via deep rein-
+                                                                                    forcement learning," in ICRA 2018, 2018, pp. 6252­6259.
+
+                                                                              [23] P. E. Hart, N. J. Nilsson, and B. Raphael, "A Formal Basis for the
+                                                                                    Heuristic Determination of Minimum Cost Paths," IEEE Transactions
+                                                                                    on Systems Science and Cybernetics, vol. 4, no. 2, pp. 100­107, 1968.
+
+                                                                              [24] D. Harabor and A. Grastien, "Online graph pruning for pathfinding
+                                                                                    on grid maps," in AAAI 2011, vol. 2, 2011, pp. 1114­1119.
+
+                                                                              [25] M. Likhachev and A. Stentz, "R* search," in AAAI 2008, 2008, pp.
+                                                                                    344­350.
+
+                                                                              [26] A. Nash, K. Daniel, S. Koenig, and A. Feiner, "Theta*: Any-angle
+                                                                                    path planning on grids," in AAAI 2007, vol. 2, 2007, pp. 1177­1183.
+
