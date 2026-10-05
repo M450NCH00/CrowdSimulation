@@ -23,6 +23,9 @@ Locators (§, table, figure) point into those papers; full detail is in the sub-
 (`s1-crowd-simulation.md` to `s4-traffic-vehicles.md`). Anything marked *(my view)* is my own
 interpretation, not a paper's claim.
 
+**Added 5 October:** Part 6 covers three further papers, on whether an LLM can supply the rule.
+They come from a separate search, written up in `literature/llm-behavioural-conflict/`.
+
 **Three things to say up front about the evidence:**
 - This is not a systematic review: 27 sources, seven web searches, no bibliographic database.
   Counts describe what I read, not the field.
@@ -283,3 +286,144 @@ interpretation, not a paper's claim.
    grid cell as a conflict, which puts PIBT under "resolve by rule" rather than "avoid by
    rule". Is that the reading you want?
 5. **May I request the two missing surveys** through the library?
+
+---
+
+## Part 6 — Can an LLM supply the rule, for cheaper agents to follow? (added 5 October)
+
+Part 5 ends on a gap: the machinery for applying an order exists, the source of the order does
+not. These three papers are the closest I found to an LLM filling that slot. They are the most
+relevant three of eleven in `literature/llm-behavioural-conflict/`:
+
+| Handle | Paper | Setting |
+|---|---|---|
+| VLM-Social-Nav | Song et al. (IEEE RA-L 2025), *VLM-Social-Nav: Socially Aware Robot Navigation Through Scoring Using Vision-Language Models* | one robot among real people |
+| Etiquette | Fang et al. (IEEE RA-L 2026), *From Obstacles to Etiquette: Robot Social Navigation With VLM-Informed Path Selection* | one robot among real people |
+| LLMDR | Seo et al. (arXiv 2025, **preprint**), *LLMDR: LLM-Driven Deadlock Detection and Resolution in Multi-Agent Pathfinding* | 4 to 64 grid agents |
+
+By "weaker agent" I mean whatever follows the LLM's answer and is much cheaper than the LLM: a
+standard planner, a smaller model, or a grid agent running a fixed procedure.
+
+**Three things to say up front about this part:**
+- A separate, thinner search: 13 web searches in one day, no bibliographic database.
+- **All three were read selectively** (abstract plus the method and results passages), from
+  arXiv copies. Section names below are the arXiv copy's.
+- None of the three is about pedestrians meeting pedestrians in a crowd simulation. I found no
+  paper that is.
+
+### 6.1 VLM-Social-Nav: the LLM answers "what would a polite person do", a plain planner obeys
+- When the robot's camera detects a person, a door or a gesture, GPT-4V is shown the image and
+  asked how to navigate following "general walking etiquette". It must answer in a fixed form:
+  move left / straight / right, and slow down / speed up / constant / stop (VLM-Social-Nav,
+  Fig. 3).
+- **The weaker agent is an ordinary reactive planner (DWA).** The LLM's answer becomes one
+  extra cost term, the distance from "a navigation behavior humans would adopt in accordance
+  with social conventions" (§III, Eq. 2). The planner still handles goal and obstacles.
+- No words pass between robot and person.
+- **The scenarios are ours:** head-on, crossing paths, and a narrow doorway, where the robot
+  "is expected to wait outside the door and yield to the human" (§IV-B).
+- **Results:** on a real robot with real participants, 21 runs per scenario, at least 27.38%
+  better average success rate and 19.05% better average collision rate than the baselines, and
+  the best rating from participants (Abstract; §IV). The plain planner passed people on either
+  side; this one "predominantly bypasses the person on the right side" (§IV-B).
+- **Caveats to raise myself:**
+  - The keep-right rule is typed into the prompt: "Move to the right when passing by a person"
+    (Fig. 3). The authors say to rewrite that line for a country that walks on the left
+    (§III). So this shows the model *applying* a convention, not *knowing* it.
+  - Each query takes 2 to 3 seconds, which the authors call "problematic in more dynamic
+    scenarios" (discussion).
+  - Only the robot follows the model. The other party is a real person.
+  - The results table did not survive text extraction; the numbers above are the abstract's.
+
+### 6.2 Etiquette: a large model's judgement copied into a small one
+- A geometric planner proposes several collision-free paths. A vision-language model, "acting
+  as a proxy for the average human", picks the one that best fits social norms (Etiquette,
+  problem formulation).
+- **The weaker agent is a smaller model.** GPT-4o was too slow, so its choices on labelled
+  frames were used to train Qwen-2.5 with 7 billion parameters, which runs in real time
+  (fine-tuning subsection).
+- Because the model only chooses among paths already known to be safe, a wrong answer is rude,
+  not dangerous.
+- **Results:** four staged situations on a real robot, three trials each, against five other
+  methods including VLM-Social-Nav. Lowest time violating personal space, least time facing
+  pedestrians, and no intrusions into social zones (Abstract; §V).
+- **Limits the authors state:** the model sees one frame and has no memory; several human
+  activities at once "can confuse the VLM's prioritization of social norms"; the best path may
+  not be among the candidates (§VI).
+- **Caveat:** the conflicts are with standing arrangements (a queue, a photographer's line of
+  sight), not two parties wanting the same space. Three trials per scenario is small.
+- *(my view)* The value is the pipeline: ask the large model once, compress the answer, run the
+  cheap version on top of a layer that already guarantees safety. That is the FYP's plan, with
+  a rule in place of the small model.
+
+### 6.3 LLMDR: the LLM hands a priority order to PIBT
+- This is the only one of the three with many agents, and it plugs into the PIBT rule from
+  Part 2.1.
+- The LLM reads a short log of agent positions, marks which agents are deadlocked, groups
+  those close together, and assigns each group a strategy (LLMDR, §IV-A, Prompt 1).
+- The strategy becomes a priority order: lead agents first, and "yield agents", which
+  "prioritize staying to allow the lead agent to move", last (§IV-B).
+- **The weaker agents are grid agents running PIBT.** They need only the order. No agent
+  communicates.
+- **Results:** on a warehouse map with 64 agents, success rose from 1% to 83%, 14% to 74% and
+  6% to 68% for three different base solvers (Table I). A stronger LLM gave shorter routes
+  (§V-C).
+- **Caveats to raise myself:**
+  - **The rule is the authors', not the LLM's.** The prompt says when to use each strategy,
+    for example the "leader" method "when any agent in the group has a goal more than 8
+    Manhattan units away" (Prompt 1), and the lead agent is defined as the one farthest from
+    its goal (§IV-B). The LLM classifies the situation; it does not invent the order.
+  - Preprint, not peer reviewed. Grid world, identical agents, no human behaviour involved.
+  - The table's row labels were displaced in text extraction. I take its last row to be 64
+    agents, which matches the paper's prose (§V-B). Check the PDF before quoting.
+  - The LLM is called once per detection window, not once per agent. The paper gives no cost
+    or timing in what I read.
+
+### 6.4 What the three say together
+- **Yes, cheaper agents can follow an LLM's answer and resolve conflicts better for it.** In
+  all three the LLM gives a small, fixed-format answer (a side and a speed, one path out of a
+  few, a priority order) and a simpler component does the moving.
+- **None trusts the LLM with safety.** A planner or PIBT sits underneath every time.
+- **Whether the LLM is the true source of the rule is not shown.** In two of the three the
+  rule is written into the prompt (VLM-Social-Nav, LLMDR). In the third it comes from a large
+  model's judgements, and I saw no check of those judgements against people's.
+- *(my view)* So the evidence is good for "an LLM-shaped answer can drive a weaker agent" and
+  thin for "an LLM knows how people resolve the conflict". The second is the research question
+  from the first meeting, and it looks open.
+
+### 6.5 Downsides
+- **Speed and cost:** 2 to 3 seconds per query (VLM-Social-Nav); a 7-billion-parameter model
+  still needed at run time (Etiquette). Neither fits 10,000 agents if called per agent.
+- **Scale:** two papers have one robot; the largest count is 64 agents (LLMDR).
+- **One-sided:** in the two robot papers only one party follows the model. Two model-driven
+  agents meeting head-on, the symmetric case from Part 1.4, is untested.
+- **No check against recorded human behaviour** in any of the three. The robot papers use
+  participants' ratings and proximity measures.
+- **No comparison with ORCA** in any of the three, so they do not tell us whether an LLM rule
+  fixes the stalls in Part 1.3.
+
+### 6.6 The research gap this leaves
+- No paper found where an LLM-derived rule decides who yields between two **simulated
+  pedestrians** with no dialogue.
+- No paper found where the rule is **elicited from the model and then run without it**, which
+  is what makes a large crowd affordable. Etiquette comes nearest, and keeps a model in the
+  loop.
+- No paper found that tests whether the model's rule **matches what people do**, or whether it
+  changes with the persona of the person yielding.
+- *(my view)* The natural experiment for the FYP is the one nobody here ran: ORCA alone
+  against ORCA plus an elicited yielding rule, in the head-on and doorway scenarios, with the
+  rule extracted once and applied without the LLM.
+- **How this could be wrong:** three candidates are unread. The distillation paper from issue
+  #8 (Zhang et al., TOMACS 2026) and CrowdVLA are in the repo at abstract or scope-check level
+  only, and one paywalled paper puts LLM agents in a cellular automaton (Dang et al., *Safety
+  Science* 2025).
+
+### 6.7 Decisions I need from the meeting, in addition to 5.5
+1. **Is "elicit once, then run as a rule with no LLM" the contribution to aim for,** given
+   that these papers all keep a model in the loop?
+2. **Should the evaluation be ORCA alone against ORCA plus the elicited rule,** in head-on and
+   doorway scenarios?
+3. **How should the prompt be written?** Supplying the convention in the prompt, as
+   VLM-Social-Nav does, would not test whether the model knows it.
+4. **May I request Dang et al. (2025) and the full text of Zhang et al. (2026)** through the
+   library?
