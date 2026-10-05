@@ -1,0 +1,605 @@
+arXiv:2308.11339v3 [cs.AI] 11 Jan 2024  ProAgent: Building Proactive Cooperative Agents with Large Language Models
+
+                                              Ceyao Zhang1,2*, Kaijie Yang3*, Siyi Hu4*, Zihao Wang2,5, Guanghe Li2, Yihang Sun2,
+                                        Cheng Zhang2, Zhaowei Zhang2,5, Anji Liu2, Song-Chun Zhu5, Xiaojun Chang4, Junge Zhang3,
+
+                                                                           Feng Yin1, Yitao Liang2, Yaodong Yang2
+
+                                                                                1SSE, The Chinese University of Hong Kong, Shenzhen
+                                                                                 2Institute for Artificial Intelligence, Peking University
+                                                                                3Institute of Automation, Chinese Academy of Sciences
+
+                                                                                   4ReLER, AAII, University of Technology Sydney
+                                         5National Key Laboratory of General Artificial Intelligence, Beijing Institute for General Artificial Intelligence (BIGAI)
+
+                                                                             ceyaozhang2@link.cuhk.edu.cn, yaodong.yang@pku.edu.cn
+
+                                                                      Abstract                              amount of training data, can capture and embody a signifi-
+                                                                                                            cant amount of common sense knowledge. Notable LLM-
+                                           Building agents with adaptive behavior in cooperative tasks      based agents like SayCan (Ahn et al. 2022), ReAct (Yao
+                                           stands as a paramount goal in the realm of multi-agent sys-      et al. 2023), DEPS (Wang et al. 2023b), RAP (Hao et al.
+                                           tems. Current approaches to developing cooperative agents        2023), Reflexion (Shinn et al. 2023), and JARVIS-1 (Wang
+                                           rely primarily on learning-based methods, whose policy gen-      et al. 2023c) have demonstrated the ability to make deci-
+                                           eralization depends heavily on the diversity of teammates        sions interactively through appropriate prompts or feedback.
+                                           they interact with during the training phase. Such reliance,     However, these works have primarily focused on explor-
+                                           however, constrains the agents' capacity for strategic adap-     ing the potential of LLMs as individual agents, whether in
+                                           tation when cooperating with unfamiliar teammates, which         games or robotics. The untapped potential lies in investigat-
+                                           becomes a significant challenge in zero-shot coordination        ing how LLM-based agents can effectively cooperate with
+                                           scenarios. To address this challenge, we propose ProAgent,       other AI agents or humans.
+                                           a novel framework that harnesses large language models
+                                           (LLMs) to create proactive agents capable of dynamically            This research delves into the capabilities of LLMs in
+                                           adapting their behavior to enhance cooperation with team-        tackling the intricate challenges of multi-agent coordina-
+                                           mates. ProAgent can analyze the present state, and infer         tion (Yang and Wang 2021; Zhang, Yang, and Bas¸ar 2021;
+                                           the intentions of teammates from observations. It then up-       Gronauer and Diepold 2022), particularly in the realm of
+                                           dates its beliefs in alignment with the teammates' subse-        policy generalization (Strouse et al. 2021; Zhao et al. 2023;
+                                           quent actual behaviors. Moreover, ProAgent exhibits a high       Li et al. 2023b, 2024). Current approaches (Carroll et al.
+                                           degree of modularity and interpretability, making it easily in-  2019; Jaderberg et al. 2017; Strouse et al. 2021; Zhao et al.
+                                           tegrated into various of coordination scenarios. Experimen-      2023; Li et al. 2023b, 2024) to developing cooperative
+                                           tal evaluations conducted within the Overcooked-AI envi-         agents rely primarily on learning-based methods, whose pol-
+                                           ronment unveil the remarkable performance superiority of         icy generalization depends heavily on the diversity of team-
+                                           ProAgent, outperforming five methods based on self-play and      mates they interact with during the training phase. Such re-
+                                           population-based training when cooperating with AI agents.       liance, however, constrains the agents' capacity for strate-
+                                           Furthermore, in partnered with human proxy models, its per-      gic adaptation when cooperating with unfamiliar teammates,
+                                           formance exhibits an average improvement exceeding 10%           which becomes a significant challenge in zero-shot coordi-
+                                           compared to the current state-of-the-art method. For more in-    nation scenarios. We present ProAgent, an innovative and
+                                           formation about our project, please visit https://pku-proagent.  adaptable framework specifically designed to excel in coor-
+                                           github.io.                                                       dination scenarios alongside novel agents. ProAgent com-
+                                                                                                            prises four essential modules: Planner, Verificator,
+                                                              Introduction                                  Controller and Memory, along with the mechanism
+                                                                                                            of Belief Correction. These modules synergistically
+                                        Large Language Models (LLMs) have rapidly emerged as                enable ProAgent to actively predict teammates' intentions
+                                        powerful tools, achieving remarkable advancements across            and achieve adaptive cooperative reasoning and planning
+                                        various domains, including long conversations (Ouyang               without the need for prior training or finetuning. To assess
+                                        et al. 2022), reasoning (Bubeck et al. 2023), and text genera-      the adaptive cooperative capabilities of ProAgent, we con-
+                                        tion (Brown et al. 2020). These models, by leveraging a vast        ducted performance evaluations using the well-established
+                                                                                                            multi-agent coordination testing suite, Overcooked-AI (Car-
+                                            *These authors contributed equally.                             roll et al. 2019). In this environment, two players must work
+                                            Work done when Ceyao Zhang visited Peking University.           together to maximize their score. The empirical findings
+                                            Corresponding author
+                                        Copyright © 2024, Association for the Advancement of Artificial
+                                        Intelligence (www.aaai.org). All rights reserved.
+   state                                       Prompt                                              Reflection Loop                ProAgent
+                              knowledge
+language state                                                                                 Error message: xxx         I succeeded at pickup(onion)
+                                 Target: cook soup and deliver...                              Please analysis again and
+                                 Skill pool: pickup(onion), cook                               replan the skill based on       Path
+                                 soup...                                                       the current scene.            Planner
+
+                              state                                                                 Plan Validation
+                                                                                                           Fail?
+                                 You (Alice): hand hold nothing.
+                                 Bob: hand holds nothing.                                              Achieved!
+                                 Kitchen states: pot empty
+                                                                                                     verificator
+                              belief
+
+                                 Bob will choose to pickup(onion).
+                                                                                     feedbackknowledge                           controller
+
+                            environmentstore
+
+                     memory
+
+feedback
+  belief
+   plan                       Analysis: The pot is empty. Both                                 Plan of you: "pickup(onion)"
+verificator                   You and Bob have empty hands.                                    Intention of Bob: "pickup(dish)"
+
+controller
+
+action                        Real behavior of Bob: "pickup(onion)"                                    Belief Correction
+
+ProAgent                                                                                       memory                                        Bob
+
+teammate  loop
+
+Figure 1: Overview of our proposed ProAgent framework including the coordination task workflow (left) and inner details
+of ProAgent pipeline (right). The teammate agent's decision-making loop is formed by the blue solid arrows in the outer
+circle, while the decision process of the ProAgent is formed by the middle gray dotted box and the outer gray solid arrows.
+ProAgent commences its operation by translating the initial state into natural language. Then the Planner adeptly analyzes
+the provided language state in conjunction with historical information stored in the Memory. This analytical process allows the
+model to discern the intentions of the teammate and devise a high-level skill for the agent accordingly. The belief about predicted
+intention will be updated through the Belief Correction mechanism, which involves comparing it with the subsequent
+actual behavior of the teammate agent. As to the planned skill, the Verificator validates whether it can be performed
+under the current state. In case of skill failure, the Verificator will assess the skill's preconditions and provide a detailed
+explanation for the encountered issue. Should the need arise, ProAgent enters into a re-plan loop, initiating a recalibration
+process. On the other hand, if the skill is deemed viable, the Controller further dissects it into several executive low-level
+actions, to be executed within the environment.
+
+from our evaluations reveal the following key insights: 1)          riority over other agents when engaging in cooperation with
+ProAgent demonstrates remarkable proficiency in coordinat-          diverse types of teammates.
+ing with various types of AI teammates across diverse sce-
+narios. 2) ProAgent exhibits a notable preference for collab-                           Related Works
+orating with rational teammates, such as the human proxy,
+which showcases human-like behavior and suggests its ac-            Reasoning and Planning with Large Language Models.
+tive effort to understand teammates' intentions to enhance          In the realm of LLMs (Huang and Chang 2023; Mialon et al.
+cooperation. These results collectively highlight the effec-        2023; Bubeck et al. 2023), reasoning often entails decom-
+tiveness of ProAgent as a cooperative agent across a wide           posing intricate queries into sequential intermediate steps,
+range of scenarios.                                                 referred to as Chain-of-Thought (CoT; Wei et al. 2022; Ko-
+                                                                    jima et al. 2022), to attain a final solution. Some research
+   In summary, our work makes three key contributions:              focuses on minimizing errors as the number of steps in-
+Firstly, we successfully integrate LLMs into the field of           creases (Wang et al. 2023a), while others explore decom-
+cooperative multi-agents and propose the ProAgent frame-            position techniques that break down complex problems into
+work, which serves as a comprehensive guideline for lever-          simpler subproblems (Zhou et al. 2023). Recent endeavors
+aging the powerful reasoning and planning capabilities of           have translated LLMs' reasoning capability into planning
+LLMs in cooperative settings. Secondly, we demonstrate              by constructing a monologue with feedback (Welleck et al.
+the remarkable capability of our ProAgent to interpretably          2023; Shinn et al. 2023; Paul et al. 2023) to facilitate the
+analyze the current scene, explicitly infer teammates' inten-       reasoning and planning process. Notably, the challenge of
+tions, and dynamically adapt its behavior accordingly. This         open-ended long-term planning in the MineDojo environ-
+proactive nature empowers ProAgent to actively collaborate          ment (Fan et al. 2022) has been addressed by utilizing LLMs
+with teammates, enabling more efficient cooperative sce-            as central planners (Wang et al. 2023b,c), thereby demon-
+narios. Thirdly, through a comprehensive series of experi-          strating the extensive capabilities of LLMs-based agents
+ments, we provide compelling evidence of ProAgent's supe-           in overcoming complex decision-making tasks. As of the
+camera-ready version of our paper, the application of LLM-           task or environment. The controller can be rule-based, or
+based agents in cooperative games remains little explored.           RL-based methods.
+Li et al. (2023a) employs a centralized LLM-based planner
+for both two players. In contrast, our framework adopts a de-           Memory Storage. Throughout the pipeline, all relevant
+centralized planning paradigm and uses one planner for one           information involved in the prompt, planning process, val-
+player. While Zhang et al. (2023) also decentralized plan-           idation process, and belief correction process is stored in
+ning, their method facilitates cooperation through explicit          the Memory module. This accumulated knowledge helps
+communication. Our work, on the other hand, fosters coop-            in making informed decisions and adjusting behavior over
+eration by observing and inferring the intentions of team-           time.
+mates.
+                                                                        We offer a pipeline outlined in pseudocode, available
+Multi-agent Coordination. The goal of multi-agent coor-              in the appendix, which delineates the procedural stages of
+dination is to enable multiple autonomous agents to collabo-         ProAgent's cooperative reasoning and planning through-
+rate effectively towards a shared goal (Rashid et al. 2018; Hu       out the execution of a cooperative task. By following this
+and Foerster 2020; Hu et al. 2021a; Yu et al. 2022; Zhong            pipeline, ProAgent effectively incorporates a knowledge li-
+et al. 2023). However, traditional approaches have limita-           brary, performs language-based planning, and adapts its be-
+tions in fixed task settings and struggle to handle multiple         havior through continuous interaction and memory updates.
+tasks or unseen scenarios. One approach to address this chal-
+lenge is to enable an agent to learn multiple tasks concur-          Prompt Construction
+rently (Hu et al. 2021b; Meng et al. 2022; Wen et al. 2022).
+However, these methods may still limit the agent's coop-             Knowledge library The planning ability of LLMs is
+eration ability in familiar tasks and fail to handle unseen          closely related to the prompt at the beginning, which is
+tasks or new agent interactions. Another line of research fo-        also the standard practice in automated planning. ProAgent
+cuses on zero-shot coordination (ZSC), utilizing Population-         is no exception, and the knowledge library should be fed
+Based Training (PBT; Strouse et al. 2021; Zhao et al. 2023;          into LLMs at the initial stage before the cooperation task
+Lupu et al. 2021; Lucas and Allen 2022; Li et al. 2023b,             begins. The main difficulty lies in how to build structured
+2024) and Theory of Mind (ToM; Hu et al. 2021a; Wu et al.            knowledge. In practice, we find that the best combination of
+2021; Wang et al. 2021) to facilitate adaptive policy devel-         knowledge library needs to be described from three perspec-
+opment for coordinating with various counterparts without            tives, including Task, Rules, and Demos. We provide a
+prior coordination experience. However, these ZSC methods            template to construct the knowledge library:
+demand significant computational resources for data collec-
+tion and model optimization, and the resulting policies often            ### Task :
+lack interpretability.                                                   - The task r e q u i r e s two p l a y e r s player0 and player1 to
+
+                         Method                                                     work t o g e t h e r as a team . . .
+                                                                         - To g e t t h e p o i n t s , t h e team needs t o . . .
+The overview of our ProAgent framework, as is depicted in                 ...
+Fig. 1, involves constant interaction between agents and the             ### Rules :
+environment. The inference pipeline of ProAgent is a hier-               I n t h i s t a s k , e a c h p l a y e r c a n ONLY p e r f o r m t h e
+archical process that involves multiple interactions between
+the LLMs and the task at hand. We break down the pipeline                         following skills : [ skill 1] , [ skill 2] , . . .
+into five key stages:                                                    def skill 1 ( obj ) :
+
+   Knowledge Library and State Grouding. The pipeline                            [ function detail ]
+starts with acquiring Knowledge Library specific to the cur-             def skill 2 ( obj , obj ) :
+rent task and transforming the raw tensor state information
+into Language-based State description that the LLM can ef-                       [ function detail ]
+fectively comprehend.                                                     ...
+                                                                         Suppose you a r e an a s s i s t a n t who i s p r o f i c i e n t i n t h e
+   High-level Skill Planning. Receiving the aligned
+language-based state, the LLM-based Planner then ana-                             task . Your goal i s to c o n t r o l player0 and
+lyzes the current scene, infers the intentino about the team-                     c o o p e r a t e w i t h p l a y e r 1 who i s c o n t r o l l e d by a
+mate agent's intentions, and plans a skill for the current                        certain strategy to get a high score and should
+agent.                                                                            follow :
+                                                                         - [ Rule 1].
+   Belief Correction. The belief in the teammate agent's in-             - [ Rule 2].
+tention is further corrected by the Belief Correction                     ...
+mechanism.                                                               - Based on the c u r r e n t scene , you need to achieve
+                                                                         - [ Target 1].
+   Skill Validation and Action Execution. The selected                   - [ Target 2].
+skill will be validated by the Verificator and a replan                   ...
+is needed if the current skill fails. If a valid skill is selected,      Your response should be in the following format :
+and the Controller module decomposes it into low-level                   - Analysis :[ your analysis of the current scene ]
+actions, allowing ProAgent to effectively interact with the              - Plan for Player 0: [ one s k i l l in [ s k i l l 1 , s k i l l
+                                                                                  2...]]
+                                                                          ...
+                                                                         ### Demos :
+                                                                         Scene 0: [ Player0 state 0]. [ Player1 state 0]. [ Other
+                                                                                  task information ]
+                                                                         Analysis : Both Player0 and Player1 are [ State
+                                                                                  d e s c r i p t i o n ] . I g u e s s two p l a y e r s w i l l [ Some
+             skill ].                                                         Cooperative Reasoning and Planning
+
+    [ T a r g e t 1 ] : [ Some s k i l l ] .                                  ProAgent is a specialized system tailored for cooperative
+                                                                              tasks, where information from teammate agents plays a piv-
+    [ T a r g e t 2 ] : [ Some s k i l l ] .                                  otal role in the coordination process. Existing works mainly
+                                                                              utilize information in two ways: firstly, through explicit in-
+     ...                                                                      corporation, involving communication and exchange of in-
+                                                                              formation before decision-making; secondly, through im-
+    Scene 39: [ Player0 state 39]. [ Player1 state 39]. [                     plicit modeling of teammate agents to facilitate cooperative
+                                                                              learning. Each approach comes with its own set of advan-
+             Other task information ]                                         tages and disadvantages concerning cooperative reasoning
+                                                                              and planning: The integration of teammate information can
+    Analysis : Player0 is [ State description ]. Player1 is [                 be achieved efficiently by sending teammate agent informa-
+                                                                              tion to LLMs. However, this approach may jeopardize the
+             State description ]. I guess . . .                               overall generalization of ProAgent's reasoning capabilities.
+                                                                              On the other hand, modeling the teammate agent offers a
+     ...                                                                      more flexible approach, while the modeling process is in-
+                                                                              herently unstable as the teammate agent's strategy may con-
+   Task is for LLMs to understand the objective of the task                   tinuously evolve, demanding additional resources for main-
+and information about other cooperative agents. Rules is                      tenance.
+designed to regulate the planning pattern of the LLM, defin-
+ing which skills are legal and which are not. In Rules, we                       In order to strike a balance between the generalization
+can also enforce the format of LLMs' responses to follow                      ability of built agents and the efficiency of incorporating
+the CoT: output analysis and then plan according to the anal-                 teammate information, particularly for LLMs that possess
+ysis instead of directly outputting a plan. Demos is an op-                   excellent reasoning capabilities but face challenges in fine-
+tional component of the three. Its main functionality is to                   tuning or learning extra belief modules, ProAgent introduces
+provide real cases for LLMs to strengthen their memories                      three core components along with a cooperative reasoning
+and behave following the regulations set by Rules. Nor-                       and planning mechanism. The three modules encompass:
+mally, Demos should contain a scene description followed                      1) The Memory module, which stores information about
+by an analysis and the desired behavior, such as the selected                 task trajectory and general knowledge in the task domain.
+skill. With these three parts, LLMs can understand the task                   2) The Verificator module, consisting of one compo-
+and what is expected of them in the subsequent planning and                   nent for skill failure analysis and another for transforming
+reasoning stages.                                                             skills into atomic actions. 3) The Controller module,
+                                                                              dedicated to the transformation of skills into atomic actions.
+Grounding tensor state to language-based state To fa-                         To further align the LLMs' belief regarding the teammate
+cilitate interaction between LLMs and the environment, it is                  agent's intentions with actual behavior, and thereby con-
+essential to establish a bridge between the original symbolic                 tinually enhance prediction accuracy, ProAgent implements
+state provided by the environment and the language-based                      the Belief Correction mechanism. This process ef-
+state for LLMs. In most scenarios, the raw state is not di-                   fectively strengthens the LLMs' beliefs, leading to improved
+rectly applicable to LLMs' usage. Hence, finding an effec-                    cooperative reasoning and planning.
+tive alignment between the original symbolic state and the
+language-based state is crucial to enhancing LLMs' accu-                      Memory Module: Leveraging History for Cooper-
+rate understanding of the current situation. To illustrate this,              ative Behavior In ProAgent, the Memory module
+we present a simplified example based on the Overcooked-                      plays a crucial role in supporting information stor-
+AI environment, demonstrating how the state can be trans-                     age and retrieval processes. It consists of two compo-
+formed into language within our ProAgent framework. With                      nents: Knowledge Library and Trajectory. The
+the knowledge library and initial state information prepared,                 Knowledge Library acts as a persistent repository, re-
+ProAgent is equipped to tackle the cooperative task along-                    taining a comprehensive record of the task, including its
+side its teammates. This marks the transition to the subse-                   layout, rules, and demonstrations throughout gameplay ses-
+quent stage, where ProAgent engages in reasoning and plan-                    sions. On the other hand, the Trajectory component
+ning, progressing step by step to achieve its objectives. Here                serves as a temporary buffer with a fixed length, following
+is an illustrative instance of the alignment between state rep-               a First-In, First-Out (FIFO) approach. It stores essential in-
+resentation and natural language:                                             formation, such as the latest Language-based State,
+                                                                              Analysis, Belief of teammates' intentions, and the
+    ### Original S ta t e                                                     Skill used, while discarding the most outdated data. When
+                                                                              needed, only specific parts of the Memory are retrieved,
+|X            X  P                        X  X|                               depending on the chosen strategy, such as the recent-K
+                                                                              strategy1. This strategy focuses on the immediate context,
+|                                            |                                facilitating efficient decision-making and planning during
+
+|O             0o  1o                        O|                                   1only retrieve the K most recent trajectories.
+
+|                                            |
+
+|X                                           X|
+
+|                                            |
+
+|X            D  X                        S  X|
+
+-----------------------------------
+
+### Language S ta t e ( Layout )
+
+Above i s the l a y o u t of the k i t c h e n : onion d i s p e n s e r a t
+
+(0 , 1) , onion dispenser at (4 , 1) , dish
+
+dispenser at (1 , 3) , pot at (2 , 0) , serving loc
+
+at (3 , 3) .
+
+### Language S ta t e ( Task s t a t e )
+
+State : Player 0 holds one onion . Player 1 holds one
+
+onion . Kitchen s t a t e s : Pot (2 , 0) is empty .
+ongoing interactions. Overall, the Memory module signif-        tions of each skill can be expressed either in natural lan-
+icantly enhances ProAgent's capacity to access pertinent in-    guage or in pseudo-code form, which can be more effective
+formation and cooperate efficiently with teammate agents.       as proposed in previous works (Liang et al. 2023; Singh et al.
+By leveraging past experiences and learning from historical     2023).
+data, the Memory module empowers ProAgent to make in-
+formed decisions during cooperation tasks.                      Belief Correction: Rectifying Belief on Teammate Agents
+                                                                The Belief Correction mechanism plays a pivotal
+Planner Module: Reasoning with Chain of Thought                 role in rectifying any incorrect beliefs during cooperation.
+With the history information and current state descrip-         ProAgent makes predictions about their teammates' future
+tion ready, ProAgent utilizes the strong reasoning ability      behavior and stores relevant analyses in their memory. In
+of LLMs to make decisions in the current situation. The         subsequent steps, ProAgent verifies the accuracy of their
+Planner module, which follows the Chain of Thought              predictions and corrects any erroneous beliefs. Specifically,
+(CoT) approach commonly used in LLMs' reasoning and             if the observed behavior of the teammate agent deviates from
+planning work (Yao et al. 2023; Hao et al. 2023; Shinn et al.   the assumed intentions recorded in Memory, the Belief
+2023). Instead of directly outputting a plan, the Planner       Correction mechanism can take two approaches: 1) Re-
+module makes the final decision step by step. The provided      place the predicted intention with the actual behavior of the
+information is first thoroughly analyzed, and the intention of  teammate. 2) Provide an annotation alongside the original
+the teammate agent's plan for the current step is predicted.    prediction to flag it as incorrect. The replacement method
+Based on this Analysis and the Belief about the team-           enforces ProAgent to learn from ground truth, while the
+mate agent, LLMs formulate a plan that ensures it is the most   annotation method allows ProAgent to reason about the
+reasonable and effective strategy for the given situation. In   cause of the wrong belief, thereby avoiding similar mis-
+the experiment part, we conduct an ablation study to assess     takes in the future. Additionally, the replan loop within the
+how this design enhances ProAgent's performance in a co-        Verificator module serves as an indirect method for
+operative scenario.                                             rectifying beliefs. With each query to the LLMs, ProA-
+                                                                gent outputs new intentions on their teammate agent, which
+Verificator Module: Analyzing Skill Failures With               contributes to improving the accuracy of their predictions.
+Multi-rounds Prompts In the cooperative setting, the            This iterative process allows ProAgent to refine their beliefs
+Verificator module plays a crucial role in scrutinizing         over time and enhance their ability to make accurate pre-
+and identifying any unreasonable or flawed planning gener-      dictions about their teammate's intentions. In summary, the
+ated by the LLMs. Its primary function involves analyzing       Belief Correction mechanism ensures that ProAgent
+the underlying reasons for these inadequacies and providing     maintains accurate and up-to-date information about their
+valuable insights and suggestions for improvement. In the       teammate agent's real behavior. By referencing the Belief
+ProAgent framework, this process entails conducting a thor-     part of Memory before making decisions, ProAgent contin-
+ough investigation through multiple rounds of prompt and        ually improves the accuracy of their beliefs regarding their
+response between the agent and the LLMs.                        teammate's future behavior.
+
+   To illustrate this process, we present an example based on   Controller Module: Grounding High-Level Skills to
+Overcooked-AI , where we employ a three-round prompt and        Low-Level Actions Based on the modules and mecha-
+response approach, including Preconditions Check,               nisms discussed above, ProAgent effectively engages in co-
+Double-check, and Error Conclusion. It's impor-                 operative reasoning and plans a high-level skill. However, it
+tant to note that the number of rounds or the specific inter-   is worth noting that there is a gap between the skill space
+action style is not restricted, and the core idea behind the    and the environment's action space. Therefore, we also need
+Verificator module remains focused on decomposing               a Controller module which is imperative, aiming to con-
+how to replan for the current agent when receiving negative     vert language-based skills into low-level actions that can be
+feedback from external environments by checking and de-         executed in the environment. Although this transformation
+termination.                                                    process is closely tied to the specific task at hand, mak-
+                                                                ing the Controller module highly flexible, it necessitates
+   Preconditions Check: The Preconditions Check                 the establishment of fixed rules capable of decomposing the
+involves signaling the LLMs if the current plan is illegal due  skill into multiple steps of low-level actions and providing a
+to internal checks before its actual execution. A robust in-    feedback signal to the reasoning component once the action
+ternal checking mechanism can prevent failures when the         is fully executed. The controller can be a rule-based path
+LLMs haven't fully understood the consequences of their         search algorithm or a policy trained by language-grounded
+chosen skill under the current state. In the Overcooked-AI      reinforcement learning (Hanjie, Zhong, and Narasimhan
+example, we design the condition check prompt by lever-         2021; Ding et al. 2023; Hu and Sadigh 2023; Du et al. 2023)
+aging both the current scene and the failed skill as inputs.    methods. Considering that the controller is not our main con-
+We employ a trigger prompt to enable the LLMs to indi-          cern, we choose the built-in controller in the Overcooked-AI
+vidually verify each precondition of the skill and pinpoint     environment based on Best-First Search and a better con-
+the specific one that led to the failure. To aid in solving     troller can definitely reach better performance. An example
+multi-step reasoning problems, prompting techniques like        of how the skill fill dish with soup() is executed
+CoT are also adopted. An instance of the trigger prompt in      and completed in three timesteps can be found in the ap-
+Overcooked-AI could be: "Analysis of why I cannot execute
+this skill in the current scene step by step." The precondi-
+Layout                                           Baseline AI Agents                               ProAgent (ours)
+                                        SP
+                                            PBT                  FCP  MEP               COLE        197.3 ± 6.1
+                                                                                    163.8 ± 24.1    194.2 ± 10.5
+Cramped Room           168.5 ± 15.2         178.8 ± 16.5 196.3 ± 16.8 185 ± 15      169.2 ± 16.8    228.7 ± 23
+                       172.8 ± 16.1                                                 201.3 ± 34.5   229.8 ± 21.9
+                                            179.8 ± 26.8 196 ± 11.9 178.2 ± 15.6    165.5 ± 33.3    175.3 ± 29
+                                                                                    168.8 ± 26.1     183 ± 31.7
+Asymmetric Advantages  183.3 ± 27.5         182.2 ± 27.9 185.7 ± 22.7 155.7 ± 63.9  158.3 ± 27.1    49.7 ± 33.1
+                       177.8 ± 24.6
+                                            152.3 ± 64.5 167.8 ± 21.3 184 ± 41.8     24 ± 21.8        31 ± 33.9
+                                                                                    57.3 ± 36.4    126.3 ± 32.3
+Coordination Ring       122 ± 17.2          141.3 ± 28 148.8 ± 19.4 167.2 ± 22.4    95.5 ± 25.2    128.5 ± 28.1
+                       133.3 ± 23.7                                                 100.8 ± 31.1
+                                            141.3 ± 27.5 145.7 ± 17.1 159.3 ± 25.3
+
+Forced Coordination     6.7 ± 6.7           15.3 ± 17.1 44.7 ± 36.4 23.3 ± 19.8
+                       30.2 ± 21.9
+                                            61.7 ± 46 32.2 ± 30.2 39.3 ± 16.9
+
+Counter Circuit        64.7 ± 45.8          64.7 ± 45.9 58.3 ± 37.5 74.3 ± 39.1
+                       60.7 ± 40.8
+                                            54.3 ± 49.1 60 ± 38.3 81.5 ± 27.5
+
+Table 1: Performance for all AI agent pairs. Each column represents the average reward and standard error of one algorithm
+playing with all others. For each layout, the first row represents the scenario where the agent takes the role of Player 0, and
+the AI partner takes the role of Player 1. The second row depicts the vice-versa scenario. The best results for each layout are
+highlighted in bold.
+
+pendix.                                                          Collaborating with AI Agents
+
+                     Experiments                                 Quantitative Results Table 1 illustrates the average per-
+                                                                 formance of SP, PBT, FCP, MEP, COLE, and ProAgent
+Experimental Settings                                            when paired with all the others. For each layout, the first
+                                                                 row represents the scenario where the agent takes the role of
+Following previous works on cooperative AI and human-            Player 0, and the AI partner takes the role of Player 1. The
+AI cooperation, we choose Overcooked-AI as our test en-          second row depicts the vice-versa scenario. The results indi-
+vironment, in which two agents swiftly prepare and serve         cate that ProAgent outperforms the baselines in all layouts
+soups by placing up to three ingredients in a pot, cook-         when acting as Playe 0. Taking the role of Player 1, ProA-
+ing the soup, filling the soup with the dish, and delivering     gent only slightly underperforms FCP in cramped room lay-
+the soup. Agents must dynamically allocate tasks and coop-       out and loses to PBT in forced coordination layout. We will
+erate effectively. Five classical layouts are used: Cramped      examine this failure further in the appendix. In previous
+Room, Asymmetric Advantages, Forced Coordination, Co-            studies, it is rare to compare different AI agent combina-
+ordination Ring, and Counter Circuit. A detailed description     tions with each other, and our experimental results also re-
+of each layout can be found in the appendix.                     veal that none of the other ZSC methods is consistently bet-
+                                                                 ter than other methods. Considering that ProAgent requires
+   Our primary concern behind this work is how well the          no specific training with distinct teammates and in distinct
+agents developed so far based on ZSC methods can cooper-         layouts, it presents a stronger adaptive ability than the other
+ate with diverse teammates, ranging from different AI agents     AI agents. These results show our LLM-based agent is a bet-
+to humans. In previous works on Overcooked-AI, the coop-         ter cooperator.
+erative performance of an agent is often evaluated with two
+held-out populations: self-play (SP) agent and human proxy       Qualitative Results To gain deeper insights into the fun-
+model. We conduct a comparative analysis between our pro-        damental components of effective cooperation, we perform a
+posed ProAgent and five alternatives prevalent in the field in-  qualitative examination of our ProAgent's behaviors exhib-
+cluding SP (Tesauro 1994; Carroll et al. 2019), PBT (Jader-      ited during our experiments, leading us to identify several
+berg et al. 2017), FCP (Strouse et al. 2021), MEP (Zhao et al.   cooperative behaviors.
+2023), and COLE (Li et al. 2023b, 2024). We combined the
+above six algorithms in pairs to construct 36 pairs. For ex-        ProAgent excels in making strategic plans. For example,
+ample, we choose the SP algorithm as player 0 and the PBT        when pot one is cooking and pot two lacks an onion, we
+algorithm as player 1, and these two algorithms can form an      observed that ProAgent would prioritize putting one onion
+agent pair (SP, PBT). Since the two players are not all homo-    into pot two. After this, the agent will fetch the plate. At
+geneous, we will also form a (PBT, SP) algorithm pair. For       the same time, cooking can be completed in the first pot,
+each algorithm pair, we ran five episodes and collected the      and this agent with a plate can directly fill the plate with
+mean and standard variation of the episode returns. Besides,     soup. This process is very effective. Besides, after making a
+we also select the human proxy model proposed by (Car-           failure plan, ProAgent can promptly recognize this failure,
+roll et al. 2019) to test the agent's ability to cooperate with  and make a new and often better plan.
+humans.
+                                                                    ProAgent demonstrates a remarkable capacity to dy-
+                                                                 namically adjust low-level actions while executing high-
+                                                                 level plans. For instance, when ProAgent intends to deposit
+                                                                 an onion into a pot, it's underlying Controller identi-
+Figure 2: Performance with human proxy partners. In each layout, the reward bar represents the average performance of one
+algorithm collaborating with the unseen human proxy partners over 400 timesteps on five BC models, and the error lines
+represent the standard error. The hashed bars indicate the rewards obtained where the starting positions are switched.
+
+fies a blocked path caused by its teammate. Swiftly, the         the Cramped Room layout. The experiment considered three
+Controller will identify an alternative interconnected           distinct conditions and their respective scores were: 1) 204
+route, skillfully bypassing any potential obstructions. This     for with both analysis and belief, 2) 184 without belief, and
+adaptive strategy enables ProAgent to discover unhindered        3) 100 for no analysis and belief, and making a skill plan
+pathways. Moreover, when Planner has no clear goal, the          directly. We believe that the significance of analysis in the
+Controller will move randomly. This dynamic operation            Planner Module lies in its provision of in-context for final
+helps ProAgent to break the deadlock caused by other AI          planning just as CoT will improve the effect of reasoning.
+agents due to conventions formed during the training phase.      Additionally, inferring teammate intentions provides further
+                                                                 improvements.
+Collaborating with Humans
+                                                                 Is Verificator effective in feedback-based reasoning?
+Apart from cooperation with AI agents, our concern also          Upon removing the Verificator Module and allowing
+involves the generalization to human partners. Due to the        ProAgent to engage in planning without feedback, we com-
+limitation of collecting human interaction data, we follow       puted success rates over 100 steps. Notably, the success rate
+the previous work (Carroll et al. 2019) that uses a behav-       dropped significantly to 20%, underscoring the critical role
+ior cloning (BC) model trained on human data as a proxy          of our Verificator Module in furnishing feedback when
+of humans. Fig. 2 presents the average cumulative rewards        the Planner Module generates inaccurate plans.
+achieved for 400 timesteps by ProAgent when engaged in
+collaboration with BC. The reported outcomes encompass                                 Conclusion
+both the mean value and standard error across five distinct
+BC models. Analysis of the experimental findings reveals         In this work, we propose ProAgent, a proactive LLM-based
+that across the five environments, ProAgent outperforms the      agent framework, with the primary objective of address-
+baseline in four environments, exhibiting particularly note-     ing the multi-agent coordination predicament. By leverag-
+worthy superiority when functioning as Player 0 in the con-      ing the inherent faculties of LLMs encompassing common
+text of Forced Coordination. Notably, the positioning dis-       sense comprehension and language-centric task understand-
+crepancy between the left and right starting positions had a     ing, coupled with explicit mechanisms for reasoning and
+negligible impact on ProAgent's performance. However, this       planning, ProAgent demonstrates remarkable performance
+difference led to substantial performance disparities among      within various coordination scenarios. Experiments on co-
+the baselines, particularly in asymmetric layouts, where the     operating with both AI agents and human proxies in the
+cumulative rewards achieved by all baselines were superior       Overcooked-AI demonstrate the effectiveness of ProAgent
+in the left position compared to the right position, consistent  over state-of-the-art methods. Moreover, ProAgent's reason-
+with the findings in COLE (Li et al. 2023b, 2024).               ing and planning are based on natural language, which is
+                                                                 interpretable and friendly to humans. These encouraging re-
+Discussion                                                       sults pave the way for further advancements in both coop-
+                                                                 erative multi-agent and human-compatible AI systems built
+Does analysis and belief help in better planning? To             upon LLMs.
+gauge the influence of analysis and belief on the accuracy
+and efficiency of decisions made by the Planner Mod-
+ule, we conducted an ablation study within the context of
+                  Acknowledgement                                Gronauer, S.; and Diepold, K. 2022. Multi-Agent Deep Re-
+                                                                 inforcement Learning: A survey. Artificial Intelligence Re-
+This work is sponsored by the National Natural Science           view, 1­49.
+Foundation of China (62376013), by the Basic Research
+Project No. HZQB-KCZYZ-2021067 of Hetao Shenzhen-                Hanjie, A. W.; Zhong, V. Y.; and Narasimhan, K. 2021.
+HK S&T Cooperation Zone, Beijing Municipal Science               Grounding Language to Entities and Dynamics for Gener-
+& Technology Commission (Z231100007423015), by the               alization in Reinforcement Learning. In International Con-
+Shenzhen Outstanding Talents Training Fund 202002, by            ference on Machine Learning, 4051­4062. PMLR.
+the Guangdong Research Projects No. 2017ZT07X152
+and No. 2019CX01X104, by the Guangdong Provincial                Hao, S.; Gu, Y.; Ma, H.; Hong, J. J.; Wang, Z.; Wang, D. Z.;
+Key Laboratory of Future Networks of Intelligence (Grant         and Hu, Z. 2023. Reasoning with Language Model is Plan-
+No. 2022B1212010001), by the Shenzhen Key Labora-                ning with World Model. arXiv:2305.14992.
+tory of Big Data and Artificial Intelligence (Grant No.
+ZDSYS201707251409055), by the NSFC under Grant No.               Hu, H.; and Foerster, J. N. 2020. Simplified Action Decoder
+62271433, and by Shenzhen Science and Technology Pro-            for Deep Multi-Agent Reinforcement Learning. In Interna-
+gram under Grant No. JCYJ20220530143806016 and No.               tional Conference on Learning Representations.
+RCJC20210609104448114.
+                                                                 Hu, H.; Lerer, A.; Cui, B.; Pineda, L.; Brown, N.; and Foer-
+                       References                                ster, J. 2021a. Off-Belief Learning. In International Confer-
+                                                                 ence on Machine Learning, 4369­4379. PMLR.
+Ahn, M.; Brohan, A.; Brown, N.; Chebotar, Y.; Cortes, O.;
+David, B.; Finn, C.; Fu, C.; Gopalakrishnan, K.; Hausman,        Hu, H.; and Sadigh, D. 2023. Language Instructed Rein-
+K.; Herzog, A.; Ho, D.; Hsu, J.; Ibarz, J.; Ichter, B.; Irpan,   forcement Learning for Human-AI Coordination. In Pro-
+A.; Jang, E.; Ruano, R. J.; Jeffrey, K.; Jesmonth, S.; Joshi,    ceedings of the 40th International Conference on Machine
+N. J.; Julian, R.; Kalashnikov, D.; Kuang, Y.; Lee, K.-H.;       Learning. PMLR.
+Levine, S.; Lu, Y.; Luu, L.; Parada, C.; Pastor, P.; Quiambao,
+J.; Rao, K.; Rettinghouse, J.; Reyes, D.; Sermanet, P.; Siev-    Hu, S.; Zhu, F.; Chang, X.; and Liang, X. 2021b. UPDeT:
+ers, N.; Tan, C.; Toshev, A.; Vanhoucke, V.; Xia, F.; Xiao, T.;  Universal Multi-agent Reinforcement Learning via Policy
+Xu, P.; Xu, S.; Yan, M.; and Zeng, A. 2022. Do As I Can,         Decoupling with Transformers. arXiv:2101.08001.
+Not As I Say: Grounding Language in Robotic Affordances.
+arXiv:2204.01691.                                                Huang, J.; and Chang, K. C.-C. 2023. Towards Reasoning
+                                                                 in Large Language Models: A Survey. arXiv:2212.10403.
+Brown, T.; Mann, B.; Ryder, N.; Subbiah, M.; Kaplan, J. D.;
+Dhariwal, P.; Neelakantan, A.; Shyam, P.; Sastry, G.; Askell,    Jaderberg, M.; Dalibard, V.; Osindero, S.; Czarnecki, W. M.;
+A.; et al. 2020. Language Models are Few-Shot Learners.          Donahue, J.; Razavi, A.; Vinyals, O.; Green, T.; Dun-
+In Advances in neural information processing systems, vol-       ning, I.; Simonyan, K.; Fernando, C.; and Kavukcuoglu,
+ume 33, 1877­1901.                                               K. 2017. Population Based Training of Neural Networks.
+                                                                 arXiv:1711.09846.
+Bubeck, S.; Chandrasekaran, V.; Eldan, R.; Gehrke, J.;
+Horvitz, E.; Kamar, E.; Lee, P.; Lee, Y. T.; Li, Y.; Lundberg,   Kojima, T.; Gu, S. S.; Reid, M.; Matsuo, Y.; and Iwasawa,
+S.; Nori, H.; Palangi, H.; Ribeiro, M. T.; and Zhang, Y. 2023.   Y. 2022. Large Language Models are Zero-Shot Reasoners.
+Sparks of Artificial General Intelligence: Early Experiments     In Advances in neural information processing systems, vol-
+with GPT-4. arXiv:2303.12712.                                    ume 35, 22199­22213.
+
+Carroll, M.; Shah, R.; Ho, M. K.; Griffiths, T.; Seshia, S.;     Li, W.; Qiao, D.; Wang, B.; Wang, X.; Jin, B.; and Zha, H.
+Abbeel, P.; and Dragan, A. 2019. On the Utility of Learning      2023a. Semantically Aligned Task Decomposition in Multi-
+about Humans for Human-AI Coordination. In Advances in           Agent Reinforcement Learning. arXiv:2305.10865.
+neural information processing systems, volume 32.
+                                                                 Li, Y.; Zhang, S.; Sun, J.; Du, Y.; Wen, Y.; Wang, X.; and
+Ding, Z.; Zhang, W.; Yue, J.; Wang, X.; Huang, T.; and Lu,       Pan, W. 2023b. Cooperative Open-ended Learning Frame-
+Z. 2023. Entity Divider with Language Grounding in Multi-        work for Zero-shot Coordination. In Proceedings of the 40th
+Agent Reinforcement Learning. In International Conference        International Conference on Machine Learning. PMLR.
+on Machine Learning, 8103­8119. PMLR.
+                                                                 Li, Y.; Zhang, S.; Sun, J.; Zhang, W.; Du, Y.; Wen, Y.; Wang,
+Du, Y.; Watkins, O.; Wang, Z.; Colas, C.; Darrell, T.;           X.; and Pan, W. 2024. Tackling Cooperative Incompatibility
+Abbeel, P.; Gupta, A.; and Andreas, J. 2023. Guiding Pre-        for Zero-Shot Human-AI Coordination. arXiv:2306.03034.
+training in Reinforcement Learning with Large Language
+Models. arXiv:2302.06692.                                        Liang, J.; Huang, W.; Xia, F.; Xu, P.; Hausman, K.; Ichter,
+                                                                 B.; Florence, P.; and Zeng, A. 2023. Code as Policies: Lan-
+Fan, L.; Wang, G.; Jiang, Y.; Mandlekar, A.; Yang, Y.; Zhu,      guage Model Programs for Embodied Control. In 2023
+H.; Tang, A.; Huang, D.-A.; Zhu, Y.; and Anandkumar, A.          IEEE International Conference on Robotics and Automation
+2022. MineDojo: Building Open-Ended Embodied Agents              (ICRA), 9493­9500. IEEE.
+with Internet-Scale Knowledge. In NIPS Processing Systems
+Datasets and Benchmarks Track.                                   Lucas, K.; and Allen, R. E. 2022. Any-Play: An Intrinsic
+                                                                 Augmentation for Zero-Shot Coordination. In International
+                                                                 Foundation for Autonomous Agents and Multiagent Systems,
+                                                                 853­861.
+
+                                                                 Lupu, A.; Cui, B.; Hu, H.; and Foerster, J. 2021. Trajec-
+                                                                 tory Diversity for Zero-Shot Coordination. In International
+                                                                 conference on machine learning, 7204­7213. PMLR.
+Meng, L.; Wen, M.; Yang, Y.; Le, C.; Li, X.; Zhang, W.;          Wang, Z.; Cai, S.; Liu, A.; Jin, Y.; Hou, J.; Zhang, B.;
+Wen, Y.; Zhang, H.; Wang, J.; and Xu, B. 2022. Offline           Lin, H.; He, Z.; Zheng, Z.; Yang, Y.; Ma, X.; and Liang,
+Pre-trained Multi-Agent Decision Transformer: One Big Se-        Y. 2023c. JARVIS-1: Open-World Multi-Task Agents
+quence Model Tackles All SMAC Tasks. arXiv:2112.02845.           with Memory-Augmented Multimodal Language Models.
+                                                                 arXiv:2311.05997.
+Mialon, G.; Dess`i, R.; Lomeli, M.; Nalmpantis, C.; Pa-
+sunuru, R.; Raileanu, R.; Rozie`re, B.; Schick, T.; Dwivedi-     Wei, J.; Wang, X.; Schuurmans, D.; Bosma, M.; brian ichter;
+Yu, J.; Celikyilmaz, A.; Grave, E.; LeCun, Y.; and Scialom,      Xia, F.; Chi, E. H.; Le, Q. V.; and Zhou, D. 2022. Chain
+T. 2023. Augmented Language Models: a Survey.                    of Thought Prompting Elicits Reasoning in Large Language
+arXiv:2302.07842.                                                Models. In Advances in Neural Information Processing Sys-
+                                                                 tems, volume 35, 24824­24837.
+Ouyang, L.; Wu, J.; Jiang, X.; Almeida, D.; Wainwright,
+C.; Mishkin, P.; Zhang, C.; Agarwal, S.; Slama, K.; Ray,         Welleck, S.; Lu, X.; West, P.; Brahman, F.; Shen, T.;
+A.; Schulman, J.; Hilton, J.; Kelton, F.; Miller, L.; Simens,    Khashabi, D.; and Choi, Y. 2023. Generating Sequences
+M.; Askell, A.; Welinder, P.; Christiano, P. F.; Leike, J.; and  by Learning to Self-Correct. In The Eleventh International
+Lowe, R. 2022. Training Language Models to Follow In-            Conference on Learning Representations.
+structions with Human Feedback. In Advances in Neural
+Information Processing Systems, volume 35, 27730­27744.          Wen, M.; Kuba, J.; Lin, R.; Zhang, W.; Wen, Y.; Wang, J.;
+                                                                 and Yang, Y. 2022. Multi-Agent Reinforcement Learning
+Paul, D.; Ismayilzada, M.; Peyrard, M.; Borges, B.;              is a Sequence Modeling Problem. In Advances in Neural
+Bosselut, A.; West, R.; and Faltings, B. 2023. RE-               Information Processing Systems, volume 35, 16509­16521.
+FINER: Reasoning Feedback on Intermediate Representa-
+tions. arXiv:2304.01904.                                         Wu, S. A.; Wang, R. E.; Evans, J. A.; Tenenbaum, J. B.;
+                                                                 Parkes, D. C.; and Kleiman-Weiner, M. 2021. Too Many
+Rashid, T.; Samvelyan, M.; Schroeder, C.; Farquhar, G.; Fo-      Cooks: Bayesian Inference for Coordinating Multi-Agent
+erster, J.; and Whiteson, S. 2018. QMIX: Monotonic Value         Collaboration. Topics in Cognitive Science, 13(2): 414­432.
+Function Factorisation for Deep Multi-Agent Reinforcement
+Learning. In International Conference on Machine Learn-          Yang, Y.; and Wang, J. 2021. An Overview of Multi-Agent
+ing, 4295­4304. PMLR.                                            Reinforcement Learning from Game Theoretical Perspec-
+                                                                 tive. arXiv:2011.00583.
+Shinn, N.; Cassano, F.; Gopinath, A.; Narasimhan, K. R.;
+and Yao, S. 2023. Reflexion: Language Agents with Verbal         Yao, S.; Zhao, J.; Yu, D.; Du, N.; Shafran, I.; Narasimhan,
+Reinforcement Learning. In Thirty-seventh Conference on          K. R.; and Cao, Y. 2023. ReAct: Synergizing Reasoning and
+Neural Information Processing Systems.                           Acting in Language Models. In The Eleventh International
+                                                                 Conference on Learning Representations.
+Singh, I.; Blukis, V.; Mousavian, A.; Goyal, A.; Xu, D.;
+Tremblay, J.; Fox, D.; Thomason, J.; and Garg, A. 2023.          Yu, C.; Velu, A.; Vinitsky, E.; Gao, J.; Wang, Y.; Bayen, A.;
+ProgPrompt: Generating Situated Robot Task Plans using           and Wu, Y. 2022. The Surprising Effectiveness of PPO in
+Large Language Models. In 2023 IEEE International Con-           Cooperative Multi-Agent Games. In Advances in Neural In-
+ference on Robotics and Automation (ICRA), 11523­11530.          formation Processing Systems, volume 35, 24611­24624.
+IEEE.
+                                                                 Zhang, H.; Du, W.; Shan, J.; Zhou, Q.; Du, Y.; Tenenbaum,
+Strouse, D.; McKee, K.; Botvinick, M.; Hughes, E.; and Ev-       J. B.; Shu, T.; and Gan, C. 2023. Building Cooperative
+erett, R. 2021. Collaborating with Humans without Human          Embodied Agents Modularly with Large Language Models.
+Data. In Advances in Neural Information Processing Sys-          arXiv:2307.02485.
+tems, volume 34, 14502­14515.
+                                                                 Zhang, K.; Yang, Z.; and Bas¸ar, T. 2021. Multi-Agent Rein-
+Tesauro, G. 1994. TD-Gammon, a self-teaching backgam-            forcement Learning: A Selective Overview of Theories and
+mon program, achieves master-level play. Neural computa-         Algorithms. Handbook of reinforcement learning and con-
+tion, 6(2): 215­219.                                             trol, 321­384.
+
+Wang, X.; Wei, J.; Schuurmans, D.; Le, Q. V.; Chi, E. H.;        Zhao, R.; Song, J.; Yuan, Y.; Hu, H.; Gao, Y.; Wu, Y.;
+Narang, S.; Chowdhery, A.; and Zhou, D. 2023a. Self-             Sun, Z.; and Yang, W. 2023. Maximum Entropy Popula-
+Consistency Improves Chain of Thought Reasoning in Lan-          tion Based Training for Zero-Shot Human-AI Coordination.
+guage Models. In The Eleventh International Conference on        In Proceedings of the AAAI Conference on Artificial Intelli-
+Learning Representations.                                        gence, 5, 6145­6153.
+
+Wang, Y.; Zhong, F.; Xu, J.; and Wang, Y. 2021. ToM2C:           Zhong, Y.; Kuba, J. G.; Feng, X.; Hu, S.; Ji, J.; and Yang,
+Target-oriented Multi-agent Communication and Coopera-           Y. 2023. Heterogeneous-Agent Reinforcement Learning.
+tion with Theory of Mind. In International Conference on         arXiv:2304.09870.
+Learning Representations.
+                                                                 Zhou, D.; Scha¨rli, N.; Hou, L.; Wei, J.; Scales, N.; Wang,
+Wang, Z.; Cai, S.; Chen, G.; Liu, A.; Ma, X.; and Liang, Y.      X.; Schuurmans, D.; Cui, C.; Bousquet, O.; Le, Q. V.; and
+2023b. Describe, Explain, Plan and Select: Interactive Plan-     Chi, E. H. 2023. Least-to-Most Prompting Enables Com-
+ning with LLMs Enables Open-World Multi-Task Agents. In          plex Reasoning in Large Language Models. In The Eleventh
+Thirty-seventh Conference on Neural Information Process-         International Conference on Learning Representations.
+ing Systems.
+

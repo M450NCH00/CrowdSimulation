@@ -1,0 +1,526 @@
+                                        Emergent Crowds Dynamics from Language-Driven Multi-Agent Interactions
+
+                                                          Yibo Liu1*, Liam Shatzel1*, Brandon Haworth1 Teseo Schneider1
+
+                                                                                                  1University of Victoria
+
+arXiv:2508.15047v1 [cs.AI] 20 Aug 2025  Figure 1: An animated scene illustrating public responses to          when necessitated by the spatial and social relationships with
+                                        a painting accident at a museum.                                      neighbouring agents. We then use the conversation and each
+                                                                                                              agent's personality, emotional state, vision, and physical state
+                                                                      Abstract                                to control the navigation and steering of each agent. Our
+                                                                                                              model thus enables agents to make motion decisions based
+                                           Animating and simulating crowds using an agent-based ap-           on both their perceptual inputs and the ongoing dialogue.
+                                           proach is a well-established area where every agent in the
+                                           crowd is individually controlled such that global human-like       We validate our method in two complex scenarios that exem-
+                                           behaviour emerges. We observe that human navigation and            plify the interplay between social interactions, steering, and
+                                           movement in crowds are often influenced by complex social          crowding. In these scenarios, we observe that grouping and
+                                           and environmental interactions, driven mainly by language          ungrouping of agents automatically occur. Additionally, our
+                                           and dialogue. However, most existing work does not con-            experiments show that our method serves as an information-
+                                           sider these dimensions and leads to animations where agent-        passing mechanism within the crowd. As a result, our frame-
+                                           agent and agent-environment interactions are largely limited       work produces more realistic crowd simulations, with emer-
+                                           to steering and fixed higher-level goal extrapolation.             gent group behaviours arising naturally from any environ-
+                                           We propose a novel method that exploits large language mod-        mental setting.
+                                           els (LLMs) to control agents' movement. Our method has two
+                                           main components: a dialogue system and language-driven                             1 Introduction
+                                           navigation. We periodically query agent-centric LLMs con-
+                                           ditioned on character personalities, roles, desires, and rela-  Animating and simulating crowds is a central problem in
+                                           tionships to control the generation of inter-agent dialogue     architecture, animation and entertainment, and more gener-
+                                                                                                           ally in human behaviour and scenario analysis. The main
+                                            *These authors contributed equally.                            objective is to simulate and animate a crowd such that
+                                                                                                           global human-like behaviour emerges. Many methods have
+                                                                                                           emerged to achieve this that are largely differentiated in their
+                                                                                                           approach, centralized vs. decentralized, agent-based vs. cel-
+                                                                                                           lular automata vs. continuum, etc. Applications often dictate
+                                                                                                           which approach is most useful given its pros and cons. Here
+                                                                                                           we focus on directable, for animation purposes, decentral-
+                                                                                                           ized agent-based simulation.
+
+                                                                                                              The general framework of a decentralized agent-based
+                                                                                                           simulation follows three main phases: low frequency, decid-
+                                                                                                           ing the global goal (e.g., the agent wants to leave the room);
+                                                                                                           medium frequency, path planning with waypoints that the
+                                                                                                           agent will loosely follow to reach the goal (e.g., the path to
+                                                                                                           reach the door and leave); high-frequency, steering where
+                                                                                                           the agent is allowed to deviate from the path (e.g., to avoid
+                                                                                                           collisions with other agents). Using these three stages, we
+                                                                                                           can observe global emergent phenomena; for instance, evac-
+                                                                                                           uation, where all agents must quickly leave an environment
+                                                                                                           and navigate through bottlenecks. In the simulation, the sin-
+                                                                                                           gle agent's behaviour influences the full crowd movement
+                                                                                                           and leads to bottlenecks in the presence of small openings.
+
+                                                                                                              We argue that, in normal circumstances (i.e., non-
+                                                                                                           emergency situations), human movement is mostly driven
+                                                                                                           by social interaction with other humans, personal motiva-
+                                                                                                           tions, and local environmental/contextual affordances. For
+instance, while visiting your university clubs, you recognize    Narrative Synthesis for Animation. Narrative synthesis
+your friend, join them, and jointly decide which stand to visit  has its roots in classic pre-generative text pre-LLM Natural
+next (Section 4). This social interaction is usually not di-     Language Processing (NLP) and symbolic AI work. Early
+rectly modelled and often leads to "robot-like" agent move-      work related to agent animation synthesis built event li-
+ments driven by orchestrated global goals and path planning      braries with even preconditions and author-set event goals
+for the agents involved. All agents move independently of        to formulate event-driven narrative plans (Shoulson et al.
+each other and never naturally gather or re-plan their path      2013). Methods that decouple user input and narrative map
+based on the presence of other agents, memory, or natural        affordances to objects, allowing a planner to order the af-
+discussion.                                                      fordances such that they satisfy preconditions to form con-
+                                                                 sistent narratives (Kapadia et al. 2015). This partial-order
+   While large language models (LLMs) have been increas-         planner approach has been coupled with animation synthe-
+ingly used in multi-agent settings to study social behaviour,    sis to generate scenes of agents carrying out roles and ac-
+most existing works focus solely on language and lack            tions in a narrative arc consistent manner (Kapadia et al.
+physical motion or interaction. We introduce our model           2016). Converting the animation of narrative problem to
+to bridge this gap (Section 3). We propose a novel so-           that of resource allocation given some agents and environ-
+cial multi-agent model that includes vision and language-        ment affordance mappings, a resource allocation planner can
+based interaction between agents. Our model allows agents        synthesize day-long agent movements with steering for mi-
+to collectively pick new goals, update the path planning,        cro movement consistency (Zhang et al. 2019). This allows
+and change steering parameters to mimic human behaviour.         for the rapid dynamic population of a semantically labelled
+We employ LLMs to control all locomotion phases, thus            built-environment scenario.
+enabling generalizable crowd behaviours without scenario-
+specific modelling. Our model enables agents to make au-         Agent-based LLM-powered Simulation. Scalable LLM-
+tonomous, decentralized decisions based on local visual          driven multi-agent simulation is a likely new frontier of
+observations and dialog, without relying on a centralized        large-scale human behaviour simulation (Adornetto et al.
+global prompt. By conditioning agent behaviour on individ-       2025; Gao et al. 2024). While there is great promise in solv-
+ual agent personalites, emotional state, and agent-agent re-     ing numerous classic problems (such as those faced by clas-
+lationships (friends, family, enemy, etc.), as well as afford-   sic NLP-based narrative synthesis, or classic simplification
+ing direct agent-agent communication channels, our frame-        issues in agent-based models (ABM) for behaviour simula-
+work represents a full agent simulation with a directable        tion), LLMs may also present yet another behavioural model
+scenario and fine-tuned agent control. Agents can discuss,       simplification now amplified by their black-box nature (La-
+plan, see, avoid, direct, gather, and more, leading to com-      rooij and To¨rnberg 2025). Validation of these models in-
+plex social and contextual scenarios that previously would       creasingly complicates the already difficult problem of han-
+be impossible. We evaluate our method with two exam-             dling calibration, validation, and reproduction of ABMs.
+ples (Section 4); our experiments reveal that such micro-
+level language-motion interactions can give rise to emergent        Novel frameworks for LLM-driven agent-based simula-
+macro-level crowd behaviours.                                    tion provide tools for city-scale scenario analysis where
+                                                                 agents have memories, personalities, and diverse behaviours
+                  2 Related Work                                 important for social investigations (Bougie and Watanabe
+                                                                 2025). Recent advances in LLM query scheduling and par-
+Crowds Simulation. Crowd simulation, the process of              allelization enable the simulation of several thousand agent-
+simulating and animating multiple interacting humans, has        based models of individual macro behaviours in urban envi-
+a long and vibrant literature with roots in cellular au-         ronments (Yan et al. 2024). More detailed agent-agent and
+tomata, agent-based models, flocking animation, and be-          agent-environment simulation supports memory, reflection,
+havioural modelling (Lemonari et al. 2022; Van Toll and          and planning incorporated with basic shortest path construc-
+Pettre´ 2021; Martinez-Gil et al. 2017; Pelechano, Allbeck,      tion for agent movement (Park et al. 2023). This allows agent
+and Badler 2008; Thalmann and Musse 2013). A basic yet           locations to fundamentally and dynamically alter the envi-
+robust and extensible approach affords flocking and crowd-       ronment as agent can now incorporate their new locale infor-
+ing behaviour generated by using simple rules (Reynolds          mation (nearby agents, environment details, etc.) into their
+1987). The earliest explorations of this modelling and an-       state.
+imation approach for humans incorporated basic collision
+prediction and grouping relationships (Thalmann and Musse           The Parallel Information Aggregation via Neural Orches-
+2013). Physically-based methods emerged as a simple to im-       tration (PIANO) architecture combines micro and macro
+plement, robust and effective approach for many use cases,       behavioural simulation in a Minecraft environment for
+dependent on the formulation of potential field functions        civilization-scale modelling ( 1000 agents modelling so-
+mapping to internal agent motivations (Helbing and Molnar        cial structures and information/religious exchange) (Al-
+1995). More sophisticated models incorporated predictive         tera.AL 2024). PIANO facilitates agent-agent and agent-
+collision avoidance (Karamouzas, Skinner, and Guy 2014;          human interaction in real-time at scale by running several
+Karamouzas et al. 2009). In parallel, velocity space op-         modules or tasks concurrently and at varying timescales, re-
+timization formulations promise collision-free paths while       spectively, to their natural use (slow long-term planning, im-
+producing emergent behaviours (Van Den Berg et al. 2011;         mediate actions, regular memory retrieval, as-needed intent
+Van den Berg, Lin, and Manocha 2008).                            generation, etc).
+LLMs for Crowds Simulation. Recent efforts have led to           Agent
+the incorporation of LLMs into the classic crowds synthe-
+sis problem, where macro behaviours (goals and intent) are       Profile P              ID
+incorporated with micro behaviours (steering and collision                        Personality
+avoidance). This approach promises deep socio-cultural af-
+fordances combined with the ability to condition agents on             Friends F              Goal g
+personalities and scenarios with ease. One key issue in clas-          Motion           Path Follow 
+sic crowds is the parameterization of agents and the scenar-      Parameter m         PAM Avoidance 
+ios they operate in. This information can be learned in con-         Location l
+ditioned graphs that represent interactions in scenarios that          State S            Cohesion 
+allow prompt-based generation of new scenarios (Ji et al.                                Alignment 
+2024). Recent work discretizes the action space of agents        Perception p            Separation 
+and learns the latent graph structure of agent-agent relations                    Cohesion Neighbors 
+in scenarios. Using variational graph auto-encoders to learn         Histroy h          Max force f
+agent-agent interaction as well as agent navigation action al-                         Max speed v
+lows for the synthesis of new crowd scenarios. Conditioning                            Dialog
+this on a language model provides a natural way to synthe-                            Vision I
+size new scenarios from text descriptions (Panayiotou, Char-
+alambous, and Karamouzas 2025). Our work provides a de-          Figure 2: Overview of the agent's variables. In blue, we de-
+centralized agent-based method for rich, unbounded agent-        note the static parts, in green the motion, and in yellow the
+agent and agent-environment interactions with individual         perception.
+agent memory, detailed personality, emotion, and relation-
+ship conditioning that affords complex emergent phenomena           The perception pi is composed of an image Ii represent-
+expected in real crowds.                                         ing ai vision, and a dialog (Section 3.5). The movement pa-
+                                                                 rameters mi are composed of the current agent goal gi (ran-
+                      3 Method                                   domly initialized) and steering parameters di. Our language-
+                                                                 driven movement uses the agent's state and is responsible for
+With the observation that human movement is mostly driven        updating it after every decision. We use the steering param-
+by social/linguistic interaction with other humans, we pro-      eters di = {i, i, i, i, in, i, fimax, vimax} with weights:
+pose a language-driven system that controls the behaviour        i for path-following, i for PAM avoidance, i for cohe-
+and motion of each individual agent ai, i = 1 . . . , n in a     sion, i for alignment, and i for separation. We also use
+crowd of n agents (Section 3.1).                                 a list of cohesion neighbours ni , and control the maximum
+                                                                 force fimax and speed vimax. Since both the goals and steer-
+   Both our models (the language system and the language-        ing parameters are controlled by our language-driven move-
+driven movement) use an LLM for their decision-making.           ment (Section 3.6), the whole motion path is influenced by
+We provide them with the global state S containing a de-         the agent's state, its vision, and conversation.
+scription of the environment and the list of locations and
+possible goals (names and positions). To ensure that the         3.2 Overview
+LLM produces a reasonable and parsable output, we specify
+the format (Supplemental ??), its role (Supplemental ??), its    For every agent ai and at every t time steps in our anima-
+task (Supplemental ??), and provide a simple set of instruc-     tion (Figure 3), we first update ai location i and veloc-
+tions (Supplemental ??). We force the LLM to describe the        ity vi using a force-based steering algorithm (Section 3.3).
+image and analyze its output greatly improves its results, in-   We then update the agent perception pi by rendering the
+spired by the chain-of-thought technique (Wei et al. 2022).      image Ii from ai perspective and update their current dia-
+If the LLM does not produce a valid output (i.e., it does not    log by grouping the agents (Section 3.4) and use our dialog
+respect the format), we skip the frame. We note that this is     system (Section 3.5) to generate a conversation. With the
+an extremely rare event: less than 10 times in all our experi-   updated perception, we use our language-driven movement
+ments.                                                           (Section 3.6) to obtain the new movement parameters mi,
+                                                                 new state si, and update its history hi by appending the sum-
+3.1 Agent                                                        mary of the decision process. Note that since both the dia-
+                                                                 log system and the language-driven movement use an LLM,
+Every agent ai (Figure 2) has a fixed profile Pi containing      which is slow, we call them every k frames (we use k = 100
+its ID and personality (initialized with the MBTI type of per-   in our experiments).
+sonality (Myers 1962)), a list Fi = {fij, j = 1 . . . , m} of m
+friends (note that friendship is not necessarily symmetric), a   3.3 Steering
+state si (empty in the beginning), a location i, its perception
+of the world pi, movement parameters mi, and its history hi      To control the motion, we use the standard A algorithm
+storing the past k = 50 events (pair of time-stamp and four      and the string pulling algorithm to generate a series of way-
+possible updated actions: position, dialog, vision, and move-    points (Kallmann and Kapadia 2016). In the steering, we
+ment) chronologically sorted. When the memory is full, we        combine boid (Reynolds 1987) and PAM (Karamouzas et al.
+pop the oldest memory from the list.
+a0                            a0                      G0                Add dialog  a0                      Add state si
+                                                                                                            and image
+                                                      ai                event                            description to hi a0
+
+ai                    Update  ai          Dialog      .a..j     Dialog    to hi     ai                   Language-Driven                       ai
+     Steering l, v                                              System  Set dialog                            Movement      Update
+                                          Grouping                                                                         motion mi ...
+                   Update I                           G1                                                   Global State S
+...                           ...                                                                   ...                                        an
+                                                      ai        Global State S                             Time t
+            Vison                                     .a..j
+
+an                            an                                                                    an
+                                                                Time t
+
+Figure 3: Overview of how our system updates the different parts of an agent. We first steer it, then update its perception, and
+finally update its motion, history, and state.
+
+2009), which leads to a predictive force-based steering algo-   3.5 Dialog System
+rithm. Formally, for a timestep t and an agent ai with loca-
+tion ti and velocity vit, we define the following force         The dialog system takes a single group Gi of m agents that
+                                                                could participate in a conversation and decides who in the
+            fi = W i((ti - w)/it - w - vih),                    group wants to join the conversation, whether to generate a
+                                                                conversation, and the content of the conversation. We exploit
+with w the current waypoint and W = 1, PAM force cohe-          an LLM to generate natural dialog between different agents.
+                                                                We input to our dialog system (Figure 3, middle) the current
+sion force         fi = i            (ti - jt ),                time t, global state S, and every agent ak  Gi in the group.
+                                                                It outputs the dialog 3 between the agents in the group as an
+                              aj ni                             ordered list of pairs (agent id and dialog, see for instance 1),
+                                                                which we then use to update the perception of every agent
+alignment force                                                 involved in the conversation. Note that we also append the
+                                                                current dialog (and time) to the event's history hi.
+                      fi = i              vjt ,
+                                                                3.6 Language-Driven Movement
+                                   aj ni
+                                                                We build a language-driven movement planner (Figure 3,
+and separation force                                            left) that takes the agent ai, the current time t, and the global
+                                                                state S. With this input, it decides whether to change the
+            fi = i            (ti - jt )er/(ti-jt ),            agent's goal gi, update the motion parameters mi, or con-
+                                                                tinue in the current state. Since the decision might affect the
+                      aj Ni                                     agent's state, as it produces a new state si, it also summarizes
+                                                                the decision process, which we add to the agent's history hi.
+with r = 0.4 and Ni = {aj | ti - tj  r}. For every              Finally, the LLM also generates a short description of the
+obstacle, we compute its bounding box radius o and center       image Ii, which we also append to hi.
+
+o, and define an obstacle force                                                    4 Experiments
+
+            fio = Wo (it - o)/it - o,                           We test our method on two different scenarios where we
+                                                                show how agent movement is affected by the interaction and
+                      oO                                        dialogues between the agents. Our scenes contain multiple
+                                                                agents, while in the second, we focus on interesting inter-
+where O is the list of obstacles at distance less than o to it  agent interactions; we refer to the supplemental material for
+and Wo = 10. We then compute the total force                    the video, animation, conversation and decision logs. Exper-
+                                                                iments were run on a workstation with an NVIDIA 3090
+        Fi = min(fimax, fi + fi + fi + fi + fio),               GPU, Intel I9 CPU, on Ubuntu OS.
+
+use an explicit time integrator to compute the new velocity     4.1 Scene 1: University Club Fair
+
+            vit+1 = min(vimax, vit + tFi),                      In this setup, we simulate a university club fair, a social event
+                                                                where conversations naturally occur. The scene includes 50
+and update the location (which we append to the agent's his-    agents, each initialized with a randomly assigned MBTI per-
+                                                                sonality type from the 16 standard categories. Their initial
+tory)                                                           goals and starting positions are also randomized, with all
+                       it+1 = it + tvit+1,                      characters entering from one side of the fair. We separate
+                                                                agents from movable (30 agents) and club staff that do not
+where t is the timestep.
+
+3.4 Dialog Grouping
+
+Since not all agents might participate in the same conversa-
+tion, we collect all agents that are within 1.5 meters of each
+other. To avoid large, chaotic conversations, we limit the
+maximum number of agents in the conversation by a user-
+controlled parameter gmax. In our experiments, we found
+that a maximum group size of 6 covers all scenarios. This
+produces a list of groups Gi of agents that could participate
+in a conversation. Note that not all groups contain the same
+number of agents, and the number of groups varies during
+the animation.
+move (20 agents). Additionally, at the international center,       24: "Hey 34, heading to the music club. Want to join?"
+the agents can get free T-shirts, and only a few club staff (7     34: "Hi 24, I'm actually on my way to the caving club now."
+agents) are aware of it.                                           24: "Music club's nearby! We can check it out quickly."
+                                                                   34: "Tempting, but I promised to meet someone at caving club."
+   We run the simulation runs at 50 frames per second (FPS),       24: "Alright, let's catch up later then. Text me!"
+and use our method (Section 3) every 100 frames to generate        34: "Will do. Have fun at the music club!"
+dialogue and update the agent's movement parameters.
+                                                                   Conversation 3: Because of their personalities, a24 and a34,
+Grouping through Implicit Motion Parameters. Figure                decide to not walk together.
+4 illustrates the emergence of grouping behaviour. At frame
+199 (first figure), a36 is en route to the kayaking club, where    In this scenario, Agent 24 and Agent 34 are close friends located
+a22 is already present. By frame 384, a36 arrives and en-          near each other at a university club fair. Agent 24, an ENFJ,
+gages in a conversation with the club staff a2 and a22 (sec-       feels excited about being near the music club and having a friend
+ond figure). After Conversation 1, where a2 informs them           (Agent 34) nearby, which can amplify their outgoing social
+about free T-shirts at the international center, they begin        behaviour. Agent 34, an ISTJ, is generally more reserved and
+walking side by side (third figure), and by frame 1294, they       focused on reaching the caving club, their current goal.
+arrive at the international center (fourth figure). Their trajec-
+tory shows that they travel together the entire way.               Given their close proximity and established friendship, it's
+                                                                   highly probable they'd have a brief conversation. Social dynamics
+2: "Welcome to the kayaking club! Interested in joining?"          suggest Agent 24 might try to persuade Agent 34 to visit the
+36: "Yes, what's available here?"                                  music club together, leveraging their excitement and the social
+2: "We organize weekly kayaking trips. It's fun and social."       environment of the fair. However, because Agent 34 is an ISTJ and
+36: "Sounds great! Anything else happening today?"                 goal-oriented, they might not be easily swayed from their current
+2: "The international center is giving out free T-shirts."         objective. Instead, they might agree to meet up later after
+36: "Good to know, I'll visit after. Thanks!"                      visiting their respective clubs. Since both agents are currently
+22: "Let's check it out together after this."                      walking and clearly visible to each other, they'd likely pause
+                                                                   briefly for this interaction. This conversation will not change
+Conversation 1: From the suggestion of a2, a22 and a36             their immediate goals, but it reinforces their friendship and
+decide to visit the international center to get free T-shirts.     sets the stage for potential future activities together.
+
+   Following the conversation, our system made specific ad-            Conversation 4: LLM reasoning for Conversation 3.
+justments to the motion parameters for both agents a22 and
+a36. Both of their goals changed from kayak club to interna-          This shows that agents consider personality traits, en-
+tional center. Within a22 steering parameters, cohesion 22         abling natural, flexible grouping, and reason from both psy-
+increased from 0.0 to 1.0, and a36 was added to its cohesion       chological and physical perspectives.
+neighbours list 2n2. Similarly for a36, 36 increase from 0.0
+to 0.8, the alignment 22 increased from 0.0 to 0.7 (as a36         Emergent Gathering via Conversational Coupling. Fig-
+follows a22), and a22 was added to n36.                            ure 7 illustrates how conversational information passing
+                                                                   leads to emergent gathering behavior. At frame 354, agents
+   In the same scene, we observe (Conversation 2) a42 ask-         are evenly distributed across the space, while by frame 799,
+ing a group of three agents to join (Figure 5, left) and the       a noticeable gathering has formed at the international cen-
+subsequent formation of a group consisting of four agents          ter. The information about free T-shirt distribution is initially
+(Figure 5, right). This example demonstrates how conversa-         known only to a few staff agents. Without explicitly scripting
+tion can lead agents to synchronize their goals and walking        this knowledge for all agents, it propagates naturally through
+behaviour. It also indicates that agents are capable of inter-     dialogue (e.g., Conversation 1). Each agent individually ad-
+preting intent and updating motion parameters in a hierar-         justs its motion based on LLM reasoning, and conversational
+chical and context-aware manner, showing evidence of their         interactions socially couple their internal states. This im-
+understanding of motion dynamics.                                  plicit coordination enables synchronized, group-level move-
+                                                                   ment to emerge from local, language-driven interactions.
+26: "Hey, we're almost at the gardening club. What do you all
+          want to check out first?"                                4.2 Scene 2: Accident at Museum
+
+50: "I'm curious about the plant care tips they offer."            In this setup, we simulate an accident occurring in a mu-
+46: "I've heard they have unique species on display."              seum, where the painting "The Starry Night" falls from the
+42: "Mind if I join you? I was heading to the international        wall and becomes cracked. This event is introduced in the
+                                                                   environment prompt at frame 799. The scene allows us to
+          center, but this sounds fun."                            observe how agents respond to both a dynamic environment
+26: "Of course, the more the merrier!"                             and a specific, unexpected event.
+42: "Great, let's see if they have workshops too."
+50: "Absolutely, workshops would be interesting. Let's find out."     The simulation includes 30 agents, each initialized with a
+                                                                   randomly assigned a random individual art preference. Their
+Conversation 2: a42 joining the group of a26, a46, and a50.        initial goals and starting positions are also randomized, with
+                                                                   all agents entering through the museum's main entrance.
+   Leveraging LLMs as parameter controllers, our model
+regulates movement at a low level while implicitly captur-         Various Unscripted Reactions. This experiment reveals
+ing high-level behaviors like pairing and grouping, without        that our method can lead to a range of diverse, unscripted
+explicitly modeling collective dynamics.                           reactions to the accident event; many agents walk toward
+                                                                   the damaged painting, forming a visible flow (Figure 8 left).
+Soft Grouping. Not all conversations result in grouping
+(Conversation 3). As shown in Figure 6, we observe a case             Their behaviour can be explained by their dialog (Conver-
+where two friends (a24 and a34) meet while walking, have a         sation 5) and the movement planner.
+brief chat, but ultimately choose not to walk together toward
+the same goal. This outcome is also strongly influenced by         24: "Did you hear that crash? 'The Starry Night' fell!"
+the agents' personalities, as reflected in the reasoning pro-      28: "Yes, I did. It's concerning. We should check it out
+vided by the LLM (Conversation 4).
+                                                                             together."
+                                                                   24: "Absolutely. I hope it isn't damaged badly."
+                                                                   28: "Me too. Such a masterpiece deserves better protection."
+Frame 199   Frame 384                                               Frame 654   Frame 1294
+
+Figure 4: Example of how two characters meet, chat with an agent, take a collective decision, and walk to a new goal together.
+
+Frame 304   Frame 429                                               Frame 5164  Frame 5809
+
+Figure 5: Our system supports the natural formation and dy-         Figure 9: a2 looks at the accident and decides to report to
+namic evolution of larger agent groups. An agent asked to           staff (left) and navigate to the entrance to find a staff member
+join a spontaneously formed group of three.                         (right).
+
+Frame 329   Frame 559                                               24: "It's a shame if it suffered. Let's hurry and see."
+                                                                    28: "Agreed. After that, maybe explore more surreal pieces?"
+Figure 6: Two friends meet, but ultimately they decide not          24: "Sounds perfect. Let's go!"
+to walk together.
+                                                                    Conversation 5: a24 and a28, decide to walk towards the
+Frame 354   Frame 799                                               damaged painting.
+
+Figure 7: Because of the free T-shirts available at the inter-         In the lower image, a2, a20, a21 remain focused on their
+national center, the initial agents' distribution (left) naturally  current artworks and are not drawn to the chaos caused by
+converges into a crowd (right) by the end of the animation.         the fallen painting, as visible by Conversation 6.
+
+Frame 1199  Frame 1139                                              Having just arrived at 'Liberty Leading the People,' the
+                                                                    painting's bold colors and evocative scene capture your
+Figure 8: Example of various reactions to the museum paint-         attention, aligning with your preference for art that tells a
+ing falling accident. Left, the agents have conversations           story. Despite the earlier disturbance, there is no visible chaos
+while walking to the accident area. Right, the agents ignore        or urgent situation in the gallery area, suggesting the incident
+the accident chaos.                                                 has settled. With friends clustered nearby and given the absence
+                                                                    of immediate distress signals, there is no pressing need to leave
+                                                                    or change plans radically. However, curiosity and enthusiasm for
+                                                                    the gallery's offerings remain high, prompting the possibility of
+                                                                    exploring another vibrant piece. For now, you will maintain calm,
+                                                                    allowing time to absorb the painting, before potentially moving
+                                                                    to another artwork if friends decide to explore further.
+
+                                                                               Conversation 6: LLM reasoning for a20.
+
+                                                                       a2 decides to report the damage to the staff at the mu-
+                                                                    seum entrance after observing the fallen painting (Con-
+                                                                    versation 7) at frame 5164 (Figure 9 left); then navi-
+                                                                    gates towards the entrance (9 right); explained by Con-
+                                                                    versation 8. This event leads to an updated state of
+                                                                    a2 to Increased anxiety due to witnessing
+                                                                    the art accident which affects its decision-making
+                                                                    and can change in response to visual information.
+
+                                                                    In front of me is 'The Starry Night,' now damaged and shattered
+                                                                    on the floor. The vivid brushstrokes lie in disarray, a tragic
+                                                                    contrast to their usual swirling serenity. The scene is
+                                                                    startling, with friend ID 4 standing approximately 2 meters ahead
+                                                                    at 0 degrees, observing the damage. The fragmented colors create
+                                                                    a chaotic visual.
+
+                                                                              Conversation 7: Vison description from a2.
+
+                                                                    The sight of 'The Starry Night' shattered on the floor enhances
+                                                                    my mild anxiety. As someone who finds deep stories within
+                                                                    brushstrokes, the destruction of this iconic artwork is
+                                                                    unsettling. This emotional response, coupled with the presence of
+                                                                    friend ID 4, prompts a decision to change the destination. I aim
+                                                                    to discuss this incident with others and perhaps inform the
+                                                                    gallery staff, as lingering here won't alter the painting's
+                                                                    state. Thus, I'll adjust my destination towards the
+Frame 1444  Frame 1909                                             Frame 724   Frame 1199
+
+Frame 2079  Frame 2349                                             Frame 1484  Frame 2789
+
+Figure 10: Example of conversation changing agent's deci-          Figure 11: Emergent gathering and dispersal behaviour, be-
+sion for movement.                                                 fore falling frame 724 and after frames 1199, 1584 and 2789.
+
+'Entrance_Exit' to potentially report the issue. Maintaining my    the gathering gradually dissolves.
+current walking style allows me to focus on navigating through        These dynamics emerge naturally from agent interactions,
+the gallery without delay, given the urgency of the situation.
+                                                                   demonstrating our model's ability to produce environment-
+Conversation 8: Reasoning analysis of movement decision            sensitive behaviours without explicit scripting.
+for a2.
+                                                                            5 Conclusion and Future Work
+   These examples show our model produces diverse,
+context-aware behaviours in response to environmental              We introduced a novel LLM-guided navigation system for
+changes, enabling dynamic animation and scriptless narra-          multi-agent animation. Our model enables character inter-
+tive continuation.                                                 actions to emerge in a realistic and unscripted manner, al-
+                                                                   lowing for richer and more natural behaviours, such as gath-
+Language Influence on Movement Decisions Figure 10                 ering, coordination, and message propagation through phys-
+illustrates how a19 changes his destination as a result of a       ical proximity.
+conversation with other agents. At frame 1444, a19 is walk-
+ing toward the painting "The Starry Night". At frame 1909,            Our approach avoids scripting; each agent uses the LLM
+he encounters a10, a25, and a29. They tell a bad joke (Con-        for localized decision-making, allowing complex group be-
+versation 9) about the broken painting, which causes a19 to        haviours to emerge from decentralized interactions. Tested
+change his mind--deciding not to visit "The Starry Night",         in two scenarios, our system demonstrates how LLMs can
+but instead to join the others in heading toward "The Great        drive diverse, context-aware behaviours through motion-
+Wave off Kanagawa". As a result, we see that by frame 2079,        level control, enabling emergent dynamics in spatially
+they begin walking in that direction, and by frame 2349, they      grounded environments.
+are nearly there.
+                                                                      Our method uses standard navigation and steering, allow-
+10: "Did you hear that noise? 'The Starry Night' just fell!"       ing it to be a drop-in replacement in existing systems. This
+19: "I saw it too! Such a shame, but it's strangely captivating."  feature also comes with all the limitations of existing meth-
+25: "Absolutely, it adds a new layer to the chaos of abstract      ods. For instance, the navigation and steering might be con-
+                                                                   flicting, or the agent struggles to stop moving when close
+          art."                                                    (but not too close) to a goal. In the future, we plan to in-
+29: "Should we check out 'The Great Wave off Kanagawa' next?"      vestigate if using an LLM to model agents might enable a
+10: "Yes, let s go. It's nearby and fits our style."               more holistic agent's control and possibly sidestep some of
+19: "Agreed, and maybe we can discuss this incident along the      the problems.
+
+          way."                                                       Finally, as we use a distributed LLM API, our system is
+25: "Perfect, let's explore more vibrant artworks together!"       slow (around 5 seconds per query). It would be interesting
+                                                                   to investigate to usage of local (smaller) models, where the
+Conversation 9: Bad joke that change a19's mind at Frame           queries can be much faster.
+1994.
+                                                                                          References
+   Integrating conversation into a multi-agent animation sys-
+tem shapes movement and fosters behavioral diversity.              Adornetto, C.; Mora, A.; Hu, K.; Garcia, L. I.; Atchade-
+                                                                   Adelomou, P.; Greco, G.; Pastor, L. A. A.; and Larson,
+Emergence of Gathering and Dispersal. In Figure 11,                K. 2025. Generative Agents in Agent-Based Modeling:
+we can observe high-level crowd behaviours such as gath-           Overview, Validation, and Emerging Challenges. IEEE
+ering and dispersal around the fallen painting. At frame           Transactions on Artificial Intelligence.
+724, before the accident occurs, agents are naturally dis-
+tributed throughout the museum, while some engage with
+different artworks, and others explore. At frame 1199 we
+can see agenets walking towards the damaged painting. By
+frame 1484, several agents have gathered around the dam-
+aged painting to investigate what happened. At frame 2519,
+Altera.AL. 2024. Project Sid: Many-agent simulations to-         annual acm symposium on user interface software and tech-
+ward AI civilization. arXiv preprint arXiv:2411.00114.           nology, 1­22.
+
+Bougie, N.; and Watanabe, N. 2025. CitySim: Modeling Ur-         Pelechano, N.; Allbeck, J. M.; and Badler, N. I. 2008. Vir-
+ban Behaviors and City Dynamics with Large-Scale LLM-            tual Crowds: Methods, Simulation, and Control. Morgan &
+Driven Agent Simulation. arXiv preprint arXiv:2506.21805.        Claypool Publishers.
+
+Gao, C.; Lan, X.; Li, N.; Yuan, Y.; Ding, J.; Zhou, Z.; Xu, F.;  Reynolds, C. W. 1987. Flocks, herds and schools: A dis-
+and Li, Y. 2024. Large language models empowered agent-          tributed behavioral model. In Proceedings of the 14th an-
+based modeling and simulation: A survey and perspectives.        nual conference on Computer graphics and interactive tech-
+Humanities and Social Sciences Communications, 11(1): 1­         niques, SIGGRAPH '87, 25­34. New York, NY, USA: As-
+24.                                                              sociation for Computing Machinery. ISBN 978-0-89791-
+                                                                 227-3.
+Helbing, D.; and Molnar, P. 1995. Social force model for
+pedestrian dynamics.                                             Shoulson, A.; Gilbert, M. L.; Kapadia, M.; and Badler, N. I.
+                                                                 2013. An event-centric planning approach for dynamic real-
+Ji, X.; Pan, Z.; Gao, X.; and Pan, J. 2024. Text-Guided Syn-     time narrative. In Proceedings of Motion on Games, 121­
+thesis of Crowd Animation. In ACM SIGGRAPH 2024 Con-             130.
+ference Papers, SIGGRAPH '24. New York, NY, USA: As-
+sociation for Computing Machinery. ISBN 9798400705250.           Thalmann, D.; and Musse, S. R. 2013. Crowd Simulation,
+                                                                 Second Edition. Springer. ISBN 978-1-4471-4449-6.
+Kallmann, M.; and Kapadia, M. 2016. Geometric and dis-
+crete path planning for interactive virtual worlds. Morgan       Van Den Berg, J.; Guy, S. J.; Lin, M.; and Manocha, D.
+& Claypool Publishers. ISBN 9781627057561.                       2011. Reciprocal n-body collision avoidance. In Robotics
+                                                                 Research: The 14th International Symposium ISRR, 3­19.
+Kapadia, M.; Falk, J.; Zu¨nd, F.; Marti, M.; Sumner, R. W.;      Springer.
+and Gross, M. 2015. Computer-assisted authoring of inter-
+active narratives. In Proceedings of the 19th Symposium on       Van den Berg, J.; Lin, M.; and Manocha, D. 2008. Recipro-
+Interactive 3D Graphics and Games, 85­92.                        cal velocity obstacles for real-time multi-agent navigation.
+                                                                 In 2008 IEEE international conference on robotics and au-
+Kapadia, M.; Frey, S.; Shoulson, A.; Sumner, R. W.; and          tomation, 1928­1935. Ieee.
+Gross, M. H. 2016. CANVAS: computer-assisted narrative
+animation synthesis. In Symposium on computer animation,         Van Toll, W.; and Pettre´, J. 2021. Algorithms for micro-
+199­209.                                                         scopic crowd simulation: Advancements in the 2010s. In
+                                                                 Computer Graphics Forum, volume 40, 731­754. Wiley On-
+Karamouzas, I.; Heil, P.; van Beek, P.; and Overmars, M. H.      line Library.
+2009. A Predictive Collision Avoidance Model for Pedes-
+trian Simulation. In Egges, A.; Geraerts, R.; and Overmars,      Wei, J.; Wang, X.; Schuurmans, D.; Bosma, M.; Ichter, B.;
+M., eds., Motion in Games, Lecture Notes in Computer Sci-        Xia, F.; Chi, E. H.; Le, Q. V.; and Zhou, D. 2022. Chain-of-
+ence, 41­52. Berlin, Heidelberg: Springer. ISBN 978-3-642-       thought prompting elicits reasoning in large language mod-
+10347-6.                                                         els. NIPS '22. Red Hook, NY, USA: Curran Associates Inc.
+                                                                 ISBN 9781713871088.
+Karamouzas, I.; Skinner, B.; and Guy, S. J. 2014. Univer-
+sal power law governing pedestrian interactions. Physical        Yan, Y.; Zeng, Q.; Zheng, Z.; Yuan, J.; Feng, J.; Zhang, J.;
+review letters, 113(23): 238701.                                 Xu, F.; and Li, Y. 2024. Opencity: A scalable platform to
+                                                                 simulate urban activities with massive llm agents. arXiv
+Larooij, M.; and To¨rnberg, P. 2025. Do large language           preprint arXiv:2410.21286.
+models solve the problems of agent-based modeling? a crit-
+ical review of generative social simulations. arXiv preprint     Zhang, X.; Schaumann, D.; Haworth, B.; Faloutsos, P.; and
+arXiv:2504.03274.                                                Kapadia, M. 2019. Multi-constrained authoring of occupant
+                                                                 behavior narratives in architectural design. In Proceedings
+Lemonari, M.; Blanco, R.; Charalambous, P.; Pelechano, N.;       of the Symposium on Simulation for Architecture and Urban
+Avraamides, M.; Pettre´, J.; and Chrysanthou, Y. 2022. Au-       Design, 1­8.
+thoring Virtual Crowds: A Survey. In Computer Graphics
+Forum, volume 41, 677­701. Wiley Online Library.
+
+Martinez-Gil, F.; Lozano, M.; Garc´ia-Ferna´ndez, I.; and
+Ferna´ndez, F. 2017. Modeling, evaluation, and scale on arti-
+ficial pedestrians: a literature review. ACM Computing Sur-
+veys (CSUR), 50(5): 72.
+
+Myers, I. B. 1962. The Myers-Briggs Type Indicator: Man-
+ual. Consulting Psychologists Press.
+
+Panayiotou, A.; Charalambous, P.; and Karamouzas, I. 2025.
+Gen-C: Populating Virtual Worlds with Generative Crowds.
+arXiv preprint arXiv:2504.01924.
+
+Park, J. S.; O'Brien, J.; Cai, C. J.; Morris, M. R.; Liang, P.;
+and Bernstein, M. S. 2023. Generative agents: Interactive
+simulacra of human behavior. In Proceedings of the 36th
+

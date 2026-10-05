@@ -1,0 +1,1333 @@
+                                         SenseWalk: Agent-Based Semantic Trajectory Simulation
+                                       Powered by Large Language Models in Zoned Environments
+
+arXiv:2607.00989v1 [cs.HC] 1 Jul 2026                            Ziyue Lin                                                                                Xinhang Xie
+
+                                                               ziyuelin917@gmail.com                                                          School of Data Science, Fudan University
+                                                     School of Data Science, Fudan University                                                                 Shanghai, China
+
+                                                                    Shanghai, China                                                                      Siming Chen
+
+                                                               Kangyi Wang                                                                             simingchen@fudan.edu.cn
+                                                                                                                                              School of Data Science, Fudan University
+                                                     School of Data Science, Fudan University
+                                                                    Shanghai, China                                                                          Shanghai, China
+
+                                       Abstract                                                                                       (Conference acronym 'XX). ACM, New York, NY, USA, 18 pages. https:
+                                                                                                                                      //doi.org/XXXXXXX.XXXXXXX
+                                       Semantic trajectory analysis has recently emerged as an approach
+                                       for modeling human movement by capturing implicit patterns and                                 1 Introduction
+                                       behaviors through semantic information (e.g., visitors' profiles and
+                                       goals) beyond raw spatial paths to better understand why people move                           Imagine a museum professional seeking to understand how different
+                                       in certain ways. However, analyzing semantic trajectories in real-                             types of visitors navigate and engage with exhibitions. For instance,
+                                       world scenarios remains challenging, as collecting high-quality data is                        a first-time tourist may follow on-site signage and focus primarily
+                                       costly and often lacks rich semantic information. Meanwhile, existing                          on iconic artworks, whereas a local art student who frequently
+                                       simulation tools require substantial technical expertise, which makes                          visits might adopt a self-directed route, selectively revisiting favored
+                                       them difficult for practitioners to adopt. To address these limitations,                       sections. Analyzing these distinct patterns holds substantial promise
+                                       the paper proposes  , an interactive system that supports                                      for personalized route recommendation [3, 11], adaptive exhibition
+                                       simulating semantic trajectories by LLM-powered agents. We develop                             design [65], and nuanced engagement evaluation [42], which are
+                                       a simulation workflow that combines LLMs and the social force                                  increasingly important for cultural institutions and public venues [3,
+                                       model to balance physical plausibility and semantic coherence. A                               17, 23, 64].
+                                       user-friendly interface is designed to facilitate users in customizing
+                                       the simulation configuration and analyzing simulation outputs. We                                 Focusing solely on raw spatial paths or aggregate footfall sta-
+                                       also conduct a quantitative experiment to evaluate the effectiveness                           tistics is insufficient to explain visitors' movement. Although the
+                                       of our simulation workflow, and a user study (n=12) to assess the                              two visitors may traverse overlapping areas, their engagement un-
+                                       usefulness and efficiency of our system.                                                       folds differently. To capture these evolving patterns, prior work
+                                                                                                                                      introduced the concept of semantic trajectories [38, 59, 60], which
+                                       CCS Concepts                                                                                   augment spatial and temporal coordinates with semantic annotations
+                                                                                                                                      describing the trajectory in its entirety. Semantic annotations are not
+                                       · Human-centered computing  Interactive systems and tools.                                     limited but can be broadly categorized into two main types: behav-
+                                                                                                                                      iors and goals [23, 35]. Behavior annotations reflect the actuality
+                                       Keywords                                                                                       of movement (e.g., wandering around an exhibition), whereas goal
+                                                                                                                                      annotations indicate the potentiality of movement (e.g., aiming to
+                                       semantic trajectory, LLM-powered agent, interactive system                                     visit the Mona Lisa), even if the goal is not ultimately achieved.
+
+                                       ACM Reference Format:                                                                             However, collecting semantic trajectory data is operationally de-
+                                       Ziyue Lin, Xinhang Xie, Kangyi Wang, and Siming Chen. 2018. Sense-                             manding. First, high-quality spatiotemporal tracking often requires
+                                       Walk: Agent-Based Semantic Trajectory Simulation Powered by Large                              costly and complex sensing infrastructure (e.g., sensors, wearables,
+                                       Language Models in Zoned Environments. In Proceedings of Make sure                             or multi-camera systems) and still suffers from noise and cover-
+                                       to enter the correct conference title from your rights confirmation email                      age gaps [16, 43]. Second, semantics can not be directly observed.
+                                                                                                                                      Enriching raw trajectories into semantic representations typically
+                                       Siming Chen is the corresponding author.                                                       relies on post-hoc annotation techniques, which require additional
+                                                                                                                                      contextual sources and domain expertise [25, 57]. Third, visitor pro-
+                                       Permission to make digital or hard copies of all or part of this work for personal or          files that associate with trajectories are difficult to obtain. Attributes
+                                       classroom use is granted without fee provided that copies are not made or distributed          such as age, interests, or time budget are rarely available at scale,
+                                       for profit or commercial advantage and that copies bear this notice and the full citation      and collecting them often relies on intrusive surveys, which raises
+                                       on the first page. Copyrights for components of this work owned by others than the             privacy and consent concerns. Finally, many real-world settings face
+                                       author(s) must be honored. Abstracting with credit is permitted. To copy otherwise, or         a cold-start scenario with little or no historical visitor trajectory
+                                       republish, to post on servers or to redistribute to lists, requires prior specific permission  data. For instance, when a new exhibition is launched, prior visitor
+                                       and/or a fee. Request permissions from permissions@acm.org.                                    trajectories are unavailable, yet route guidance must still be made.
+                                       Conference acronym 'XX, Woodstock, NY
+                                       © 2018 Copyright held by the owner/author(s). Publication rights licensed to ACM.
+                                       ACM ISBN 978-1-4503-XXXX-X/2018/06
+                                       https://doi.org/XXXXXXX.XXXXXXX
+Conference acronym 'XX, June 03­05, 2018, Woodstock, NY                                                                                                                        Trovato et al.
+
+   Motivated by the limitations, we aim to develop a simulation tool                   2.1 Semantic Trajectory Modeling and Analysis
+for trajectory-aware practitioners who make decisions based on visitor
+movements to generate semantic trajectories tailored to their needs.                   Motivated by the need to move beyond raw movement points to-
+Our work focuses on zoned environments [41, 55] (e.g., museum,                         ward interpretable representations, the semantic trajectory has been
+exhibition, and shopping mall), which are spatially bounded areas                      extensively studied in the mobility communities [12­14]. The tra-
+intentionally divided into semantically distinct zones. There are three                jectory is identified by two specific spatio-temporal positions of the
+major challenges to overcome. First, simulating semantic trajectories                  movement track [49]. Semantic trajectory enriches these coordinates
+requires balancing physical plausibility and semantic coherence.                       with contextual annotations to enhance the analysis of movement
+Simulations must respect spatial constraints, such as accessibility                    data and facilitate the discovery of semantically implicit behavior
+and movement costs, while also reflecting visitors' characteristics and                patterns [1, 38]. A promising enrichment approach is to leverage
+the semantic logic of the visit. Second, enabling effective and flexible               ontologies and linked data to semantically connect trajectory patterns
+authoring remains challenging, as many target users lack technical                     with broader behavioral and contextual knowledge [3]. Semantic
+or modeling expertise. During practitioners' analytic workflow, they                   trajectory analysis has broad practical applications. For example,
+need to repeatedly adjust assumptions and explore alternative scenar-                  Kontarinis et al. [23] incorporate semantic information to support
+ios to converge on desired outcomes. Existing commercial tools like                    personalized route recommendations, enhancing visitor experiences
+Anylogic1 and PTV Viswalk2 primarily entail a steep learning curve,                    in museums. RetailOpt [61] tracks customer motion data and pur-
+requiring familiarity with parameter calibration and engineering                       chase records in indoor retail environments for customer behavior
+workflows. The complexity limits the practical usability of such tools                 analysis and in-store navigation.
+in real-world applications. Third, interpreting generated trajectories
+is nontrivial. In practice, practitioners need to understand not only                     Due to data shortage and privacy restrictions, researchers have
+where visitors move, but also why specific decisions occur, such                       focused on trajectory simulation methods, which can be categorized
+as visiting or skipping particular zones, to build trust and translate                 into rule-based [31] and data-driven [45, 64]. Rule-based models
+simulation outputs into actionable insights.                                           encode the walking trajectories through predetermined mechanisms,
+                                                                                       such as mathematical equations [54] or cellular automata [47]. Data-
+   To address the challenges, we present  , an interactive                             driven simulation models use deep neural networks to generate
+system for simulating semantic trajectories with LLM-powered                           trajectories by learning from the training data [7, 9, 63]. However,
+agents. To build the simulation workflow of agents, we integrate the                   existing methods struggle to capture the deeper semantic logic
+social force model [36] to enforce physical plausibility with the LLMs'                underlying movement, resulting in annotations that label where
+language understanding to translate high-level semantic constraints.                   movement occurs but offer limited understanding of why it occurs.
+The system enables practitioners to customize environment maps                         We utilize LLMs to serve as a semantic annotation engine that bridges
+and agent profiles for alternative scenario exploration and to analyze                 low-level trajectories and high-level interpretations. The context-
+the trajectories through intuitive interaction design. We visualize                    awareness enables it to align annotations with contextual inputs,
+the simulated semantic trajectories, including geographical positions                  such as zone descriptions, visitor profiles, temporal constraints, and
+and semantic annotations. We also support practitioners chatting                       environmental semantics. LLMs can also provide flexibility beyond
+with agents to give them instructions and to access their internal                     predefined rule-based annotation types and dynamically adapt the
+reasoning, which enables users to understand why agents make certain                   granularity to suit diverse practitioner needs.
+decisions. We conduct an experiment to assess the effectiveness of
+our simulation workflow and a user study to verify the usefulness                      2.2 LLM-Based Agent Simulation
+and efficiency of our system. In summary, our contributions include:
+· A simulation workflow for semantic trajectories that combines                        LLM-based agents have recently emerged as a practical paradigm
+                                                                                       for modeling human-like behavior [52]. Generative Agents [39]
+  LLMs and social force models to balance physical plausibility and                    demonstrated an LLM-centered architecture that combines memory,
+  semantic coherence.                                                                  planning, and reflection to produce believable daily routines and so-
+· A user-friendly and intuitive interactive system that lowers the                     cial interactions. Sensible Agent [24] and InterQuest [34] studied the
+  barrier to support authoring alternative scenarios and analyzing                     agent's autonomy to model user intents proactively. SketchGPT [20]
+  trajectories.                                                                        extends agents' perceptual capabilities by enabling them to inter-
+· A quantitative experiment to evaluate the effectiveness of the                       pret not only textual input but also sketches and speech, supporting
+  simulation workflow and a user study to verify the usefulness and                    richer multimodal interaction. Given the exceptional reasoning and
+  efficiency of our system.                                                            planning capabilities of LLMs, multi-agent collaboration systems,
+                                                                                       in which multiple autonomous agents coordinate their actions to
+2 Related Work                                                                         achieve shared goals, have been developed in various domains [26].
+                                                                                       PosterMate [48] supported a collaboration mechanism among agents
+We discuss related studies, including semantic trajectory modeling                     with diverse capabilities to assist poster design. MetaGPT [18] as-
+and analysis, LLM-based agent simulation, and agent-based modeling                     signed diverse roles and communication rules to various agents for
+and simulation for decision-making.                                                    automatic programming tasks. StorySage [50] utilized a multi-agent
+                                                                                       framework for autobiography writing of diverse users.
+1 https://www.anylogic.com/
+2 https://www.ptvgroup.com/en/products/pedestrian- simulation- software- ptv- viswalk     Human mobility modeling has also been a promising direction of
+                                                                                       LLM-based agents, which shift from purely text generation toward
+                                                                                       geographic synthesis [15]. GATSim [29] and OpenCity [56] utilized
+SenseWalk: Agent-Based Semantic Trajectory Simulation Powered by Large Language Models in Zoned EnvironmentCsonference acronym 'XX, June 03­05, 2018, Woodstock, NY
+
+language understanding capabilities of LLMs to simulate urban             3 Preliminary Study
+mobility based on diverse agent profiles, lifestyles, and preferences.
+Wang et al. [51] proposed a LLM-agent framework that accounts             To figure out the design requirements of our interactive system, we
+for individual activity motivations for personal mobility generation.     conducted semi-structured interviews with practitioners to obtain
+PuppetLine [53] decomposed text input into trajectories and emotions      valuable insights.
+by leveraging a library of action primitives primitives. Although
+LLMs excel at generating contextually plausible movement decisions,       3.1 Participants and Procedure
+they often exhibit limited sensitivity to spatial constraints, such as
+connectivity, accessibility, and movement costs. Ju et al. [21] combine   We recruited 7 participants (4 males, 3 females) who are our system's
+LLMs with physical models for location mapping to generate coherent       target users, with ages ranging from 26 to 41 years old ( =
+human mobility; however, the approach does not explicitly model fine-     32.86,  = 5.58). Participants comprised a diverse group of
+grained pedestrian dynamics under continuous spatial constraints. To      trajectory-aware practitioners working in zoned environments, such
+bridge the gap, our paper introduces a hybrid algorithm to integrate      as museums, expos, and similar settings. They all had substan-
+LLMs and the social force model that enforces physically plausible        tial professional experience and were deeply familiar with trajec-
+motion and collision-free navigation.                                     tory analysis and operational decision-making. Their analysis goals
+                                                                          are practice-driven, including route recommendation, engagement
+2.3 ABMS for Decision Making                                              evaluation, layout optimization, visitor guidance, and promotion
+                                                                          placement. Meanwhile, most participants reported low to moderate
+Agent-based modeling and simulation (ABMS) [33] served as a core          familiarity with simulation tools, indicating that even highly experi-
+methodology for human behavior research and provides decision             enced professionals may still face barriers when adopting existing
+support for scenarios that are difficult to test in the real world [46].  simulation-based approaches. Detailed demographic information is
+ABMS models complex systems composed of autonomous agents                 shown in Table 1.
+whose local rules produce emergent collective behavior [32], which
+has been applied across diverse domains, including finance [4], pan-         We obtained informed consent from participants to record the
+demic [37], and sociology [6]. It has further been adopted to simulate    interviews. Each interview lasted approximately 45-60 minutes. First,
+trajectories in structured environments. Rahbar et al. [44] applied       we interviewed participants about their current practices in analyzing
+ABMS to generate human trajectories to facilitate architectural layout    trajectory data, including their typical analytical workflows, the per-
+designs. Gabilondo et al. [10] synthesized mobility data to model         ceived importance of trajectory analysis for decision making, and the
+non-residential demand in Tokyo's commercial streets.                     key challenges they encounter. Next, we asked about their experiences
+                                                                          with and opinions on existing simulation tools. After introducing
+   Human-AI interactions engaged with simulations provide a human-        our preliminary idea of an LLM-powered agent simulation system,
+in-the-loop way to shape and interpret simulated behavior, allowing       we invited participants to share their expectations and suggestions
+users to iteratively explore scenarios and test assumptions while         for such a system. Insights from these stages informed the design
+observing how outcomes unfold [28]. Commercial platforms such as          requirements.
+NetLogo3 and Swarm4 enable researchers to specify behavioral rules
+and dynamically adjust parameters to observe emergent collective          3.2 Findings
+phenomena. However, these systems typically require programming
+expertise and explicit rule specification, resulting in steep learning    We summarize four key findings (F1-F4) from the interview.
+curves and limiting their accessibility and applicability across diverse     F1: Challenges of obtaining real data. Participants agreed that
+real-world scenarios. LLMs have broadened ABMS by enabling
+more natural human­AI interaction and lowering barriers for non-          acquiring real-world trajectory data is costly and often impractical.
+experts to communicate with simulations via natural language [2, 62].     Collecting high-quality traces and visitors' profiles typically requires
+DialogLab [19] supported authoring and simulating interactively           substantial sensing infrastructure and demanding data preprocessing,
+multi-party dialogues. Social Simulacra [40] and SimSpark [27]            while semantic information, such as visitors' goals, is even harder
+provide prototypes for generating social media behaviors according        to capture directly. P4 noted "Collecting this kind of data at scale
+to users' designs. Kim et al. [22] simulate a deliberative agent that     requires too much coordination and time. We sometimes collect
+induces socio-cognitive conflict and communicates with human users        visitor information through questionnaires, but the data quality is
+to foster democratic skills. Inspired by existing work, our interactive   often low, and the sample size is limited." P3 explained "We can
+system aims to provide a user-friendly platform for trajectory-aware      know where visitors go, but it is much harder to know why they make
+practitioners. Users are allowed to simulate semantic trajectories by     those choices." In addition, privacy and ethical concerns further
+intuitive interactions and natural language, reducing the learning        restrict access to fine-grained data, especially in public venues.
+curve.
+                                                                             F2: Complexities of Zoned Environments. Zoned environments
+3 https://www.netlogo.org/                                                are often characterized by spatial concentration, with multiple func-
+4 http://www.santafe.edu/projects/swarm/                                  tionally distinct zones densely arranged within a confined space,
+                                                                          such as expos and museums. P1 and P6 agreed that many different
+                                                                          zones are packed into a relatively limited space. These zones differ
+                                                                          in a variety of attributes, including spatial properties (e.g., position,
+                                                                          size, and accessibility) and semantic properties (e.g., theme and func-
+                                                                          tion). Such heterogeneity further shapes visitors' decision-making,
+                                                                          as movement is influenced not only by spatial proximity but also by
+                                                                          the distinct characteristics of each zone. Zoned environments also
+ Conference acronym 'XX, June 03­05, 2018, Woodstock, NY                                                                             Trovato et al.
+
+ exhibit temporal dynamics. P4 noted "When a product-introduction           Temporal      Semantic        Spatial      Event         Agent
+ talk or lucky draw starts, people suddenly gather there."                     timeframe                  position
+                                                                                             theme                                                     age
+    F3: High Barrier to Simulation Tools. Existing simulation tools                          description  position            Demo                     job
+ present a high barrier to adoption in practice. First, these systems                                     size                                         gender
+
+ with complex interfaces often require substantial technical expertise                       type         rotation     RoI                             characteristics
+ and sometimes programming skills. P2 explained "It takes a great                            theme        access
+ deal of time to learn how to use these tools properly, which can                            description  start point                                  goal
+ reduce our efficiency in everyday work." Second, users must abstract                                     end point                                    preference
+ real-world environments into model parameters, which is difficult,                                                    Wall   Visit                    timeframe
+ especially for users without modeling backgrounds. P6 said "It is                                                                                     start point
+ hard to decide what values to use when we need to turn things like         ( a ) Environment Map
+ shop popularity or activity influence into numbers for the model"                                                                         ( b ) Agent Profile
+
+    F4: Contextualized Trajectory Interpretation. Interpreting tra-         Figure 1: The simulation configuration includes (a) Environment
+ jectories requires understanding the contextual factors that shape         Map and (b) Agent Profile.
+ visitors' decisions. Trajectories are often more informative when
+ interpreted alongside contextual information, such as visitor profiles,    walls, regions of interest (RoIs), and events. Walls specify the physi-
+ goals, reasoning processes, and the semantic characteristics of dif-       cal boundaries of the environment. Each wall is represented as a line
+ ferent zones. P5 emphasized "A path alone does not tell us much            segment defined by two endpoints, which constrain walkable space
+ unless we also know who the visitor is and what they are trying to do."    and shape agents' movement paths. RoIs represent functional zones
+ However, P5 also pointed out the practical limitation, stating that "In    associated with specific semantic meanings. For example, in an expo
+ real settings, it is very hard to know these details at scale, especially  setting, RoIs may correspond to brand booths or a service center.
+ people's goals or motivations." A similar concern was echoed by P2         Each RoI is defined by spatial attributes, including its position, size,
+"We may observe where visitors go, but it is much harder to capture         rotation, and access (entrance sides), as well as semantic attributes
+ why they make certain choices, or how they perceive different zones."      such as theme, type, and detailed description. Events introduce tem-
+                                                                            poral dynamics into the environment. Each event is associated with a
+3.3 Design Requirements                                                     spatial location and a temporal timeframe. It also includes semantic
+                                                                            information: the theme and description.
+ After interviewing our target users and conducting literature reviews,
+ we specified three design requirements:                                    4.1.2 Agent Profile. Users can customize agents' profiles that char-
+                                                                            acterize each simulated visitor in the environment. It includes basic
+    D1: Generate Plausible Semantic Trajectory. The system should           demographic information, such as age, gender, job, and personal
+ generate semantic trajectories that are both physically feasible and       characteristics. The profile also specifies behavioral attributes, in-
+ semantically coherent, thereby serving as a substitute for real-world      cluding the agent's visit goals and preferences, which influence
+ data to facilitate more informed decision making (F1).                     decision-making and movement patterns. In addition, each agent is
+                                                                            associated with temporal attributes, namely the timeframe of their
+    D2: Support Scenario Authoring. The system should facilitate            visit, as well as an initial spatial location that determines where the
+ scenario authoring by enabling users to configure and modify simu-         agent enters the environment.
+ lation workflows without requiring extensive technical or modeling
+ expertise (F3). It should further specify fine-grained configuration       4.2 Agent Architecture
+ of scenario settings that closely reflect real-world contexts (F2).
+                                                                            Agent architecture is powered by LLMs to generate semantic tra-
+    D3: Facilitate Trajectory Analysis. The system should support           jectories, including geographic positions and semantic annotations,
+ effective analysis of generated trajectories by enabling users to          based on simulation configuration (D1). It refers to the integrated
+ inspect movement patterns. It should also help users understand the        decision-making mechanism that enables agents to interpret their
+ underlying reasons for these trajectories so that simulation results       simulated environment. As illustrated in Figure 2, it is composed of
+ can inform planning and operational decisions (F4).                        five coordinated modules.
+
+4 Simulation Workflow                                                          First, the agents will formulate a visit long-term plan for simu-
+                                                                            lating how people form intentions in advance in real-world settings.
+ In this section, we propose the simulation workflow of semantic            For example, in an expo, a procurement buyer may typically make
+ trajectories, involving simulation configuration and agent architecture.   clear plans based on their purchasing needs, while a general visitor
+ The configuration defines the simulation scenario settings, whereas        may instead plan a more exploratory route. The module leverages
+ the architecture determines how agents act within that setup (D1).         simulation configuration: map and profile as input. In addition, users
+                                                                            can provide explicit textual instructions to agents through the sys-
+4.1 Simulation Configuration                                                tem. We convert all inputs into a JSON format and utilize LLMs to
+                                                                            generate a structured sequence of planned destinations, where each
+ Simulation configuration refers to the simulation workflow inputs          item specifies which zone (RoI or event) the agent intends to visit,
+ tailored to the user's analysis requirements (D2). The configuration       why it is selected, and when it is scheduled. For each destination, an
+ consists of two parts, environment maps and agent profiles (fig. 1).       interest score is computed to represent how attractive the zone is,
+                                                                            which is estimated by LLMs and scaled to the range of 0 to 1.
+ 4.1.1 Environment Map. Our preliminary study revealed that the
+ environments in the target application scenarios are inherently com-
+ plex (F2). We model the environment map by three components:
+SenseWalk: Agent-Based Semantic Trajectory Simulation Powered by Large Language Models in Zoned EnvironmentCsonference acronym 'XX, June 03­05, 2018, Woodstock, NY
+
+The trajectory is not solely determined by pre-defined plans, but        Input                                   Output
+                                                                              map
+is continuously influenced by nearby zones. We introduce the short-                                              stay
+
+term perceive module to enable agents to sense their surroundings                  profile   instruction         destination (1))
+
+within a fixed spatial range periodically. For each nearby zone, an                                              stay
+
+interest score is also computed. If the score exceeds a predefined        LLM                memory system       destination (21)
+
+threshold, it will be recorded in the memory system.                      short-term                    walking        ······
+                                                                            perceive                     engine
+We maintain a memory system for each agent to dynamically                                                        stay
+                                                                          LLM                     LLM
+record its plans, perceptions, and visited zones. Every time the                                                 ddeesstitninaatitoionn(t(-11))
+                                                                          long-term 
+             reason
+memory system is updated, the agent will begin to reason about the            plan                                 walk
+                                                                                                                 stay
+next destination. For each zone (planned or percevied) in the memory     Agent Architecture
+                                                                                                                  destination (t)
+system, we compute a score based on both distance and interest level.
+
+The distance represents the spatial cost for an agent to reach a given
+
+zone and is normalized. These two factors are then weighted and
+
+contrasted. The highest-scoring unvisited zone is selected as the        Figure 2: The simulation workflow. Input consists of three parts:
+                                                                         environment map, agent profiles, and user instructions. The
+current destination. When the agent reaches a destination, LLMs will     agent architecture integrates multiple coordinated modules to
+                                                                         generate geographic positions and semantic annotations as output
+be used to determine the duration of stay.                               semantic trajectories.
+
+We develop a walking engine to simulate agents' certain move-
+
+ment. While LLMs excel at generating semantically plausible de-
+
+cisions, they lack sensitivity to spatial constraints and often fail to
+
+account for factors such as collision avoidance. Therefore, we adopt
+
+the social force model [36] to guarantee physical realism. The social    interpret the outcomes. It consists of four views: MapSidebar, Ma-
+                                                                         pEditor, Timeline, and AgentSidebar (Figure 3). The interface is
+force model simulates pedestrian movement by a combination of            implemented in TypeScript. To better illustrate the detailed opera-
+                                                                         tions, we follow Amanda, a client manager at the International Import
+virtual forces. We use the following equation to compute agent           Expo (IIE), observing how she leverages our system to support her
+                                                                         decision-making in practice. The IIE is an international trade fair that
+motions:                                                                 brings together global exhibitors and buyers across diverse indus-
+                                                                         tries, featuring numerous themed zones within a highly structured
+                     ì = ì0 + ìwall,                  (1)                environment. Amanda is responsible for supporting clients, includ-
+                                                                         ing procurement buyers and business partners, by recommending
+                                                                         relevant booths, coordinating visit schedules, and navigating tour
+                                                                         routes to optimize engagement and efficiency. Given the large scale
+where ì represents the acceleration of agents, the driving force ì0      of the expo, we focus on the consumer goods exhibition area as a
+                                                                         representative example.
+
+directs the agent toward its intended destination, and the repulsive     5.1 Authoring Stage
+
+force ìwall reflects the repulsive force from walls and inaccessible     First, the timeframe of the expo should be specified to define the
+                                                                         simulation period at the upper-left corner of Timeline (Figure 3C).
+                                                                         Next, Amanda needs to configure the environment map in the system
+                                                                         based on the real exhibition map, involving three components: wall,
+side of RoI is orthogonal to the wall. When agents start to walk,        RoI, and event. By clicking the button in MapSidebar (Figure 3A),
+                                                                         a corresponding component can be created, which is simultaneously
+they are guided by a driving force that pulls them toward their          visualized in MapEditor (Figure 3C). For each wall, its start and
+                                                                         end coordinates (1,1) and (2,2) can be configured either by
+current destination. In addition, when the agent approaches a wall       entering exact values in MapSidebar or by directly dragging the
+                                                                         two endpoints of the line segment in MapEditor. Coordinates are
+or an inaccessible side of RoI within a certain threshold distance, it   displayed on mouse hover in MapEditor. For each RoI, Amanda can
+                                                                         specify spatial attributes, including position ( , ), width ( ), height
+experiences a repulsive force from the wall, which pushes it away to     ( ), and rotation () in MapSidebar. In this case, RoIs represent
+                                                                         exhibition booths and public service areas, etc. The position and size
+prevent collisions.                                                      can be adjusted directly in MapEditor through dragging and resizing.
+                                                                         Clicking the four sides of icon toggles accessibility, where yellow
+4.3 Workflow Overview                                                    indicates inaccessible and gray indicates accessible. Each ROI can
+                                                                         be assigned a type (e.g., sports, fashion), which can be selected from
+After users configure the map and agent profiles, the workflow first     existing categories or newly defined by the user. The input field of
+generates a long-term plan consisting of a sequence of destinations      theme and detailed description will appear after clicking and
+for each agent. The agent then starts walking toward the first destina-
+tion by walking engine. During movement, it periodically perceives
+its surroundings and reasons whether to adjust its destination as
+needed. Upon arrival, the agent reasons its stay time before pro-
+ceeding to the next destination. The process repeats throughout the
+simulation. Meanwhile, the memory system is continuously updated
+to record the agent's behaviors and reasoning process. The final
+semantic trajectory output includes both the geographic positions
+and semantic annotations at each time step. The social force model
+generates the geographic positions. As mentioned, semantic anno-
+tations are classified into two types: goals (current destination) and
+behaviors (walking or staying) [23]. Additionally, we provide all the
+prompt templates in Section B.
+
+5 Interface
+
+The user interface supports both authoring (D2) and analyzing (D3)
+stages, enabling practitioners to construct simulation scenarios and
+Conference acronym 'XX, June 03­05, 2018, Woodstock, NY                                              Trovato et al.
+
+A MapSidebar  C MapEditor                                                        B AgentSidebar
+
+                                                                                 b1
+
+                                                                                 b2              b3
+
+                         D Timeline                                          d1
+                                                                             d2
+              a1
+
+Figure 3: The interface of SenseWalk. It consists of four views: (A) MapSidebar supports the environment map configuration; (B)
+AgentSidebar supports the agent profile configuration and allows users to chat with agents; (C) MapEditor displays the geographical
+positions of maps and trajectories; (D) Timeline monitors agents' behaviors and semantic annotations.
+
+icons. For each event, its position ( , ) can also be configured in          5.2 Analyzing Stage
+MapSidebar and MapEditor. In MapSidebar, the start and end time,
+as well as a theme and description, can be specified. In addition, the       After configuring the map and agents, Amanda clicks Generate Plan
+system supports configuring the map by directly uploading a JSON             button to generate a long-term plan for each agent in Timeline. The
+file (Figure 3a1). By clicking icon, an upload window is triggered,          generated plans are displayed in AgentSidebar (Figure 3b2), including
+allowing users to upload a JSON list following the provided template.        the intended destinations, scheduled times, and the reasons for
+The number of components is displayed within circular badges next            selecting each zone. Amanda then clicks icon (Figure 3d1), which
+to each category. When hovering over a specific component, the               triggers the backend simulation workflow to generate trajectories for
+corresponding element in MapEditor is highlighted.                           all agents. To improve simulation efficiency, all agents are simulated
+                                                                             in parallel. The simulation results are displayed in real time on the
+   Clients of IIE typically submit their profiles and visit requirements     interface.
+in advance through the official website. Based on this information,
+Amanda can configure corresponding agents. By clicking the button               The circles on each agent's timeline represent its current desti-
+in AgentSidebar (Figure 3B), an agent can be created. AgentSidebar           nations, where yellow indicates RoIs and red indicates events, and
+is organized into two main sections. The upper section presents a list       the numbers denote their sequence indices (Figure 3d1). The purple
+of agents, allowing Amanda to quickly browse different profiles (Fig-        rectangles represent the periods during which the agent stays at the
+ure 3b1). Gender, age, and job can be edited in this section. By             corresponding destinations. Clicking on a specific agent displays the
+clicking icon, the detailed profile of the corresponding agent will          geographic positions of its trajectory in MapEditor (Figure 3C). At
+be displayed in the lower section (Figure 3b2). All attributes can be        this stage, Amanda obtains the complete set of simulated semantic
+configured in this section. Specifically, to set an agent's starting point,  trajectories, including both geographic positions and their corre-
+Amanda first clicks icon and then selects a position in MapEditor.           sponding semantic annotations. Clicking icon clears all simulation
+The chosen position is marked with a numbered label. The system              results and restarts the simulation from the beginning.
+also supports uploading a JSON list to create agent profiles after
+clicking Import button.                                                         Amanda then conducts a more detailed analysis of simulation
+                                                                             results of Agent 1 by switching to single-agent mode using the Multi
+   The top timeline represents the overall simulation timeframe,             slider and selecting the target agent from the dropdown menu (Fig-
+and each semi-transparent red block corresponds to an event in               ure 3d2). Clicking icon next to the agent's timeline reveals the
+Timeline (Figure 3d1). The timelines below correspond to individual          reasoning process behind its destination selections, which is dis-
+agents, which indicate the agents' own timeframe.                            played below the timeline. It allows Amanda to understand the agent's
+                                                                             decision-making process. To further deepen this understanding, our
+                                                                             system supports direct interaction with agents after clicking icon
+                                                                             in AgentSidebar (Figure 3b1), allowing Amanda to converse with
+SenseWalk: Agent-Based Semantic Trajectory Simulation Powered by Large Language Models in Zoned EnvironmentCsonference acronym 'XX, June 03­05, 2018, Woodstock, NY
+
+them and obtain richer, multi-dimensional information about their                Baseline      SenseWalk             **
+behaviors (Figure 3b3). Amanda intends to query the agent for its
+evaluation of the exhibition after the visit is completed. Subsequently,                 *                    ***  Gemini
+Amanda identifies that the agent did not include the product intro-
+duction event in its trajectory and proactively recommends it, as the       0.5
+event aligns with the agent's inferred preferences and task goals. By
+clicking icon in the chatting bubble, the agent will re-simulate its        0.4
+behavior accordingly. Amanda observes that the updated trajectory
+now includes the product introduction event (Figure 3d2). During            0.3
+navigation, the agent also visits additional destinations through
+perception ( - - ). This capability allows Amanda to explore alter-         0.2
+native scenarios and test different strategies in a flexible and iterative
+manner. By observing how agents respond to varying instructions,            0.1
+she can better anticipate visitor behaviors, evaluate the effectiveness
+of different routing or recommendation strategies, and make more            Deepseek               Qwen
+informed, data-driven decisions in her work.
+                                                                            Figure 4: Comparison of the mean of physical loss between the
+                                                                            baseline and SenseWalk across three LLMs. Lower values indi-
+                                                                            cate better physical plausibility. Error bars represent standard
+                                                                            deviation.
+
+                                                                             phys           =  1,  if segment  violates constraints  (3)
+
+                                                                            
+                                                                            
+                                                                                               0, otherwise,
+
+6 Model Evaluation                                                             Semantic Loss evaluates whether trajectories align with semantic
+                                                                            constraints. We note that evaluating semantic alignment is inherently
+We conduct a quantitative experiment to evaluate the effectiveness          subjective. To mitigate this bias, we adopt a two-step validation
+of our simulation workflow.                                                 strategy. First, for each environment and each agent profile, we use
+                                                                            LLMs to generate a set of expected destinations that the agent is likely
+6.1 Experiment Method                                                       to visit. Then, domain experts review and refine these results through
+                                                                            manual adjustments to better align them with contextually appropriate
+The evaluation quantitatively demonstrates our improvements by              behaviors. This refined set serves as a reference for evaluation.
+comparing with baseline approaches from two dimensions, physical            Based on this reference, we assess the semantic consistency of each
+loss and semantic loss.                                                     simulated trajectory by comparing the visited locations with the
+                                                                            expected destinations. Specifically, we compute precision, recall, and
+6.1.1 Datasets. We construct four simulation environments modeled           F1 score for each trajectory.
+after real-world venues spanning diverse spatial layouts and visitor
+behaviors, including a consumer electronics expo (CES, Las Vegas),          6.1.3 Baseline and Procedure. We compare our simulation workflow
+a fashion shopping mall (Shibuya PARCO, Tokyo), an art gallery (Na-         against a pure-LLM baseline where the language model is solely
+tional Gallery, London), and an import expo (CIIE, Shanghai). Each          responsible for both high-level planning and low-level trajectory
+environment is specified by a structured map file containing walls,         generation. The baseline encodes the full environment map and agent
+RoIs, and events according to our system configuration. For every           profile into the prompt, and LLMs directly output a complete trajec-
+environment, we instantiate 15 agents with distinct demographic             tory as timestamped coordinates (Section C.1) without coordinated
+profiles using LLMs. They cover diverse types of zoned environments         modules and social force models. To control for model-specific biases,
+and provide varied spatial and semantic contexts for evaluating our         we implement the experiment using three LLMs (deepseek-v3.2,
+simulation workflow.                                                        qwen-plus, and gemini3-flash). We used them to generate trajectories
+                                                                            for 15 agents across four environments, and compared our simulation
+6.1.2 Metrics. Inspired by prior work [17], we evaluate the simu-           workflow against the baseline under each model.
+lation workflow from two perspectives: physical loss and semantic
+loss, which provide a holistic assessment by jointly capturing both         6.2 Results and Analysis
+physical realism and semantic consistency.
+                                                                            Figure 4 and Figure 5 depict the results of physical loss and semantic
+   Physical Loss measures the extent to which simulated trajectories        loss. Our simulation workflow consistently outperforms the baseline.
+conform to physically plausible movement under environmental
+constraints. We divide each trajectory into fixed-length segments and       6.2.1 Physical Loss. The results show that our simulation workflow
+evaluate whether each segment satisfies basic physical plausibility         consistently achieves lower physical loss than the baseline across all
+constraints. Specifically, we consider two criteria for each segment:       three LLMs, indicating improved physical plausibility of the gener-
+(1) whether the segment exceeds the map boundary, and (2) whether           ated trajectories. Specifically, the reduction is statistically significant
+it crosses an obstacle, including walls or inaccessible boundaries of       for DeepSeek ( < 0.05), highly significant for Qwen ( < 0.001),
+RoIs. If either criterion is violated, the segment is assigned a loss of    and significant for Gemini ( < 0.01). It suggests that our method
+1; otherwise, it is assigned 0. The physical loss of the entire trajectory  effectively compensates for LLMs' limited sensitivity to spatial
+is then computed as the average over all segments. Formally, for a          constraints. To further examine the limitations of our workflow, we
+trajectory divided into  segments, the segment-wise physical loss           find that failure cases typically occur in densely obstructed regions.
+is defined as:                                                              Under the social force model, agents may be subjected to multiple re-
+                                                                            pulsive forces simultaneously, and their combined effect can produce
+Lphys  =  1           (2)                                                   unrealistic behaviors such as wall penetration.
+          
+              phys
+                 .
+
+                    
+
+             =1
+Conference acronym 'XX, June 03­05, 2018, Woodstock, NY                  Trovato et al.
+
+Model                     Precision Recall F1                             the system's operation, including its key functionalities and interac-
+                                                                          tion workflows, and demonstrated representative examples to help
+deepseek-v3.2  Baseline   0.93 0.44 0.59                                  participants understand its practical use.
+               SenseWalk  0.77 0.72 0.72
+                                                                             Task (40 minutes). Participants were given a series of structured
+qwen-plus      Baseline   0.84 0.51 0.63                                  tasks. (1) Configure the simulation with the predefined map and
+               SenseWalk  0.75 0.72 0.73                                  agent profiles we provided. (2) Run the simulation and examine the
+                                                                          generated semantic trajectories and results. (3) Select a specific agent
+gemini3-flash  Baseline   0.89 0.33 0.48                                  for in-depth analysis, explore its behavior and reasoning through
+               SenseWalk  0.78 0.75 0.76                                  interaction, and engage in direct dialogue with the agent. (4) Provide
+                                                                          instructions to the agent and re-run the simulation to observe updated
+Figure 5: Comparison of semantic loss between the baseline and            outcomes.
+SenseWalk across three LLMs. SenseWalk consistently improves
+F1 scores, primarily driven by substantial gains in recall.                  Real-world Scenario Exploration (40 minutes). We invited partic-
+                                                                          ipants to bring real-world cases from their own professional practice
+6.2.2 Semantic Loss. Across all three LLMs, our simulation work-          and use our system to address these tasks. Specifically, they were
+flow consistently improves overall performance compared to the            encouraged to describe concrete scenarios they commonly encounter
+baseline, as reflected by higher F1 scores. A key observation is the      in their work, such as route planning, and to configure corresponding
+substantial increase in recall across all models. This improvement is     simulation settings within our system.
+mainly attributable to the additional perception module. By allowing
+agents to identify relevant destinations during movement, our method         Interview (20 minutes). We conducted a semi-structured interview
+reduces the chance of missing target places and thus achieves better      with participants to gain deeper insights. Participants were first asked
+overall performance. However, it also leads to a slight decrease in       to fill in a 7-point Likert scale questionnaire (1 for "strongly disagree",
+precision, as the increased coverage may introduce additional false       7 for "strongly agree") in terms of quantitative metrics. Based on
+positives. Overall, it demonstrates that our simulation workflow          their ratings, we then asked follow-up questions further to probe the
+enhances both robustness and completeness of trajectory generation.       reasons behind particularly high or low scores. Besides, participants
+                                                                          were asked to reflect on their use of the system, including its usability,
+7 User Study                                                              usefulness, and limitations. We also encouraged them to discuss
+                                                                          how the system could support their real-world tasks and to provide
+In this section, we introduce the user study that evaluates the useful-   suggestions for improvement.
+ness and efficiency of the system.
+                                                                         7.3 Measurements
+7.1 Participants
+                                                                          Our evaluation combines quantitative metrics and qualitative findings
+We recruited 12 participants (7 females and 5 males) by sending           to assess subjective experiences and in-depth user insights.
+invitations via email or social media. They are all trajectory-aware
+practitioners, whose ages ranged from 27 to 36 years old, with            7.3.1 Quantitative Metrics. We evaluate the system from three per-
+an average age of 31.3. We gather their demographic information           spectives: authoring, analyzing, and overall system experience. We
+and professional experience. They represented a diverse group of          evaluated the authoring capability by an overall assessment and two
+practitioners across multiple real-world scenarios and had between        sub-dimensions: scenario configuration and workflow. The former
+3 and 14 years of employment. They cover roles such as curators,          captures the system's ability to represent real-world scenarios (e.g.,
+exhibition designers, client managers, and marketers, reflecting a       "I can accurately represent my real-world tasks through the con-
+broad spectrum of responsibilities related to environment planning        figuration."), while the latter focuses on usability and interaction
+and visitor management. Overall, the sample captures a heteroge-          efficiency (e.g., "The authoring workflow is intuitive and easy to
+neous yet representative group of practitioners who rely on trajectory    follow."). We evaluated the analyzing stage by an overall assessment
+data to inform real-world decisions in complex zoned environments.        and two sub-dimensions: trajectory interpretability and workflow.
+Detailed demographic information is shown in Table 2                      Trajectory interpretability refers to the extent to which users can
+                                                                          comprehend the simulated semantic trajectories (e.g., "The system
+7.2 Study Procedure                                                       helps me understand simulated trajectories effectively."). We assess
+                                                                          the workflow by the efficiency and ease with which users can explore
+We provided all participants with a detailed explanation of the study's   simulation results to support analytical tasks (e.g., "The system allows
+purpose and informed them of their right to withdraw at any time.         efficient exploration of different scenarios."). Additionally, we evalu-
+We obtained informed consent from participants to utilize the study's     ated the overall system from three aspects of effectiveness (e.g., "The
+results for further analysis. The study contains four sessions lasting    system improves my efficiency in trajectory analysis."), usability (e.g.,
+around two hours as follows:                                             "The system is easy to learn and use overall."), and trust (e.g., "I trust
+                                                                          the results generated by the system."). Figure 6 depicts the detailed
+   Tutorial (20 minutes). We first presented the research motivation      question list and quantitative results of the questionnaire.
+and core idea of our work, ensuring that participants understood
+how our approach differs from existing methods. We then introduced        7.3.2 Qualitative Results. We collected qualitative feedback from
+                                                                          participants during the interview. Participants provide insights into
+SenseWalk: Agent-Based Semantic Trajectory Simulation Powered by Large Language Models in Zoned EnvironmentCsonference acronym 'XX, June 03­05, 2018, Woodstock, NY
+
+(a) Authoring Stage
+
+Configuration  Q1 - The system supports flexible configuration of real-world scenarios.                                    5.33±1.11  7
+Workflow       Q2 - I can accurately represent my real-world tasks through the configuration.
+Overall                                                                                                                    5.17±1.07  6
+               Q3 - The authoring workflow is intuitive and easy to follow.
+               Q4 - It is easy to learn how to use the authoring interface.                                                5.83±1.07  5
+               Q5 - The system allows fine-grained configuration without excessive effort.
+                                                                                                                           5.75±0.92  4
+               Q6 - The system effectively supports scenario authoring.
+                                                                                                                           5.25±1.36
+
+                                                                                                                                      3
+
+                                                                                                                           5.92±0.76  2
+
+                                                                                                25%  50%  75%  100%  4  6             1
+
+(b) Analyzing Stage
+
+Interpretability Q7 - The system helps me understand simulated trajectories effectively.                                   5.67±0.85
+                  Q8 - The trajectory visualization clearly reflects visitor behaviors.                                    6.17±0.69
+                  Q9 - I can understand why agents choose certain destinations.                                            6.25±0.83
+                  Q10 - The reasoning process provided by the system is clear and informative.                             5.83±1.14
+                  Q11 - Interacting with agents helps me better understand their behavior.                                 5.33±1.11
+                  Q12 - The system improves my trust in the simulation results.                                            5.42±1.19
+
+Workflow       Q13 - The analysis workflow is intuitive and easy to follow.                                                5.75±0.92
+               Q14 - The system allows efficient exploration of different scenarios.                                       4.83±1.14
+               Q15 - The system supports analysis without excessive effort.                                                5.25±1.01
+
+Overall        Q16 - The system effectively supports trajectory analysis.                                                  5.75±1.09
+
+                                                                                                25%  50%  75%  100%  4  6
+
+(c) System
+
+Effectiveness  Q17 - The system helps me make better decisions.                                                            5.5±0.96
+Usability      Q18 - The system improves my efficiency in trajectory analysis.                                             6.08±0.86
+Trust          Q19 - The system supports exploring practical scenarios relevant to my work.                                5.92±0.86
+
+               Q20 - The system is easy to learn and use overall.                                                          5.75±0.72
+               Q21 - The system integrates well into my existing workflow.                                                 4.83±1.14
+
+               Q22 - I trust the results generated by the system.                                                          5.17±1.14
+               Q23 - The system produces consistent and reasonable outputs for analysis.                                   5.58±0.95
+
+                                                                                                25%  50%  75%  100%  4  6
+
+Figure 6: Quantitative results of user study. Participants rated the system from (a) authoring, (b) analyzing, and (c) system perspectives.
+Horizontal stacked bar charts illustrate the percentage distribution of rating scores (left). Box plots show mean and standard deviation
+values (right).
+
+their experiences using the system, highlighting its strengths, limita-                         to manage everything." (P10) and "It would be much easier if the
+tions, and how it could support or improve their real-world analytical                          system could extract zones directly from a map image." (P8)
+workflows.
+                                                                                                7.4.2 Strong Interpretability in Analysis. The analyzing stage was
+7.4 Results and Findings                                                                        also rated positively, especially in terms of interpretability (Q16:
+                                                                                                5.75). Participants agreed that the system helped them understand
+The results indicate that participants responded positively to our                              simulated trajectories and visitor behaviors (Q8: 6.17), and they
+system. We organized the evaluation results and summarized them                                 reported particularly strong agreement that they could understand why
+as follows:                                                                                     agents chose certain destinations (Q9: 6.25, Q10: 5.83),, highlighting
+                                                                                                the value of transparent reasoning support. P7 noted, "It is quite
+7.4.1 Effective Authoring Stage. Participants gave consistently posi-                           an innovative feature. I can not only see where the visitor goes, but
+tive ratings to the authoring stage, suggesting that the system provides                        also understand why they choose that place." P7 also emphasized
+effective support for practical scenario construction with relatively                           that directly communicating with agents facilitated accessing deeper
+low effort (Q6: 5.92). They generally agreed that the configuration                             information about decision rationales, which in turn increased the
+design of our system can capture key aspects of their practical settings                        trust in the simulation results (Q12: 5.42). Some participants pointed
+and represent nuanced real-world scenarios (Q1: 5.33, Q2: 5.17).                                out that the system's support for iterative simulation and exploration
+Participants found our system easy to learn, highlighting that the                              of alternative scenarios remains limited (Q14: 4.83). P11 noted, "It
+graphical interface makes interaction intuitive and accessible (Q3:                             would be more practical if I could keep the previous results and
+5.83, Q4: 5.75). P3 commented, "The configuration is detailed                                   continue iterating from there, instead of starting over each time."
+enough to reflect how our real environment is organized." P4 with                               P2 suggested that maintaining a history of simulation runs would
+prior experience using simulation software noted, "It is much easier                            make the system more convenient for real-world use, especially when
+to get started with. The interface is more straightforward and visual."                         comparing multiple scenarios and refining decisions progressively.
+P1 added, "I don't need to deal with complicated parameters or script-
+ing. I can just configure things directly on the map, which feels much                          7.4.3 Positive Overall Utility of System. Participants evaluated the
+more intuitive." Despite the overall ease of use, some participants                             system favorably at the overall level. They highlighted the system's
+still perceived the system as relatively complex, particularly when                             value for decision support in practical tasks such as route planning
+configuring dense and highly structured zoned environments. "When                               and recommendation. P5 explained, "When planning how to guide
+there are many zones packed together, it becomes a bit complicated
+ Conference acronym 'XX, June 03­05, 2018, Woodstock, NY                                                                                                           Trovato et al.
+
+ clients through the exhibition, this system helps me see in advance       other simulation or rule-based systems (e.g., crowd [58], traffic [8], or
+ whether a route is reasonable and whether important zones might be        urban mobility [29]), indicating its broader applicability to physically
+ missed." They found that the system improved efficiency in trajectory     grounded generative tasks.
+ analysis (Q18: 6.08), supported practical scenario exploration (Q19:
+ 5.92), overall ease of learning and use (Q20: 5.75), and output con-      8.2 Hybrid Intelligence Integration
+ sistency and reasonableness (Q23: 5.58). In contrast, integration into
+ existing workflows (Q21: 4.83) was comparatively lower, suggesting        Our paper studies the value of hybrid intelligence integration, where
+ that real-world adoption may still depend on better compatibility with    LLMs are combined with models of complementary capabilities, each
+ practitioners' established practices. Although participants generally     contributing to different stages of the pipeline. LLMs offer strong
+ found the system useful and easy to use, several noted that their         capabilities in language understanding and generative creativity,
+ day-to-day work often relies on a combination of existing official        enabling them to interpret user intent and produce flexible, context-
+ software, organizational routines, and data sources, which our current    aware outputs across a wide range of applications. However, these
+ prototype does not yet fully connect with. These comments indicate        advantages are often accompanied by limitations in stability and
+ that, beyond usability at the interface level, successful adoption also   reliability. Their outputs can be inconsistent and prone to violating
+ requires the system to better fit into practitioners' decision-making     established rules. To address these limitations, hybrid intelligence
+ workflows. Some participants remained cautious about the validity         integration combines LLMs with more stable, though less flexible,
+ of agent-based simulation itself, which in turn affected their trust in   models. Such models provide explicit rule enforcement and stronger
+ the results. Although they appreciated the system's interpretability      alignment with domain-specific requirements. Recent advances in
+ and flexibility, they questioned whether simulated agents could fully     LLM-based agents, such as function calling, demonstrate a growing
+ capture the complexity and variability of real human behavior. P6         trend toward augmenting LLMs with external capabilities [30].
+ noted, "Even if the trajectories look reasonable, I would still want to   We also suggest a shift from "LLMs doing everything" to task
+ know how close they are to what people would do in reality."              decomposition with specialized modules, where different components
+                                                                           collaborate according to their strengths, improving both robustness
+ 7.4.4 Improvement. Our participants also provided meaningful sug-         and domain alignment.
+ gestions for improvement. First, some participants highlighted the
+ need for richer multi-agent interactions and P11 suggested that agents    8.3 LLM-Powered Agent Application
+ should not be limited to visitors, but also include other roles such
+ as exhibitors, enabling the system to better capture interactions be-     The main purpose of ABMS is to model macro-level phenomena by
+ tween different stakeholders. "In a real expo, it's not just visitors.    simulating large populations of lightweight agents, whose individual
+ Exhibitors also actively engage with them, and this affects movement      actions are intentionally simplified, allowing scalable simulation and
+ and decisions." Incorporating heterogeneous agent roles and their         meaningful aggregation at the macro level. LLM-powered agents
+ interactions could further improve the realism and applicability of       are computationally expensive and tend to over-model fine-grained
+ the simulation. Second, participants recommended providing higher-        behaviors that are unnecessary at the macro level. Such micro-level
+ level abstractions or templates (e.g., common visitor types) to reduce    richness can be diluted or averaged out when aggregated, reducing
+ the effort required to set up simulations for recurring tasks. P1 noted,  its contribution to explaining emergent patterns while significantly
+"We often deal with similar types of visitors, so having predefined        increasing computational overhead. For instance, macroeconomic
+ templates would save a lot of time." Third, workflow integration          models can capture demand dynamics using simple consumption
+ may be improved by making the system easier to incorporate into           rules [5], whereas LLM agents may simulate rich but redundant
+ practitioners' existing tools and decision processes. Although the        individual reasoning. This mismatch suggests that LLM-powered
+ system itself is useful, its current use still feel somewhat separate     agents are not always suitable for large-scale macro modeling and
+ from the broader workflows participants rely on in everyday practice.     highlights the need for more efficient, hybrid designs. Compared
+ P7 explained, "In my daily work, I already rely on several tools, so      to traditional agents, LLM-based agents exhibit greater adaptabil-
+ it would be helpful if this system could connect with them instead of     ity and generalization across domains, requiring less task-specific
+ being used separately."                                                   engineering and enabling more natural human­AI interaction. It
+                                                                           suggests that LLM-powered agents may be better suited for tasks
+8 Discussion                                                               requiring rich semantic reasoning at the individual level, whereas
+                                                                           traditional lightweight agents remain more appropriate for large-scale
+ In this section, we conduct a discussion on the implication and           simulations focused on emergent macro-level dynamics, which aligns
+ generalization of our approach, hybrid intelligence integration, LLM-     with the scope of our work.
+ Powered agent application, and limitations and future work.
+                                                                           8.4 Limitations and Future Work
+8.1 Implication and Generalization
+                                                                           We comprehend some limitations of our system and suggest pos-
+ Our methodology highlights a general paradigm for semantic trajec-        sible future directions. First, while our current design primarily
+ tory generation by coupling high-level semantic reasoning with low-       relies on textual inputs, incorporating multimodal signals, such as
+ level physical constraint modeling. Purely LLM-driven approaches          visual observations and vocal interactions, could further enhance
+ are insufficient for tasks requiring strong spatial grounding, and inte-  the realism of the simulation workflow. Second, LLM integration
+ grating structured simulation models such as the social force model       introduces significant computational overhead and latency. Although
+ can effectively bridge this gap. The framework can be extended to         we implement parallel computation to help mitigate latency, it does
+SenseWalk: Agent-Based Semantic Trajectory Simulation Powered by Large Language Models in Zoned EnvironmentCsonference acronym 'XX, June 03­05, 2018, Woodstock, NY
+
+not fundamentally resolve the high computational cost of LLM-based                       arXiv:https://doi.org/10.1287/mnsc.2018.3188 doi:10.1287/mnsc.2018.3188
+components. Future work could explore selective invocation and
+hybrid designs to improve efficiency. Third, due to the inherent                         [12] Fosca Giannotti, Mirco Nanni, Dino Pedreschi, Fabio Pinelli, Chiara Renso,
+uncertainty and variability of LLM-generated outputs, users may
+find it difficult to fully trust the system's decisions. The lack of pre-                Salvatore Rinzivillo, and Roberto Trasarti. 2011. Unveiling the complexity of
+dictability may affect user confidence, particularly in scenarios that
+require reliable and accountable decision-making. Future work could                      human mobility by querying and mining massive trajectory data. The VLDB
+explore interaction mechanisms, such as uncertainty estimation, to
+enhance trust.                                                                           Journal 20, 5 (Oct. 2011), 695­719. doi:10.1007/s00778-011-0244-8
+
+9 Conclusion                                                                             [13] Fosca Giannotti, Mirco Nanni, Fabio Pinelli, and Dino Pedreschi. 2007. Trajectory
+
+We propose  , an interactive system that supports simulat-                               pattern mining. In Proceedings of the 13th ACM SIGKDD International Conference
+ing semantic trajectories by LLM-powered agents for trajectory-aware
+practitioners who make decisions based on visitors movements. It                         on Knowledge Discovery and Data Mining (San Jose, California, USA) (KDD
+addresses the challenges in simulating semantic trajectories, enabling
+effective authoring, and interpreting generated trajectories. We de-                     '07). Association for Computing Machinery, New York, NY, USA, 330­339.
+velop a simulation workflow for semantic trajectories that balances
+physical plausibility and semantic coherence. A user-friendly in-                        doi:10.1145/1281192.1281230
+teractive interface based on the workflow was designed to support
+authoring alternative scenarios and analyzing trajectories. We evalu-                    [14] Aris Gkoulalas-Divanis and Vassilios S. Verykios. 2008. A privacy-aware trajectory
+ate the effectiveness and efficiency of our system by a quantitative
+experiment and a user study.                                                             tracking query engine. SIGKDD Explor. Newsl. 10, 1 (May 2008), 40­49. doi:10.
+
+References                                                                               1145/1412734.1412739
+
+ [1] Basma H. Albanna, Ibrahim F. Moawad, Sherin M. Moussa, and Mahmoud A. Sakr.         [15] Letian Gong, Yan Lin, Xinyue Zhang, Yiwen Lu, Xuedi Han, Yichen Liu, Shengnan
+      2015. Semantic Trajectories: A Survey from Modeling to Application. Springer
+      International Publishing, Cham, 59­76. doi:10.1007/978-3-319-16667-4_4             Guo, Youfang Lin, and Huaiyu Wan. 2024. Mobility-LLM: Learning Visiting
+
+ [2] Mohammed Almutairi, Charles Chiang, Haoze Guo, Matthew Belcher, Nandini             Intentions and Travel Preference from Human Mobility Data with Large Language
+      Banerjee, Maria Milkowski, Svitlana Volkova, Daniel Nguyen, Tim Weninger,
+      III Yankoski, Michael G, Trenton W Ford, and Diego Gómez-Zará. 2025. VIRT-         Models. In Advances in Neural Information Processing Systems, A. Globerson,
+      LAB: An AI-Powered System for Flexible, Customizable, and Large-scale Team
+      Simulations. In Adjunct Proceedings of the 38th Annual ACM Symposium on User       L. Mackey, D. Belgrave, A. Fan, U. Paquet, J. Tomczak, and C. Zhang (Eds.),
+      Interface Software and Technology (UIST Adjunct '25). Association for Computing
+      Machinery, New York, NY, USA, Article 59, 6 pages. doi:10.1145/3746058.            Vol. 37. Curran Associates, Inc., 36185­36217. doi:10.52202/079017-1141
+      3758994
+                                                                                         [16] Tesfay Gidey Hailu, Xiansheng Guo, Haonan Si, Lin Li, and Yukun Zhang. 2024.
+ [3] Sotiris Angelis, Konstantinos Kotis, and Dimitris Spiliotopoulos. 2021. Semantic
+      Trajectory Analytics and Recommender Systems in Cultural Spaces. Big Data and      Theories and Methods for Indoor Positioning Systems: A Comparative Analysis,
+      Cognitive Computing 5, 4 (2021). doi:10.3390/bdcc5040080
+                                                                                         Challenges, and Prospective Measures. Sensors 24, 21 (2024). doi:10.3390/
+ [4] Robert L. Axtell and J. Doyne Farmer. 2025. Agent-Based Modeling in Economics
+      and Finance: Past, Present, and Future. Journal of Economic Literature 63, 1       s24216876
+      (March 2025), 197­287. doi:10.1257/jel.20221319
+                                                                                         [17] Zhenxuan He, Tong Zhang, Wangshu Wang, and Jing Li.
+ [5] Robert L. Axtell and J. Doyne Farmer. 2025. Agent-Based Modeling in Economics
+      and Finance: Past, Present, and Future. Journal of Economic Literature 63, 1       2024. A deep pedestrian trajectory generator for complex in-
+      (March 2025), 197­287. doi:10.1257/jel.20221319
+                                                                                         door environments. Transactions in GIS 28, 2 (2024), 411­
+ [6] Federico Bianchi and Flaminio Squazzoni. 2015. Agent-based models
+      in sociology. WIREs Computational Statistics 7, 4 (2015), 284­306.                 432.           arXiv:https://onlinelibrary.wiley.com/doi/pdf/10.1111/tgis.13143
+      arXiv:https://wires.onlinelibrary.wiley.com/doi/pdf/10.1002/wics.1356 doi:10.
+      1002/wics.1356                                                                     doi:10.1111/tgis.13143
+
+ [7] Ji Cao, Tongya Zheng, Qinghong Guo, Yu Wang, Junshu Dai, Shunyu Liu, Jie            [18] Sirui Hong, Mingchen Zhuge, Jonathan Chen, Xiawu Zheng, Yuheng Cheng,
+      Yang, Jie Song, and Mingli Song. 2025. Holistic Semantic Representation for
+      Navigational Trajectory Generation. arXiv:2501.02737 [cs.CV] https://arxiv.org/    Jinlin Wang, Ceyao Zhang, Zili Wang, Steven Ka Shing Yau, Zijuan Lin, Liyang
+      abs/2501.02737
+                                                                                         Zhou, Chenyu Ran, Lingfeng Xiao, Chenglin Wu, and Jürgen Schmidhuber.
+ [8] Sergey Dorokhin, Alexander Artemov, Dmitry Likhachev, Alexey Novikov, and
+      Evgeniy Starkov. 2020. Traffic simulation: an analytical review. IOP Conference    2024. MetaGPT: Meta Programming for A Multi-Agent Collaborative Framework.
+      Series: Materials Science and Engineering 918, 1 (sep 2020), 012058. doi:10.
+      1088/1757- 899X/918/1/012058                                                       In The Twelfth International Conference on Learning Representations. https:
+
+ [9] Yang Fang, Bei Luo, Ting Zhao, Dong He, Bingbing Jiang, and                         //openreview.net/forum?id=VtmBAGCN7o
+      Qilie Liu. 2022. ST-SIGMA: Spatio-temporal semantics and interac-
+      tion graph aggregation for multi-agent perception and trajectory forecast-         [19] Erzhen Hu, Yanhe Chen, Mingyi Li, Vrushank Phadnis, Pingmei Xu, Xun Qian,
+      ing. CAAI Transactions on Intelligence Technology 7, 4 (2022), 744­
+      757. arXiv:https://ietresearch.onlinelibrary.wiley.com/doi/pdf/10.1049/cit2.12145  Alex Olwal, David Kim, Seongkook Heo, and Ruofei Du. 2025. DialogLab:
+      doi:10.1049/cit2.12145
+                                                                                         Authoring, Simulating, and Testing Dynamic Human-AI Group Conversations. In
+[10] Santiago Garcia-Gabilondo, Yuya Shibuya, and Yoshihide Sekimoto. 2024. En-
+      hancing geospatial retail analysis by integrating synthetic human mobility sim-    Proceedings of the 38th Annual ACM Symposium on User Interface Software and
+      ulations. Computers, Environment and Urban Systems 108 (2024), 102058.
+      doi:10.1016/j.compenvurbsys.2023.102058                                            Technology (UIST '25). Association for Computing Machinery, New York, NY,
+
+[11] Anindya Ghose, Beibei Li, and Siyuan Liu. 2019. Mobile Targeting Using              USA, Article 210, 20 pages. doi:10.1145/3746059.3747696
+      Customer Trajectory Patterns. Management Science 65, 11 (2019), 5027­5049.
+                                                                                         [20] Zeyuan Huang, Cangjun Gao, Yaxian Shan, Haoxiang Hu, Qingkun Li, Xiaoming
+
+                                                                                         Deng, Cuixia Ma, Yu-Kun Lai, Yong-Jin Liu, Feng Tian, Guozhong Dai, and
+
+                                                                                         Hongan Wang. 2025. SketchGPT: A Sketch-based Multimodal Interface for
+
+                                                                                         Application-Agnostic LLM Interaction. In Proceedings of the 38th Annual ACM
+
+                                                                                         Symposium on User Interface Software and Technology (UIST '25). Association
+
+                                                                                         for Computing Machinery, New York, NY, USA, Article 157, 18 pages. doi:10.
+
+                                                                                         1145/3746059.3747598
+
+                                                                                         [21] Chenlu Ju, Jiaxin Liu, Shobhit Sinha, Hao Xue, and Flora Salim. 2025. TrajLLM: A
+
+                                                                                         Modular LLM-Enhanced Agent-Based Framework for Realistic Human Trajectory
+
+                                                                                         Simulation. In Companion Proceedings of the ACM on Web Conference 2025.
+
+                                                                                         Association for Computing Machinery, New York, NY, USA, 2847­2850. doi:10.
+
+                                                                                         1145/3701716.3715201
+
+                                                                                         [22] Kyuwon Kim, Jaeryeong Hwang, Younseo Lee, Jeanhee Lee, Sung-Eun Kim,
+
+                                                                                         and Hyo-Jeong So. 2025. Your Thoughtful Opponent: Embracing Cognitive
+
+                                                                                         Conflict with Peer Agent. In Adjunct Proceedings of the 38th Annual ACM
+
+                                                                                         Symposium on User Interface Software and Technology (UIST Adjunct '25).
+
+                                                                                         Association for Computing Machinery, New York, NY, USA, Article 180, 3 pages.
+
+                                                                                         doi:10.1145/3746058.3758410
+
+                                                                                         [23] Alexandros Kontarinis, Karine Zeitouni, Claudia Marinica, Dan Vodislav, and
+
+                                                                                         Dimitris Kotzinos. 2021. Towards a semantic indoor trajectory model: application to
+
+                                                                                         museum visits. GeoInformatica 25, 2 (April 2021), 311­352. doi:10.1007/s10707-
+
+                                                                                         020- 00430- x
+
+                                                                                         [24] Geonsun Lee, Min Xia, Nels Numan, Xun Qian, David Li, Yanhe Chen, Achin
+
+                                                                                         Kulshrestha, Ishan Chatterjee, Yinda Zhang, Dinesh Manocha, David Kim, and
+
+                                                                                         Ruofei Du. 2025. Sensible Agent: A Framework for Unobtrusive Interaction with
+
+                                                                                         Proactive AR Agents. In Proceedings of the 38th Annual ACM Symposium on
+
+                                                                                         User Interface Software and Technology (UIST '25). Association for Computing
+
+                                                                                         Machinery, New York, NY, USA, Article 119, 22 pages. doi:10.1145/3746059.
+
+                                                                                         3747748
+
+                                                                                         [25] Francesco Lettich, Chiara Pugliese, Chiara Renso, and Fabio Pinelli. 2023. Se-
+
+                                                                                         mantic Enrichment of Mobility Data: A Comprehensive Methodology and the
+
+                                                                                         MAT-BUILDER System. IEEE Access 11 (2023), 90857­90875. doi:10.1109/
+
+                                                                                         ACCESS.2023.3307824
+
+                                                                                         [26] Xinyi Li, Sai Wang, Siqi Zeng, Yu Wu, and Yi Yang. 2024. A survey on LLM-based
+
+                                                                                         multi-agent systems: workflow, infrastructure, and challenges. Vicinagearth 1, 1
+
+                                                                                         (Oct. 2024), 9. doi:10.1007/s44336-024-00009-2
+
+                                                                                         [27] Ziyue Lin, Yi Shan, Lin Gao, Xinghua Jia, and Siming Chen. 2025. SimSpark:
+
+                                                                                         Interactive Simulation of Social Media Behaviors. Proc. ACM Hum.-Comput.
+Conference acronym 'XX, June 03­05, 2018, Woodstock, NY                                                                                                                          Trovato et al.
+
+      Interact. 9, 2, Article CSCW168 (May 2025), 32 pages. doi:10.1145/3711066          [48] Donghoon Shin, Daniel Lee, Gary Hsieh, and Gromit Yeuk-Yin Chan. 2025.
+[28] Ziyue Lin, Siqi Shen, Zichen Cheng, Cheok Lam Lai, and Siming Chen. 2025.                 PosterMate: Audience-driven Collaborative Persona Agents for Poster Design. In
+                                                                                               Proceedings of the 38th Annual ACM Symposium on User Interface Software and
+      Carbon and Silicon, Coexist or Compete? A Survey on Human-AI Interactions                Technology (UIST '25). Association for Computing Machinery, New York, NY,
+      in Agent-based Modeling and Simulation. arXiv:2502.18145 [cs.HC] https:                  USA, Article 201, 20 pages. doi:10.1145/3746059.3747769
+      //arxiv.org/abs/2502.18145
+[29] Qi Liu, Can Li, and Wanjing Ma. 2026. GATSim: Urban Mobility Simulation with        [49] Stefano Spaccapietra, Christine Parent, Maria Luisa Damiani, Jose Antonio de
+      Generative Agents. arXiv:2506.23306 [cs.AI] https://arxiv.org/abs/2506.23306             Macedo, Fabio Porto, and Christelle Vangenot. 2008. A conceptual view on
+[30] Weiwen Liu, Xu Huang, Xingshan Zeng, Xinlong Hao, Shuai Yu, Dexun Li, Shuai               trajectories. Data & Knowledge Engineering 65, 1 (2008), 126­146. doi:10.1016/
+      Wang, Weinan Gan, Zhengying Liu, Yuanqing Yu, Zezhong Wang, Yuxian Wang,                 j.datak.2007.10.008 Including Special Section: Privacy Aspects of Data Mining
+      Wu Ning, Yutai Hou, Bin Wang, Chuhan Wu, Xinzhi Wang, Yong Liu, Yasheng                  Workshop (2006) - Five invited and extended papers.
+      Wang, Duyu Tang, Dandan Tu, Lifeng Shang, Xin Jiang, Ruiming Tang, Defu
+      Lian, Qun Liu, and Enhong Chen. 2025. ToolACE: Winning the Points of LLM           [50] Shayan Talaei, Meijin Li, Kanu Grover, James Kent Hippler, Diyi Yang, and Amin
+      Function Calling. arXiv:2409.00920 [cs.LG] https://arxiv.org/abs/2409.00920              Saberi. 2025. StorySage: Conversational Autobiography Writing Powered by a
+[31] Gregor Lämmel and Gunnar Flötteröd. 2015. A CA Model for Bidirectional                    Multi-Agent Framework. In Proceedings of the 38th Annual ACM Symposium on
+      Pedestrian Streams. Procedia Computer Science 52 (2015), 950­955. doi:10.                User Interface Software and Technology (UIST '25). Association for Computing
+      1016/j.procs.2015.05.171 The 6th International Conference on Ambient Systems,            Machinery, New York, NY, USA, Article 209, 26 pages. doi:10.1145/3746059.
+      Networks and Technologies (ANT-2015), the 5th International Conference on                3747681
+      Sustainable Energy Information Technology (SEIT-2015).
+[32] C.M. Macal and M.J. North. 2005. Tutorial on agent-based modeling and               [51] Jiawei Wang, Renhe Jiang, Chuang Yang, Zengqing Wu, Makoto Onizuka, Ryosuke
+      simulation. In Proceedings of the Winter Simulation Conference, 2005. 14 pp.­.           Shibasaki, Noboru Koshizuka, and Chuan Xiao. 2024. Large Language Models as
+      doi:10.1109/WSC.2005.1574234                                                             Urban Residents: An LLM Agent Framework for Personal Mobility Generation. In
+[33] Charles M. Macal and Michael J. North. 2009. Agent-based modeling and                     Advances in Neural Information Processing Systems, A. Globerson, L. Mackey,
+      simulation. In Proceedings of the 2009 Winter Simulation Conference (WSC).               D. Belgrave, A. Fan, U. Paquet, J. Tomczak, and C. Zhang (Eds.), Vol. 37. Curran
+      86­98. doi:10.1109/WSC.2009.5429318                                                      Associates, Inc., 124547­124574. doi:10.52202/079017-3957
+[34] Yu Mei, Yuanxi Wang, Shiyi Wang, Qingyang Wan, Zhuojun Li, Chun Yu, Weinan
+      Shi, and Yuanchun Shi. 2025. InterQuest: A Mixed-Initiative Framework for          [52] Lei Wang, Chen Ma, Xueyang Feng, Zeyu Zhang, Hao Yang, Jingsen Zhang,
+      Dynamic User Interest Modeling in Conversational Search. In Proceedings of the           Zhiyuan Chen, Jiakai Tang, Xu Chen, Yankai Lin, Wayne Xin Zhao, Zhewei Wei,
+      38th Annual ACM Symposium on User Interface Software and Technology (UIST                and Jirong Wen. 2024. A survey on large language model based autonomous agents.
+     '25). Association for Computing Machinery, New York, NY, USA, Article 138,                Frontiers of Computer Science 18, 6 (March 2024), 186345. doi:10.1007/s11704-
+      23 pages. doi:10.1145/3746059.3747753                                                    024- 40231- 1
+[35] Michael Mireku Kwakye. 2017. Modelling and Design of Generic Semantic
+      Trajectory Data Warehouse. doi:10.11575/PRISM/31331                                [53] Ruhan Wang, Shuowen Li, Peiran Zhang, Danqi Huang, Yijie Guo, and Haipeng
+[36] Mehdi Moussaïd, Niriaska Perozo, Simon Garnier, Dirk Helbing, and Guy Ther-               Mi. 2025. PuppetLine: An Interactive System for Embodied Storytelling with
+      aulaz. 2010. The Walking Behaviour of Pedestrian Social Groups and Its Impact            LLM-driven Swarm Robots. In Adjunct Proceedings of the 38th Annual ACM
+      on Crowd Dynamics. PLOS ONE 5, 4 (04 2010), 1­7. doi:10.1371/journal.pone.               Symposium on User Interface Software and Technology (UIST Adjunct '25).
+      0010047                                                                                  Association for Computing Machinery, New York, NY, USA, Article 48, 3 pages.
+[37] Christian Nitzsche and Stefan Simm. 2024. Agent-based modeling to estimate the            doi:10.1145/3746058.3759016
+      impact of lockdown scenarios and events on a pandemic exemplified on SARS-CoV-
+      2. Scientific Reports 14, 1 (June 2024), 13391. doi:10.1038/s41598-024-63795-1     [54] Hui Xi, Seungho Lee, and Young-Jun Son. 2011. An Integrated Pedestrian
+      Publisher: Nature Publishing Group.                                                      Behavior Model Based on Extended Decision Field Theory and Social Force
+[38] Christine Parent, Stefano Spaccapietra, Chiara Renso, Gennady Andrienko, Natalia          Model. Springer London, London, 69­95. doi:10.1007/978-0-85729-883-6_4
+      Andrienko, Vania Bogorny, Maria Luisa Damiani, Aris Gkoulalas-Divanis, Jose
+      Macedo, Nikos Pelekis, Yannis Theodoridis, and Zhixian Yan. 2013. Semantic         [55] Claudia Yamu, Akkelies van Nes, and Chiara Garau. 2021. Bill Hillier's Legacy:
+      trajectories modeling and analysis. ACM Comput. Surv. 45, 4, Article 42 (Aug.            Space Syntax--A Synopsis of Basic Concepts, Measures, and Empirical Applica-
+      2013), 32 pages. doi:10.1145/2501654.2501656                                             tion. Sustainability 13, 6 (2021). doi:10.3390/su13063394
+[39] Joon Sung Park, Joseph O'Brien, Carrie Jun Cai, Meredith Ringel Morris, Percy
+      Liang, and Michael S. Bernstein. 2023. Generative Agents: Interactive Simulacra    [56] Yuwei Yan, Qingbin Zeng, Zhiheng Zheng, Jingzhe Yuan, Jie Feng, Jun Zhang,
+      of Human Behavior. In Proceedings of the 36th Annual ACM Symposium on                    Fengli Xu, and Yong Li. 2024. OpenCity: A Scalable Platform to Simulate
+      User Interface Software and Technology (San Francisco, CA, USA) (UIST '23).              Urban Activities with Massive LLM Agents. arXiv:2410.21286 [cs.MA] https:
+      Association for Computing Machinery, New York, NY, USA, Article 2, 22 pages.             //arxiv.org/abs/2410.21286
+      doi:10.1145/3586183.3606763
+[40] Joon Sung Park, Lindsay Popowski, Carrie Cai, Meredith Ringel Morris, Percy         [57] Zhixian Yan, Dipanjan Chakraborty, Christine Parent, Stefano Spaccapietra, and
+      Liang, and Michael S. Bernstein. 2022. Social Simulacra: Creating Populated              Karl Aberer. 2011. SeMiTri: a framework for semantic annotation of heterogeneous
+      Prototypes for Social Computing Systems. In Proceedings of the 35th Annual               trajectories. In Proceedings of the 14th International Conference on Extending
+      ACM Symposium on User Interface Software and Technology (Bend, OR, USA)                  Database Technology (Uppsala, Sweden) (EDBT/ICDT '11). Association for
+      (UIST '22). Association for Computing Machinery, New York, NY, USA, Article              Computing Machinery, New York, NY, USA, 259­270. doi:10.1145/1951365.
+      74, 18 pages. doi:10.1145/3526113.3545616                                                1951398
+[41] William M Pena and Steven A Parshall. 2012. Problem seeking: An architectural
+      programming primer. John Wiley & Sons.                                             [58] Shanwen Yang, Tianrui Li, Xun Gong, Bo Peng, and Jie Hu. 2020. A review
+[42] Panos I. Philippopoulos, Ioannis C. Drivas, Nikolaos D. Tselikas, Kostas N.               on crowd simulation and modeling. Graphical Models 111 (2020), 101081.
+      Koutrakis, Elena Melidi, and Dimitrios Kouis. 2024. A Holistic Approach for              doi:10.1016/j.gmod.2020.101081
+      Enhancing Museum Performance and Visitor Experience. Sensors 24, 3 (2024).
+      doi:10.3390/s24030966                                                              [59] Josh Jia-Ching Ying, Wang-Chien Lee, Tz-Chiao Weng, and Vincent S. Tseng.
+[43] Aurora Polo-Rodríguez, Miguel Ángel Anguita-Molina, Ignacio Rojas-Ruiz, and               2011. Semantic trajectory mining for location prediction. In Proceedings of the
+      Javier Medina-Quero. 2025. Multi-occupant tracking with radar and wearable               19th ACM SIGSPATIAL International Conference on Advances in Geographic
+      devices for enhanced accuracy in indoor environments. Engineering Applications           Information Systems (Chicago, Illinois) (GIS '11). Association for Computing
+      of Artificial Intelligence 154 (2025), 110872. doi:10.1016/j.engappai.2025.110872        Machinery, New York, NY, USA, 34­43. doi:10.1145/2093973.2093980
+[44] Morteza Rahbar, Mohammadjavad Mahdavinejad, Amir H.D. Markazi, and Mo-
+      hammadreza Bemanian. 2022. Architectural layout design through deep learning       [60] Josh Jia-Ching Ying, Eric Hsueh-Chan Lu, Wang-Chien Lee, Tz-Chiao Weng, and
+      and agent-based modeling: A hybrid approach. Journal of Building Engineering             Vincent S. Tseng. 2010. Mining user similarity from semantic trajectories. In Pro-
+      47 (2022), 103822. doi:10.1016/j.jobe.2021.103822                                        ceedings of the 2nd ACM SIGSPATIAL International Workshop on Location Based
+[45] Amir Rasouli and Iuliia Kotseruba. 2022. PedFormer: Pedestrian Behavior                   Social Networks (San Jose, California) (LBSN '10). Association for Computing
+      Prediction via Cross-Modal Attention Modulation and Gated Multitask Learning.            Machinery, New York, NY, USA, 19­26. doi:10.1145/1867699.1867703
+      arXiv:2210.07886 [cs.CV] https://arxiv.org/abs/2210.07886
+[46] Sheldon M Ross. 2022. Simulation. academic press.                                   [61] Ryo Yonetani, Jun Baba, and Yasutaka Furukawa. 2024. RetailOpt: Opt-In,
+[47] Michael J Seitz, Felix Dietrich, Gerta Köster, and Hans-Joachim Bungartz. 2016.           Easy-to-Deploy Trajectory Estimation from Smartphone Motion Data and Retail
+      The superposition principle: A conceptual perspective on pedestrian stream               Facility Information. In Proceedings of the 2024 ACM International Symposium
+      simulations. Collective Dynamics 1 (2016), 1­19.                                         on Wearable Computers (Melbourne VIC, Australia) (ISWC '24). Association for
+                                                                                               Computing Machinery, New York, NY, USA, 125­132. doi:10.1145/3675095.
+                                                                                               3676623
+
+                                                                                         [62] Hanzhong Zhang, Jibin Yin, Mulin Jiang, and Cong Su. 2025. Can Agents
+                                                                                               Spontaneously Form a Society? Introducing a Novel Architecture for Generative
+                                                                                               Multi-Agents to Elicit Social Emergence. In Adjunct Proceedings of the 38th
+                                                                                               Annual ACM Symposium on User Interface Software and Technology (UIST Adjunct
+                                                                                              '25). Association for Computing Machinery, New York, NY, USA, Article 78,
+                                                                                               3 pages. doi:10.1145/3746058.3758414
+
+                                                                                         [63] Zhishuai Zhang, Jiyang Gao, Junhua Mao, Yukai Liu, Dragomir Anguelov, and
+                                                                                               Congcong Li. 2020. STINet: Spatio-Temporal-Interactive Network for Pedestrian
+                                                                                               Detection and Trajectory Prediction. In Proceedings of the IEEE/CVF Conference
+                                                                                               on Computer Vision and Pattern Recognition (CVPR).
+SenseWalk: Agent-Based Semantic Trajectory Simulation Powered by Large Language Models in Zoned EnvironmentCsonference acronym 'XX, June 03­05, 2018, Woodstock, NY
+
+[64] Yi Zuo, Junhao Jiang, and Katsutoshi Yada. 2025. Application of hybrid gate          explanation:
+      recurrent unit for in-store trajectory prediction based on indoor location system.  {
+      Scientific Reports 15, 1 (Jan. 2025), 1055. doi:10.1038/s41598-024-84599-3
+      Publisher: Nature Publishing Group.                                                    "steps": [
+                                                                                              {"destination": "...", "reason": "...", "time": "..."},
+[65] Marta Sveb Dragija, Martijn van Zomeren, and Nina Hansen. 2024. De-
+      signing museum experiences for eudaimonic or hedonic well-being: insights                 ...
+      from interviews with museum visitors. Museum Management and Curator-                   ]
+      ship 0, 0 (2024), 1­18. arXiv:https://doi.org/10.1080/09647775.2024.2408239         }
+      doi:10.1080/09647775.2024.2408239
+
+A Preliminary Study                                                                       ## 6. Example Output
+                                                                                          {
+Table 1 shows the demographic information of participants.
+                                                                                             "steps": [
+B Prompts for Simulation Workflow                                                               {
+B.1 Long-term Plan                                                                                 "destination": "lululemon athletica",
+                                                                                                "reason": "Lululemon offers athletic apparel, interes-
+You are a professional indoor navigation assistant.                                                ting for sport-influenced costumes.",
+You will be given:                                                                                 "time": "08:23"
+1. A JSON-formatted exhibition map                                                              },
+2. A user's navigation request                                                                  {
+                                                                                                   "destination": "PUMA SE",
+Your goal: Within the user's available time, plan a visit                                       "reason": "Puma provides both athletic and casual wear,
+order that allows them to see as many booths as possible,                                          useful for costume materials.",
+based on the map data.                                                                             "time": "15:50"
+                                                                                                },
+## 1. Coordinate System                                                                         {
+- The map is a 2D plane.                                                                           "destination": "NIKE",
+                                                                                                 "reason": "Nike's innovative designs could inspire
+## 2. JSON Field Description                                                                       sport-themed costumes.",
+- Booth name (unique identifier)                                                                   "time": "20:33"
+- `pos`: [x, y, w, h]  booth position and size                                                  }
+- `des`: booth description
+- `Country/Region`: brand's country or region                                                ]
+- `Business Type`, `Category`, `Main exhibit types`: booth                                }
+classification and main exhibit information
+                                                                                          Now, here is the specific map data and the user's request.
+
+## 3. Core Logic                                                                          **Map Data:**
+- Booth location is represented by its center point:                                      {"lululemon athletica":{"id":0,"des":"lululemon athletica
+`[x + w/2, y + h/2]`                                                                      inc. (NASDAQ: LULU) is a technical athletic apparel, foot-
+- Arrange booths in an order that minimizes unnecessary                                   wear and accessories company for yoga, running, training,
+backtracking                                                                              and most other activities, creating transformational
+- Booths that are adjacent (vertically or horizontally) or                                products and experiences that build meaningful connections,
+very close should be grouped together                                                     unlocking greater possibility and wellbeing for all.
+                                                                                          ...(from 'map_data_str' you set in plan.py)
+## 4. Generation Rules (Most Important)
+- Each `step` in the output must include:                                                 **User's Request:**
+                                                                                          My visiting requirements are as follows:
+   - `destination`: booth name from the JSON data                                         - **Time:** Start at 08:00 and visit for a total of 2 hours.
+  - `reason`: why this booth is selected (based on its                                    - **Route:** Start the visit from the door at the top-left
+   details)                                                                               corner and continue until reaching near the door at the
+  - `time`: planned arrival time (consider walking time +                                 bottom-right corner.
+   visiting time between consecutive booths)                                              - **Interests:** I am very interested in sports brands.
+- Do NOT include the route between booths                                                 - **Notes:**:
+- First select valuable booths, then optimize order based
+on spatial location                                                                             1.Highly recommended booths should have longer visit
+- Avoid patterns like "far left  far right  far left                                               durations.
+again" or "top  bottom  top again"
+                                                                                                2.Small booths typically take 2­3 minutes to visit;
+## 5. Output Format                                                                                large booths take 5­6 minutes.
+Return only the following JSON format with no extra
+                                                                                                3.Give equal consideration to all booths, especially
+                                                                                                   smaller ones.
+Conference acronym 'XX, June 03­05, 2018, Woodstock, NY                                                     Trovato et al.
+
+Table 1: The demographic information of the interviewees. We record their ages, gender, jobs, domains, purpose of trajectory analysis,
+years of employment, and familiarity with simulation tools (1 being not familiar, 5 being familiar).
+
+ID Age Gender Job                                        Domain  Purpose of                  Years       Familiarity with
+P1 26 Female Guide                                               Trajectory Analysis                     Simulation Tools
+P2 30 Male Curator
+P3 35 Female Curator                                     Museum  Route customization adjust to 4         1
+P4 38 Male Host
+P5 41 Male Marketer                                              individual preferences
+P6 33 Female Marketer
+P7 27 Male Event Planner                                 Museum  Evaluate exhibit engagement 5           3
+
+                                                                 and dwell patterns
+
+                                                         Expo    Optimize booth layout and visi- 10 2
+
+                                                                 tor circulation
+
+                                                         Expo    Provide exhibition guidance and 7       2
+
+                                                                 recommendations to clients
+
+                                                         Shopping Mall Improve campaign placement 15 2
+
+                                                                 and footfall conversion
+
+                                                         Shopping Mall Identify high-impact zones for 7  2
+
+                                                                 promotions and signage
+
+                                                         Convention Booth and event arrangement to 3     1
+
+                                                                 attract visitors
+
+      4.Within the time limit, maximize the total number of      visit history, and plan.
+         booths visited.                                         For each entity, provide:
+                                                                 - A `score` from 0 to 1 (0 = no interest at all, 1 = extremely
+Please strictly follow the previously described JSON format      interested)
+to generate the visit plan.                                      - A concise `reason` (based on alignment with your demand,
+                                                                 whether it's already visited, planned, or relevant)
+
+B.2 Interest Score                                               **Strict output format:**
+                                                                 - Output a valid JSON object
+SYSTEM:                                                          - Each key must be the entity name string exactly as given
+You are {name}, a visitor with the following profile:            - Do NOT modify the entity names
+- Age: {age}                                                     - The format must be exactly:
+- Gender: {gender}
+- Job: {job}                                                        {{
+- Goal: {goal}                                                     "EntityName1": {{"score": float, "reason": "text"}},
+- Preference: {preference}                                         "EntityName2": {{"score": float, "reason": "text"}},
+- Character: {character}                                            ...
+                                                                    }}
+Your role is to identify which entity(POI or Event) to visit
+next, based on **current time**, **your goal**, **visited        Candidate entities to evaluate:
+entities**, and **original plan**.                               **{candidates_info}**
+Your responses should be analytical, concise, and strictly
+follow the given output format.                                  **Example output format (only for reference, do NOT copy
+                                                                 shop names):**
+USER:                                                            {{"EntityName1": {{"score": 0.9, "reason": "Matches
+You are a visitor, and your visit objective is **{goal}**.       interests and planned."}},
+The current time is **{now}**. You have already visited the       "EntityName2": {{"score": 0.2, "reason": "Event ends in 10,
+following entities:                                               unavailable."}},
+**{visited_info}**                                                "EntityName3": {{"score": 0.4, "reason": "Event ending soon,
+                                                                  prioritizing scheduled visit."}},
+You originally planned to visit the following entities:           "EntityName4": {{"score": 0.8, "reason": "Unplanned but
+**{planned_info}**                                                very interested, time available."}}}}
+
+Please evaluate your interest in visiting the following          B.3 Duration of Stay
+candidate entities **next**, based on your role, goal,
+                                                                 SYSTEM:
+                                                                 You are {name}, a visitor with the following profile:
+SenseWalk: Agent-Based Semantic Trajectory Simulation Powered by Large Language Models in Zoned EnvironmentCsonference acronym 'XX, June 03­05, 2018, Woodstock, NY
+
+- Age: {age}                                                  C Model Evaluation
+- Gender: {gender}
+- Job: {job}                                                  C.1 Baseline Prompts
+- Goal: {goal}
+- Preference: {preference}                                    SYSTEM_PROMPT = """You are a pedestrian simulation engine for
+- Character: {character}                                      an indoor venue.
+                                                              Your task is DUAL:
+Your role is to determine how long to stay at a given entity
+(POI or Event), based on **current time**, **your goal**,         1. PLAN: Decide which POIs/events this visitor should go
+**visited entities**, and **original plan**.                        to, in what order, and for how long.
+                                                                    2. SIMULATE: Generate realistic physical movement
+Your responses should be analytical, concise, and                   trajectories through the venue space.
+strictly follow the given output format.
+                                                              You must output a single JSON document capturing both the
+USER:                                                         high-level visit plan and the detailed physical trajectory.
+
+You are a visitor, and your visit objective is **{goal}**.    ## COORDINATE SYSTEM
+                                                              - Origin (0,0) is top-left. X increases rightward, Y
+The current time is **{now}**. You have already visited the   increases downward.
+following entities:                                           - Walls are hard boundaries - the agent CANNOT pass through
+**{visited_info}**                                            them. You must route around walls.
+
+                                                              ## WALL BOUNDARIES
+                                                              {walls_description}
+
+You originally planned to visit the following entities:       ## PHYSICAL SCALE & TIMING (CRITICAL - read carefully)
+**{planned_info}**                                            - The map is approximately {map_width} x {map_height}
+                                                              coordinate units.
+Target entity information:                                    - WALKING SPEED: The agent moves at a pace of 1 coordinate
+**{candidates_info}**                                         unit per 3 seconds.
+
+**Available time calculation:**                                   -> Moving 5 units takes 15 seconds; moving 50 units takes
+                                                                   150 seconds (2.5 minutes); crossing the full venue
+- For events: available_minutes = min((event_end -
+max(current_time, event_start)).total_seconds() / 60, 10)         (~{long_span} units) takes ~{crossing_minutes} minutes.
+- For POIs: available_minutes = 15 (default maximum)          - MINIMUM STORE STAY: 15 minutes. Typical browsing: 20-45
+                                                              minutes. Events: attend for their full scheduled duration.
+Your task is to determine an appropriate visit duration       - TOTAL visit duration is {visit_duration_hint} - your
+within the available time based on your profile and context.  trajectory timestamps MUST span this entire window.
+
+**Strict output format:**                                     ## TRAJECTORY GENERATION RULES
+                                                              GOAL: Output as FEW points as possible while keeping the
+- Provide ONLY a valid JSON object                            trajectory fully reproducible.
+- Include "visit_duration" (integer, minutes) and "reason"    A trajectory is reproducible if: given any two consecutive
+(concise explanation)                                         points, we can reconstruct the exact path between them by
+- visit_duration must be between 1 and available_minutes      straight-line interpolation at constant speed.
+- Reason must reference your profile and decision factors
+- The format must be exactly: {{"visit_duration": int,        RULES:
+"reason": "text"}}                                            1. WALKING SPEED is exactly 1 unit / 3 seconds
+                                                              (5 units / 15 seconds). All walking segments must obey
+**Example output:**                                           this.
+                                                              2. AXIS-ALIGNED MOTION ONLY: Between any two consecutive
+{{"visit_duration": 5, "reason": "This exhibition highly      walking points, at most ONE coordinate (X or Y) may change.
+aligns with my art interests, and I can spend 5 minutes       Never change both X and Y in a single segment.
+within the 10-minute available time before it closes."}}      3. WHEN TO OUTPUT A POINT (walking):
+
+                                                                 a) At the START of the trajectory (initial position).
+                                                                 b) At every TURN (corner): where the direction changes
+                                                                 (e.g., from moving along X to moving along Y). Output
+                                                                  the corner point BEFORE the direction changes.
+                                                                 c) When current_destination CHANGES (the agent starts
+                                                                  heading to a new place).
+Conference acronym 'XX, June 03­05, 2018, Woodstock, NY                                                  Trovato et al.
+
+     d) Upon ARRIVAL at a destination.                      ## TIME-LIMITED EVENTS
+
+     Do NOT output intermediate points along a straight     {events_description}
+
+     segment -- they can be reconstructed from the
+
+     endpoints + speed.                                     ## YOUR TASK
+
+4. BROWSING / ATTENDING (Time Jump):                        Simulate this agent's complete visit to the venue from
+
+- One point on ARRIVAL (action="browsing" or "attending"). {start_time} to {end_time}.
+
+     - Next point is DEPARTURE after the stay
+
+     (action="walking", with new current_destination).      Step 1 - PLAN:
+
+Time jumps forward by stay duration (>=15 min for stores,      a) First, check which TIME-LIMITED EVENTS overlap with
+
+     full duration for events).                                  the agent's visit window ({start_time}~{end_time}).
+
+                                                                 b) Based on the agent's character/goal/preference,
+
+## OUTPUT FORMAT                                                 decide whether to attend each overlapping event.
+
+Return ONLY valid JSON:                                          c) Select stores to visit, weaving events into the
+
+{{                                                               schedule at their correct times.
+
+     "agent_summary": {{ ... }},                               d) Ensure the visit_plan list includes both store visits
+
+     "visit_plan": [ ... ],                                      AND event attendances, in time order.
+
+     "full_trajectory": [
+
+         // Start                                           Step 2 - SIMULATE: Generate the physical trajectory.
+
+         {{"time": "13:00:00", "x": 240.0, "y": 200.0,
+
+         "action": "walking", "current_destination":        CRITICAL:
+
+         "Store A"}},                                       - The FIRST trajectory point MUST be at the agent's starting
+
+     // Corner: walked 15 units on X (45s), now turning     position ({startx}, {starty}) at time {start_time}.
+
+         to Y-axis                                          - The LAST trajectory point must be at or after {end_time}.
+
+         {{"time": "13:00:45", "x": 255.0, "y": 200.0,      Your plan must fill the entire {visit_duration_hint}.
+
+         "action": "walking", "current_destination":        - For WALKING: only output points at turns (corners),
+
+         "Store A"}},                                       destination changes, and arrival. Do NOT output intermediate
+
+         // Arrived at Store A: walked 10 units on Y (30s)  straight-line points. Speed is always 5 units per 15 seconds.
+
+         {{"time": "13:01:15", "x": 255.0, "y": 210.0,      Only one coordinate may change between consecutive points.
+
+         "action": "browsing", "current_destination":       - Use TIME JUMPS (>=15 min) when staying in a store; attend
+
+         "Store A"}},                                       events for their full scheduled duration.
+
+         // Departure after 20 min stay, now heading to     - All POI and event names in your output (visit_plan
+
+         Store B                                            destinations, full_trajectory current_destination, etc.)
+
+         {{"time": "13:21:15", "x": 255.0, "y": 210.0,      MUSTstrictly match the exact "title" from the provided map
+
+         "action": "walking", "current_destination":        data. Do NOT paraphrase, abbreviate, translate, or invent
+
+         "Store B"}},                                       names.You MUST complete the FULL visit schedule within one
+
+         // Corner: walked 10 units on X (30s), turning to  single response. Ensure the JSON is properly closed!
+
+         Y-axis                                             """
+
+         {{"time": "13:21:45", "x": 265.0, "y": 210.0,
+
+         "action": "walking", "current_destination":        C.2 Example
+         "Store B"}},
+         // ...                                             An example agent profile is provided below.
+
+     ],                                                     {
+
+     "simulation_summary": {{ ... }}                             "id": 1,
+
+}}                                                               "name": "Mina Kobayashi",
+
+"""                                                              "gender": "Female",
+
+                                                                 "age": "29",
+
+USER_PROMPT_TEMPLATE = """## AGENT PROFILE                       "job": "Tokyo Fashion Buyer",
+
+- Name: {name} | Age: {age} | Gender: {gender} |                 "start": "2025-09-08T01:00:00.000Z",
+
+Job: {job}                                                       "end": "2025-09-08T06:00:00.000Z",
+
+- Character: {character} | Goal: {goal} | Preference:          "character": "Selective and highly discerning, walks
+
+{preference}                                                     the floor with a pre-planned route ...",
+
+- Visit Window: {start_time} ~ {end_time} (local time)           "goal": "Source new womenswear pieces from LOEWE and
+
+- Starting Position: ({startx}, {starty})                        MARNI for her boutique's next season ...",
+
+                                                                 "preference": "LOEWE, MARNI, CELINE, Comme des
+
+## AVAILABLE STORES (POIs)                                       Garchons Girl, Café Marly.",
+
+{pois_description}                                               "startx": 15,
+
+                                                                 "starty": 231
+SenseWalk: Agent-Based Semantic Trajectory Simulation Powered by Large Language Models in Zoned EnvironmentCsonference acronym 'XX, June 03­05, 2018, Woodstock, NY
+
+}                                                                  D User Study
+
+                                                                   D.1 Participants
+
+                                                                   Received 20 February 2007; revised 12 March 2009; accepted 5 June 2009
+
+Figure 7: Comparison of baseline and simulated trajectories for
+a sample agent in the Shibuya fashion district scenario. The blue
+line represents the baseline trajectory, while the red line shows
+our simulation trajectory, overlaid on the venue map with booth
+boundaries and event locations.
+Conference acronym 'XX, June 03­05, 2018, Woodstock, NY                                                           Trovato et al.
+
+Table 2: Participant demographics and professional backgrounds. We record their ages, gender, jobs, domains, purpose of trajectory
+analysis, years of employment, and familiarity with simulation tools (1 being not familiar, 5 being familiar).
+
+ID Age Gender Job                                        Domain  Purpose of                             Years  Familiarity with
+                                                                 Trajectory Analysis                           Simulation Tools
+
+P1 36 Male Exhibition Designer Museum                            Optimize spatial layout to improve 10 4
+
+                                                                 narrative flow and visitor experience
+
+P2 31 Male Curator                                       Museum  Evaluate exhibit engagement and 8             2
+
+                                                                 identify dwell patterns across gal-
+
+                                                                 leries
+
+P3 30 Female Guide                                       Museum  Personalize visitor routes based on 5         2
+
+                                                                 visitor preferences and time con-
+
+                                                                 straints
+
+P4 28 Female Data Analyst                                Museum  Analyze visitor movement patterns 5           4
+
+                                                                 to support exhibition design deci-
+
+                                                                 sions
+
+P5 35 Male Client Manager                                Expo    Recommend tailored visiting routes 11 3
+
+                                                                 for clients with different procure-
+
+                                                                 ment needs
+
+P6 28 Female Manager                                     Expo    Monitor crowd distribution and re- 3          4
+
+                                                                 duce congestion
+
+P7 27 Female Curator                                     Expo    Optimize booth arrangement and vis- 3         1
+
+                                                                 itor circulation
+
+P8 37 Female Event Planner                               Convention Plan visitor routing and functional 14 2
+
+                                                                 zoning for large-scale events
+
+P9 28 Male Event Planner                                 Convention Booth and event arrangement to at- 5       3
+
+                                                                 tract visitors
+
+P10 35 Female Curator                                    Shopping Mall Optimize booth layout and visitor 9     3
+
+                                                                 circulation
+
+P11 29 Female Manager                                    Shopping Mall Optimize customer navigation for 4      2
+
+                                                                 conversion improvement
+
+P12 31 Male Marketer                                     Shopping Mall Improve promotion placement based 5     2
+
+                                                                 on footfall patterns
+

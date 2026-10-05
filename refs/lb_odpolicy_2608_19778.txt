@@ -1,0 +1,289 @@
+                                        Distilling Aggregate Mobility Statistics into a Language Model
+                                                       Policy for Post-Event Crowd Simulation
+
+                                          Tatsuya Amano1,2, Hirozumi Yamaguchi1,2
+
+                                                  1The University of Osaka, Suita, Japan
+                                        2RIKEN Center for Computational Science, Kobe, Japan
+
+arXiv:2608.19778v1 [cs.MA] 20 Aug 2026  Abstract                                                                 since many different combinations of decisions produce the same
+                                                                                                                 counts. Any solution must ensure both that each agent's move-
+                                        Pedestrian simulators need a behaviour rule for every agent, but         ments are individually plausible and that the population as a whole
+                                        privacy usually limits the data for setting one to aggregate sta-        remains statistically consistent with the observed aggregates.
+                                        tistics, namely zone-level device counts and origin-to-destination
+                                        (OD) flows, with no individual trajectories. Such aggregates under-         Existing approaches achieve statistical consistency with the ob-
+                                        determine individual behaviour, because many different sets of           served aggregates, for example by tuning simulator parameters
+                                        decisions reproduce the same counts. We fine-tune a language             with a derivative-free optimiser [5], by using a gravity model to
+                                        model crowd agent so that the simulated population matches the           match zone-level flows [8], or by fitting a synthetic population to
+                                        observed destination composition, the fraction of the departing          known marginals with IPF [1]. Yet they offer only a static zone-to-
+                                        crowd heading to each point of interest. We read this target from        zone mapping, with no model of individual behaviour that could
+                                        the OD flow and reweight the model's own destination distribution        transfer to a new scenario. A reusable policy, a decision rule that
+                                        onto it by iterative proportional fitting. Because fine-tuning inflates  reads an agent's current situation and returns an action such as
+                                        the dominant destination class, we fit the low-rank adapter to tra-      heading to a station, stopping at a nearby shop, or leaving by an-
+                                        jectories resampled to a corrected training composition that reaches     other exit, would let each decision depend on context such as time,
+                                        the target after this inflation. On mobile network counts from two       weather, and group makeup.
+                                        baseball games the fine-tuned agent runs without inference-time
+                                        correction, cutting the destination-share error by 25%, while the           Recent work has turned to large language models (LLMs) as
+                                        grid correlation remains similar across policies.                        behavioural policies in agent simulation, showing that LLM agents
+                                                                                                                 reproduce believable daily routines [4, 11] and generate individually
+                                        CCS Concepts                                                             plausible mobility patterns [6, 9, 14]. At each decision point the
+                                                                                                                 simulator presents the agent's situation as a text prompt, and the
+                                        · Information systems  Geographic information systems; ·                 LLM reads it and returns one executable action. Because the decision
+                                        Computing methodologies  Multi-agent systems; Artificial                 is conditioned on free-text context, the model can respond to factors
+                                        intelligence.                                                            beyond what aggregate counts capture, such as a rainy evening
+                                                                                                                 or a family with small children seeking a less crowded exit. Yet
+                                        Keywords                                                                 the pretrained model's destination composition, the fraction of
+                                                                                                                 the departing crowd heading to each point of interest, inevitably
+                                        pedestrian simulation, language model agents, iterative propor-          diverges from the observed data, leaving statistical consistency
+                                        tional fitting, supervised fine-tuning, aggregate mobility data          unaddressed.
+
+                                        1 Introduction                                                              In this paper we close this gap by fitting the LLM policy to the
+                                                                                                                 destination composition observed in the OD flow. A direct approach
+                                        When tens of thousands of people leave a large event such as a           would train on trajectories whose class proportions match the tar-
+                                        sports match within a short time window, the way that crowd              get, but the dominant class gets amplified. A model aimed at a 74%
+                                        disperses determines the safety of the surrounding area, the load on     station share, for instance, deploys above 94% in simulation. We
+                                        nearby stations, and the revenue of nearby businesses. Urban and         avoid this overshoot by separating what the policy should produce
+                                        transport planners therefore need to anticipate this dispersal and       in simulation from what it sees during training. Information projec-
+                                        explore how changes in facilities or transport provision would alter     tion, solved by IPF, first tilts the pretrained destination distribution
+                                        the outcome [13]. Multi-agent pedestrian simulation [7] can model        onto the target while preserving the model's context-conditioned
+                                        each person's decisions at fine spatial resolution and is realised in    preferences within each class. We then estimate, from a few pilot
+                                        widely adopted simulators such as SUMO [10].                             training runs, how much the adaptation inflates each class, and
+                                                                                                                 invert this response to obtain a corrected training composition that
+                                           To run these simulators realistically, planners need to set each      reaches the target after inflation. A final supervised fine-tuning
+                                        agent's behaviour so that the simulated crowd matches what is            (SFT) pass on trajectories resampled to this corrected composition
+                                        observed in reality. Individual trajectory data from sources such as     absorbs the aggregate constraint into the model weights, so the
+                                        GPS traces or call detail records would provide direct supervision,      policy runs in the simulator without inference-time correction.
+                                        but privacy constraints mean that such records are rarely released.
+                                        What is typically available instead is spatially and temporally ag-         We evaluate on mobile network-based OD counts from two pro-
+                                        gregated statistics, namely device counts on a fixed spatial grid and    fessional baseball games at one of the largest stadiums in Japan.
+                                        origin-to-destination (OD) flow matrices between zones over time.        After calibration to the cell counts, the grid correlation between
+                                        Recovering individual behaviour from these aggregates is ill-posed,      simulated and observed occupancy is similar across very different
+                                                                                                        Tatsuya Amano, Hirozumi Yamaguchi
+
+behavioural priors, so this metric alone leaves them indistinguish-        2.2 Problem setting
+able. The destination composition separates them. The fine-tuned
+policy cuts the destination-share error by about a quarter relative        The study area is a grid of 125 m cells and a set P of points of interest
+to the untuned model, and by a further 15% over an inference-time          (PoIs) such as train stations, shopping complexes, and venue exits.
+correction, all in free-running simulation.                                For each ten-minute bin , the operator reports a cell count (, ),
+                                                                           the number of devices in cell , and an origin-to-destination (OD)
+2 Overview and Problem Setting                                             flow  ( , ) between cells. Individual paths remain private.
+
+We simulate the post-event crowd as a population of agents in                 We use these two statistics in two ways. The cell count  says
+an agent-based pedestrian simulator (ABS). We start from a base            where the crowd is at each moment; reproducing it is the stan-
+agent that follows a fixed decision schema, fit it to the observed         dard macro check, the grid correlation between the simulated and
+aggregate statistics and run the fine-tuned population to generate         observed counts. The OD flow  says where the crowd is going.
+the post-event dispersal (Fig. 1).                                         Aggregated over the departure window it gives the destination
+                                                                           composition , whose entry () is the share of the departing
+2.1 Agent-based simulator with an LLM policy                               crowd bound for PoI , and this composition is the target the policy
+                                                                           is fitted to.
+Each agent is one simulated pedestrian, carrying a persona and a
+position in the street network. A single language model serves as             We model the crowd as  agents drawn from a profile distribu-
+the decision policy shared by the whole crowd, reading an agent's          tion  over age band, group makeup, and residence type. At each
+persona and current situation as text and returning that agent's           step an agent with profile  reads its local situation  and selects
+next action.                                                               one of three actions, going to a PoI, waiting, or leaving the area. A
+                                                                           policy  ( | , ) generates these choices, and we seek weights 
+   At each arrival or wait event, an agent reads its local situation       such that the simulated population matches .
+and responds in the OpenAI Harmony multi-channel format (Fig-
+ure 2). The analysis channel contains a short, structured rationale        3 Proposed Method
+with four labelled lines, PERCEIVE, STATE, GOAL, and DECIDE,
+while the final channel contains exactly one executable action.            Given the format-trained 0, we fit it to the observed composition
+This design makes the model organise the relevant situation, goal,          through a second, separate fine-tuning pass. We distinguish
+and intended decision, and then commit to a single simulator action.       three compositions in this procedure. The observed composition
+The simulator parses only the final action. The rationale is discarded      is read from the OD flow. The training composition is the class
+before the next decision, where a fresh rationale is generated from        makeup of the fine-tuning set. The simulation composition is what
+the updated simulator state; it therefore acts as an ephemeral rea-        the fine-tuned policy produces when run in the simulator. The goal
+soning scaffold rather than part of the simulator state.                   is to find a training composition whose simulation composition
+                                                                           lands on . The fitting has two steps. First, an information projec-
+   We teach this interaction schema once by supervised fine-tuning         tion computes the action distribution closest to 0 that meets the
+and add 18 dedicated action, PoI, and delimiter tokens so the ex-          observed composition; we call it , the distribution we want the
+ecutable structure is emitted reliably. We synthesize the format-          policy to produce. Second, because supervised fine-tuning shifts the
+training examples by pairing a situation with an action sampled            simulation composition away from the training composition, what
+from the base policy for a given persona, and a stronger model             we train on differs from . We estimate this shift with a transfer
+writes the surrounding rationale. We call the resulting format-            map and resample the data to a corrected training composition ~
+trained policy 0. This schema makes the behaviour readable and             whose deployment matches .
+steerable; fitting 0 to the observed aggregate statistics is a separate
+step.                                                                         We now make the two steps precise. Let  = (, ) collect the
+                                                                           agent profile and its local situation into a single context variable. A
+   The agent and the simulator form a closed loop. We run the              rollout of 0 yields its destination distribution 0 ( | ), the model's
+population in the SUMO pedestrian simulator [10] over the venue            prior over where the crowd goes before any tuning, together with
+street network and advance everyone in continuous time. When-              the empirical set of contexts  it visits. For the information projec-
+ever an agent reaches a PoI or finishes a wait, the simulator hands it     tion we hold this context distribution fixed and neglect the shift in
+the current situation, including any injected event. The agent then        context occupancy that the tuning induces in the closed loop. Over
+generates a rationale and returns a final-channel action, and the          this distribution we solve
+simulator executes only that action. Running the whole population
+forward through this loop, generating each agent's trajectory step             =  arg  min  E    KL (· | )  0 (· | )
+by step, is a single rollout, i.e., a free-running simulation with no ex-
+ternal correction. The rollout yields the simulated behavioural-class      
+composition that we compare against the observed composition
+defined below.                                                                                                               (1)
+
+   Implementation details of the format pass and the aggregate-                      s.t.   E,  [       ()]  =        ,
+fitting pass are given in Section 4.
+                                                                                                                
+
+                                                                                                                   
+
+                                                                              where  () marks each action's membership in destination
+
+                                                                           class  (heading to a station, to the adjacent mall, or to another
+
+                                                                           exit) and  is that class's share in . The solution takes the
+
+                                                                                              
+
+                                                                           exponential-tilt form
+
+                                                                               (  |   )  =  0 (  |   )  exp     ()           (2)
+                                                                                                                          ,
+                                                                                                         ()
+Distilling Aggregate Mobility Statistics into a Language Model Policy for Post-Event Crowd Simulation
+
+            Aggregate OD                                               Observed dest. composition                     Naïve Direct SFT LLM                                                                                            Majority-class overshoot /
+                                                                                                                                                                                                                                      Class amplification
+                                                                                                   Mismatch     Proposed
+                                                                                Prior policy                          Project prior to target marginal (IPF)                                                                      Corrected train composition
+                                                                                                                                                                                                                               ...                                        Grounded
+                                                                       ...                                                                                                                                                                                                LLM policy
+            Template Dataset Template                                                                           Compare
+                                                                                                                                                                                                                                                               SFT
+                                                                                                                                            Rollout
+                                                                                                                                               composition                                                                                                 rollout
+                                                                                                                                                                                                                                         Simulated composition
+                                                                                                                                                                         Resample                                                        observed composition
+                                                           SFT    LLM               Context                                 
+                                                             ABS                                                                                                                                                                                    Match
+ Template   <|start|>assistant<|channel|>final<|message|>              Rollout                Prior policy on       Pilot          
+Generation  PERCEIVE: the game has finished                                                   rollout contexts
+            STATE: at GATE_SOUTH, 19:46, post-game.                                                              Fine-tune  Training composition
+            GOAL: get the kids through the crowd to a                                                           response 
+            station.
+            DECIDE: take the east station to make our
+            connection.
+            -> @GOTO STATION_EAST
+
+                                                                       Figure 1: Proposed Method Overview.
+
+ # system: the persona, fixed                                                                                   4 Experimental Setup
+ <|start|>system<|message|>Spectator at the Hanshin vs Hiroshima game,
+ Koshien, 2022-05-10. Retired, with daughter and two grandchildren;                                             We use mobile network-based OD data for two professional baseball
+ unlikely to leave early, may buy a souvenir.<|end|>                                                            games at Hanshin Koshien (10 and 11 May 2022, official attendances
+ # user: the situation, from the environment                                                                    31,560 and 30,917). We cross-validate over the two game days, cali-
+ <|start|>user<|message|>[19:46] The game has ended.<|end|>                                                     brating on each in turn and evaluating on the other, then averaging.
+ # assistant: analysis channel, structured rationale                                                            The observed destination composition falls into three destination
+ <|start|>assistant<|channel|>analysis<|message|>                                                               classes, a station, the adjacent commercial complex, and other exits,
+ PERCEIVE: the game has finished; fans are pouring out.                                                         with mean shares 0.744, 0.064, and 0.192 across the two days.
+ STATE: at GATE_SOUTH, 19:46, post-game.
+ GOAL: get the kids through the crowd to a station.                                                                Both SFT passes use gpt-oss-20b with LoRA (rank 64, =128),
+ DECIDE: take the east station to make our connection.                                                          learning rate 2×10-4, effective batch size 16, and a 4096-token
+ <|end|>                                                                                                        packed context on a single NVIDIA H100 NVL GPU. The format
+ # assistant: final channel, action parsed by simulator                                                         pass trains the embeddings of the 18 added tokens on 1,756 synthetic
+ <|start|>assistant<|channel|>final<|message|>                                                                  decision examples whose rationales are written by gpt-5-mini for
+ @GOTO STATION_EAST                                                                                             five epochs. The aggregate-fitting pass resamples narrated trajecto-
+ <|end|>[STEP_END]                                                                                              ries to the corrected composition ~ and trains on 1,663 examples
+                                                                                                                for three epochs.
+Figure 2: One decision step in the Harmony format. Bold
+marks the added tokens; # lines are annotations.                                                                   We evaluate each policy by a free-running rollout. We simulate
+                                                                                                                500 agents from a uniform distribution over personas across ten
+   where the multipliers  satisfy the constraints of Eq. (1). This is                                           random seeds and read each agent's class from the cells its trajectory
+the information projection of 0 onto the constraint set [2], found by                                           visits. An agent counts as mall if it enters the commercial-complex
+IPF [3] in milliseconds. Because the features  are class indicators,                                            cells before leaving the area, as station if it reaches a station without
+the projection acts as a class-level offset. It preserves the support of                                        entering those cells, and as other otherwise.
+0 and the relative probabilities within each class, adjusting only
+the population-level class masses to match the data.                                                               All metrics are computed over the post-game window (20:00­
+                                                                                                                22:10). The grid correlation is the Pearson correlation between the
+   The second step turns , the target we want deployed, into the                                                simulated and observed per-cell occupancy shares on the 125 m
+composition the model actually trains on. The two differ because                                                grid (268 cells), where each ten-minute bin is separately normalised
+fine-tuning amplifies whichever destination class dominates the                                                 to a spatial distribution and all cell-bin pairs active in both sim-
+training set. A model trained on a set composed as  deploys to                                                  ulation and observation are pooled, so the metric captures the
+more concentrated shares and overshoots the target. We therefore                                                shape of the crowd's spatial spread rather than its absolute size.
+calibrate the resampling composition with an empirical transfer                                                 The destination-share error is the summed absolute difference be-
+map  that sends a training composition to the simulation compo-                                                 tween the simulated and observed shares of the three destination
+sition the fine-tuned model produces. We fit  as a per-class affine                                             classes, where each agent is classified by the first destination mesh
+relation from a few pilot fine-tunes at differing compositions; on                                              its trajectory enters.
+our data it is close to linear, for example a station share  in the data
+deploys to about 0.94  + 0.26. Because  is per-class and monotone,                                                 We compare Proposed against four LLM-based variants (no ground-
+we invert it in closed form to obtain the corrected composition                                                 ing, naive SFT, IPF at inference, and GRPO [12]), a rule simulator
+~ with  (~)  ; matching the observed 74% station share, for                                                     tuned by CMA-ES [5], an LLM prompting agent (LLMob [14]), and
+instance, asks for a training share near 51%, since training at 74%                                             a classical gravity model [15].
+would deploy above 94%.
+                                                                                                                5 Results
+   We realise ~ by resampling, with no rewriting of text, keeping
+every trajectory of the rarer classes and subsampling the dominant                                              After calibration to the cell counts, the grid correlation is similar
+class without replacement. A low-rank adapter trained on this                                                   across all behavioural priors, landing near 0.75 for the rule, the
+set yields the fine-tuned policy  , which brings the simulation
+composition toward  in free-running rollout.
+IPF (inference)        0.76       Proposed     0.23                                                                              Tatsuya Amano, Hirozumi Yamaguchi
+                             gravity (tuned)   0.26
+No grounding           0.76  IPF (inference)   0.27                     venues and events, leveraging the growing availability of open
+                              No grounding      0.31                    urban mobility datasets.
+Rule (CMA-ES)          0.76
+                                 RL (GRPO)       0.33                   Acknowledgments
+Proposed               0.76      Naive SFT        0.39
+                              gravity (unif.)                           This work was supported by JST PRESTO Grant JPMJPR2361.
+Naive SFT        0.68                                  0.64
+                                     LLMob              0.65            References
+RL (GRPO)        0.67
+                                                                         [1] Kevin Chapuis, Patrick Taillandier, and Alexis Drogoul. 2022. Generation of
+0.0 0.5 1.0                  0.0 0.5 1.0                                       Synthetic Populations in Social Simulations: A Review of Methods and Practices.
+                                                                               Journal of Artificial Societies and Social Simulation 25, 2 (2022), 6.
+  grid correlation               share error
+                                                                         [2] Imre Csiszár. 1975. I-Divergence Geometry of Probability Distributions and
+(a) Grid correlation.        (b) Destination-share error.                      Minimization Problems. The Annals of Probability 3, 1 (1975), 146­158.
+
+Figure 3: Grid correlation is insensitive across calibrated poli-        [3] W. Edwards Deming and Frederick F. Stephan. 1940. On a Least Squares Ad-
+cies, whereas destination-share error separates them.                          justment of a Sampled Frequency Table When the Expected Marginal Totals are
+                                                                               Known. The Annals of Mathematical Statistics 11, 4 (1940), 427­444.
+uniform policy, and the LLM alike (Fig. 3a). The destination compo-
+sition separates them (Fig. 3b). The fine-tuned policy achieves the      [4] Chen Gao, Xiaochong Lan, Nian Li, Yuan Yuan, Jingtao Ding, Zhilun Zhou,
+lowest destination-share error and is the only policy with a visible           Fengli Xu, and Yong Li. 2024. Large language models empowered agent-based
+mall share, lifting it from 0.02 to 0.09 against an observed 0.06.             modeling and simulation: a survey and perspectives. Humanities and Social
+                                                                               Sciences Communications 11, 1 (2024), 1­24.
+   Training directly at the observed composition confirms the need
+for the corrected training composition. Naive SFT amplifies the          [5] Nikolaus Hansen and Andreas Ostermeier. 2001. Completely Derandomized
+dominant class and performs worse than the untuned baseline.                   Self-Adaptation in Evolution Strategies. Evolutionary Computation 9, 2 (2001),
+GRPO, trained with a cell-occupancy residual reward, also has                  159­195.
+higher destination-share error than the fine-tuned policy and falls
+below the grid-correlation band reached by the other calibrated          [6] Minwoo Jeong, Jeeyun Chang, and Yoonjin Yoon. 2025. Speak to Simulate: An
+policies.                                                                      LLM-Guided Agentic Framework for Traffic Simulation in SUMO. In Proc. of the
+                                                                               8th ACM SIGSPATIAL International Workshop on Geospatial Simulation. 45­48.
+   We also tested whether the policy responds to an unseen weather
+prompt. The policy is calibrated on the dry game day alone, and          [7] Saba Khan and Zhigang Deng. 2024. Agent-based crowd simulation: an in-depth
+the light-rain day's OD flow serves only as held-out ground truth.             survey of determining factors for heterogeneous behavior. The Visual Computer
+We run the calibrated population on the rainy day once with a                  40, 7 (2024), 4993­5004.
+rain sentence appended to the situation prompt (It has suddenly
+started raining.) at the post-event onset and once without. On           [8] Maxime Lenormand, Aleix Bassolas, and José J. Ramasco. 2016. Systematic
+the real rainy day the crowd shelters more at the commercial com-              comparison of trip distribution laws and models. Journal of Transport Geography
+plex and disperses more slowly, and conditioning the policy on                 51 (2016), 158­169.
+rain tracks this shift. Late-window sheltering at the mall rises from
+3 to 59 agents, and the cosine similarity of the mall-occupancy          [9] Qi Liu, Can Li, and Wanjing Ma. 2026. GATSim: Urban mobility simulation with
+curve with the observed rainy day rises from 0.59 to 0.74. A policy            generative agents. Transportation Research Part C: Emerging Technologies 186
+that samples the fixed observed composition produces the same                  (2026), 105576.
+behaviour regardless of weather.
+                                                                        [10] Pablo Alvarez Lopez, Michael Behrisch, Laura Bieker-Walz, Jakob Erdmann,
+6 Conclusion                                                                   Yun-Pang Flötteröd, Robert Hilbrich, Leonhard Lücken, Johannes Rummel, Peter
+                                                                               Wagner, and Evamarie Wießner. 2018. Microscopic Traffic Simulation using
+We presented a method for fitting an LLM crowd policy to aggregate             SUMO. In Proc. of the 21st IEEE International Conference on Intelligent Transporta-
+mobility statistics when individual trajectories are unavailable. The          tion Systems (ITSC). 2575­2582.
+key idea is to project the prior policy toward the OD-derived destina-
+tion composition and fine-tune on a corrected training composition      [11] Joon Sung Park, Joseph C. O'Brien, Carrie J. Cai, Meredith Ringel Morris, Percy
+that accounts for the amplification caused by SFT. On post-game                Liang, and Michael S. Bernstein. 2023. Generative Agents: Interactive Simulacra
+crowd data, the calibrated policy reduced the destination-share                of Human Behavior. In Proc. of the 36th Annual ACM Symposium on User Interface
+error and ran in free-running simulation without inference-time                Software and Technology.
+correction. The results also show that grid-count correlation alone
+can hide important behavioural differences between policies.            [12] Zhihong Shao, Peiyi Wang, Qihao Zhu, et al. 2024. DeepSeekMath: Pushing the
+                                                                               Limits of Mathematical Reasoning in Open Language Models. arXiv preprint
+   A limitation of this work is that it targeted a post-game egress            arXiv:2402.03300 (2024).
+scenario with a small set of POIs and limited context variation,
+and the zero-shot weather response was demonstrated under a             [13] Fukuharu Tanaka, Tatsuya Amano, Akira Uchiyama, Akihito Hiromori, Yusuke
+single condition. As destinations and context combinations grow,               Nakamura, and Hirozumi Yamaguchi. 2024. Policy Optimization for Pedestrian
+the pilot cost scales combinatorially, calling for amortised transfer          Traffic Management by Surrogation of Simulation Models. In 2024 IEEE 21st
+estimates or hierarchical class structures. Future work should clarify         International Conference on Mobile Ad-Hoc and Smart Systems (MASS). 203­211.
+the effective range of LLM-driven crowd simulation across diverse
+                                                                        [14] Jiawei Wang, Renhe Jiang, Chuang Yang, Zengqing Wu, Makoto Onizuka,
+                                                                               Ryosuke Shibasaki, and Chuan Xiao. 2024. Large Language Models as Urban Res-
+                                                                               idents: An LLM Agent Framework for Personal Mobility Generation. In Advances
+                                                                               in Neural Information Processing Systems 37. 124547­124574.
+
+                                                                        [15] Alan G. Wilson. 1971. A Family of Spatial Interaction Models, and Associated
+                                                                               Developments. Environment and Planning A 3, 1 (1971), 1­32.
+

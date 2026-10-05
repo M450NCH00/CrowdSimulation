@@ -1,0 +1,1440 @@
+                                                 An LLM-powered Agent Framework for Heterogeneous Evacuation
+                                                 Behavior Modeling under a Moving Threat in a Public Plaza
+
+                                                 Jian Maa, Runxin Yua, Tianyu Tanga and Xiaolian Lib
+
+                                                 aSchool of Transportation and Logistics, Southwest Jiaotong University, Chengdu, 610031, China
+                                                 bFujian Police College, Fuzhou, 350007, China
+
+arXiv:2609.37009v1 [physics.soc-ph] 29 Sep 2026  ARTICLE INFO                     ABSTRACT
+
+                                                 Keywords:                        Modeling heterogeneous evacuation behavior under a moving threat is challenging because human
+                                                 Crowd Evacuation Simulation      perception, memory, and evidence evaluation resist representation through fixed rules. To overcome
+                                                 Large Language Models (LLMs)     this limitation and capture these internal decision processes, we propose a novel agent-based framework
+                                                 Symbolic Spatial Representation  powered by large language models (LLMs). It has three main components: (i) each pedestrian agent
+                                                 Agent Memory                     perceives a private symbolic ASCII view, mantains a Memory-based Knowledge Graph updated
+                                                 Personality Traits               solely via individual observations, and makes decisions using prompts that incorporate a personality
+                                                 Public Space Security            profile under a common sampling configuration; (ii) a decision-context compression coupled with
+                                                                                  a stateless memory model preserves trial-and-error experience across decision turns while omitting
+                                                                                  reasoning traces to keep the context compact, with the resulting memory record reconstructed post
+                                                                                  hoc as a knowledge graph; and (iii) a validation engine executes routes exclusively over observed
+                                                                                  terrain, effectively decoupling behavioral choice from physical feasibility. In a simulated public plaza
+                                                                                  scenario, we evaluated eight personality compositions in eight paired randomized blocks. The results
+                                                                                  reveal a strong association between usable-exit knowledge and evacuation outcomes: agents with such
+                                                                                  knowledge evacuated in 89.5% of cases, compared to only 1.05% of those lacking it. Furthermore,
+                                                                                  personality compositions differed in their evaluation of threat evidence. Under remembered evidence,
+                                                                                  the proportion of danger assessments varied by 0.265 across personality compositions, while the mean
+                                                                                  share of high-urgency, low-directness decisions varied approximately three-fold, from 11.41% to 34.33%.
+                                                                                  By contrast, responses converged after direct threat sightings: 99.6% of the assessments classified
+                                                                                  the situation as dangerous, as instructed. Movement was selected in 99.8% of decisions. Overall, the
+                                                                                  results indicate that access to information was strongly associated with evacuation outcomes, while
+                                                                                  spatial geometry, information, and affect were jointly associated with evacuation time. The proposed
+                                                                                  framework provides an auditable approach to generating endogenous behavioral heterogeneity through
+                                                                                  persona-conditioned LLM agents in crowd-evacuation simulations.
+
+                                                 1. Introduction                                                 simulated density to physical compression forces (Li et al.,
+                                                                                                                 2018). Individual heterogeneity is difficult to represent at this
+                                                     Public plazas, temple forecourts, transport interchanges,   scale (Kouskoulis et al., 2018). Mesoscopic models occupy
+                                                 and other open civic spaces bring large numbers of people       the intermediate scale: rather than tracking each evacuee,
+                                                 into layouts designed for circulation. When a threat emerges    they describe the crowd through a statistical distribution
+                                                 within such a space, people must rapidly determine what is      over individual states such as position, velocity, and walking
+                                                 happening, whether they are at risk, where the exits are, and   direction, typically in gas-kinetic or kinetic-theory form
+                                                 how those nearby are likely to respond. Pedestrian safety       (Hoogendoorn and Bovy, 2000; Bellomo and Dogbe, 2011).
+                                                 in these settings has therefore attracted sustained attention   Agnelli et al., for example, applied kinetic theory to crowd
+                                                 across disciplines. Computer-science research detects conges-   evacuation from bounded domains (Agnelli et al., 2015)
+                                                 tion from motion signatures in trajectory data (Khan, 2019),    and later extended the approach to disease contagion during
+                                                 while emergency-management research develops actionable         evacuation (Agnelli et al., 2023). Heterogeneity at this
+                                                 evacuation plans for dense facilities (Guo et al., 2023).       scale is typically represented through a small number of
+                                                 A moving threat intensifies the evacuation problem: the         activity variables or state classes, so individual perception and
+                                                 hazard follows a dynamic path, information reaches different    decision processes remain outside the model. Microscopic
+                                                 individuals incompletely and at different times, and route      models instead represent evacuees individually and can
+                                                 choice depends on spatial cognition, risk perception, and       therefore capture individual attributes and local interactions.
+                                                 geometry of the scene. Consequently, mathematical and           Social-force models (Helbing et al., 2000), cellular automata
+                                                 computational models have sought to capture how population      (Kirchner et al., 2003), and hybrids of the two are standard
+                                                 heterogeneity shapes evacuation behavior.                       examples. Chen et al. developed social-force formulations
+                                                                                                                 considering the spatial features of tread depth and riser
+                                                     Existing evacuation models operate at three scales: macro-  height in staircases to explore vertical evacuation of buildings
+                                                 scopic, mesoscopic, and microscopic. Macroscopic models         (Chen et al., 2018a). These formulations resolve mechanical
+                                                 represent a crowd as a homogeneous flow described by            interactions within physical space, but cognitive processes,
+                                                 density, velocity, and flow rate; common formulations include   perceived information, and behavioral preferences generally
+                                                 queuing, regression, and path-selection models (Kaur and        remain external to the model. Subjective trade-offs among
+                                                 Kaur, 2022). Li et al., for example, developed a numerical
+                                                 scheme based on the Hughes continuum model that relates
+
+                                                 Ma, Yu, Tang and Li: Preprint submitted to Elsevier             Page 1 of 22
+LLM-powered Modeling of Evacuation under a Moving Threat
+
+threat exposure, congestion, and travel distance must there-       Yang et al. incorporated personality traits, environmental
+fore be encoded as rules.                                          observations, and action histories into an LLM-powered
+                                                                   evacuation framework (Yang et al., 2026). Explicit spatial
+    Pedestrian microsimulation generates behavior from             and knowledge representations provide additional support for
+predefined physical or behavioral rules affected by environ-       such decisions: neuro-symbolic evacuation models combine
+mental features and personal behavioral preferences. Recent        learned reasoning with spatial structure (Bahamid et al.,
+work has extended this rule-based foundation in several            2024), while Tao et al. coupled a fire-incident knowledge
+directions. Simulation-based optimization has been coupled         graph constructed through entity and relation extraction with
+with real-time evacuation guidance under changing access           vision-language-model reasoning for emergency decision
+conditions and crowd distributions (Zhang et al., 2024);           support (Tao et al., 2026). Building on this work, the present
+visibility-dependent interaction models reproduce detours,         study asks how changing information is interpreted, retained,
+wall following, and herding under reduced visibility (Tan          and translated into successive evacuation decisions under
+et al., 2025); and machine-learning models infer microscopic       a moving threat. A central issue is how a pedestrian's
+pedestrian motion from local interaction data (Jiang et al.,       understanding of danger and available exits develops as new
+2025). Multi-agent studies have also compared situational-         evidence arrives. Connecting these changes to route choice
+awareness and routing strategies under dynamic hazards             and movement provides a basis for investigating the processes
+(Serrano et al., 2026), as well as heterogeneous exit-choice       through which evacuation behavior develops.
+strategies that balance efficiency, safety, and fairness (Tong
+et al., 2026). Collectively, these studies make information, per-      Such a framework should meet at least the following
+ception, and behavioral heterogeneity increasingly explicit,       four requirements. First, the environment must be presented
+but decisions remain encoded in optimization objectives,           in a form the model can interpret without devoting exces-
+learned functions, or prescribed strategy sets. Agent-based        sive capacity to decoding geometry. Second, population
+modeling has consequently attracted interest as a means            heterogeneity must arise within the agents, because demo-
+of representing human-like behavior and the cognitive pro-         graphic, physical, and psychological differences produce
+cesses underlying individual decisions (Gao et al., 2024).         distinct evacuation behaviors (Hu et al., 2023; Li et al.,
+Psychological structure has been introduced into agent-based       2023; Mandar and Boulmakoul, 2016). Knowledge-guided
+evacuation models through Gibson's theory of affordances for       hierarchical multi-agent reinforcement learning represents
+pedestrian­environment interaction (Hassanpour and Rassafi,        this heterogeneity through mobility attributes, sensitivity
+2021), trained leaders who redistribute crowd route choices        parameters, and decision mechanisms (Sun et al., 2026),
+(Pelechano and Badler, 2006), and heterogeneous self-driven        while other work encodes personality traits as agent attributes
+forces (Wu et al., 2022). Nevertheless, these formulations         (Wang et al., 2021; Raetano et al., 2026). Third, each agent
+rely on weighted functions and manually specified rules that       requires persistent, inspectable memory so that a decision can
+define the population's behavioral repertoire in advance.          be traced to what the agent knew when it was made. Fourth,
+                                                                   information must pass from person to person to reflect the
+    Large language models (LLMs) offer a way to condition          uneven diffusion of knowledge through a crowd.
+agent decisions on descriptions of the environment, individual
+attributes, and remembered experience. Research on language            This study develops an LLM-powered agent framework
+processing has identified shared computational principles          for investigating how individual experience enters evacu-
+between human neural responses and language models,                ation decisions in a public plaza under a moving threat.
+including context-dependent prediction and representations         Its contributions are to represent decisions using private
+of word meaning (Goldstein et al., 2022). More recently,           observations, personality profiles, and retained experience;
+a language model fine-tuned on human behavioral data               to reconstruct changes in memory alongside successive
+predicted choices across a range of cognitive tasks (Binz et al.,  choices; and to connect these records to physically executed
+2025), supporting interest in language models as tools for         movement. Together, these elements support the analysis of
+studying human decision-making. Interactive agents extend          how pedestrians interpret danger, maintain an escape goal,
+this potential to decisions made through repeated encounters       and reconsider a route as their understanding of the situation
+with an environment. In Minecraft, JARVIS-1 combines               changes. Section 2 describes the framework, Section 3
+planning, action execution, and memory of previous experi-         presents the experimental design, Section 4 reports the results,
+ences to complete tasks requiring multiple stages of action        Section 5 discusses their implications and limitations, and
+(Wang et al., 2025). For evacuation modeling, this division        Section 6 concludes the paper.
+of functions offers a way to connect immediate responses
+to danger with continuing goals and revisions to an escape         2. Methodology
+plan. Recent studies have applied LLM-powered agents to
+evacuation and wayfinding. Dang et al. combined LLMs                   The framework separates local perception, decision-
+with a cellular-automaton environment to examine how agent         making, memory updating, and physical execution. Each
+backgrounds and communication relate to fire-evacuation            pedestrian maintains a private known map  containing
+outcomes (Dang et al., 2025b). In a separate wayfinding study,     observed terrain. The decision model receives the current
+they compared spatial-memory conditions and included
+human participants as a reference (Dang et al., 2025a).
+
+Ma, Yu, Tang and Li: Preprint submitted to Elsevier                Page 2 of 22
+LLM-powered Modeling of Evacuation under a Moving Threat
+
+Figure 1: Perception, decision, memory, and physical execution in the LLM-powered framework. (a) Local observations update
+each pedestrian's private known map . (b) The decision model combines the current view , personality, affect, short-term
+context , and long-term memory . (c) The model selects an action and target ; the engine constructs and checks routes
+through observed, passable cells. Memory revisions are reconstructed as knowledge graphs after the run.
+
+scteyormmmbptoueltxiectduavalifefmewcetmivoer, ystthatee, .psIehtrossoretnl-eatcetrdsmeasnccoraincpttteiioxontn,anth,deaenietdhnelgorinnagen--  present framework, the five trait scores form part of each
+offered route or a perceived target. The engine generates                                                                                       agent's persistent persona description.
+and validates routes using the pedestrian's known map, then
+applies the physical movement rules. After each run, memory                                                                                     2.1.1. Personality Configuration
+revisions and decision records are reconstructed as graphs for                                                                                      With the five-domain FFM profile, each evacuee's per-
+analysis. Figure 1 distinguishes the information used during
+simulation from the records constructed afterward.                                                                                              sonality can be represented as an agent attribute expressed as
+                                                                                                                                                T-scores. The score is embedded for each agent in the system
+2.1. Personality Modeling and Prompt                                                                                                            prompt received by the decision model on every call. Each
+      Specialization                                                                                                                            profile assigns a T-score (mean 50, standard deviation 10)
+                                                                                                                                                to openness, conscientiousness, extraversion, agreeableness,
+    The framework represents stable behavioral tendencies                                                                                       and neuroticism. Scores are mapped to five interpretive bands:
+using the Five-Factor Model (FFM): openness to experience                                                                                       very low (below 35), low (35­44), average (45­55), high (56­
+(O), conscientiousness (C), extraversion (E), agreeableness                                                                                     65), and very high (above 65). For each domain, the prompt
+(A), and neuroticism (N). The FFM provides a compact                                                                                            includes the numeric score, its band, and a behavioral anchor
+description of individual differences (Raetano et al., 2026).                                                                                   framed in the context of an ordinary outing.
+Evacuation models have used OCEAN traits to relate person-
+ality to psychological stress and desired speed (Wang et al.,                                                                                       For example, the high-conscientiousness anchor
+2021), while separate work has examined aggressiveness and                                                                                      describes a person who adheres to a plan and follows
+competition in pedestrian movement (Hu et al., 2023). In the                                                                                    a chosen route, whereas the high-neuroticism anchor
+                                                                                                                                                describes someone who hesitates and revisits choices when a
+                                                                                                                                                situation is unclear. Domains outside the average band also
+                                                                                                                                                include salient facets that link non-average scores to specific
+                                                                                                                                                tendencies. Table 1 presents the five profile templates used
+
+Ma, Yu, Tang and Li: Preprint submitted to Elsevier                                                                                             Page 3 of 22
+                    LLM-powered Modeling of Evacuation under a Moving Threat
+
+to instantiate this representation. Population size and the       updated current perception, engine-computed affect, and
+number of pedestrians assigned to each profile are specified      retained memory. This separation makes the sources of
+separately for each experimental scenario.                        prompt variation explicit, but it does not isolate the causal
+                                                                  effect of persona text because neuroticism also affects the
+Table 1                                                           engine-maintained fear state described in Section 2.3.5.
+FFM T-scores of the five personality archetypes.
+
+Archetype           OC E AN                                       Table 2
+                                                                  The seven instruction blocks of the shared policy section.
+
+Average             50 50 50 50 50                                Block       Content
+Calm-independent    50 55 40 45 30                                Identity
+Rule-following      40 70 45 60 50                                            An ordinary pedestrian acting on local
+Anxious-conformist  40 45 62 60 72                                Map         perception, its own known map, memory,
+Bold-solitary       68 35 35 40 32                                            affect, and messages received
+                                                                  Judgment
+    The five personality profiles use the fixed T-scores listed               The fixed north-up orientation, the
+in Table 1. These scores determine the interpretive bands,        Intent      @-relative offset convention, and the glyph
+salient facets, and behavioral anchors inserted into each         Route       table of Table 3
+agent's identity section. The neuroticism score also deter-       options
+mines the sensitivity and recovery coefficients in Eq. (5). The               Target choice belongs to the agent, route
+composition experiment changes the numbers of pedestrians         Past        legality to the engine; the evidence clause;
+assigned to each profile while keeping the profile scores fixed.  experience  the default target-distance band
+                                                                  Output
+2.1.2. Behavioral Differentiation through                                     intent and urgency as a standing goal that
+        Persona-Conditioned Decisions                                         persists until the agent changes it
+
+    Rule-based evacuation models usually represent indi-                      Fields of the engine-computed routes
+vidual differences through parameter values or prescribed                     (length, familiarity, crowding, clearance
+behavioral rules. In the present framework, by contrast,                      from A or D, reach) and the rule that the
+behavioral heterogeneity is introduced through a stable                       shortest route need not be chosen
+persona profile embedded in each agent's system prompt. The
+persona conditions the decision but does not prescribe a fixed                Use of the decision-context capsule and of
+action; pedestrians presented with the same environmental                     the engine's feedback on the previous
+evidence may therefore still make different choices. The                      response
+language model interprets this profile together with current
+perception, affect, and remembered experience, and this                       Validation and JSON action guideline
+interpretation is the core mechanism through which different
+agents express their heterogeneity.                                   The identity section of the system prompt describes
+                                                                  each agent's identity and personality and remains fixed
+    Agents accumulate different observations and memory           throughout the simulation. It includes the agent's identifier
+texts as their trajectories diverge. These changing inputs        and demographic type, the five personality domain scores and
+can accompany differences in later decisions. The graphs          their bands, the salient facets of domains outside the average
+reconstructed after a run describe this recorded history. As a    range, and a brief description of a behavioral tendency for
+result, individual differences in personality become progres-     each domain. For example, the high-neuroticism description
+sively more pronounced. This phenomenon emerges from              characterizes a preference for nearby targets and more
+the long-term effects of LLM-powered self-maintenance,            frequent changes in movement direction under threat. These
+through which perceptual, decision-making, and other be-          descriptions provide a personality context that the decision
+havioral information are progressively integrated over time,      model considers together with local observations, memory,
+ultimately giving rise to an increasingly coherent and realistic  and affect when choosing an action.
+perception­decision­action framework for each individual.
+                                                                      At  = 0, each pedestrian selects an initial route and
+    Fig. 2 summarizes how the five trait scores are translated    enters the first recorded frame already moving (Section 2.3.1).
+into agent-specific descriptions while the general decision       The engine accepts a target when it lies on an observed,
+instructions and sampling settings remain fixed across agents.    passable cell and can be reached through observed cells
+                                                                  (Section 2.2.3).
+    For each agent, its system prompt is composed of a shared
+policy section and an agent-specific identity section. The            During the simulation, an agent's move is affected by its
+shared policy is identical for all the agents and consists of     surrounding environmental situation, especially the situation
+seven instruction blocks, summarized in Table 2, while the        within its field of view. A direct sighting of the threat
+identity section varies depending on the agent's demographic      or an injured person provides unambiguous evidence that
+type and FFM profile. For each decision the agent made, the       the current situation is dangerous. In the symbolic view
+system prompt load varies because it contains the agent's         described in Section 2.2.3, the glyph A marks an armed
+                                                                  person rushing toward the crowd, and D marks a person lying
+                                                                  motionless on the ground (Table 3). For example, an agent
+                                                                  may interpret A as "I saw someone holding a knife with
+                                                                  blood on it". The decision instruction states that directly
+
+Ma, Yu, Tang and Li: Preprint submitted to Elsevier                           Page 4 of 22
+                    LLM-powered Modeling of Evacuation under a Moving Threat
+
+a Big Five profile            b Agent-specific prompt layer                                   c Controlled interface
+
+Example · anxious-conformist                                                                         Fixed across agents
+                                                                                                          shared policy
+O                   40        AGENT IDENTITY
+                                                                                                       same instructions
+C                   45        demographic                         age / sex / role                         tool schema
+                              T-scores                            O·C·E·A·N                                 same fields
+E                   62        bands                               low · average · high                        sampling
+                              facets                              anxiety · compliance
+A                   60        anchors                             crowd · route · wait                  temperature = 0.2
+                                                                                                      Inserted into every
+N                   72
+                                                                                                        decision prompt
+   T = 50
+                                                                  only agent identity varies
+
+Figure 2: Personality-to-prompt encoding in the controlled decision interface. (a) An anxious-conformist profile illustrates the five
+FFM T-scores and their position relative to  = 50. (b) The agent-specific identity section converts demographics and scores into
+bands, salient facets, and behavioral anchors. (c) The shared policy, tool schema, and temperature=0.2 remain fixed across agents,
+and the resulting identity section is inserted into every decision prompt.
+
+seeing A or D is strong evidence of danger. The label itself,     2.2. ASCII-Based Local Perception and Spatial
+however, is produced by the language model rather than                  Representation
+written by the engine: the model must recognize the glyph
+in its own ASCII view and return danger in the situation              Agents in the proposed framework receive their surround-
+field of its JSON output, which records its appraisal as          ings through a symbolic representation. By making decision-
+normal, unsure, or danger (Section 2.3.5). The LLM then           relevant information explicit at the cell level, this interface
+selects the agent's next action by considering its personality    allows each move to be related to what the agent could
+description, affective state, remembered experience, and          observe (Ahissar et al., 2025; Bahamid et al., 2024). This
+visible surroundings. Within each decision turn, the LLM          section defines the environment layers that generate the view,
+interprets the symbolic observations, reports its appraisal of    the geometry that determines which cells enter it, and the
+the situation, and selects an action. As new evidence becomes     encoding that converts those cells into prompt text, as shown
+available, it can reconsider its standing goal and choose a       in Fig. 3.
+different route or target in light of remembered experience.
+This connects cue interpretation, situation appraisal, and        2.2.1. Layered Environment Representation
+action selection within an LLM-powered decision process               The environment comprises four layers with distinct
+(Section 2.3.2).
+                                                                  functions. The 1st layer is the raw layer, a raster of 0.4 m cells
+    Person-to-person communication is represented by shout-       that records the fixed geometry of the space. The 2nd layer
+ing. Once a pedestrian has chosen to escape, it shouts while      is the semantic layer, which records openings, gates, fixed
+moving. The engine calculates the distance between the            obstacles, and spawn cells. The 3rd layer is the effective layer,
+speaker and nearby pedestrians and adds the signal to the         which combines the raw and semantic layers with the current
+decision context of listeners within hearing range (Sec-          gate states and serves as the physical authority for collision
+tion 2.3.7). The signal conveys the direction and approximate     and availability. The 4th layer is the belief layer, which is
+distance of the shout. In everyday terms, the listener hears      private to each agent and contains only terrain that the agent
+someone shouting nearby. Anonymous shouting is presented          has personally observed.
+as uncertain evidence, which the listener's LLM considers
+alongside its observations, memory, personality, and affect.          The reason why we separate the belief layer from the
+The model returns an updated appraisal of normal, unsure, or      effective layer is that it establishes the framework's informa-
+danger, and the engine records this as the pedestrian's current   tion boundary. Physical resolution uses the effective layer,
+situation. This communication mechanism separates warning         whereas target selection and local route generation use the
+reception, interpretation, and the choice of a response (Lindell  pedestrian's private belief layer. The model receives only
+and Perry, 2012).                                                 the privately observed and explored map, and the memory
+                                                                  connects the selected target exclusively through observed
+    All agents share the same sampling settings, so variation     cells.
+across personalities arises from trait scores, verbal anchors,
+affect, memory, and current evidence.                             2.2.2. Field of View and the perception map
+                                                                      Visibility is computed by enumerating every raster cell
+Ma, Yu, Tang and Li: Preprint submitted to Elsevier
+                                                                  whose center lies within the sight radius and testing it against
+                                                                  the view cone and a line-of-sight trace. Let  denote the static
+                                                                  set of raster cells and let  denote the effective physical-grid
+                                                                  state at time . For pedestrian , with position , heading
+                                                                  , sight radius , and cone width , the visible set of the
+
+                                                                                                                                 Page 5 of 22
+                               LLM-powered Modeling of Evacuation under a Moving Threat
+
+   1. Local                  2. View cone +                      3. + Moore ring               4. Perceived set         5. Encoded patch
+                               line of sight                                                     P = F union M
+environment                                                                                                                 ?????????
+                                                                                                                            ??###..E?
+T                 G          T                G                  T                  G          T             G              ??#..p..?
+         @             E              @            E                      @              E              @         E         ??#.A.G.?
+                                                                                                                            ??..@p..?
+                                                                                                                            ??T.....?
+                                                                                                                            ?????????
+
+                                                                                                                                                   N
+
+                                  120° · radius 12 m             first-order Moore             uniform hatch = unknown
+                          filled cone: every cell centre tested   neighbourhood
+
+                                                                                                                                                          ASCII + belief grid -> route options / target A*
+
+Figure 3: From geometry to action. The filled view cone and first-order Moore neighborhood form the perception map, unknown
+cells appear as ?, and the private Memory-based Knowledge Graph supports engine-generated route options as well as A* validation
+of a model-selected target.
+
+environment is                                                               Table 3
+                                                                             Character vocabulary of the local symbolic view.
+  =         {             -      ,
+                    |
+                    |
+
+                    |                                                               Symbol Meaning
+
+                       ( - , )  2,                               (1)
+
+                       LOS(, ; ) }.                                                         ? Outside the perception map or occluded
+
+                                                                                            . Walkable ground
+
+The perception map also includes the first-order Moore                                      # Wall or outside the building
+neighborhood , representing immediate awareness of the
+eight cells surrounding pedestrian  at time , including cells                               T Tree or fixed obstacle
+
+behind the pedestrian:                                                                      E  Exit
+
+                                                                                            G  Gate, open
+
+ =   .                                                           (2)                        g Gate, closing
+
+                                                                                            X  Gate, closed
+
+    At initialization, each pedestrian also observes the cells                              @ The agent itself
+within a Chebyshev radius of 3, subject to line of sight. These
+initial terrain observations are stored in the memory section                               p Another pedestrian
+and serve as one part of system prompts before the first
+decision and persist after ordinary directional perception                                  D A person lying motionless on the ground
+begins. A wall cell remains visible while occluding cells
+behind it, and every cell outside  appears as ?. Moore-                                     A An abnormal person rushing toward the
+neighborhood cells are integrated into the same equal-width                                         crowd
+ASCII matrix, as shown in Fig. 3. At each simulation timestep,
+ is written to the private Memory-based Knowledge Graph                      identifier or a target offset. The engine checks the selected
+together with its observation time. The resulting Memory-                    destination against the saved decision-time observation, con-
+based Knowledge Graph supplies route options and supports                    structs an eight-neighbor A* route on the pedestrian's private
+validation of model-selected targets.                                        Memory-based Knowledge Graph, and rejects unknown,
+                                                                             blocked, or disconnected targets. Only validated belief-grid
+2.2.3. Symbolic Encoding of the Perceived Field                              cells are executed.
+    The perception region aligns with the orientation of
+                                                                             2.2.4. Properties of the Two-Dimensional Symbolic
+the agent's facing direction. The terrain from the effective                         Field
+layer is written first, after which entities are overlaid: other
+pedestrians, people on the ground, the anomalously behaving                      A character grid encodes position and attribute in a single
+person, and the focal agent. Table 3 defines the vocabulary.                 token. A symbol's location in the matrix specifies where an
+Every cell in the bounding box but outside the perception                    object is relative to the agent, while the symbol itself specifies
+map is written as ?, making the boundary between observed                    the object's identity. Thus, reading A two rows above and one
+and unknown space explicit.                                                  column to the right conveys both properties simultaneously.
+                                                                             Throughout a run, textual adjacency preserves neighborhood
+    The decision model returns an action, a situation assess-                relationships in the two-dimensional field.
+ment, a standing intent, and either an engine-provided route
+                                                                                 The representation is also preserved under reorientation.
+                                                                             When a scene is rotated, interpreting a coordinate list requires
+
+Ma, Yu, Tang and Li: Preprint submitted to Elsevier                                                                            Page 6 of 22
+LLM-powered Modeling of Evacuation under a Moving Threat
+
+the spatial relationships to be re-derived arithmetically. By     took effect. Each assessment uses the observation recorded
+contrast, the character grid rotates with the scene while         at its start, and its decision takes effect one simulated second
+preserving layout and adjacency, so the reading procedure re-     later. Subsequent changes in the scene are considered in the
+mains unchanged. This property allows the benchmark below         next assessment.
+to separate spatial competence from arithmetic competence.
+                                                                      During pending computation, the pedestrian continues
+    Spatial-representation validation was retained as a sup-      along an existing legal route and waits if that route is ex-
+plementary experiment using frozen snapshots to compare           hausted. After pedestrian decisions are applied, the adversary
+four representations: no map, structured cells, lean ASCII,       plans its movement, and all entities propose at most one
+and ASCII with a decoding protocol. In the main evacuation        move for concurrent resolution. Fatalities, opening capacity,
+experiment, the implemented equal-width ASCII representa-         evacuation, decision traces, metrics, and the rendered frame
+tion remained fixed while the behavioral mechanisms were          are then evaluated from the committed state.
+tested.
+                                                                  2.3.2. Dual-Model Architecture and Decision Layers
+2.3. LLM-powered Agent Modeling Framework                             Each agent is served by two models with distinct responsi-
+    Once the surroundings have been perceived, agents with
+                                                                  bilities. The decision model reads the symbolic view, compact
+different behavioral characteristics must decide how to act.      working context, long-term memory, and affect; reports an
+Their information is partial, uncertain, and dynamic, as is       intention, urgency, action, and situation assessment; and se-
+typical in evacuation settings, where environmental cues,         lects an offered route or perceived target. The memory model
+risk appraisal, and nearby behavior jointly inform the next       reads the agent's current notes together with its observations,
+move. Linguistic instead of purely numerical representation       decisions, and realized movement, then rewrites a first-person
+reflects how such situations are described and interpreted        account. Separating these functions makes decision behavior
+(Xue et al., 2023). Language models, in turn, provide a           and memory revision independently measurable (Dang et al.,
+mechanism for context-dependent decisions that can incor-         2025a).
+porate heterogeneous behavioral characteristics (Gao et al.,
+2024; Yang et al., 2026). This section specifies the decision         Within a single call, the decision model operates at
+loop, supporting memory architecture, affective state, and        three levels. At the highest layer, it states a standing goal:
+algorithmic adversary.                                            intent identifies what the agent is trying to do, while urgency
+                                                                  indicates how strongly it judges that immediate action is
+2.3.1. Perception­Decision­Action Loop                            required. Both values persist until the agent revises them. The
+    Before the simulation starts, the decision model receives     previous values are returned to the agent on its next turn, so
+                                                                  an intention continues by default and any change is explicitly
+each pedestrian's initial observation and selects either an       recorded. At the middle layer, the agent selects a route. The
+offered route or a legal target. The engine validates the         engine constructs up to four walkable route segments on
+selection and installs the resulting route, so each pedestrian    the pedestrian's private Memory-based Knowledge Graph,
+enters the first recorded frame already moving along a model-     anchored to known openings or frontier cells at the edge of
+selected route.                                                   explored space. It also adds a corridor-distinct alternative to
+                                                                  the nearest anchor, providing another path even when only
+    Each subsequent turn follows a fixed sequence. Memory         one destination is known. Each segment is annotated with
+revisions submitted during the preceding turn become due          observable attributes: length in cells, the fraction already
+first. If a revision remains unfinished, the simulation waits at  traversed, the number of visible people along it, the closest
+the current boundary before constructing any new decision         approach to any currently visible A or D, and whether the
+observation. Fields of view are then recomputed and local         20-cell horizon reaches the anchor or only advances toward
+evidence registered. Every active pedestrian carries a current    it. Personality and affect can therefore influence whether the
+route and may also have one pending decision request. A           agent prioritizes familiarity, crowding, or clearance from a
+decision submitted at simulated time  stores the pedestrian's     visible threat; the prompt explicitly gives no priority to the
+observation and memory snapshot and is scheduled for the          shortest option. If none of the offered routes is suitable, the
+first boundary at or after  + 1. During this interval, the        agent selects a target_offset and, optionally, one interme-
+pedestrian may execute one step along an existing legal route.    diate waypoint. At the lowest layer, the engine commits at
+An early response remains buffered until the due boundary; a      most 20 cells of the selected route before requesting another
+late response pauses pedestrians, the adversary, gates, affect,   decision, preventing a single choice from determining an
+collision recovery, trajectory recording, and the simulation      entire long route.
+clock until computation finishes. The validated decision is
+then applied at the same boundary before movement.                2.3.3. Context Compression and Experience Retention
+                                                                      Each request is constructed from a fresh, self-contained
+    When a pedestrian first sees an armed person (A) or
+someone lying motionless (D), it reassesses the situation using   context. Throughout the text and figures,  denotes the
+the new observation. If a decision based on an earlier view       decision-context window: per-agent short-term memory that
+is still being generated, that assessment is replaced by one      carries compressed operational context between nearby turns.
+that includes the newly observed evidence. While the threat       The symbol  denotes per-agent long-term first-person
+remains visible, another assessment can begin once at least
+one simulated second has passed since the previous decision
+
+Ma, Yu, Tang and Li: Preprint submitted to Elsevier               Page 7 of 22
+LLM-powered Modeling of Evacuation under a Moving Threat
+
+memory maintained across revisions. The decision and                    The completed record is assembled into a versioned
+memory models use these two written channels, respectively,         knowledge graph. Each revision is divided at sentence bound-
+to carry experience between turns.                                  aries into individual remembered facts, each represented as
+                                                                    a node. Facts are matched across versions using character-
+    The short-term memory is a rolling operational context.         bigram Jaccard overlap,
+Its inputs are the previous content, the current observation,
+and the engine's feedback on the previous response, which            (, ) = |()  ()| ,                          (3)
+states whether it was accepted and, if not, why it was                        |()  ()|
+rejected, so that the next decision can correct the error. The
+compression rule retains the current intention, strategies          where () denotes the set of adjacent character pairs. This
+confirmed against the environment, tool corrections, and un-        measure operates directly on the text and clearly separates
+resolved questions. It removes reasoning traces, restatements,      the observed score ranges: rewritten versions of the same fact
+expired map details, and relative coordinates invalidated by        score 0.43­0.60, whereas distinct facts score 0.00­0.11. A
+movement. Reasoning traces are omitted by design because            threshold of 0.40 therefore assigns reworded facts to their
+they would not fit within the compression length limit; the         existing nodes. A retained fact continues as one lineage
+capsule keeps the outcome of each attempt. A valid response         across versions, a revised fact starts a new version within
+replaces the memory prompts; a rejected response preserves          its lineage, and a fact omitted from a revision ends its lineage.
+the previous version.                                               Edges between lineages record semantic associations among
+                                                                    opening knowledge, route intention, communicated evidence,
+    The second model writes the long-term memory  from              and affect. Fig. 4 illustrates this structure for one recorded
+the pedestrian's current memory text and a summary of the           agent.
+committed turn. The summary includes the number of visible
+people; identifiers of visible adversaries and bodies; signage          The knowledge graph is reconstructed after the simulation
+and opening states within the perception map; affect and            from the complete memory record. It connects changes in
+witnessed events; and the decision, including its target, action,   remembered information with recorded decisions, supporting
+and situation assessment. The model returns a first-person          analysis of how pedestrians revise their understanding and
+account within a 1,200-character limit, retaining current           evacuation plans (Tao et al., 2026).
+facts while revising or removing expired ones. Because
+facts persist only through rewriting, omission constitutes          2.3.5. Affective State
+forgetting. When an adversary leaves the perceptual set, the
+pedestrian retains only the cell in which it last observed that         The validation mechanism manages a fear value () 
+adversary and the simulated time of the observation. Later          [0, 1] for each pedestrian . Four categorical levels are used
+requests label this record explicitly as stale evidence and
+report the elapsed time, with bearing and distance recomputed       for reporting: calm below 0.20, alert below 0.45, afraid below
+from the pedestrian's current position to the remembered
+cell. The record is created only while the adversary lies           0.75, and high fear at or above 0.75. Stimuli arise from direct
+within that pedestrian's perceptual set and is replaced only
+by a subsequent direct sighting. Gaze and body direction            sightings, proximity to the threat, observed casualties, and
+are represented by a single heading, so a pedestrian cannot
+look behind itself without turning, and any committed step          nearby pedestrians fleeing. Let () denote the intensity
+overwrites its previous orientation.                                of stimulus type  experienced by pedestrian , and let
+                                                                     () = max () denote the strongest active stimulus. Fear
+    The two limits reflect different retention horizons. Oper-      is updated as
+ational context concerns the current situation and becomes
+stale within a few turns, so 500 characters are sufficient for in-            {max((), min(1,  ()))          ,   () > 0,
+formation that survives one rewrite. Experience accumulates                      max(0, () - ) ,
+throughout a run, giving the memory model 1,200 characters          ( + )  =                                     () = 0,
+within which to determine what the pedestrian retains.                                                                  (4)
+
+2.3.4. Graph-Structured Memory                                      where the sensitivity multiplier  and recovery rate  are
+    The memory model is stateless. Each update carries a
+                                                                      =                (    +    -  50 )
+complete context for one agent: its current memory text                  clip[0.65,1.45] 1                ,
+and the newly committed turn. Neither conversation history                                     100
+nor content is shared between agents. Revisions are written                                                     (5)
+as prose, allowing the model to retain, modify, or omit                       (                 - 50 ) .
+remembered facts in the same format as the record. Facts              =  max 0.01,  0.10    -    1000
+absent from the current revision become forgotten nodes;
+forgetting is therefore endogenous to the agent and observable      A larger  therefore produces a stronger rise in fear and
+through logs that record what disappeared and when.                 a slower recovery. The current fear value and active stimuli
+                                                                    are supplied to the decision model, creating an explicit
+                                                                    second pathway from the personality representation to later
+                                                                    decisions.
+
+                                                                        The framework represents emotion using two quantities
+                                                                    with distinct origins. The scalar  is computed by the engine
+                                                                    from Eqs. (4) and (5) and supplied to the decision prompt
+
+Ma, Yu, Tang and Li: Preprint submitted to Elsevier                                                             Page 8 of 22
+                        LLM-powered Modeling of Evacuation under a Moving Threat
+
+Recorded memory evolution · Agent 5
+
+                   v1              v2                v3            v4               v5               v6  v7                v8
+
+environment & activity                                                 touring
+
+                        east sign                    E + NE signs                        exit1 best      10  2 steps
+                        follow E                                                        continue r1        near exit1
+opening knowledge                                                      exit1 known
+route intention
+                                       follow NE                     exit1 + exit2
+                                                           toward exit1
+
+                                                     calm                               afraid       agent 1 shouts
+                                                                                                           alert
+threat & affect                                                                                                      calm
+
+retained                revised        forgotten                   cross-lane relation                character-bigram Jaccard · J  0.40
+                                                                                        Agent 5 · 8 versions · 6 active · 18 forgotten
+
+Figure 4: Recorded evolution of Agent 5's long-term first-person memory in the completed GLM-5.3-flash reference run. Facts are
+arranged by version (1­8) and semantic track. Solid dark lineages were retained, blue nodes mark revisions, and pale dashed
+lineages terminate facts later omitted from memory. Dashed cross-track edges show recorded semantic associations, such as
+opening knowledge informing route intention and a heard shout accompanying an affect update. Reworded facts are matched by
+character-bigram Jaccard overlap at   0.40. The final record contains six active and 18 forgotten facts; graph construction
+occurs after the simulation.
+
+together with its categorical level and currently active stimuli.  predefined rule set. In the context of occupant evacuation
+The model returns the appraisal: situation indicates whether       and emergency response, this enables the model to integrate
+the pedestrian interprets its circumstances as normal, unsure,     heterogeneous situational descriptions and infer context-
+or danger, while urgency ranges from 0 to 1 and indicates how      dependent interpretations that may not be directly encoded
+strongly the agent judges that immediate protective action is      as explicit evacuation rules. Consequently, the appraisal is
+needed.                                                            also model-dependent: another model may interpret the same
+                                                                   symbolic patch differently.
+    The appraisal channel draws on representations acquired
+during model pretraining. For each prompt, including the           2.3.6. Time Step, Movement, and Contention
+symbolic patch, persona text, affective context, and retained          The simulation advances in discrete physical steps. Each
+memory, the model returns the label that best matches the
+description within its learned representation space. The avail-    active entity moves by at most one cell per step, either
+able categories (danger, unsure, and normal) and their graded      orthogonally (0.4 m) or diagonally (0.57 m), so the speed
+urgency are therefore derived from the model's learned             ceiling is 1.2 m s-1 along the grid axes and 1.7 m s-1
+statistical regularities. A large language model (LLM) maps        diagonally. Each pedestrian advances along its accepted,
+a textual description of the current emergency scenario into       model-selected route and waits after exhausting its legal
+a high-dimensional semantic representation and establishes         steps. Because each decision occupies a fixed interval of
+associations between the current input and previously learned      simulated time (Section 2.3.1), this time scale supports direct
+semantic patterns within its parameterized knowledge and           comparison of decision timing, route choice, and responses to
+representation space. Through the Transformer architecture,        neighboring behavior (Chen et al., 2017; van Toll and Pettré,
+attention mechanisms, contextual modeling, and statistical         2021).
+regularities encoded in its parameters, the LLM performs
+contextual inference over the available situational information        Each grid cell can hold one entity, providing an explicit
+and generates the most probable and contextually appropriate       spatial constraint and a well-defined procedure for resolving
+interpretation of the current emergency scenario.                  contention. Consistent with grid-based models that resolve
+                                                                   simultaneous choices through cell occupancy and local
+    This capability represents an important distinction be-        contention (Zhu et al., 2020; Kirchner et al., 2003), when
+tween large language models and conventional rule-based            several entities select the same cell, one is chosen at random
+models in emergency and evacuation applications. Rule-             and the others are assigned feasible cells within their Moore
+based models primarily rely on explicitly predefined con-          neighborhoods. Opposing swaps, diagonal crossings, and
+ditions, rules, thresholds, and decision pathways, whereas         static occupancy are resolved in the same pass, and diagonal
+LLMs can leverage contextual information and learned               movement cannot cut between two blocked orthogonal cells.
+semantic representations to generalize and reason about            Because resolution occurs during execution, the agents' stated
+scenarios that have not been explicitly specified in the           preferences remain unchanged (Chen et al., 2018b). Agents
+
+Ma, Yu, Tang and Li: Preprint submitted to Elsevier                                                                    Page 9 of 22
+LLM-powered Modeling of Evacuation under a Moving Threat
+
+still active at the time limit are recorded as unresolved,         3. Experimental Design
+distinguishing them from those reached by the adversary.
+                                                                       This section applies the general framework in Section 2
+2.3.7. Algorithmic Adversary and Evidence                          to an evacuation scenario in Plaza. The plaza is represented
+        Propagation                                                by a 155 × 164 raster with a cell length of 0.4 m, giving a
+                                                                   raster extent of approximately 62.0 × 65.6 m and a walkable
+    The adversary uses the adult physical model: one cell          area of 1,201.12 m2. Twenty-five groups of trees form fixed
+per turn, a 12 m sight radius, a 120° cone plus Moore              internal obstacles. Eleven adult pedestrians are distributed
+neighborhood, and the common collision and terrain rules. Its      across the plaza, while one moving threat enters from a fixed
+distinct physical capability is defined by a 2.0 m attack radius.  location. Five openings connect the plaza to its surroundings:
+A fixed algorithmic policy keeps hazard behavior constant          two 4.0-m-wide entrance gates at the northern and southern
+across pedestrian conditions.                                      ends and 3 evacuation exits that never closed along the eastern
+                                                                   boundary, with widths of 1.4, 3.5, and 1.1 m.
+    The default policy is a perception-limited patrol­pursuit
+strategy. When no pedestrian is visible, the adversary patrols         The entrance gates and evacuation exits have different
+evacuation exits 1­3 and entrance gates 1­2 in sequence            operational functions. During normal use, the northern
+before returning to exit1. When a pedestrian enters its            and southern gates admit people into the plaza. Once the
+perception map, the adversary selects the nearest visible          simulated attack activates the emergency phase, both entrance
+pedestrian, locks onto that target for six turns, and updates      gates begin closing and subsequently become impassable.
+the last observed cell while visual contact persists. After        This rule represents emergency access control: admitting
+losing sight, it searches toward the last observed cell for        additional people after a violent incident would expose
+up to eight turns. If it does not reacquire a pedestrian, it       them to the threat and increase the number of potential
+resumes the patrol from its current patrol index. Routes are       victims. The three designated evacuation exits are therefore
+generated by the same physical-map A* procedure used for           opened and remain available for outward movement. The
+other algorithmic movement. This perception-limited policy         asymmetric opening rule follows the functional distinction
+resembles patrol-then-pursuit formulations used in campus-         in the actual plaza between stopping further entry and
+attack simulations (Beattie et al., 2022).                         maintaining evacuation capacity.
+
+    Threat information propagates through local observation            All simulations use the same plaza geometry, opening-
+and person-to-person communication. The prompt requires            control rule, pedestrian number, adult perception parame-
+situation=danger but leaves the action to the model, with          ters, movement rules, threat policy, communication radius,
+move, wait, and turn_and_observe all permitted. The recorded       memory mechanisms, and language model. The experimental
+situation therefore measures prompt compliance, whereas            factor is the personality composition of the eleven-person
+the recorded action is a behavioral outcome. The engine            group. Each profile uses the fixed T-scores listed in Table 1.
+preserves the returned fields and limits movement during           The analysis examines whether personality composition is as-
+the pending interval to the pedestrian's existing legal route.     sociated with situation appraisal, urgency and affect, changes
+After the source leaves view, the prior direct observation         in objectives and routes, access to exit information, and the
+remains part of the pedestrian's knowledge. An anonymous           resulting evacuation outcomes under the same physical and
+shout supports unsure but contains no threat coordinate.           informational constraints.
+
+    Shouting carries the signal beyond the line of sight. A            The experiment evaluates eight personality compositions
+pedestrian who has decided to escape, either after a direct        in eight matched blocks.The analysis combines run-level out-
+sighting or through the model's situation assessment, shouts       comes with pedestrian-level records of perception, decisions,
+while moving. Listeners within 15 m receive the message            memory, movement, information transfer, and final status.
+even without line of sight, and the message still conveys          The following subsections specify the plaza and common
+the bearing and approximate distance of the shouter, which         parameters, outcome measures, statistical treatment, model
+also tell the one relative direction of danger. They evaluate      configuration, and experimental conditions.
+it together with other available evidence when selecting an
+intention.                                                         3.1. Simulation Setup and Common Parameters
+                                                                   3.1.1. Spatial Layout and Emergency Opening Control
+    The shared policy defines the local-map rules and tool
+contract while leaving situation assessment, intention, and            Fig. 5 shows the spatial relation among the two entrance
+route choice to the pedestrian. An uninformed pedestrian may       gates, three evacuation exits, fixed obstacles, pedestrian
+tour, observe, wait, or explore a legal route or target. Direct    starting locations, and the initial threat location. The entrance
+evidence and communicated information enter the next model         gates occupy the northern and southern ends of the plaza,
+observation, after which the model determines whether to           whereas the three evacuation exits are distributed along the
+adopt evacuation as its objective. Personality, memory, affect,    eastern boundary. The 25 groups of trees are distributed
+and evidence can influence preferences among legal choices         within the walkable interior and divide the open plaza into
+but cannot change glyph meanings, coordinates, or passability.     locally constrained movement corridors.
+Fig. 1 summarizes this methodological boundary, and Fig. 3
+details the construction of each private spatial observation.          The state of each opening forms part of the time-
+                                                                   dependent physical grid . During the emergency phase,
+                                                                   an entrance passes through open, closing, and closed states;
+
+Ma, Yu, Tang and Li: Preprint submitted to Elsevier                Page 10 of 22
+LLM-powered Modeling of Evacuation under a Moving Threat
+
+once closed, it is no longer physically passable. The three        Table 4
+evacuation exits remain open in the reference scenario.            Outcome measures computed for each pedestrian.
+Pedestrians do not receive these states from the complete
+physical map. An agent learns that an opening is available         Measure                   Definition
+or unavailable only by observing it directly or by receiving
+information from another pedestrian. An entrance observed          Evacuation                Turns from run start to reaching
+before closure may therefore remain in the agent's memory          Evacuation time           an opening
+as apparently usable until later evidence updates that belief.     Trajectory length
+The opening-control rule consequently affects both physical        Evacuation efficiency     Distance walked along the
+route availability and the information on which agents base                                  executed trajectory
+subsequent decisions.                                              Critical safety margin
+                                                                   Mean threat distance      Shortest exit distance over walked
+    For the Plaza scenario, each simulation contains eleven        Outcome                   distance, capped at 1; zero when
+adult pedestrians placed at spatially distributed starting cells,                            unresolved
+together with one moving threat-"terrorist" entering from
+a fixed cell. Within each matched block, all personality-                                    Smallest distance to the adversary
+composition conditions use the same pedestrian starting cells,                               over the run
+threat starting cell, plaza geometry, obstacle arrangement, and
+opening-control schedule. Personality profiles are reassigned                                Mean distance to the adversary
+among the fixed pedestrian starting cells across blocks so                                   over the run
+that the results are not tied to a particular profile occupying a
+particular location.                                                                         Evacuated, reached by the threat,
+                                                                                             or unresolved at the time limit
+    Each physical step lasts  = 13 s and permits
+movement to one neighbouring cell. With a cell length of           Behavioral descriptors    Turns from first evidence to the
+0.4 m, the maximum speed is 1.2 m s-1 along the grid               Pre-movement delay        first committed move
+axes and approximately 1.7 m s-1 diagonally. When several          Movement directness
+agents attempt to enter the same cell, one is selected at                                    Net displacement divided by path
+random and the others are assigned feasible neighbouring           Reversals per 100 m       length over the 10 s following a
+cells. Movement prevents overlap, opposing swaps, diagonal                                   decision, ending at evacuation,
+crossings, and passage between blocked corners. A simulation       Herding rate              death, or the simulation limit
+ends when every pedestrian has evacuated or been reached           Pocket cells entered
+by the threat, or when 240 simulated seconds have elapsed.         Exit used, familiar-exit  Number of heading changes
+Pedestrians still active at the time limit are recorded as         use                       beyond 120°, normalized per
+unresolved.                                                        Threat response           100 m of walked distance
+
+3.1.2. Outcome Measures                                                                      Fraction of moves aligned within
+    The outcome measures describe evacuation outcomes,                                       45° with neighbors inside 5 m
+
+threat exposure, and pedestrian behavior.                                                    Entries into cells with at most two
+                                                                                             passable orthogonal neighbors
+
+                                                                                             Which opening was taken, and
+                                                                                             whether it was the nearest known
+                                                                                             one
+
+                                                                                             Situation appraisal and action after
+                                                                                             directly seeing A or D
+
+3.1.3. Statistical Treatment                                       evacuation exit; personality by composition; information by
+                                                                   exit-information categories, the numbers of distinct warning
+    Movement directness was calculated as net displacement         senders and recipients, and whether and when threat evidence
+divided by path length over the 10 s following each applied        was first recorded; and affect by mean reported urgency, mean
+decision, ending at evacuation, death, or the simulation limit     engine-computed fear, and the share of high-urgency, low-
+and including the final movement step. The analysis included       directness decisions. Each factor group was fitted separately
+10,947 decisions after initialization from 704 pedestrians.        and then included in a combined model. McFadden pseudo-
+Urgency and directness were divided at their pooled medians;       2 describes the evacuation-outcome models, and ordinary
+each pedestrian's share of decisions in a quadrant was then        2 describes the time models. These models summarize
+used to compare outcomes and calculate AUC.                        associations within the recorded simulations.
+
+    The 5 homogeneous compositions were compared using             3.1.4. Language Model Configuration
+run-level decision shares within the 8 paired blocks. Two-             The decision and memory roles both used GLM-5.3-flash,
+sided paired sign-flip tests enumerated all 28 assignments,
+with Holm adjustment across the 10 pairwise comparisons            with a sampling temperature of 0.2. Ordinary decisions used
+for each measure. The 95% intervals in Fig. 7 were obtained        the model's lowest reasoning level, and decisions triggered
+by resampling the paired blocks.                                   by direct visual evidence used a high level.
+
+    Logistic regression compared the 462 evacuated and 202
+killed pedestrians, while linear regression of log evacuation
+time included the evacuated pedestrians. Geometry was
+represented by initial distance to the nearest designated
+
+Ma, Yu, Tang and Li: Preprint submitted to Elsevier                                                      Page 11 of 22
+   LLM-powered Modeling of Evacuation under a Moving Threat
+
+a Recorded plaza and trajectories                                                          exit1               b different route
+
+       N                                                                                                                       GLM-5.3-flash
+                                                                            1                                           decision and memories
+
+      5                                                                                                        5 exit1       62 s
+                        10
+                                                                                                               recorded path · 31.7 m
+
+                                                 4                                                             6 exit2       12 s
+   8
+
+         0                                                                                              exit2  recorded path · 6.5 m
+
+2                                                                              6
+
+   7                                                                                                           7 unresolved  100 s
+
+            9                                                                                                  recorded path · 52.8 m
+                                          exit3
+
+      3                                                                                                        Agent 5's final opening was not
+                                                                                                                its initially nearest geometric
+                                                                               open exit   closed gate          opening in this recorded run.
+
+                                                                               attack 2 m  perception 12 m       illustrative completed run
+
+Figure 5: Plaza geometry and three illustrative trajectories. The perception map shows the three evacuation exits, two entrance
+gates, eleven pedestrian starting cells, fixed obstacles, and the initial threat position. The concentric circles indicate the implemented
+2 m attack radius and 12 m perception radius. The trajectories illustrate three recorded outcomes from one completed run.
+
+3.2. Experimental Conditions                                                               4. Results
+    The executed experiment varied only the personality
+                                                                                           4.1. Decision, Memory, and Evacuation Outcomes
+composition of the eleven-person group. Eight compositions                                     This section examines how the recorded behaviors
+were defined using the five profile templates in Section 2.1.1.
+Five were homogeneous: A comprised eleven average pedes-                                   emerged, and to what extend the knowledge graph works.Of
+trians, B eleven calm-independent pedestrians, C eleven bold-                              the 704 pedestrians, 462 (65.6%) evacuated, 202 (28.7%)
+solitary pedestrians, D eleven rule-following pedestrians, and                             were killed. The following analyses examine how pedestrians
+H eleven anxious-conformist pedestrians. Conditions D­H                                    revised their decisions, how responses differed across
+formed a dose ladder in which rule-following pedestrians                                   personality compositions, and how exit information was
+were progressively replaced by anxious-conformist pedes-                                   associated with evacuation outcomes.
+trians: E contained eight rule-following and three anxious-
+conformist pedestrians, F contained six and five, and G                                    4.1.1. Decision Revisions during Evacuation
+contained three and eight, respectively. The run-level anxious-                                The knowledge graph illustrates each single decision-turn
+conformist proportions were therefore 0, 311, 511, 811,
+and 1 across D­H. The five homogeneous conditions A, B,                                    in the whole simulation. Across 10,947 decisions following
+C, D, and H were compared pairwise within blocks. We                                       each pedestrian's initial decision, plan-level revisions oc-
+conducted a post hoc spatial analysis of decisions based on                                curred in 64.5% of epochs, compared with 8.8% for goal-level
+remembered threat information. For each threat-avoidance                                   revisions and 9.9% for execution-level adjustments. Changes
+decision with a recorded last sighting and a nonzero first                                 at different layers could occur within the same epoch, and it
+executed step, we measured changes in distance to the last                                 also means the pedestrian would switch exit indeed, and all
+observed position and to the adversary's actual position at                                of these are determined by the large language model.
+step onset. Both reference positions were held fixed when
+calculating these changes. Directional mismatch denoted a                                      Goal revisions were most frequent when urgency changed
+step that increased the former distance but decreased the latter.                          substantially (Fig. 6). An absolute urgency change of at least
+Mismatch rates were calculated among steps moving away                                     0.15 was accompanied by a goal revision in 58.6% of epochs,
+from the last observed position, with 95% percentile intervals                             compared with 4.3% when the change was smaller. New direct
+obtained by resampling the 8 paired blocks. Evidence age                                   threat evidence was accompanied by a goal revision in 44.1%
+was the time since last sighting reported in the decision input.                           of epochs. The association between urgency changes and goal
+                                                                                           revision persisted across thresholds of 0.10, 0.15, and 0.20,
+                                                                                           with corresponding risk ratios ranging from 12.27 to 14.37.
+
+                                                                                               Information from other pedestrians was associated with
+                                                                                           more goal revisions on first receipt than on subsequent receipt:
+
+Ma, Yu, Tang and Li: Preprint submitted to Elsevier                                                                          Page 12 of 22
+                                 LLM-powered Modeling of Evacuation under a Moving Threat
+
+a Revision layers                                                            b Trigger-specific revision depth
+
+            H Goal layer                                         baseline 0.043               Pr(D  1)          Pr(D  2)  Pr(D  3)
+
+                                 Urgency jump |u|  0.15                                                         0.586
+
+                          8.8%                       Direct threat evidence                        0.441
+
+                                 Social information, first arrival                            0.376
+                                             Physical obstruction
+M Plan layer              64.5%
+
+                                                                                  0.076
+
+L Execution layer 9.9%           Social information, repeat                       0.063
+
+Plan retained 29.1% (D = 0)                          No new stimulus              0.017
+n = 10,947 decision epochs
+
+                                                                             0.0         0.2  0.4               0.6       0.8       1.0
+
+                                                                                              Probability
+
+Figure 6: Decision revision by layer and stimulus. Left: the frequencies of goal-, plan-, and execution-level revisions across 10,947
+decisions, together with the proportion retaining the previous decision. Right: cumulative revision probabilities for six stimulus
+classes. The dashed line marks the 4.3% goal-revision rate for epochs with an absolute urgency change below 0.15.
+
+37.6% versus 6.3%. Physical constraints were accompanied         was 31.6% among pedestrians who were killed, approximately
+by revisions at the plan level or above in 54.3% of decisions    4.5 times the 7.0% among those who evacuated, with an AUC
+and goal-level revisions in 7.6%. Pedestrians therefore usually  of 0.839 for distinguishing the 2 outcomes. The opposite
+retained their goals while adjusting their plans or local        combination showed a clear contrast: low-urgency, high-
+movement in response to physical constraints.                    directness decisions accounted for an average of 62.9% among
+                                                                 evacuated pedestrians and 15.0% among killed pedestrians,
+    Once pedestrians left ordinary activity, none returned to    with an AUC of 0.802. Evacuated pedestrians also had the
+it. Threat avoidance and movement toward a known exit were       lowest mean urgency and highest mean directness, with
+retained at the next decision with probabilities of 0.982 and    a centroid at ( = 0.358,  = 0.867), compared with
+0.931, respectively. These patterns indicate that evacuation-    (0.653, 0.630) for killed pedestrians and (0.587, 0.416) for
+related objectives were largely maintained while plans and       unresolved pedestrians. These results show that reported
+local movement continued to change.                              urgency gains behavioral meaning when considered alongside
+                                                                 subsequent movement: pedestrians who were killed more
+4.1.2. Personality, Appraisal, and Arousal                       often combined a strong sense of urgency with less direct
+    Danger appraisal differed most across personality pro-       movement, revealing a gap between the urgency expressed
+                                                                 by the agent and the movement that followed.
+files when pedestrians relied on remembered threat in-
+formation. Without threat information, danger-assessment             Across the 5 homogeneous personality compositions, the
+rates were nearly identical across the 5 homogeneous per-        mean share of high-urgency, low-directness decisions ranged
+sonality compositions, differing by at most 0.002. When          from 11.41% for calm-independent agents to 34.33% for
+pedestrians relied on remembered threat information, the         rule-following agents, a roughly 3-fold difference. Anxious-
+gap widened to 26.5 percentage points, with the danger-          conformist agents followed at 33.32%, while average and bold-
+assessment rate in the anxious-conformist composition reach-     solitary agents recorded 29.45% and 22.52%, respectively.
+ing 52.8%, approximately twice the 26.3% observed in the         Calm-independent agents had lower shares than both rule-
+calm-independent composition. With direct sightings, the         following and anxious-conformist agents in all 8 paired blocks
+gap in danger-assessment rates narrowed to 3.3 percentage        (Holm-adjusted  = 0.078 for each comparison). For low-
+points across the 5 personality compositions. These results      urgency, high-directness decisions, calm-independent agents
+show that personality-related differences in danger appraisal    recorded the highest mean share at 31.08%, approximately
+depend on the available threat information, with remembered      2.4 times the 12.72% recorded by anxious-conformist agents.
+evidence revealing the clearest separation between profiles.     The calm-independent composition therefore combined the
+                                                                 lowest share of high-urgency, low-directness decisions with
+    We examined the relationship between reported urgency        the highest share of the opposite combination.
+and subsequent movement directness. Across the evaluated
+decisions, 32.5% combined high urgency with high move-
+ment directness, making this the largest of the 4 quadrants.
+The mean share of high-urgency, low-directness decisions
+
+Ma, Yu, Tang and Li: Preprint submitted to Elsevier                                                                       Page 13 of 22
+LLM-powered Modeling of Evacuation under a Moving Threat
+
+    In conclusion, the outcome and personality comparisons         The memory­decision links thus distinguish different behav-
+identify reported urgency and subsequent movement direct-          ioral intentions accompanying a broadly similar movement
+ness as complementary descriptors of simulated evacuation          direction, showing how the reconstructed graphs support
+behavior (Fig. 7).                                                 interpretation of individual evacuation trajectories.
+
+    Across 102,045 memory operations involving 34,489              4.1.3. Information Access and Survival
+distinct items, writing accounted for the largest share at 33.8%,      Across all 704 pedestrians, knowledge of a usable exit was
+followed by forgetting at 29.9% and rewriting at 24.7%, while
+explicit retention made up the remaining 11.6%. Anxious-           strongly associated with outcome. Pedestrians who acquired
+conformist agents stood out for retaining existing memories:       knowledge of at least one usable exit reached safety in 89.5%
+their explicit-retention share reached 15.6%, compared with        of cases; among those who acquired no such knowledge,
+10.8­12.1% across the other 4 homogeneous personality              1.05% reached safety and 80.0% were killed. Fisher's exact
+compositions. They also recorded the highest share of deci-        test yielded an odds ratio of 800.7 ( = 6.1 × 10-118).
+sions without revision, at 33.5%, showing that more frequent       The relationship was graded: rescue rates were 1.05% for
+memory retention accompanied greater decision continuity in        pedestrians who knew no usable exit, 64.3% for those who
+this composition. Across the knowledge graphs, each decision       knew one, and 95.7% for those who knew two. At the run
+was linked to an average of 5.51 memory items. Fig. S2 shows       level, the number of pedestrians with usable-exit knowledge
+these links for one pedestrian. Table 5 traces 2 cases in which    correlated with the number rescued ( = 0.607,  = 1.0 ×
+remembered observations, their interpretation, and escape          10-7).
+plans changed over successive decisions.
+                                                                       The value of the information also depended on its content.
+    In Case 1, earlier shouts acquired a new meaning after         Pedestrians who directly observed a usable exit were rescued
+the pedestrian saw an armed person. The pedestrian initially       in 91.2% of cases, compared with 52.2% of those informed by
+wanted to observe and clarify the situation; after the sighting,   a peer. None of the 58 pedestrians whose only exit information
+its memory described the earlier shouts as probable warnings       referred to a closed gate was rescued, and 87.9% were killed.
+and placed escape ahead of exploration. When the known gate        Acquisition timing also differed by outcome: the median time
+subsequently closed, the recorded plan combined continued          to usable-exit knowledge was 5.17 s for rescued pedestrians
+threat avoidance with a search for an open exit.                   and 32.33 s for killed pedestrians. Fig. 9 compares evacuation
+                                                                   outcomes by exit knowledge and information group, together
+    This sequence is consistent with the distinction between       with the timing of knowledge acquisition. Panel (a) shows
+interpreting warning cues and assessing protective actions in      evacuation rates of 1.05% with no usable exit known, 64.3%
+the Protective Action Decision Model (Lindell and Perry,           with 1, and 95.7% with 2. Panel (b) includes the 58 pedestrians
+2012). The memory revisions documented both why the                whose only reported exit information concerned a closed gate;
+pedestrian intended to leave and which escape options it           none evacuated. Panel (c) shows median acquisition times
+considered usable.                                                 of 5.17 s for evacuated pedestrians and 32.33 s for killed
+                                                                   pedestrians.
+    In Case 2, recognizing that a gate was closed preceded
+abandoning the route toward it. The pedestrian recorded the            The two propagation channels were associated with
+closure but retained a plan to approach the gate and check         different outcomes. The number of distinct pedestrians
+whether it could be opened, and the next decision continued        reached by a shout yielded an AUC of 0.808 for being killed
+toward it. A later decision treated the route as impassable and    ( = 6 × 10-42), while the number of distinct shouters heard
+sought an alternative, which the following memory revision         yielded an AUC of 0.791 ( = 2 × 10-34). By contrast,
+recorded.                                                          usable-exit knowledge predicted rescue ( = 7 × 10-98). In
+                                                                   this framework, shouts primarily carried alarm, whereas exit
+    Experiments have shown that exit familiarity influences        messages conveyed routes. Among 311 pedestrians whose
+evacuation choices (Kinateder et al., 2018). In the present        previous appraisal was normal and whose first evaluated
+case, the stated intention to verify whether a known gate          decision containing a shout had no direct or remembered
+could be used offers a possible explanation for continuing         threat evidence, 286 (92.0%) reported higher urgency than in
+toward it after learning that it was closed. The record iden-      their preceding decision. At that point, 254 (81.7%) assessed
+tifies an intermediate stage in route revision: the pedestrian     the situation as unsure, and only 1 assessed it as dangerous.
+acknowledged the obstruction while still considering whether       These results show that heightened urgency and uncertainty
+the original escape plan could work.                               about danger can coexist in the simulated response to a
+                                                                   warning.
+    An illustrative comparison involved 2 pedestrians who
+started from the same position in one paired block. Following          Exit information propagated through a narrow channel.
+warning shouts, the calm-independent pedestrian's memory           Each run had an average of 2.1 senders, and the two most
+emphasized moving south while watching for signs and               active senders accounted for 90.1% of receiving relations.
+continuing to search for an exit. In contrast, the anxious-        Propagation extended no more than one hop: 591 pedestrians
+conformist pedestrian's memory emphasized following the            observed an exit directly, while 64 learned of one from
+crowd along a familiar southern route. At the next recorded        someone who had observed it. Fig. S1 contrasts the two
+decision, their objectives were exit exploration and following     channels within a single run. The same eleven pedestrians
+others, respectively, while both continued moving southward.
+
+Ma, Yu, Tang and Li: Preprint submitted to Elsevier                Page 14 of 22
+                LLM-powered Modeling of Evacuation under a Moving Threat
+
+Table 5
+Changes in remembered information and escape plans in 2 illustrative cases.
+
+Stage           Memory excerpt (translated)                         Interpretation            Decision or plan
+
+Case 1: From uncertain signals to escape and exit search
+
+1. Situation    "I wanted to stop and observe to clarify the The meaning of others'           The stated plan is to observe
+unclear         situation, without hastily following the others." behavior is still unclear.  before deciding whether to follow
+                                                                                              others.
+
+2. Threat       "The 2 shouts I heard earlier . . . were probably Earlier sounds are now      The decision changes from
+confirmed       warnings." "Escaping comes first; exploration interpreted as warnings.        continuing activity to moving
+                can wait."                                                                    away from the threat.
+
+3. Another exit "Next, I need to find an exit that is still open or Escape remains necessary, The next decision maintains
+
+needed          a direction with more people, and keep moving but the known gate may threat avoidance and includes
+
+                away from the northeast."                           be unusable.              looking for other exits.
+
+Case 2: From choosing a known exit to checking and abandoning it
+
+1. Known exit   "I remembered that [the gate] was to the south, The known exit provides       The selected goal is to reach the
+chosen          so I decided to go south, away from the armed a destination for escape.       known exit.
+                person and toward the known exit."
+                                                                                              The next decision continues
+2. Closed gate  "The exit door to the south is closed . . . Once I  The gate is closed, but   toward the gate to check it.
+to be checked   get closer, I may check whether it can be           the pedestrian still
+                opened or look for another route."                  considers whether it can
+                                                                    be used.
+
+3. Original     "The south exit gate is still closed and cannot The gate is now regarded The decision selects an
+route
+abandoned       be used, so I have switched to going east . . . to as unusable.               alternative route, and the revised
+
+                look for another exit."                                                       memory records the new plan.
+
+Excerpts are translated from model-generated Chinese memories. Ellipses mark omissions; square brackets replace an internal gate identifier
+with a descriptive name. Stages are ordered within each case, and the final column summarizes the corresponding decision or stated plan.
+Both cases involve bold-solitary pedestrians in separate runs.
+
+occupy identical positions and are encoded by outcome               for affect, 0.0537 for geometry, and 0.0036 for personality
+in both panels, so only the edges differ. Shouting forms a          composition; the combined model reached 0.7020. Exit
+dense, multi-source network, whereas exit information travels       knowledge and communication records therefore captured
+through a small number of directed, single-hop links.               much of the observed separation between evacuation and
+                                                                    death.
+    Fig. 8 traces this process for one pedestrian. Five aligned
+lanes show perception events, the affect transition and ur-         4.1.4. Factors Associated with Evacuation Time
+gency trajectory, the appraisal category, decisions positioned          Evacuation time was associated with geometry, infor-
+by revision depth, and memory write, rewrite, and forget
+operations. The two goal-layer revisions appear as the tallest      mation, and affect. Their separate models had 2 values of
+decision markers; callouts reproduce the memory entries             0.6608, 0.6864, and 0.6859, respectively, compared with
+recorded around them, and a broken time axis connects the           0.0031 for personality composition; the combined model
+early sequence to the outcome at 219.7 s. Agent 3 in the            reached 0.8738. The higher fit of the combined model
+rule-following condition of block 5 heard shouting at 3.33 s,       indicates that these factors describe evacuation duration more
+changed from calm to afraid at 7.00 s, and observed the armed       fully when considered together.
+adversary at 8.00 s. The agent then changed its goal from
+exit seeking to threat avoidance and raised its self-reported       5. Discussion
+urgency to 0.9 while moving toward the only opening it knew.
+When the gate closed at 11.67 s, the agent revised its goal         5.1. Contribution to Evacuation Modeling
+again; it was killed at 219.7 s. Its opening knowledge referred         The framework connects the development of individual
+only to the entrance gate that closed while it was approaching;
+meanwhile, entrance gates were closing with merely one              interpretations to the movement of a crowd. Social-force
+person being able to go out of them.                                and cellular-automaton models describe local movement and
+                                                                    interaction, while behavioral extensions represent differences
+    Exit information was closely associated with whether            in perception, preferences, and route choice. The present
+pedestrians evacuated. The information-only model had a             approach adds an explicit record of how an agent describes
+McFadden pseudo-2 of 0.6650, compared with 0.3541                   its situation, retains experience, and revises a plan within a
+                                                                    shared physical environment.
+
+Ma, Yu, Tang and Li: Preprint submitted to Elsevier                                                             Page 15 of 22
+                                                                        LLM-powered Modeling of Evacuation under a Moving Threat
+
+(a) Urgency and movement                                                                                Evacuated       Killed          Unresolved
+
+               Group means:
+          1.0
+
+                                                                        Low urgency                                                              High urgency                             5
+
+                                                                        High directness                                                          High directness
+
+                     Subsequent movement directness  0.8                17.5%                                                                    32.5%
+
+                                                                                                                                                                                          4
+
+                                                     0.6                                                                                                                                  3            Decisions (%)
+
+                                                     0.4                                                                                                                                              2
+
+                                                     0.2                Low urgency                                                                  High urgency                                     1
+                                                                                                                                                    Low directness
+                                                                        Low directness                                                                                                                0
+                                                                                                                                                          30.8%                        1.0
+                                                                        19.2%
+                                                                                                                                                             0.8                            Rule-
+                                                     0.0                                                                  0.6                                                            following
+                                                          0.0           0.2                   0.4                                                        Anxious-                34.33% [30.12, 38.70]
+                                                                                                                                                        conformist
+                                                                                                        Reported urgency                         33.32% [25.61, 43.40]
+
+(b) Personality compositions
+               High urgency + low directness: mean share (95% CI)
+
+                                        Calm-                                               Bold-                         Average
+                                   independent                                             solitary              29.45% [20.67, 36.75]
+                              11.41% [7.89, 15.24]                               22.52% [16.07, 29.55]
+                     1.0
+Movement directness
+                     0.5
+
+                     0.0                                                                                                                                                1.0 0.0  0.5
+                                                     0.0       0.5      1.0 0.0          0.5            1.0 0.0    0.5                  1.0 0.0  0.5                                                                  1.0
+
+                                                               Urgency           Urgency                           Urgency                       Urgency                         Urgency
+
+Figure 7: Reported urgency and subsequent movement directness across 10,947 decisions. (a) Dashed lines mark the pooled
+medians of urgency ( = 0.60) and directness ( = 0.606); quadrant labels give the percentages of all evaluated decisions. Symbols
+mark outcome-group means, with each pedestrian weighted equally. (b) The 5 homogeneous personality compositions. Values
+above each panel give the mean run-level share of high-urgency, low-directness decisions and its 95% confidence interval from
+paired-block resampling. In all panels, the linear color scale shows the percentage of decisions within that panel falling in each cell.
+The individual share of high-urgency, low-directness decisions distinguished death from evacuation with an AUC of 0.839.
+
+    Learning-based crowd models offer complementary ways                                                           unfolds from the perspective of an individual with incomplete
+to represent adaptive behavior. Deep reinforcement learning                                                        information.
+develops policies through environmental interaction (Zhang
+et al., 2023; Pang et al., 2023); hierarchical and knowledge-                                                      5.2. Memory, Interpretation, and Route Revision
+guided methods organize decisions at different levels (Sun                                                             Memory carries both an account of the situation and
+et al., 2026); and attention-based planners coordinate move-
+ment in pedestrian environments (Dong et al., 2024; Li et al.,                                                     the conditions attached to an intended action. The cases
+2026). The contribution of the present framework is to make                                                        in Table 5 distinguish 2 processes: new evidence changes
+the information available at a decision, the model's stated                                                        the meaning assigned to earlier cues, and new knowledge
+interpretation, and the resulting movement available for joint                                                     about an exit is evaluated against an existing escape plan.
+analysis.                                                                                                          These processes connect successive decisions through an
+                                                                                                                   evolving understanding of what has happened and what
+    This approach connects movement analysis with ques-                                                            remains possible.
+tions about how decisions develop. Similar trajectories can
+accompany different intentions, while a continuing goal                                                                The distinction between recognizing a change and acting
+can be pursued through changing routes. Recording these                                                            on its implications is particularly relevant to evacuation. A
+distinctions makes it possible to examine how an evacuation                                                        pedestrian may acknowledge a closed gate while retaining an
+                                                                                                                   intention to verify whether it can be used, leaving an interme-
+                                                                                                                   diate stage between receiving information and abandoning
+
+Ma, Yu, Tang and Li: Preprint submitted to Elsevier                                                                                                                              Page 16 of 22
+                               LLM-powered Modeling of Evacuation under a Moving Threat
+
+Agent 3: a complete psychological­cognitive­decision­action chain
+
+                           No threat in sight, but shouting in the distance.
+                        Follow the evacuation arrows down the corridor and
+
+                                                move carefully.
+
+                                                                 An armed man is charging the crowd to the north.
+                                                                 Fall back south, get clear, and keep looking for a
+
+                                                                                            way out.
+
+               shout heard     first evidence                 armed man sighted
+
+Perception                                                                                                                   Outcome
+
+               urgency                                                                                                            killed
+                                                                                                                                 219.7 s
+Affect
+                                                                                                                             Only learned
+                               calm                                              afraid · fear 0.60                                 of
+
+Appraisal                                  normal             unsure danger          danger                      unsure      closed gated
+               marker height = revision depth D                                                                                (ft_back)
+
+Decision                                                      explore_for_exit       move_away_from_threat                   Gate closed
+ Memory                                                       move_away_from_threat      explore_for_exit                     at 11.67 s
+
+                                                           The man with the knife is in plain view now -- I
+                                                              cannot let myself get anywhere near him.
+
+               WRITE           REWRITE             FORGET                        The south gate (ft_back) has shut. That way out is
+                                                                                                              gone.
+
+            0               2           4                  6                  8      10                      12          14
+
+                                                           Simulation time (s)
+
+Figure 8: The recorded chain for Agent 3 in the rule-following run. Five lanes carry perception events, the affect transition and the
+self-reported urgency trace, the appraisal band, each decision at a height set by its revision depth, and the write, rewrite, and
+forget operations on memory. Callouts reproduce selected memory entries. The pedestrian learns of only one opening, the south
+entrance gate, which closes at 11.67 s.
+
+a route. This interpretation extends the case analysis into          The recorded interpretations are model-generated ac-
+a testable explanation of route persistence and is consistent    counts supplied within the decision process. Their correspon-
+with the separation of cue interpretation and protective-action  dence with human judgments, route choices, and responses
+assessment in the Protective Action Decision Model (Lindell      to communicated information remains to be established. The
+and Perry, 2012).                                                present contribution is a framework and a set of observable
+                                                                 decision sequences through which such correspondence can
+    The reconstructed knowledge graph makes this sequence        be investigated.
+open to examination by linking retained information to the
+decisions at which it was available. It supports questions       5.4. Implications for Future Evacuation Research
+about which interpretations persist, which plans remain              A central opportunity is to evaluate evacuation models
+conditional, and what evidence accompanies their revision?
+The resulting analysis treats evacuation as a developing         against the development of behavior as well as its final out-
+sequence of judgments and actions, with memory preserving        come. Human experiments could compare when participants
+the connections between them.                                    recognize danger, how they interpret an uncertain exit, and
+                                                                 when they abandon a preferred route. These comparisons
+5.3. Scope and Limitations                                       would test whether simulated transitions reproduce the
+    The findings concern a small pedestrian population in        sequence and timing of human responses.
+
+one plaza under a specified moving-threat policy. Personality        The same framework could support controlled studies of
+compositions were compared within a common environment,          evacuation communication. Messages that report a closure
+and the personality representation entered both the decision     could be compared with messages that explain its conse-
+prompts and the affect model. The observed differences           quences and identify a usable alternative, testing whether
+therefore concern the combined personality configuration.        information content changes verification, route revision,
+
+Ma, Yu, Tang and Li: Preprint submitted to Elsevier                                                                          Page 17 of 22
+                                                               LLM-powered Modeling of Evacuation under a Moving Threat
+
+                                                                                            Evacuated                            Killed                  Unresolved
+
+(a) Known usable exits                                                                                                      (b) Exit information
+
+                                                                                    n       Evacuated                                                                             n Evacuated
+                                                                                                                                                                                  491 91.2%
+                 0                                                                  190 1.1%                                             Exit seen
+                                                                                                                                           directly
+Number of exits  1                                                                  98      64.3%                                                                                 23 52.2%
+                                                                                                                                    Exit reported
+                 2                                                                  396 95.7%                                            by others                                132 1.5%
+
+                 3                                                                      20  90.0%                                        No initial                                   58  0.0%
+                                                                                    100                                          exit information                                 100
+                                             0         25  50               75                                                                           25          50  75
+                                                                                                                                   Only a closed
+                                                                                                                                   gate reported
+
+                                                                                                                                                      0
+
+                                                           Pedestrians (%)                                                                               Pedestrians (%)
+
+(c) Time to exit knowledge
+
+                 Cumulative pedestrians (%)  100
+
+                                                75
+                                                                                                                   32.33 s
+
+                                                50
+                                                                                    5.17 s
+
+                                                25                                                                                                                        Evacuated
+
+                                                                                                                                                                          Killed
+
+                                                0   0                           60                                          120                          180                         240
+
+                                                                                       Time to first usable-exit knowledge (s)
+
+Figure 9: Exit knowledge and evacuation outcomes. (a) Outcome shares by the number of usable exits known. (b) Outcome
+shares for the 4 exit-information groups. "No initial exit information" refers to the absence of system-provided exit information at
+initialization; "Only a closed gate reported" refers to information received from others during the simulation. Numbers beside
+the bars give group sizes () and evacuation rates. (c) Cumulative distributions of time to first usable-exit knowledge among
+pedestrians who acquired it, grouped by final outcome. Markers indicate median times of 5.17 s for evacuated pedestrians and
+32.33 s for killed pedestrians.
+
+and exposure to danger. Such studies would connect the                                                                          Most decision changes occurred at the plan level. Large
+interpretation of a warning to the movement that follows                                                                    changes in urgency and new direct threat evidence were
+it.                                                                                                                         associated with goal revisions, while physical constraints
+                                                                                                                            usually prompted adjustments that preserved the current
+    A further direction is to connect individual decision                                                                   goal. Once pedestrians left ordinary activity, they maintained
+histories with collective evacuation patterns. Distributions of                                                             evacuation-related objectives while adapting their plans and
+perceived danger, exit knowledge, and continuing intentions                                                                 movement.
+could inform behavioral states in mesoscopic models and help
+investigate changes in aggregate exit demand. This would                                                                        Personality compositions differed in danger appraisal
+extend the use of LLM-powered simulation from examining                                                                     under remembered evidence and in the relationship between
+individual choices to studying how uneven information and                                                                   reported urgency and movement. The share of high-urgency,
+different interpretations develop into crowd-level behavior.                                                                low-directness decisions ranged from 11.41% for calm-
+                                                                                                                            independent agents to 34.33% for rule-following agents.
+6. Conclusions                                                                                                              The calm-independent composition maintained lower shares
+                                                                                                                            than the rule-following and anxious-conformist compositions
+    This study develops an LLM-powered framework for                                                                        across all paired blocks.
+examining how evacuation decisions evolve under a moving
+threat. Private perception, personality, and retained experi-                                                                   Knowledge of a usable exit was strongly associated with
+ence provide the context for individual choices, while the                                                                  evacuation. Pedestrians with knowledge of a usable exit were
+physical simulation records how those choices are executed.                                                                 rescued in 89.5% of cases, compared with 1.05% of those
+Linking memory revisions to decisions and movement makes                                                                    without such knowledge, yielding an odds ratio of 800.7. No
+the formation, continuation, and revision of escape plans                                                                   pedestrian whose only exit information identified a closed
+accessible to analysis.                                                                                                     gate was rescued. Exit knowledge traveled at most one hop,
+                                                                                                                            through an average of 2.1 senders per run; the two most
+
+Ma, Yu, Tang and Li: Preprint submitted to Elsevier                                                                                                                               Page 18 of 22
+                                          LLM-powered Modeling of Evacuation under a Moving Threat
+
+active senders accounted for 90.1% of transmissions. Rescued
+pedestrians acquired this knowledge at a median of 5.17 s.
+
+    Exit information was closely associated with whether
+evacuation occurred, while evacuation time was associated
+with geometry, information, and affect together. These find-
+ings connect the knowledge available to pedestrians with both
+the completion and duration of evacuation.
+
+    The memory cases identify changes in the meaning of
+earlier information and in the conditions for retaining an
+escape plan. These sequences provide concrete hypotheses
+about delayed responses and persistence toward a known exit.
+The framework opens a path toward evacuation research that
+connects how people understand a developing emergency
+with how their individual choices contribute to collective
+movement.
+
+Ma, Yu, Tang and Li: Preprint submitted to Elsevier                                                 Page 19 of 22
+                               LLM-powered Modeling of Evacuation under a Moving Threat
+
+Supplementary Figures                                                 Agent 3 knowledge graph · nodes by type
+
+             rescued           killed         unresolved              Retrieval density: 5.51 memories per decision.
+   a Shout network
+                                       b Exit-information network     TRIGGERED 66                 CHOSE 57
+
+              0                                      0                ASSOCIATED WITH DECISION 54
+
+   10            1                        10            1             CREATED MEMORY 163           RETRIEVED FOR 360
+
+9                           2          9                           2  INVOLVED IN 0                ENDED IN 1
+
+8                           3          8                           3
+
+   7                     4                7                     4     Agent          Observation                      Memory
+           6     5                                6     5                1                  54                           163
+
+   AUC(killed) = 0.808                    AUC(rescued) = 0.651
+
+Figure S1: Shout and exit-information propagation in one
+
+run. The same eleven pedestrians hold identical positions in                          Decision
+                                                                                           54
+both panels and are encoded by outcome. Directed edges give           Place                                           Goal
+deduplicated sender­receiver pairs for (a) heard shouts and              5                                              3
+
+(b) transmitted exit information. Across the experiment, shout
+
+out-degree carries an AUC of 0.808 for being killed and exit
+
+knowledge an AUC of 0.651 for rescue.
+
+Acknowledgements                                                      Entity              Route                       Outcome
+                                                                         1                  54                             1
+    This work was supported by the National Key Research
+and Development Program of China (No. 2025YFB2606402),                        Affect               Collision
+the National Science Foundation of China (No. 72604081),                        12                      0
+and the Sichuan Provincial Science and Technology Innova-
+tion Project (No. 2024YFHZ0345).                                      Figure S2: Reconstructed knowledge graph for Agent 3. Nodes
+                                                                      are grouped into eleven type clusters and relations are bundled
+                                                                      between types, with RETRIEVED FOR emphasized. This agent's
+                                                                      graph holds 54 observations, 54 decisions, 54 routes, 163
+                                                                      memories, and 12 affect records, with an average of 6.67
+                                                                      memory links per decision. Across the experiment, the graphs
+                                                                      contain 75,944 nodes and 138,963 edges.
+
+                                                                      References
+
+                                                                      Agnelli, J.P., Buffa, B., Knopoff, D., Torres, G., 2023. A Spatial Ki-
+                                                                         netic Model of Crowd Evacuation Dynamics with Infectious Disease
+                                                                         Contagion. Bulletin of Mathematical Biology 85, 23. doi:10.1007/
+                                                                         s11538- 023- 01127- 6.
+
+                                                                      Agnelli, J.P., Colasuonno, F., Knopoff, D., 2015. A kinetic theory approach to
+                                                                         the dynamics of crowd evacuation from bounded domains. Mathematical
+                                                                         Models and Methods in Applied Sciences 25, 109­129. doi:10.1142/
+                                                                         S0218202515500049.
+
+                                                                      Ahissar, E., Assa, E., Mizrachi, N., Nelinger, G., Ben-Joseph, T., Saraf-Sinik,
+                                                                         I., Geiger, S., Rivkind, A., 2025. Closed-loop perception: gaps between
+                                                                         artificial intelligence and biology. Current Opinion in Behavioral Sciences
+                                                                         65, 101572. doi:10.1016/j.cobeha.2025.101572.
+
+                                                                      Bahamid, A., Mohd Ibrahim, A., Shafie, A.A., 2024. Crowd evacuation
+                                                                         with human-level intelligence via neuro-symbolic approach. Advanced
+                                                                         Engineering Informatics 60, 102356. doi:10.1016/j.aei.2024.102356.
+
+                                                                      Beattie, S., Xi, J.Y.S., Chan, W.K.V., 2022. On effective campus attack
+                                                                         response: Insights from agent-based simulation for improving emergency
+                                                                         information sharing system design and response strategy. Interna-
+                                                                         tional Journal of Disaster Risk Science 13, 435­447. doi:10.1007/
+                                                                         s13753- 022- 00418- 1.
+
+Ma, Yu, Tang and Li: Preprint submitted to Elsevier                                                                   Page 20 of 22
+LLM-powered Modeling of Evacuation under a Moving Threat
+
+Bellomo, N., Dogbe, C., 2011. On the Modeling of Traffic and Crowds: A           Khan, S.D., 2019. Congestion detection in pedestrian crowds using
+   Survey of Models, Speculations, and Perspectives. SIAM Review 53,                oscillation in motion trajectories. Engineering Applications of Artificial
+   409­463. doi:10.1137/090746677.                                                  Intelligence 85, 429­443. doi:10.1016/j.engappai.2019.07.009.
+
+Binz, M., Akata, E., Bethge, M., Brändle, F., Callaway, F., Coda-Forno, J.,      Kinateder, M., Comunale, B., Warren, W.H., 2018. Exit choice in an
+   Dayan, P., Demircan, C., Eckstein, M.K., Éltet, N., Griffiths, T.L., Haridi,     emergency evacuation scenario is influenced by exit familiarity and
+   S., Jagadish, A.K., Ji-An, L., Kipnis, A., Kumar, S., Ludwig, T., Mathony,       neighbor behavior. Safety Science 106, 170­175. doi:10.1016/j.ssci.
+   M., Mattar, M., Modirshanechi, A., Nath, S.S., Peterson, J.C., Rmus,             2018.03.015.
+   M., Russek, E.M., Saanum, T., Schubert, J.A., Schulze Buschoff, L.M.,
+   Singhi, N., Sui, X., Thalmann, M., Theis, F.J., Truong, V., Udandarao,        Kirchner, A., Nishinari, K., Schadschneider, A., 2003. Friction effects and
+   V., Voudouris, K., Wilson, R., Witte, K., Wu, S., Wulff, D.U., Xiong,            clogging in a cellular automaton model for pedestrian dynamics. Physical
+   H., Schulz, E., 2025. A foundation model to predict and capture human            Review E 67, 056122.
+   cognition. Nature 644, 1002­1009. doi:10.1038/s41586-025-09215-4.
+                                                                                 Kouskoulis, G., Spyropoulou, I., Antoniou, C., 2018. Pedestrian simulation:
+Chen, J., Ma, J., Lo, S.M., 2018a. Geometric constraint based pedestrian            Theoretical models vs. data driven techniques. International Journal of
+   movement model on stairways. Physica A: Statistical Mechanics and its            Transportation Science and Technology 7, 241­253. doi:10.1016/j.ijtst.
+   Applications 505, 1212­1230. doi:10.1016/j.physa.2018.03.051.                    2018.09.001.
+
+Chen, L., Tang, T.Q., Huang, H.J., Wu, J.J., Song, Z., 2018b. Modeling           Li, J., Wan, B., Song, Z., 2026. Multi-agent deep reinforcement learning for
+   pedestrian flow accounting for collision avoidance during evacuation.            group intelligence in emergency evacuation: A decentralized simulation-
+   Simulation Modelling Practice and Theory 82, 1­11.                               to-reality platform with perception-aware policies. Engineering Appli-
+                                                                                    cations of Artificial Intelligence 165, 113489. doi:10.1016/j.engappai.
+Chen, S., Di, Y., Liu, S., Wang, B., 2017. Modelling and Analysis on                2025.113489.
+   Emergency Evacuation from Metro Stations. Mathematical Problems in
+   Engineering 2017, 2623684.                                                    Li, S., Li, Q., Zhong, G., Zhang, Y., 2023. Simulation of bi-directional
+                                                                                    pedestrian flow in corridor based on direction fuzzy visual field. Scientific
+Dang, P., Zhu, J., Li, W., Lai, J., 2025a. A large language model-based agent       Reports 13, 19261.
+   for wayfinding: simulation of spatial perception and memory. Cartography
+   and Geographic Information Science 52, 350­369. doi:10.1080/15230406.         Li, X., Zhou, J., Chen, F., Zhang, Z., 2018. Cluster Risk of Walking
+   2024.2405596.                                                                    Scenarios Based on Macroscopic Flow Model and Crowding Force
+                                                                                    Analysis. Sustainability 10, 385. doi:10.3390/su10020385.
+Dang, P., Zhu, J., Li, W., Xie, Y., Zhang, H., 2025b. Large-language-
+   model-driven agents for fire evacuation simulation in a cellular automata     Lindell, M.K., Perry, R.W., 2012. The Protective Action Decision Model:
+   environment. Safety Science 191, 106935. doi:10.1016/j.ssci.2025.                Theoretical Modifications and Additional Evidence. Risk Analysis 32,
+   106935.                                                                          616­632. doi:10.1111/j.1539-6924.2011.01647.x.
+
+Dong, L., He, Z., Song, C., Yuan, X., Zhang, H., 2024. Multi-robot               Mandar, M., Boulmakoul, A., 2016. Fuzzy Pheromone Potential Fields
+   social-aware cooperative planning in pedestrian environments using               for Virtual Pedestrian Simulation. Advances in Fuzzy Systems 2016,
+   attention-based actor-critic. Artificial Intelligence Review 57, 108.            4027687.
+   doi:10.1007/s10462- 024- 10739- w.
+                                                                                 Pang, C., Lyu, L., Zhou, Q., Zhou, L., 2023. Environment-sensitive crowd
+Gao, C., Lan, X., Li, N., Yuan, Y., Ding, J., Zhou, Z., Xu, F., Li, Y.,             behavior modeling method based on reinforcement learning. Applied
+   2024. Large language models empowered agent-based modeling and                   Intelligence 53, 19356­19371.
+   simulation: a survey and perspectives. Humanities and Social Sciences
+   Communications 11, 1259. doi:10.1057/s41599-024-03611-3.                      Pelechano, N., Badler, N.I., 2006. Modeling Crowd and Trained Leader
+                                                                                    Behavior during Building Evacuation. IEEE Computer Graphics and
+Goldstein, A., Zada, Z., Buchnik, E., Schain, M., Price, A., Aubrey, B.,            Applications 26, 80­86. doi:10.1109/MCG.2006.133.
+   Nastase, S.A., Feder, A., Emanuel, D., Cohen, A., Jansen, A., Gazula, H.,
+   Choe, G., Rao, A., Kim, C., Casto, C., Fanda, L., Doyle, W., Friedman, D.,    Raetano, J., Gregor, J., Tamang, S., 2026. A Survey and Computational Atlas
+   Dugan, P., Melloni, L., Reichart, R., Devore, S., Flinker, A., Hasenfratz,       of Personality Models. ACM Trans. Intell. Syst. Technol. 17, Article 118.
+   L., Levy, O., Hassidim, A., Brenner, M., Matias, Y., Norman, K.A.,               doi:10.1145/3828667.
+   Devinsky, O., Hasson, U., 2022. Shared computational principles for
+   language processing in humans and deep language models. Nature                Serrano, Á., Lujak, M., Vizzari, G., 2026. When shortest is not safest:
+   Neuroscience 25, 369­380. doi:10.1038/s41593-022-01026-4.                        Multi-agent evacuation with awareness and agile routing in dynamic
+                                                                                    hazards. Simulation Modelling Practice and Theory 150, 103294.
+Guo, K., Zhang, L., Wu, M., 2023. Simulation-based multi-objective                  doi:10.1016/j.simpat.2026.103294.
+   optimization towards proactive evacuation planning at metro stations.
+   Engineering Applications of Artificial Intelligence 120, 105858. doi:10.      Sun, L., Liu, H., Fan, B., Li, X., Li, W., 2026. A knowledge-guided
+   1016/j.engappai.2023.105858.                                                     hierarchical multi-agent deep reinforcement learning approach for crowd
+                                                                                    evacuation. Engineering Applications of Artificial Intelligence 181,
+Hassanpour, S., Rassafi, A.A., 2021. Agent-Based Simulation for Pedestrian          115413. doi:10.1016/j.engappai.2026.115413.
+   Evacuation Behaviour Using the Affordance Concept. KSCE Journal of
+   Civil Engineering 25, 1433­1445. doi:10.1007/s12205-021-0206-7.               Tan, J., Zhang, W., Nong, T., Zhang, Z., Wang, T., Ma, Y., Lee, E.W.M.,
+                                                                                    Shi, M., 2025. An improved social force model based on nucleus force
+Helbing, D., Farkas, I., Vicsek, T., 2000. Simulating dynamical features of         theory to simulate building evacuation in different visibility conditions.
+   escape panic. Nature 407, 487­490. doi:10.1038/35035023.                         Simulation Modelling Practice and Theory 142, 103117. doi:10.1016/j.
+                                                                                    simpat.2025.103117.
+Hoogendoorn, S., Bovy, P.H.L., 2000. Gas-Kinetic Modeling and Simulation
+   of Pedestrian Flows. Transportation Research Record: Journal of the           Tao, J., Wang, P., Jiang, H., Han, Y., 2026. A knowledge-formalization
+   Transportation Research Board 1710, 28­36. doi:10.3141/1710-04.                  and vision-language-model system for fire emergency decision support.
+                                                                                    Advanced Engineering Informatics 71, 104409. doi:10.1016/j.aei.2026.
+Hu, X., Chen, T., Deng, K., Wang, G., 2023. Effects of aggressiveness               104409.
+   on pedestrian room evacuation using extended cellular automata model.
+   Physica A: Statistical Mechanics and its Applications 619, 128731.            van Toll, W., Pettré, J., 2021. Algorithms for Microscopic Crowd Simulation:
+                                                                                    Advancements in the 2010s. Computer Graphics Forum 40, 731­754.
+Jiang, N., Yu, H., Lee, E.W.M., Yang, H., Yang, L., Yuen, R.K.K., 2025.
+   Machine learning methods in microscopic pedestrian and evacuation             Tong, Y., Jiang, H., Ning, J., Fu, R., 2026. Strategy-driven evacuation
+   dynamics simulation: a comparative study. Simulation Modelling Practice          dynamics in heterogeneous crowds under efficiency, safety and fairness
+   and Theory 144, 103180. doi:10.1016/j.simpat.2025.103180.                        objectives. Simulation Modelling Practice and Theory 151, 103320.
+                                                                                    doi:10.1016/j.simpat.2026.103320.
+Kaur, N., Kaur, H., 2022. A Multi-agent Based Evacuation Planning for Dis-
+   aster Management: A Narrative Review. Archives of Computational Meth-         Wang, H., Xu, T., Li, F., 2021. A Novel Emergency Evacuation Model of
+   ods in Engineering 29, 4085­4113. doi:10.1007/s11831-022-09729-4.                Subway Station Passengers Considering Personality Traits. Sustainability
+                                                                                    13, 10463. doi:10.3390/su131810463.
+
+                                                                                 Wang, Z., Cai, S., Liu, A., Jin, Y., Hou, J., Zhang, B., Lin, H., He, Z.,
+                                                                                    Zheng, Z., Yang, Y., Ma, X., Liang, Y., 2025. JARVIS-1: Open-world
+
+Ma, Yu, Tang and Li: Preprint submitted to Elsevier                              Page 21 of 22
+                                          LLM-powered Modeling of Evacuation under a Moving Threat
+
+   multi-task agents with memory-augmented multimodal language models.
+   IEEE Transactions on Pattern Analysis and Machine Intelligence 47,
+   1894­1907. doi:10.1109/TPAMI.2024.3511593.
+Wu, W., Chen, M., Li, J., Liu, B., Zheng, X., 2022. An Extended Social
+   Force Model via Pedestrian Heterogeneity Affecting the Self-Driven
+   Force. IEEE Transactions on Intelligent Transportation Systems 23,
+   7974­7986. doi:10.1109/TITS.2021.3074914.
+Xue, S., Yang, Y., Deng, X., 2023. A novel probabilistic linguistic decision-
+   making model based on discrete evidence fusion and attribute weight
+   optimization. Engineering Applications of Artificial Intelligence 125,
+   106706. doi:10.1016/j.engappai.2023.106706.
+Yang, S., Ceferino, L., Zhang, Y., Gu, C., Guo, T., Kondo, G., 2026.
+   When agents learn to think: Large language model-enhanced agent-
+   based modeling for crowd evacuation in disaster scenarios. Reliability
+   Engineering & System Safety 269, 112056. doi:10.1016/j.ress.2025.
+   112056.
+Zhang, B., Lo, J.T.Y., Fang, H., Xie, C., Tang, T., Lo, S., 2024. Coupled
+   simulation­optimization model for pedestrian evacuation guidance
+   planning. Simulation Modelling Practice and Theory 134, 102922.
+   doi:10.1016/j.simpat.2024.102922.
+Zhang, D., Li, W., Gong, J., Zhang, G., Liu, J., Huang, L., Liu, H., Ma,
+   H., 2023. Deep reinforcement learning and 3D physical environments
+   applied to crowd evacuation in congested scenarios. International Journal
+   of Digital Earth 16, 691­714.
+Zhu, K., Wang, J., Guo, N., Ding, Z., Mei, P., 2020. Simulation of
+   pedestrian counter flow with conflicting preference using a lattice-based
+   simulation model. International Journal of Modern Physics C 31,
+   2050120. doi:10.1142/S012918312050120X.
+
+Ma, Yu, Tang and Li: Preprint submitted to Elsevier                                                 Page 22 of 22
+

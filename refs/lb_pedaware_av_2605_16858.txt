@@ -1,0 +1,565 @@
+                                        Pedestrian-Aware LLM-Driven Behavioral Planning
+
+                                                        for Autonomous Vehicles
+
+                                                    Aidana Baimbetova 1, Haruki Yonekura 1,2, Hamada Rizk 1,2,3, Hirozumi Yamaguchi 1,2
+                                                                                         1The University of Osaka, Japan
+
+                                                                              2RIKEN Center for Computational Science, Japan
+                                                                                              3Tanta University, Egypt
+
+                                                 {a-baimbetova, h-yonekura, hamada_rizk, h-yamagu}@ist.osaka-u.ac.jp
+
+arXiv:2605.16858v1 [cs.RO] 16 May 2026     Abstract--Autonomous Vehicles (AVs) must make reliable de-                    environments requires adaptive reasoning about motion, intent,
+                                        cisions in dense urban environments where pedestrian behavior                    and social norms. However, many existing approaches struggle
+                                        is variable, sometimes abnormal, and frequently unseen during                    to generalize across diverse scenarios and to dynamically
+                                        training. Reinforcement learning (RL)­based AVs control systems                  prioritize safety-critical elements.
+                                        perform well in structured traffic settings but struggle to gen-
+                                        eralize when pedestrians behave unpredictably or in scenarios                       Reinforcement learning (RL) methods have achieved strong
+                                        outside their training distribution. Their reliance on handcrafted               results in structured driving tasks such as highway merging,
+                                        rewards and opaque decision further limits their suitability for                 intersection negotiation, and lane changing [1]­[3]. Yet these
+                                        safety-critical, pedestrian-rich environments. To overcome these                 systems rely on extensive simulation data, long training cycles,
+                                        limitations, we introduce a Large Language Model (LLM)­based                     and careful reward engineering to achieve stable performance.
+                                        decision-making framework designed to enhance pedestrian                         Their generalization remains limited: when facing novel or rare
+                                        safety and robustness under abnormal and unseen conditions.                      situations, RL policies often fail to adapt efficiently, making
+                                        The system converts structured scene observations into natural-                  them unsuitable for unstructured real-world traffic. These lim-
+                                        language reasoning prompts that allow the LLM to infer pedes-                    itations become particularly problematic in pedestrian-rich en-
+                                        trian intent, anticipate risk, and generate cautious tactical driving            vironments, where vehicles must respond to highly urgent and
+                                        decisions. These decisions are then executed through a motion                    unpredictable behaviors, such as sudden trajectory deviations
+                                        planner that ensures smooth and kinematically feasible control.                  or unexpected jaywalking. Moreover, the low interpretability
+                                        We evaluate the framework in SUMO across multiple pedestrian-                    of RL policies and their dependence on task-specific tuning
+                                        interaction scenarios, including unexpected jaywalking events                    hinder transparent evaluation and human oversight.
+                                        and complex unseen pedestrian behaviors such as turn-back
+                                        crossings, where pedestrians abruptly reverse direction during                      Recent advances in Large Language Models (LLMs) of-
+                                        traversal. In zero-shot evaluation, the LLM-based agent achieves                 fer a different capability: contextual reasoning beyond the
+                                        a 68% collision-free success rate, substantially outperforming                   training distribution. LLM-based systems have demonstrated
+                                        deep RL baselines (17.7%). When augmented with few-shot                          the ability to integrate multi-modal information, interpret
+                                        episodic memory in a single-pedestrian scenario, performance                     high-level goals, generalize from few examples, and produce
+                                        increases to 96.0%, outperforming a custom DQN controller                        interpretable justifications [4]­[8]. Recent efforts have also
+                                        (82.0% success rate). Furthermore, in the complex unseen turn-                   explored LLM-assisted autonomous mobility beyond conven-
+                                        back scenario, the few-shot memory-enabled agent demonstrates                    tional driving, including cross-city autonomous driving with
+                                        strong generalization capability, successfully adapting prior expe-              meta-learning and LLMs [9] and multimodal LLM-driven
+                                        rience to previously unobserved pedestrian dynamics. The system                  robot navigation in dynamic human environments [10]. Their
+                                        consistently initiates earlier responses, maintains wider safety                 chain-of-thought reasoning enables them to combine traffic
+                                        buffers, and produces interpretable, human-aligned decisions.                    rules, spatial relationships, behavioral cues, and commonsense
+                                                                                                                         knowledge into a coherent decision-making process [11],
+                                           Index Terms--Autonomous Vehicle Control, Large Language                       [12]. Crucially, LLMs possess strong zero-shot and few-shot
+                                        Model, Pedestrian-aware Safety System                                            generalization abilities [13], [14], making them promising for
+                                                                                                                         handling previously unseen interaction patterns in structured
+                                                                  I. INTRODUCTION                                        tactical driving scenarios.
+
+                                           Autonomous Vehicles (AVs) are gaining popularity today                           Despite this progress, existing LLM-based driving frame-
+                                        and are anticipated to become a core of intelligent transporta-                  works largely focus on structured vehicle­vehicle interac-
+                                        tion in the future. To fully realize their potential, AVs must op-               tions or rely on domain-specific training pipelines, leaving
+                                        erate robustly in complex urban environments where decision-                     pedestrian-centric safety underexplored. Works on pedestrian
+                                        making depends on understanding diverse and dynamic con-                         prediction [15] highlight the difficulty of modeling human
+                                        textual factors. Urban driving poses unique challenges due to                    behavior, yet remain constrained by the limits of their training
+                                        constantly changing traffic conditions and the unpredictable                     data or perceptual modalities. No prior work provides a
+                                        behavior of vulnerable road users such as pedestrians, cy-
+                                        clists, and scooter riders. Effective decision-making in these
+
+                                           This paper has been accepted for presentation at the 29th IEEE International
+                                        Conference on Intelligent Transportation Systems (ITSC).
+comprehensive LLM-driven mechanism explicitly designed to         control. Zhu et al. [20] introduce a deep deterministic policy
+anticipate abnormal, rare, or unseen pedestrian behaviors and     gradient-based car-following controller that learns directly
+translate them into safe tactical driving actions.                from real trajectories and a simulation loop, optimizing a tri-
+                                                                  objective reward encompassing safety, efficiency, and comfort
+   This paper builds on our preliminary study on LLM-             by designing the actor and critic deep learning networks.
+augmented driving behavior planning [16] and substantially
+expands it with a full pedestrian-centered framework, episodic       Lu et al. [21] proposed a two-level control scheme for
+memory retrieval, abnormal and unseen behavior evaluations,       AV motion planning: a "decision" layer selects actions such
+and more extensive comparisons with RL baselines. To address      as speeding up or changing lanes, and an "execution" layer
+these challenges, we propose an LLM-enhanced decision-            converts them into safe, feasible paths. This structure en-
+making framework for AVs operating in pedestrian-rich envi-       sures strategic plans remain within the vehicle's capabilities,
+ronments. The framework translates structured environmental       bridging high-level decisions with real-world motion. Pathare
+observations, such as positions, velocities, and lane data,       et al. [22] introduce a tactical-level driving agent that not
+into natural-language prompts processed by an LLM. The            only chooses high-level manoeuvres (keep lane, change lane,
+model then generates high-level tactical decisions, which are     accelerate, brake) via deep reinforcement learning but also
+translated into control commands through a motion controller      quantifies how confident it is in each choice. By training an
+that enforces kinematic constraints. This design enables in-      ensemble of Q-networks augmented with randomized prior
+terpretable, human-aligned behavior without requiring hand-       functions (RPF), the agent can flag unfamiliar situations and
+crafted rules or dense supervision.                               fall back to a conservative action when its uncertainty is high,
+                                                                  outperforming a standard Double-DQN baseline on simulated
+   The proposed system emphasizes cautious and socially com-      highways and avoiding crashes in out-of-distribution scenarios.
+pliant interactions with pedestrians. By leveraging the LLM's
+general world knowledge and contextual reasoning, the vehi-          Traditional RL pipelines for autonomous driving have been
+cle can anticipate potential pedestrian movements and react       analyzed in depth, yet they remain sample-inefficient and
+adaptively, reducing unsafe or abrupt maneuvers. Pedestrian       slow to train, often requiring millions of simulation steps to
+interactions are among the most safety-critical challenges in     converge to a stable policy. Because these agents overfit to the
+AV deployment, as pedestrians are legally prioritized and their   environment on which they were trained, their performance
+motion is inherently unpredictable. Failures in these scenarios   degrades sharply when the scene distribution shifts. Seeking
+not only increase accident risk but also erode public trust in    faster generalization, recent studies have replaced RL with
+autonomous systems.                                               trajectory-generation models based on diffusion processes
+                                                                  [23], yet these models still rely on large domain-specific
+   Experimental evaluations in simulated single- and multi-       datasets and substantial offline training time.
+pedestrian crossing scenarios demonstrate that the LLM can
+make safety-oriented tactical decisions even without task-        B. LLM-based AV control
+specific fine-tuning. The model generalizes to unseen pedes-
+trian interaction patterns and produces interpretable decisions,     The advent of LLMs has significantly expanded and en-
+often outperforming RL baselines in adaptability and contex-      hanced various applications, particularly in the realm of AV
+tual awareness. Few-shot memory on limited historical driving     systems. Researchers are increasingly focusing on the con-
+experiences further improves stability and consistency. These     textual understanding and reasoning capabilities of LLMs,
+results highlight the potential of language-based reasoning as    especially their proficiency in interpreting and comprehend-
+a foundation for transparent, generalizable, and human-aligned    ing input text. When applied to the dynamic environments
+autonomous driving behavior.                                      surrounding AV, LLMs demonstrate potential in facilitating
+                                                                  planning and decision-making processes. Beyond autonomous
+                         II. RELATED WORK                         driving, LLM-based agent simulation has also been explored
+                                                                  in our prior work for generating daily activities of smart-home
+A. Reinforcement Learning-based Method                            simulator agents, suggesting the broader potential of language
+                                                                  models for modeling human-centered behavior in simulated
+   Traditionally, AV control systems have been developed          environments [24].
+using reinforcement learning (RL) frameworks [17], [18]. In
+general, reinforcement learning is a form of trial-and-error         Recent studies have explored integrating LLMs into
+learning in which agents, such as AVs, learn optimal driving      AV frameworks to improve decision-making and planning.
+behaviors by interacting with their environment. Rather than      DriveMLM [4] tokenizes temporal camera images, LiDAR
+relying on labeled data, the system is guided by a reward         sweeps, system-level traffic rules, and user commands, fuses
+mechanism: the agent receives feedback based on the conse-        them via a Vision-Transformers, and employs a LLaMA-
+quences of its actions (e.g., avoiding collisions), allowing it   based decoder to predict discrete path-and-speed planner states
+to improve its policy over time through the maximization of       together with natural-language justifications, enabling closed-
+cumulative rewards.                                               loop control in the CARLA simulator. LLaDA [25] focuses
+                                                                  on adapting driving policies to regional traffic rules ex-
+   Chen et al. [19] propose a conditional Deep Q-Network          pressed in natural language, enabling rule-compliant decision-
+that integrates global-path conditioning, a fuzzy-logic module,   making across domains. RDA-Driver [6] has revealed a rea-
+and a Conv-LSTM-based encoder to capture environmental
+information and stabilize end-to-end steering and acceleration
+soning­decision misalignment in vision-language planners,              In the context of autonomous driving using LLMs, methods
+showing that persuasive Chain-of-Thought (CoT) explanations         explicitly prioritizing pedestrian safety in driving control re-
+can accompany unsafe trajectories, and counter this flaw with       main unexplored. Even in studies employing bird's-eye view
+RDA-Driver, a bird's-eye-view multimodal LLaMA that uni-            perspectives, most rely on simplistic social force models or
+fies reasoning and motion by aligning reasoning and decision        time-consuming training schemes that impose implicit penal-
+by LLM. Agent-Driver [7] treats an LLM as a cognitive               ties on the control model. In contrast, our work distinguishes
+scheduler. Several tools, such as getting occupancy on roads        itself by leveraging language models to explicitly prioritize
+or predicting other vehicles' trajectories, are installed in their  pedestrian safety, setting it apart from existing research.
+system, and LLM chooses and uses tools, retrieves common-
+sense memories, runs CoT reasoning, and outputs a trajectory,                          III. SYSTEM ARCHITECTURE
+while making every decision textually interpretable. Acci-
+dentGPT [5] is the first large-scale system to jointly exploit         The proposed framework integrates an LLM-based Reason-
+multi-vehicle V2X, bird's-eye-view perception, and GPT-level        ing Module as the core of the AV decision pipeline, enabling
+reasoning, enabling a unified model to forecast risks, issue        interpretable, context-aware planning in complex urban envi-
+warnings, and analyze accident causes for both autonomous           ronments. As illustrated in Figure 1, the system consists of four
+and human-driven vehicles. ConvoyLLM [8] equips each                main components: the Scenario Generator, Decision-Making,
+connected vehicle with a few-shot LLaMA agent, augments             Action Parser and Motion Planner, and the Memory Module.
+it via a task-oriented shared-memory pool, and couples the
+resulting high-level commands with an interlaced dynamic-                 a) Closed-Loop and Horizon Execution: The proposed
+graph planner, enabling robust obstacle avoidance, merging,         framework operates as a receding-horizon closed-loop decision
+splitting, and escort re-formation across multi-lane highways.      system. At each timestep t, the Scenario Generator converts
+                                                                    the current environment state into a structured textual descrip-
+   These studies typically presuppose reliable relative-position    tion, which is provided to the LLM-based Decision-Making
+information for neighboring vehicles, may require substantial       Module. The LLM produces a high-level tactical action that is
+multi-modal training data that limits cross-domain generaliza-      parsed and executed by the Motion Planner over an execution
+tion, and pay scant attention to pedestrian interactions, neces-    horizon of t simulation steps. To reduce decision latency and
+sitating retraining or data augmentation when such scenarios        maintain real-time responsiveness, LLM inference for the next
+are critical. In contrast, our proposed method leverages the        control cycle is parallelized while the current action is being
+zero-shot capabilities of LLMs to handle pedestrian interac-        executed. Specifically, multiple LLM calls are dispatched con-
+tions and novel environments without additional training.           currently using thread-based execution, enabling simultaneous
+                                                                    reasoning over the upcoming state horizon. Once the simu-
+C. Pedestrian Safety Mechanism                                      lator advances and the new state becomes available, the pre-
+                                                                    computed decisions are collected and applied in the subsequent
+   Ensuring pedestrian safety is essential for the real-world       control cycle. This pipelined perception­reasoning­action loop
+deployment of AVs. Unlike AVs, pedestrians are not integrated       repeats throughout the episode, allowing the system to approx-
+into computational systems, necessitating that AVs possess          imate receding-horizon planning while maintaining continuous
+robust perception and understanding capabilities to interact        environmental feedback.
+safely with them. Consequently, designing trustworthy safety
+mechanisms is essential.                                                  b) The Scenario Generator: This component constructs
+                                                                    the textual prompt that drives the LLM's reasoning process and
+   Trumpp et al. [26] address the challenge of enabling AVs         integrates two internal modules: the Environment Observation
+and pedestrians to safely interact at unsignalised crosswalks.      module and the Instruction Manager. The Observation module
+They model it as a deep multi-agent reinforcement learn-            functions as the perception system, collecting structured data
+ing game, allowing both agents to learn and adapt. Their            from the simulation, including road geometry, ego-vehicle
+PCAM(pedestrian crash avoidance mitigation) policy nearly           state, and nearby agents such as vehicles and pedestrians.
+eliminates collisions and remains robust under noise and            At each discrete time step t, the ego-vehicle state is defined
+unpredictable behavior. Elallid et al. [15] propose a Deep Q-       by its position (xt, yt), speed vt, heading t, and lane index
+Network (DQN) policy for autonomous driving in the CARLA            lanet, and is represented as stego = (xt, yt, vt, t, lanet). This
+simulator. The agent uses front-camera input and selects from       information is combined with dynamic attributes of surround-
+discrete throttle, brake, and steering actions. Training rewards    ing agents (e.g., their velocity and heading) and traffic rules
+task completion, penalizes collisions, and encourages efficient,    (e.g., speed limits), forming a structured and context-rich
+safe driving. GPT-4V [27] evaluates whether a GPT-4 Vision          description of the driving scene. The Instruction Manager
+model can reason about, and forecast, pedestrian crossing           defines the current driving goal or intent, such as maintaining
+behavior from raw images. Tested zero-shot on two public            lane, slowing down, or yielding to pedestrians. Prompts may
+datasets, GPT-4V attains 57%­67% accuracy without any fine-         optionally include a few-shot examples retrieved from the
+tuning, exhibits strong commonsense explanations, yet still         Memory Module to enhance generalization and stability in
+trails task-specific CNN/LSTM baselines and struggles with          unfamiliar conditions, whose process is shown in Figure 2.
+small or fast-moving pedestrians.
+                                                                          c) The Decision-Making component: This component
+                                                                    processes each prompt through the LLM, which reasons over
+Fig. 1: System overview.
+
+the provided context to produce a high-level tactical decision        demonstrations. Using compact numerical vectors instead of
+expressed in natural language, such as "slow down due to              raw textual retrieval reduces inference latency while ensuring
+pedestrian ahead" or "change to the left lane." This approach         retrieval based on geometric and dynamic similarity rather than
+enables interpretable decision-making that can be analyzed and        lexical matching.
+verified post hoc.
+                                                                            f) The Motion Planner: applies a simplified nonholo-
+      d) The Action Parser: This component implements a               nomic kinematic model consistent with De Luca et al. [28].
+deterministic mapping M : T  A,where T denotes the                    The vehicle is treated as a rigid body constrained to move
+LLM-generated text output and A = {0, 1, 2, 3, 4} represents          along its heading direction, preventing instantaneous lateral
+the discrete action space. The action space A corresponds to:         displacement. The vehicle state evolves over a time interval t
+0: Stay Idle, 1: Turn Left, 2: Turn Right, 3: Accelerate, 4:          according to
+Decelerate. The Action Parser and Motion Planner translate
+the LLM's textual output into discrete control actions, includ-       xt+1  xt + vt cos t t 
+ing maintaining speed, accelerating, decelerating, turning left,
+and turning right. These actions are mapped to physically             yt+1       =    yt + vt sin t t                   (1)
+feasible motion primitives that respect the vehicle's kinematic                                                ,
+constraints and safety limits. The ego vehicle operates within
+a discrete action space consisting of five maneuvers: stay            t+1           t  +  k (target      -  t  )
+idle, turn left, turn right, accelerate, and decelerate. The low-                                               
+level motion controller executes these commands in real time,
+ensuring smooth transitions and stable control.                       vt+1                vt + a t
+
+      e) Memory Module.: The Memory Module supports                   where the acceleration command is
+decision-making by storing structured numerical representa-
+tions of previous successful examples between the ego vehicle         a = min  amax, max  -amax,         vtarget -  vt  (2)
+and pedestrians. Instead of retaining full textual demonstra-                                                t
+tions, each memory entry is encoded as a normalized feature
+vector                                                                with vtarget and target derived from the LLM's commonsense
+                                                                      reasoning, and amax denoting the physical acceleration bound.
+                   x = [dx, dy, vego, vped, TTC],                     This ensures that the acceleration remains within the physi-
+                                                                      cally feasible range [-amax, amax].
+representing relative longitudinal distance, lateral offset, ego
+velocity, pedestrian velocity, and time-to-collision. The feature                IV. EXPERIMENTAL SETUP AND RESULTS
+weights are empirically defined to emphasize safety-critical
+factors. In particular, the influence of lateral offset is increased  A. Simulator and Environment
+in near-conflict situations, allowing the retrieval process to
+prioritize interactions with higher collision risk.                      All experiments were conducted using the SUMO micro-
+                                                                      scopic traffic simulator (version 1.12.10). The environment
+   A kNN search retrieves the most similar past situations in         models a three-lane urban roadway with bidirectional pedes-
+the normalized feature space. The retrieved samples are sub-          trian access, enabling controlled evaluation of tactical driving
+sequently de-serialized into natural-language templates con-          behaviors including lane keeping, speed adaptation, and pedes-
+taining scenario descriptions, reasoning traces, and selected         trian avoidance. All positions and distances are represented in
+actions, and are provided to the LLM prompt as few-shot               the SUMO global Cartesian coordinate system (meters).
+
+                                                                         Simulations were executed using fixed configuration files
+                                                                      defining road geometry, vehicle dynamics, and pedestrian
+                                                                      behavior policies. To ensure statistical robustness, each sce-
+                                                                      nario was evaluated across 50 randomized seeds, where each
+                                                                      seed generated distinct pedestrian spawn positions and motion
+Fig. 2: Example of scenario prompt and LLM response.
+
+Fig. 3: Historical trajectory of ego vehicle and pedestrian. The  prior interactions. During inference, relevant memory entries
+pedestrian is represented as a green dot.                         are retrieved and incorporated into the prompt to guide
+                                                                  decision-making.
+
+                                                                     The Turn-back scenario, described later in Sections IV-F
+                                                                  and IV-G, uses a memory bank containing 114 state vectors,
+                                                                  while the single pedestrian crossing memory bank contains
+                                                                  82. Each vector represents one decision-step state stored for
+                                                                  k-NN retrieval, rather than an entire episode trajectory.
+
+trajectories. Experiments were performed on a workstation         D. Models
+equipped with an NVIDIA GeForce RTX 2080 Ti GPU (11
+GB VRAM) and a multi-core CPU with 64 GB RAM.                        We evaluate four instruction-following large language mod-
+                                                                  els: Gemma3-1B, Qwen3-1.7B, LLaMA3.2-1B, and Gemma3-
+B. Evaluation Metrics                                             27B. All LLMs operate without gradient updates during
+                                                                  evaluation. Inference for all LLMs was performed using a
+   Performance was evaluated using the following metrics:         temperature of 0.0, top-p of 0.9, and a maximum generation
+   · Success Rate: percentage of episodes completed without       length of 2000 tokens to ensure deterministic and comparable
+                                                                  decision outputs. As a RL baseline, we include a Deep Q-
+      collision.                                                  Network (DQN) agent trained for 200,000 timesteps in the
+   · Average Speed: mean ego-vehicle speed during success-        same environment. The DQN policy is evaluated without
+                                                                  further training. All experiments were conducted over 50
+      ful episodes.                                               independent episodes per experimental condition. Table I
+   · Steps: number of simulation steps required to complete       summarizes the collision-free success rates obtained across all
+                                                                  research questions and experimental settings, including single-
+      the scenario.                                               pedestrian unseen scenarios, memory-augmented evaluations
+   · Minimum Pedestrian Distance: closest Euclidean distance      in seen environments, increasing scene complexity with mul-
+                                                                  tiple pedestrians, and cross-behavior memory transfer tests.
+      between vehicle and pedestrian.
+   · Minimum Lateral Pedestrian Distance: minimum lateral         E. Zero-Shot LLM vs. RL Baselines without Episodic Memory
+
+      clearance between the vehicle body and pedestrians.            This experiment evaluates whether LLM agents can gen-
+   · Minimum Time-to-Collision (TTC): smallest predicted          eralize to previously unseen pedestrian interactions without
+                                                                  relying on external memory. The objective is to establish a
+      collision time observed during an episode.                  fair zero-shot comparison between reasoning-based decision
+                                                                  making and reinforcement learning (RL) policies trained under
+C. Scenario and Memory Definitions                                limited environmental assumptions.
+
+   Seen Scenario: A pedestrian behavior type is included in          We compare a zero-shot LLM agent (Gemma-27B) with
+the memory construction phase and therefore represented in        two tactical driving baselines, Dueling DQN and Randomized
+the memory bank.                                                  Prior Functions (RPF) [22], [29]. RL agents were trained ex-
+                                                                  clusively on vehicle­vehicle interaction tasks and were never
+   Unseen Scenario: A pedestrian behavior type not included       exposed to pedestrian behaviors during training. Similarly, the
+in the memory construction phase.                                 LLM operates without memory augmentation or task-specific
+
+   Zero-Shot Setting (No Memory): The LLM-based agent
+operates without episodic memory retrieval. Decisions are
+generated solely from the current scene description and driving
+rules, without access to prior interaction examples.
+
+   Few-Shot Setting (With Memory): The LLM-based agent
+is equipped with an episodic memory bank constructed from
+      TABLE I: Collision-Free Success Rate Across Experiments
+
+Exp   Scenario                         Model                             Success Rate (%)
+Exp1  Single Pedestrian (Unseen)
+                                       Gemma3-27B (No Memory)                    68.0
+Exp2  Single Pedestrian (Seen)         Dueling DQN                               17.7
+                                       Randomized Prior Functions (RPF)          42.8
+Exp3  Three Pedestrians
+Exp4  Turn-back (Seen)                 Gemma3-1B (No Memory)                     72.0
+      Hesitation (Unseen)              Qwen3-1.7B (No Memory)                    74.0
+      Bidirectional Crossing (Unseen)  LLaMA3.2-1B (No Memory)                   76.0
+                                       Gemma3-1B (With Memory)                   96.0
+                                       Qwen3-1.7B (With Memory)                  92.0
+                                       LLaMA3.2-1B (With Memory)                 68.0
+                                       DQN                                       82.0
+
+                                       Gemma3-1B (With Memory)                   88.0
+                                       Qwen3-1.7B (With Memory)                  76.0
+                                       LLaMA3.2-1B (With Memory)                 68.0
+                                       DQN                                       92.0
+
+                                       Gemma3-1B (With Memory)                   94.0
+
+                                       Gemma3-1B (With Memory)                   82.0
+
+                                       Gemma3-1B (With Memory)                   90.0
+
+adaptation. Exp1 does not evaluate which approach is superior      3.17 m (+2.21 m). These results indicate that memory augmen-
+in general. Rather, it tests a specific claim in the literature    tation consistently enlarges spatial buffers during pedestrian
+-- that tactically-trained RL agents can generalize to unseen      interaction. The DQN baseline achieves an 82.0% success rate
+interaction types. We evaluate this claim by placing these         but maintains a minimum lateral clearance of only 0.61 m,
+agents in a pedestrian scenario outside their training distribu-   which is 2.56 m narrower than Gemma-1B with memory. This
+tion, alongside a zero-shot LLM that also has no task-specific     contrast highlights behavioral difference: the RL policy learns
+adaptation. This is an out-of-distribution generalization test,    to complete the task within tight margins, while the memory-
+not a head-to-head competition on equal footing.                   augmented LLM leverages contextual reasoning over retrieved
+                                                                   experiences to maintain substantially larger spatial separation,
+   The zero-shot LLM achieves a collision-free success rate        reflecting an awareness of pedestrian proximity that extends
+of 68%, outperforming RPF (42.8%) and DQN (17.7%). RL              well beyond minimum collision avoidance requirements. The
+agents frequently collided or halted prematurely, indicating       distributions of the minimum ego­pedestrian distance and
+limited transfer beyond their training distribution. In contrast,  minimum lateral pedestrian distance are visualized in Fig. 4
+the LLM adapts speed and trajectory based on contextual            and Fig. 5, respectively.
+reasoning despite the absence of prior pedestrian experience.
+                                                                      Overall, episodic memory improves robustness in seen sce-
+   In terms of safety behavior, the LLM maintained a median        narios primarily by enlarging lateral safety margins, reflecting
+minimum lateral clearance of approximately 3.3 m while             a shift toward defensive rather than minimally compliant colli-
+completing most episodes. RL agents preserved substantially        sion avoidance. Whether these gains reflect genuine behavioral
+larger clearances (approximately 5 m) but often failed to          generalization or scenario-specific retrieval is examined in the
+complete the scenario due to excessive braking or conserva-        following experiment.
+tive stopping policies. This contrast highlights a qualitative
+difference in decision strategies: the LLM executes tighter        G. Scaling to Multi-Pedestrian Scenes
+yet confident avoidance maneuvers informed by contextual
+reasoning, whereas RL agents apply rigid avoidance behaviors          This experiment evaluates whether driving policies
+that prioritize separation at the cost of task completion.         learned from single-pedestrian interactions can generalize to
+                                                                   more complex multi-pedestrian environments. All memory-
+   These results indicate that reasoning-based policies exhibit    augmented LLM agents were constructed using episodic
+stronger zero-shot generalization to unseen agent types com-       memories derived from the one-pedestrian walking scenario,
+pared to trained RL baselines.                                     while the DQN baseline was trained under the same
+                                                                   single-pedestrian condition. Evaluation was performed in
+F. Episodic Memory Effects in Seen Scenarios                       a multi-pedestrian setting, introducing increased spatial
+                                                                   uncertainty and simultaneous collision risks.
+   This experiment investigates whether episodic memory
+improves robustness in previously observed pedestrian-                The DQN agent achieves the highest task completion rate of
+crossing scenarios, evaluated using success rate, minimum          92.0%. However, this performance is associated with minimal
+ego­pedestrian distance, and minimum lateral clearance.            safety margins, yielding a mean minimum pedestrian distance
+                                                                   of 2.593 ± 1.057 m and an extremely small minimum lateral
+   For Gemma-1B, memory increases the success rate from
+72.0% to 96.0%, minimum ego­pedestrian distance from 2.63
+m to 4.34 m, and minimum lateral clearance from 0.96 m to
+distance of 0.034 ± 0.029 m, indicating collision avoidance       Fig. 4: Exp2: Min Pedestrian Distance Distribution (Single
+behavior that prioritizes completion over spatial safety.         Pedestrian, Seen).
+
+   Memory-augmented LLM agents maintain competitive per-          ambiguity through competing pedestrian trajectories. Conse-
+formance while preserving substantially larger safety buffers.    quently, successful performance requires adaptive reasoning
+Gemma-1B with memory achieves an 88.0% success rate               rather than direct recall of stored motion patterns.
+with a minimum pedestrian distance of 3.009 ± 1.217 m and
+a minimum lateral distance of 1.462 ± 1.144 m. Qwen-1B               Using memory derived solely from the turn-back scenario,
+with memory attains a 76.0% success rate while maintaining        the agent achieved a success rate of 94.0% (95% CI: 83.8%­
+a minimum pedestrian distance of 2.758 ± 1.256 m and a            97.9%) on the memory-matched turn-back evaluation across
+lateral clearance of 1.276±1.180 m. LLaMA-1B with memory          50 runs. The agent maintained a mean minimum pedestrian
+achieves 68.0% success with a minimum pedestrian distance         distance of 3.76 m (95% CI: 3.40­4.13 m) and a mean time-
+of 2.364±1.348 m and a lateral separation of 0.715±1.259 m.       to-finish (TTF) of 3.21 s (95% CI: 3.08­3.34 s).
+Across all models, LLM-based policies consistently maintain
+lateral distances substantially larger than those produced by        Despite the absence of behavior-specific memories, per-
+the DQN baseline.                                                 formance remained high in unseen scenarios. The hesitation
+                                                                  scenario achieved a success rate of 82.0% (95% CI: 69.2%­
+   Time-to-collision (TTC) measurements suggest behavioral        90.2%), reflecting the increased difficulty of safely resolving
+differences in response timing. Memory-enabled agents main-       unpredictable pedestrian intent. The agent maintained a mean
+tain lower but stable TTC values (Gemma-1B: 0.351±0.554 s,        minimum distance of 3.27 m (95% CI: 2.83­3.72 m) and a
+Qwen-1B: 0.231 ± 0.481 s, LLaMA-1B: 0.222 ± 0.383 s), re-         mean TTF of 3.19 s (95% CI: 3.07­3.32 s). The bidirectional
+flecting earlier trajectory adjustment compared to the memory-    scenario achieved a success rate of 90.0% (95% CI: 78.6%­
+free agent (0.615 ± 1.701 s), which exhibits higher variance      95.7%), indicating stable adaptation under multi-directional
+indicative of delayed or unstable reactions.                      interaction complexity, with a mean minimum distance of
+                                                                  2.94 m (95% CI: 2.64­3.24 m) and a mean TTF of 3.15 s
+   A notable exception is LLaMA3.2-1B, where memory aug-          (95% CI: 3.03­3.26 s). Safety margins and completion times
+mentation lowers the success rate from 76.0% to 68.0%.            remained broadly consistent across all behavioral conditions.
+We attribute this to the model's limited capacity to inte-
+grate retrieved context, where conflicting episodes introduce        These results demonstrate that retrieved memories en-
+hesitation rather than guidance. This suggests memory aug-        code generalizable interaction principles rather than scenario-
+mentation is not uniformly beneficial -- models below an          specific trajectories, enabling the agent to adapt previously
+instruction-following threshold may require retrieval filtering   learned avoidance strategies to unseen pedestrian behaviors
+or summarization before episodic memory reliably improves         without retraining or additional memory accumulation. This
+performance.                                                      supports the broader claim that memory augmentation enables
+                                                                  robust decision-making under diverse and unpredictable real-
+   Overall, the results indicate that while reinforcement learn-  world interactions.
+ing achieves strong success rates under increased scene
+complexity, memory-augmented LLM agents generalize more                             V. COMPUTATION EFFICIENCY
+conservatively, preserving larger interpersonal safety margins
+through contextual scene awareness rather than purely goal-          Inference latency was evaluated to assess real-time appli-
+driven optimization.                                              cability of the decision-making policies. The Dueling DQN
+                                                                  agent demonstrates highly efficient execution, requiring ap-
+H. Cross-Behavior Generalization                                  proximately 1.24­1.45 ms per decision step with minimal
+                                                                  variance, reflecting the low computational cost of neural net-
+   This experiment evaluates whether experience acquired          work forward inference. In comparison, the Gemma3-1B LLM
+from one pedestrian behavior generalizes to distinct and pre-     exhibits higher variability due to autoregressive reasoning,
+viously unseen behavioral patterns in more complex scenar-        with decision-step inference times ranging from near-instant
+ios. Memory entries were constructed exclusively using the        responses to a maximum of 1.26 s (standard deviation 0.19 s).
+turn-back pedestrian scenario, in which pedestrians reverse
+direction while crossing. Evaluation in this experiment is
+restricted to Gemma3-1B, as it demonstrated the most stable
+and consistent memory-augmented performance across Exp2
+and Exp3, making it the most suitable candidate for isolating
+the effect of cross-behavior memory transfer independently
+of model-capacity variability. Evaluation was subsequently
+performed without updating memory on two unseen behaviors:
+hesitation and bidirectional crossing.
+
+   These scenarios introduce substantially different interaction
+dynamics. Hesitation behavior produces unpredictable stop­go
+motion, increasing temporal uncertainty, and requiring con-
+tinuous replanning. Bidirectional crossing introduces spatial
+Fig. 5: Exp2: Min Lateral Pedestrian Distance Distribution       Fig. 7: Exp3: Min Lateral Pedestrian Distance Distribution.
+(Single Pedestrian, Seen).
+                                                                TABLE II: Inference time comparison between Gemma3-1B
+                                                                and Dueling DQN (per decision step).
+
+                                                                Model        Avg (s)  Max (s)   Min (s)    Std (s)
+
+                                                                Gemma3-:1B   0.1178    1.2647   0.00006    0.1887
+                                                                DQN         0.001306  0.001448  0.001240  0.000071
+
+                                                                with perception and prediction components, and evaluate its
+                                                                robustness under uncertain or imperfect state estimation.
+
+     Fig. 6: Exp3: Min Pedestrian Distance Distribution.                                 VII. CONCLUSION
+
+   Despite the computational advantage of DQN, the infer-          This study introduced a framework that integrates LLMs
+ence latency of Gemma3-1B remains compatible with real-         into the decision-making process of AVs to enhance behav-
+time tactical planning operating at low decision frequencies.   ioral planning in pedestrian-rich environments. By translating
+This suggests that LLM-based agents can remain practically      structured scene observations into natural language prompts,
+deployable while providing improved reasoning capability        the system enables interpretable, context-aware reasoning and
+compared to conventional reinforcement learning policies.       generates tactical driving decisions aligned with human expec-
+                                                                tations. Experiments in the SUMO simulator, covering single-
+                          VI. LIMITATIONS                       and multi-pedestrian jaywalking scenarios, demonstrated that
+                                                                LLM-based agents, especially those supported by few-shot
+   Several limitations are acknowledged. First, the present     memory, outperform RL baselines in collision avoidance,
+evaluation focuses on tactical maneuver decision-making in      lateral clearance, and behavioral consistency. Unlike reactive
+the SUMO simulator. While this setting enables controlled and   RL policies trained on narrow objectives, LLM-based poli-
+reproducible analysis of pedestrian-aware planning behavior,    cies adapt to unseen pedestrian behavior patterns within the
+SUMO abstracts away several factors that are critical in full   evaluated SUMO scenarios. The proposed framework also
+autonomous driving systems, including raw sensor perception,    promotes socially interpretable driving behavior, prioritizing
+occlusions, perception noise, and limited field-of-view condi-  smoother lane changes, early evasive actions, and cautious
+tions. Therefore, validating the proposed framework in richer   maneuvers near pedestrians. Its natural language reasoning
+simulation platforms such as CARLA, and ultimately in real-     enhances transparency and facilitates post-hoc analysis of
+world driving environments, remains an important direction for  decision logic. Overall, the results suggest that LLM-based
+future work. Second, the framework relies on structured state   reasoning can serve as a viable and interpretable compo-
+representations rather than end-to-end perceptual inputs. This  nent for tactical behavioral planning in structured pedestrian-
+design allows the study to isolate the reasoning and decision-  interaction scenarios, offering a promising step toward more
+making capability of LLM-based planning, but it limits direct   generalizable and human-aligned autonomous driving systems.
+applicability to complete autonomous driving pipelines that
+operate from camera, LiDAR, or multi-modal sensor data.                                      REFERENCES
+Future work should integrate the proposed reasoning module
+                                                                 [1] Q. Liu et al., "Autonomous highway merging in mixed traffic using
+                                                                      reinforcement learning and motion predictive safety controller," in
+                                                                      2022 IEEE 25th International Conference on Intelligent Transportation
+                                                                      Systems (ITSC). IEEE, 2022, pp. 1063­1069.
+
+                                                                 [2] W. Zhou et al., "Multi-agent reinforcement learning for cooperative
+                                                                      lane changing of connected and autonomous vehicles in mixed traffic,"
+                                                                      Autonomous Intelligent Systems, vol. 2, no. 1, p. 5, 2022.
+ [3] D. Isele et al., "Navigating occluded intersections with autonomous         [26] R. Trumpp et al., "Modeling interactions of autonomous vehicles and
+      vehicles using deep reinforcement learning," in 2018 IEEE international          pedestrians with deep multi-agent reinforcement learning for collision
+      conference on robotics and automation (ICRA). IEEE, 2018, pp. 2034­              avoidance," in 2022 IEEE Intelligent Vehicles Symposium (IV). IEEE,
+      2039.                                                                            2022, pp. 331­336.
+
+ [4] W. Wang et al., "Drivemlm: Aligning multi-modal large language              [27] J. Huang et al., "Gpt-4v takes the wheel: Promises and challenges for
+      models with behavioral planning states for autonomous driving," CoRR,            pedestrian behavior prediction," in Proceedings of the AAAI Symposium
+      2023.                                                                            Series, vol. 3, no. 1, 2024, pp. 134­142.
+
+ [5] L. Wang et al., "Accidentgpt: Accident analysis and prevention from v2x     [28] A. De Luca et al., "Kinematic modeling and redundancy resolution
+      environmental perception with multi-modal large model," CoRR, 2023.              for nonholonomic mobile manipulators," in Proceedings 2006 IEEE
+                                                                                       International Conference on Robotics and Automation, 2006. ICRA
+ [6] Z. Huang, T. Tang, S. Chen, S. Lin, Z. Jie, L. Ma, G. Wang,                       2006. IEEE, 2006, pp. 1867­1873.
+      and X. Liang, "Making large language models better planners with
+      reasoning-decision alignment," in European Conference on Computer          [29] C.-J. Hoel et al., "Tactical decision-making in autonomous driving
+      Vision. Springer, 2024, pp. 73­90.                                               by reinforcement learning with uncertainty estimation," in 2020 IEEE
+                                                                                       intelligent vehicles symposium (IV). IEEE, 2020, pp. 1563­1569.
+ [7] J. Mao et al., "A language agent for autonomous driving," in Proceedings
+      of the First Conference on Language Modeling(COLM), 2024.
+
+ [8] L. Lu et al., "Convoyllm: Dynamic multi-lane convoy control using
+      llms," arXiv preprint arXiv:2502.17529, 2025.
+
+ [9] M. Gaafar et al., "Geodrive: Cross-city autonomous driving through
+      meta-learning and llms," in Proceedings of the 33rd ACM Interna-
+      tional Conference on Advances in Geographic Information Systems, ser.
+      SIGSPATIAL '25. Association for Computing Machinery, 2025, p.
+      1292­1293.
+
+[10] X. Liu et al., "Llm - driven adaptive autonomous robot navigation via
+      multimodal fusion for diverse environments," in 2025 IEEE Intelligent
+      Vehicles Symposium (IV), 2025, pp. 2361­2368.
+
+[11] T. Cai et al., "Driving with regulation: Interpretable decision-making for
+      autonomous vehicles with retrieval-augmented reasoning via llm," arXiv
+      preprint arXiv:2410.04759, 2024.
+
+[12] S. Wang et al., "Omnidrive: A holistic llm-agent framework for au-
+      tonomous driving with 3d perception, reasoning and planning," CoRR,
+      vol. abs/2405.01533, 2024.
+
+[13] D. Sur´is et al., "Vipergpt: Visual inference via python execution for
+      reasoning," in Proceedings of the IEEE/CVF International Conference
+      on Computer Vision, 2023, pp. 11 888­11 898.
+
+[14] Z. Yang et al., "Doraemongpt: Toward understanding dynamic scenes
+      with large language models (exemplified as a video agent)," in Inter-
+      national Conference on Machine Learning. PMLR, 2024, pp. 55 976­
+      55 997.
+
+[15] B. B. Elallid et al., "Dqn-based reinforcement learning for vehicle
+      control of autonomous vehicles interacting with pedestrians," in 2022
+      International Conference on Innovation and Intelligence for Informatics,
+      Computing, and Technologies (3ICT). IEEE, 2022, pp. 489­493.
+
+[16] A. Baimbetova et al., "Llm-augmented driving behavior planning for au-
+      tonomous vehicle," in Companion Proceedings of the 27th International
+      Conference on Distributed Computing and Networking, ser. ICDCN
+      Companion '26. Association for Computing Machinery, 2026, p. 5­6.
+
+[17] G. P. R. Papini et al., "A reinforcement learning approach for enacting
+      cautious behaviours in autonomous driving system: Safe speed choice
+      in the interaction with distracted pedestrians," IEEE transactions on
+      intelligent transportation systems, vol. 23, no. 7, pp. 8805­8822, 2021.
+
+[18] S. Kuutti et al., "A survey of deep learning applications to autonomous
+      vehicle control," IEEE Transactions on Intelligent Transportation Sys-
+      tems, vol. 22, no. 2, pp. 712­733, 2020.
+
+[19] L. Chen et al., "Conditional dqn-based motion planning with fuzzy logic
+      for autonomous driving," IEEE Transactions on Intelligent Transporta-
+      tion Systems, vol. 23, no. 4, pp. 2966­2977, 2022.
+
+[20] M. Zhu et al., "Safe, efficient, and comfortable velocity control based
+      on reinforcement learning for autonomous driving," Transportation
+      Research Part C: Emerging Technologies, vol. 117, p. 102662, 2020.
+
+[21] Y. Lu et al., "Hierarchical reinforcement learning for autonomous
+      decision making and motion planning of intelligent vehicles," IEEE
+      Access, vol. 8, pp. 209 776­209 789, 2020.
+
+[22] D. Pathare et al., "Tactical decision making for autonomous trucks by
+      deep reinforcement learning with total cost of operation based reward,"
+      arXiv preprint arXiv:2403.06524, 2024.
+
+[23] B. Liao et al., "Diffusiondrive: Truncated diffusion model for end-to-
+      end autonomous driving," in Proceedings of the Computer Vision and
+      Pattern Recognition Conference, 2025, pp. 12 037­12 047.
+
+[24] H. Yonekura et al., "Generating human daily activities with llm for smart
+      home simulator agents," in 2024 International Conference on Intelligent
+      Environments (IE), 2024, pp. 93­96.
+
+[25] B. Li et al., "Driving everywhere with large language model policy
+      adaptation," in Proceedings of the IEEE/CVF Conference on Computer
+      Vision and Pattern Recognition, 2024, pp. 14 948­14 957.
+

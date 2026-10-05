@@ -34,6 +34,7 @@ experiment code until the literature review is complete and discussed.**
 | 5a | Demographic personas: realism vs LLM bias | **delivered** (issue #16) — `literature/demographic-personas/` |
 | 5b | Game theory: communication-free conflict rules | **delivered** (issue #20) — `literature/game-theory/` |
 | 5c | Implemented rules in simulators, games, robots, traffic | **delivered** (issue #22) — `literature/simulation-rules/` |
+| 5d | LLMs resolving spatial conflict without conversation | **draft** (no issue; search of 2026-10-05) — `literature/llm-behavioural-conflict/` |
 | 6 | Bridge into CrowdGym — `integration/crowdgym_mapping.md` | not started |
 
 Three findings from the simulation-rules review (issue #22), all drafts needing supervisor

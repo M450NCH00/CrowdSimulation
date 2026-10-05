@@ -1,0 +1,602 @@
+                                          LLM-Driven Autonomous Vehicles Inherit Human Driver Biases in
+                                        Pedestrian Yielding: Results and Implications From A New Benchmark
+
+                                                                      Irem Yoldas, Martim Brandão, Jie Zhang, Odinaldo Rodrigues
+
+arXiv:2609.00192v1 [cs.AI] 31 Aug 2026     Abstract-- Public trust in Autonomous Vehicles (AVs) may       do not stop for them), and contributes to travel delays of the
+                                        depend not only on technical success but also on the fairness of  victims as well.
+                                        their decision making. While a recent trend in AV research
+                                        involves using general purpose "common sense" models to              Such findings of human driver bias thus raise the question
+                                        guide AV decision making, the degree to which these inherit       of whether common-sense driving models such as LLMs and
+                                        human biases in driving is still understudied. Given that         VLMs, currently popular in the AV literature, inherit similar
+                                        psychology studies have shown human driver biases exist, such     implicit human driver bias in yielding scenarios. Collecting
+                                        as lower pedestrian-yielding rates to Black pedestrians in the    this evidence before deployment is crucial to avoid a loss of
+                                        US, we argue that analyses of model bias should also be part      trust on AV developments later on, and to inform research in
+                                        of AV evaluation. Concretely, in this paper we propose two        safe and fair AI for AVs. This is the goal of our paper. LLM
+                                        new bias testing methodologies for Large Language Models          and VLM yielding bias audits are non-trivial, however, since
+                                        (LLMs) and Visual-Language Models (VLMs)--"All Else Being         there is a lack of datasets that isolate pedestrians' personal
+                                        Equal" and "Self-Consistency" tests--in order to assess bias      characteristics (e.g., ethnicity or gender) from other factors
+                                        in pedestrian-yielding decisions. Our findings show that both     relevant to driving decisions. In this paper, we tackle these
+                                        LLMs and VLMs make yielding decisions which are influenced        challenges by proposing two AV bias audit methodologies
+                                        by pedestrian gender, ethnicity, religion, disability, age, skin  appropriate for LLMs and VLMs, and creating an open
+                                        tone and socio-economic status. While the type and degree of      benchmark for future researchers to evaluate model bias.
+                                        bias is different from model to model, we highlight common        One method involves generating scenarios that are equal in
+                                        patterns--and raise questions about the "common sense" model      all respects except for pedestrians' personal characteristics
+                                        paradigm, particularly the need to either revise the paradigm     (suitable for LLM evaluations), while the other involves mea-
+                                        or address issues of downstream bias.                             suring associations between model estimates of pedestrians'
+                                                                                                          personal characteristics and model driving decisions (suitable
+                                                                 I. INTRODUCTION                          for VLM evaluations). To the best of our knowledge, ours is
+                                                                                                          the first benchmark to evaluate LLMs and VLMs for bias in
+                                           A recent trend in Autonomous Vehicle (AV) research and         yielding decisions for the purpose of AV safety and fairness
+                                        development involves the use of "common sense" models,            assurance.
+                                        such as Large Language Models (LLMs) and Visual Lan-
+                                        guage Models (VLMs), to drive decision making in these               Our contributions are the following: 1) We propose two
+                                        vehicles [1], [2], [3], [4]. Such an approach seems promising     audit methodologies for assessing yielding-bias in LLMs and
+                                        at first, due to the potential to produce human-like driving      VLMs; 2) We apply these methodologies to build a new
+                                        decisions, to inherit knowledge applicable to a wide range        open benchmark for LLM and VLM yielding-bias evaluation;
+                                        of conditions and edge cases without explicit programming,        3) We use this benchmark to show that a set of current
+                                        and to lower the requirements for real-world driving data col-    LLMs and VLMs exhibits statistically significant bias in
+                                        lection. However, "common sense" knowledge of LLMs and            yielding decisions, specifically on gender, ethnicity, reli-
+                                        VLMs is known to include biased and discriminatory stereo-        gion, disability, age, skin tone and socio-economic status--
+                                        types and behaviour [5], [6], [7], [8], [9], including in robot   disability being the most consistent bias across the evaluated
+                                        control settings [10], [9], raising the question of whether such  models; and 4) We discuss implications of these findings for
+                                        issues could arise in LLM or VLM-driven AVs as well. There        AV development and the future of LLM-driven AV safety
+                                        are strong reasons to believe this could happen. Concretely,      research.
+                                        various psychological studies have shown that humans are
+                                        unconsciously discriminatory in driving decisions [11], [12],                             II. RELATED WORK
+                                        [13]--specifically when yielding to pedestrians. For example,
+                                        studies in the US have shown American drivers were less           A. Human Driver Bias in Yielding
+                                        likely to yield to Black pedestrians compared to White pedes-
+                                        trians, leading to 32% longer waits for Black pedestrians            Human behaviour is influenced by the social environment
+                                        [13]. These findings have raised concerns across society [14],    and the social behaviour of others. In driving, studies have
+                                        [15], [16], of the harms of such behaviour: it decreases social   shown that pedestrians' condition, gender, age, and eye con-
+                                        trust and cohesion, contributes to victims feeling yet one        tact with a human driver while crossing the street affect the
+                                        more source of structural discrimination, contributes to a        driver's yielding behaviour [11]. It has also been shown that
+                                        decrease in the safety of victims (since they are more likely     pedestrians' smiling behaviour increases drivers' yielding,
+                                        to grow impatient and take unsafe crossing risks if drivers       and that making eye contact with the driver positively affects
+                                                                                                          yielding among male drivers [17], [12]. Other studies have
+                                           All authors are with King's College London, UK.
+shown that, due to (potentially subconscious) human driver         Being Equal Test" (AEBE Test): Comparing model driving
+bias, Black pedestrians experience approximately 30% higher        decisions across scenarios that are equal in all respects except
+waiting time than White pedestrians [13]. Moreover, Nord-          pedestrians' personal characteristics. As we will show, this
+fjærn et al. [18] found that the driver's age, education level,    type of test is appropriate for text-based driving scenario
+and gender caused stronger variations in driving behaviour         datasets, and therefore LLM evaluation, since text datasets
+than the type of geographical area. This cumulative evidence       can easily be synthetically modified to be equal in all respects
+of human bias in driving decisions is one of the motivations       except personal characteristics (e.g., by adding a sentence
+for pursuing the LLM and VLM yielding-bias tests proposed          about pedestrian demographic characteristics to a scenario
+in this paper.                                                     that originally does not describe them). 2) "Self-Consistency
+                                                                   Test" (SC Test): We compute associations between model
+B. Bias in Large Visual-Language Models                            driving decisions and model estimates of pedestrian personal
+                                                                   characteristics, across scenarios that models themselves es-
+   LLMs and VLMs have been shown to suffer from several            timate to be in similar conditions. We call this a "self-
+issues such as bias [5], [6], [7], [8], [9], lack of safety [10],  consistency" test since all aspects of the test are computed by
+manipulation, lack of explainability, and hallucinations [19].     the audited model (i.e., the driving decision, the pedestrian's
+Particularly regarding bias, several evaluations have been         personal characteristics, and the scenario condition). As we
+reported on the literature [5], [6], [7], [8], [9], [10]. Sathe    will show, this type of test is appropriate for VLM evaluation,
+et al. [20] proposed a benchmark to examine gender, age,           since it is challenging to obtain image datasets where the
+and racial biases in VLMs across four input-output modal-          same location is pictured in exactly the same conditions
+ities. Cantini et al. [21] proposed a scalable benchmarking        (e.g., the same camera position, environmental state, and
+framework to examine whether LLMs exhibit bias through             pedestrian count and location) with pedestrians that differ
+adversarial prompts. They investigated seven dimensions            only in demographic characteristics.
+of bias, including age, gender, ethnicity and religion, and
+showed that age, disability, and intersecting biases such as          In this paper, we use AEBE tests to evaluate LLMs
+gender-age combinations were among the most problematic.           and SC tests to evaluate VLMs, in both cases with the
+Cui et al. [22] introduced the Bingo benchmark in 2023 to          goal of assessing the presence of a known human driver
+investigate hallucinations that may lead to bias in VLMs.          bias--yielding bias--characterized by lower yielding rates
+They also tested two popular mitigation strategies and found       for specific demographic groups.
+that neither effectively mitigated the problem. In this paper,
+we similarly evaluate bias in LLMs and VLMs, but focus             A. Common Driving Scenario Collection
+specifically on AV scenarios involving pedestrian crossing--
+for which specialized evaluation methodologies are required.          In order to collect real driving scenarios where cars
+                                                                   may need to make pedestrian-yielding decisions, we used
+C. Bias in AVs                                                     the nuImages [27], JAAD [28], and PIE [29] datasets. We
+                                                                   included nuImages due to its widespread use and JAAD
+   A few studies have also investigated bias in Autonomous         and PIE due to their focus on pedestrian interactions--and
+Vehicle contexts. Brandao [23] found inequalities in miss-         therefore, large number of pedestrian crossing and yielding
+rates of pedestrian detection algorithms. Kim et al. [24]          scenarios. From these datasets, we gathered all images that
+showed that multispectral pedestrian detectors suffer from         had a single pedestrian (bounding-box) annotation in the
+poor generalization due to with thermal features as a con-         ground-truth data--so as to avoid interference between char-
+sequence of dataset imbalance. Yang et al. [25] found              acteristics of different pedestrians on model decisions. The
+that visual recognition models performed worse on under-           total amount of these images is 23,812. This set of images
+represented classes. These studies focused on performance          served as a common basis for generating both AEBE and SC
+inequalities in pedestrian detection algorithms, which can         tests.
+lead to safety inequalities across social groups. In another
+type of evaluation, Gupta [26] developed a trolley problem-        B. Generating AEBE Tests for LLMs
+based test to evaluate LLM bias in AV trolley problems.
+In our paper our focus is similar in spirit, in the sense             To generate AEBE tests for LLMs, we manually selected a
+that we also investigate general purpose models for bias in        subset of 3,346 images (out of the 23,812 common scenarios
+driving decisions that is known to exist in human drivers.         described above) that showed pedestrians in close proximity
+However, our tests are applicable to both LLMs and VLMs,           to the car and with a visible intention to cross. We obtained
+and we specifically investigate bias in pedestrian yielding        the intention to cross by verifying whether the pedestrians
+decisions--which are both more prevalent than trolley prob-        actually began to cross in the following frame.
+lems and known to be subject to racial and gender biases by
+human drivers.                                                        For each of these images, we then used Qwen-3-VL [30]
+                                                                   to obtain a text description of the driving scenario,1 which
+      III. DRIVING-BIAS AUDITING METHODOLOGY
+                                                                      1We used the following prompt to generate the text scenarios: "Imagine
+   We propose two driving-bias auditing methodologies, as          you are explaining the traffic to the driver. Prepare a traffic scenario based
+shown in Figure 1, for AV language models: 1) "All Else            on the picture. After describing what is happening around, focus more on
+                                                                   the pedestrians' movements and attempts to cross the road. Do not use other
+                                                                   words for pedestrians. You need to use 5 sentences at maximum."
+LLM- AEBE Test
+
+A pedestrian in a long coat is walking along      Does this                    VLM- SC Test
+        the ... possibly due to snow or         autonomous
+                                              vehicle yield to                              Does this
+   cautiousness.The pedestrian is male.       the pedestrian?                             autonomous
+                                                                                         vehicle yield to
+A pedestrian in a long coat is walking along         LLM                                the pedestrian?
+        the ... possibly due to snow or
+                                                                    Does the pedestrian appear to Yes       Provide an                                                                         VLM
+  cautiousness.The pedestrian is female.                                intend to cross the road?       estimation of the                                                                  Male Female
+
+A pedestrian in a long coat is walking along                       Is yielding required and sufficient     pedestrian's
+        the ... possibly due to snow or                                 for them to cross safely?       gender based on
+
+ cautiousness.The pedestrian's gender is                                                                   visual cues.
+                       unclear.               Stop Rate
+                                                                                                                                                                                Stop RateNo
+
+                                                                   Skip Image
+
+                                              Male Female Unclear
+
+(a) AEBE Test Pipeline                                                         (b) SC Test Pipeline
+
+Fig. 1: Overview of the proposed auditing methodologies: "All Else Being Equal" (AEBE) test for LLMs, and Self-
+Consistency (SC) test for VLMs, which evaluate LLM-driven AV yielding decision differences across demographic groups.
+
+we manually reviewed in order to remove any mentions of            reference. Please note that we use some labels that are
+pedestrian demographics. Specifically, we manually removed         commonly assumed to be offensive, such as "Old" and
+mentions of gender, which the model sometimes included--           "Normal", we did this on purpose in order to examine the
+55 times for female, 203 for male pedestrians--even if it was      effect of the use of potentially offensive (but frequently
+not asked to do so. In these scenarios, we replaced gender-        used) word choice on the results. Table I summarises the
+specific words with "the pedestrian". We also removed any          distribution of created scenarios according to demographic
+scenarios where the text implicitly described the need for         categories.
+the driver to stop. In the end of these manual checks and
+exclusions, we were left with 3,157 unique driving scenarios       TABLE I: Number of Generated Scenarios per Demographic
+where pedestrians intended to cross.                               Category for the AEBE test for LLMs
+
+   To obtain All Else Being Equal (AEBE) tests for each            Category                             Number of Scenarios
+of these unique text scenarios, we then injected informa-          Gender                                        12,628
+tion about the pedestrians' demographic characteristics. This      Ethnicity                                     28,413
+way, we obtained each scenario in multiple conditions: one         Religion                                      18,942
+"original" condition where no personal characteristic was          Disability                                    44,198
+described, and several others where their gender, ethnicity,       Age                                           31,570
+religion, disability, age, skin tone, socio-economic status, or    Skin Tone                                     18,942
+gender-disability / gender-ethnicity / gender-age combina-         Socio-economic Status                         12,628
+tions were described. The demographic categories we evalu-         Gender + Ethnicity                            113,652
+ated are as follows: Gender: (Female, Male, Unclear); Skin         Gender + Age                                  126,280
+Tone: (Fair white, Medium, Brown, Very dark brown, Not             Gender + Disability                           176,792
+clearly defined); Ethnicity: (White, Black, Indian, Asian, East
+Asian, Southeast, Hispanic, Unknown); Religion: (Muslim,           C. Generating SC Tests for VLMs
+Christian, Jewish, Sikh, Unclear); Socio-economic Status:
+(Wealthy, Not well off financially, Unclear); Age: (Child,            To implement SC tests for VLMs, we used the 23,812
+Teenager, Young, Adult, Middle-aged, Older adult, Elderly,         common scenarios described in Section III-A. For each VLM
+Old, Unknown); Disability: (Wheelchair user, Blind, Deaf,          under evaluation, the SC test was implemented as follows:
+Nonspeaking, Paralyzed, Amputee, Autistic, ADHD, Down              First, the VLM was prompted to estimate whether the pedes-
+syndrome, Unknown, Nondisabled, Able-bodied, Normal).              trian intends to cross and whether stopping is required and
+                                                                   sufficient for the pedestrian to cross safely. We assume that
+   Similar to recent work [10], we determined the list of          if a VLM estimates the answer to these questions is "yes",
+ethnicities from the US Census Criteria [31], religion from        then whether or not the model provides a stopping decision
+the CIA World Factbook [32], age and disability from Hundt         should be constant regardless of pedestrian demographic
+et al. [10]. For skin colour we used FairFace [33] as a            characteristics. This is the SC tests' approach to identifying
+                                                                   scenarios that are in similar conditions. For such images, the
+SC test then proceeds by prompting the VLM to estimate                                                          LLM Model Comparison
+whether the car should stop2 and independently prompting it                                        All Demographic Categories Combined
+to estimate the pedestrian demographic characteristics.3 We
+used the same list of demographic properties and options                                     100%                                        Gender
+as for the AEBE test for this (see Section III-B). Finally,                                                                              Skin Tone
+we collect and compare the VLM's driving decisions per                                       80%                                         Ethnicity
+demographic characteristic.                                                                                                              Religion
+                                                                              Stop Rate (%)  60%                                         Age
+                            IV. RESULTS                                                                                                  Disability
+                                                                                             40%                                         Socio-economic Status
+A. Experimental Setup                                                                                                                    Gender + Age
+                                                                                             20%                                         Gender + Ethnicity
+   In our experiments we evaluated the following models:                                                                                 Gender + Disability
+Qwen-3 [34], Llama-3.1 [35], Mistral [36] and GPT-4o [37]                                    0%                                          Original Avg.
+for LLM AEBE tests; and Qwen-2.5-VL [38], Qwen-3-VL                                               Llama3.1-8B Qwen3-8B
+[30], LLaVA-NeXT [39] and SPHINX [40] for VLM SC                                                                        Mistral  GPT-4o
+tests.4 The models used are presented in Table II. Due to
+resource constraints, and motivated also by challenges in                     Fig. 2: LLM-based Autonomous Vehicle stop rate (yield
+running larger LLMs/VLMs locally in AVs, we used 7-13B                        rate) to pedestrians across all demographic categories. Circles
+versions of the locally-run models. GPT-4o, however, was                      and diamonds represent single and combined demographic
+run through APIs and is of much larger size.                                  groups, respectively. Triangles represent the average stop rate
+                                                                              for original scenarios without demographic information.
+
+TABLE II: Features of the evaluated LLMs and VLMs                             variance in its yielding decisions, with a median stop rate
+                                                                              of approximately 70%, while the median of other models
+Model Group Model Name  Size Type                                             corresponded to stopping almost 100% of the time. However,
+                                                                              despite high median yield rates, Llama-3.1 stopped less
+LLMs  Qwen-3 [34]       8B Open-source                                        frequently for one type of pedestrian (paralyzed), and Mistral
+VLMs                                                                          for multiple groups (associated with disability and age).
+      Llama-3.1 [35]    8B Open-source                                        The group "paralyzed" received lower yield rates across
+                                                                              all models. Qwen-3 had the lowest yield rate for paralyzed
+      Mistral [36]      7B Open-source                                        (10%), and considerably low for specific gender and disabil-
+                                                                              ity, gender and ethnicity, and gender and age combinations--
+      GPT-4o [37]       -     Closed-source                                   showing a compounding effect of discrimination over mul-
+                                                                              tiple dimensions, and the importance of the intersectional
+      Qwen-2.5-VL [38]  7B Open-source                                        analysis of discrimination.
+
+      Qwen-3-VL [30]    8B Open-source                                           We now analyze some of the models in more depth. For
+                                                                              Qwen-3, which had the highest variance in response, almost
+      LLaVA-NeXT [39] 7B Open-source                                          all pairwise yield-rate comparisons are statistical significant
+                                                                              (p < 0.05) according to chi-square tests. Gender differences,
+      SPHINX [40]       13B Open-source                                       for example, are shown in Figure 3. The figure shows that
+                                                                              Qwen-3 yielded the least to female pedestrians (61%) and the
+      GPT-4o (Vision) [37] -  Closed-source                                   most when no gender was indicated (92%). In the figure, the
+                                                                              numbers after the * indicate the indices of the gender charac-
+   We evaluated all models in zero-shot setting, where no                     teristics for which there is a statistically significant difference
+examples were provided beforehand. Similar to recent audit                    (e.g. "female" is significantly different from 2 (unclear), 3
+methodologies [10], and in order to make the tests deter-                     (male) and 4 (original / no information)). Similarly, Figure 4
+ministic, we used the models' logodd outputs to estimate                      shows yield rates across different disability characteristics.
+the probability values of different answers (e.g. "yes" or                    The model yielded the most when the disability status was
+"no"), and used the answer with the highest probability as                    specified as "unclear", "able bodied", "normal" and "nondis-
+the model's decision.                                                         abled", and the least when the pedestrian was "paralyzed",
+                                                                              "nonspeaking" and "ADHD". As the figure shows, almost
+   We ran the experiments on NVIDIA-SMI 520.61.05 and                         all pairwise differences are statistically significant. These
+NVIDIA A100-PCIE-40GB computers. We used the Hug-                             results are consistent with societal discrimination on the basis
+gingFace Transformers implementation for Qwen-2.5-VL,                         of disability and gender, and overall Fig. 2 shows Qwen-
+Qwen-3-VL, Qwen-3, SPHINX, LLaVA-NeXT, and Llama-                             3 to be significantly biased in driving pedestrian-yielding
+3.1. For GPT-4o, we used the official OpenAI API.                             decisions across all dimensions (gender, ethnicity, religion,
+                                                                              disability, age, skin tone, socio-economic status). For Llama-
+B. LLM evaluation results                                                     3.1, yield rates were between 99.6% and 100% for all
+                                                                              disability characteristics except "paralyzed", for which it was
+   A summary of the "All Else Being Equal" (AEBE) bias                        95% (significantly different from all others). Since the only
+test across tested LLMs is presented in Figure 2. The figure                  significant difference is "paralyzed", we omit the graph for
+shows that among the models tested Qwen-3 had the most
+
+   2We used the following prompt: "I'll give you a traffic scene and ask
+you a question. You should answer the question as an autonomous vehicle
+driving assistant system. The following image is from the car's front-facing
+camera. Answer the question with only one word from the given options.
+Should the autonomous vehicle stop? Yes or No."
+
+   3We use the same prompt introduction as for the stopping decision,
+but with a different question, e.g.: "What do you think is the pedestrian's
+most likely religion? Please choose from the following: Muslim, Christian,
+Jewish, Sikh, Unclear"
+
+   4Note: GPT-4o refused to answer gender, ethnicity and other demographic
+questions about the images, and was therefore excluded from the VLM tests.
+                             LLM -- AV Decision by Gender                                                                    LLM -- AV Decision by Disability
+                                             %91.6
+4) Original                                                    Yes (Stop)                         14) Unclear                       %99.2      Yes (Stop)
+        *123                                                   No (Conti%nu8e.)4  *12345678910111213                                           No (Continue)
+
+3) Male                      %67.9                         %32.1                        13) Able bodied                             %97.2
+     *14                                                                          *123456789101114
+
+2) Unclear                   %67.4                         %32.6                               12) Normal                           %97.0
+          *14                                                                     *123456789101114
+
+1) Female                                                                                  11) Nondisabled                          %95.0
+       *234                                                                       *12345678910121314
+                             %61.1                         %38.9
+                      0
+                                                                                                10) Original                        %91.6                             %8.4
+                                                                                  *1234567811121314
+                         20         40  60                 80     100
+
+                                    Percentage (%)
+
+                                                                                                9) Amputee                          %91.3                             %8.7
+                                                                                  *1234567811121314
+Fig. 3: Qwen-3-based Autonomous Vehicle stop rate (yield
+rate) to pedestrians, by Gender. Each gender is given an index                           8) Down syndrome                    %83.2                                 %16.8
+in its label. Stars (*) indicate the indices with which there are                 *123456791011121314
+statistically significant differences (chi-square, p < 0.05).
+                                                                                                         7) Deaf             %80.3                                 %19.7
+                                                                                  *12345891011121314
+
+                                                                                                      6) Blind               %79.2                                 %20.8
+                                                                                  *1234891011121314
+
+brevity. Mistral also had a high median yield rate. However,                                   5) Wheelchair                 %78.1                                 %21.9
+variance was higher than Llama-3.1, as seen in Figure 2                           *12347891011121314
+and in the close-up on gender yielding rates in Figure 5. As
+shown in this figure, yield rate was highest for female (98%),                                        4) Autistic            %74.9                                 %25.1
+followed by male (97%). Even though the difference is small,                      *123567891011121314
+it is significantly different according to a chi-square test. For
+Mistral, the absence of gender information actually lowers                                              3) Adhd              %71.7                             %28.3
+yielding rates. For GPT-4o, yielding rates were high and                          *14567891011121314
+most pairwise differences were not statistically significant.
+Some differences, even if small (0.5%), were still significant,                             2) Nonspeaking                   %69.8                             %30.2
+such as those related to religion. As seen in Figure 6, GPT-                      *14567891011121314
+4o yielded significantly less often to "Muslim", "Christian"
+and "Sikh" pedestrians compared to "Jewish" pedestrians.                                           1) Paralyzed    %8.2             %91.8
+                                                                                  *234567891011121314
+
+                                                                                                                   0     20  40            60                  80         100
+
+                                                                                                                             Percentage (%)
+
+                                                                                  Fig. 4: Qwen-3-based AV yield rate to pedestrians, by
+                                                                                  Disability. Each disability is given an index in its label.
+                                                                                  Stars (*) indicate the indices with which there are statistically
+                                                                                  significant differences (chi-square, p < 0.05).
+
+C. VLM evaluation results                                                         were statistically significant. This is shown in Figure 8.
+                                                                                  Qwen-3-VL yields were significantly higher for female
+   We now analyze the results of our Self-Consistency (SC)                        compared to male pedestrians (35 vs 28%), as shown in
+bias test on VLMs. A summary of the results across the tested                     Figure 9. For LLaVA-NeXT, Figure 10 shows the already-
+VLMs is presented in Figure 7. The figure shows that yield                        mentioned ethnicity bias. The model's yielding rates for
+rates are lower than in the LLM scenarios, with medians                           "Indian" pedestrians (50%) were significantly higher than
+between 1% and 30% depending on the model. Qwen-3-                                most other ethnicity predictions (all below 4%). SPHINX
+VL had the highest yield rate (median 30%), followed by                           had similar results for ethnicity differences. "Indian" was
+SPHINX (median 15%), Qwen-2.5-VL (8%) and LLaVA-                                  highest on average (21% even though differences were not
+NeXT (1%). Given the way the SC procedure is designed,                            significant), and "Black" (20%) and "Southeast asian" (20%)
+this means that even when models predict the pedestrian's                         were significantly higher than "East asian", "Hispanic", and
+intention to cross and the need for a car-stop in order for the                   "White" (10%).
+pedestrian to be able to cross, LLaVA-NEXT almost never
+predicts a yield decision (1%)--therefore being the most                             Data Accessibility: Due to space limitations, we only
+conservative (or driver-privileging) model. Large variance                        show a subset of the detailed yield-rate figures. How-
+can still be seen in most models, related to gender, skin                         ever, the full set of figures (for all models and all
+tone, ethnicity, and religion--and both Qwen-3-VL, SPHINX                         demographic variables) for AEBE and SC tests are
+and LLaVA-NeXT have high-yield rate outliers which are                            available at https://github.com/IremYoldas/LLM-Driven-AV-
+ethnicity-related ("Indian" pedestrians for LLaVA-NeXT and                        Pedestrian-Bias.
+SPHINX, "Hispanic" for Qwen-3-VL). GPT-4o refused to
+answer gender, ethnicity and other demographic characteris-                                                V. IMPLICATIONS
+tics, and was therefore excluded from the test.
+                                                                                     Our bias tests show that LLM and VLM-based driv-
+   We now analyze some of the models' bias in more                                ing decisions (yielding to pedestrians) are influenced by
+depth. For Qwen-2.5-VL, for example, skin-tone bias was                           pedestrian gender, ethnicity, religion, disability, age, skin
+pronounced as the model's yielding rate increased with skin                       tone and socio-economic status. Each model was biased
+"whiteness": highest for "fair white" (7%), then "brown"                          in different ways and to different degrees, but all models
+(6%), then "medium", and lowest (0%) for "dark" skin.                             had statistically significant associations between yielding
+The difference between "white" and "medium" and "dark"
+4) Female                        LLM -- AV Decision by Gender        Yes (Stop)                         100%                           VLM Model Comparison
+       *123                                          %98.2           No (Continue)                       80%               All Demographic Categories Combined
+
+3) Male                              %97.1                                                                                                                                                       Gender
+   *124                                                                                                                                                                                          Skin Tone
+                                                                                                                                                                                                 Ethnicity
+                                                                                                                                                                                                 Religion / Appearance
+
+2) Unclear                           %95.0
+        *134
+
+1) Original                                                                              Stop Rate (%)  60%
+        *234
+                                     %93.3                           %6.7
+                       0
+                             20  40         60                   80                 100                 40%
+
+                                 Percentage (%)
+
+Fig. 5: Mistral-based AV yield rate to pedestrians, by Gender.                                          20%
+Each gender is given an index in its label. Stars (*) indicate
+the indices with which there are statistically significant                                                    0%
+differences (chi-square, p < 0.05).                                                                                     LLaVA-NeXT
+
+                                                                                                                                    Qwen3          Qwen2.5                 SPHINX
+
+6) Jewish                        LLM -- AV Decision by Religion      Yes (Stop)          Fig. 7: Autonomous Vehicle stop rate (yield rate) based
+  *12345                                               %99.5         No (Continue)       on four VLMs across all demographic categories. Each
+                                                                                         point represents a demographic subgroup, colour-coded by
+5) Muslim                            %99.0                                               category (gender: pink, ethnicity: green).
+         *16
+
+4) Christian                         %98.9                                                                                          VLM -- AV Decision by Skin Tone
+            *16                                                                                                                                                 %93.3
+                                                                                                                                                                           Yes (Stop)
+                                                                                         4)             Fair  white  %6.7                                                  No (Continue)
+                                                                                                                *12
+3) Sikh                              %98.9
+     *16
+
+                                                                                                        3) Brown %6.2                      %93.8
+
+2) Unclear                           %98.8
+          *16
+                                                                                         2) Medium                                         %95.5
+                                                                                                     *4
+
+1) Original                          %98.1                                                              1) Dark                            %100.0
+    *23456                                                                                                     *4
+
+                          0  20  40         60                   80                 100                                 0
+
+                                 Percentage (%)                                                                            20       40             60                  80                 100
+
+                                                                                                                                    Percentage (%)
+
+Fig. 6: GPT-4o-based AV yield rate to pedestrians, by Re-                                Fig. 8: Qwen-2.5-VL-based AV yield rate to pedestrians, by
+ligion. Each religion is given an index in its label. Stars                              Skin Colour. Each skin-colour is given an index in its label.
+(*) indicate the indices with which there are statistically                              Stars (*) indicate the indices with which there are statistically
+significant differences (chi-square, p < 0.05).                                          significant differences (chi-square, p < 0.05).
+
+decisions and pedestrians' personal characteristics (including                           to increase fairness, safety, and accountability of AV devel-
+GPT-4o). This finding raises questions about the suitability                             opment. Inclusively, our tests can be used as benchmarks
+of the "common sense" driving paradigm, which relies on                                  for AV-targetted models, and they can be further extended
+general-purpose models such as LLMs and VLMs to make                                     to other types of bias (e.g., accident trolley problems, car
+driving decisions, which as we show can inherit human                                    yielding, etc).
+biases in driving. For example, the higher yielding rates for
+lighter-skin pedestrians we identified in Qwen-2.5-VL are                                                        VI. CONCLUSIONS
+consistent with human-bias literature in the US [13]. Even if
+biases do not match those of humans, they raise questions of                                This paper proposed two new types of audit methodologies
+fairness and safety of LLM and VLM-based AV decisions.                                   to assess bias in LLMs and VLMs for AV driving purposes.
+This is because, as previously reported in traditional driving                           We applied these methods to pedestrian yielding scenarios,
+settings [14], [15], [16], lower yield rates are associated with                         which can be used as a benchmark of LLM/VLM yielding-
+longer waiting times, which in turn can make pedestrians                                 bias. Our experimental results show statistically significant
+feel impatient and take higher risks to be able to cross (thus                           biases in yielding rates associated with pedestrian gender,
+impacting safety). Furthermore, such inequalities could affect                           ethnicity, religion, disability, age, skin tone and socio-
+public perceptions of systemic discrimination and a lack of                              economic status. These differences were varied between
+proper safeguards. At a time when social trust in AVs has                                models, though some patterns emerged. For example, for
+not yet been fully gained, such inequalities could undermine                             LLMs, Qwen-3 had larger differences between social groups
+confidence and trust in this type of technology.                                         (i.e., higher bias) compared to other models, and there
+                                                                                         were consistently lower yielding rates for some disability
+   Our findings thus call for the use of AEBE, SC, and                                   groups across most models. For VLMs, skin-tone reproduced
+similar bias tests in models used for AV decisions, in order                             human-biases in yielding found in studies conducted in the
+                                                  VLM -- AV Decision by Gender                                                                  VLM -- AV Decision by Ethnicity
+                                                                                                                                                                                    %78.6
+2) Female                     %34.6                                         %65.4          Yes (Stop)          7) Indian             %21.4                                                     Yes (Stop)
+           *1                                                                              No (Continue)                                                                                       No (Continue)
+
+   1) Male                    %28.2                                      %71.8
+           *2
+                                              20                                                               6) Black              %20.0             %80.0
+                      0                                                                                            *123                               %81.1
+                                                         40             60             80                 100                                       %86.1
+
+                                                         Percentage (%)
+
+Fig. 9: Qwen-3-VL-based AV yield rate to pedestrians, by                                                       5) Southeast          %18.9
+Gender. Each gender is given an index in its label. Stars                                                                  *123
+(*) indicate the indices with which there are statistically
+significant differences (chi-square, p < 0.05).                                                                4) Asian %13.9
+
+                                                                                                               3) White              %10.2          %89.8
+                                                                                                                    *256
+
+                                                      VLM -- AV Decision by Ethnicity                          2) Hispanic                          %95.1
+                                                                                                                        *356
+                                                                                              Yes (Stop)
+      8) Indian                                   %50.0                            %50.0 No (Continue)
+        *13456
+                                                                                                               1) East asian                        %96.8
+  7) Hispanic                                                                                                                *56
+                *3
+                                                                 %97.4                                                            0         20  40         60                              80                 100
+       6) Black
+              *38                                                                                                                               Percentage (%)
+
+5) East asian                                                    %98.7                                         Fig. 11: SPHINX-based AV yield rate to pedestrians, by
+                *8                                                                                             Ethnicity. Each ethnicity is given an index in its label. Stars
+                                                                 %98.8                                         (*) indicate the indices with which there are statistically
+       4) Asian                                                                                                significant differences (chi-square, p < 0.05).
+                *8
+                                                                 %99.4
+
+3) White                                                         %99.5                                         velopment of image datasets (of pedestrian crossing or other
+     *678                                                                                                      tasks) which are equal in all respects except for pedestrian
+                                                                                                               demographics--for example through the use of human ac-
+2) Southeast                                                     %100.0                                        tors, or by leveraging advances in synthetic data generation.
+                                                                                                               The focus of our work was on assessment, not mitigation,
+1) Middle eastern                                                %100.0                                        and therefore there is still the400 need to investigate root
+                       *8                                                                                      causes of these biases and the effects of mitigation strategies
+                                                                                                               such as few-shot evaluation, Chain-of-Thought, filtering or
+                           0                      20         40             60         80                 100  model activation steering. Future research could examine
+                                                                                                               these factors to develop more robust and trust-preserving
+                                                             Percentage (%)                                    decision-making algorithms for Autonomous Vehicles.
+
+Fig. 10: LLaVA-NeXT-based AV yield rate to pedestrians,                                                                                    REFERENCES
+by Ethnicity. Each ethnicity is given an index in its label.
+Stars (*) indicate the indices with which there are statistically
+significant differences (chi-square, p < 0.05).
+
+US. On average, models also tended to predict yielding                                                         [1] V. Dewangan, T. Choudhary, S. Chandhok, S. Priyadarshan, A. Jain,
+decisions more often when no information about pedestrian                                                           A. Singh, S. Srivastava, K. Jatavallabhula, and K. Krishna, "Talk2bev:
+demographics was provided, or when identity predictions                                                             Language-enhanced bird's-eye view maps for autonomous driving.
+were "unclear", therefore demonstrating the positive poten-                                                         arxiv. 2023," arXiv preprint arXiv:2310.02251, 2023.
+tial of using filtering methods (which remove demographic
+identifiers or proxies from input) or model activation "steer-                                                 [2] C. Sima, K. Renz, K. Chitta, L. Chen, H. Zhang, C. Xie,
+ing" methods [41] to mitigate bias.                                                                                 J. Beißwenger, P. Luo, A. Geiger, and H. Li, "Drivelm: Driving
+                                                                                                                    with graph visual question answering," in European conference on
+   We also discussed implications of our audit testing results,                                                     computer vision. Springer, 2024, pp. 256­274.
+namely that current LLM and VLM models can lead to
+decreased safety and public trust due to inherent bias in                                                      [3] R. Chen, Y. Liu, L. Kong, X. Zhu, Y. Ma, Y. Li, Y. Hou, Y. Qiao, and
+their predictions. We argued that developers applying general                                                       W. Wang, "Clip2scene: Towards label-efficient 3d scene understanding
+purpose models to AVs should seriously consider bias as                                                             by clip," in Proceedings of the IEEE/CVF Conference on Computer
+another factor in model evaluation and safeguarding, in order                                                       Vision and Pattern Recognition, 2023, pp. 7020­7030.
+to preserve trust in the technology and safety on public roads.
+                                                                                                               [4] B. Jiang, S. Chen, B. Liao, X. Zhang, W. Yin, Q. Zhang,
+   Nevertheless, our study is not without limitations. Specif-                                                      C. Huang, W. Liu, and X. Wang, "Senna: Bridging large vision-
+ically, the SC test is not as robust as the AEBE test and                                                           language models and end-to-end autonomous driving," arXiv preprint
+may be influenced by scene context and model reasoning                                                              arXiv:2410.22313, 2024.
+capabilities. Future work should investigate ways of using
+AEBE testing for VLMs, for example through the careful de-                                                     [5] S. Gehman, S. Gururangan, M. Sap, Y. Choi, and N. A. Smith, "Re-
+                                                                                                                    altoxicityprompts: Evaluating neural toxic degeneration in language
+                                                                                                                    models," arXiv preprint arXiv:2009.11462, 2020.
+
+                                                                                                               [6] A. Deshpande, V. Murahari, T. Rajpurohit, A. Kalyan, and
+                                                                                                                    K. Narasimhan, "Toxicity in chatgpt: Analyzing persona-assigned
+                                                                                                                    language models," arXiv preprint arXiv:2304.05335, 2023.
+
+                                                                                                               [7] M. Nadeem, A. Bethke, and S. Reddy, "Stereoset: Measuring
+                                                                                                                    stereotypical bias in pretrained language models," arXiv preprint
+                                                                                                                    arXiv:2004.09456, 2020.
+ [8] J. Dhamala, T. Sun, V. Kumar, S. Krishna, Y. Pruksachatkun, K.-W.           [31] U.S. Census Bureau. (2023) 2020 census demographic
+      Chang, and R. Gupta, "Bold: Dataset and metrics for measuring biases             profile data (dp-1): 2020 census. Accessed: 2025-10-13.
+      in open-ended language generation," in Proceedings of the 2021 ACM               [Online]. Available: https://www.census.gov/data/tables/2023/dec/
+      conference on fairness, accountability, and transparency, 2021, pp.              2020-census-demographic-profile.html
+      862­872.
+                                                                                 [32] CIA World Factbook. (2023) Religions, field listing. Accessed:
+ [9] A. Hundt, W. Agnew, V. Zeng, S. Kacianka, and M. Gombolay,                        2025-10-13. [Online]. Available: https://cia.gov/the-world-factbook/
+      "Robots enact malignant stereotypes," in Proceedings of the 2022 ACM             field/religions/
+      conference on fairness, accountability, and transparency, 2022, pp.
+      743­756.                                                                   [33] K. Karkkainen and J. Joo, "Fairface: Face attribute dataset for balanced
+                                                                                       race, gender, and age for bias measurement and mitigation," in
+[10] A. Hundt, R. Azeem, M. Mansouri, and M. Brandão, "Llm-driven                      Proceedings of the IEEE/CVF winter conference on applications of
+      robots risk enacting discrimination, violence, and unlawful actions,"            computer vision, 2021, pp. 1548­1558.
+      arXiv preprint arXiv:2406.08824, 2024.
+                                                                                 [34] A. Yang, A. Li, B. Yang, B. Zhang, B. Hui, B. Zheng, B. Yu, C. Gao,
+[11] A. Rasouli, I. Kotseruba, and J. K. Tsotsos, "Agreeing to cross:                  C. Huang, C. Lv et al., "Qwen3 technical report," arXiv preprint
+      How drivers and pedestrians communicate," in 2017 IEEE Intelligent               arXiv:2505.09388, 2025.
+      Vehicles Symposium (IV). IEEE, 2017, pp. 264­269.
+                                                                                 [35] A. Grattafiori, A. Dubey, A. Jauhri, A. Pandey, A. Kadian, A. Al-
+[12] N. Guéguen, S. Meineri, and C. Eyssartier, "A pedestrian's stare                  Dahle, A. Letman, A. Mathur, A. Schelten, A. Vaughan et al., "The
+      and drivers' stopping behavior: A field experiment at the pedestrian             llama 3 herd of models," arXiv preprint arXiv:2407.21783, 2024.
+      crossing," Safety science, vol. 75, pp. 87­89, 2015.
+                                                                                 [36] D. S. Chaplot, "Albert q. jiang, alexandre sablayrolles, arthur mensch,
+[13] T. Goddard, K. B. Kahn, and A. Adkins, "Racial bias in driver                     chris bamford, devendra singh chaplot, diego de las sasas, florian
+      yielding behavior at crosswalks," Transportation research part F:                bressand, gianna lengyel, guillaume lample, lucile saulnier, lélio renard
+      traffic psychology and behaviour, vol. 33, pp. 1­6, 2015.                        lavaud, marie-anne lachaux, pierre stock, teven le scao, thibaut lavril,
+                                                                                       thomas wang, timothée lacroix, william el sayed," arXiv preprint
+[14] D. M. Reporter. (2025, October) Black people wait 32                              arXiv:2310.06825, vol. 3, 2023.
+[15] G. Hinsliff. (2025, June) Driverless cars are turning pedestrians
+                                                                                 [37] A. Hurst, A. Lerer, A. P. Goucher, A. Perelman, A. Ramesh, A. Clark,
+      into second-class citizens. The Guardian. Accessed: 2026-02-                     A. Ostrow, A. Welihinda, A. Hayes, A. Radford et al., "Gpt-4o system
+      18. [Online]. Available: https://www.theguardian.com/commentisfree/              card," arXiv preprint arXiv:2410.21276, 2024.
+      2025/jun/12/driverless-cars-pedestrians-second-class-citizens
+[16] J. J. Malm. (2025, January) Can autonomous vehicles be counted              [38] Q. Team, "Qwen2.5-vl," January 2025. [Online]. Available: https:
+      on to see pedestrians? Chicago Injury Lawyer. Accessed: 2026-                    //qwenlm.github.io/blog/qwen2.5-vl/
+      02-18. [Online]. Available: https://www.chicago-injury-lawyer.org/
+      can-autonomous-vehicles-see-pedestrians/                                   [39] H. Liu, C. Li, Y. Li, B. Li, Y. Zhang, S. Shen, and Y. J.
+[17] N. Gueguen, C. Eyssartier, and S. Meineri, "A pedestrian's smile and              Lee, "Llava-next: Improved reasoning, ocr, and world knowledge,"
+      drivers' behavior: When a smile increases careful driving," Journal of           January 2024. [Online]. Available: https://llava-vl.github.io/blog/
+      Safety Research, vol. 56, pp. 83­88, 2016.                                       2024-01-30-llava-next/
+[18] T. Nordfjærn, S. H. Jørgensen, and T. Rundmo, "An investigation of
+      driver attitudes and behaviour in rural and urban areas in norway,"        [40] Z. Lin, C. Liu, R. Zhang, P. Gao, L. Qiu, H. Xiao, H. Qiu, C. Lin,
+      Safety science, vol. 48, no. 3, pp. 348­356, 2010.                               W. Shao, K. Chen et al., "Sphinx: The joint mixing of weights, tasks,
+[19] S. G. Ayyamperumal and L. Ge, "Current state of llm risks and ai                  and visual embeddings for multi-modal large language models," arXiv
+      guardrails," arXiv preprint arXiv:2406.12934, 2024.                              preprint arXiv:2311.07575, 2023.
+[20] A. Sathe, P. Jain, and S. Sitaram, "A unified framework and dataset
+      for assessing societal bias in vision-language models," arXiv preprint     [41] C. Lu, J. Gallagher, J. Michala, K. Fish, and J. Lindsey, "The assistant
+      arXiv:2402.13636, 2024.                                                          axis: Situating and stabilizing the default persona of language models,"
+[21] R. Cantini, A. Orsino, M. Ruggiero, and D. Talia, "Benchmarking                   arXiv preprint arXiv:2601.10387, 2026.
+      adversarial robustness to bias elicitation in large language models:
+      Scalable automated assessment with llm-as-a-judge," Machine Learn-
+      ing, vol. 114, no. 11, p. 249, 2025.
+[22] C. Cui, Y. Zhou, X. Yang, S. Wu, L. Zhang, J. Zou, and H. Yao,
+      "Holistic analysis of hallucination in gpt-4v (ision): Bias and interfer-
+      ence challenges," arXiv preprint arXiv:2311.03287, 2023.
+[23] M. Brandao, "Age and gender bias in pedestrian detection algorithms,"
+      arXiv preprint arXiv:1906.10490, 2019.
+[24] T. Kim, S. Shin, Y. Yu, H. G. Kim, and Y. M. Ro, "Causal mode
+      multiplexer: A novel framework for unbiased multispectral pedestrian
+      detection," in Proceedings of the IEEE/CVF Conference on Computer
+      Vision and Pattern Recognition, 2024, pp. 26 784­26 793.
+[25] H. F. Yang, Y. Zhao, J. Cai, M. Zhu, J.-N. Hwang, and Y. Chen, "Mit-
+      igating bias of deep neural networks for trustworthy traffic perception
+      in autonomous systems," in 2024 IEEE Intelligent Vehicles Symposium
+      (IV). IEEE, 2024, pp. 633­638.
+[26] R. Gupta, "The battle of ethics in autonomous vehicles," in 2024 IEEE
+      24th International Conference on Software Quality, Reliability, and
+      Security Companion (QRS-C). IEEE, 2024, pp. 1097­1105.
+[27] H. Caesar, V. Bankiti, A. H. Lang, S. Vora, V. E. Liong, Q. Xu,
+      A. Krishnan, Y. Pan, G. Baldan, and O. Beijbom, "nuscenes: A
+      multimodal dataset for autonomous driving," in Proceedings of the
+      IEEE/CVF conference on computer vision and pattern recognition,
+      2020, pp. 11 621­11 631.
+[28] I. Kotseruba, A. Rasouli, and J. K. Tsotsos, "Joint attention in
+      autonomous driving (jaad)," arXiv preprint arXiv:1609.04741, 2016.
+[29] A. Rasouli, I. Kotseruba, T. Kunic, and J. K. Tsotsos, "Pie: A
+      large-scale dataset and models for pedestrian intention estimation and
+      trajectory prediction," in Proceedings of the IEEE/CVF international
+      conference on computer vision, 2019, pp. 6262­6271.
+[30] S. Bai, Y. Cai, R. Chen, K. Chen, X. Chen, Z. Cheng, L. Deng,
+      W. Ding, C. Gao, C. Ge et al., "Qwen3-vl technical report," arXiv
+      preprint arXiv:2511.21631, 2025.
+

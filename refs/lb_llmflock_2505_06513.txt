@@ -1,0 +1,1393 @@
+                                        LLM-Flock: Decentralized Multi-Robot Flocking via
+                                            Large Language Models and Influence-Based
+                                                                   Consensus
+
+                                              Peihan Li          Lifeng Zhou
+                                         Drexel University,   Drexel University,
+
+                                            United States        United States
+                                        pl525@drexel.edu     lz457@drexel.edu
+
+arXiv:2505.06513v1 [cs.RO] 10 May 2025            Abstract: Large Language Models (LLMs) have advanced rapidly in recent years,
+                                                  demonstrating strong capabilities in problem comprehension and reasoning. In-
+                                                  spired by these developments, researchers have begun exploring the use of LLMs
+                                                  as decentralized decision-makers for multi-robot formation control. However,
+                                                  prior studies reveal that directly applying LLMs to such tasks often leads to unsta-
+                                                  ble and inconsistent behaviors--robots may collapse to the centroid of their posi-
+                                                  tions or diverge entirely--due to hallucinated reasoning, logical inconsistencies,
+                                                  and limited coordination awareness. To overcome these limitations, we propose
+                                                  a novel framework that integrates LLMs with an influence-based plan consen-
+                                                  sus protocol. In this framework, each robot independently generates a local plan
+                                                  toward the desired formation using its own LLM. The robots then iteratively re-
+                                                  fine their plans through a decentralized consensus protocol that accounts for their
+                                                  influence on neighboring robots. This process drives the system toward a coher-
+                                                  ent and stable flocking formation in a fully decentralized manner. We evaluate
+                                                  our approach through comprehensive simulations involving both state-of-the-art
+                                                  closed-source LLMs (e.g., o3-mini, Claude 3.5) and open-source models (e.g.,
+                                                  Llama3.1-405b, Qwen-Max, DeepSeek-R1). The results show notable improve-
+                                                  ments in stability, convergence, and adaptability over previous LLM-based meth-
+                                                  ods. We further validate our framework on a physical team of Crazyflie drones,
+                                                  demonstrating its practical viability and effectiveness in real-world multi-robot
+                                                  systems. The video2 and code3 are available online.
+
+                                                  Keywords: Multi-Robot Systems, Flocking, Large Language Models, Influence-
+                                                  Based Consensus
+
+                                        1 Introduction
+
+                                        Decentralized formation control in multi-robot systems has been a popular topic over the decades [1,
+                                        2]. Enabling a team of robots to coordinate and maintain desired formations without centralized con-
+                                        trol is critical for applications such as environmental monitoring, search-and-rescue missions, and
+                                        distributed exploration [3, 4, 5, 6, 7]. Classical decentralized control strategies, including rule-based
+                                        flocking algorithms and graph-based consensus methods, achieve global coordination through local
+                                        interactions [8, 9]. However, these approaches often rely on simple heuristics or static interaction
+                                        models, limiting adaptability in dynamic environments and complex mission objectives [10, 11].
+
+                                        Recent advancements in large language models (LLMs) have introduced new opportunities for flex-
+                                        ible and generalized reasoning in robotics [12, 13, 14, 15, 16]. Trained on massive text corpora,
+                                        LLMs demonstrate structured planning, goal inference, and task adaptation across diverse domains
+
+                                           Corresponding author
+                                            2https://youtu.be/8zcPYqjWzYo
+                                            3https://github.com/Zhourobotics/LLM-Flock
+Figure 1: LLM-Flock framework for decentralized multi-robot flocking. Each robot first uses an
+onboard LLM to generate a candidate plan from a shared prompt. Then robots exchange plans
+locally and iteratively refine them through an influence-based consensus protocol. Motion execution
+occurs in parallel, with each robot's LLM deciding the waypoint location at each step, enabling
+coordination without centralized control.
+
+without explicit retraining [17, 18]. These capabilities suggest that LLMs could serve as decen-
+tralized decision-makers, enabling robots to interpret high-level instructions and generate formation
+strategies on the fly.
+
+However, directly applying LLMs to decentralized multi-robot coordination presents significant
+challenges [19, 20, 21]. Independent LLM-driven robots often exhibit hallucinated reasoning, logi-
+cal inconsistencies, and a lack of collective awareness [22, 23]. Without structured mechanisms to
+align individual plans, such systems can collapse into degenerate behaviors, such as converging to
+the centroid or diverging chaotically, undermining effective decentralized control [24, 25].
+
+To address these challenges, we propose LLM-Flock (Fig. 1), a decentralized multi-robot flocking
+framework that integrates LLM-driven local planning with an influence-based consensus protocol.
+Each robot independently queries an LLM to generate a candidate formation plan based on local
+objectives and environmental constraints. Robots then iteratively negotiate plan adoption based
+on the number of neighbors, dynamically driving the team toward coherent and stable formations
+without centralized coordination or retraining.
+
+The main contributions of this work are:
+
+        · We propose a generalizable decentralized framework for multi-robot flocking that com-
+          bines LLM-based local planning with influence-based consensus.
+
+        · We design a structured interaction protocol that unifies decentralized reasoning through
+          lightweight local negotiation.
+
+        · We validate the framework across a diverse set of closed-source and open-source LLMs,
+          demonstrating its effectiveness and generality.
+
+        · We demonstrate practical feasibility through comprehensive simulations and real-world
+          experiments with physical multi-drone systems.
+
+The remainder of this paper is organized as follows: Section 2 reviews prior work on multi-robot for-
+mation control and multi-robot coordination with LLMs. Section 3 details the proposed LLM-Flock
+framework. Section 4 presents simulation and real-world experiments validating the framework.
+Section 5 concludes the paper, and Section 6 discusses current limitations and future directions.
+
+                                                           2
+2 Related Works
+
+Multi-Robot Formation Control. Flocking and formation control are well-established topics in
+multi-robot systems. Classical methods, such as Reynolds' boid model and Olfati-Saber's decen-
+tralized algorithms, achieve coordination through local rules like separation, alignment, and cohe-
+sion [26, 8, 27]. Later studies introduced graph-based consensus protocols to improve stability and
+scalability [28]. Reinforcement learning (RL) approaches, including MADDPG and QMIX, en-
+able decentralized strategies for multi-robot coordination [29, 30], but typically require extensive
+training and are sensitive to environment dynamics. Imitation learning such as graph neural net-
+works [31, 32, 33, 34] offers an alternative, but it faces challenges such as dataset dependence and
+covariate shift.
+
+LLMs for Multi-Robot Coordination.
+
+LLMs offer new opportunities for flexible reasoning in multi-robot coordination. Recent frame-
+works such as RoCo [14] and SMART-LLM [35] demonstrate the potential of LLMs for task plan-
+ning and coordination in multi-robot systems. Other studies, such as ZeroCAP [36], have explored
+LLM-based formation control, showing promising results. However, these approaches rely on cen-
+tralized architectures with global environment knowledge, limiting their scalability and real-world
+applicability.
+
+Challenges of LLM-Based Decentralized Reasoning. Despite their promise, LLM-driven robots
+exhibit hallucinated outputs, logical inconsistencies, and limited awareness of coordination, as noted
+in [25]. Early attempts of using LLMs for multi-robot flocking show that independently operating
+LLM-based robots frequently collapse toward a centroid or diverge due to misaligned individual
+plans, highlighting the need for structured negotiation mechanisms to align decentralized reason-
+ing [24].
+
+Positioning of This Work. To address these challenges, we propose LLM-Flock, a framework
+that integrates LLM-based local planning with an influence-based decentralized consensus proto-
+col. By coupling prompt-driven reasoning with lightweight local negotiation, our approach enables
+multi-robot teams to dynamically converge toward coherent flocking formations without centralized
+control or extensive retraining. In contrast to prior work that relies solely on unstructured LLM out-
+puts, LLM-Flock explicitly grounds decentralized coordination by assigning each robot an LLM for
+plan generation and decision-making through structured, influence-based plan refinement, enabling
+scalable and robust flocking behaviors.
+
+3 Methods
+
+We propose LLM-Flock, a framework for decentralized multi-robot flocking that integrates LLM-
+driven planning with an influence-based consensus mechanism, as shown in Fig. 1. The framework
+enables a team of robots to autonomously achieve and maintain a coherent formation without cen-
+tralized control. Each robot is individually equipped with an LLM that acts as its local planner and
+decision-maker. The interaction between the robot and its LLM is structured through two types of
+messages: (i) a one-time plan generation message at the beginning of the mission, and (ii) peri-
+odic position update messages during motion execution. The communication of these two types of
+messages guides the LLM to reason about both the initial formation objective and dynamic local
+adjustments throughout the mission.
+
+LLM-Flock operates through three key stages: (1) individual plan generation, (2) influence-based,
+decentralized plan consensus, and (3) coordinated motion execution. The plan generation stage is
+executed once at mission initialization, while the framework alternates periodically between plan
+consensus and motion execution thereafter. Each stage is detailed below.
+
+3.1 Individual Plan Generation
+We consider a team of N mobile robots, indexed as i  {1, · · · , N }. Each robot is initialized ran-
+domly in the environment at xi(0)  R2. To guide the LLMs during the planning phase, each robot
+is initialized with a system message that defines the task context, environmental constraints, and
+
+                                                           3
+expected behavior. The system message explicitly describes the objective of forming a specified ge-
+ometric formation, the inter-robot distance requirements, the safe distance constraint, the maximum
+allowed movement per round, and the communication range. An example system message template
+is shown below.
+
+           [SYSTEM] = " You are a drone navigating in a 2D space. Your objective is to
+           determine your next position to contribute to forming a shape with your neighbors
+           while maintaining specific distance constraints. Your neighbors are also moving.
+           Key Requirements:
+           Formation: Form a/an {shape} centered at {xc}.
+           Desired Distance: Maintain a desired distance of {dd} units between each drone.
+           Safe Distance: Keep a minimum safe distance of {ds} units from other drones.
+           Maximum Speed: Your movement per step cannot exceed {vm} units.
+           Communication Range: Your communication range is {rcomm} units.
+           Task: Decide your next position considering the above constraints and formation
+           goal. Briefly explain your decision and provide the new position in the format
+           `Position: [x, y].' "
+
+where mission-specific parameters such as desired formation shape, center location xc  R2, desired
+inter-robot distance dd, minimum safe distance between robots ds, maximum velocity the robot can
+move in each round vm, and the communication radius for the robot rcomm are dynamically filled
+based on the task specification.
+
+After receiving the system message, each robot initiates the mission by sending an initial plan gen-
+eration user message to its LLM. This message instructs the LLM to propose a full set of target
+positions for all robots that satisfy the specified formation constraints. In addition to the overall
+plan, the LLM is also required to assign the robot's own role by indicating which specific position it
+should take within the formation. The plan generation user message template is detailed below.
+
+           [USER] = "Please make a plan of the locations for the team of {N } robots
+           forming the shape. Remember the given requirements about the shape
+           and desired distance. Please give the final answer in the form of `Plan:
+           [[x1, y1], [x2, y2], · · · , [xn, yn]]', and the index of the location you are taking as
+           `my plan: a', where a is the index of the coordinate."
+
+This message provides the robot with the team size of N and reiterates the formation requirements
+to guide the LLM's reasoning. The LLM is instructed to output a full global plan, denoted as
+Pi = {p1i , pi2, . . . , pNi }, where each pji  R2 specifies the desired position for robot j according to
+robot i's local planning. In addition to generating the global plan, the LLM must assign the robot's
+own role within the formation by indicating the index of the position it will take, i.e., gi = Pi[a]. The
+output format is explicitly defined to ensure accurate and consistent information extraction across
+all robots.
+
+After individual plan generation, the system proceeds to the decentralized consensus phase, where
+robots negotiate and align on a common formation plan.
+
+3.2 Influence-based Decentralized Plan Consensus
+
+After the individual plan generation, each robot possesses a locally generated formation plan. How-
+
+ever, coherent global formation cannot be achieved if robots pursue conflicting plans. Thus, a decen-
+
+tralized consensus process is necessary to synchronize the team toward a unified plan. To facilitate
+
+decentralized negotiation, we introduce the notion of influence, which quantifies a robot's com-
+
+munication centrality within the network. Intuitively, a robot with more immediate neighbors is
+
+considered more influential, as it can propagate its plan more rapidly across the team. The influence
+
+from robot i at time t is defined as            |Ni(t)| ,
+                                                  N
+                                      Ii(t)  =                                 (1)
+
+where Ni(t) = {j  {1, . . . , N } \ {i} | xi(t) - xj(t)  rcomm} denotes the set of neighboring
+
+robots within communication range rcomm, and N is the total number of robots.
+
+                                                4
+At each consensus round, every robot broadcasts its current formation plan Pi and computed influ-
+ence score Ii(t) to its neighboring robots Ni(t). Upon receiving plans and influence scores from its
+neighbors, robot i identifies the neighbor k with the highest influence score Ik(t). If the neighbor's
+influence is greater than its own, i.e., Ik(t) > Ii(t), and the neighbor's plan differs from its current
+plan (Pk = Pi), robot i adopts the neighbor's plan Pi  Pk.
+
+After adopting a new plan, each robot dynamically assigns itself a goal position from the adopted
+plan based on proximity. Goal assignment is conducted in a decentralized greedy fashion: each
+robot selects the closest available goal position among the unassigned waypoints in the plan. Once
+a goal position is assigned to a robot, it becomes unavailable for others. Specifically, robot i selects
+its goal gi according to:
+
+                                   gi = arg min xi(t) - p,                  (2)
+                                      pPiavail
+
+where Piavail denotes the set of unassigned goal positions remaining in the plan Pi, and xi(t) is the
+robot's current position. This nearest-available-goal assignment ensures a smooth transition during
+plan updates, minimizes unnecessary movement, and promotes stability throughout the formation
+process. If no neighbor possesses a higher influence score, the robot retains its current plan.
+
+This decentralized negotiation process is repeated periodically, with robots dynamically alternating
+between consensus negotiation and motion execution. Over successive rounds, high-influence plans
+naturally propagate through the network, enabling the team to progressively refine and converge
+toward a shared formation plan without requiring global communication or centralized synchroniza-
+tion. The formal influence-based consensus procedure is summarized in Algorithm 1.
+
+Algorithm 1 Influence-Based Plan Consensus
+
+1: Input: Initial plans Pi, neighbor sets Ni(t), and influence scores Ii(t) for all i  {1, . . . , N }
+
+2: Output: Updated formation plans Pi and assigned goals gi for all robots
+
+3: for all robot i in parallel do
+
+4: Receive Pj and Ij(t) from all j  Ni(t)
+
+5: k  arg maxjNi(t) Ij (t)
+6: if Ik(t) > Ii(t) and Pk = Pi then
+
+7:   Pi  Pk
+
+8:   Initialize available goals: Piavail  Pi
+
+9:   Assign goal: gi  arg minpPiavail xi(t) - p
+
+10:  Remove assigned goal from available set: Piavail  Piavail \ {gi}
+
+11: end if
+
+12: end for
+
+Having established the decentralized plan consensus mechanism, we now describe how individual
+robots execute motion toward their assigned goals.
+
+3.3 Motion Execution
+Following the influence-based consensus process, each robot proceeds with motion execution while
+continuously adjusting its trajectory based on local observations. During each update cycle, the
+robot queries its LLM using a position update user message that encodes its current state and nearby
+environmental information. Specifically, the message includes the robot's current position xi  R2,
+the set of neighboring robot positions Xi = {xj | j  Ni(t)}, and its assigned global formation
+plan Pi.
+
+Using this updated local information, the LLM determines the robot's next movement step toward
+its assigned goal, considering both formation objectives and safety constraints. To ensure robust
+parsing and minimal ambiguity, the output format is strictly specified. The template for the position
+update user message is shown below:
+
+                                                           5
+           [USER] = "Current Position: {xi}. Moving Neighbor Positions: {Xi}. Plan:
+           {Pi}. You will need to go to {gi} as your final destination.
+           Task: Decide your next position considering the above constraints and the lo-
+           cation of your neighbors. Briefly explain your decision and provide the new
+           position in the format `Position: [x, y].' "
+
+Upon receiving the position update query, the LLM reasons about the robot's next waypoint wi(t) 
+R2 toward its assigned goal gi, taking into account the updated neighbor configuration and formation
+constraints.
+
+In summary, LLM-Flock combines local LLM-based planning with an influence-based decentral-
+ized consensus mechanism, enabling scalable multi-robot flocking without centralized coordination.
+Robots autonomously generate individual formation plans, negotiate through local influence-driven
+interactions, and navigate toward dynamically assigned goal positions. In the following section,
+we present comprehensive simulations and real-world experiments to evaluate the performance and
+effectiveness of the proposed framework.
+
+4 Results
+
+Our evaluation covers diverse formation tasks, multiple LLM backends, and both simulated en-
+vironments and real robot experiments. We first present qualitative results illustrating the emer-
+gence of flocking behaviors, including a comparison to a baseline without influence-based consen-
+sus. We then quantitatively analyze convergence performance across different LLMs and formation
+shapes. Finally, we validate LLM-Flock's applicability through real-world experiments with a team
+of Crazyflie drones [37].
+
+All experiments, unless otherwise specified, use a desired inter-robot distance of 10 units, a maxi-
+mum speed of 6 units per round, a minimum safe distance of 3 units, and a communication range of
+15 units. All the robots are initialized randomly in a 2D environment with 100 by 100 units. Forma-
+tions are centered at [50, 50], and robots are assumed to have perfect localization in simulation.
+
+4.1 Qualitative Simulation Evaluation
+
+100                           100                           100                           100
+
+80                            80                            80                            80
+
+60                            60                            60                            60
+
+40                            40                            40                            40
+
+20                            20                            20                            20
+
+00   20  40  60      80  100  00   20  40  60      80  100  00   20  40  60      80  100  00   20  40  60       80  100
+
+         (a) Step 0                    (b) Step 4                    (c) Step 7                    (d) Step 10
+
+100                           100                           100                           100
+
+80                            80                            80                            80
+
+60                            60                            60                            60
+
+40                            40                            40                            40
+
+20                            20                            20                            20
+
+00   20  40  60      80  100  00   20  40  60      80  100  00   20  40  60      80  100  00   20  40  60       80  100
+
+         (e) Step 0                    (f) Step 4                    (g) Step 7                    (h) Step 10
+
+Figure 2: Comparison of formation results with and without influence-based consensus. (a)-(d)
+show robot trajectories using influence-based plan consensus with three robots forming triangle
+formations, and (e)-(h) show the trajectories without consensus.
+
+We qualitatively evaluate LLM-Flock by comparing its influence-based consensus approach against
+a baseline method. Using OpenAI o3-mini as the LLM backend, we test both approaches on triangle
+
+                                                       6
+100                               100                               100                               100
+
+80                                80                                80                                80
+
+60                                60                                60                                60
+
+40                                40                                40                                40
+
+20                                20                                20                                20
+
+00       20  40  60      80  100  00       20  40  60      80  100     00    20  40  60      80  100  00       20  40  60       80  100
+
+             (a) Step 0                        (b) Step 4                        (c) Step 7                        (d) Step 10
+
+100                               100                               100                               100
+
+80                                80                                   80                             80
+
+60                                60                                   60                             60
+
+40                                40                                   40                             40
+
+20                                20                                   20                             20
+
+     00  20  40  60      80  100       00  20  40  60      80  100       00  20  40  60      80  100       00  20  40  60       80  100
+
+             (e) Step 0                        (f) Step 4                        (g) Step 7                        (h) Step 10
+
+Figure 3: Qualitative results demonstrating LLM-Flock on diverse formation tasks. (a)-(d) show the
+progression of robot trajectories as eight robots form a square formation using influence-based plan
+consensus. (e)-(h) show the progression for ten robots forming a circle formation.
+
+formations with three robots. In the baseline, each robot follows its initial plan independently,
+selecting its assigned goal without negotiating with neighbors. This setup highlights an approach
+that relies solely on unstructured LLM planning for decentralized formation control.
+
+As shown in Fig. 2, LLM-Flock consistently converges to symmetric triangle formations, with all
+robots reaching plan consensus by the end of the test. The color of its disk indicates each robot's
+plan. Initially, in Fig. 2(a), each robot generates a unique plan, with disk color matching the robot's
+identity. In Fig. 2(b), the yellow drone adopts the plan from the red drone due to the higher influence
+of the red drone, and its disk color switches to red. By the final frame (Fig. 2(d)), all robots share
+the same plan. In contrast, the baseline results in collapsed or disorganized configurations with
+inconsistent spacing, as seen in Fig. 2(h). LLM-Flock achieves a well-spaced equilateral triangle,
+but the baseline frequently produces uneven formations.
+
+To demonstrate the flexibility and scalability of LLM-Flock, we test the framework on a square
+formation with eight robots and a circle formation with ten robots, as shown in Fig. 3. In both cases,
+robots successfully arrange themselves along the intended geometric shapes while maintaining the
+desired inter-robot distance. The square formation yields evenly spaced robots along the edges
+and corners in Fig. 3(d) and the circle formation achieves smooth alignment around the center at
+[50, 50] in Fig. 3(h). These results highlight LLM-Flock's ability to coordinate larger teams and
+support diverse formation geometries through decentralized influence-based consensus. Additional
+simulation results are included in the appendix and supplementary materials.
+
+4.2 Quantitative Simulation Evaluation
+
+We quantitatively evaluate the convergence performance of LLM-Flock across different language
+model backends and formation tasks. As a convergence metric, we use the Procrustes shape er-
+ror [38, 39], which measures the geometric difference between the actual robot formation X and the
+target formation Y after optimal alignment through translation and rotation. Formally, the Procrustes
+error at timestep t is computed as:
+
+                                                               1N
+                                           Error(t) = N xi(t) - yi2 ,                                                                    (3)
+
+                                                               i=1
+
+                                                                    7
+1000                           o3-mini                                                                                       o3-mini
+ 800                                                                                                                         Claude 3.5
+ 600  150                      Claude 3.5                                                                  1000              Llama3.1-405b
+ 400                                                                                                        800              Qwen-Max
+ 200                           Llama3.1-405b                                                                600              DeepSeek-R1
+                                                                                                            400
+                               Qwen-Max                                                                     200
+
+      100                      DeepSeek-R1
+
+      50
+
+Error
+                                                                                                    Error
+      0
+        7 8 9 10 11 12 13 14 15 16 17 18 19
+
+0                                                                                                          0
+  0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19                                                          0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19
+                                     Timestep                                                                                                   Timestep
+
+         (a) Square with 8 robots                                                                                  (b) Circle with 10 robots
+
+Figure 4: Procrustes shape error over time across different formation tasks and LLM backends.
+Lines show the mean Procrustes error across 10 randomized trials, with shaded regions representing
+the 95% confidence intervals.
+
+      (a) Step 0  (b) Step 4                                                                                     (c) Step 7  (d) Step 12
+
+Figure 5: Snapshots of five Crazyflie drones forming a circle using proposed LLM-Flock framework.
+
+where xi(t) and yi denote the aligned positions of robot i and actual target formation, respectively,
+and N is the number of robots. Detailed definitions and approaches for calculating the error can be
+found in the appendix.
+
+For each configuration, we conduct 10 randomized trials and plot the mean Procrustes error over
+time, with shaded regions representing the 95% confidence intervals. We use five popular LLMs:
+OpenAI o3-mini [40], Claude 3.5 Sonnet [41], DeepSeek-R1 [42], Llama3.1-405b [18], and Qwen-
+Max [43]. Each model is evaluated on triangle formations with three and six robots, a square forma-
+tion with eight robots, and a circle formation with ten robots. All experiments use the environmental
+parameters and formation center described earlier. For brevity, we only demonstrate results from
+square and circular formations. More results are included in Appendix C. Fig. 4 shows that LLM-
+Flock enables stable convergence across all tested language models and team sizes. Models with
+stronger reasoning capabilities, such as OpenAI o3-mini and DeepSeek-R1, achieve faster conver-
+gence and consistently form the desired formations across all tasks. In contrast, general-purpose
+models such as Claude 3.5 Sonnet, Qwen-Max, and Llama 3.1 exhibit slower convergence and
+higher residual errors.
+
+4.3 Real Robot Evaluation
+We validate the practical feasibility of LLM-Flock using Crazyflie drones in an indoor motion cap-
+ture environment. Each robot executes the LLM-Flock protocol, performing independent plan gen-
+eration and influence-based consensus with neighbors using OpenAI o3-mini model. We test a
+circle formation with five Crazyflie drones initialized from random positions. Snapshots in Fig. 5
+show the team progressively converging to a stable circle without centralized control. These results
+demonstrate that LLM-Flock generalizes beyond simulation to real-world decentralized systems.
+Additional snapshots are available in Appendix B, and the video is available online4.
+
+4https://youtu.be/8zcPYqjWzYo
+
+                                                     8
+5 Conclusion
+
+We introduced LLM-Flock, a decentralized flocking framework that integrates LLM-based local
+planning with influence-based consensus. The system enables formation control through prompt-
+driven reasoning and local plan negotiation. Experiments across diverse formations and LLMs,
+including real-world Crazyflie deployments, show that LLM-Flock achieves stable and scalable
+flocking without centralized coordination or retraining. By structuring decentralized plan refine-
+ment, LLM-Flock mitigates inconsistencies in unstructured LLM reasoning and demonstrates the
+potential of combining language models with lightweight coordination for multi-robot collabora-
+tion.
+
+6 Limitations
+
+While LLM-Flock demonstrates effective decentralized flocking across a range of simulated and
+real-world settings, several limitations remain.
+First, a key limitation of LLM-Flock lies in the computational demands of modern language mod-
+els. Current LLMs are either capable of dealing with complex problems but too large to run on
+lightweight robot platforms, or they are lightweight but lack sufficient reasoning ability, making on-
+board inference infeasible. Our real-world experiments rely on external servers to run the models,
+which requires persistent network connectivity during execution. This reliance restricts deployment
+in infrastructure-free or communication-limited environments. Enabling local inference through
+model compression, distillation, or hardware acceleration is an essential step toward the practical
+and scalable deployment of LLM-based decentralized planning.
+Second, although modern LLMs significantly improve structured reasoning, their outputs remain
+susceptible to inconsistencies, particularly under partial or ambiguous observations of neighboring
+states. Since each robot reasons independently based on local perceptions and prompts, small errors
+or misinterpretations may propagate before consensus corrects them. Enhancing robustness through
+local verification mechanisms, feedback loops, or multi-step reasoning chains remains an open area
+for exploration.
+Third, the overall performance of LLM-Flock inherently depends on the zero-shot planning accuracy
+of the underlying language model. Quantitative experiments show that stronger reasoning models,
+such as DeepSeek-R1 and o3-mini, converge more rapidly and achieve lower residual errors than
+more general-purpose LLMs like Claude 3.5 Sonnet or Qwen-Max. Improving reasoning ability
+and output accuracy remains an important direction for future work.
+Finally, while current formation tasks focus on relatively simple geometric shapes, scaling the frame-
+work to more complex, dynamic, or mission-driven formations presents additional challenges. Fu-
+ture work includes developing hierarchical planning strategies where LLMs reason about both for-
+mation structure and dynamic adaptation to evolving objectives.
+
+                                                           9
+References
+
+ [1] L. Shijie, S. Yefeng, G. Liang, and Z. Kai. Trajectory tracking method of agricultural machin-
+      ery multi-robot formation operation based on mpc delay compensator. Smart Agriculture, 6
+      (3):69, 2024.
+
+ [2] L. Peng, F. Guan, L. Perneel, H. Fayyad-Kazan, and M. Timmerman. Decentralized multi-
+      robot formation control with communication delay and asynchronous clock. Journal of Intel-
+      ligent & Robotic Systems, 89:465­484, 2018.
+
+ [3] R. Konda, H. M. La, and J. Zhang. Decentralized function approximated q-learning in multi-
+      robot systems for predator avoidance. IEEE Robotics and Automation Letters, 5(4):6342­6349,
+      2020.
+
+ [4] N. Bouraqadi, A. Doniec, and E. de Douai. Flocking-based multi-robot exploration. In Na-
+      tional conference on control architectures of robots, pages 23­24, 2009.
+
+ [5] G. Notomista, C. Pacchierotti, and P. R. Giordano. Multi-robot persistent environmental mon-
+      itoring based on constraint-driven execution of learned robot tasks. In 2022 International
+      Conference on Robotics and Automation (ICRA), pages 6853­6859. IEEE, 2022.
+
+ [6] K.-C. Ma, Z. Ma, L. Liu, and G. S. Sukhatme. Multi-robot informative and adaptive planning
+      for persistent environmental monitoring. In Distributed Autonomous Robotic Systems: The
+      13th International Symposium, pages 285­298. Springer, 2018.
+
+ [7] W. Burgard, M. Moors, C. Stachniss, and F. E. Schneider. Coordinated multi-robot exploration.
+      IEEE Transactions on robotics, 21(3):376­386, 2005.
+
+ [8] R. Olfati-Saber. Flocking for multi-agent dynamic systems: Algorithms and theory. IEEE
+      Transactions on automatic control, 51(3):401­420, 2006.
+
+ [9] S. Shao, J. Zhang, T. Wang, A. Shankar, and C. Maple. Dynamic obstacle-avoidance algorithm
+      for multi-robot flocking based on improved artificial potential field. IEEE Transactions on
+      Consumer Electronics, 70(1):4388­4399, 2023.
+
+[10] M. De Denus, J. Anderson, and J. Baltes. Heuristic formation control in multi-robot systems
+      using local communication and limited identification. In RoboCup 2009: Robot Soccer World
+      Cup XIII 13, pages 437­448. Springer, 2010.
+
+[11] G. Antonelli, F. Arrichiello, F. Caccavale, and A. Marino. Decentralized time-varying forma-
+      tion control for multi-robot systems. The International Journal of Robotics Research, 33(7):
+      1029­1043, 2014.
+
+[12] Z. Tao, T.-E. Lin, X. Chen, H. Li, Y. Wu, Y. Li, Z. Jin, F. Huang, D. Tao, and J. Zhou. A survey
+      on self-evolution of large language models. arXiv preprint arXiv:2404.14387, 2024.
+
+[13] P. Li, Z. An, S. Abrar, and L. Zhou. Large language models for multi-robot systems: A survey.
+      arXiv preprint arXiv:2502.03814, 2025.
+
+[14] Z. Mandi, S. Jain, and S. Song. Roco: Dialectic multi-robot collaboration with large language
+      models. In 2024 IEEE International Conference on Robotics and Automation (ICRA), pages
+      286­299. IEEE, 2024.
+
+[15] Y. Wang, R. Xiao, J. Y. L. Kasahara, R. Yajima, K. Nagatani, A. Yamashita, and H. Asama.
+      Dart-llm: Dependency-aware multi-robot task decomposition and execution using large lan-
+      guage models. arXiv preprint arXiv:2411.09022, 2024.
+
+[16] Y. Wu, Y. Tao, P. Li, G. Shi, G. S. Sukhatmem, V. Kumar, and L. Zhou. Hierarchical LLMs
+      In-the-loop Optimization for Real-time Multi-Robot Target Tracking under Unknown Hazards,
+      Sept. 2024. URL http://arxiv.org/abs/2409.12274. arXiv:2409.12274.
+
+                                                          10
+[17] J. Achiam, S. Adler, S. Agarwal, L. Ahmad, I. Akkaya, F. L. Aleman, D. Almeida,
+      J. Altenschmidt, S. Altman, S. Anadkat, et al. Gpt-4 technical report. arXiv preprint
+      arXiv:2303.08774, 2023.
+
+[18] A. Grattafiori, A. Dubey, A. Jauhri, A. Pandey, A. Kadian, A. Al-Dahle, A. Letman, A. Mathur,
+      A. Schelten, A. Vaughan, et al. The llama 3 herd of models. arXiv preprint arXiv:2407.21783,
+      2024.
+
+[19] W. Hunt, S. D. Ramchurn, and M. D. Soorati. A Survey of Language-Based Communication
+      in Robotics. arXiv preprint arXiv:2406.04086, Sept. 2024. doi:10.48550/arXiv.2406.04086.
+      URL http://arxiv.org/abs/2406.04086.
+
+[20] Y. Kim, D. Kim, J. Choi, J. Park, N. Oh, and D. Park. A Survey on Integration of Large
+      Language Models with Intelligent Robots. arXiv preprint arXiv:2404.09228, Aug. 2024. doi:
+      10.48550/arXiv.2404.09228. URL http://arxiv.org/abs/2404.09228.
+
+[21] T. Guo, X. Chen, Y. Wang, R. Chang, S. Pei, N. V. Chawla, O. Wiest, and X. Zhang. Large
+      Language Model based Multi-Agents: A Survey of Progress and Challenges. arXiv preprint
+      arXiv:2402.01680, Apr. 2024. doi:10.48550/arXiv.2402.01680. URL http://arxiv.org/
+      abs/2402.01680.
+
+[22] L. Huang, W. Yu, W. Ma, W. Zhong, Z. Feng, H. Wang, Q. Chen, W. Peng, X. Feng, B. Qin,
+      et al. A survey on hallucination in large language models: Principles, taxonomy, challenges,
+      and open questions. ACM Transactions on Information Systems, 2023.
+
+[23] D. McDonald, R. Papadopoulos, and L. Benningfield. Reducing llm hallucination using knowl-
+      edge distillation: A case study with mistral large and mmlu benchmark. Authorea Preprints,
+      2024.
+
+[24] P. Li, V. Menon, B. Gudiguntla, D. Ting, and L. Zhou. Challenges faced by large language
+      models in solving multi-agent flocking. arXiv preprint arXiv:2404.04752, 2024.
+
+[25] W. Chen, S. Koenig, and B. Dilkina. Why solving multi-agent path finding with large language
+      model has not succeeded yet. arXiv preprint arXiv:2401.03630, 2024.
+
+[26] C. W. Reynolds. Flocks, herds and schools: A distributed behavioral model. In Proceedings
+      of the 14th annual conference on Computer graphics and interactive techniques, pages 25­34,
+      1987.
+
+[27] J. Blumenkamp, S. Morad, J. Gielis, Q. Li, and A. Prorok. A framework for real-world multi-
+      robot systems running decentralized gnn-based policies. In 2022 International Conference on
+      Robotics and Automation (ICRA), pages 8772­8778. IEEE, 2022.
+
+[28] M. Goarin and G. Loianno. Graph neural network for decentralized multi-robot goal assign-
+      ment. IEEE Robotics and Automation Letters, 2024.
+
+[29] R. Lowe, Y. I. Wu, A. Tamar, J. Harb, O. Pieter Abbeel, and I. Mordatch. Multi-agent actor-
+      critic for mixed cooperative-competitive environments. Advances in neural information pro-
+      cessing systems, 30, 2017.
+
+[30] T. Rashid, M. Samvelyan, C. S. De Witt, G. Farquhar, J. Foerster, and S. Whiteson. Monotonic
+      value function factorisation for deep multi-agent reinforcement learning. Journal of Machine
+      Learning Research, 21(178):1­51, 2020.
+
+[31] S. Chen, Y. Sun, P. Li, L. Zhou, and C.-T. Lu. Spatial temporal graph neural networks for de-
+      centralized control of robot swarms. In Proceedings of the 31st ACM International Conference
+      on Advances in Geographic Information Systems, pages 1­4, 2023.
+
+                                                          11
+[32] S. Chen, Y. Sun, P. Li, L. Zhou, and C.-T. Lu. Learning decentralized flocking controllers with
+      spatio-temporal graph neural network. In 2024 IEEE International Conference on Robotics
+      and Automation (ICRA), pages 2596­2602. IEEE, 2024.
+
+[33] E. Tolstaya, F. Gama, J. Paulos, G. Pappas, V. Kumar, and A. Ribeiro. Learning decentralized
+      controllers for robot swarms with graph neural networks. In Conference on robot learning,
+      pages 671­682. PMLR, 2020.
+
+[34] A. Khan, E. Tolstaya, A. Ribeiro, and V. Kumar. Graph policy gradients for large scale robot
+      control. In Conference on robot learning, pages 823­834. PMLR, 2020.
+
+[35] S. S. Kannan, V. L. Venkatesh, and B.-C. Min. Smart-llm: Smart multi-agent robot task plan-
+      ning using large language models. In 2024 IEEE/RSJ International Conference on Intelligent
+      Robots and Systems (IROS), pages 12140­12147. IEEE, 2024.
+
+[36] V. L. N. Venkatesh and B.-C. Min. ZeroCAP: Zero-Shot Multi-Robot Context Aware Pattern
+      Formation via Large Language Models, Sept. 2024. URL http://arxiv.org/abs/2404.
+      02318. arXiv:2404.02318.
+
+[37] Bitcraze crazyflie. https://www.bitcraze.io/. Accessed: 2025-04-15.
+
+[38] J. C. Gower and G. B. Dijksterhuis. Procrustes problems, volume 30. Oxford University Press,
+      USA, 2004.
+
+[39] D. G. Kendall. A survey of the statistical theory of shape. Statistical Science, 4(2):87­99,
+      1989.
+
+[40] OpenAI. Openai o3-mini, January 2025.       URL https://openai.com/index/
+      openai-o3-mini/. Accessed April 30, 2025.
+
+[41] Anthropic. Claude 3.5 sonnet, October 2024. URL https://www.anthropic.com/news/
+      claude-3-5-sonnet. Accessed April 30, 2025.
+
+[42] D. Guo, D. Yang, H. Zhang, J. Song, R. Zhang, R. Xu, Q. Zhu, S. Ma, P. Wang, X. Bi, et al.
+      Deepseek-r1: Incentivizing reasoning capability in llms via reinforcement learning. arXiv
+      preprint arXiv:2501.12948, 2025.
+
+[43] A. Yang, B. Yang, B. Zhang, B. Hui, B. Zheng, B. Yu, C. Li, D. Liu, F. Huang, H. Wei, et al.
+      Qwen2. 5 technical report. arXiv preprint arXiv:2412.15115, 2024.
+
+12
+A LLM Prompting Details
+
+To illustrate how robots in LLM-Flock interact with language models during decentralized forma-
+tion, we present a representative simulation in which three robots are tasked with forming an equilat-
+eral triangle centered at [50, 50]. Each robot is equipped with its own instance of an LLM (OpenAI
+o3-mini), serving as its local planner and decision-maker. The mission specifies a desired inter-robot
+distance of 10 units, a maximum movement speed of 6 units per round, and a communication range
+of 15 units. This simple example is chosen for clarity, but the same prompt-driven interaction and
+influence-based consensus process generalize naturally to larger and more complex formations due
+to the decentralized structure of the framework.
+
+100                                                        100                                                        100
+                      0.00                                                         0.00
+                                                                                                                      80
+ 80                                                         80                                                                                       0.00
+               0.00                                                            0.00
+                                                                                                                      60           0.50
+ 60                                                         60
+                                                                                                                                                      0.50
+ 40                                                         40                                                        40
+            0.00                                                           0.00
+                                                                                                                      20
+ 20                                                         20
+
+00   20                     40                60  80  100  00   20                       40  60              80  100  00   20  40                                 60    80  100
+
+                            (a) Step 0                              (b) Step 4                                                 (c) Step 5
+
+100                                                        100                                                        100
+
+80                                                         80                                                         80
+                                  0.00
+                                                                                                0.50
+60                                      0.50               60                                                         60                                    1.00
+
+                                                                                                       1.00                                                       1.00
+                                                                                                0.50
+                                0.50                                                                                                                        1.00
+                                                           40
+40                                                                                                                    40
+
+20                                                         20                                                         20
+
+00   20                     40                60  80  100  00   20                       40  60              80  100  00   20  40                                 60    80  100
+
+                            (d) Step 6                              (e) Step 7                                                 (f) Step 8
+
+Figure 6: Snapshots of simulation with three robots forming an equilateral triangle. The number on
+top of the robot demonstrates the influence of the robot. (a) shows the initial positions of the robots.
+(b) shows the motion execution based on the decision made by individual LLMs. (c)-(f) shows the
+process of the influence-based consensus with the plan unified at the end of the simulation among
+all three robots.
+
+The snapshots of this simulation are shown in Fig. 6. Here, we focus on the brown robot. The
+blue text box below shows the inputs to the LLM, and the brown text box shows the output from
+the LLM for the brown robot.
+
+A.1 System Prompt
+
+In the first round, the LLM receives the system prompt, which defines the role of the LLM and the
+requirements for the brown robot.
+
+                                                          13
+[SYSTEM] = "You are a drone navigating in a 2D space. Your objective is
+to determine your next position to contribute to forming a shape with your
+neighbors while maintaining specific distance constraints. Your neighbors are
+moving like you.
+
+Key Requirements:
+Formation: Form an equilateral triangle centering at [50, 50].
+Desired Distance: Maintain a desired distance of 10 units between each drone.
+Safe Distance: Keep a minimum safe distance of 3 units from other drones.
+Maximum Speed: Your movement per step cannot exceed 6 units.
+
+Task:
+Decide your next position considering the above constraints and formation
+goal. Briefly explain your decision and provide the new position in the format
+`Position:[x, y].'"
+
+A.2 User Prompt - Plan Generation
+The following message was sent to the LLM inquiring a plan:
+
+[USER] = "Please make a plan of the locations for the team of 3 robots forming
+a/an equilateral triangle with desired distance between robots to be 10.
+Please give the final answer in the form of 'Plan: [[x 1, y 1], [x 2,
+y 2], · · · , [x n, y n]]', and the index of the location you are taking as
+`my plan: a', where a is the index of your assigned coordinate."
+
+The LLM responds with a generated plan:
+
+[ASSISTANT] = " To achieve an equilateral triangle formation centered at
+
+[50, 50] with a side length of 10 units, we can determine the triangle's vertices
+
+relative to the centroid. In an equilateral triangle, the distance from the centroid
+                              3
+to any vertex is given by    3           ·  side.  For a side length of 10, that distance is
+
+approximately 5.7735 units.
+
+Using this distance, we can compute the three vertices at the following angular
+
+directions:
+
+· Vertex 0 (0° to the right):
+
+                           [50 + 5.7735, 50]  [55.77, 50]
+
+· Vertex 1 (120°):
+                [50 + 5.7735 · cos(120), 50 + 5.7735 · sin(120)]
+                 = [50 - 2.88675, 50 + 5.0] = [47.11, 55]
+
+· Vertex 2 (240°):
+                [50 + 5.7735 · cos(240), 50 + 5.7735 · sin(240)]
+                 = [50 - 2.88675, 50 - 5.0] = [47.11, 45]
+
+These vertices ensure that:
+   · The triangle is equilateral (each side is 10 units),
+   · The centroid is located at [50, 50],
+   · The robots are spaced according to the desired distance.
+
+Since my index is 0, I will take the coordinate corresponding to Vertex 0.
+Plan: [[55.77, 50], [47.11, 55], [47.11, 45]]
+my plan: 0
+
+From this response, the robot extracts:
+
+                                                   14
+        · The full plan: Pi = {[55.77, 50.0], [47.11, 56], [47.11, 45]}
+        · Its assigned goal: gi = pi0 = [55.77, 50.0]
+
+The plan and index are parsed via regular expressions and validated before proceeding to the consen-
+sus stage. Other robots follow similar procedures using their local prompts and positions, resulting
+in multiple candidate plans to be resolved through influence-based consensus, as shown in Fig. 6(c)-
+6(f).
+
+A.3 User Prompt - Motion Execution
+
+After selecting its assigned goal position from either the original plan or consensus plan, each robot
+proceeds with local motion execution. In each round, the robot sends a position update message to
+its LLM, providing the current state, nearby neighbor positions, and formation goal. Below is an
+example query and the corresponding LLM response from brown robot in the triangle example.
+
+[USER] = "Current Positions:
+Your Location: [12.63, 70.48]
+Moving Neighbor Locations: [[22.67, 96.23], [8.52, 24.74]]
+
+Task: Decide your next position considering the above constraints and formation
+goal. Briefly explain your decision and provide the new position in the format
+"Position: [x, y]"."
+
+The LLM for the brown robot makes a decision on the next step of motion execution as follows:
+
+[ASSISTANT] = "I'm currently at [12.63, 70.48] with my target being
+[55.77, 50]. The straight-line vector from my position to the target is
+(43.14, -20.48) with an approximate distance of 47.75 units. Since I can only
+move up to 6 units per step, I calculate a proportional move along that direction.
+
+   · Step 1: Calculate the unit vector:
+
+Unit vector   43.14 -20.48
+                                 ,         (0.903, -0.429)
+              47.75 47.75
+
+· Step 2: Multiply by the max step of 6:
+
+Movement  (6 × 0.903, 6 × -0.429)  (5.42, -2.57)
+
+· Step 3: Compute new position:
+
+New position  [12.63 + 5.42, 70.48 - 2.57] = [18.05, 67.91]
+
+Before moving, I verified that I am keeping a safe distance (minimum 3
+units) from moving neighbors. With neighbor positions [22.67, 96.23] and
+[8.52, 24.74], this new position maintains a generous clearance.
+Position: [18.05, 67.91]"
+
+The robot extracts the motion execution and moves to the next position, as shown in Fig. 6(b)
+
+B Additional Results
+
+In this section, we present additional results both in simulation and real robot experiments.
+
+B.1 Qualitative Simulation Results
+
+We evaluate the qualitative behavior of LLM-Flock across four formation tasks using OpenAI o3-
+mini as the LLM backend. Each task is tested both with and without the proposed influence-based
+plan consensus mechanism. The tests include triangle formations with three (Fig. 7) and six (Fig. 8)
+
+                                 15
+100                           100                           100                           100
+
+80                            80                            80                            80
+
+60                            60                            60                            60
+
+40                            40                            40                            40
+
+20                            20                            20                            20
+
+00   20  40  60      80  100  00   20  40  60      80  100  00   20  40  60      80  100  00   20  40  60       80  100
+
+         (a) Step 0                    (b) Step 4                    (c) Step 7                    (d) Step 10
+
+100                           100                           100                           100
+
+80                            80                            80                            80
+
+60                            60                            60                            60
+
+40                            40                            40                            40
+
+20                            20                            20                            20
+
+00   20  40  60      80  100  00   20  40  60      80  100  00   20  40  60      80  100  00   20  40  60       80  100
+
+         (e) Step 0                    (f) Step 4                    (g) Step 7                    (h) Step 10
+
+Figure 7: Three robots forming a triangle using OpenAI o3-mini. (a)­(d): With influence-based con-
+sensus, robots successfully converge to an equilateral triangle with unified plan alignment. (e)­(h):
+Without consensus, robots follow conflicting plans, leading to disorganized final positions.
+
+100                           100                           100                           100
+
+80                            80                            80                            80
+
+60                            60                            60                            60
+
+40                            40                            40                            40
+
+20                            20                            20                            20
+
+00   20  40  60      80  100  00   20  40  60      80  100  00   20  40  60      80  100  00   20  40  60       80  100
+
+         (a) Step 0                    (b) Step 4                    (c) Step 8                    (d) Step 12
+
+100                           100                           100                           100
+
+80                            80                            80                            80
+
+60                            60                            60                            60
+
+40                            40                            40                            40
+
+20                            20                            20                            20
+
+00   20  40  60      80  100  00   20  40  60      80  100  00   20  40  60      80  100  00   20  40  60       80  100
+
+         (e) Step 0                    (f) Step 4                    (g) Step 8                    (h) Step 12
+
+Figure 8: Six robots forming a triangle using OpenAI o3-mini. (a)­(d): LLM-Flock enables conver-
+gence to a large equilateral triangle with consistent spacing. (e)­(h): Without influence-based plan
+consensus, robots exhibit misaligned spacing and failure to form the intended structure.
+
+robots, a square with eight robots (Fig. 9), and a circle with ten robots (Fig. 10). Robots are initial-
+ized from random positions in each run. The goal is to assess whether the team can self-organize
+into the desired geometric formation through decentralized planning and local negotiation.
+
+B.2 Extended Simulation Quantitative Results
+
+To further evaluate the effectiveness and generalizability of LLM-Flock, we conduct extensive sim-
+ulation trials across multiple formation geometries and language model backends. Specifically, we
+measure the shape accuracy over time using the Procrustes error metric, which quantifies deviation
+from the ideal formation up to rigid-body transformations and is formulated in Appendix C. For
+
+                                                       16
+100                               100                               100                               100
+
+80                                80                                80                                80
+
+60                                60                                60                                60
+
+40                                40                                40                                40
+
+20                                20                                20                                20
+
+00       20  40  60      80  100  00       20  40  60      80  100  00       20  40  60      80  100  00       20  40  60       80  100
+
+             (a) Step 0                        (b) Step 4                        (c) Step 7                        (d) Step 10
+
+100                               100                               100                               100
+
+80                                80                                80                                80
+
+60                                60                                60                                60
+
+40                                40                                40                                40
+
+20                                20                                20                                20
+
+     00  20  40  60      80  100       00  20  40  60      80  100       00  20  40  60      80  100       00  20  40  60       80  100
+
+             (e) Step 0                        (f) Step 4                        (g) Step 7                        (h) Step 10
+
+Figure 9: Eight robots forming a square. (a)­(d): Influence-based plan consensus leads to uniform
+distribution along the square boundary. (e)­(h): Baseline planning without consensus yields scat-
+tered and misaligned placements.
+
+100                               100                               100                               100
+
+80                                80                                80                                80
+
+60                                60                                60                                60
+
+40                                40                                40                                40
+
+20                                20                                20                                20
+
+     00  20  40  60      80  100       00  20  40  60      80  100       00  20  40  60      80  100       00  20  40  60       80  100
+
+             (a) Step 0                        (b) Step 4                        (c) Step 7                        (d) Step 10
+
+100                               100                               100                               100
+
+80                                80                                80                                80
+
+60                                60                                60                                60
+
+40                                40                                40                                40
+
+20                                20                                20                                20
+
+     00  20  40  60      80  100       00  20  40  60      80  100       00  20  40  60      80  100       00  20  40  60       80  100
+
+             (e) Step 0                        (f) Step 4                        (g) Step 7                        (h) Step 10
+
+Figure 10: Ten robots forming a circle. (a)­(d): Robots converge to evenly spaced positions around
+the circular boundary using LLM-Flock. (e)­(h): Without consensus, inconsistent goal assignments
+lead to disorganized structures.
+
+                                                               17
+       1000       30  o3-mini                                                                                    Influence-Based
+        800
+        600           Claude 3.5                                       800                                  40   Basic Planning
+        400           Llama3.1-405b
+        200
+                  20  Qwen-Max                                                                              30
+
+                      DeepSeek-R1
+
+                                                                       600                                  20
+
+Error             10                                            Error
+
+                                                                                                            10
+
+                                                                                                       400  0
+                  0                                                                                           7 8 9 10 11 12 13 14 15 16 17 18 19
+
+                    7 8 9 10 11 12 13 14 15 16 17 18 19
+                                                                                                       200
+
+       0                                                              0
+         0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19              0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19
+                                            Timestep                                                       Timestep
+
+          (a) Equilateral triangle with 3 robots            (b) Baseline comparison forming triangle with 3 robots
+
+       1000           o3-mini                                          1000                                      Influence-Based
+        800                                                             800
+        600  150      Claude 3.5                                        600                                 125  Basic Planning
+        400                                                             400
+        200           Llama3.1-405b                                     200
+
+                      Qwen-Max                                                                              100
+
+             100      DeepSeek-R1                                                                           75
+
+             50                                                                                             50
+
+Error        0                                                  Error                                       25
+               7 8 9 10 11 12 13 14 15 16 17 18 19
+                                                                                                            0
+                                                                                                              7 8 9 10 11 12 13 14 15 16 17 18 19
+
+       0                                                               0
+         0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19               0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19
+                                            Timestep                                                       Timestep
+
+                  (c) Square with 8 robots                  (d) Baseline comparison forming square with 8 robots
+
+       1000           o3-mini                                          1000                                      Influence-Based
+        800           Claude 3.5                                        800                                      Basic Planning
+        600           Llama3.1-405b                                     600
+        400           Qwen-Max                                          400
+                      DeepSeek-R1
+
+Error                                                           Error
+
+       200                                                             200
+
+       0                                                               0
+         0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19               0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19
+                                            Timestep                                                       Timestep
+
+                 (e) Circle with 10 robots                  (f) Baseline comparison forming circle with 10 robots
+
+Figure 11: Procrustes shape error over time across different formation tasks and LLM backends.
+Left column ((a), (c), (e)) shows average Procrustes error across 10 randomized trials using differ-
+ent LLMs under the proposed influence-based consensus framework. Right column ((b), (d), (f))
+compares performance with and without consensus using o3-mini. Shaded regions represent 95%
+confidence intervals. Results demonstrate that influence-based consensus significantly improves for-
+mation stability and consistency.
+
+each tested configuration, we perform 10 randomized trials and compute the mean Procrustes error
+at each timestep, along with 95% confidence intervals.
+
+Figure 11 (left column) presents results for triangle (3-robot), square (8-robot), and circle (10-robot)
+formations under the influence-based consensus protocol using five popular LLMs: o3-mini, Claude
+
+                                                            18
+3.5 Sonnet, DeepSeek-R1, Llama3.1-405b, and Qwen-max. Strong reasoning models such as o3-
+mini and DeepSeek-R1 consistently achieve low error and fast convergence, demonstrating robust
+shape formation across team sizes. General-purpose LLMs exhibit higher error and slower stabiliza-
+tion but still improve over time under our consensus framework.
+
+To highlight the importance of influence-based negotiation, we also include comparisons against a
+baseline setting in which each robot follows its initial LLM-generated plan independently, without
+plan consensus. As shown in the right column of Fig. 11, baseline trials yield significantly higher
+Procrustes error and greater variance, especially in larger formations. These results emphasize that
+LLM-Flock's structured plan consensus mechanism is critical for achieving coherent decentralized
+formations, even when using high-performing LLMs.
+
+B.3 Real Robot Experiment
+
+To further validate the real-world applicability of LLM-Flock, we conducted four physical experi-
+ments using Crazyflie drones with increasing team sizes. As shown in Fig. 12, the tested formations
+include a triangle with three drones, a square with four drones, a cross with five drones, and a circle
+with five drones. These experiments demonstrate that the proposed framework scales effectively
+across varying team sizes and geometries while achieving desired formations through decentralized
+coordination in real environments.
+
+C Procrustes Error
+
+To quantitatively evaluate the accuracy of multi-robot formations, we adopt the Procrustes error as
+a shape comparison metric. This error measures how closely one set of points (e.g., robot positions)
+matches another (e.g., an ideal formation) after removing differences in global position and orien-
+tation. In our context, it objectively evaluates whether the final robot positions form the desired
+geometric shape, independent of absolute orientation or location.
+
+The Procrustes error is particularly well suited for this task because:
+
+· It captures shape similarity between two configurations, ignoring irrelevant differences
+  such as global translation or rotation.
+
+· It is sensitive to geometric distortion, effectively detecting irregular formations.
+
+· It enables consistent quantitative comparisons across different team sizes and formation
+  types.
+
+Let the actual team configuration be:
+                                      X = [x1 x2 · · · xN ]  R2×N ,
+
+and the target (ideal) configuration be:
+                                      Y = [y1 y2 · · · yN ]  R2×N ,
+
+where each xi, yi  R2 is the 2D position of robot i.
+
+Step 1: Remove Translation
+
+Compute the centroids of both sets:
+
+                                     1N            1N
+                            x¯ =          xi,      y¯ =          yi.
+                                  N                      N
+                                     i=1                    i=1
+
+Center the shapes:
+
+                            X~ = X - x¯1, Y~ = Y - y¯1
+
+where 1  RN is a vector of ones.
+
+                                               19
+(a) Step 0  (b) Step 4      (c) Step 7  (d) Step 12
+
+(e) Step 0  (f) Step 4      (g) Step 7  (h) Step 12
+
+(i) Step 0  (j) Step 4      (k) Step 7  (l) Step 12
+
+(m) Step 0  (n) Step 4      (o) Step 7  (p) Step 12
+
+Figure 12: Real drone experiments using proposed LLM-Flock framework with o3-mini as LLM
+backend. (a)­(d): Forming a triangle with three drones. (e)­(h): Forming a square with four drones.
+(i)-(l): Forming a cross with five drones. (m)-(p): Forming a circle with five drones.
+
+                        20
+Step 2: Optimal Rotation Alignment
+
+We seek the optimal rotation matrix R  SO(2) that minimizes the squared Frobenius norm:
+
+                               R      =  arg    min    RX~  -  Y~  F2  .
+
+                                              RSO(2)
+
+This is solved via the Singular Value Decomposition (SVD) of the cross-covariance matrix:
+                                             M = Y~ X~  = U V .
+
+Then the optimal rotation is:
+
+                                              R = U V .
+
+If det(R) = -1, the solution involves reflection In that case, the sign of the last singular value in
+ is flipped to enforce a proper rotation.
+
+Step 3: Compute Procrustes Error
+The aligned version of the shape is:
+
+                                              X^ = RX~ .
+
+The Procrustes error is then given by:
+
+                           1                   1  N
+                           N                   N
+                 Eproc  =      X^  - Y~ 2F  =          R(xi - x¯) - (yi - y¯)2.
+
+                                                  i=1
+
+This metric is:
+
+· Translation invariant -- both sets are centered before alignment.
+· Rotation invariant -- optimal R minimizes misalignment.
+
+D Failure Analysis
+
+While LLM-Flock consistently enables stable and coherent formations across a range of shapes,
+failures can still occur when the LLM generates incorrect outputs, as illustrated by the quantitative
+results in Fig. 11. In this section, we highlight two representative failure cases that demonstrate
+how LLM-generated mistakes can impact system behavior: (1) incorrect plan generation, where
+the proposed formation geometry is invalid or poorly structured, and (2) flawed motion execution,
+where the generated actions violate the intended trajectory or fail to converge.
+
+D.1 Incorrect Plan Generation
+
+We assess the failure caused by incorrect geometric reasoning of LLMs. A robot equipped with
+Claude 3.5 Sonnet is tasked to generate a formation plan for ten robots arranged in a circle centered
+at [50, 50], with a desired inter-robot spacing of 10 units. As shown in Fig. 13(a), Claude 3.5 Sonnet
+produces a set of points that deviate significantly from the intended circular shape, with uneven
+spacing and noticeable distortion compared to the ideal team formation. This faulty plan ends up
+propagating to the entire team, and the final formation does not represent an ideal uniformly spaced
+circular shape as shown in Fig. 13(b).
+
+These results reinforce the importance of the strong reasoning capability of the LLMs for decentral-
+ized planning. However, as our previous quantitative results Fig 10(e) - 10(h) show, models with
+strong reasoning ability (e.g., o3-mini) are still insufficient to reliably achieve coherent multi-robot
+formation alone without our proposed plan consensus framework.
+
+                                                  21
+70              Idea formation                       100
+
+                Claude 3.5 Sonnet
+
+60                                                   80             0.11 0.11
+
+                                                              0.11                                                                0.22
+
+                                                     60
+
+50                                                                  0.00                                                              0.22
+
+                                                     40       0.11                                                                0.22
+
+                                                                                                                       0.11 0.11
+40
+
+                                                                                                               20
+
+30                                                   00
+
+    30  40  50  60                                        20              40                                                      60        80  100
+
+(a) Generated plan from Claude 3.5 vs. ideal forma-                 (b) Step 19
+tion
+
+Figure 13: Comparison of formation plans generated by Claude 3.5 Sonnet and ideal formation for
+a 10-robot circle formation centered at [50, 50]. (a) Claude 3.5 generates irregular positions that
+break the intended shape. (b) The distorted plan propagates to the entire team and leads to a failed
+formation.
+
+D.2 Incorrect Motion Execution
+
+While LLM-Flock demonstrates consistent convergence in most scenarios, execution stability can
+be impacted by incorrect motion planning decisions from the LLMs. Fig. 14 shows a failure case
+in a three-robot triangle formation task using Qwen-Max as the LLM backend. Although all robots
+successfully reach a consensus on a common plan, one robot (in red) exhibits unstable execution
+behavior. The behavior of the red robot in Fig. 14(a) is shown below.
+
+                                   22
+100                               100
+
+80                                80
+
+60           1.00                 60           1.00
+
+                   1.00                        1.00 1.00
+
+             1.00
+
+40                                40
+
+20                                20
+
+00   20  40        60    80  100  00   20  40        60   80  100
+
+         (a) Step 09                       (b) Step 10
+
+100                               100
+
+80                                80
+
+60           1.00                 60           1.00
+
+                   1.00                        1.00 1.00
+
+             1.00
+
+40                                40
+
+20                                20
+
+00   20  40        60    80  100  00   20  40        60   80  100
+
+         (c) Step 11                       (d) Step 12
+
+Figure 14: Snapshots from a simulation in which the LLM fails to execute correct motion behavior.
+In this example, three robots use Qwen-Max to form an equilateral triangle. The red robot con-
+sistently applies maximum velocity during execution, causing it to overshoot the goal position and
+oscillate without stabilizing.
+
+                             23
+[ASSISTANT] = " To illustrate the LLM's reasoning process during motion execu-
+tion, we present a sample step-by-step decision trace. In this scenario, a robot aims
+to move toward its assigned goal while considering neighbor positions and physical
+constraints.
+Current Situation:
+
+   · Current position: [46.12, 42.29]
+   · Neighboring robot positions: [[56.8, 51.93], [47.11, 55.0]]
+   · Assigned goal position: [47.11, 45]
+Constraints:
+
+   · Desired distance: 10 units
+   · Safe distance: 3 units
+   · Maximum speed per round: 6 units
+Step 1: Compute Direction Vector
+
+Direction Vector = [47.11 - 46.12, 45 - 42.29] = [0.99, 2.71]
+
+Step 2: Normalize the Direction Vector
+
+                                                                 
+Direction Vector = 0.992 + 2.712 = 0.98 + 7.34 = 8.32  2.88
+
+                               0.99 2.71
+Unit Vector =                   ,          [0.344, 0.939]
+                               2.88 2.88
+
+Step 3: Scale by Maximum Speed
+
+Movement Vector = 6 · [0.344, 0.939]  [2.06, 5.63]
+
+Next Position = [46.12 + 2.06, 42.29 + 5.63] = [48.18, 47.92]
+
+Step 4: Constraint Validation
+
+· Distance to [56.8, 51.93]:
+
+                                                                   
+(56.8 - 48.18)2 + (51.93 - 47.92)2  74.30 + 16.08 = 90.38  9.51
+
+· Distance to [47.11, 55.0]:
+
+                                                                   
+(47.11 - 48.18)2 + (55.0 - 47.92)2  1.14 + 50.13 = 51.27  7.16
+
+· Movement magnitude:
+
+                                                               
+2.062 + 5.632 = 4.24 + 31.69 = 35.93  6.0
+
+All constraints are satisfied.
+Final Decision:
+
+                                     Position: [48.18, 47.92]
+
+"
+
+Despite computing a distance of only 2.88 units to the target in Step 2, which is below the maximum
+speed limit of 6 units, the robot still executes a full-speed move. As shown in Fig. 14(a)­14(d), the
+red robot repeatedly overshoots its goal by applying maximum velocity in every step, leading to
+oscillatory behavior and failure to converge within the desired tolerance. This behavior stems from
+the LLM's flawed numerical reasoning or misinterpretation of geometric constraints, resulting in
+physically suboptimal execution.
+
+These two failure cases highlight the critical role of LLM reasoning capability in enabling suc-
+cessful flock formation. However, as shown in Fig. 10 and Fig. 11, strong reasoning alone is not
+sufficient--formation often fails without structured coordination. It is the combination of accurate
+plan generation and reliable motion execution, supported by our proposed influence-based consen-
+sus strategy, that leads to consistent and robust formation success.
+
+                                24
+
