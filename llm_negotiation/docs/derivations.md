@@ -4,6 +4,12 @@ This file derives the speed bound in `negsim/control/strategy1.py` and the confl
 in `negsim/conflict/zone.py`. Each result names the test that checks it. Paper locators
 (`v1:LINE`) point into `refs/ln_gamechat_arxiv_v1.txt`.
 
+Sections 1 to 8 are issue #24's. Sections 9 to 14 were added for the avoidance layer of
+issue #26: what the directive fields do to ORCA's guarantee, the wall rule in discrete
+time, the conflict zone at a single-file segment, and why a symmetric meeting stalls.
+There `orca:LINE` points into `refs/si1_orca_vandenberg2011.txt`, and the notation is that
+of `orca.md`, section 3.
+
 ## 1. The paper's rule
 
 GameChat models two agents as "thin, car-like objects of length `l` and zero width"
@@ -242,3 +248,290 @@ The paper's Table II gives the follower's minimum speed in the intersection as 0
 when the roles are known in advance (`v1:329`, row "GameChat Ground Truth"; a mean over
 its 18 variants).
 *Tested:* `test_scenarios.py::test_follower_speed_in_the_symmetric_intersection_matches_the_formula`.
+
+## 9. Responsibility shares, and the reciprocity condition
+
+ORCA has each agent of a pair make up half of the change `u` in relative velocity that is
+needed (`orca.md`, section 3). A directive's `responsibility_share` replaces the half by a
+number `α` in [0, 1]. This section finds what the two shares of a pair must satisfy.
+
+**On a collision course.** The relative velocity `v = v_A - v_B` is inside the velocity
+obstacle. `u` is the smallest change of `v` that takes it out, and `n` the outward normal
+where it comes out, so `u = |u| n`. Give A the half-plane
+
+    (v_A' - v_A) · n  >=  α_A |u|
+
+and B, for whom everything is mirrored (`u` and `n` change sign),
+
+    (v_B' - v_B) · (-n)  >=  α_B |u|
+
+Subtracting the second from the first, the new relative velocity `v'` satisfies
+
+    (v' - v) · n  >=  (α_A + α_B) |u|
+
+The obstacle is convex and `n` is its outward normal at `v + u`, so every `v'` with
+`(v' - v) · n >= |u|` is outside it. Hence:
+
+> **If α_A + α_B >= 1, the pair has no collision for τ.** A changes its velocity by at
+> least `α_A |u|` along `n`, B by at least `α_B |u|` the other way, the two together by at
+> least `(α_A + α_B) |u|`, and `|u|` is enough.
+
+That is the condition issue #26 states. If the sum is less than 1 the two together may
+stop short of `|u|` and stay on a collision course.
+*Tested:* `tests/test_orca.py::test_shares_that_sum_to_at_least_one_keep_a_pair_collision_free_for_tau`
+(2,000 random configurations for each of 15 combinations of shares and sides) and
+`::test_shares_that_sum_to_less_than_one_do_not`.
+
+**Not on a collision course: the part the condition does not cover.** Now `v` is outside
+the obstacle and `u` points *toward* it: `u = -|u| n`, and `|u|` is the room that is left.
+The paper applies the same formula here (`orca:308`): each agent may move toward the
+obstacle by half of the room. If the share simply replaced the half, A could use
+`α_A |u|` of the room and B `α_B |u|`, and with `α_A + α_B > 1` the two together could use
+more room than there is. A pair with shares (1, 1), which is safe on a collision course,
+would be able to steer itself onto one. Standard ORCA never meets this, because its
+shares sum to exactly 1.
+
+So the share cannot multiply `u` in both cases.
+
+**DD29 (decision). The share divides the avoidance, and the room is always split in
+half.** In code (`orca.py`, `_half_plane`), with `m = u · n`:
+
+    m > 0   (on a collision course):   (v_A' - v_A) · n  >=  α_A m
+    m <= 0  (not on one):              (v_A' - v_A) · n  >=  m / 2
+
+Outside the obstacle the two then use at most `|u|/2 + |u|/2 = |u|` whatever their shares,
+and stay outside. The two cases meet at `m = 0`, so nothing jumps as a pair moves onto a
+collision course. With `α = 1/2` both lines are the paper's. And a share has no effect at
+all unless there is something to avoid.
+
+Together with the box above: **shares that sum to at least 1 are sufficient in both
+cases.**
+*Tested:* `::test_outside_the_cone_the_room_is_split_in_half_whatever_the_share`,
+`::test_using_the_room_that_is_left_never_puts_a_pair_on_a_collision_course` (shares (1, 1),
+2,000 configurations).
+
+(The alternative considered: give the agent with share `α` the fraction `1 - α` of the
+room. It is also safe when the shares sum to at least 1. It was not chosen because an
+agent with share 1 would then be forbidden to turn toward a neighbour at all, even one it
+is nowhere near meeting.)
+
+**What a share of 0 means.** On a collision course its half-plane is
+`(v' - v) · n >= 0`: the agent need do nothing, but may not make things worse. An agent
+walking at the velocity it wants is not affected at all, and is not counted as exposed
+(`metrics.md`, section 3). That is the counterpart of the other agent's assumption: A,
+with share 1, plans as if B's velocity will stay as it is.
+
+**When a pair's shares sum to less than 1.** Each directive is given by its own provider,
+so the two may not fit. The layer checks every pair that perceive each other
+(`directives.py`, `resolve_pair`), and on a shortfall it logs a `reciprocity_violation`
+and repairs the shares before they are used. **DD29, continued (decision): the repair is
+proportional.** Both are scaled by `1 / (α_A + α_B)`, which keeps their ratio:
+(0.2, 0.3) becomes (0.4, 0.6). If both are 0 there is no ratio to keep and each gets 1/2,
+which is plain ORCA. `share_policy: equal_split` adds half of the shortfall to each
+instead. A sum above 1 is left alone: taking more than one's share is safe.
+*Tested:* `tests/test_directives.py`, `test_proportional_policy_keeps_the_ratio` and
+those after it; `tests/test_avoidance_sim.py::test_shares_short_of_one_are_logged_once_and_repaired`.
+
+## 10. Side preference
+
+On a collision course `v` is inside the cone and can leave it across either leg. ORCA
+takes the nearer (eq. 5). A `side_preference` of `left` or `right` takes that leg instead,
+whichever is nearer: `u` becomes the vector from `v` to the foot of the perpendicular on
+that leg's line, and `n` that leg's outward normal.
+
+**It is safe.** A leg's line is tangent to the whole cone, cut off or not, so the
+half-plane beyond it contains no point of the obstacle. This holds even where the foot of
+the perpendicular falls short of the arc.
+
+**It is reciprocal if both use the same side.** "Left" is as each agent sees it, looking
+at the other. B's obstacle is A's turned through a half turn, and a half turn keeps
+handedness: A's left leg, turned, is B's left leg. So if both take `left`, B's `u` and `n`
+are minus A's, the argument of section 9 goes through unchanged, and the pair is
+collision-free for τ. Both keeping left means each steps to its own left and they pass
+right shoulder to right shoulder.
+*Tested:* `tests/test_orca.py::test_the_two_agents_of_a_pair_build_mirrored_half_planes`
+(for no side, left and right);
+`tests/test_avoidance_sim.py::test_side_preference_decides_the_side_the_two_pass_on`.
+
+**It is not reciprocal if they differ.** With A on `left` and B on `right`, the two step
+to the same side of the corridor, the relative velocity does not change, and they stay on
+a collision course: the familiar sidewalk dance. Nothing in section 9 covers it.
+
+**DD30 (decision). A pair has one side.** `resolve_pair` gives it:
+
+| A says | B says | The pair uses |
+|---|---|---|
+| nothing | nothing | the nearer side: plain ORCA |
+| a side | the same side | that side |
+| a side | nothing | that side, for both |
+| a side | the other side | the nearer side, and a `reciprocity_violation` is logged |
+
+"Nothing" is read as having no preference, so the one stated preference stands for the
+pair. This is the layer deciding with knowledge of both directives, as it does for the
+shares. It models a convention, which only works if both follow it; a rule database that
+every agent reads from will give both the same side.
+
+**Only on a collision course.** A side preference does nothing while `v` is outside the
+obstacle. Otherwise an agent already going by on the right would be told to cross over
+and go by on the left. The preference picks between two ways out of a conflict; it does
+not create one.
+*Tested:* `tests/test_orca.py::test_a_side_preference_does_nothing_when_not_on_a_collision_course`.
+
+Once the pair is out of the cone on the chosen side, plain ORCA keeps it there: the
+nearest boundary point is then on that side. So the preference acts on the first step of
+a conflict and its effect lasts.
+
+## 11. Clearance margin and passage order
+
+**Clearance.** A `clearance_margin` of `c` is used as a larger combined radius,
+`r_A + r_B + c`: the obstacle grows and the two pass `c` further apart. The two agents of
+a pair may ask for different margins. If each used its own, they would build obstacles of
+different sizes, and the two half-planes would no longer be mirror images: A would rely on
+B doing its share against an obstacle B is not using.
+
+**DD31 (decision). The pair uses the larger of the two margins.** Each agent then gets at
+least the space it asked for, both use the same obstacle, and section 9 applies as it
+stands. Nothing is lost, so there is nothing to log.
+*Tested:* `tests/test_avoidance_sim.py::test_clearance_margin_is_the_gap_the_two_keep`
+(the smallest separation in a run equals the margin, for four margins),
+`::test_the_larger_of_two_clearance_margins_is_kept_by_both`.
+
+A collision is still judged on the bodies, without the margin (`metrics.md`, section 6).
+
+**Passage order.** `passage_order` says who goes first through a single-file segment. It
+is handed to the arbiter of issue #24 as its "agreed leader", the input it already has for
+a negotiated agreement (`negsim/conflict/roles.py`, `decide_roles`).
+
+| A says | B says | Leader handed to the arbiter |
+|---|---|---|
+| `leader` | `follower` or nothing | A |
+| nothing | `follower` | A |
+| `follower` | `leader` or nothing | B |
+| nothing | `leader` | B |
+| nothing | nothing | none: the arbiter's own rule decides |
+| `leader` | `leader` | none, and a `reciprocity_violation` is logged |
+| `follower` | `follower` | none, and a `reciprocity_violation` is logged |
+
+*Tested:* `tests/test_directives.py::test_passage_orders_of_a_pair`.
+
+## 12. Walls in discrete time
+
+`orca.md`, section 5, gives the wall half-plane: with `q` the wall's nearest point to an
+agent at `p` with radius `r`, and `e = (q - p) / |q - p|`,
+
+    v · e  <=  (|q - p| - r) / τ_obst
+
+**Where it comes from.** The wall's velocity obstacle (the paper's eq. 11) is the set of
+velocities that bring the agent's disc onto the wall within `τ_obst`. Its point nearest
+the origin of velocity space is `((|q - p| - r) / τ_obst) e`: the slowest way to reach the
+wall in the time allowed is straight at its nearest point. The obstacle is convex, so the
+tangent there is at right angles to `e`, and the half-plane on the origin's side of it is
+the one above. The paper takes exactly that half-plane for a wall (`orca:577`).
+
+**Claim.** An agent that obeys the half-plane at every step never touches a convex wall,
+provided `τ_obst >= dt`.
+
+**Proof.** Let `g = |q - p| - r` be the gap. The wall is convex and `q` is its nearest
+point to `p`, so the whole wall lies on the far side of the line through `q` at right
+angles to `e`. After a step the agent is at `p' = p + v dt`, and its distance to that line
+is `|q - p| - v · e dt`, which is at least `|q - p| - g dt / τ_obst`. Its gap to the wall
+is therefore at least
+
+    g' >= g (1 - dt / τ_obst)
+
+which is not negative when `dt <= τ_obst`, and is positive, by the same fraction of `g`
+every step, when `dt < τ_obst`. ∎
+
+The proof needs no assumption about the other half-planes, because the fallback never
+relaxes a wall (`orca.md`, section 7). With a horizon shorter than the time step the bound
+is too loose and an agent can step through a wall, so a scenario with
+`time_horizon_obst < dt` is refused when it is loaded.
+*Tested:* `tests/test_orca.py::test_obeying_the_wall_half_plane_never_reaches_the_wall`
+(including the failure for a horizon shorter than the step); in every committed run and
+every test run the number of agent-wall collisions is zero.
+
+**Standing still is always allowed.** With `g >= 0` the right-hand side is not negative,
+so `v = 0` satisfies every wall half-plane. The walls alone are never infeasible.
+
+## 13. The conflict zone at a single-file segment
+
+For the hallway of issue #24 the conflict zone of a pair is the stretch of each path that
+comes within `r_i + r_j + margin` of the other's path (section 4). That zone is as long as
+the two paths stay close, which in a corridor is most of the way. It suits a pair the
+arbiter holds from the first step. It does not suit a pair that ORCA holds until the two
+perceive each other: by then one of them may already be inside it. That happened in the
+first version of the bottleneck scenario, and the run ended in a collision
+(`WORK_LOG-26.md`).
+
+For the avoidance layer the zone is therefore tied to the segment
+(`coordination.py`, `SingleFileDetector`). On each agent's path it is the stretch inside
+the segment, plus a run-out of length `c = r_i + r_j + margin` at each end.
+
+**Claim.** If the two centres are never inside their zones at the same time, the two are
+never both inside the segment, and an agent waiting at the edge of its zone is at least
+`margin` clear of an agent at the mouth of the segment.
+
+**Proof.** A centre inside the segment is inside its zone, so the first part is
+immediate. For the second: the follower's centre is at least `c` along its path before
+the mouth, and its path into the segment ends at the mouth, so, where that last stretch
+of path is straight, it is at least `c` from the mouth and from the leader's centre
+there. The bodies are then at least `c - r_i - r_j = margin` apart. ∎
+
+That is all the zone guarantees. It says nothing about the two once the leader is out in
+the wide part with the follower in front of it: there they have to pass each other, and
+that is ORCA's job, not the arbiter's.
+
+**DD32 (decision). ORCA is never switched off for a pair the arbiter holds.** While the
+arbiter holds a pair the follower takes all of the avoidance and the leader none (shares 1
+and 0, which sum to 1, so section 9 applies). The leader, which cannot step aside inside
+the segment, is not slowed by a follower standing near its way out; the follower, which
+has room, gets out of the way. The arbiter's speed bound caps what the follower *wants*,
+so that it does not walk into the segment, and leaves its maximum speed alone, so that it
+can still move aside.
+
+This is a weaker statement than issue #24's, where the bound capped the speed itself. An
+agent that ORCA moves is not on its path any more, and one that is pushed, by a third
+agent in a crowd, could be moved past the edge of its zone. With two agents nothing pushes
+the follower; the first test below checks, on the trajectory, that the two are never in
+their zones at once.
+*Tested:* `tests/test_avoidance_sim.py::test_the_follower_stays_out_of_the_segment_until_the_leader_has_left_it`,
+`::test_the_leader_is_not_slowed_and_the_follower_does_the_avoiding`,
+`::test_the_arbiters_speed_bound_caps_what_the_follower_wants_not_what_it_may_do`.
+
+The follower's bound is section 2's, `d_in * v_leader / d_out`, with the zone above and
+with the leader's *preferred* speed as `v_leader`. The arbiter was written for agents that
+walk at their maximum speed; an ORCA agent walks at its preferred speed and reaches its
+maximum only when dodging. So the arbiter is shown each agent with its preferred speed in
+the place of the maximum (`coordination.py`, `_AgentView`). Section 6 covers the case of a
+leader that turns out slower still.
+
+## 14. A number to check: how long a symmetric meeting takes to stall
+
+`orca.md`, section 6, argues that two agents exactly head-on only ever brake. The
+argument gives a time, which can be set against a run.
+
+Let `g` be the gap between the two bodies. On a step where the closing speed exceeds
+`g / τ`, each agent gives up half of the excess, so the closing speed after the step is
+exactly `g / τ`, and
+
+    g_next = g (1 - dt / τ)
+
+Braking starts when `g` first falls below `2 v τ`, with `v` the walking speed. From then
+on each agent's speed is `g / (2 τ)`.
+
+For the shipped head-on scenario: `v = 1.3 m/s`, `τ = 3 s`, `dt = 0.1 s`, the two start
+16 m apart with radius 0.25 m, so the gap starts at 15.5 m.
+
+- Braking starts at a gap of `2 × 1.3 × 3 = 7.8 m`, reached after `(15.5 - 7.8) / 2.6 =
+  2.96 s`: on the step that begins at 3.0 s.
+- An agent's speed is below the deadlock threshold of 0.01 m/s once `g < 0.06 m`. The gap
+  shrinks by the factor `1 - 0.1/3` each step, so that takes
+  `ln(0.06 / 7.8) / ln(1 - 0.1/3) = 143.6` steps: 14.4 s, at about 17.4 s.
+- A deadlock is declared after 3 s below the threshold: **at about 20.4 s**, with a gap of
+  `7.8 × (1 - 0.1/3)^174 = 0.021 m`.
+
+The committed run `runs/si1_head_on_side_preference/001_symmetric_plain` ends in a
+deadlock at 20.4 s with a smallest separation of 0.0214 m.
+*Tested:* the symmetry the argument rests on, in
+`tests/test_avoidance_sim.py::test_an_exactly_symmetric_start_stays_exactly_symmetric_under_plain_orca`.
+The time itself is a result, read from the run.

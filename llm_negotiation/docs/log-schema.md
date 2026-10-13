@@ -1,4 +1,4 @@
-# Log schema, version 1
+# Log schema, version 2
 
 The logs are this platform's research output: rule extraction will be done from them. This
 file says what every file and field means. The machine-checkable part of the schema, the
@@ -8,6 +8,24 @@ folder against it, and the runner runs that check on every folder it writes.
 **Versioning.** `log_schema_version` is written into every `config.json` and
 `outcome.json`. Raise `LOG_SCHEMA_VERSION` whenever a field is added, removed, renamed or
 changes meaning, and add a line to the change log at the end of this file.
+
+**Two kinds of run.** Since version 2 every `config.json` says which kind of run it
+describes, in `run_kind`:
+
+| `run_kind` | What it is | Its files |
+|---|---|---|
+| `negotiation` | A run of issue #24: two agents, an optional dialogue, the arbiter. | `config.json`, `conversation.jsonl`, `trajectory.csv`, `outcome.json`, `transcript.md` |
+| `avoidance` | A run of the avoidance layer of issue #26: any number of agents under ORCA and directives. | `config.json`, `trajectory.csv`, `interactions.jsonl`, `events.jsonl`, `outcome.json` |
+
+The sections from "Layout" to "`summary.csv`" describe a negotiation run; they are those of
+version 1, with the one new field. The section "Avoidance runs" describes the other kind.
+The two have files of the same name with different contents; `run_kind` says which is
+which.
+
+**Old folders stay valid.** A folder written under version 1 has no `run_kind` and is a
+negotiation run. `validate_run_dir` checks a folder against the version its own
+`config.json` declares, and a test runs it over every committed run folder. The 66 run
+folders of issue #24 are version 1 and were not rewritten.
 
 ## Layout
 
@@ -37,7 +55,8 @@ The fully resolved configuration: defaults filled in, overrides applied.
 
 | Field | Meaning |
 |---|---|
-| `log_schema_version` | 1 |
+| `log_schema_version` | 2 (1 in a folder written before issue #26) |
+| `run_kind` | `negotiation`. Absent from a version 1 folder. |
 | `experiment_name`, `run_id`, `run_index` | Which experiment; this run's id (also its folder name); its position in the design, from 1 |
 | `condition` | `C0` to `C4` |
 | `seed` | The run's seed: the design's base seed plus `run_index`. Governs the simulator's random choices only (task phrasing, a random tie-break). The model cannot be seeded. |
@@ -187,6 +206,139 @@ empty for persona conditions; usage (`llm_calls`, `parse_failures`, `prompt_toke
 
 Empty cells mean null. Booleans are `true` and `false`.
 
+## Avoidance runs
+
+A run of the avoidance layer (`architecture.md`, section 6). It calls no model, so it has
+no conversation and no transcript, and nothing is added to the spend ledger.
+
+```
+llm_negotiation/
+  runs/<experiment_name>/
+    summary.csv                      one row per run
+    <run_id>/
+      config.json                    everything that defines the run
+      trajectory.csv                 one row per agent per time step
+      interactions.jsonl             one line per interaction: the perception record and the directive
+      events.jsonl                   one line per event: violations, handoffs, yields, near misses, collisions
+      outcome.json                   what happened: every metric, per agent and in total
+```
+
+The conventions are those above. Agents are numbered from 0; a JSON object keyed by agent
+uses the number as a string.
+
+### `config.json` of an avoidance run
+
+| Field | Meaning |
+|---|---|
+| `log_schema_version`, `run_kind` | 2, `avoidance` |
+| `experiment_name`, `run_id`, `run_index` | Which experiment; the id of this run (also its folder name); its position in the design, from 1 |
+| `seed`, `repeat` | The seed of the run (the base seed of the design plus `run_index`), which seeds a random tie-break by the arbiter and nothing else; which repetition, from 1 |
+| `created_utc`, `git`, `software` | As for a negotiation run |
+| `scenario_file` | The scenario YAML used |
+| `variant` | The level of each factor of the design, e.g. `{"layout": "offset", "condition": "both_left"}` |
+| `scenario` | The resolved scenario: `schema_version` (2), `type`, `dt_s`, `max_time_s`, `goal_tolerance_m`, `arrival`, `dynamics`, `seed` (of the randomness in the scenario itself), `on_collision`, `geometry`, `agent_types`, `orca` (`tie_break`), `navigation` (`lookahead_m`), `neighbour_search` (`cell_size_m`), `single_file` (`safety_margin_m`, `segments`), `deadlock`, `metrics` (the thresholds), `n_agents`, `obstacles`, and `agents` |
+| `scenario.agents[]` | Per agent: `agent_id`, `agent_type`, `group`, `side`, `radius_m`, `preferred_speed_mps`, `max_speed_mps`, `initial_speed_mps`, `sensing_radius_m`, `max_neighbours`, `time_horizon_s`, `time_horizon_obst_s`, `start`, `goal`, desired `path`, `path_length_m`, and `single_file_stretches` (where its path enters and leaves each single-file segment) |
+| `population[]` | Per agent: `agent_id`, `group`, `persona_id` and `attributes` (`age`, `gender`, `backstory`), or nulls for an agent with no persona. The task of the persona is not written: it plays no part in an avoidance run |
+| `visibility` | For each attribute, whether an agent could see it of a neighbour |
+| `directives` | The provider (`provider`: `null` or `static`), what it was configured with (`default`, `agents`, `pairs`), and `share_policy` (`proportional` or `equal_split`) |
+| `arbitration` | `enabled`, `policy`, `tie_break`: how single-file segments were handled |
+| `logging` | `trajectory_stride` (every how-many-th step is in `trajectory.csv`) and `interactions` (whether `interactions.jsonl` was filled) |
+| `perception_schema_version` | Version of the perception record (`perception.md`) |
+
+### `trajectory.csv` of an avoidance run
+
+One row per agent per time step, for the agents that had not yet arrived, then one final
+row per agent for the state at the end. As for a negotiation run, a row gives the state at
+the *start* of a step and what was done *during* it, and the final rows have only the
+state. With `trajectory_stride` above 1 only every such step is written; the final rows
+always are.
+
+| Column | Meaning |
+|---|---|
+| `step`, `time_s` | Step number from 0, and its start time |
+| `agent_id` | |
+| `x_m`, `y_m`, `theta_rad` | Position of the centre, and the direction of motion |
+| `path_s_m` | Progress along the desired path |
+| `vx_mps`, `vy_mps`, `speed_mps` | The velocity the agent moved at during the step |
+| `pref_vx_mps`, `pref_vy_mps` | The velocity it wanted: along its path at its preferred speed, scaled by its directives and capped by the arbiter |
+| `control_mode` | `orca`, or `arbiter` if the agent was in a pair the arbiter held on this step (`architecture.md`, section 6.4) |
+| `speed_bound_mps` | The bound the arbiter put on the speed the agent wants; empty unless `control_mode` is `arbiter` |
+| `role`, `role_source` | `leader` or `follower`, and where the order came from: `negotiated` (here: the `passage_order` of the directives), `strategy1` (the rule of the arbiter itself) or `physical_precedence`. Empty unless the arbiter held the agent and the conflict was live |
+| `in_conflict` | Whether the arbiter found a live single-file conflict for the agent on this step |
+| `zone_d_in_m`, `zone_d_out_m` | Distance along the path to where the agent enters and leaves the conflict zone at the segment; negative once passed |
+| `n_neighbours` | How many neighbours the agent perceived |
+| `speed_scale` | The scale its directives put on its preferred speed on this step: the smallest `speed_scale` among them, 1 if it perceived nobody |
+| `exposed` | Whether its preferred velocity was outside a half-plane induced by another agent, so that ORCA had to change it (`metrics.md`, section 3) |
+| `fallback` | Whether no velocity satisfied all its half-planes, so that the fallback of ORCA chose (`orca.md`, section 7) |
+| `interactions` | The `interaction_id` of each of its interactions that was active on this step, separated by `;`. **This is how the active directive is recorded**: each id is a line of `interactions.jsonl`, which holds the directive |
+
+### `interactions.jsonl`
+
+One JSON object per line, one line per interaction, in the order they began. An
+interaction is the dealings of one agent with one neighbour, from the step the neighbour
+became one of its perceived neighbours to the step it went out of range
+(`metrics.md`, section 2). Empty if the experiment sets `logging.interactions: false`.
+
+| Field | Meaning |
+|---|---|
+| `interaction_id` | From 0 |
+| `observer_id`, `neighbour_id` | Whose interaction, and with whom |
+| `start_step`, `start_time_s` | When the neighbour came into range |
+| `end_step`, `end_time_s`, `end_reason` | When and why it ended: `out_of_range`, `observer_arrived`, `neighbour_arrived` or `run_ended` |
+| `perception` | **The perception record at the moment the neighbour came into range**, whole (`perception.md`) |
+| `directive` | The directive the provider returned for it: `side_preference`, `responsibility_share`, `speed_scale`, `clearance_margin`, `passage_order`. It held for the whole interaction |
+| `effective` | What was actually used, as a list of entries, a new one each time it changed: `from_step`, `mutual` (whether the neighbour perceived the observer too), `responsibility_share`, `side_preference`, `clearance_margin`. It differs from `directive` when the two directives of the pair were combined, when a violation was repaired, and while the arbiter held the pair |
+| `perceived_time_s` | Time during which the neighbour was among the perceived neighbours of the observer |
+| `conflict_exposure_time_s` | Time during which the preferred velocity of the observer was outside the half-plane induced by this neighbour |
+| `arbiter_time_s` | Time during which the arbiter held the pair |
+| `min_separation_m` | Smallest distance between the surfaces of the two bodies during the interaction |
+
+### `events.jsonl`
+
+One JSON object per line, in time order. Every event has `event_index` (from 0), `type`
+and `time_s`.
+
+| `type` | Further fields | Meaning |
+|---|---|---|
+| `reciprocity_violation` | `step`, `field`, `agents`, `given`, `resolved`, `policy` | The two directives of a pair contradicted each other in `field` (`responsibility_share`, `side_preference` or `passage_order`). `given` is what the two asked for, `resolved` what was used, `policy` the rule that decided (`derivations.md`, sections 9 to 11). Logged once, when the pair first perceive each other |
+| `handoff` | `step`, `pair`, `to`, `leader`, `role_source`, `reason` | Control of a pair passed `to` the `arbiter` or back to `orca` |
+| `yield` | `agent_id`, `start_time_s`, `end_time_s`, `duration_s`, `min_speed_mps` | A yield event (`metrics.md`, section 4). `time_s` is its start |
+| `near_miss` | `pair`, `start_time_s`, `end_time_s`, `min_separation_m` | A near miss (`metrics.md`, section 5) |
+| `collision` | `pair`, `start_time_s`, `end_time_s`, `max_overlap_m` | Two bodies overlapped |
+| `wall_collision` | `agent_id`, `start_time_s`, `end_time_s`, `max_overlap_m` | A body overlapped a wall |
+
+### `outcome.json` of an avoidance run
+
+| Field | Meaning |
+|---|---|
+| `log_schema_version`, `run_kind`, `run_id` | |
+| `status` | `completed` (every agent arrived), `collision` (two bodies overlapped and the scenario stops on that), `deadlock`, or `timeout` (the `max_time` of the scenario ran out). Never `aborted`: no model is called |
+| `sim_time_s`, `steps` | When the run ended |
+| `n_agents`, `arrived` | How many agents, and how many reached the end of their path |
+| `collisions` | `agent_agent` and `agent_wall` (numbers of episodes), `time_s` (of the first), `agents` involved, `max_overlap_m` (the deepest overlap; null if none). With `on_collision: stop` the run ends at the first; with `continue` they are counted |
+| `deadlock` | true if every agent that had not arrived stayed below the threshold speed for the window |
+| `makespan_s` | When the last agent arrived; null unless all did |
+| `time_to_goal_s` | Per agent; null if it did not arrive |
+| `agents` | Per agent, every metric: `time_to_goal_s`, `distance_m`, `path_deviation_mean_m`, `path_deviation_max_m`, `interactions`, `interaction_time_s`, `conflict_exposure_time_s`, `orca_altered_time_s`, `yield_events`, `yield_time_s`, `near_misses`, `min_separation_m`, `min_wall_gap_m`, `fallback_steps`, `one_sided_steps`, `arbiter_time_s` (`metrics.md`) |
+| `totals` | Over all agents: `interactions`, `conflict_exposure_time_s`, `yield_events`, `yield_time_s`, `near_misses`, `min_separation_m`, `mean_time_to_goal_s`, `mean_path_deviation_m`, `max_path_deviation_m`, `steps_with_fallback`, `fallback_agent_steps`, `one_sided_agent_steps` |
+| `single_file` | Per single-file segment: `segment`, `entry_time_s` per agent, and `first_through` |
+| `reciprocity_violations` | Every violation, as in `events.jsonl` without `event_index` and `type` |
+| `handoffs` | Every handoff, likewise |
+| `thresholds` | The metric thresholds the run used, and the deadlock settings |
+
+### `summary.csv` of an avoidance experiment
+
+One row per run, in design order: identification (`experiment_name`, `run_id`, `scenario`,
+`variant`, `seed`, `repeat`, `n_agents`); the settings (`provider`, `arbitration_enabled`);
+the outcome (`status`, `arrived`, `collisions`, `max_overlap_m`, `deadlock`, `makespan_s`,
+`mean_time_to_goal_s`); the conflict metrics (`conflict_exposure_time_s`, `yield_events`,
+`yield_time_s`, `near_misses`, `min_separation_m`, `steps_with_fallback`,
+`fallback_agent_steps`, `reciprocity_violations`, `handoffs`, `first_through`); the same
+for agents 0 and 1, which is all there are in four of the five scenarios
+(`time_to_goal_0_s`, `time_to_goal_1_s`, `path_deviation_max_0_m`,
+`path_deviation_max_1_m`, `conflict_exposure_0_s`, `conflict_exposure_1_s`); and
+`git_commit`.
+
 ## `spend_ledger.jsonl`
 
 One line per paid call: `utc`, `experiment`, `run_id`, `turn_index`, `speaker`, `attempt`,
@@ -197,3 +349,9 @@ One line per paid call: `utc`, `experiment`, `run_id`, `turn_index`, `speaker`, 
 ## Change log
 
 - **1** (2026-10-13, issue #24): first version.
+- **2** (2026-10-13, issue #26): a second kind of run. `run_kind` added to every
+  `config.json`. A `negotiation` run is otherwise as in version 1. An `avoidance` run has
+  its own files: `config.json`, `trajectory.csv` (with the velocity as a vector, the
+  preferred velocity, `control_mode`, and the ids of the active interactions),
+  `interactions.jsonl`, `events.jsonl` and `outcome.json`; and the `summary.csv` of an
+  avoidance experiment has its own columns. Folders written under version 1 stay valid.

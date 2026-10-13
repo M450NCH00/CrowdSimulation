@@ -5,6 +5,10 @@ own. Decisions are numbered **DD** and marked as decisions: they are not facts t
 the paper or the issue, and each needs the supervisor's sign-off. Assumptions are numbered
 **A**.
 
+Sections 1 to 5 describe the negotiation simulator of issue #24. Section 6 describes the
+avoidance layer added by issue #26, which sits beside it: ORCA, perception, directives,
+and the handoff to the arbiter.
+
 ## 1. The pieces
 
 ```
@@ -14,29 +18,37 @@ negsim/
   experiment/   config.py    experiment YAML -> list of RunPlan (the design, counterbalanced)
                 runner.py    one RunPlan -> one simulation -> one log folder
                 batch.py     all the runs of an experiment, the client, summary.csv
+                avoidance.py avoidance experiments (issue #26): config, design, run, summary
+                cli.py       what run_experiment.py calls
   scenarios/                 scenario YAML -> ScenarioSpec (agents, walls, paths, region)
                              doorway, intersection, hallway; a base class; a registry
-  core/                      Pose, Control, unicycle step, AgentSpec, World, geometry
+                             crowd_base.py and five avoidance scenarios (issue #26)
+  core/                      Pose, Control, dynamics models, AgentSpec, World, geometry
   conflict/                  conflict zone, detection, time to the region, who leads
   control/                   controller interface, path tracker, Strategy 1 speed bound
+  avoidance/                 the ORCA layer (issue #26): section 6
   negotiation/               prompt templates, persona rendering, situation report,
                              turn parsing, consensus, the dialogue protocol
   personas/                  persona schema and YAML loader
   llm/                       client interface, DeepSeek client, mock client,
                              price table, spend ledger, budget guard
   metrics/                   makespan, minimum speed, path deviation, deadlock, ground truth
+                             avoidance.py: yield events, near misses, collisions (issue #26)
   runlog/                    log schema, writers, the schema check
   viz/                       transcript renderer, trajectory plot
 
-configs/   scenarios/  personas/  experiments/  tasks/  llm/
-tests/     runs/       docs/
+configs/   scenarios/  personas/  experiments/  avoidance/  tasks/  llm/
+tests/     runs/       docs/       LICENSES/
 ```
 
 Dependencies point one way: `core` knows nothing else; `conflict` and `control` build on
 `core`; `scenarios` builds on those; `llm` and `personas` stand alone; `negotiation` uses
 `llm`, `personas` and `scenarios`; `experiment` ties everything together. Nothing imports
 from `pipeline/` or `dataset/`, and a test checks that
-(`test_repo_hygiene.py::test_phase_1_code_is_not_imported`).
+(`test_repo_hygiene.py::test_phase_1_code_is_not_imported`). `avoidance` builds on `core`,
+on `conflict` and `control` (for the arbiter) and on `personas` (for which attributes
+exist). It imports neither `llm` nor `negotiation`, and a test checks that too
+(`test_avoidance_runs.py::test_the_avoidance_layer_does_not_import_the_llm_package`).
 
 Additions to the layout issue #24 suggested, and why: `negsim/experiment/`, because the
 run loop has to be importable for the tests and `run_experiment.py` should stay thin;
@@ -247,3 +259,244 @@ there are exactly two agents. Issue #24 puts the rest out of scope.
   line, with no change to the loader, the visibility settings or the renderer (tested in
   `test_personas_and_prompts.py`, "the schema is a table").
 - Queue-cutting, non-spatial conflicts, CrowdGym integration, scaling.
+
+## 6. The avoidance layer (issue #26)
+
+The simulator of sections 1 to 5 settles a conflict in one way: it decides who goes first.
+A rule taken from it could only ever prescribe priority. This layer adds the other half:
+agents that step out of each other's way, under directives that say how. It is the first
+of six sub-issues; it contains no rule, no rule database and no call to a model.
+
+It is a second kind of run, beside the first. A negotiation run and an avoidance run have
+different scenarios, different experiment configs and different log files, and share the
+core, the arbiter, the personas and the logging conventions.
+
+### 6.1 Where each piece lives
+
+| Piece | Module | What it is |
+|---|---|---|
+| ORCA half-planes | `negsim/avoidance/orca.py` | `agent_half_plane`: the velocities one agent may choose because of one neighbour, with a share and an optional side. `wall_half_plane`: the same for a wall block. From the paper (`orca.md`). |
+| Linear programs | `negsim/avoidance/lp.py` | `solve`: the allowed velocity nearest the preferred one, and the fallback when there is none. Adapted from RVO2, with its notice. |
+| Neighbour search | `negsim/avoidance/neighbours.py` | `SpatialGrid`: the nearest `k` agents within a radius, and all pairs within a distance. |
+| Perception | `negsim/avoidance/perception.py` | `PerceptionRecord`, versioned; `perceive` builds one; the visibility rules (`perception.md`). |
+| Directives | `negsim/avoidance/directives.py` | `AvoidanceDirective`; `resolve_pair`, which combines the two directives of a pair and reports a `ReciprocityViolation`; the `DirectiveProvider` interface with `NullProvider` and `StaticProvider`. |
+| Layer coordination | `negsim/avoidance/coordination.py` | `SingleFileDetector`, a detector for the arbiter of issue #24; `Coordinator`, which decides which pairs the arbiter holds and logs each `Handoff`. |
+| The run loop | `negsim/avoidance/simulation.py` | `AvoidanceSimulation`: one step for every agent, the interactions, the bookkeeping. |
+| Benchmark | `negsim/avoidance/benchmark.py` | Milliseconds per step for a crowd of a given size. |
+| Dynamics | `negsim/core/dynamics.py` | `DynamicsModel`, with `UnicycleDynamics` (issue #24) and `HolonomicDynamics` (ORCA). `World` takes one. |
+| Metrics | `negsim/metrics/avoidance.py` | Yield events, near misses, collision episodes (`metrics.md`). Exposure is counted in the run loop, where the half-planes are. |
+| Scenarios | `negsim/scenarios/crowd_base.py` and one module per scenario | `CrowdScenario`, `CrowdScenarioSpec`, `AgentType`; `wide_corridor_head_on`, `open_crossing`, `overtaking`, `corridor_to_bottleneck`, `bidirectional_flow`. Configs in `configs/scenarios/`, `schema_version: 2`. |
+| Experiments | `negsim/experiment/avoidance.py` | `AvoidanceExperiment`: a config with `layer: avoidance`, expanded into runs; one run; a whole experiment. Configs in `configs/avoidance/`. |
+| Logs | `negsim/runlog/schema.py`, `writer.py` | Log schema version 2: `run_kind`, the files and fields of an avoidance run, `AvoidanceRunLogger` (`log-schema.md`). |
+
+### 6.2 One step
+
+```
+   every time step, for every agent that has not arrived, all from the same state:
+   ┌──────────────────────────────────────────────────────────────────────────────┐
+   │ 1 PERCEIVE     neighbours = nearest max_neighbours agents within R            │
+   │                a new neighbour starts an interaction:                         │
+   │                   world ──perceive──> PerceptionRecord                        │
+   │                   record ──DirectiveProvider──> AvoidanceDirective            │
+   │                                                                              │
+   │ 2 RESOLVE      two agents that perceive each other:                           │
+   │                   their two directives ──resolve_pair──> shares, side,        │
+   │                   clearance, leader   (a contradiction is logged and repaired) │
+   │                                                                              │
+   │ 3 COORDINATE   a pair with a single-file segment ahead of both, and in each   │
+   │                other's way there ──> the arbiter: leader, follower's bound    │
+   │                                                                              │
+   │ 4 CHOOSE       preferred velocity = along the path, at preferred speed        │
+   │                   x speed_scale, capped by the arbiter's bound                │
+   │                one half-plane per wall in reach (hard)                        │
+   │                one half-plane per neighbour (share, side, clearance)          │
+   │                linear program ──> the allowed velocity nearest the preferred  │
+   │                   none allowed? ──> the fallback (counted)                    │
+   │                                                                              │
+   │ 5 MOVE         velocity ──DynamicsModel──> new position, velocity realised    │
+   │                                                                              │
+   │ 6 BOOKKEEPING  arrivals, collisions, near misses, yields, exposure, deadlock  │
+   └──────────────────────────────────────────────────────────────────────────────┘
+        config.json   trajectory.csv   interactions.jsonl   events.jsonl   outcome.json
+```
+
+### 6.3 Design decisions
+
+**DD22. A second kind of run beside the first; nothing existing changes.** Avoidance
+scenarios have their own config schema (`schema_version: 2`) and builder, avoidance
+experiments their own config (`layer: avoidance`), loader and folder (`configs/avoidance/`),
+and avoidance runs their own files. No existing scenario or experiment config was edited,
+and none is read differently. *Checked:* the 432 tests of issue #24 pass unchanged, and
+the 54 committed no-LLM runs of issue #24, run again with this code, come out identical
+(`WORK_LOG-26.md`).
+
+**DD23. Dynamics are pluggable; the avoidance layer is holonomic.** `World` takes a
+`DynamicsModel`, which turns one agent's command into its motion and reports the velocity
+actually realised. The default is the unicycle of issue #24, whose command is `(v, omega)`;
+the avoidance scenarios use the holonomic model, whose command is a velocity vector, as
+ORCA assumes. The layer hands a velocity to the model and reads back what was realised,
+which is what neighbours then observe; it does not know which model it is. A vehicle model
+would take the same command and realise the nearest motion it can. Nothing in
+`negsim/avoidance/` would change for it, though ORCA's guarantee would then need the
+tracking error accounted for. That, non-holonomic ORCA, is out of scope, and a scenario
+that asks for any other model is refused for now.
+*Tested:* `test_another_dynamics_model_can_be_plugged_in_without_touching_the_layer`.
+
+**DD24. ORCA is written from the paper; the linear programs are adapted from RVO2.**
+`orca.md`, section 2. RVO2 was read, not run, and is not a dependency. Its licence is
+Apache-2.0; `lp.py` carries its notice.
+
+**DD25. Neighbour search is a uniform grid**, not the k-d tree the paper suggests. It is
+rebuilt in one pass and its cost per query does not grow with the crowd. *Tested* against
+looking at every agent.
+
+**DD26. An exact tie between the two passing sides is not broken.** `orca.md`, section 4.
+RVO2 breaks it to the right; its behaviour is available as `orca.tie_break: right`.
+
+**DD27. Walls follow the paper, not RVO2.** `orca.md`, section 5.
+
+**DD28. The directive has the five fields the issue proposed, unchanged.**
+
+| Field | Values | What it does to ORCA |
+|---|---|---|
+| `side_preference` | `left`, `right`, `none` | On a collision course, the pair leaves the velocity obstacle across that leg instead of the nearer one. |
+| `responsibility_share` | 0 to 1; 0.5 is ORCA | On a collision course, the fraction of the needed change this agent makes. |
+| `speed_scale` | 0 or more; 1 is no change | Multiplies the agent's preferred speed while the neighbour is perceived. |
+| `clearance_margin` | metres, 0 or more | Added to the combined radius of the pair. |
+| `passage_order` | `leader`, `follower`, `none` | Handed to the arbiter as the agreed leader at a single-file segment. |
+
+Implementation did not show a better set. What it showed is that four of the five are
+properties of a *pair*, not of an agent, which is DD29 to DD32.
+
+**DD29. Shares: the share divides the avoidance; the room that is left is always split in
+half; a pair whose shares sum to less than 1 is logged and scaled up in proportion.**
+`derivations.md`, section 9. The issue's condition, α_i + α_j ≥ 1, is right for a pair on
+a collision course and silent about a pair that is not; applying the share there too would
+make (1, 1) unsafe.
+
+**DD30. A pair has one side.** If one agent states a side both use it; if they state
+different sides, that is a `reciprocity_violation` and neither is used.
+`derivations.md`, section 10. The issue names only the shares as a reciprocity
+constraint. Opposite sides break the same guarantee, so they are checked and logged the
+same way, as is DD32's case of two claims to go first.
+
+**DD31. The pair uses the larger of the two clearance margins.** `derivations.md`,
+section 11.
+
+**DD32. The arbiter decides the order at a single-file segment; ORCA is never switched
+off.** Section 6.4 and `derivations.md`, section 13. The arbiter is used unchanged through
+a new detector, `SingleFileDetector`. While it holds a pair the follower takes all of the
+avoidance and the leader none.
+
+**DD33. A perception record is built once per interaction, and the task is never in it.**
+`perception.md`. Two choices beyond the issue: the agent's own task is left out as well as
+the neighbour's, and `single_file_ahead_m` was added so that a rule can tell that
+`passage_order` applies.
+
+**DD34. An agent has arrived when its progress along its path reaches the end, and an
+agent that has arrived leaves the scene.** Progress is used, not distance to the goal
+point, because an agent that was pushed sideways may pass beside its goal. An arrived
+agent is no longer anyone's neighbour and cannot be collided with; otherwise the first
+agents through a corridor would block its end. Issue #24's agents stay where they are,
+which is unchanged.
+
+**DD35. A collision is what it was; a crowd scenario may record it and go on.**
+`metrics.md`, section 6. `on_collision: stop` is the default and is issue #24's behaviour.
+
+**DD36. Physical parameters and demographic attributes are set in different places and
+cannot reach each other.** `parameters.md`, section 5.
+
+**DD37. Log schema version 2 adds a kind of run and leaves the old one alone.**
+`log-schema.md`. A negotiation run gains one field, `run_kind`. A folder written under
+version 1 is still valid and is checked against version 1; a test runs the check over
+every committed run folder.
+
+**DD38. Exposure counts other agents, not walls, and is measured on the velocity the
+directives leave; a yield is measured against the agent's own preferred speed.**
+`metrics.md`, sections 3 and 4.
+
+**DD39. The default sensing radius is the paper's bound**, 12.5 m, not the 5 m used in
+practice. `parameters.md`, section 2. The other ORCA settings are from practice.
+
+**DD40. With several neighbours, the smallest `speed_scale` applies.** A directive is
+about one neighbour, but an agent has one preferred speed. The most cautious of its active
+directives wins.
+
+**DD41. An avoidance experiment's design is a set of named factors, crossed.** Each level
+of a factor may change the scenario, the directives, the arbitration settings, who the
+agents are, or what they can see. Each run records the level of every factor.
+
+**A4. A holonomic agent may move in any direction, backwards included**, at up to its
+maximum speed. That is ORCA as published. Issue #24's unicycle agents cannot reverse.
+
+**A5. An agent's preferred velocity points at a spot a fixed distance ahead on its
+desired path** (`navigation.lookahead`), at its preferred speed. After stepping aside it
+drifts back to its line over that distance.
+
+**A6. An agent that perceives a neighbour which does not perceive it uses its own
+directive as it stands**, as RVO2 would. The pairwise guarantee does not cover that step;
+such steps are counted (`one_sided_steps`). It can only happen when sensing radii differ
+or when there are more agents in range than `max_neighbours`.
+
+### 6.4 When control passes between ORCA and the arbiter
+
+For a pair of agents, **from ORCA to the arbiter** on the first step on which all three
+hold:
+
+1. **Each perceives the other**: each is among the other's perceived neighbours. Before
+   that neither has a directive about the other, so there is no `passage_order` to use.
+2. **A single-file segment lies ahead of both.** A segment the scenario declares, on both
+   their paths, too narrow for the two to pass in (narrower than their two diameters
+   together), which neither has cleared.
+3. **The arbiter's own test says they would be in each other's way there**: the conflict
+   zone of the pair is live and the two would occupy it at overlapping times if each
+   walked at its preferred speed (`negsim.conflict.timing.is_social_minigame`).
+
+and **from the arbiter back to ORCA** on the first step on which the conflict zone is no
+longer live, because one of the two has cleared it, or one of the two has arrived.
+
+Between those two steps:
+
+- **The arbiter decides the order**, by `decide_roles` as in issue #24: the directives'
+  leader if there is one and it can still be honoured, otherwise the shorter time to the
+  zone, otherwise the lower index. It gives the follower a speed bound.
+- **The bound caps the speed the follower wants to walk at**, not its maximum speed.
+- **ORCA goes on building a half-plane between the two**, with the follower's share 1 and
+  the leader's 0, and half-planes for every wall and every other agent as always.
+- The trajectory's `control_mode` is `arbiter` for both, and `role`, `role_source`,
+  `speed_bound_mps`, `zone_d_in_m` and `zone_d_out_m` are filled in.
+
+Outside those steps `control_mode` is `orca` and those columns are empty.
+
+Each handoff is an event in `events.jsonl` and an entry in the outcome, with the step, the
+pair, the leader and where the leader came from. `role_source` keeps the arbiter's own
+words: `negotiated` means the leader was supplied from outside, which in an avoidance run
+is the directives' `passage_order` (there is no dialogue); `strategy1` means the arbiter's
+own rule; `physical_precedence` means the agreed follower was already inside the zone.
+
+The conflict zone is the segment plus a run-out at each end as long as the two radii and
+the safety margin together (`derivations.md`, section 13).
+
+**What can go wrong, and is checked for.** If the two first perceive each other when one
+is already inside the zone, the arbiter can no longer keep it out. With the shipped
+scenario they perceive each other 2.2 s in, 3.4 m before either zone. A scenario with a
+short sensing radius and a fast approach could be late; the arbiter then falls back on
+physical precedence, as in issue #24, and ORCA is still there.
+
+*Tested:* `tests/test_avoidance_sim.py`, from
+`test_control_passes_to_the_arbiter_and_back_exactly_once` to
+`test_a_segment_wide_enough_for_the_pair_is_not_single_file_for_it`.
+
+### 6.5 What is not here
+
+- Rules, the rule database, rule-following (the next sub-issue).
+- Any call to a model. Negotiating a directive is a later sub-issue; it will be a
+  `DirectiveProvider`.
+- Non-holonomic ORCA and vehicle dynamics (DD23).
+- An ordering of three or more agents at a single-file segment. The arbiter resolves
+  pairs, as in section 4; a cycle of followers is possible. The shipped bottleneck has two
+  agents.
+- Following closely in single file. Two agents going the same way through a segment are
+  made to take turns: the second waits until the first is out. The arbiter was built for
+  agents going opposite ways, where that is necessary.
+- Bodies that are not discs (`parameters.md`, section 7).
