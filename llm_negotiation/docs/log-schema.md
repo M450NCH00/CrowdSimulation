@@ -171,8 +171,11 @@ in it.
 
 One row per run of the experiment, in design order, rewritten whenever the experiment is
 run. Columns: identification (`experiment_name`, `run_id`, `condition`, `scenario`,
-`scenario_variant`, `info_variant`, `seed`, `repeat`); each agent's `persona`, `age`,
-`gender`, `task_type`, `task` and `side`; the controlled factors (`swap_sides`,
+`scenario_variant`, `info_variant`, `seed`, `repeat`); each agent's persona id, age,
+gender, task type, task text and starting side (`agent0_persona`, `agent0_age`,
+`agent0_gender`, `agent0_task_type`, `agent0_task`, `agent0_side`, and `agent1_persona`,
+`agent1_age`, `agent1_gender`, `agent1_task_type`, `agent1_task`, `agent1_side`; the
+persona, age and gender cells are empty for a task-only agent); the controlled factors (`swap_sides`,
 `first_speaker`, `timing_mode`, `prompt_template`, `model`, `temperature`); the outcome
 (`status`, `consensus_reached`, `turns_used`, `end_reason`, `negotiated_leader`,
 `first_through`, `negotiated_roles_followed`, `fallback_used`, `collisions`, `deadlock`,

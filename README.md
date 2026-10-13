@@ -186,7 +186,7 @@ CrowdSimulation/
     configs/                        scenarios, personas, experiment designs C0-C4, task strings, API prices
     negsim/                         the package: core, scenarios, conflict, control, llm,
                                     negotiation, personas, runlog, metrics, viz, experiment
-    tests/                          431 tests, all on the mock client, no network, no spend
+    tests/                          432 tests, all on the mock client, no network, no spend
     docs/                           architecture, gamechat-notes, derivations, llm-backend, log-schema
     runs/                           committed run logs: C0 (no LLM) and the paid smoke runs
     spend_ledger.jsonl              one line per paid API call for this work (Phase 1 spend is

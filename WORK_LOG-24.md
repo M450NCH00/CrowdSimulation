@@ -292,9 +292,12 @@ Kept here because the workflow asks for the dead ends, not a tidied account.
 
 ### 2026-10-13 16:25 — Verification
 
-- Tests: `python -m pytest` in `llm_negotiation/`: **431 passed** on Python 3.13.3 and on
+- Tests: `python -m pytest` in `llm_negotiation/`: **432 passed** on Python 3.13.3 and on
   3.12.3, each in a clean virtual environment built from `requirements.txt`. The network is
   blocked and the real `.env` is hidden during the tests. `pyflakes` reports nothing.
+  (431 when the build entry above was written; one more was added during verification,
+  checking that `docs/log-schema.md` names every field of the schema. It found twelve
+  summary columns described only in prose, now listed.)
 - Log folders: the runner checks every folder it writes against the schema. In addition a
   script compared, for each of the 12 paid runs, the transcript with `conversation.jsonl`
   turn by turn (speaker, message, stance), the system prompts in the transcript with the
@@ -416,7 +419,7 @@ which the agents negotiate through an LLM and the agreement decides who goes fir
   command line.
 - `configs/`: three scenarios, four personas, ten experiment designs covering C0 to C4,
   GameChat's task strings, DeepSeek's prices.
-- `tests/` (about 3,000 lines): 431 tests, all on the mock client.
+- `tests/` (about 3,000 lines): 432 tests, all on the mock client.
 - `docs/`: architecture (with 21 design decisions marked as such), GameChat notes,
   derivations, LLM backend, log schema. Plus `README.md` and `THIRD_PARTY_NOTICES.md`.
 - `runs/`: 54 no-LLM runs and 12 paid smoke runs, with `spend_ledger.jsonl`.
@@ -445,7 +448,7 @@ completely, so that rules can later be extracted from the conversations.
 **What it did not do.** The MPC-CBF controller. Any experiment beyond smoke runs. Anything
 the issue lists as out of scope.
 
-**How it was verified.** 431 tests on two Python versions with the network blocked; 140
+**How it was verified.** 432 tests on two Python versions with the network blocked; 140
 mock runs across all ten configs and 54 no-LLM runs with no collision; a negative control
 showing each scenario collides without arbitration; every log folder checked against the
 schema by the runner, and the 12 paid ones cross-checked by script and read; a search of

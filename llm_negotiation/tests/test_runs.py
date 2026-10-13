@@ -529,6 +529,23 @@ def test_schema_check_notices_a_damaged_conversation_or_trajectory(good_run, tmp
         assert validate_run_dir(copy_dir) != [], damage
 
 
+def test_the_schema_document_names_every_field():
+    """docs/log-schema.md is the description people read; it must not fall behind the code."""
+    import re
+
+    from negsim.runlog import schema
+
+    document = (PACKAGE_ROOT / "docs" / "log-schema.md").read_text(encoding="utf-8")
+    assert f"# Log schema, version {LOG_SCHEMA_VERSION}" in document
+    for group in (
+        "CONFIG_KEYS", "CONFIG_NEGOTIATION_KEYS", "CONFIG_LLM_KEYS", "TURN_KEYS", "ATTEMPT_KEYS",
+        "TRAJECTORY_COLUMNS", "OUTCOME_KEYS", "OUTCOME_NEGOTIATION_KEYS", "SUMMARY_COLUMNS", "STATUSES",
+    ):
+        for field in getattr(schema, group):
+            pattern = r"(?<![A-Za-z0-9_])" + re.escape(field) + r"(?![A-Za-z0-9_])"
+            assert re.search(pattern, document), f"{group}: '{field}' is not described in docs/log-schema.md"
+
+
 def test_trajectory_plot_is_drawn_from_the_log_folder(good_run, tmp_path):
     pytest.importorskip("matplotlib")
     from negsim.viz.trajectory_plot import plot_run
