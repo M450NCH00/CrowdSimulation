@@ -227,7 +227,7 @@ Kept here because the workflow asks for the dead ends, not a tidied account.
   hour after finding the problem instead of straight away. That left the user less time to
   object before the paid runs than I had meant to give.
 
-### 2026-10-13 16:15 — No-LLM runs (condition C0) for all three scenarios
+### 2026-10-13 16:12 — No-LLM runs (condition C0) for all three scenarios
 
 - What I did: ran `c0_no_llm.yaml`, `c0_no_llm_intersection.yaml` and
   `c0_no_llm_hallway.yaml` from a clean tree at commit `50123f6`; committed the 54 run
@@ -256,15 +256,199 @@ Kept here because the workflow asks for the dead ends, not a tidied account.
     the first step.
 - Next step: re-read the issue for a reply to Q1, then the paid smoke runs.
 
+### 2026-10-13 16:17 — Paid smoke runs: 12 runs, 37 calls, about USD 0.0043
+
+- What I did: re-read the issue (no reply to Q1; my comment had been up for 17 minutes).
+  Ran one C1 run first as a canary, checked its log, then the other five C1 runs and the
+  six C2 runs, all with `--client deepseek` from a clean tree at commit `c9522e4`.
+  Committed the 12 run folders and the spend ledger.
+- Why: the issue's "Live smoke runs with DeepSeek, within the budget cap".
+- Result / what I found:
+  - **C1, GameChat replication, doorway, 6 runs.** Consensus in 6 of 6, in 3, 6, 4, 4, 4
+    and 4 turns. **The higher-priority agent went first in 6 of 6**; the paper reports
+    100% (`refs/ln_gamechat_arxiv_v1.txt:329-459`). No malformed reply, no retry, no
+    fallback, no collision.
+  - **C2, task plus persona, hallway, 6 runs.** Consensus in 6 of 6, every one in 2 turns.
+    No ground truth; nothing is marked correct or incorrect. In 5 of the 6 the first
+    speaker opened by giving way and the other accepted; the exception was the
+    70-year-old man going to the emergency room, who asked to go first.
+  - **Cost.** 37 calls, estimated USD 0.004282 (C1 0.002460, C2 0.001821), all at the
+    peak rate. Under 1% of the USD 0.50 cap. Zero failed calls.
+  - **Latency.** 0.81 s per call in C1, 3.36 s per dialogue (SD 0.73 s); the paper
+    measured 2.767 s (SD 0.441 s) per dialogue.
+  - **Prompts.** Both templates were used exactly as frozen. No wording was changed
+    before, between or after the paid runs, so there is one prompt version per template
+    and nothing to report under "prompt iteration".
+  - The API accepted the request as built from the documentation (thinking off, JSON
+    mode), returned the cache-hit and cache-miss token counts the price table needs, and
+    reported zero reasoning tokens.
+- Two things I read in the transcripts (my reading of 12 conversations, not a measurement):
+  - In C1 runs 001, 003 and 004, one of the two stances that made the consensus was not
+    said out loud: the message only named the agent's own task. See Q5.
+  - In C1 run 003 the grocery agent picked up the other agent's word and said it was
+    "taking my patient to buy groceries". The paper mentions such slips
+    (`refs/ln_gamechat_arxiv_v1.txt:497`).
+- Next step: verification against the issue's acceptance criteria, then the PR.
+
+### 2026-10-13 16:25 — Verification
+
+- Tests: `python -m pytest` in `llm_negotiation/`: **431 passed** on Python 3.13.3 and on
+  3.12.3, each in a clean virtual environment built from `requirements.txt`. The network is
+  blocked and the real `.env` is hidden during the tests. `pyflakes` reports nothing.
+- Log folders: the runner checks every folder it writes against the schema. In addition a
+  script compared, for each of the 12 paid runs, the transcript with `conversation.jsonl`
+  turn by turn (speaker, message, stance), the system prompts in the transcript with the
+  ones sent, the parsed messages with the raw replies, and the costs with the ledger.
+  No discrepancy. I also read the conversations of all 12.
+- API key: read the key from `.env` into a shell variable without displaying it and
+  searched for it and for its first 12 characters. Tracked files at `HEAD`: 0 matches.
+  Commits on this branch that add or remove it: 0. Commits on any branch: 0. Run logs and
+  ledger: 0, and no occurrence of `Authorization` or `Bearer` in them either. `.env` is
+  not tracked and no commit has ever touched it. The only file on disk that contains the
+  key is `.env` itself.
+- Phase 1: `git diff a1aafb9 -- pipeline dataset CLAUDE.md integration literature` is
+  empty, and a test checks that no module imports from `pipeline` or `dataset`.
+- Acceptance criteria, one by one:
+
+  | Criterion | Status | Evidence |
+  |---|---|---|
+  | Prerequisite check performed against `CLAUDE.md` | done; passes as written, with caveat Q1 | first progress entry |
+  | GameChat repository read but not executed; licence confirmed; adapted code carries its notice | done; no code adapted | `docs/gamechat-notes.md` section 2, `THIRD_PARTY_NOTICES.md` |
+  | Every listed GameChat behaviour implemented, or its deviation documented | 9 of 11 implemented; 2 deviate with reasons | `docs/gamechat-notes.md` sections 3, 4, 6. Not implemented: the MPC-CBF controller (the issue allows this) and gpt-4o-mini (the issue asks for DeepSeek) |
+  | Doorway, intersection, hallway run end to end | done | 54 C0 runs, 12 paid runs, `test_scenarios.py` |
+  | Follower speed derivation documented and unit-tested, with the reduction | done | `docs/derivations.md` sections 2, 3; `test_conflict.py` |
+  | Personas with independent age and gender, no names, configurable visibility | done | `test_personas_and_prompts.py` |
+  | Situation report fields individually switchable, observable values only | done | `test_negotiation.py` |
+  | DeepSeek and mock clients behind one interface; all tests on the mock | done | `negsim/llm/base.py`, `tests/conftest.py` |
+  | Budget guard enforced; ledger and per-call cost recorded | done | `test_llm.py`, `spend_ledger.jsonl` |
+  | Every run writes the five files, matching the documented schema | done | `negsim/runlog/schema.py`, `docs/log-schema.md` |
+  | Speaking order and spawn side counterbalanced and recorded | done as config options and recorded per run; **partly exercised**, see Q9 | `negsim/experiment/config.py`, the header of each smoke config |
+  | Only C0 and C1 scored against ground truth | done, and enforced | `test_experiment_config.py` |
+  | All prompt versions recorded; no undocumented tuning | done; one version each, never changed | `templates/MANIFEST.json` |
+  | Smoke runs within budget, results and spend in the PR description | done | USD 0.0043 of 0.50 |
+  | API key absent from code, logs and history | done | above |
+  | Phase 1 folders untouched and not imported | done | above |
+
 ## Open questions / risks
 
-- **Q1 — needs the user's confirmation: has the supervisor's "no simulation code until the
-  literature review is complete and discussed" instruction been lifted?** `CLAUDE.md` on this
-  branch does not carry it, so the issue's prerequisite check passes and I went ahead. But
-  `README.md:24-25` on this branch still states it, `CLAUDE.md` on the unmerged
-  `docs/5-biweekly-update-1` branch still states it, and no file records it being lifted. If it
-  has not been lifted, this PR should simply stay unmerged; nothing here touches Phase 1 or the
-  literature. Either way `CLAUDE.md` needs the user's attention: the version in force describes
-  the Phase 1 dataset as the current task and does not mention this platform.
+Needing a decision from the user or the supervisor:
 
-## Summary (fill in at the end)
+- **Q1 — has the supervisor's "no simulation code until the literature review is complete
+  and discussed" instruction been lifted?** `CLAUDE.md` on this branch does not carry it,
+  so the issue's prerequisite check passes and I went ahead, including the paid runs. But
+  `README.md` on this branch still stated it (I have marked its status "unconfirmed" there
+  and not removed it), `CLAUDE.md` on the unmerged `docs/5-biweekly-update-1` branch still
+  states it, and no file records it being lifted. If it has not been lifted, leave the PR
+  unmerged; nothing on this branch touches Phase 1 or the literature. The spend is made and
+  cannot be undone: USD 0.0043.
+- **Q2 — branch base.** Cut from `docs/22-...`, not `main`, and the PR targets that branch
+  (assumption A1). If it should go to `main` instead:
+  `git rebase --onto main docs/22-simulation-conflict-rules-literature feat/24-llm-negotiation-simulator`,
+  then redo the `README.md` hunk by hand.
+- **Q3 — the hallway's sizes and speeds are placeholders [unverified].** Body radius
+  0.25 m, maximum speed 1.3 m/s, turn rate 2.0 rad/s, hallway 0.8 m by 4 m. I chose
+  human-scale numbers so that personas are not told they walk at a robot's 0.3 m/s, but I
+  took them from no source. They need sourced values, or a decision to use GameChat's
+  scale instead, before any experiment that will be reported.
+- **Q4 — the persona prompt says nothing about where the scene is.** Phase 1 was
+  Singapore-only. Issue #24 lists age, gender, backstory and task, so `persona_v1` has no
+  location. If the study is to be about Singapore, that needs an attribute or a backstory
+  and a new template version.
+- **Q5 — a consensus can be silent.** Consensus is complementary *stances*, as the issue
+  defines it, and the stance is hidden from the other agent. In three of the six C1 runs an
+  agent conceded or claimed the way in its stance while its message only stated its task.
+  The motion followed the stances. Whether that counts as "the agents agreed" is a
+  question about what the study means by agreement. Requiring the concession to be spoken
+  would need a new prompt version or a different consensus rule.
+- **Q6 — the zone length (DD3).** Safe-by-construction zone as the scenario default; the
+  GameChat repository's fixed 0.25 m in the doorway replication configs so that timings are
+  comparable with the paper. Is that split acceptable, or should the replication also use
+  the safe zone and accept a 2 s later follower?
+- **Q7 — the MPC-CBF controller is not implemented** (DD1). The issue allowed that. Is a
+  follow-up wanted? For two agents it would change the trajectories slightly and none of
+  the dialogue.
+- **Q8 — `CLAUDE.md` is out of date and I did not edit it.** It describes the Phase 1
+  dataset as the current task, does not mention `llm_negotiation/`, and says DeepSeek spend
+  is tracked in `pipeline/config.py`. Spend is now in two places: that file (USD 0.10,
+  untouched) and `llm_negotiation/spend_ledger.jsonl` (USD 0.0043). The model name it
+  implies, `deepseek-chat`, is no longer listed by DeepSeek.
+
+Limits on what the results show:
+
+- **Q9 — six runs per condition are a smoke test.** 6 of 6 in C1 does not establish a
+  rate, and C2's "first speaker gives way" pattern is five conversations. Speaking order
+  was counterbalanced within each pairing; agent index and starting side were swapped
+  *together* between the two runs of a pairing, and the separate side swap
+  (`swap_sides`) was not used in any paid run. Only `pre_conflict` timing was run with the
+  real model; `concurrent` mode, blocked sight, and the C3, C4 and full C1 and C2 designs
+  have run on the mock only.
+- **Q10 — C1 is not a like-for-like replication.** Different model (`deepseek-flash`, not
+  gpt-4o-mini), a different turn format that asks for a stance on every turn, no MPC, and
+  a deterministic tie-break. `docs/gamechat-notes.md` lists nineteen differences.
+- **Q11 — the model is not reproducible.** DeepSeek's API has no seed parameter, and a
+  model name can be re-pointed to a new model. These runs were served with
+  `system_fingerprint` `aeb56401ca74e127821c4f9126dcb669`, logged per call.
+- **Q12 — the cost is an estimate**, computed from returned token counts and the prices
+  read on 2026-10-13. The DeepSeek account page is the authority. Re-check the pricing page
+  before the next paid run.
+- **Q13 — the C0 "50%" is by construction**, not a finding (see the C0 entry).
+- **Q14 — the personas and their tasks are placeholders** (ages 25 and 70, one errand),
+  and `persona_v1`'s wording has not been reviewed by anyone but me. Any change to it is a
+  new version by design.
+- **Q15 — not tested:** Python 3.10 and 3.11; any system other than Windows 11.
+- **Q16 — what I did not read:** the published IEEE version of the GameChat paper (only
+  arXiv versions 1 and 2), and the upstream repository GameChat's was forked from.
+- **Q17 — size of the change.** 433 files. 335 of them are run logs, of which 273 are the
+  no-LLM runs, which cost nothing to regenerate; that commit (`705fe0b`) can be dropped
+  if the logs are unwanted in the repository.
+
+## Summary
+
+**What changed.** A new top-level folder, `llm_negotiation/`: a two-agent simulator in
+which the agents negotiate through an LLM and the agreement decides who goes first.
+
+- `negsim/` (about 6,300 lines): unicycle dynamics and a world for any number of agents;
+  doorway, intersection and hallway scenarios; conflict zones, detection and Strategy 1;
+  a controller interface with a path-tracking backend; a DeepSeek client and a
+  deterministic mock behind one interface; a price table, spend ledger and budget guard;
+  personas; two frozen prompt templates; the situation report; the dialogue protocol; a
+  versioned log schema; metrics; experiment designs with counterbalancing; a runner and a
+  command line.
+- `configs/`: three scenarios, four personas, ten experiment designs covering C0 to C4,
+  GameChat's task strings, DeepSeek's prices.
+- `tests/` (about 3,000 lines): 431 tests, all on the mock client.
+- `docs/`: architecture (with 21 design decisions marked as such), GameChat notes,
+  derivations, LLM backend, log schema. Plus `README.md` and `THIRD_PARTY_NOTICES.md`.
+- `runs/`: 54 no-LLM runs and 12 paid smoke runs, with `spend_ledger.jsonl`.
+- Outside the folder: two cached sources under `refs/`, one `.gitignore` entry, and the
+  root `README.md` (roadmap rows 2 and 3, the directory layout, a findings paragraph, and a
+  note that the standing instruction's status is unconfirmed). `pipeline/`, `dataset/`,
+  `integration/`, `literature/` and `CLAUDE.md` are untouched.
+
+**Why.** Issue #24: the FYP needs a platform on which LLM-to-LLM negotiations over a
+spatial conflict can be run, varied by persona and by situational information, and logged
+completely, so that rules can later be extracted from the conversations.
+
+**What it found.**
+
+1. Task-only agents put the higher-priority task first in 6 of 6 doorway runs, as GameChat
+   reports, with a different model and turn format. Six runs.
+2. With personas in the hallway, the first speaker gave way in 5 of 6 runs. Six runs; but
+   it is a concrete reason to counterbalance speaking order, which the platform does.
+3. The paper's speed rule, applied literally to discs, lets them overlap at a right-angle
+   crossing. The conflict point became a computed zone with a proof that it is long enough.
+4. GameChat's dialogue code is on its repository's default branch, not `model-arcs`, and
+   the repository departs from the paper in ways that matter (`docs/gamechat-notes.md`).
+5. DeepSeek's API has changed since Phase 1: new model names, thinking mode on by default
+   (which silently disables temperature), peak and off-peak prices.
+
+**What it did not do.** The MPC-CBF controller. Any experiment beyond smoke runs. Anything
+the issue lists as out of scope.
+
+**How it was verified.** 431 tests on two Python versions with the network blocked; 140
+mock runs across all ten configs and 54 no-LLM runs with no collision; a negative control
+showing each scenario collides without arbitration; every log folder checked against the
+schema by the runner, and the 12 paid ones cross-checked by script and read; a search of
+the tree, the logs and the history of every branch for the API key, which found it only in
+`.env`. The acceptance criteria are checked off one by one in the last progress entry, and
+the open questions above are the ones I could not close.

@@ -114,6 +114,100 @@ Each config says in its header what it balances. The factors that could be mista
 persona effect are separate settings, each recorded in every run: who speaks first, which
 participant is agent 0, and which side agent 0 starts on.
 
+## Results so far (2026-10-13)
+
+These are smoke runs: they show that the platform works end to end. **Six runs per
+condition are not an estimate of any rate**, and the model's replies vary from call to call
+even at fixed settings. Every number below can be recomputed from `runs/*/summary.csv`.
+
+### No LLM (C0), 18 runs per scenario
+
+Mean ± population standard deviation. Paper rows are arXiv:2503.12333v1, Table II, method
+"GameChat (no LLM)".
+
+| Scenario | Collisions | Deadlocks | Higher-priority agent first | Its time to goal (s) | Makespan (s) | Follower's minimum speed (m/s) |
+|---|---|---|---|---|---|---|
+| Doorway | 0 | 0 | 9 of 18 | 10.900 ± 0.900 | 11.800 ± 0.000 | 0.257 ± 0.015 |
+| *Paper, doorway* | 0 | 0 | 50% | 10.733 ± 0.566 | 11.267 ± 0.194 | 0.200 ± 0.088 |
+| Intersection | 0 | 0 | 9 of 18 | 10.600 ± 0.800 | 11.400 ± 0.000 | 0.256 ± 0.016 |
+| *Paper, intersection* | 0 | 0 | 50% | 10.800 ± 0.823 | 11.600 ± 0.000 | 0.249 ± 0.013 |
+| Hallway (not in the paper) | 0 | 0 | 9 of 18 | 9.750 ± 2.850 | 12.600 ± 0.000 | 0.202 ± 0.037 |
+
+The 9 of 18 is built into the design: Strategy 1 does not look at the tasks, and each agent
+index is the higher-priority one equally often. The doorway differs from the paper more
+than the intersection does, for the reason given in `docs/gamechat-notes.md` (D4): this
+simulator breaks a symmetric tie on the first step, where GameChat's takes a while.
+
+### C1 smoke: GameChat replication, doorway, 6 paid runs
+
+`deepseek-flash`, thinking off, temperature 1.0, template `gamechat_task_v1`,
+dialogue before motion.
+
+| Run | Agent 0 is taking someone to | Agent 1 is taking someone to | Speaks first | Turns | Agreed to go first | Higher-priority agent went first |
+|---|---|---|---|---|---|---|
+| 001 | the emergency room | the airport | 0 | 3 | 0 | yes |
+| 002 | catch a flight | the operating room | 0 | 6 | 1 | yes |
+| 003 | buy groceries | the operating room | 1 | 4 | 1 | yes |
+| 004 | the operating room | the store | 1 | 4 | 0 | yes |
+| 005 | go to the airport | the grocery store | 0 | 4 | 0 | yes |
+| 006 | the supermarket | catch a flight | 0 | 4 | 1 | yes |
+
+- **Correct-priority rate: 6 of 6.** The paper reports 100% for its communicating
+  variants (Table II). This run used a different model and a different turn format
+  (`docs/gamechat-notes.md`, section 5), and six runs.
+- Consensus in all six; no malformed reply, no retry, no fallback, no collision. Makespan
+  11.8 s in every run.
+- Time spent waiting for the model: 3.36 s per dialogue on average (SD 0.73 s), 0.81 s per
+  call. The paper measured 2.767 s (SD 0.441 s) per dialogue.
+
+Things seen in the transcripts that someone analysing them should know about. They are
+my reading of six conversations, not measurements:
+
+- **An agent can concede, or claim the way, without saying so.** In runs 001, 003 and
+  004, one of the two stances that made up the consensus came with a message that only
+  named the agent's own task ("I am taking someone to the store."). The agreement is
+  between the stances, as issue #24 defines it; the spoken exchange does not always
+  contain it.
+- **Details drift.** In run 003 one agent asked "Where are you taking your patient?" and
+  the grocery agent answered "I am taking my patient to buy groceries." The priority came
+  out right all the same.
+
+### C2 smoke: task plus persona, hallway, 6 paid runs
+
+Same model and settings, template `persona_v1`, every situation-report field on. **No
+ground truth: nothing here is correct or incorrect.**
+
+| Run | Agent 0 (west end) | Agent 1 (east end) | Speaks first | First speaker's stance | Went first |
+|---|---|---|---|---|---|
+| 001 | woman, 70, to the supermarket | man, 25, to the airport | 0 | gives way | 1 (man, 25) |
+| 002 | man, 25, to the airport | woman, 70, to the supermarket | 0 | gives way | 1 (woman, 70) |
+| 003 | woman, 25, to the supermarket | man, 70, to the emergency room | 1 | claims the way | 1 (man, 70) |
+| 004 | man, 70, to the emergency room | woman, 25, to the supermarket | 1 | gives way | 0 (man, 70) |
+| 005 | woman, 25, to the airport | man, 70, to the airport | 0 | gives way | 1 (man, 70) |
+| 006 | man, 70, to the airport | woman, 25, to the airport | 0 | gives way | 1 (woman, 25) |
+
+- Consensus in all six, each in two turns; no malformed reply, no fallback, no collision.
+  Makespan 12.6 s in every run; 1.67 s per dialogue waiting for the model.
+- **In five of the six runs the first speaker opened by giving way and the other
+  accepted.** The exception is the 70-year-old man on his way to the emergency room, who
+  asked to go first. Who went first therefore tracked who spoke *second* far more closely
+  than it tracked age, gender or task. With six runs this is an observation, not a result,
+  but it is the confound the design factors exist for: an experiment on personas has to
+  counterbalance speaking order, as `c2_task_plus_persona.yaml` and the C3 and C4 configs
+  do.
+- The personas show in the wording: "You go ahead, dear, I'll wait.", "Thank you,
+  ma'am.", "young man", "young lady".
+
+### Spend
+
+37 paid calls, all between 08:15 and 08:17 UTC on 2026-10-13 and so at the peak rate.
+**Estimated cost USD 0.0043** (C1 USD 0.00246, C2 USD 0.00182), from the token counts the
+API returned and the prices in `configs/llm/deepseek_pricing.yaml`. That is under 1% of
+this issue's USD 0.50 cap. The provider's own bill is the authoritative figure.
+
+`spend_ledger.jsonl` records every call. Phase 1's spend is tracked separately, in
+`pipeline/config.py`, which this work did not touch.
+
 ## Changing things
 
 | To | Edit |
