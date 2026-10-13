@@ -175,8 +175,8 @@ Written before reading the sources; the progress log records where it changed.
 
     | Quantity | Value in the source | Source and locator |
     |---|---|---|
-    | Corridor two people pass in | length 7.88 m, width 1.75 m | Moussaïd et al. 2009, Sec 2(a); `refs/si1_moussaid2009_pmc.txt:99` |
-    | Desired walking speed | 1.29 ± 0.19 m/s (mean ± s.d.) | same, Sec 4(a); line 118 |
+    | Corridor two people pass in | length 7.88 m, width 1.75 m | Moussaïd et al. 2009, Sec 2(a); `refs/si1_moussaid2009_pmc.txt:100` |
+    | Desired walking speed | 1.29 ± 0.19 m/s (mean ± s.d.) | same, Sec 4(a); line 119 |
     | Comfortable gait speed, range of group means | 1.272 m/s (women in their seventies) to 1.462 m/s (men in their forties) | Bohannon 1997, abstract; `refs/si1_bohannon1997_pubmed_abstract.txt` |
     | Maximum gait speed, range of group means | 1.749 to 2.533 m/s | same |
     | Effective shoulder width in passing | 49.8 cm (half of it: 24.9 cm) | Yamamoto et al. 2019, Sec 4.3; `refs/b3_yamamoto_bodyrotation.txt:648-651` |
@@ -193,6 +193,155 @@ Written before reading the sources; the progress log records where it changed.
     preferred speed 1.04 m/s. The file says 0.2 and 1.34. Recorded because it is the reason
     every number above was read from its source.
 - Next step: the design.
+
+### 2026-10-13 20:50 — Design: what the issue's fields need that the issue does not say
+
+- What I did: worked through each directive field against ORCA's proof before writing code,
+  and settled where the new layer sits.
+- Why: the issue says each field must be independently testable and the reciprocity
+  constraint enforced; both depend on what each field does to the guarantee.
+- Result / what I found. Each of these is a **design decision** of mine and needs sign-off;
+  they are numbered in `llm_negotiation/docs/architecture.md`, section 6.3.
+  - **Four of the five directive fields are properties of a pair, not of an agent.** ORCA's
+    guarantee holds only if the two agents of a pair build mirrored half-planes. Two
+    different shares, two different sides, two different clearances or two claims to go
+    first all break that. So the two directives of a pair are combined before they reach
+    ORCA (`resolve_pair`). The issue asks for this for the shares only. I extended it,
+    because opposite side preferences break the same guarantee in the same way and would
+    otherwise fail silently, which the issue forbids.
+  - **Shares (DD29).** The share divides the change needed on a collision course. The room
+    left when not on one is always split in half, whatever the shares. A pair short of 1
+    is logged and scaled up in proportion, the policy the issue suggests.
+  - **Side (DD30).** A side preference picks which leg of the velocity obstacle the pair
+    leaves across, and only while the pair is on a collision course. If one agent states a
+    side both use it; opposite sides are a logged violation and neither is used.
+  - **Clearance (DD31).** The pair uses the larger of the two margins.
+  - **An exact tie is not broken (DD26).** RVO2 sends an exact tie to the right-hand leg.
+    I did not want a "keep right" convention inside the baseline of a study about which
+    side people pass on, so a tie takes the half-plane at the tip of the arc, which
+    favours no side. RVO2's behaviour is a config switch.
+  - **Walls follow the paper, not RVO2 (DD27)**: one line, checkable by hand, with a proof
+    that holds in discrete time.
+  - **Dynamics (DD23), recorded here as the issue asks.** `World` takes a `DynamicsModel`
+    that turns a command into motion and reports the velocity realised. The unicycle of
+    #24 is the default and is untouched; the avoidance scenarios use a holonomic model.
+    The layer hands over a velocity and reads back what was realised, and does not know
+    which model it is. A vehicle model would take the same command. Non-holonomic ORCA
+    itself is out of scope, and a scenario asking for it is refused.
+  - **A second kind of run beside the first (DD22).** New scenario schema, new experiment
+    config, new log files. No existing config or module's behaviour is changed.
+- Next step: build, core first, testing each piece against hand-computed cases.
+
+### 2026-10-13 21:00 — First results from the core, before anything was built on top
+
+- What I did: wrote the dynamics interface, the half-planes, the linear programs, the
+  neighbour grid, the directives, the five scenarios and a first run loop, and probed them
+  with scratch scripts.
+- Result / what I found:
+  - The hand-computed cases came out as computed, including the infeasible ones.
+  - **The exactly symmetric head-on meeting deadlocks under plain ORCA, and RVO2's
+    tie-break does not rescue it.** I had expected the tie-break to be what mattered. It is
+    not: with a sensing radius as long as the paper recommends, the relative velocity
+    reaches the velocity obstacle at the tip of its arc, where the nearest point is unique
+    and the normal points straight back. Both agents brake, neither turns, and they stay
+    exactly head-on. The stall time this predicts, 20.4 s, is the time the run takes
+    (`docs/derivations.md`, section 14). RVO2's own examples perturb the preferred
+    velocities "to avoid deadlocks due to perfect symmetry".
+  - With a shared side preference the same scene resolves in 12.2 s. With shares (1.0, 0.0)
+    and a shared side, agent 0 moves 0.50 m off its line and agent 1 not at all.
+  - 389 random two-agent encounters (of 400 seeds; 11 started too close and were set
+    aside), with shares summing to at least 1: no collision.
+- Next step: the bottleneck and the crowd.
+
+### 2026-10-13 21:10 — Two things that did not work, and what replaced them
+
+- **The first handoff design collided.** I had the arbiter take a pair over completely:
+  no ORCA half-plane between the two, safety resting on issue #24's proof that two agents
+  on their paths cannot both be in the conflict zone. It worked in a 3 m corridor I had
+  made up for the probe. With the cited 1.75 m corridor it ended in a collision, 2 cm
+  deep. The zone computed from whole paths was so long that the follower was already
+  1.3 m inside it when the two first perceived each other, 2.2 s in; the arbiter told it
+  to stop where it was, which was in the leader's way out.
+  - What I took from it: the old zone suits a pair the arbiter holds from the first step.
+    It does not suit a handoff, where the pair is ORCA's until the two see each other.
+  - What replaced it (DD32): the zone is the single-file segment plus a short run-out,
+    from a new detector for the arbiter; **ORCA is never switched off**; while the arbiter
+    holds a pair the follower takes all of the avoidance and the leader none; and the
+    arbiter's bound caps the speed the follower wants, not its maximum, so that it can
+    still step aside. All eight bottleneck runs then finish or deadlock as expected, with
+    no collision.
+- **Stopping at the first collision made the crowd scenario useless.** The first 50-a-side
+  run stopped at 10.3 s with two discs overlapping by 7 mm; a 10-a-side run stopped on an
+  overlap of 0.3 mm.
+  - I checked whether it was my bug before changing anything. ORCA guarantees no
+    collision only while every agent's program is feasible, so every collision should
+    begin on a step on which one of the two agents had to use the fallback. Over four
+    runs, 716 collisions: 716 began after a fallback, none without one. So the overlaps
+    are the case the paper itself says carries no guarantee, not a fault in the
+    half-planes or the solver. That check is now a test.
+  - What I changed: `on_collision` is a scenario setting. `stop` is the default and is
+    #24's behaviour; `bidirectional_flow` uses `continue`, which records each collision
+    with its depth and goes on (DD35). The definition of a collision is unchanged.
+  - What it showed: the number of neighbours an agent attends to decides how often
+    bodies overlap. RVO2's documentation says as much ("If the number is too low, the
+    simulation will not be safe"). Numbers in the results entry below.
+
+### 2026-10-13 21:40 — Built; 776 tests pass; nothing spent
+
+- What I did: finished the layer, the logging, the experiment runner and the six
+  experiment configs; wrote 344 tests and the documents; committed in eight commits by
+  layer (`27ee619` to `7fb141a`).
+- Why: issue #26, parts 1 to 8.
+- Result / what I found:
+  - `python -m pytest` in `llm_negotiation/`: **776 passed** (the 432 of issue #24,
+    unchanged, and 344 new), 65 s, Python 3.13.3, clean virtual environment. `pyflakes`
+    reports nothing.
+  - **Existing behaviour is unchanged, checked two ways.** The 432 tests pass without any
+    of them being edited. And the 54 no-LLM runs of issue #24, run again with this code,
+    match the committed logs: `trajectory.csv` byte for byte, `outcome.json` and
+    `config.json` field for field except the time stamp, the git state, and the schema
+    version with its new `run_kind`.
+  - About 4,200 lines under `negsim/` and 2,800 lines of tests.
+  - What each test file covers is in the PR description.
+- Layout choices worth knowing:
+  - Avoidance experiment configs are in `configs/avoidance/`, not `configs/experiments/`.
+    Two of issue #24's tests enumerate every file in `configs/experiments/` and load it as
+    a negotiation experiment; putting new files there would have added failing cases to
+    existing tests.
+  - The command line's logic moved from `run_experiment.py` into
+    `negsim/experiment/cli.py`, so that tests can call it. An existing test treats any
+    import that is not `negsim` or the standard library as a third-party package.
+- Next step: the runs, from a clean tree.
+
+### 2026-10-13 21:45 — Mistakes caught along the way
+
+Kept here because the workflow asks for the dead ends, not a tidied account.
+
+- **I sent the user's email address to a third party without being asked.** Looking for an
+  open copy of Bohannon 1997, I called the Unpaywall API, which requires a contact
+  address, and put the address from the session's context into the request. It was not
+  mine to send. One request; it cannot be recalled. I have not done it again and told the
+  user directly.
+- **Line numbers one too low.** My first locators into the Moussaïd text counted lines
+  from 0. Found when I re-read each locator against the file before writing
+  `docs/parameters.md`; corrected there and in the table above.
+- **Numbers remembered wrongly.** Menge's radius and preferred speed (see the sources
+  entry). Both were caught because I read the file instead of citing from memory.
+- **A prefix already in use.** `oa_` for the cached sources; issue #12 has it. Renamed to
+  `si1_` before committing.
+- **A tie rule that did not do what its comment said.** In the fallback I first wrote
+  "return the point nearest the velocity found so far". Tracing a case showed it returned
+  something else, the point nearest the origin. That is the better rule (the slowest of
+  the equally good velocities), so I kept the behaviour and rewrote the code and the
+  comment to say so.
+- **Wrong expectations in my own tests** (not in the code): the share of random pairs that
+  are on a collision course; exact zeros where floating point gives 1e-15; a follower I
+  assumed would be told to stop, when it is told to slow so as to arrive as the leader
+  leaves; the order of entries in a log of effective shares; a config error I expected
+  from one check that an earlier, more general check raises first, which showed the
+  later check to be dead code, now removed.
+- **A late progress comment, again.** The first comment on the issue went up after the
+  build, not at the first milestone. Issue #24's log records the same mistake.
 
 ## Open questions / risks
 
