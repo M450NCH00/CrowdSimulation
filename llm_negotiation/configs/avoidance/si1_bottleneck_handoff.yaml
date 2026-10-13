@@ -1,0 +1,30 @@
+# Issue #26, behaviour check 3: the handoff between ORCA and the arbiter. Two agents and a
+# stretch of corridor only one of them can use at a time. No model is called.
+#
+#   python run_experiment.py configs/avoidance/si1_bottleneck_handoff.yaml
+schema_version: 1
+layer: avoidance
+experiment_name: si1_bottleneck_handoff
+description: A wide corridor into a single-file segment. Who goes first, and who decides.
+
+scenario: configs/scenarios/corridor_to_bottleneck.yaml
+
+design:
+  seed: 26300
+  factors:
+    flow:
+      - name: opposing           # one agent from each end
+      - name: merging            # both from the west end, side by side
+        scenario_overrides: {geometry: {flow: merging}}
+    order:
+      - name: no_directive       # the arbiter's own rule decides (the lower index wins a tie)
+      - name: agent_1_first      # the directives say agent 1 goes first
+        directives:
+          provider: static
+          agents:
+            0: {passage_order: follower}
+            1: {passage_order: leader}
+      - name: both_claim         # both directives say "me first": a reciprocity violation
+        directives: {provider: static, default: {passage_order: leader}}
+      - name: arbiter_off        # negative control: ORCA alone
+        arbitration: {enabled: false}
