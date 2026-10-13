@@ -1,0 +1,224 @@
+{
+  "log_schema_version": 1,
+  "experiment_name": "c0_no_llm_intersection",
+  "run_id": "001_hospital-vs-airport_symmetric",
+  "run_index": 1,
+  "condition": "C0",
+  "seed": 24101,
+  "repeat": 1,
+  "created_utc": "2026-10-13T08:13:20+00:00",
+  "git": {
+    "commit": "50123f6d2e2387a3a89d328858510088af4b59fb",
+    "dirty": false
+  },
+  "software": {
+    "negsim_version": "0.1.0",
+    "python": "3.13.3"
+  },
+  "scenario_file": "configs/scenarios/intersection.yaml",
+  "scenario_variant": "symmetric",
+  "scenario": {
+    "type": "intersection",
+    "description": "Two corridors cross at right angles. One agent comes up from the south, the other in from the west, and both must cross the same small square.",
+    "dt_s": 0.2,
+    "max_time_s": 15.0,
+    "goal_tolerance_m": 0.1,
+    "geometry": {
+      "size": 0.4,
+      "wall_extent": 3.0,
+      "start_distance": 2.0,
+      "goal_distance": 1.0
+    },
+    "swap_sides": false,
+    "start_offsets_m": [
+      0.0,
+      0.0
+    ],
+    "region": {
+      "kind": "intersection",
+      "width_m": 0.4,
+      "length_m": 0.4
+    },
+    "conflict": {
+      "predictor": "heading_ray",
+      "safety_margin_m": 0.05,
+      "zone_half_length_m": "auto"
+    },
+    "observation": {
+      "max_range_m": null,
+      "walls_block_sight": false
+    },
+    "deadlock": {
+      "window_s": 3.0,
+      "speed_eps_mps": 0.01
+    },
+    "controller": {
+      "backend": "path_tracking",
+      "lookahead": 0.3
+    },
+    "agents": [
+      {
+        "agent_id": 0,
+        "side": "south",
+        "radius_m": 0.1,
+        "max_speed_mps": 0.3,
+        "max_turn_rate_radps": 1.0,
+        "initial_speed_mps": 0.3,
+        "start": {
+          "x": -0.0,
+          "y": -2.0,
+          "theta_rad": 1.5707963267948966
+        },
+        "goal": {
+          "x": 0.0,
+          "y": 1.0
+        },
+        "path": [
+          [
+            -0.0,
+            -2.0
+          ],
+          [
+            0.0,
+            1.0
+          ]
+        ],
+        "path_length_m": 3.0,
+        "region_entry_s_m": 1.8,
+        "region_exit_s_m": 2.2
+      },
+      {
+        "agent_id": 1,
+        "side": "west",
+        "radius_m": 0.1,
+        "max_speed_mps": 0.3,
+        "max_turn_rate_radps": 1.0,
+        "initial_speed_mps": 0.3,
+        "start": {
+          "x": -2.0,
+          "y": -0.0,
+          "theta_rad": 0.0
+        },
+        "goal": {
+          "x": 1.0,
+          "y": 0.0
+        },
+        "path": [
+          [
+            -2.0,
+            -0.0
+          ],
+          [
+            1.0,
+            0.0
+          ]
+        ],
+        "path_length_m": 3.0,
+        "region_entry_s_m": 1.8,
+        "region_exit_s_m": 2.2
+      }
+    ],
+    "obstacles": [
+      {
+        "xmin": -3.0,
+        "ymin": -3.0,
+        "xmax": -0.2,
+        "ymax": -0.2
+      },
+      {
+        "xmin": -3.0,
+        "ymin": 0.2,
+        "xmax": -0.2,
+        "ymax": 3.0
+      },
+      {
+        "xmin": 0.2,
+        "ymin": -3.0,
+        "xmax": 3.0,
+        "ymax": -0.2
+      },
+      {
+        "xmin": 0.2,
+        "ymin": 0.2,
+        "xmax": 3.0,
+        "ymax": 3.0
+      }
+    ]
+  },
+  "participants": [
+    {
+      "agent_id": 0,
+      "task": "get surgery",
+      "task_type": "hospital",
+      "persona": null,
+      "side": "south"
+    },
+    {
+      "agent_id": 1,
+      "task": "board a plane",
+      "task_type": "airport",
+      "persona": null,
+      "side": "west"
+    }
+  ],
+  "assignment": {
+    "agent_0": {
+      "persona": null,
+      "overrides": {},
+      "task_type": "hospital"
+    },
+    "agent_1": {
+      "persona": null,
+      "overrides": {},
+      "task_type": "airport"
+    },
+    "swap_sides": false,
+    "first_speaker": null
+  },
+  "negotiation": {
+    "enabled": false,
+    "prompt_template": null,
+    "max_messages_per_agent": 4,
+    "first_speaker": null,
+    "timing": {
+      "mode": "pre_conflict",
+      "seconds_per_message": 1.0
+    },
+    "info_variant": "default",
+    "info_fields": [],
+    "visibility": {
+      "age": true,
+      "gender": true,
+      "backstory": false,
+      "task": false,
+      "speed": true,
+      "size": true
+    },
+    "rendered_system_prompts": null
+  },
+  "llm": {
+    "client": null,
+    "model": null,
+    "temperature": null,
+    "max_tokens": null,
+    "thinking": null,
+    "json_mode": null,
+    "seed_parameter": null
+  },
+  "arbitration": {
+    "policy": "strategy1",
+    "tie_break": "lower_index"
+  },
+  "scoring": {
+    "ground_truth": "task_priority",
+    "priority_order": [
+      "hospital",
+      "airport",
+      "grocery"
+    ]
+  },
+  "budget": {
+    "cap_usd": 0.5,
+    "ledger": "spend_ledger.jsonl"
+  }
+}
