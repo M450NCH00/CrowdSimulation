@@ -332,6 +332,15 @@ Kept here because the workflow asks for the dead ends, not a tidied account.
   | API key absent from code, logs and history | done | above |
   | Phase 1 folders untouched and not imported | done | above |
 
+### 2026-10-13 16:35 — Pushed; PR #25 opened
+
+- What I did: pushed `feat/24-llm-negotiation-simulator` and opened
+  https://github.com/M450NCH00/CrowdSimulation/pull/25 against
+  `docs/22-simulation-conflict-rules-literature`; posted the link on the issue.
+- Result: the PR description leads with the two things that need the user's answer (Q1 and
+  Q2). Because the base is not the default branch, GitHub will not close issue #24 on merge.
+- Next step: none from me. The issue is left open, as the workflow requires.
+
 ## Open questions / risks
 
 Needing a decision from the user or the supervisor:
