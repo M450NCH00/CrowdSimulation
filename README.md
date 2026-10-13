@@ -57,10 +57,12 @@ how to run it and for the results, and `WORK_LOG-24.md` for what needs sign-off:
   task first in 6 of 6 doorway runs, as the paper reports. In 6 hallway runs with
   personas, the first speaker gave way in 5. Six runs per condition show that the
   platform works and are not an estimate of anything.
-- **Two things issue #24 assumed turned out otherwise.** GameChat's dialogue code is on
-  its repository's default branch, not `model-arcs`; and the paper's speed formula,
-  applied literally to disc-shaped agents, lets them overlap at a right-angle crossing,
-  so the conflict "point" had to become a zone (`llm_negotiation/docs/derivations.md`).
+- **Three things the build turned up.** GameChat's dialogue code is on its repository's
+  default branch, not on `model-arcs` as issue #24 says. The formula issue #24 calls
+  garbled is intact in the paper; only the PDF text extract breaks it. And the paper's
+  speed formula, applied literally to disc-shaped agents, lets them overlap at a
+  right-angle crossing, so the conflict "point" had to become a zone
+  (`llm_negotiation/docs/derivations.md`).
 
 Three findings from the simulation-rules review (issue #22), all drafts needing supervisor
 sign-off — see `literature/simulation-rules/`. The review is seed-led (27 sources, 5 papers
