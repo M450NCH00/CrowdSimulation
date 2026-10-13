@@ -1,0 +1,2258 @@
+DeepSeek API documentation, text extracts.
+Retrieved: 2026-10-13 for issue #24 (llm_negotiation/docs/llm-backend.md cites these).
+Each section is one page of https://api-docs.deepseek.com with navigation removed.
+The change log is cut off before its 2025-09-29 entry.
+
+====================================================================================================
+PAGE: https://api-docs.deepseek.com/
+====================================================================================================
+Your First API Call | DeepSeek API Docs
+
+# Your First API Call
+
+The DeepSeek API uses an API format compatible with OpenAI/Anthropic. By modifying the configuration, you can use the OpenAI/Anthropic SDK or softwares compatible with the OpenAI/Anthropic API to access the DeepSeek API.
+
+| PARAM | VALUE
+
+| base_url (OpenAI) | https://api.deepseek.com
+
+| base_url (Anthropic) | https://api.deepseek.com/anthropic
+
+| api_key | apply for an API key
+
+| model | deepseek-flash(1)
+deepseek-v4-pro
+
+(1) Use deepseek-flash as the model name. The legacy names deepseek-v4-flash and deepseek-v4-flash-vision-exp are still accepted, but the corresponding models have been retired, their requests are served by the DeepSeek-V4.1-Flash model and billed at the Flash price.
+
+## Integrate with Agent Tools​
+
+DeepSeek Harness is now in developer preview for agent harness developers worldwide. See the DeepSeek Harness Guide for details.
+
+The DeepSeek API is supported by many popular AI agent and coding assistant tools. If you use tools like Claude Code, GitHub Copilot, or OpenCode, you can use DeepSeek as the backend model directly — no code required.
+
+See the Agent Integrations Guide for details.
+
+## Invoke The Chat API​
+
+Once you have obtained an API key, you can access the DeepSeek model using the following example scripts in the OpenAI API format. This is a non-stream example, you can set the stream parameter to true to get stream response.
+
+For examples using the Anthropic API format, please refer to Anthropic API.
+
+curl
+
+python
+
+nodejs
+
+curl https://api.deepseek.com/chat/completions \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer ${DEEPSEEK_API_KEY}" \
+-d '{
+"model": "deepseek-flash",
+"messages": [
+{"role": "system", "content": "You are a helpful assistant."},
+{"role": "user", "content": "Hello!"}
+],
+"thinking": {"type": "enabled"},
+"reasoning_effort": "high",
+"stream": false
+}'
+
+# Please install OpenAI SDK first: `pip3 install openai`
+import os
+from openai import OpenAI
+
+client = OpenAI(
+api_key=os.environ.get('DEEPSEEK_API_KEY'),
+base_url="https://api.deepseek.com")
+
+response = client.chat.completions.create(
+model="deepseek-flash",
+messages=[
+{"role": "system", "content": "You are a helpful assistant"},
+{"role": "user", "content": "Hello"},
+],
+stream=False,
+reasoning_effort="high",
+extra_body={"thinking": {"type": "enabled"}}
+)
+
+print(response.choices[0].message.content)
+
+// Please install OpenAI SDK first: `npm install openai`
+
+import OpenAI from "openai";
+
+const openai = new OpenAI({
+baseURL: 'https://api.deepseek.com',
+apiKey: process.env.DEEPSEEK_API_KEY,
+});
+
+async function main() {
+const completion = await openai.chat.completions.create({
+messages: [{ role: "system", content: "You are a helpful assistant." }],
+model: "deepseek-flash",
+thinking: {"type": "enabled"},
+reasoning_effort: "high",
+stream: false,
+});
+
+console.log(completion.choices[0].message.content);
+}
+
+main();
+
+Integrate with Agent Tools
+
+Invoke The Chat API
+
+====================================================================================================
+PAGE: https://api-docs.deepseek.com/quick_start/pricing
+====================================================================================================
+Models & Pricing | DeepSeek API Docs
+
+# Models & Pricing
+
+The prices listed below are in units of per 1M tokens. A token, the smallest unit of text that the model recognizes, can be a word, a number, or even a punctuation mark. We will bill based on the total number of input and output tokens by the model.
+
+## Model Details​
+
+| MODEL | deepseek-flash(1) | deepseek-v4-pro
+
+| BASE URL (OpenAI Format) | https://api.deepseek.com
+
+| BASE URL (Anthropic Format) | https://api.deepseek.com/anthropic
+
+| MODEL VERSION | DeepSeek-V4.1-Flash | DeepSeek-V4-Pro-0813
+
+| THINKING MODE | Supports both non-thinking and thinking (default) modes
+See Thinking Mode for how to switch
+
+| CONTEXT LENGTH | 1M
+
+| MAX OUTPUT | MAXIMUM: 384K
+
+| FEATURES | Json Output | ✓ | ✓
+
+| Tool Calls | ✓ | ✓
+
+| Responses API | ✓ | ✓
+
+| Anthropic API | ✓ | ✓
+
+| Chat Prefix Completion（Beta） | ✓ | ✓
+
+| FIM Completion（Beta） | Non-thinking mode only | Non-thinking mode only
+
+| Vision | ✓ | Not supported
+
+| PRICING(2) | 1M INPUT TOKENS
+(CACHE HIT) | OFF-PEAK | $0.003 | $0.022
+
+| PEAK | $0.006 | $0.044
+
+| 1M INPUT TOKENS
+(CACHE MISS) | OFF-PEAK | $0.15 | $0.66
+
+| PEAK | $0.3 | $1.32
+
+| 1M OUTPUT TOKENS | OFF-PEAK | $0.6 | $1.98
+
+| PEAK | $1.2 | $3.96
+
+| Concurrency Limit(3) | 2500 | 500
+
+(1) Use deepseek-flash as the model name. The legacy names deepseek-v4-flash and deepseek-v4-flash-vision-exp are still accepted, but the corresponding models have been retired, their requests are served by the DeepSeek-V4.1-Flash model and billed at the Flash price.
+
+(2) Off-peak rates are half of the peak rates. Peak hours are 01:00 - 04:00 and 06:00 - 10:00 UTC, Monday through Friday, excluding Chinese public holidays. All other hours are off-peak, including weekends and Chinese public holidays in full.
+
+(3) For more details on concurrency limits, please refer to Rate Limit & Isolation.
+
+## Deduction Rules​
+
+The expense = number of tokens × price.
+The corresponding fees will be directly deducted from your topped-up balance or granted balance, with a preference for using the granted balance first when both balances are available.
+
+Product prices may vary and DeepSeek reserves the right to adjust them. We recommend topping up based on your actual usage and regularly checking this page for the most recent pricing information.
+
+Model Details
+
+Deduction Rules
+
+====================================================================================================
+PAGE: https://api-docs.deepseek.com/quick_start/parameter_settings
+====================================================================================================
+The Temperature Parameter | DeepSeek API Docs
+
+# The Temperature Parameter
+
+The default value of temperature is 1.0.
+
+We recommend users to set the temperature according to their use case listed in below.
+
+| USE CASE | TEMPERATURE
+
+| Coding / Math    | 0.0
+
+| Data Cleaning / Data Analysis | 1.0
+
+| General Conversation | 1.3
+
+| Translation | 1.3
+
+| Creative Writing / Poetry | 1.5
+
+====================================================================================================
+PAGE: https://api-docs.deepseek.com/quick_start/token_usage
+====================================================================================================
+Token & Token Usage | DeepSeek API Docs
+
+# Token & Token Usage
+
+Tokens are the basic units used by models to represent natural language text, and also the units we use for billing. They can be intuitively understood as 'characters' or 'words'. Typically, a Chinese word, an English word, a number, or a symbol is counted as a token.
+
+Generally, the conversion ratio between tokens in the model and the number of characters is approximately as following:
+
+1 English character ≈ 0.3 token.
+
+1 Chinese character ≈ 0.6 token.
+
+However, due to the different tokenization methods used by different models, the conversion ratios can vary. The actual number of tokens processed each time is based on the model's return, which you can view from the usage results.
+
+## Calculate token usage offline​
+
+You can run the demo tokenizer code in the following zip package to calculate the token usage for your intput/output.
+
+deepseek_tokenizer.zip
+
+## Calculate image token usage​
+
+You can estimate the number of tokens consumed by an image based on its dimensions. Images are automatically resized before inference, and there is an upper bound on the number of tokens per image; for details, see Vision.
+
+This is an estimate only; the actual number of tokens produced during processing may vary slightly, so refer to the usage returned by the API as the source of truth.
+
+#### Image Token Calculator
+
+Width (px)
+
+Height (px)
+
+Calculate token usage offline
+
+Calculate image token usage
+
+====================================================================================================
+PAGE: https://api-docs.deepseek.com/quick_start/error_codes
+====================================================================================================
+Error Codes | DeepSeek API Docs
+
+# Error Codes
+
+When calling DeepSeek API, you may encounter errors. Here list the causes and solutions.
+
+| CODE | DESCRIPTION
+
+| 400 - Invalid Format | Cause: Invalid request body format.
+Solution: Please modify your request body according to the hints in the error message. For more API format details, please refer to DeepSeek API Docs.
+
+| 401 - Authentication Fails | Cause: Authentication fails due to the wrong API key.
+Solution: Please check your API key. If you don't have one, please create an API key first.
+
+| 402 - Insufficient Balance | Cause: You have run out of balance.
+Solution: Please check your account's balance, and go to the Top up page to add funds.
+
+| 422 - Invalid Parameters | Cause: Your request contains invalid parameters.
+Solution: Please modify your request parameters according to the hints in the error message. For more API format details, please refer to DeepSeek API Docs.
+
+| 429 - Rate Limit Reached | Cause: You are sending requests too quickly.
+Solution: Please pace your requests reasonably. We also advise users to temporarily switch to the APIs of alternative LLM service providers, like OpenAI.
+
+| 500 - Server Error | Cause: Our server encounters an issue.
+Solution: Please retry your request after a brief wait and contact us if the issue persists.
+
+| 503 - Server Overloaded | Cause: The server is overloaded due to high traffic.
+Solution: Please retry your request after a brief wait.
+
+====================================================================================================
+PAGE: https://api-docs.deepseek.com/quick_start/rate_limit
+====================================================================================================
+Rate Limit & Isolation | DeepSeek API Docs
+
+# Rate Limit & Isolation
+
+## Concurrency Limit​
+
+For each account, the concurrency limits for different DeepSeek API models are shown in the table below.
+
+If you need higher concurrency, you can submit a capacity expansion request. We will match the appropriate concurrency based on your actual business needs. There is no additional cost for capacity expansion.
+
+| | deepseek-flash | deepseek-v4-pro
+
+| Concurrency Limit | 2500 | 500
+
+A request counts as one concurrent connection from the time it is sent until the model response is complete
+
+Concurrency limits are calculated at the account level, regardless of which API Key is used
+
+For a given account, API requests within the concurrency limit will receive a response; when the concurrency limit is exceeded, you will receive an HTTP 429 error code
+
+## user_id Isolation​
+
+You can pass the user_id parameter to the API to achieve fine-grained management of different users on your business side under the same account. The specific functions of user_id are as follows:
+
+Content Safety Isolation: user_id is used to distinguish user identities on your business side for content safety handling
+
+KVCache Isolation: user_id is used to isolate KVCache for users on your business side for privacy management
+
+Scheduling Isolation: user_id is used for scheduling isolation of users on your business side
+
+For regular API users, all user_id values are combined for concurrency limit calculation
+
+For API users with increased concurrency quotas, we will limit the total concurrency under your account, and we will also impose concurrency limits on each user_id you pass (an empty id is treated as a special user_id). For each user_id, the concurrency limit for deepseek-flash is 2500, and for deepseek-v4-pro it is 500. If a user_id exceeds its limit, requests with that user_id under your account will receive an HTTP 429 error code
+
+### Setting user_id​
+
+The user_id parameter must be a string matching the regex [a-zA-Z0-9\-_]+, with a maximum length of 512. Do not include user privacy information in user_id.
+
+You can set the user_id parameter in the following ways:
+
+#### OpenAI Chat Completions API​
+
+HTTP request body:
+
+{
+"model": "deepseek-flash",
+"messages": {"role": "user", "content": "Hello!"},
+"user_id": "your_user_id"
+}
+
+If you are using the OpenAI SDK, you need to place the user_id parameter under the extra_body parameter:
+
+response = client.chat.completions.create(
+model="deepseek-flash",
+messages=[{"role": "user", "content": "Hello!"}],
+extra_body={"user_id": "your_user_id"}
+)
+
+#### Anthropic API​
+
+HTTP request body:
+
+{
+"model": "deepseek-flash",
+"messages": {"role": "user", "content": "Hello!"},
+"metadata": {"user_id": "your_user_id"},
+"max_tokens": 1024
+}
+
+If you are using the Anthropic SDK, the calling method is as follows:
+
+message = client.messages.create(
+model="deepseek-flash",
+messages=[{"role": "user", "type": "text", "content": "Hello!"}],
+metadata={"user_id": "your_user_id"},
+max_tokens=1024
+)
+
+## Request Keep-Alive Mechanism​
+
+After your request is sent, it may sometimes take a while to receive a response from the server. During this period, your HTTP request will remain connected, and you may continuously receive contents in the following formats:
+
+Non-streaming requests: Continuously return empty lines
+
+Streaming requests: Continuously return SSE keep-alive comments (: keep-alive)
+
+These contents do not affect the parsing of the JSON body of the response. If you are parsing the HTTP responses yourself, please ensure to handle these empty lines or comments appropriately.
+
+If the request has not started inference after 10 minutes, the server will close the connection.
+
+Concurrency Limit
+
+user_id Isolation
+
+Setting user_id
+
+Request Keep-Alive Mechanism
+
+====================================================================================================
+PAGE: https://api-docs.deepseek.com/guides/json_mode
+====================================================================================================
+JSON Output | DeepSeek API Docs
+
+# JSON Output
+
+In many scenarios, users need the model to output in strict JSON format to achieve structured output, facilitating subsequent parsing.
+
+DeepSeek provides JSON Output to ensure the model outputs valid JSON strings.
+
+## Notice​
+
+To enable JSON Output, users should:
+
+Set the response_format parameter to {'type': 'json_object'}.
+
+Include the word "json" in the system or user prompt, and provide an example of the desired JSON format to guide the model in outputting valid JSON.
+
+Set the max_tokens parameter reasonably to prevent the JSON string from being truncated midway.
+
+When using the JSON Output feature, the API may occasionally return empty content. We are actively working on optimizing this issue. You can try modifying the prompt to mitigate such problems.
+
+## Sample Code​
+
+Here is the complete Python code demonstrating the use of JSON Output:
+
+import json
+from openai import OpenAI
+
+client = OpenAI(
+api_key="<your api key>",
+base_url="https://api.deepseek.com",
+)
+
+system_prompt = """
+The user will provide some exam text. Please parse the "question" and "answer" and output them in JSON format.
+
+EXAMPLE INPUT:
+Which is the highest mountain in the world? Mount Everest.
+
+EXAMPLE JSON OUTPUT:
+{
+"question": "Which is the highest mountain in the world?",
+"answer": "Mount Everest"
+}
+"""
+
+user_prompt = "Which is the longest river in the world? The Nile River."
+
+messages = [{"role": "system", "content": system_prompt},
+{"role": "user", "content": user_prompt}]
+
+response = client.chat.completions.create(
+model="deepseek-flash",
+messages=messages,
+response_format={
+'type': 'json_object'
+}
+)
+
+print(json.loads(response.choices[0].message.content))
+
+The model will output:
+
+{
+"question": "Which is the longest river in the world?",
+"answer": "The Nile River"
+}
+
+Notice
+
+Sample Code
+
+====================================================================================================
+PAGE: https://api-docs.deepseek.com/guides/thinking_mode
+====================================================================================================
+Thinking Mode | DeepSeek API Docs
+
+# Thinking Mode
+
+The DeepSeek model supports the thinking mode: before outputting the final answer, the model will first output a chain-of-thought reasoning to improve the accuracy of the final response.
+
+## Thinking Mode Toggle and Effort Control​
+
+| | Control Parameter (OpenAI Format) | Control Parameter (Anthropic Format) | Control Parameter (Responses API Format)
+
+| Thinking Mode Toggle(1) | {"thinking": {"type": "enabled/disabled"}} | {"reasoning": {"effort": "none/low/high/max"}}
+(none disables thinking mode)
+
+| Thinking Effort Control(2) | {"reasoning_effort": "low/high/max"} | {"output_config": {"effort": "low/high/max"}}
+
+(1) Thinking mode is enabled by default, with the default effort being high
+
+(2) The mapping between the effort set by the user and the model's actual reasoning effort is as follows:
+
+| Requested effort | Actual mapped effort
+
+| minimal | low
+
+| low | low
+
+| medium | high
+
+| high | high
+
+| xhigh | high
+
+| max | max
+
+| ultra | max
+
+When using Chat Completion with the OpenAI SDK to set the thinking parameter, you need to pass the thinking parameter within extra_body:
+
+response = client.chat.completions.create(
+model="deepseek-flash",
+# ...
+reasoning_effort="high",
+extra_body={"thinking": {"type": "enabled"}}
+)
+
+## Input and Output Parameters​
+
+Thinking mode does not support the temperature, presence_penalty, or frequency_penalty parameters. Please note that, for compatibility with existing software, setting these parameters will not trigger an error but will also have no effect.
+
+top_p only takes effect in thinking mode, where the effective range is 0.95–1.0: values below 0.95 are treated as 0.95. In non-thinking mode it is fixed at 1.0 and your value is ignored.
+
+In thinking mode, the chain-of-thought content is returned via the reasoning_content parameter, at the same level as content. In subsequent requests, whether reasoning_content should be passed back and whether it will be concatenated into the context depends on whether the request carries the tools parameter:
+
+If the request carries the tools parameter: the reasoning_content of all previous turns should be passed back to the API and will be concatenated into the context. See Tool Calls for details.
+
+If the request does not carry the tools parameter: reasoning_content does not need to be passed back; even if passed to the API, it will be ignored and will not be concatenated into the context. See Multi-turn Conversation for details.
+
+## Multi-turn Conversation​
+
+In each turn of the conversation, the model outputs the CoT (reasoning_content) and the final answer (content). If the request does not carry the tools parameter, the CoT content from previous turns will not be concatenated into the context in the next turn, as illustrated in the following diagram:
+
+### Sample Code​
+
+The following code, using Python as an example, demonstrates how to access the CoT and the final answer, as well as how to concatenate context in multi-turn conversations.
+
+NoStreaming
+
+Streaming
+
+from openai import OpenAI
+client = OpenAI(api_key="<DeepSeek API Key>", base_url="https://api.deepseek.com")
+
+# Turn 1
+messages = [{"role": "user", "content": "9.11 and 9.8, which is greater?"}]
+response = client.chat.completions.create(
+model="deepseek-flash",
+messages=messages,
+reasoning_effort="high"
+extra_body={"thinking": {"type": "enabled"}},
+)
+
+reasoning_content = response.choices[0].message.reasoning_content
+content = response.choices[0].message.content
+
+# Turn 2
+# The reasoning_content will be ignored by the API
+messages.append(response.choices[0].message)
+messages.append({'role': 'user', 'content': "How many Rs are there in the word 'strawberry'?"})
+response = client.chat.completions.create(
+model="deepseek-flash",
+messages=messages,
+reasoning_effort="high"
+extra_body={"thinking": {"type": "enabled"}},
+)
+# ...
+
+from openai import OpenAI
+client = OpenAI(api_key="<DeepSeek API Key>", base_url="https://api.deepseek.com")
+
+# Turn 1
+messages = [{"role": "user", "content": "9.11 and 9.8, which is greater?"}]
+response = client.chat.completions.create(
+model="deepseek-flash",
+messages=messages,
+stream=True,
+reasoning_effort="high"
+extra_body={"thinking": {"type": "enabled"}},
+)
+
+reasoning_content = ""
+content = ""
+
+for chunk in response:
+if chunk.choices[0].delta.reasoning_content:
+reasoning_content += chunk.choices[0].delta.reasoning_content
+else:
+content += chunk.choices[0].delta.content
+
+# Turn 2
+# The reasoning_content will be ignored by the API
+messages.append({"role": "assistant", "reasoning_content": reasoning_content, "content": content})
+messages.append({'role': 'user', 'content': "How many Rs are there in the word 'strawberry'?"})
+response = client.chat.completions.create(
+model="deepseek-flash",
+messages=messages,
+stream=True,
+reasoning_effort="high"
+extra_body={"thinking": {"type": "enabled"}},
+)
+# ...
+
+## Tool Calls​
+
+The DeepSeek model's thinking mode supports tool calls. Before outputting the final answer, the model can perform multiple turns of reasoning and tool calls to improve the quality of the response. The calling pattern is illustrated below:
+
+Please note that for requests carrying the tools parameter, the reasoning_content must be fully passed back to the API in all subsequent requests — even for turns where the model did not perform a tool call. If your code does not correctly pass back reasoning_content, the API will return a 400 error. Please refer to the sample code below for the correct approach.
+
+### Sample Code​
+
+Below is a simple sample code for tool calls in thinking mode:
+
+import os
+import json
+from openai import OpenAI
+from datetime import datetime
+
+# The definition of the tools
+tools = [
+{
+"type": "function",
+"function": {
+"name": "get_date",
+"description": "Get the current date",
+"parameters": { "type": "object", "properties": {} },
+}
+},
+{
+"type": "function",
+"function": {
+"name": "get_weather",
+"description": "Get weather of a location, the user should supply the location and date.",
+"parameters": {
+"type": "object",
+"properties": {
+"location": { "type": "string", "description": "The city name" },
+"date": { "type": "string", "description": "The date in format YYYY-mm-dd" },
+},
+"required": ["location", "date"]
+},
+}
+},
+]
+
+# The mocked version of the tool calls
+def get_date_mock():
+return datetime.now().strftime("%Y-%m-%d")
+
+def get_weather_mock(location, date):
+return "Cloudy 7~13°C"
+
+TOOL_CALL_MAP = {
+"get_date": get_date_mock,
+"get_weather": get_weather_mock
+}
+
+def run_turn(turn, messages):
+sub_turn = 1
+while True:
+response = client.chat.completions.create(
+model='deepseek-flash',
+messages=messages,
+tools=tools,
+reasoning_effort="high",
+extra_body={ "thinking": { "type": "enabled" } },
+)
+messages.append(response.choices[0].message)
+reasoning_content = response.choices[0].message.reasoning_content
+content = response.choices[0].message.content
+tool_calls = response.choices[0].message.tool_calls
+print(f"Turn {turn}.{sub_turn}\n{reasoning_content=}\n{content=}\n{tool_calls=}")
+# If there is no tool calls, then the model should get a final answer and we need to stop the loop
+if tool_calls is None:
+break
+for tool in tool_calls:
+tool_function = TOOL_CALL_MAP[tool.function.name]
+tool_result = tool_function(**json.loads(tool.function.arguments))
+print(f"tool result for {tool.function.name}: {tool_result}\n")
+messages.append({
+"role": "tool",
+"tool_call_id": tool.id,
+"content": tool_result,
+})
+sub_turn += 1
+print()
+
+client = OpenAI(
+api_key=os.environ.get('DEEPSEEK_API_KEY'),
+base_url=os.environ.get('DEEPSEEK_BASE_URL'),
+)
+
+# The user starts a question
+turn = 1
+messages = [{
+"role": "user",
+"content": "How's the weather in Hangzhou Tomorrow"
+}]
+run_turn(turn, messages)
+
+# The user starts a new question
+turn = 2
+messages.append({
+"role": "user",
+"content": "How's the weather in Guangzhou Tomorrow"
+})
+run_turn(turn, messages)
+
+In each sub-request of Turn 1, the reasoning_content generated during that turn is sent to the API, allowing the model to continue its previous reasoning. response.choices[0].message contains all necessary fields for the assistant message, including content, reasoning_content, and tool_calls. For simplicity, you can directly append the message to the end of the messages list using the following code:
+
+messages.append(response.choices[0].message)
+
+This line of code is equivalent to:
+
+messages.append({
+'role': 'assistant',
+'content': response.choices[0].message.content,
+'reasoning_content': response.choices[0].message.reasoning_content,
+'tool_calls': response.choices[0].message.tool_calls,
+})
+
+Additionally, in the Turn 2 request, we still pass the reasoning_content generated in Turn 1 to the API.
+
+The sample output of this code is as follows:
+
+Turn 1.1
+reasoning_content="The user is asking about the weather in Hangzhou tomorrow. I need to get tomorrow's date first, then call the weather function."
+content="Let me check tomorrow's weather in Hangzhou for you. First, let me get tomorrow's date."
+tool_calls=[ChatCompletionMessageFunctionToolCall(id='call_00_kw66qNnNto11bSfJVIdlV5Oo', function=Function(arguments='{}', name='get_date'), type='function', index=0)]
+tool result for get_date: 2026-04-19
+
+Turn 1.2
+reasoning_content="Today is 2026-04-19, so tomorrow is 2026-04-20. Now I'll call the weather function for Hangzhou."
+content=''
+tool_calls=[ChatCompletionMessageFunctionToolCall(id='call_00_H2SCW6136vWJGq9SQlBuhVt4', function=Function(arguments='{"location": "Hangzhou", "date": "2026-04-20"}', name='get_weather'), type='function', index=0)]
+tool result for get_weather: Cloudy 7~13°C
+
+Turn 1.3
+reasoning_content='The weather result is in. Let me share this with the user.'
+content="Here's the weather forecast for **Hangzhou tomorrow (April 20, 2026)**:\n\n- 🌤 **Condition:** Cloudy \n- 🌡 **Temperature:** 7°C ~ 13°C (45°F ~ 55°F)\n\nIt'll be on the cooler side, so you might want to bring a light jacket if you're heading out! Let me know if you need anything else."
+tool_calls=None
+
+Turn 2.1
+reasoning_content='The user is asking about the weather in Guangzhou tomorrow. Today is 2026-04-19, so tomorrow is 2026-04-20. I can directly call the weather function.'
+content=''
+tool_calls=[ChatCompletionMessageFunctionToolCall(id='call_00_8URkLt5NjmNkVKhDmMcNq9Mo', function=Function(arguments='{"location": "Guangzhou", "date": "2026-04-20"}', name='get_weather'), type='function', index=0)]
+tool result for get_weather: Cloudy 7~13°C
+
+Turn 2.2
+reasoning_content='The weather result for Guangzhou is the same as Hangzhou. Let me share this with the user.'
+content="Here's the weather forecast for **Guangzhou tomorrow (April 20, 2026)**:\n\n- 🌤 **Condition:** Cloudy \n- 🌡 **Temperature:** 7°C ~ 13°C (45°F ~ 55°F)\n\nIt'll be cool and cloudy, so a light jacket would be a good idea if you're going out. Let me know if there's anything else you'd like to know!"
+tool_calls=None
+
+Thinking Mode Toggle and Effort Control
+
+Input and Output Parameters
+
+Multi-turn Conversation
+
+Sample Code
+
+Tool Calls
+
+Sample Code
+
+====================================================================================================
+PAGE: https://api-docs.deepseek.com/guides/kv_cache
+====================================================================================================
+Context Caching | DeepSeek API Docs
+
+# Context Caching
+
+The DeepSeek API Context Caching on Disk Technology is enabled by default for all users, allowing them to benefit without needing to modify their code.
+
+Each user request will trigger the construction of a hard disk cache. If subsequent requests have overlapping prefixes with previous requests, the overlapping part will only be fetched from the cache, which counts as a "cache hit."
+
+## Cache Persistence and Hit Rules​
+
+A cache hit requires that the corresponding prefix has already been "persisted" (written to the disk cache). Due to the Sliding Window Attention mechanism, the storage and matching of cached prefixes differs from before. Each cached prefix is an independent, complete unit. A subsequent request can only hit the cache if it fully matches a cache prefix unit.
+
+### When cache prefixes are persisted:​
+
+Persistence at request boundaries: Each request will produce two cache prefix units at the end position of the user input and the end position of the model output. A subsequent request can hit the cache if it fully matches them.
+
+Common prefix detection persistence: When the system detects a common prefix across multiple requests, it will persist that common prefix as an independent cache prefix unit. A subsequent request can hit the cache if it fully reuses that cache prefix unit.
+
+Persistence at fixed token intervals: For long inputs or long outputs, the system will carve out cache prefix units at fixed token intervals, to avoid long prefixes from being completely uncacheable due to never reaching an end position.
+
+Example 1: A user's first-round request is A + B, and the second-round request is A + B + C. The second request can fully match the cache prefix unit A + B, hitting the cache for A + B. See Example 1 below.
+
+Example 2: A user's first-round request is A + B, and the second-round request is A + C. The second request cannot hit the cache, because A + C does not fully match the first round's cache prefix unit (A + B). However, at this point the system will detect that the two requests share a common prefix A, and persist A as a cache prefix unit. When a third-round request A + D arrives, it can fully match the cache prefix unit A, hitting the cache for A. See Example 2 below.
+
+### Example 1: Multi-round Conversation​
+
+First Request
+
+messages: [
+{"role": "system", "content": "You are a helpful assistant"},
+{"role": "user", "content": "What is the capital of China?"}
+]
+
+Second Request
+
+messages: [
+{"role": "system", "content": "You are a helpful assistant"},
+{"role": "user", "content": "What is the capital of China?"},
+{"role": "assistant", "content": "The capital of China is Beijing."},
+{"role": "user", "content": "What is the capital of the United States?"}
+]
+
+In this example, the second request can fully reuse the cache prefix unit from the first request, which will count as a "cache hit."
+
+### Example 2: Long Text Q&A​
+
+First Request
+
+messages: [
+{"role": "system", "content": "You are an experienced financial report analyst..."}
+{"role": "user", "content": "<financial report content>\n\nPlease summarize the key information of this financial report."}
+]
+
+Second Request
+
+messages: [
+{"role": "system", "content": "You are an experienced financial report analyst..."}
+{"role": "user", "content": "<financial report content>\n\nPlease analyze the profitability of this financial report."}
+]
+
+Third Request
+
+messages: [
+{"role": "system", "content": "You are an experienced financial report analyst..."}
+{"role": "user", "content": "<financial report content>\n\nPlease analyze the ratio of the company's revenue to expenses."}
+]
+
+In the above example, the first two requests will not hit the cache. After the first two requests are completed, the system will identify the system message + <financial report content> in the user message as a cache prefix unit and persist it. In the third request, since it fully matches the previously persisted cache prefix unit, it can hit the cache.
+
+## Checking Cache Hit Status​
+
+In the response from the DeepSeek API, we have added two fields in the usage section to reflect the cache hit status of the request:
+
+prompt_cache_hit_tokens: The number of tokens in the input of this request that resulted in a cache hit.
+
+prompt_cache_miss_tokens: The number of tokens in the input of this request that did not result in a cache hit.
+
+## Hard Disk Cache and Output Randomness​
+
+The hard disk cache only matches the prefix part of the user's input. The output is still generated through computation and inference, and it is influenced by parameters such as temperature, introducing randomness.
+
+## Additional Notes​
+
+The cache system works on a "best-effort" basis and does not guarantee a 100% cache hit rate.
+
+Cache construction takes seconds. Once the cache is no longer in use, it will be automatically cleared, usually within a few hours to a few days.
+
+Cache Persistence and Hit Rules
+
+When cache prefixes are persisted:
+
+Example 1: Multi-round Conversation
+
+Example 2: Long Text Q&A
+
+Checking Cache Hit Status
+
+Hard Disk Cache and Output Randomness
+
+Additional Notes
+
+====================================================================================================
+PAGE: https://api-docs.deepseek.com/api/create-chat-completion
+====================================================================================================
+Chat Completions API | DeepSeek API Docs
+
+# Chat Completions API
+
+POST
+## /chat/completions
+
+Creates a model response for the given chat conversation.
+
+## Request​
+
+application/json
+
+###
+Body
+
+required
+
+messages
+
+object[]
+
+required
+
+Possible values: >= 1
+
+A list of messages comprising the conversation so far.
+
+Array [
+
+oneOf
+
+System message
+
+User message
+
+Assistant message
+
+Tool message
+
+content stringrequired
+
+The contents of the system message.
+
+role stringrequired
+
+Possible values: [system]
+
+The role of the messages author, in this case system.
+
+name string
+
+An optional name for the participant. Provides the model information to differentiate between participants of the same role.
+
+content string | object[]
+required
+
+The contents of the user message. Either a string, or an array of content parts (for image input). See the Vision guide for details.
+
+oneOf
+
+Text content
+
+Array of content parts
+
+string
+
+Array [
+
+oneOf
+
+Text content part
+
+Image content part
+
+File content part
+
+type stringrequired
+
+Possible values: [text]
+
+The type of the content part, in this case text.
+
+text stringrequired
+
+The text content.
+
+type stringrequired
+
+Possible values: [image_url]
+
+The type of the content part, in this case image_url.
+
+image_url
+
+object
+
+required
+
+url stringrequired
+
+Either an http(s) URL of the image (max 8192 characters) or a base64-encoded data URL (data:image/jpeg;base64,...). Supported formats: JPEG, PNG, GIF, and WebP.
+
+detail string
+
+Possible values: [low, high, original, auto]
+
+Controls how the image is processed. low downsamples the image to 512x512 (faster, cheaper). high, original, and auto keep the original image.
+
+type stringrequired
+
+Possible values: [file]
+
+The type of the content part, in this case file.
+
+file_id string
+
+The ID of a file uploaded via the Files API, of the form file-api-.... Mutually exclusive with file_data.
+
+file_data string
+
+A base64-encoded data URL of the image (data:image/jpeg;base64,...). Mutually exclusive with file_id.
+
+filename string
+
+An optional filename. Only valid together with file_data.
+
+]
+
+role stringrequired
+
+Possible values: [user]
+
+The role of the messages author, in this case user.
+
+name string
+
+An optional name for the participant. Provides the model information to differentiate between participants of the same role.
+
+content stringnullablerequired
+
+The contents of the assistant message.
+
+role stringrequired
+
+Possible values: [assistant]
+
+The role of the messages author, in this case assistant.
+
+name string
+
+An optional name for the participant. Provides the model information to differentiate between participants of the same role.
+
+prefix bool
+
+(Beta) Set this to true to force the model to start its answer by the content of the supplied prefix in this assistant message.
+You must set base_url="https://api.deepseek.com/beta" to use this feature.
+
+reasoning_content stringnullable
+
+(Beta) Used for the thinking mode in the Chat Prefix Completion feature as the input for the CoT in the last assistant message. When using this feature, the prefix parameter must be set to true.
+
+role stringrequired
+
+Possible values: [tool]
+
+The role of the messages author, in this case tool.
+
+content string | object[]
+required
+
+The contents of the tool message. Either a string, or an array of content parts (for image input). See the Vision guide for details.
+
+oneOf
+
+Text content
+
+Array of content parts
+
+string
+
+Array [
+
+oneOf
+
+Text content part
+
+Image content part
+
+File content part
+
+type stringrequired
+
+Possible values: [text]
+
+The type of the content part, in this case text.
+
+text stringrequired
+
+The text content.
+
+type stringrequired
+
+Possible values: [image_url]
+
+The type of the content part, in this case image_url.
+
+image_url
+
+object
+
+required
+
+url stringrequired
+
+Either an http(s) URL of the image (max 8192 characters) or a base64-encoded data URL (data:image/jpeg;base64,...). Supported formats: JPEG, PNG, GIF, and WebP.
+
+detail string
+
+Possible values: [low, high, original, auto]
+
+Controls how the image is processed. low downsamples the image to 512x512 (faster, cheaper). high, original, and auto keep the original image.
+
+type stringrequired
+
+Possible values: [file]
+
+The type of the content part, in this case file.
+
+file_id string
+
+The ID of a file uploaded via the Files API, of the form file-api-.... Mutually exclusive with file_data.
+
+file_data string
+
+A base64-encoded data URL of the image (data:image/jpeg;base64,...). Mutually exclusive with file_id.
+
+filename string
+
+An optional filename. Only valid together with file_data.
+
+]
+
+tool_call_id stringrequired
+
+Tool call that this message is responding to.
+
+]
+
+model stringrequired
+
+Possible values: [deepseek-flash, deepseek-v4-pro]
+
+ID of the model to use. Use deepseek-flash or deepseek-v4-pro.
+
+thinking
+
+object
+
+nullable
+
+Controls the switch between thinking and non-thinking mode.
+
+type string
+
+Possible values: [enabled, disabled]
+
+Default value: enabled
+
+If set to enabled, then use thinking mode. If set to disabled, then use non-thinking model.
+
+reasoning_effort string
+
+Possible values: [none, low, high, max]
+
+Controls the thinking mode toggle and the thinking effort. none disables thinking mode; low / high / max enable thinking mode. The default effort is high. For compatibility with existing software, minimal is accepted and mapped to low, and medium / xhigh are accepted and mapped to high.
+
+max_tokens integernullable
+
+The maximum number of tokens that can be generated in the chat completion.
+
+The total length of input tokens and generated tokens is limited by the model's context length.
+
+The value must be between 1 and 384K (393216). When not set, the default is 8K in non-thinking mode, 64K in thinking mode (128K with reasoning_effort set to max). Please refer to the Models & Pricing page for details.
+
+response_format
+
+object
+
+nullable
+
+An object specifying the format that the model must output.
+Setting to { "type": "json_object" } enables JSON Output, which guarantees the message the model generates is valid JSON.
+
+Important: When using JSON Output, you must also instruct the model to produce JSON yourself via a system or user message. Without this, the model may generate an unending stream of whitespace until the generation reaches the token limit, resulting in a long-running and seemingly "stuck" request. Also note that the message content may be partially cut off if finish_reason="length", which indicates the generation exceeded max_tokens or the conversation exceeded the max context length.
+
+type string
+
+Possible values: [text, json_object]
+
+Default value: text
+
+Must be one of text or json_object.
+
+stop string | string[]
+nullable
+
+Up to 16 sequences where the API will stop generating further tokens.
+
+oneOf
+
+Single stop sequence
+
+Stop sequence list
+
+string
+
+Array [
+
+string
+
+]
+
+stream booleannullable
+
+If set, partial message deltas will be sent. Tokens will be sent as data-only server-sent events (SSE) as they become available, with the stream terminated by a data: [DONE] message.
+
+stream_options
+
+object
+
+nullable
+
+Options for streaming response. Must be set together with stream: true; if stream is not set to true, the API returns a 400 error.
+
+include_usage boolean
+
+If set to true, all chunks in the stream will include a usage field, whose value is null on every chunk except the last one. If omitted or set to false, the usage field is absent from all chunks except the last one.
+
+Either way, the last chunk before the data: [DONE] message carries the token usage statistics for the entire request in its usage field. Note that no separate usage-only chunk is emitted: the statistics ride on the last content chunk, whose choices array always contains exactly one element that carries no new content and a non-null finish_reason.
+
+temperature numbernullable
+
+Possible values: <= 2
+
+Default value: 1
+
+What sampling temperature to use, between 0 and 2. Higher values like 0.8 will make the output more random, while lower values like 0.2 will make it more focused and deterministic.
+
+We generally recommend altering this or top_p but not both. Has no effect in thinking mode.
+
+top_p numbernullable
+
+Possible values: <= 1
+
+Default value: 1
+
+An alternative to sampling with temperature, called nucleus sampling, where the model considers the results of the tokens with top_p probability mass. So 0.1 means only the tokens comprising the top 10% probability mass are considered.
+
+The value must be greater than 0 and at most 1. We generally recommend altering this or temperature but not both. It only takes effect in thinking mode, where the effective range is 0.95–1.0: values below 0.95 are treated as 0.95. In non-thinking mode it is fixed at 1.0 and the value you pass is ignored.
+
+tools
+
+object[]
+
+nullable
+
+A list of tools the model may call. Currently, only functions are supported as a tool.
+Use this to provide a list of functions the model may generate JSON inputs for. Tool names must be unique.
+
+Array [
+
+type stringrequired
+
+Possible values: [function]
+
+The type of the tool. Currently, only function is supported.
+
+function
+
+object
+
+required
+
+description string
+
+A description of what the function does, used by the model to choose when and how to call the function.
+
+name stringrequired
+
+The name of the function to be called. Must be a-z, A-Z, 0-9, or contain underscores and dashes, with a maximum length of 128.
+
+parameters
+
+object
+
+The parameters the functions accepts, described as a JSON Schema object. See the Tool Calls Guide for examples, and the JSON Schema reference for documentation about the format.
+
+Omitting parameters defines a function with an empty parameter list.
+
+property name* any
+
+The parameters the functions accepts, described as a JSON Schema object. See the Tool Calls Guide for examples, and the JSON Schema reference for documentation about the format.
+
+Omitting parameters defines a function with an empty parameter list.
+
+strict boolean
+
+Default value: false
+
+If set to true, the API will use strict-mode for the tool calls to ensure the output always complies with the function's JSON schema. This is a Beta feature, for more details please refer to Tool Calls Guide
+
+]
+
+tool_choice string | object
+nullable
+
+Controls which (if any) tool is called by the model.
+
+none means the model will not call any tool and instead generates a message.
+
+auto means the model can pick between generating a message or calling one or more tools.
+
+required means the model must call one or more tools.
+
+Specifying a particular tool via {"type": "function", "function": {"name": "my_function"}} forces the model to call that tool.
+
+none is the default when no tools are present. auto is the default if tools are present.
+
+required and named tool choices are not supported in thinking mode; the API returns a 400 error. Disable thinking mode first to use them.
+
+oneOf
+
+ChatCompletionToolChoice
+
+ChatCompletionNamedToolChoice
+
+string
+
+Possible values: [none, auto, required]
+
+type stringrequired
+
+Possible values: [function]
+
+The type of the tool. Currently, only function is supported.
+
+function
+
+object
+
+required
+
+name stringrequired
+
+The name of the function to call.
+
+logprobs booleannullable
+
+Whether to return log probabilities of the output tokens or not. If true, returns the log probabilities of each output token returned in the content of message.
+
+top_logprobs integernullable
+
+Possible values: <= 20
+
+An integer between 0 and 20 specifying the number of most likely tokens to return at each token position, each with an associated log probability. logprobs must be set to true if this parameter is used.
+
+user_id nullable
+
+A custom user_id. Allowed character set is [a-zA-Z0-9\-_], with a maximum length of 512. Do not include user privacy information in the user_id.
+
+user_id can be used to distinguish user identities on your side to help us with content safety review.
+
+user_id can be used for KVCache isolation for privacy management.
+
+user_id can be used for scheduling isolation of users on your business side.
+
+For more details on the user_id parameter, please refer to Rate Limit & Isolation
+
+frequency_penalty deprecated
+
+This parameter is no longer supported. It will not take effect if you pass it to the API.
+
+presence_penalty deprecated
+
+This parameter is no longer supported. It will not take effect if you pass it to the API.
+
+## Responses​
+
+200 (No streaming)
+
+200 (Streaming)
+
+OK, returns a chat completion object
+
+application/json
+
+Schema
+
+Example (from schema)
+
+Example
+
+Schema
+
+id stringrequired
+
+A unique identifier for the chat completion.
+
+choices
+
+object[]
+
+required
+
+A list of chat completion choices.
+
+Array [
+
+finish_reason stringrequired
+
+Possible values: [stop, length, content_filter, tool_calls, insufficient_system_resource, aborted]
+
+The reason the model stopped generating tokens. This will be stop if the model hit a natural stop point or a provided stop sequence,
+length if the maximum number of tokens specified in the request was reached,
+content_filter if content was omitted due to a flag from our content filters,
+tool_calls if the model called a tool,
+insufficient_system_resource if the request is interrupted due to insufficient resource of the inference system,
+or aborted if the generation was interrupted.
+
+index integerrequired
+
+The index of the choice in the list of choices.
+
+message
+
+object
+
+required
+
+A chat completion message generated by the model.
+
+content stringnullablerequired
+
+The contents of the message.
+
+reasoning_content stringnullable
+
+For thinking mode only. The reasoning contents of the assistant message, before the final answer.
+
+tool_calls
+
+object[]
+
+The tool calls generated by the model.
+
+Array [
+
+id stringrequired
+
+The ID of the tool call.
+
+type stringrequired
+
+Possible values: [function]
+
+The type of the tool. Currently, only function is supported.
+
+function
+
+object
+
+required
+
+The function that the model called.
+
+name stringrequired
+
+The name of the function to call.
+
+arguments stringrequired
+
+The arguments to call the function with, as generated by the model in JSON format. Note that the model does not always generate valid JSON, and may hallucinate parameters not defined by your function schema. Validate the arguments in your code before calling your function.
+
+]
+
+role stringrequired
+
+Possible values: [assistant]
+
+The role of the author of this message.
+
+logprobs
+
+object
+
+nullable
+
+required
+
+Log probability information for the choice.
+
+content
+
+object[]
+
+nullable
+
+required
+
+A list of message content tokens with log probability information.
+
+Array [
+
+token stringrequired
+
+The token.
+
+logprob numberrequired
+
+The log probability of this token, if it is within the top 20 most likely tokens. Otherwise, the value -9999.0 is used to signify that the token is very unlikely.
+
+bytes integer[]nullablerequired
+
+A list of integers representing the UTF-8 bytes representation of the token. Useful in instances where characters are represented by multiple tokens and their byte representations must be combined to generate the correct text representation. Can be null if there is no bytes representation for the token.
+
+top_logprobs
+
+object[]
+
+required
+
+List of the most likely tokens and their log probability, at this token position. In rare cases, there may be fewer than the number of requested top_logprobs returned.
+
+Array [
+
+token stringrequired
+
+The token.
+
+logprob numberrequired
+
+The log probability of this token, if it is within the top 20 most likely tokens. Otherwise, the value -9999.0 is used to signify that the token is very unlikely.
+
+bytes integer[]nullablerequired
+
+A list of integers representing the UTF-8 bytes representation of the token. Useful in instances where characters are represented by multiple tokens and their byte representations must be combined to generate the correct text representation. Can be null if there is no bytes representation for the token.
+
+]
+
+]
+
+reasoning_content
+
+object[]
+
+nullable
+
+A list of message content tokens with log probability information.
+
+Array [
+
+token stringrequired
+
+The token.
+
+logprob numberrequired
+
+The log probability of this token, if it is within the top 20 most likely tokens. Otherwise, the value -9999.0 is used to signify that the token is very unlikely.
+
+bytes integer[]nullablerequired
+
+A list of integers representing the UTF-8 bytes representation of the token. Useful in instances where characters are represented by multiple tokens and their byte representations must be combined to generate the correct text representation. Can be null if there is no bytes representation for the token.
+
+top_logprobs
+
+object[]
+
+required
+
+List of the most likely tokens and their log probability, at this token position. In rare cases, there may be fewer than the number of requested top_logprobs returned.
+
+Array [
+
+token stringrequired
+
+The token.
+
+logprob numberrequired
+
+The log probability of this token, if it is within the top 20 most likely tokens. Otherwise, the value -9999.0 is used to signify that the token is very unlikely.
+
+bytes integer[]nullablerequired
+
+A list of integers representing the UTF-8 bytes representation of the token. Useful in instances where characters are represented by multiple tokens and their byte representations must be combined to generate the correct text representation. Can be null if there is no bytes representation for the token.
+
+]
+
+]
+
+]
+
+created integerrequired
+
+The Unix timestamp (in seconds) of when the chat completion was created.
+
+model stringrequired
+
+The model used for the chat completion.
+
+system_fingerprint stringrequired
+
+This fingerprint represents the backend configuration that the model runs with.
+
+object stringrequired
+
+Possible values: [chat.completion]
+
+The object type, which is always chat.completion.
+
+usage
+
+object
+
+Usage statistics for the completion request.
+
+completion_tokens integerrequired
+
+Number of tokens in the generated completion.
+
+prompt_tokens integerrequired
+
+Number of tokens in the prompt. It equals prompt_cache_hit_tokens + prompt_cache_miss_tokens.
+
+prompt_tokens_details
+
+object
+
+required
+
+Breakdown of tokens used in the prompt.
+
+cached_tokens integer
+
+Number of tokens in the prompt that hit the context cache. Same as prompt_cache_hit_tokens.
+
+prompt_cache_hit_tokens integerrequired
+
+Number of tokens in the prompt that hits the context cache.
+
+prompt_cache_miss_tokens integerrequired
+
+Number of tokens in the prompt that misses the context cache.
+
+total_tokens integerrequired
+
+Total number of tokens used in the request (prompt + completion).
+
+completion_tokens_details
+
+object
+
+Breakdown of tokens used in a completion.
+
+reasoning_tokens integer
+
+Tokens generated by the model for reasoning.
+
+{
+"id": "string",
+"choices": [
+{
+"finish_reason": "stop",
+"index": 0,
+"message": {
+"content": "string",
+"reasoning_content": "string",
+"tool_calls": [
+{
+"id": "string",
+"type": "function",
+"function": {
+"name": "string",
+"arguments": "string"
+}
+}
+],
+"role": "assistant"
+},
+"logprobs": {
+"content": [
+{
+"token": "string",
+"logprob": 0,
+"bytes": [
+0
+],
+"top_logprobs": [
+{
+"token": "string",
+"logprob": 0,
+"bytes": [
+0
+]
+}
+]
+}
+],
+"reasoning_content": [
+{
+"token": "string",
+"logprob": 0,
+"bytes": [
+0
+],
+"top_logprobs": [
+{
+"token": "string",
+"logprob": 0,
+"bytes": [
+0
+]
+}
+]
+}
+]
+}
+}
+],
+"created": 0,
+"model": "string",
+"system_fingerprint": "string",
+"object": "chat.completion",
+"usage": {
+"completion_tokens": 0,
+"prompt_tokens": 0,
+"prompt_tokens_details": {
+"cached_tokens": 0
+},
+"prompt_cache_hit_tokens": 0,
+"prompt_cache_miss_tokens": 0,
+"total_tokens": 0,
+"completion_tokens_details": {
+"reasoning_tokens": 0
+}
+}
+}
+
+{
+"id": "930c60df-bf64-41c9-a88e-3ec75f81e00e",
+"choices": [
+{
+"finish_reason": "stop",
+"index": 0,
+"message": {
+"content": "Hello! How can I help you today?",
+"role": "assistant"
+},
+"logprobs": null
+}
+],
+"created": 1705651092,
+"model": "deepseek-flash",
+"object": "chat.completion",
+"system_fingerprint": "fp_7a09fdf9c2",
+"usage": {
+"completion_tokens": 10,
+"prompt_tokens": 16,
+"total_tokens": 26,
+"prompt_tokens_details": {
+"cached_tokens": 0
+},
+"prompt_cache_hit_tokens": 0,
+"prompt_cache_miss_tokens": 16
+}
+}
+
+OK, returns a streamed sequence of chat completion chunk objects
+
+text/event-stream
+
+Schema
+
+Example (from schema)
+
+Example
+
+Schema
+
+Array [
+
+id stringrequired
+
+A unique identifier for the chat completion. Each chunk has the same ID.
+
+choices
+
+object[]
+
+required
+
+A list of chat completion choices.
+
+Array [
+
+delta
+
+object
+
+required
+
+A chat completion delta generated by streamed model responses.
+
+content stringnullable
+
+The contents of the chunk message.
+
+reasoning_content stringnullable
+
+For thinking mode only. The reasoning contents of the assistant message, before the final answer.
+
+role string
+
+Possible values: [assistant]
+
+The role of the author of this message.
+
+tool_calls
+
+object[]
+
+The tool calls generated by the model, such as function calls. The first chunk of each tool call carries the id, type and function fields; subsequent chunks only carry the function arguments.
+
+Array [
+
+index integerrequired
+
+id string
+
+The ID of the tool call.
+
+type string
+
+Possible values: [function]
+
+The type of the tool. Currently, only function is supported.
+
+function
+
+object
+
+name string
+
+The name of the function to call.
+
+arguments string
+
+The arguments to call the function with, as generated by the model in JSON format. Note that the model does not always generate valid JSON, and may hallucinate parameters not defined by your function schema. Validate the arguments in your code before calling your function.
+
+]
+
+logprobs
+
+object
+
+nullable
+
+Log probability information for the choice.
+
+content
+
+object[]
+
+nullable
+
+required
+
+A list of message content tokens with log probability information.
+
+Array [
+
+token stringrequired
+
+The token.
+
+logprob numberrequired
+
+The log probability of this token, if it is within the top 20 most likely tokens. Otherwise, the value -9999.0 is used to signify that the token is very unlikely.
+
+bytes integer[]nullablerequired
+
+A list of integers representing the UTF-8 bytes representation of the token. Useful in instances where characters are represented by multiple tokens and their byte representations must be combined to generate the correct text representation. Can be null if there is no bytes representation for the token.
+
+top_logprobs
+
+object[]
+
+required
+
+List of the most likely tokens and their log probability, at this token position. In rare cases, there may be fewer than the number of requested top_logprobs returned.
+
+Array [
+
+token stringrequired
+
+The token.
+
+logprob numberrequired
+
+The log probability of this token, if it is within the top 20 most likely tokens. Otherwise, the value -9999.0 is used to signify that the token is very unlikely.
+
+bytes integer[]nullablerequired
+
+A list of integers representing the UTF-8 bytes representation of the token. Useful in instances where characters are represented by multiple tokens and their byte representations must be combined to generate the correct text representation. Can be null if there is no bytes representation for the token.
+
+]
+
+]
+
+reasoning_content
+
+object[]
+
+nullable
+
+A list of message content tokens with log probability information.
+
+Array [
+
+token stringrequired
+
+The token.
+
+logprob numberrequired
+
+The log probability of this token, if it is within the top 20 most likely tokens. Otherwise, the value -9999.0 is used to signify that the token is very unlikely.
+
+bytes integer[]nullablerequired
+
+A list of integers representing the UTF-8 bytes representation of the token. Useful in instances where characters are represented by multiple tokens and their byte representations must be combined to generate the correct text representation. Can be null if there is no bytes representation for the token.
+
+top_logprobs
+
+object[]
+
+required
+
+List of the most likely tokens and their log probability, at this token position. In rare cases, there may be fewer than the number of requested top_logprobs returned.
+
+Array [
+
+token stringrequired
+
+The token.
+
+logprob numberrequired
+
+The log probability of this token, if it is within the top 20 most likely tokens. Otherwise, the value -9999.0 is used to signify that the token is very unlikely.
+
+bytes integer[]nullablerequired
+
+A list of integers representing the UTF-8 bytes representation of the token. Useful in instances where characters are represented by multiple tokens and their byte representations must be combined to generate the correct text representation. Can be null if there is no bytes representation for the token.
+
+]
+
+]
+
+finish_reason stringnullablerequired
+
+Possible values: [stop, length, content_filter, tool_calls, insufficient_system_resource, aborted]
+
+The reason the model stopped generating tokens. This will be stop if the model hit a natural stop point or a provided stop sequence,
+length if the maximum number of tokens specified in the request was reached,
+content_filter if content was omitted due to a flag from our content filters,
+tool_calls if the model called a tool,
+insufficient_system_resource if the request is interrupted due to insufficient resource of the inference system,
+or aborted if the generation was interrupted.
+
+index integerrequired
+
+The index of the choice in the list of choices.
+
+]
+
+created integerrequired
+
+The Unix timestamp (in seconds) of when the chat completion was created. Each chunk has the same timestamp.
+
+model stringrequired
+
+The model to generate the completion.
+
+system_fingerprint stringrequired
+
+This fingerprint represents the backend configuration that the model runs with.
+
+object stringrequired
+
+Possible values: [chat.completion.chunk]
+
+The object type, which is always chat.completion.chunk.
+
+]
+
+[
+{
+"id": "string",
+"choices": [
+{
+"delta": {
+"content": "string",
+"reasoning_content": "string",
+"role": "assistant",
+"tool_calls": [
+{
+"index": 0,
+"id": "string",
+"type": "function",
+"function": {
+"name": "string",
+"arguments": "string"
+}
+}
+]
+},
+"logprobs": {
+"content": [
+{
+"token": "string",
+"logprob": 0,
+"bytes": [
+0
+],
+"top_logprobs": [
+{
+"token": "string",
+"logprob": 0,
+"bytes": [
+0
+]
+}
+]
+}
+],
+"reasoning_content": [
+{
+"token": "string",
+"logprob": 0,
+"bytes": [
+0
+],
+"top_logprobs": [
+{
+"token": "string",
+"logprob": 0,
+"bytes": [
+0
+]
+}
+]
+}
+]
+},
+"finish_reason": "stop",
+"index": 0
+}
+],
+"created": 0,
+"model": "string",
+"system_fingerprint": "string",
+"object": "chat.completion.chunk"
+}
+]
+
+data: {"id": "1f633d8bfc032625086f14113c411638", "choices": [{"index": 0, "delta": {"content": "", "role": "assistant"}, "finish_reason": null, "logprobs": null}], "created": 1718345013, "model": "deepseek-flash", "system_fingerprint": "fp_a49d71b8a1", "object": "chat.completion.chunk"}
+
+data: {"choices": [{"delta": {"content": "Hello", "role": "assistant"}, "finish_reason": null, "index": 0, "logprobs": null}], "created": 1718345013, "id": "1f633d8bfc032625086f14113c411638", "model": "deepseek-flash", "object": "chat.completion.chunk", "system_fingerprint": "fp_a49d71b8a1"}
+
+data: {"choices": [{"delta": {"content": "!", "role": "assistant"}, "finish_reason": null, "index": 0, "logprobs": null}], "created": 1718345013, "id": "1f633d8bfc032625086f14113c411638", "model": "deepseek-flash", "object": "chat.completion.chunk", "system_fingerprint": "fp_a49d71b8a1"}
+
+data: {"choices": [{"delta": {"content": " How", "role": "assistant"}, "finish_reason": null, "index": 0, "logprobs": null}], "created": 1718345013, "id": "1f633d8bfc032625086f14113c411638", "model": "deepseek-flash", "object": "chat.completion.chunk", "system_fingerprint": "fp_a49d71b8a1"}
+
+data: {"choices": [{"delta": {"content": " can", "role": "assistant"}, "finish_reason": null, "index": 0, "logprobs": null}], "created": 1718345013, "id": "1f633d8bfc032625086f14113c411638", "model": "deepseek-flash", "object": "chat.completion.chunk", "system_fingerprint": "fp_a49d71b8a1"}
+
+data: {"choices": [{"delta": {"content": " I", "role": "assistant"}, "finish_reason": null, "index": 0, "logprobs": null}], "created": 1718345013, "id": "1f633d8bfc032625086f14113c411638", "model": "deepseek-flash", "object": "chat.completion.chunk", "system_fingerprint": "fp_a49d71b8a1"}
+
+data: {"choices": [{"delta": {"content": " assist", "role": "assistant"}, "finish_reason": null, "index": 0, "logprobs": null}], "created": 1718345013, "id": "1f633d8bfc032625086f14113c411638", "model": "deepseek-flash", "object": "chat.completion.chunk", "system_fingerprint": "fp_a49d71b8a1"}
+
+data: {"choices": [{"delta": {"content": " you", "role": "assistant"}, "finish_reason": null, "index": 0, "logprobs": null}], "created": 1718345013, "id": "1f633d8bfc032625086f14113c411638", "model": "deepseek-flash", "object": "chat.completion.chunk", "system_fingerprint": "fp_a49d71b8a1"}
+
+data: {"choices": [{"delta": {"content": " today", "role": "assistant"}, "finish_reason": null, "index": 0, "logprobs": null}], "created": 1718345013, "id": "1f633d8bfc032625086f14113c411638", "model": "deepseek-flash", "object": "chat.completion.chunk", "system_fingerprint": "fp_a49d71b8a1"}
+
+data: {"choices": [{"delta": {"content": "?", "role": "assistant"}, "finish_reason": null, "index": 0, "logprobs": null}], "created": 1718345013, "id": "1f633d8bfc032625086f14113c411638", "model": "deepseek-flash", "object": "chat.completion.chunk", "system_fingerprint": "fp_a49d71b8a1"}
+
+data: {"choices": [{"delta": {"content": "", "role": null}, "finish_reason": "stop", "index": 0, "logprobs": null}], "created": 1718345013, "id": "1f633d8bfc032625086f14113c411638", "model": "deepseek-flash", "object": "chat.completion.chunk", "system_fingerprint": "fp_a49d71b8a1", "usage": {"completion_tokens": 9, "prompt_tokens": 17, "total_tokens": 26, "prompt_tokens_details": {"cached_tokens": 0}, "prompt_cache_hit_tokens": 0, "prompt_cache_miss_tokens": 17}}
+
+data: [DONE]
+
+Loading...
+
+====================================================================================================
+PAGE: https://api-docs.deepseek.com/updates
+====================================================================================================
+Change Log | DeepSeek API Docs
+
+# Change Log
+
+## Date: 2026-09-10​
+
+### DeepSeek-V4.1-Flash Release​
+
+Today, we officially release the DeepSeek-V4.1-Flash model. It is the smallest model in our new architecture family, with native multimodal visual understanding. The new architecture is designed for a higher capability ceiling, faster inference, higher throughput, and scaling to larger models.
+
+GPQA Diamond: 90.9
+
+HLE: 36.8 (39.1*)
+
+Codeforces (Rating): 3471
+
+MathArena Apex: 65.6
+
+Terminal-Bench 2.1: 90.6
+
+Terminal-Bench 3.0: 30.0
+
+Terminal-Bench 4.0: 31.2
+
+DeepSWE v1.1: 74.2
+
+ProgramBench: 20.3
+
+NL2Repo-Bench: 65.4
+
+CyberGym: 88.1
+
+SEC-Bench Pro: 62.8
+
+ExploitGym: 15.3
+
+HLE (w/tools): 63.9
+
+Automation-Bench: 54.8
+
+Agents' Last Exam: 31.8
+
+Chartography (w/tools): 78.9
+
+BabyVision (w/tools): 89.6
+
+ZeroBench-main (w/tools): 49.0
+
+* Tested only on the pure-text subset of the HLE benchmark set.
+
+API changes
+
+DeepSeek V4.1 Flash is now available on the DeepSeek API with native multimodal support. Change the model name to deepseek-flash to call the latest V4.1 Flash model. The previous-generation models V4 Flash and V4 Flash Vision Exp have been retired; for compatibility, the model names deepseek-v4-flash and deepseek-v4-flash-vision-exp are temporarily routed to V4.1 Flash.
+
+In response to user demand, we have decided to continue providing API services for DeepSeek V4 Pro after September 14, 2026, with the billing method remaining unchanged. We will provide further notice should there be any changes. Thank you for your understanding and support!
+
+API pricing adjustment
+
+With the release of DeepSeek-V4.1-Flash, API prices have been reduced accordingly. For details, please refer to Models & Pricing.
+
+For more details, please refer to this documentation.
+
+## Date: 2026-08-21​
+
+### DeepSeek-V4-Flash-Vision-Exp Release​
+
+Today, the new multimodal vision understanding model DeepSeek-V4-Flash-Vision-Exp is now available on the DeepSeek API platform. This is an experimental model that can be accessed by setting model='deepseek-v4-flash-vision-exp'.
+
+Terminal Bench 2.1: 83.9
+
+NL2Repo: 57.7
+
+DeepSWE: 59.3
+
+DSBench-Hard: 63.6
+
+AutomationBench (Public): 25.7
+
+ApexBench (Pass@1): 36.5
+
+Agents' Last Exam: 27.3
+
+Chartography: 64.3
+
+ZeroBench (Pass@5): 35.0
+
+* For the Code Agent text tasks in the public benchmark sets, the DeepSeek family models were tested using the DeepSeek Harness minimal mode as the framework, with the max effort level, topp=0.95, and temperature=1.0; in the ApexBench and Agents' Last Exam evaluations, the text model DeepSeek-V4-Flash ignores the multimodal elements within them.
+
+In terms of pure-text capabilities (agent, reasoning, world knowledge, etc.), DeepSeek-V4-Flash-Vision-Exp is on par with the official DeepSeek-V4-Flash.
+
+On agent benchmarks that require visual understanding, DeepSeek-V4-Flash-Vision-Exp delivers a significant leap over DeepSeek-V4-Flash, bringing its multimodal agent capabilities close to Opus-4.8.
+
+For usage details, please refer to the Vision guide.
+
+## Date: 2026-08-13​
+
+### DeepSeek-V4-Pro Update​
+
+The GA release of DeepSeek-V4-Pro has been rolled out on the APP, Web, and API. The API calling method remains unchanged — simply set the model name to deepseek-v4-pro to use the latest version.
+
+Significantly enhanced Agent capabilities
+
+The GA version of DeepSeek V4 Pro greatly enhances agent capabilities, with particularly significant performance improvements in production environments.
+
+HLE (wo / w tools): 42.7/60.0
+
+Terminal Bench 2.1: 87.9
+
+NL2Repo: 61.5
+
+Cybergym: 83.3
+
+DeepSWE: 62.7
+
+Toolathlon-Verified: 74.1
+
+Agents' Last Exam: 25.7
+
+AutomationBench (Public): 31.8
+
+DSBench-FullStack: 71.1
+
+DSBench-Hard: 67.2
+
+Native support for the Responses API
+
+The DeepSeek API now natively supports the OpenAI Responses API format and is specifically adapted for Codex. Users can refer to the official documentation and complete the Codex configuration with a one-click configuration script.
+
+More flexible thinking effort control
+
+The thinking modes of V4-Pro and V4-Flash now support three thinking effort levels: low / high / max. In real-world usage, users can flexibly choose based on task complexity: use low for simple tasks, high for daily Agent tasks, and max for more complex scenarios. For setup instructions, please refer to the official API documentation: Thinking Mode.
+
+API Pricing Adjustment
+
+With the official release of the DeepSeek V4 model family, we will update and adjust API pricing. To allocate resources more reasonably, we will adopt peak/off-peak pricing, with off-peak prices set at half of the peak-hour prices, encouraging users to schedule their tasks based on actual usage. The new prices will take effect at 16:00 (UTC Time) on August 16, 2026.
+
+For more details, please refer to this documentation.
+
+## Date: 2026-07-31​
+
+### DeepSeek-V4-Flash Update​
+
+The official release of the DeepSeek-V4-Flash API is now in public beta. The API calling method remains unchanged — simply set the model name to deepseek-v4-flash to use the latest version.
+
+Significantly enhanced agent capabilities, with benchmark results far exceeding V4-Pro-Preview:
+
+Terminal Bench 2.1: 82.7
+
+NL2Repo: 54.2
+
+Cybergym: 76.7
+
+DeepSWE: 54.4
+
+Toolathlon verified: 70.3
+
+Agent Last Exam: 25.2
+
+Automation Bench (Public): 25.1
+
+DSBench-FullStack: 68.7
+
+DSBench-Hard: 59.6
+
+Note 1: For the Code Agent tasks in the public benchmark sets, the official DeepSeek-V4-Flash was tested using the DeepSeek Harness minimal mode (to be released soon) as the framework, with the max effort level, topp=0.95, and temperature=1.0
+
+Note 2: DSBench-FullStack is an internal full-stack development test set, and DSBench-Hard is an internal Coding Agent hard-problem test set
+
+The official V4-Flash natively supports the Responses API format and is specifically adapted for Codex. For the specific configuration, please refer to the documentation.
+
+DeepSeek-V4-Flash-0731 keeps the same model architecture and size as DeepSeek-V4-Flash-Preview, and was only re-post-trained.
+
+Note: This update only upgrades the DeepSeek-V4-Flash API. The DeepSeek-V4-Pro API and the APP/WEB models are unchanged.
+
+The official release of DeepSeek-V4-Pro will follow soon.
+
+## Date: 2026-04-24​
+
+### DeepSeek-V4​
+
+The DeepSeek API now supports V4-Pro and V4-Flash, available via both the OpenAI ChatCompletions interface and the Anthropic interface. To access the new models, the base_url remains unchanged, and the model parameter should be set to deepseek-v4-pro or deepseek-v4-flash.
+
+The two legacy API model names, deepseek-chat and deepseek-reasoner, will be discontinued in three months (2026-07-24). During the current period, these two model names point to the non-thinking mode and thinking mode of deepseek-v4-flash, respectively.
+
+For more details, please refer to this documentation.
+
+## Date: 2025-12-01​
+
+### DeepSeek-V3.2​
+
+Both deepseek-chat and deepseek-reasoner have been upgraded to DeepSeek-V3.2.
+
+deepseek-chat corresponds to DeepSeek-V3.2's non-thinking mode
+
+deepseek-reasoner corresponds to DeepSeek-V3.2's thinking mode
+
+### DeepSeek-V3.2-Speciale​
+
+DeepSeek-V3.2-Speciale is served via a temporary endpoint: base_url="https://api.deepseek.com/v3.2_speciale_expires_on_20251215". Same pricing as V3.2, no tool calls, available until Dec 15th, 2025, 15:59 (UTC Time).
+
+For more details, please refer to this documentation.
+
