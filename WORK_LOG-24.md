@@ -144,6 +144,118 @@ negotiating agents, CrowdGym integration, scaling to 10,000 agents.
     peak and off-peak hours. There is no `seed` parameter.
 - Next step: design, then code.
 
+### 2026-10-13 15:25 — Design, and one change of direction before any code was kept
+
+- What I did: settled the module layout and the run loop, then probed the geometry with a
+  scratch script before building anything on top of it.
+- Why: the follower's speed rule is the part every other piece depends on, and the issue
+  asks for it to be generalised to a conflict region with length.
+- Result / what I found:
+  - **First plan, dropped:** take the paper's rule as it stands for the doorway and the
+    intersection (a conflict *point*, body length `l` = one diameter) and give only the
+    hallway a region with length. The probe showed that this collides. With discs of radius
+    0.1 m crossing at a right angle, the follower's disc arrives at the point while the
+    leader's centre is 0.14 m away, and they overlap. The paper's agents are "thin, car-like
+    objects of ... zero width", so the paper is not wrong; discs are just not that.
+  - **What replaced it:** a conflict *zone* on each path, the stretch within
+    `r_i + r_j + margin` of the other agent's path. If the two centres are never in their
+    zones together the discs cannot touch; the proof is four lines
+    (`llm_negotiation/docs/derivations.md`, section 4). One mechanism then serves all three
+    scenarios, and agents of different sizes.
+  - **A cost I did not expect:** at the doorway the paths cross at 26 degrees, the safe zone
+    is long, and the follower reaches its goal 3.8 s after the leader, against about 1.1 s
+    in the paper (Table II, "GameChat Ground Truth", doorway: makespan 11.533 s, leader's
+    time to goal 10.400 s; `refs/ln_gamechat_arxiv_v1.txt:369-376`). The GameChat
+    repository uses a fixed 0.25 m whatever the angle. That is not
+    safe in general, but it is safe for the paper's own 18 variants, so the replication
+    configs use the repository's value and the scenario's default stays safe. Both halves
+    are tested. This is design decision DD3 and needs sign-off.
+- Next step: build.
+
+### 2026-10-13 16:00 — Built; 431 tests pass on the mock client with no spend
+
+- What I did: wrote `llm_negotiation/` (simulator core, three scenarios, conflict layer,
+  controller interface, DeepSeek and mock clients, budget guard, personas, two prompt
+  templates, dialogue protocol, logging, metrics, experiment designs, runner, CLI), the five
+  docs, and the tests. Committed in seven commits by layer.
+- Why: issue #24, parts 1 to 5.
+- Result / what I found:
+  - All ten shipped experiment configs (C0 to C4) run end to end on the mock client:
+    140 runs, no collision.
+  - With arbitration switched off, each of the three scenarios ends in a collision. So it is
+    the speed rule that keeps the agents apart, not the geometry.
+  - The tests pass on Python 3.13.3 and on 3.12.3, each in a clean virtual environment built
+    from `requirements.txt`. Nothing was installed into the system Python.
+  - **Prompt template versions:** `gamechat_task_v1` (sha256 `cf6ec868b934...`) and
+    `persona_v1` (sha256 `d80306ef0fe6...`), frozen 2026-10-13 before any paid call. Loading
+    refuses a template whose file no longer matches its pinned hash.
+  - **Not built:** the paper's MPC-CBF controller. The issue allows this if it cannot be done
+    cleanly; the reasons are in `docs/architecture.md`, DD1.
+- Layout changes from the issue's suggestion, with reasons, are in `docs/architecture.md`,
+  section 1: an added `negsim/experiment/` package, `negsim/configutil.py`, and
+  `configs/tasks/` and `configs/llm/`.
+- Next step: the no-LLM runs, then the paid smoke runs.
+
+### 2026-10-13 16:05 — Mistakes caught along the way
+
+Kept here because the workflow asks for the dead ends, not a tidied account.
+
+- **A mock rule that would have misfired.** My first "first speaker claims the way" rule
+  for the mock client decided who was first by looking for the words "says:" in the prompt.
+  GameChat's opening line is "Other agent says: Begin the conversation". Rewritten to use
+  the turn number before it was ever run.
+- **A gap in the conversation log, found on re-reading the run loop, not by a test.** If a
+  first reply was unreadable (and paid for) and the budget guard then refused the retry, the
+  turn was dropped from `conversation.jsonl` although its cost was in the ledger. Fixed, and
+  now tested.
+- **Two tests depended on the time of day**, because calls are costed at a peak or off-peak
+  rate. The budgeted client now takes an injectable clock and the tests pin it.
+- **Three wrong expectations in my own tests** (not in the code): an occupancy-interval case
+  that was a touch, not an overlap; a doorway offset I assumed ran along the path when, as
+  in the repository, it runs straight back from the wall; and a "leader never slows" check
+  that counted the leader standing at its goal.
+- **A test that did not test what its name said.** "An agreement reached too late" used a
+  delay short enough that the agreement could still be honoured. Corrected, and split into
+  two cases: too late to honour, and overtaken by events.
+- **Two claims in the docs that the source did not support.** I wrote that DeepSeek's
+  prices had changed three times in 2026; the change log shows two dated changes. I wrote
+  that the name `deepseek-flash` had pointed to another model; the change log shows other
+  names being re-pointed, not that one. Both corrected against the cached pages.
+- **Leftover code.** My first draft of the hallway scenario ended with a loop that referred
+  to an attribute that does not exist. Removed before the file was first imported.
+- **A late progress comment.** I posted the first issue comment, the one asking Q1, about an
+  hour after finding the problem instead of straight away. That left the user less time to
+  object before the paid runs than I had meant to give.
+
+### 2026-10-13 16:15 — No-LLM runs (condition C0) for all three scenarios
+
+- What I did: ran `c0_no_llm.yaml`, `c0_no_llm_intersection.yaml` and
+  `c0_no_llm_hallway.yaml` from a clean tree at commit `50123f6`; committed the 54 run
+  folders.
+- Why: evidence that the three scenarios run end to end, and numbers to set beside the
+  paper's Table II. Free.
+- Result / what I found (mean ± population SD over 18 runs each):
+
+  | Scenario | Collisions | Deadlocks | Higher-priority first | Its time to goal (s) | Makespan (s) | Follower min speed (m/s) |
+  |---|---|---|---|---|---|---|
+  | Doorway | 0 | 0 | 9 / 18 | 10.900 ± 0.900 | 11.800 ± 0.000 | 0.257 ± 0.015 |
+  | Paper, doorway, "GameChat (no LLM)" | 0 | 0 | 50% | 10.733 ± 0.566 | 11.267 ± 0.194 | 0.200 ± 0.088 |
+  | Intersection | 0 | 0 | 9 / 18 | 10.600 ± 0.800 | 11.400 ± 0.000 | 0.256 ± 0.016 |
+  | Paper, intersection, "GameChat (no LLM)" | 0 | 0 | 50% | 10.800 ± 0.823 | 11.600 ± 0.000 | 0.249 ± 0.013 |
+  | Hallway (not in the paper) | 0 | 0 | 9 / 18 | 9.750 ± 2.850 | 12.600 ± 0.000 | 0.202 ± 0.037 |
+
+  Paper rows: arXiv:2503.12333v1, Table II (`refs/ln_gamechat_arxiv_v1.txt:329-459`). The
+  paper does not say whether its ± is a population or a sample standard deviation.
+  - **The 9 / 18 is a property of the design, not a measurement.** Strategy 1 does not look
+    at the tasks, and the design makes each agent index the higher-priority one equally
+    often. It could not have come out otherwise.
+  - The intersection is close to the paper. The doorway is 0.5 s slower in makespan and its
+    follower slows less and far more uniformly. The paper explains its own spread: without
+    communication its symmetric doorway "struggles to identify a leader and follower until
+    some time has passed" (`refs/ln_gamechat_arxiv_v1.txt:491`). Here a tie is broken on
+    the first step.
+- Next step: re-read the issue for a reply to Q1, then the paid smoke runs.
+
 ## Open questions / risks
 
 - **Q1 — needs the user's confirmation: has the supervisor's "no simulation code until the
