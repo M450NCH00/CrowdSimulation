@@ -1,0 +1,721 @@
+arXiv:1412.1082v1 [physics.soc-ph] 2 Dec 2014            Universal power law governing pedestrian interactions
+
+                                                                  Ioannis Karamouzas,1 Brian Skinner,2 and Stephen J. Guy1
+                                                        1Department of Computer Science and Engineering, University of Minnesota, USA
+
+                                                                     2Materials Science Division, Argonne National Laboratory, USA
+                                                                                               (Dated: December 4, 2014)
+
+                                                  Human crowds often bear a striking resemblance to interacting particle systems, and this has
+                                               prompted many researchers to describe pedestrian dynamics in terms of interaction forces and po-
+                                               tential energies. The correct quantitative form of this interaction, however, has remained an open
+                                               question. Here, we introduce a novel statistical-mechanical approach to directly measure the interac-
+                                               tion energy between pedestrians. This analysis, when applied to a large collection of human motion
+                                               data, reveals a simple power law interaction that is based not on the physical separation between
+                                               pedestrians but on their projected time to a potential future collision, and is therefore fundamentally
+                                               anticipatory in nature. Remarkably, this simple law is able to describe human interactions across
+                                               a wide variety of situations, speeds and densities. We further show, through simulations, that the
+                                               interaction law we identify is sufficient to reproduce many known crowd phenomena.
+
+                                                  In terms of its large-scale behaviors, a crowd of pedes-   lections of recently published crowd datasets recorded
+                                               trians can look strikingly similar to many other collec-      by motion-capture or computer vision-based techniques.
+                                               tions of repulsively-interacting particles [1­4]. These sim-  These datasets include pedestrian trajectories from sev-
+                                               ilarities have inspired a variety of pedestrian crowd mod-    eral outdoor environments [26, 27] and controlled lab set-
+                                               els, including cellular automata and continuum-based ap-      tings [28] (a summary of datasets is given in the Sup-
+                                               proaches [5­8], as well as simple particle or agent-based     plemental Material [29]). To reduce statistical noise,
+                                               models [9­15]. Many of these models conform to a long-        datasets with similar densities were combined together,
+                                               standing hypothesis that humans in a crowd interact           resulting in one Outdoor dataset comprising 1,146 trajec-
+                                               with their neighbors through some form of "social po-         tories of pedestrians in sparse-to-moderate outdoor set-
+                                               tential" [16], analogous to the repulsive potential ener-     tings, and one Bottleneck dataset with 354 trajectories
+                                               gies between physical particles. How to best determine        of pedestrians in dense crowds passing through narrow
+                                               the quantitative form of this interaction potential, how-     bottlenecks. In analyzing these datasets, our primary
+                                               ever, has remained an open question, with most previous       tool for quantifying the strength of interactions between
+                                               researchers employing a simulation-driven approach.           pedestrians is the statistical-mechanical pair distribution
+                                                                                                             function, denoted g.
+                                                  Previously, direct measurement of the interaction law
+                                               between pedestrians has been confounded by two primary           As in the typical condensed matter setting [30], here we
+                                               factors. First, each individual in a crowd experiences a      define the pair distribution function g(x) as the observed
+                                               complex environment of competing forces, making it dif-       probability density for two pedestrians to have relative
+                                               ficult to isolate and robustly quantify a single pairwise     separation x divided by the expected probability den-
+                                               interaction. Secondly, a pedestrian's motion is strongly      sity for two non-interacting pedestrians to have the same
+                                               influenced not just by the present position of neighboring    separation. In general, the probability density for non-
+                                               pedestrians, but by their anticipated future positions [17­   interacting pedestrians cannot be known a priori, since it
+                                               21], a fact which has influenced recent models [22­25].       depends on where and how frequently pedestrians enter
+                                               Consider, for example, two well-separated pedestrians         and exit the environment. However, for large datasets we
+                                               walking into a head-on collision (Fig. 1a). These pedestri-   are able to closely approximate this distribution by sam-
+                                               ans typically exhibit relatively large acceleration as they   pling the separation between all pairs of pedestrians that
+                                               move to avoid each other, as would result from a large        are not simultaneously present in the scene (and there-
+                                               repulsive force. On the other hand, pedestrians walking       fore not interacting). As defined above, small values of
+                                               in parallel directions exhibit almost no acceleration, even   the pair distribution function, g(x) 1, correspond to
+                                               when their mutual separation is small (Fig. 1b).              situations where interactions produce strong avoidance.
+
+                                                  Here, we address both of the aforementioned factors           If the Cartesian distance r between two pedestrians
+                                               using a data-driven, statistical mechanics-based analysis     were a sufficient descriptor of their interaction, we would
+                                               that accounts properly for the anticipatory nature of hu-     expect the shape of the pair distribution function g(r) to
+                                               man interactions. This approach allows us to directly and     be independent of all other variables. However, as can
+                                               robustly measure the interaction energy between pedes-        be seen in Fig. 1c, g(r) has large, qualitative differences
+                                               trians. The consistency of our measurements across a          when the data is binned by the rate at which the two
+                                               variety of settings suggests a simple and universal law       pedestrians are approaching each other, v = -dr/dt. In
+                                               governing pedestrian motion.                                  particular, pedestrians with a small rate of approach are
+                                                                                                             more likely to be found close together than those that are
+                                                  To perform our analysis, we turn to the large col-
+                                                                                      2
+
+         (a)               (b)                                    time for which two pedestrians could continue walking
+                                                                  at their current velocities before colliding. As shown in
+      5                            0< 1                           Fig. 1d, when the pair distribution function is plotted
+                                   1< 2                           as a function of  , curves for different rates of approach
+         (c)                       >2                             collapse onto each other, with no evidence of a separate
+                                                                  dependence of the interaction on v. Even when binned
+      4                                                           by other parameters such as the relative orientation be-
+                                                                  tween pedestrians, there is no significant difference be-
+g(r)  3                                                           tween curves (see the Supplemental Material [29]). This
+                                                                  consistent collapse of the curves suggests that the sin-
+      2                                                           gle variable  provides an appropriate description of the
+                                                                  interaction between pedestrians.
+      1
+                                                                     This pair distribution function, g( ), describes the ex-
+      0  0       1    2         3        4                        tent to which different configurations of pedestrians are
+                    r [m]                                         made unlikely by the mutual interaction between pedes-
+                                                                  trians. In general, situations with strong interactions
+      3                            0< 1                           (small  ) are suppressed statistically, since the mutual
+                                   1< 2                           repulsion between two approaching pedestrians makes it
+         (d)                       >2                             very unlikely that the pedestrians will arrive at a situ-
+                                                                  ation where a collision is imminent. This suppression
+      2                                                           can be described in terms of a pedestrian "interaction
+                                                                  energy" E( ). In particular, in situations where the av-
+g()                                                               erage density of pedestrians does not vary strongly with
+                                                                  time, the probability of a pair of pedestrians having time-
+      1                                                           to-collision  can be assumed to follow a Boltzmann-like
+                                                                  relation, g( )  exp[-E( )/E0]. Here, E0 is a character-
+      0  0    1     2      3       4                              istic pedestrian energy, whose value is scene-dependent.
+
+                     [s]                                             This use of a Boltzmann-like relation between g( ) and
+                                                                  E( ) amounts to an assumption that the systems being
+FIG. 1. Analysis of anticipation effects in pedestrian motion.    considered are at, or near, statistical equilibrium. In our
+(a) Two pedestrians react strongly to avoid an upcoming colli-    analysis, this assumption is motivated by the observa-
+sion even though they are far from each other (path segments      tion that the intensive properties of the system in each
+over an interval of 4 s are shown as colored lines, with ar-      of the datasets (e.g., the average pedestrian density and
+rows indicating acceleration). (b) In the same environment,       walking speed) are essentially time-independent. If this
+two pedestrians walk close to each other without any rela-        time-independence is taken as given, a Boltzmann-like
+tive acceleration. (c) The pair distribution function g as a      relation follows as a consequence of entropy maximiza-
+function of inter-pedestrian separation r shows very different    tion. By rearranging this relation, the interaction energy
+behavior when plotted for pedestrian pairs with different rate    can be expressed in terms of g( ) as:
+of approach v = -dr/dt. Units of v are m/s. (d) In con-
+trast, when g is computed as a function of time-to-collision,     E( )  ln [1/g( )].  (1)
+ , curves corresponding to different v collapse onto each other.
+                                                                  A further, self-consistent validation of Eq. (1) is provided
+approaching each other quickly (as evidenced by the sep-          below.
+aration between the curves at small r). A particularly
+pronounced difference can be seen for the curve corre-               Figure 2 plots the interaction law defined by Eq. (1)
+sponding to small v, where the large peak suggests a              using the values for g( ) derived from our two aggre-
+tendency for pedestrians with similar velocities to walk          gated pedestrian datasets. It is worth emphasizing that
+closely together.                                                 these two datasets capture very different types of pedes-
+                                                                  trian motion. The pedestrian trajectories in the Outdoor
+   While the distance r is not a sufficient descriptor of         dataset are generally multi-directional paths in sparse-
+interactions, we find that the pair distribution function         to-moderate densities, with pedestrians often walking in
+can, in fact, be accurately parameterized by a single vari-       groups or stopping for brief conversations. In contrast,
+able that describes how imminent potentially upcoming             trajectories in the Bottleneck dataset are largely unidi-
+collisions are. We refer to this variable as the time-to-         rectional, with uniformly high density, and with little
+collision, denoted  , which we define as the duration of          stopping or grouping between individuals.
+
+                                                                     Remarkably, despite their large qualitative differences,
+                                                                  both datasets reveal the same power-law relationship un-
+                                                                  derlying pedestrian interactions. For both datasets, the
+                                                                                                   3
+
+                  30                                                     ing speed u. Such scaling is indeed consistent with the
+                                                                         trend observed in our data, with the denser Bottleneck
+                           6                                   (a)       dataset ( = 2.5 m-2, u = 0.55 m/s) demonstrating a
+                                                                         smaller value of t0 than the sparser Outdoor dataset
+                           4                                             ( = 0.27 m-2, u = 0.86 m/s) [32]. While the large-
+                                                                          behavior in our datasets is therefore dominated by
+E() [arb. units]  20       2                                             screening, we can use the largest observed values of t0
+                                                                         to place a lower bound estimate on the intrinsic range
+                           0                                             of unscreened interactions (which we denote as 0). This
+                                                                         estimate suggests that an appropriate value is 0  3 s,
+                  10       -2                     t                      which is consistent with previous research demonstrating
+                           0.4 1               2      3     4            an interaction time horizon of 2 - 4 s [21].
+                                                   0
+                                                                            Since the interaction energy follows a power law with
+                      0        1          t              2          2.5  a sharp truncation at large  , we infer from the data the
+                    -5                                                   following form of the pedestrian interaction law:
+                                           0
+                      0.2
+                  102                   [s]
+                  101
+                                                               (b)
+
+E() [arb. units]                                                         E( )  =  k  e-  /0  .     (2)
+                                                                                  2
+
+                  100                                                    Here, k is a constant that sets the units for energy.
+                                                                            To demonstrate the general nature of the identified in-
+                  10-1     Fit - E()  -2
+                           Outdoor                                       teraction law, we performed simulations of pedestrians
+                                                                         that adapt their behavior according to Eq. (2) via force-
+                  10-2     Bottleneck                                    based interactions. In particular, the energy E( ) di-
+                                                                         rectly implies a natural definition of the force F experi-
+                  10-1                    100                  101       enced by pedestrians when interacting:
+
+                                        [s]
+
+FIG. 2. (a) The interaction energy computed from the dense               F = -r   k  e-  /0     ,  (3)
+Bottleneck dataset and from the more sparse Outdoor dataset                       2
+(inset). The overall constant k is normalized so that E(1) = 1.
+Both datasets fit well to a power law up to a point marked               where r is the spatial gradient. A full analytical ex-
+t0, beyond which there is no discernible interaction. Solid              pression for this derivative is given in the Supplemental
+lines shows the fit to the data and colored regions show their           Material [29].
+corresponding 95% confidence interval (Bottleneck, R2 = 0.94;
+Outdoor, R2 = 0.92). (b) The interaction energy in both                     For the purposes of simulation, each pedestrian is also
+datasets is well described by a power law with exponent 2.               given a driving force associated with its desired direction
+                                                                         of motion, following Ref. 9. The resulting force model is
+interaction energy E shows a quadratic falloff as a func-                sufficient to reproduce a wide variety of important pedes-
+tion of  , so that E( )  1/ 2 over the interval where E                  trian behaviors, including the formation of lanes, arching
+is well-defined. For smaller values of  (less than 200                   in narrow passages, slowdowns in congestion, and antic-
+ms), the energy seen in the data saturates to a maximum                  ipatory collision avoidance (Fig. 3). Additionally, the
+value, likely as a consequence of finite human reaction                  simulated pedestrians match the known fundamental di-
+times. For sufficiently large values of  , on the other                  agram [33] of speed-density relationships for real human
+hand, the observed interaction energy quickly vanishes,                  crowds and qualitatively capture the empirical behavior
+suggesting a truncation of the interaction when the time-                of g(r) depicted in Fig. 1c [29].
+to-collision is large. We denote the maximum observed
+interaction range as t0 (Bottleneck: t0  1.4 s; Outdoor:                    Our simulations also reproduce the anticipatory power
+t0  2.4 s).                                                              law described by Eq. (2), as shown in Fig. 4. In con-
+                                                                         trast, simulations generated by distance-based interac-
+   Importantly, t0 does not, by itself, indicate the in-                 tion forces fail to show a dependence of E on  (Fig. 4).
+trinsic interaction range between pedestrians, since in-                 Other, more recent models of pedestrian behavior also
+teractions between distant, non-neighboring pedestrians                  cannot consistently capture the empirical power-law re-
+are screened by the presence of nearest-neighbors, as in                 lationship (see the Supplemental Material [29]). The abil-
+other dense, interacting systems [30, 31]. For a crowd                   ity of our own simulations to reproduce E( ) also pro-
+with density , the characteristic "screening time" can                   vides a self-consistent validation of our use of the Boltz-
+be expected to scale as the typical distance between                     mann relation to infer the interaction energy from data.
+nearest neighbors, -1/2, divided by the mean walk-
+                                                                            Interesting behavior can also be seen when Eq. (3) is
+                                                                         applied to walkers propelled forward in the direction of
+                                                                         their current velocity without having a specific goal (as
+                                                                                                                          4
+
+               (a)  (b)
+
+               (c)  (d)                                           FIG. 4. Inferred interaction energy E  ln(1/g) as a func-
+
+                                                                  tion of time-to-collision  for different simulations, obtained
+
+                                                                  using the anticipatory force described by Eq. (3), and the
+
+                                                                  distance-dependent force described in Ref. 9 (inset). For sim-
+
+                                                                  ulations with strictly distance-dependent interactions, the in-
+
+                                                                  ferred interaction energy does not show a dependence on  .
+
+                                                                  In contrast, simulations following our model closely match
+
+                                                                  the observed empirical power law for E( ). Shaded regions
+
+                                                                  denote average energy values ± one standard deviation.
+
+Initial state       Steady state (e)                              flows that have been reported to occur in extremely high
+                                                                  density crowds [41]. In such very dense situations, satu-
+FIG. 3. Stills from simulations of agents following the force     rating effects such as finite human reaction time become
+law derived from Eq. (2). In figures (a)-(d), agents are rep-     relevant, and these may alter the quantitative form of the
+resented as cylinders and color-coded according to their goal     interaction in a way that is not well-captured by our time-
+direction. The simulated agents display many emergent phe-        to-collision-based analysis. Augmenting our result with
+nomena also seen in human crowds, including arching around        an additional close-ranged component of the interaction
+narrow passages (a), clogging and "zipping" patterns at bot-      may give a better description of these extremely dense
+tlenecks (c), and spontaneously self-organized lane formation     scenarios, and is a promising avenue for future work.
+(b and d). Figure (e) depicts a simulation of agents without a
+preferred goal direction (arrows represent the agents' current       To conclude, our statistical mechanics-based analysis
+orientations). The agents' interactions lead to large-scale syn-  of a large collection of human data has allowed us to
+chronization of their motion. Further simulation details are      quantify the nature and strength of interactions between
+given in the Supplemental Material [29].                          pedestrians. This novel type of analysis opens new av-
+                                                                  enues for studying the behavior of humans using real life
+implemented, for example, in Ref. 34). In such cases,             data. The data we have analyzed here reveals the ex-
+complex spatio-temporal patterns emerge, leading even-            istence of a single anticipatory power law governing the
+tually to large scale synchronization of motion. An exam-         motions of humans. The consistency of this law across a
+ple is illustrated in Fig. 3e, where a collection of pedestri-    variety of scenarios provides a new means to understand
+ans that is initialized to a high energy state with many          how pedestrians behave and suggests new ways to eval-
+imminent collisions settles over time into a low energy           uate models of pedestrian interactions. Further, these
+state where pedestrians move in unison. This result is            results suggest a general quantitative law for describing
+qualitatively similar to observed behavior in dense, non-         human anticipation that may extend to other studies of
+goal-oriented human crowds [35], and is reminiscent of            human behavior, which may therefore be amenable to a
+the "flocking" behavior seen in a variety of animal groups        similar type of analysis.
+[36­40]. A detailed study of such collective behaviors,
+however, is outside the scope of our present work.                   Complete simulation source code, along with videos
+                                                                  and links to data used in this study, can be found
+   While the model implied by Eq. (3) is widely applica-          at our companion webpage: http://motion.cs.umn.
+ble, it may not be sufficient on its own to capture certain       edu/PowerLaw. We would like to thank Anne-H´el`ene
+crowd phenomena, such as the shock waves and turbulent            Olivier, Alex Kamenev, Julien Pettr´e, Igor Aranson, Di-
+                                                                  nesh Manocha, and Leo Kadanoff for helpful discussions.
+                                                                  We also acknowledge support from Intel and from Uni-
+                                                                 5
+
+versity of Minnesota's MnDRIVE Initiative on Robotics,                 Rev. E 85, 016110 (2012).
+Sensors, and Advanced Manufacturing. Work at Argonne             [26] A. Lerner, Y. Chrysanthou, and D. Lischinski, Computer
+National Laboratory is supported by the U.S. Depart-
+ment of Energy, Office of Basic Energy Sciences under                  Graphics Forum 26, 655 (2007).
+contract no. DE-AC02-06CH11357.                                  [27] S. Pellegrini, A. Ess, K. Schindler, and L. Van Gool,
+
+ [1] D. Helbing, P. Moln´ar, I. Farkas, and K. Bolay, Env.             in IEEE International Conference on Computer Vision
+      Plan. B 28, 361 (2001).                                          (2009) pp. 261­268.
+                                                                 [28] A. Seyfried, O. Passon, B. Steffen, M. Boltes, T. Rup-
+ [2] M. Moussa¨id, E. G. Guillot, M. Moreau, J. Fehrenbach,            precht, and W. Klingsch, Transp. Sci. 43, 395 (2009).
+      O. Chabiron, S. Lemercier, J. Pettr´e, C. Appert-Rolland,
+      P. Degond, and G. Theraulaz, PLoS Comput Biol. 8,          [29] See the Supplemental Material for experimental datasets,
+      e1002442 (2012).                                                 statistical methods, a simulation model derived from our
+                                                                       law, and simulation results. The Supplemental Material
+ [3] W. Yu and A. Johansson, Phys. Rev. E 76, 046105                   includes Refs. [42­46].
+      (2007).
+                                                                 [30] G. D. Mahan, Many-Particle Physics (Plenum, New
+ [4] D. Helbing, Rev. Mod. Phys. 73, 1067 (2001).                      York, 1990).
+ [5] L. P. Kadanoff, J. Stat. Phys. 39, 267 (1985).
+ [6] S. Hoogendoorn and P. H. L. Bovy, Transport. Res. Rec.      [31] M. Babadi, B. Skinner, M. M. Fogler, and E. Demler,
+                                                                       Europhys. Lett. 103, 16002 (2013).
+      1710, 28 (2000).
+ [7] R. Hughes, Transp. Res. Part B 36, 507 (2002).              [32] The ratio of (-1/2)/u between the Bottleneck and Out-
+ [8] A. Kirchner, K. Nishinari, and A. Schadschneider, Phys.           door datasets is (1.15 s)/(2.25 s) = 0.51. For comparison,
+                                                                       the measured values of t0 have a ratio (1.4 s)/(2.4 s) =
+      Rev. E 67, 056122 (2003).                                        0.58.
+ [9] D. Helbing, I. Farkas, and T. Vicsek, Nature 407, 487
+                                                                 [33] U. Weidmann, Transporttechnik der Fußga¨nger , Litera-
+      (2000).                                                          ture Research 90 (ETH Zu¨rich, 1993) in German.
+[10] W. J. Yu, R. Chen, L. Y. Dong, and S. Q. Dai, Phys.
+                                                                 [34] D. Grossman, I. S. Aranson, and E. B. Jacob, New J.
+      Rev. E 72, 026112 (2005).                                        Phys. 10, 023036 (2008).
+[11] M. Chraibi, A. Seyfried, and A. Schadschneider, Phys.
+                                                                 [35] J. L. Silverberg, M. Bierbaum, J. P. Sethna, and I. Co-
+      Rev. E 82, 046111 (2010).                                        hen, Phys. Rev. Lett. 110, 228701 (2013).
+[12] S. Hoogendoorn and P. H. L. Bovy, Optim. Control Appl.
+                                                                 [36] T. Vicsek, A. Cziro´k, E. Ben-Jacob, I. Cohen, and
+      Methods 24, 153 (2003).                                          O. Shochet, Phys. Rev. Lett. 75, 1226 (1995).
+[13] M. Moussa¨id, D. Helbing, S. Garnier, A. Johansson,
+                                                                 [37] I. D. Couzin, J. Krause, R. James, G. D. Ruxton, and
+      M. Combe, and G. Theraulaz, Proc. R. Soc. B 276,                 N. R. Franks, J. Theor. Biol. 218, 1 (2002).
+      2755 (2009).
+[14] B. R. Fajen and W. H. Warren, J. Exp. Psychol. Hum.         [38] M. Ballerini, N. Cabibbo, R. Candelier, A. Cavagna,
+      Percept. Perform. 29, 343 (2003).                                E. Cisbani, I. Giardina, V. Lecomte, A. Orlandi,
+[15] C. W. Reynolds, ACM Comput. Graph. 21, 25 (1987).                 G. Parisi, A. Procaccini, M. Viale, and V. Zdravkovic,
+[16] D. Helbing and P. Molna´r, Phys. Rev. E 51, 4282 (1995).          Proc. Natl. Acad. Sci. 105, 1232 (2008).
+[17] M. G´erin-Lajoie, C. Richards, and B. McFadyen, Motor
+      control 9, 242 (2005).                                     [39] I. L. Bajec and F. H. Heppner, Anim. Behav. 78, 777
+[18] T. Ducourant, S. Vieilledent, Y. Kerlirzin, and                   (2009).
+      A. Berthoz, Neurosci. Lett. 389, 6 (2005).
+[19] A. Johansson, Phys. Rev. E 80, 026120 (2009).               [40] T. Vicsek and A. Zafeiris, Phys. Rep. 517, 71 (2012).
+[20] L. Noy, E. Dekel, and U. Alon, Proc. Natl. Acad. Sci.       [41] D. Helbing, A. Johansson, and H. Z. Al-Abideen, Phys.
+      108, 20947 (2011).
+[21] A.-H. Olivier, A. Marin, A. Cr´etual, and J. Pettr´e, Gait        Rev. E 75, 046109 (2007).
+      Posture 36, 399 (2012).                                    [42] A. Seyfried, M. Boltes, J. Ka¨hler, W. Klingsch, A. Portz,
+[22] J. Ondrej, J. Pettr´e, A.-H. Olivier, and S. Donikian,
+      ACM Trans. Gr. 29, 1 (2010).                                     T. Rupprecht, A. Schadschneider, B. Steffen, and
+[23] F. Zanlungo, T. Ikeda, and T. Kanda, EPL (Europhysics             A. Winkens, in Pedestrian and Evacuation Dynamics
+      Letters) 93, 68005 (2011).                                       2008 , edited by W. Klingsch, C. Rogsch, A. Schadschnei-
+[24] M. Moussa¨id, D. Helbing, and G. Theraulaz, Proc. Natl.           der, and M. Schreckenberg (Springer Berlin Heidelberg,
+      Acad. Sci. 108, 6884 (2011).                                     2010) pp. 145­156.
+[25] S. J. Guy, S. Curtis, M. C. Lin, and D. Manocha, Phys.      [43] M. Boltes, A. Seyfried, B. Steffen, and A. Schad-
+                                                                       schneider, in Pedestrian and Evacuation Dynamics 2008 ,
+                                                                       edited by W. Klingsch, C. Rogsch, A. Schadschneider,
+                                                                       and M. Schreckenberg (Springer Berlin Heidelberg, 2010)
+                                                                       pp. 43­54.
+                                                                 [44] L. C. Edie, in Proceedings of the Second International
+                                                                       Symposium on the Theory of Traffic Flow: London 1963
+                                                                       (OECD, Paris, France, 1965) pp. 139­154.
+                                                                 [45] S. P. Hoogendoorn and W. Daamen, Transp. Sci. 39, 147
+                                                                       (2005).
+                                                                 [46] S. Hoogendoorn and W. Daamen, in Traffic and Granular
+                                                                       Flow '03 (Springer Berlin Heidelberg, 2005) pp. 373­382.
+arXiv:1412.1082v1 [physics.soc-ph] 2 Dec 2014                                              Supplemental material for:
+                                                                      Universal power law governing pedestrian interactions
+
+                                                                                   Ioannis Karamouzas,1 Brian Skinner,2 and Stephen J. Guy1
+                                                                          1Department of Computer Science and Engineering, University of Minnesota, USA
+
+                                                                                       2Materials Science Division, Argonne National Laboratory, USA
+                                                                                                                  (Dated: December 4, 2014)
+
+                                                                                                            EXPERIMENTAL DATASETS
+
+                                                  Our findings draw from datasets published by three different research groups. These datasets are illustrated in
+                                               Fig. S1 and summarized in Table S1. The experiments labeled b250 combined and b4 combined are described in
+                                               Refs. 1 and 2, and are combined to comprise the Bottleneck dataset. These experimental trials were recorded at
+                                               25 fps using multiple cameras, with trajectories automatically tracked and corrected for perspective distortion [1, 3].
+                                               The experiments involved participants walking through a 4 m-long corridor that has a bottleneck of width of 2.5 m
+                                               or 1 m. The remaining four datasets were combined to comprise the Outdoor dataset. The three datasets labeled
+                                               crowds zara01, crowds zara02, and students003 were recorded at 25 fps using a single camera and the trajectories
+                                               of the pedestrians were manually tracked and post-processed to minimize errors and correct the distortion due to
+                                               pixel noise and the camera perspective [4]. The dataset denoted seq eth was recorded at 2.5 fps and tracked in a
+                                               semi-automatic process [5]. In addition to their different settings, the two datasets types, Bottleneck and Outdoor,
+                                               are also distinguished from each other by their different pedestrian densities (see Table S1), while within each type
+                                               the densities are similar.
+
+                                                  Matlab was used to process the corresponding 2D positional data of the pedestrians' trajectories after applying a
+                                               low-pass second order Butterworth filter to remove noise and reduce oscillation effects (zero phase shift; 0.8 normalized
+                                               cutoff frequency for the four outdoor datasets and 0.24 normalized cutoff frequency for the two bottleneck datasets).
+                                               In all datasets and for each time instant, we infer the instantaneous velocity of each pedestrian using a discrete
+                                               derivative. To estimate the time-to-collision  , which indicates when (if ever) a given pair of pedestrians will collide
+                                               if they continue moving with their current velocities, we assume that each pedestrian can be modeled as a disc with
+                                               a fixed radius. In our analysis, we used a radius of 0.1 m, which results in less than ten total colliding pairs of
+                                               pedestrians across all six datasets. The corresponding disc diameter represents the smallest cross-sectional length
+                                               that a pedestrian can occupy (by rotating or compressing his or her upper body) while resolving a collision. Overall,
+                                               we collected 119,774 pairwise time-to-collision ( ) samples from the Outdoor datasets and 177,672 samples from the
+                                               Bottleneck datasets. This number of samples was sufficient to draw statistically significant conclusions about the
+                                               power law governing pedestrian interactions. While all results presented here correspond to an assumed radius of
+                                               0.1 m, a similar power law trend is produced for a wide range of radius values.
+
+                                               FIG. S1. Pedestrian trajectories for four of the six datasets examined in this paper, colored by time-averaged density from low
+                                               (dark red) to high (white) values. (A-B) are from sparse, outdoor environments with largely bi-directional flows. (C) is from
+                                               a moderately dense environment with multi-directional flow. (D) is from controlled experiments where a dense crowd walks
+                                               through a narrow constriction. Horizontal and vertical axes label the distance from the center of the scene, in meters.
+                                                                                                             2
+
+TABLE S1. Characteristics of the datasets analyzed. The first two listed datasets were grouped together to comprise the
+Bottleneck dataset. The remaining four datasets define the combined Outdoor dataset. The average density reported in the
+table is computed using the generalized definition of Edie [6].
+
+Dataset   Type                  Description           Flow       Location    No.  Density  Citation   Data
+                                                                             Ped  (1/m2)      [1, 2]  files
+  b250     Lab                Participants             Uni-        Ju¨lich,  176                        [7]
+combined  setting             navigating           directional   Germany            2.328     [1, 2]
+                              through a 2.5 m                                178               [4]      [7]
+    l4     Lab                wide bottleneck          Uni-        Ju¨lich,         2.665      [4]
+combined  setting             Participants         directional   Germany     148               [4]      [8]
+                              navigating                                     204    0.206      [5]      [8]
+crowds    Outdoor             through a 1.5 m           Bi-       Nicosia,   434    0.267               [8]
+zara01     setting            wide bottleneck      directional     Cyprus    360    0.391               [9]
+                              Pedestrians                                           0.148
+crowds    Outdoor             interacting at a          Bi-       Nicosia,
+zara02     setting            shopping street      directional     Cyprus
+                              Pedestrians
+students003 Outdoor           interacting at a       Multi-      Tel Aviv,
+                     setting  shopping street      directional      Israel
+                              Students
+seq eth   Outdoor             interacting at a          Bi-        Zu¨rich,
+           setting            university campus    directional  Switzerland
+                              Students
+                              interacting outside
+                              the ETH main
+                              building
+
+                         DETAILED DESCRIPTION OF THE PAIR-DISTRIBUTION FUNCTION
+
+   For a given variable x that describes the separation between two pedestrians, the pair distribution function g(x)
+indicates the degree to which a pair separation x is made unlikely by the interactions between pedestrians. Specifically,
+g(x) is defined by g(x) = P (x)/PNI(x), where P (x) is the probability density function for the relative separation x
+between pedestrians in the dataset, and PNI(x) is the probability density function for x that would arise, hypothetically,
+if pedestrians were non-interacting. For large separation values we expect that pedestrians do not influence each other,
+and therefore lim g(x) = 1.
+
+                               x
+
+   While there is no way to remove the interactions between pedestrians in the dataset, we propose the following
+approach to closely approximate the distribution PNI(x). We begin by randomly permuting time information between
+different pedestrians, so that each moment in a pedestrian's trajectory has its instantaneous position and velocity
+preserved, but is assigned a randomly permuted time. The resulting "time-scrambled" dataset maintains the same
+spatially-averaged density at any given instant and the same time-averaged flow rate of pedestrians across any location
+in the scene as in the original dataset. However, the pedestrian positions in the time-scrambled dataset are uncorrelated
+with each other at any given value of the scrambled time, since they are drawn from trajectories at different real times.
+Creating a probability density function of the scrambled data gives PNI(x), allowing us to define g(x) = P (x)/PNI(x).
+Figure 1c of the main text shows the result of this process using for the variable x the Cartesian distance r between
+pedestrians, while Fig. 1d shows the result when the probability density functions are computed for the time-to-
+collision  .
+
+                                                                STATISTICAL METHODS
+
+                                              Analysis of similarity between g(r) and g( ) curves
+
+   We analyzed the effect that the relative velocity between pedestrians has on the distance- and time-to-collision-based
+pair distribution functions by conducting separate one-way ANOVAs for g(r) and g( ) respectively on the Outdoor
+                                                                                                                                                         3
+
+dataset. All tests were performed in STATISTICA (version 8.0) with significance levels set to 5%. To estimate g(r)
+and g( ), we used intervals of 0.04 m and 0.04 s, respectively, and clustered pairs of pedestrians into three categories
+according to their rate of approach v = -dr/dt (Fig. 1c and Fig. 1d) for values of r < 8 m and  < 8 s. The analysis
+reveals that the distance-based pair distribution function g(r) has a significant dependence on the rate of approach,
+[F (2, 576) = 27.811, P < 0.001]. However, for g( ), the pair distribution function does not vary for different values of
+v, [F (2, 510) = 0.143, P = 0.866], indicating that  is a sufficient descriptor of pedestrian interactions.
+
+                                                                    Power-law fit for E( )
+
+   Regarding the power-law fit shown in Fig. 2 of the main text, for both the Outdoor and the Bottleneck datasets,
+we estimated g( ), and subsequently the interaction energy E( ), using intervals of 0.01 s. In both datasets, due to
+tracking errors and statistical noise, the energy is only well-defined over a finite interval, with the computed energy
+values fluctuating around a maximum observed energy at very small values of  and becoming indistinguishable from
+noise at large values of  . To estimate the lower  boundary, we first clustered the data into bins of 0.2 s, and used a
+series of t-tests between successive bins to determine the first two bins with significantly different interaction energies.
+In the Outdoor dataset, the analysis revealed a significant difference in E( ) between [0.2 s, 0.4 s) and [0.4 s, 0.6 s)
+indicating a value of  = 0.4 s as an appropriate lower bound [t(38) = 6.664, P < 0.001]. In the Bottleneck dataset,
+the first two bins already exhibit a statistically significant difference in energy [t(38) = 10.856, P < 0.001], allowing
+us to select the value of 0.2 s as a lower boundary for  . To estimate the upper boundary value, t0, we conducted
+separate ANOVA tests and determined the first three successive clusters for which the interaction energy does not
+vary. In the Outdoor dataset, [2.2 s, 2.4 s) denotes the first bin that has the same energy as its two subsequent ones,
+indicating t0 = 2.4 s [F (2, 57) = 1.883, P = 0.161]. In the Bottleneck dataset, the corresponding bin is [1.2 s, 1.4 s)
+resulting in the estimate t0 = 1.4 s [F (2, 57) = 1.614, P = 0.208].
+
+   Over the interval of well-defined data, E( ) follows a power law. A linear fit of log E vs. log  with bisquare
+weighting reveals an exponent of 2.05 ± 0.123 for the Outdoor dataset and 2.017 ± 0.192 for the Bottleneck dataset.
+As can be seen in Fig. 2b, the interaction energy in both datasets can be well modeled with an exponent of 2
+[t(174) = 0.809, P = 0.42 for the Outdoor and t(106) = 0.171, P = 0.865 for the Bottleneck]. We note that, for visual
+clarity, the data in Fig. 2a and Fig. 2b are down-sampled, showing E( ) samples every 0.02 s and 0.03 s respectively.
+
+                            PAIR DISTRIBUTION FUNCTION IN 2D SPATIAL COORDINATES
+
+   Figure 1c of the main text demonstrates that the Cartesian distance r between two pedestrians is not a sufficient
+descriptor of their interaction, as it cannot account for the dependence of the pair distribution function g(r) on
+the pedestrian rate of approach v. Here we show that even the full two-dimensional displacement vector r cannot
+adequately parameterize pedestrian interactions. In other words, we show that the empirical behavior of the pair
+distribution function is inconsistent with any form of the interaction that depends only on relative spatial coordinates.
+
+            3                         0<1
+
+                                                                   1<2
+            2.5
+
+                                                                   >2
+
+g(r,  = 0)  2
+
+            1.5
+
+            1
+
+            0.5
+
+            0    0  0.5  1  1.5    2  2.5                               3
+
+                            r [m]
+
+FIG. S2. The pair distribution function g in polar coordinates (r, ) for pedestrians in the Outdoor dataset, plotted for the
+fixed angle  = 0. g(r,  = 0) shows a significant dependence on the rate v at which the pedestrians approach each other,
+indicating that the displacement vector r is not a sufficient descriptor of pedestrian interactions.
+                                                                                                                                   4
+
+A                 0    /3                B                                                                             Bottleneck
+                  /3 <   2/3                                                                                           Outdoor
+    2.5           2/3 <   2                   3
+
+       2                                    2.5
+
+    1.5                                                                                      2
+
+g( )                                                                                         1.5
+                                                                                       g(r)
+
+1
+
+                                                                                             1
+
+0.5                                                                                          0.5
+
+0         0  0.5  1  1.5      2  2.5  3                                                      0    0  0.5  1  1.5    2  2.5  3
+
+                      [s]                                                                                    r [m]
+
+FIG. S3. Appropriateness of the time-to-collision variable ( ) as a descriptor of pedestrian-pedestrian interactions. (A) The
+pair distribution function g( ) as a function of time-to-collision  for different values of the relative orientation  between
+interacting pedestrians in the Outdoor dataset. The different g( ) curves collapse onto each other, suggesting that, in addition
+to the velocity-independence demonstrated in Fig. 1d of the main text, g( ) is also independent of the pedestrians' relative
+orientation. (B) The pair distribution function g as a function of the distance r between pedestrian pairs that are not on a
+collision course (i.e., pairs that have undefined  ). For both the Bottleneck and the Outdoor datasets, there is no evidence of
+any repulsion beyond r  0.4 m. This, along with (B) and Fig. 1 of the main text, suggests that  alone provides an appropriate
+parameterization of pedestrian interactions.
+
+   The displacement vector r connecting two pedestrians can be parameterized by the vector norm r and the angle 
+between r and a given pedestrian's current heading. We find that, for a given fixed value of , the pair distribution
+function g(r, ) shows a significant dependence on the pedestrian rate of approach v. This is shown explicitly for  = 0
+in Fig. S2. Similar conclusions can also be drawn for different values of , suggesting that the displacement vector r
+alone cannot accurately quantify pedestrian interactions.
+
+                                                  ORIENTATION-INDEPENDENCE OF g( )
+
+   In Fig. 1d of the main text, it is shown that g( ) is independent of the rate v at which pedestrians approach other.
+Here we show that g( ) is also independent of the relative orientation between pedestrians.
+
+   Figure S3A plots g( ) for different values of the angle , defined (as above) as the angle between a pedestrian's
+velocity vector and the displacement vector connecting the two interacting pedestrians. As in Fig. 1d, the curves for
+g( ) corresponding to different  collapse onto each other. This suggests that the interaction between pedestrians as
+captured by  is independent of the pedestrians' relative orientation.
+
+                                          ABSENCE OF INTERACTION FOR UNDEFINED 
+
+   Figure 2 of the main text presents the interaction energy for pedestrian pairs with finite time-to-collision  . Here
+we demonstrate that for pedestrian pairs that are not on a collision course (i.e., for pairs with undefined  ), there is
+no evidence of any finite interaction beyond a short-ranged exclusion.
+
+   Figure S3B shows the pair distribution function g(r) plotted only for pedestrian pairs with undefined  . For the
+Bottleneck dataset, g(r)  1 at all r 0.4 m, which suggests that there is no interaction between non-colliding
+pedestrians once that are separated by more than 0.4 m. For the Outdoor dataset, a finite repulsive interaction,
+corresponding to g(r) < 1, also appears only at r 0.4 m. The peak in g(r) at r  0.6 m suggests a positive correlation
+between non-colliding pedestrians that are not too far away. This can be mainly attributed to the presence of small
+groups of pedestrians that walk next to each other, either for social reasons or as a strategy for navigating through
+the crowd.
+                                                                                                                       5
+
+              ANALYTICAL EXPRESSION FOR THE SIMULATED INTERACTION FORCE
+
+   Equation (2) of the main text defines the interaction energy of a pair of pedestrians with finite time-to-collision  .
+Within a force-based simulation model, this energy is directly related to the force Fij experienced by the pedestrian
+i due to the interaction with another pedestrian j. In particular,
+
+                                     Fij = -xij E( ) = -xij k -2e-/0 ,                                                 (S1)
+
+as in Eq. (3) of the main text. Here,  is understood to be a function of the relative displacement xij = xi - xj
+between pedestrians and their relative velocity vij = vi - vj.
+
+   At any given simulation step, we estimate  by linearly extrapolating the trajectories of the pedestrians i and j
+
+based on their current velocities. Specifically, a collision is said to occur at some time  > 0 if the corresponding discs
+
+of the pedestrians,of      radii Ri  and Rj  , respectively, intersect. If  no  such time exists, the     interaction  force Fij is 0.
+                 b-    d,  where a   = vij   2, b = -xij · vij , c = xij    2-  (Ri + Rj)2, and d =       b2 - ac. By  substituting 
+Otherwise,    =     a
+
+into Eq. (S1), the interaction force can be written explicitly as:
+
+                                                                                                          
+                                                   vij -
+              Fij = -      ke- /0    2       +  1                           vij 2 xij - (xij · vij ) vij  .            (S2)
+                           vij 2  2             0
+                                                          (xij · vij )2 - vij 2 ( xij 2 - (Ri + Rj )2)
+
+   A complete simulation is produced by combining this interaction force, and a similar force associated with repulsion
+from static obstacles, with a driving force. C++ and Python code of our complete force-based simulation model are
+available at http://motion.cs.umn.edu/PowerLaw/.
+
+                                                                 SIMULATION RESULTS
+
+   We tested the anticipatory interaction law via computer simulations using the derived force-based model. To
+approximate the behavior of typical humans, the preferred walking speeds of the pedestrians were normally distributed
+with an average value of 1.3 ± 0.3 m/s [10]. In all simulations, we set k = 1.5 and 0 = 3 s as the default parameter
+values of the interaction forces. [See Eq. (S2)].
+
+   Details of the simulations are listed below:
+
+    · Evacuation: 150 pedestrians exit a room (10 m wide × 24 m long) through a narrow doorway. Due to the re-
+       stricted movement of the pedestrians, arch-like blockings are formed near the exit, leading to clogging phenomena
+       similar to the ones observed in granular media [11, 12]. See Fig. 3a.
+
+    · Hallway: 300 pedestrians cross paths while walking from opposite ends of an open hallway that is 20 m wide.
+       The pedestrians dynamically form lanes of uniform walking directions to efficiently resolve collisions. See Fig. 3b.
+
+    · Bottleneck : 150 pedestrians start in a 5 m-wide waiting area and have to pass through a 5 m-long bottleneck of
+       variable width (1 m - 3 m). In all cases, pedestrians exhibit clogging behaviors in the waiting area (Fig. 3c).
+       With wider bottlenecks, "zipping" patterns emerge inside the constriction. For example, at a width of 2.5 m,
+       pedestrians tend to walk diagonally behind each other, dynamically forming 5-6 overlapping layers that maximize
+       the utility of the bottleneck, as observed in real life [13].
+
+    · Crossing: Two groups, of 40 pedestrians each, cross paths perpendicularly. The pedestrians prefer to slow down
+       and let others pass rather than deviate from their planned courses. As such, homogeneous clusters of pedestrians
+       emerge within the two groups, leading to the formation of diagonal line-shaped patterns [14]. See Fig. 3d.
+
+    · Collective motion: 750 pedestrians are placed in an enclosed square area of size 40 × 40 m, and at each time
+       step are propelled forward in the direction of their current velocity without having a specific goal. Pedestrians
+       are initially given random orientations, and after a long enough time they spontaneously form a vortex pattern
+       in which all pedestrians are walking in unison. See Fig. 3e.
+
+   Overall, as can be seen in Fig. 3 of the main text, the derived force law described in Eq. (S2) is able to reproduce a
+wide variety of collective phenomena. We also used the generalized definitions of flow, speed, and density suggested
+by Edie [6] to measure the density-dependent behavior that the agents exhibit in several of the simulations described
+                                                                                                                                                                                                   6
+
+A 1.6                                   Hallway           B                                                                                  0         E()  -2
+                                        Bottleneck
+     1.4                                Evacuation                2                                                                      10
+     1.2                                Weidmann               1.5
+                                                                                                                                             -1
+       1                                                          1
+     0.8Speed [m/s]                                                                                                                      10
+     0.6g(r)
+     0.4                                                                                                                                                                             0
+     0.2                                                                                 E() [arb. units]
+                                                                                                  g(r)                                                        10
+       0                                                                                                 0.5
+         0
+                                                                                                                           Fit - E()  -2
+
+                                                                                                         0                 Hallway
+
+                                                                                                                           Bottleneck
+
+                                                                                                         -0.5              Evacuation
+
+                  1     2         3     4              5                                                   0.6          1           1.5          2                                      2.5     3
+
+                     Density [1/m2]                                                                                                        [s]
+
+FIG. S4. Analysis of simulations generated using the interaction force described in Eq. (S2). (A) Speed-density relation
+seen in various simulations. The results are obtained using the generalized definitions of flow, speed and density of Edie [6] by
+clustering the data into bins of 0.1 ppl/m2. The corresponding fundamental diagram is compared to measurements of Weidmann
+[10]. (B) The trajectories of simulated pedestrians reveal the same power-law interaction that we identify from real human
+crowd data (see Fig. 2 of the main text).
+
+above. Each simulation area was divided into two-dimensional cells measuring 0.5 m × 0.5 m and for each cell we
+determined its average density and speed over 4 s intervals. Figure S4A shows the corresponding fundamental diagram
+(here, the bottleneck samples refer to a 1 m wide bottleneck). Our results are in good agreement with the fundamental
+relation of speed, flow and density of real humans, as reported by Weidmann [10].
+
+   Our derived force model is also sufficient to reproduce, qualitatively, the behavior of the spatial pair distribution
+function g(r). This is shown in Fig. S5A, where simulation results for g(r) are plotted for different values of the
+pedestrian rate of approach v. The strong dependence of g(r) on v is consistent with what we observe in the Outdoor
+dataset (Fig. 1c). The peak in g(r) for small v can be mainly attributed to spontaneous lane formation between
+pedestrians walking in the same direction. Simulation approaches based on distance-dependent forces show somewhat
+different behavior of g(r), as shown in Fig. S4B, with a weaker dependence on v. Such distance-dependent force
+simulations also fail to show a strong dependence of g on the time-to-collision (as depicted in Fig. S6A).
+
+   Importantly, in addition to reproducing known crowd phenomena and flows, our simulations also reproduce the
+empirical behavior of g( ) described in this Letter. Figure S4B shows that the inferred pedestrian interaction energy
+E( )  ln(1/g( )) in the hallway, bottleneck (2.5 m wide), and evacuation simulations closely follows the inverse
+quadratic power law. In contrast, existing anticipatory models of pedestrian behavior, such as the ones proposed
+in [15, 16], do not consistently capture this law. This is shown explicitly in Fig. S6 for the hallway and bottleneck
+scenarios.
+
+A                                       0<1                                                              B                                                                              0<1
+                                        1<2                                                                                                                                             1<2
+        6                               >2                                                                        3                                                                     >2
+        4                                                                                                         2
+
+            2                                                                                                  1
+
+            0  0     1               2              3                                                          0     0     1                        2                                        3
+
+                           r [m]                                                                                                         r [m]
+
+FIG. S5. The pair distribution function g(r) in the hallway simulation generated using (A) the interaction force described
+in Eq. (S2), and (B) the distance-dependent force described in [11]. The variable v denotes the rate of approach between
+pedestrians, and is measured in units of m/s. See also Fig. 1c of the main text.
+                                                                                                                                                         7
+
+FIG. S6. The inferred interaction energy E( )  ln(1/g( )) as a function of time-to-collision ( ) for simulations obtained using
+(A) the distance-dependent model described in [11], (B) the behavioral heuristics model proposed in [16], (C) the least-effort
+model proposed in [15], and (D) our derived anticipatory force model. In all figures, colored lines indicate average energy values
+every 0.05 s and shaded regions denote ± one standard deviation.
+
+                                                                                NOTE
+
+   C++ and Python implementation of the anticipatory force model is available at
+http://motion.cs.umn.edu/PowerLaw/, along with videos demonstrating simulation results. We also provide
+links to the data used to derive the power law of human interactions.
+
+ [1] A. Seyfried, O. Passon, B. Steffen, M. Boltes, T. Rupprecht, and W. Klingsch, Transp. Sci. 43, 395 (2009).
+ [2] A. Seyfried, M. Boltes, J. Ka¨hler, W. Klingsch, A. Portz, T. Rupprecht, A. Schadschneider, B. Steffen, and A. Winkens, in
+
+      Pedestrian and Evacuation Dynamics 2008 , edited by W. Klingsch, C. Rogsch, A. Schadschneider, and M. Schreckenberg
+      (Springer Berlin Heidelberg, 2010) pp. 145­156.
+ [3] M. Boltes, A. Seyfried, B. Steffen, and A. Schadschneider, in Pedestrian and Evacuation Dynamics 2008 , edited by
+      W. Klingsch, C. Rogsch, A. Schadschneider, and M. Schreckenberg (Springer Berlin Heidelberg, 2010) pp. 43­54.
+ [4] A. Lerner, Y. Chrysanthou, and D. Lischinski, Computer Graphics Forum 26, 655 (2007).
+ [5] S. Pellegrini, A. Ess, K. Schindler, and L. Van Gool, in IEEE International Conference on Computer Vision (2009) pp.
+      261­268.
+ [6] L. C. Edie, in Proceedings of the Second International Symposium on the Theory of Traffic Flow: London 1963 (OECD,
+      Paris, France, 1965) pp. 139­154.
+ [7] The b250 combined and l4 combined datasets are available at http://www.asim.uni-wuppertal.de/database-new/own-
+      experiments/bottleneck.
+ [8] The zara 01, zara 02 and students003 datasets are available at
+      http://graphics.cs.ucy.ac.cy/research/downloads/crowd-data.
+ [9] The seq eth dataset is available at http://www.vision.ee.ethz.ch/datasets/.
+[10] U. Weidmann, Transporttechnik der Fußg¨anger , Literature Research 90 (ETH Zu¨rich, 1993) in German.
+[11] D. Helbing, I. Farkas, and T. Vicsek, Nature 407, 487 (2000).
+[12] D. Helbing, Rev. Mod. Phys. 73, 1067 (2001).
+[13] S. P. Hoogendoorn and W. Daamen, Transp. Sci. 39, 147 (2005).
+[14] S. P. Hoogendoorn and W. Daamen, in Traffic and Granular Flow '03 (Springer Berlin Heidelberg, 2005) pp. 373­382.
+[15] S. J. Guy, S. Curtis, M. C. Lin, and D. Manocha, Phys. Rev. E 85, 016110 (2012).
+[16] M. Moussa¨id, D. Helbing, and G. Theraulaz, Proc. Natl. Acad. Sci. 108, 6884 (2011).
+

@@ -119,6 +119,81 @@ Written before reading the sources; the progress log records where it changed.
     original paper is not cached.
 - Next step: read the sources.
 
+### 2026-10-13 20:40 — Sources read: the ORCA paper, RVO2 (read, not run), parameter sources
+
+- What I did:
+  - Downloaded the ORCA paper from its authors' page and read all of it.
+  - Cloned `github.com/snape/RVO2` into the session scratchpad with `--no-checkout` and read
+    files through `git show`. Nothing was checked out, built, installed or executed.
+  - Checked the GameChat reference list in the copy cached by #24.
+  - Looked for sources for the physical parameters: first in what the repository already
+    caches, then on the web, downloading the raw page or file each time and reading the number
+    in it myself instead of trusting a summary or my memory.
+  - Cached everything under `refs/` with the prefix `si1_`. (I first used `oa_`, then saw that
+    issue #12 already uses that prefix for something else, and renamed before committing.)
+- Why: the issue's Part 1 (confirm the citation, read RVO2, confirm its licence) and Part 5
+  (a citation with a locator for every physical parameter, or a `[placeholder]` tag).
+- Result / what I found:
+  - **Citation confirmed, for GameChat v1 only.** ORCA is reference [22] in arXiv:2503.12333v1
+    (`refs/ln_gamechat_arxiv_v1.txt:596-598`): J. van den Berg, S. J. Guy, M. Lin, D. Manocha,
+    "Reciprocal n-body collision avoidance", in *Robotics Research: The 14th International
+    Symposium ISRR*, pp. 3–19, Springer, 2011. In v2 of the same paper [22] is a different work
+    (`refs/mahadevan2025_gamechat.txt:558`). The repository's own Crossref record gives the DOI
+    `10.1007/978-3-642-19457-3_1` and pages 3–19 (`refs/sr_cr_prewindow.json`). "ISRR 2011" in
+    the issue is the year the proceedings were published; the year the symposium was held is
+    not stated in anything I read.
+  - **GameChat says of ORCA exactly what this sub-issue is about:** "deadlocks often result
+    due to the structure of the half-planes [23]" (`refs/ln_gamechat_arxiv_v1.txt:73`).
+  - **RVO2**, commit `75822bb` (branch `main`, 2026-09-25). Licence: **Apache-2.0** for the
+    source files (SPDX header of `src/Agent.cc`, lines 5–6; `LICENSE` at the root), copyright
+    "2008 University of North Carolina at Chapel Hill". The README and citation file are
+    CC-BY-SA-4.0. There is no `NOTICE` file.
+  - **RVO2 departs from the paper in three places that matter here.** Line numbers are those
+    of `src/Agent.cc` at that commit, cached in `refs/si1_rvo2_75822bb_excerpts.txt`.
+    1. *Walls.* The paper builds a wall's half-plane at the point of the velocity obstacle
+       closest to the optimisation velocity and sets that velocity to zero for obstacles
+       (Sec 5.4). RVO2 projects the agent's *current* velocity instead (lines 455–535).
+    2. *An exact tie between the two sides.* The paper takes "the closest point on the boundary
+       of the velocity obstacle" (Eq. 5) and does not say what happens when two points are
+       equally close. RVO2 takes the right-hand leg (`det(...) > 0` picks the left leg, anything
+       else the right; lines 574–588).
+    3. *The share of the avoidance* is the constant 0.5 (line 607). There is no per-agent
+       parameter to change, which is the reason the issue gives for not using RVO2's bindings.
+  - **RVO2's own examples work around perfect symmetry.** `examples/Blocks.cc:178` and
+    `examples/Roadmap.cc:322` add a random vector of length up to 0.0001 to every preferred
+    velocity, under the comment "Perturb a little to avoid deadlocks due to perfect symmetry."
+    So the reference implementation does not claim that plain ORCA resolves an exactly
+    symmetric encounter. That bears directly on the first behaviour check in the issue.
+  - **A gap in the issue's reciprocity condition, found on paper before any code.** The issue
+    says the guarantee needs α_i + α_j ≥ 1. That is right when the pair is on a collision
+    course. When it is not, ORCA's half-plane lets each agent move *toward* the velocity
+    obstacle, by its share of the room that is left; with shares that sum to more than 1 the
+    pair could then steer itself onto a collision course. Standard ORCA never meets this
+    because its shares sum to exactly 1. So the share cannot simply multiply `u` in both cases.
+    Design decision to follow.
+  - **Parameter sources found, each read in the raw source and cached:**
+
+    | Quantity | Value in the source | Source and locator |
+    |---|---|---|
+    | Corridor two people pass in | length 7.88 m, width 1.75 m | Moussaïd et al. 2009, Sec 2(a); `refs/si1_moussaid2009_pmc.txt:99` |
+    | Desired walking speed | 1.29 ± 0.19 m/s (mean ± s.d.) | same, Sec 4(a); line 118 |
+    | Comfortable gait speed, range of group means | 1.272 m/s (women in their seventies) to 1.462 m/s (men in their forties) | Bohannon 1997, abstract; `refs/si1_bohannon1997_pubmed_abstract.txt` |
+    | Maximum gait speed, range of group means | 1.749 to 2.533 m/s | same |
+    | Effective shoulder width in passing | 49.8 cm (half of it: 24.9 cm) | Yamamoto et al. 2019, Sec 4.3; `refs/b3_yamamoto_bodyrotation.txt:648-651` |
+    | Shoulder width by gender | men 48.4 cm (SD 3.7), women 41.0 cm (SD 1.4); five men, four women | same, Table 2 and Sec 7; lines 1068–1079, 1096–1099 |
+    | Corridor widths at which two people were made to pass | 60 to 140 cm | same, Sec 3; lines 344–345 |
+    | Interaction time horizon of pedestrians | about 3 s ("consistent with previous research demonstrating ... 2–4 s") | Karamouzas et al. 2014, p. 3; `refs/si1_karamouzas2014_1412_1082.txt:136-138` |
+    | ORCA settings used for pedestrians in practice | neighbour distance 5 m, 10 neighbours, τ 3.0 s, obstacle τ 0.15 s, radius 0.2 m, preferred speed 1.34 m/s, maximum 2 m/s | Menge example `examples/core/4square/4squareS.xml`, lines 15 and 22; `refs/si1_menge_4squareS.xml` |
+
+  - **What I could not get.** The full text of Bohannon 1997 is behind a paywall; only its
+    abstract was read, so only the two ends of its age-by-sex table are available, not the
+    table. Weidmann's 1.34 m/s, the usual citation for walking speed, was not obtained in any
+    form; Menge uses that number without citing it.
+  - **A number I had wrong from memory.** I expected Menge's example to say radius 0.19 m and
+    preferred speed 1.04 m/s. The file says 0.2 and 1.34. Recorded because it is the reason
+    every number above was read from its source.
+- Next step: the design.
+
 ## Open questions / risks
 
 - **Q1 (carried from #24) — has the supervisor's "no simulation code until the literature
