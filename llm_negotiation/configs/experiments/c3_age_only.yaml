@@ -1,0 +1,54 @@
+# Condition C3 (age): two people with the same task and the same gender, 25 and 70.
+#
+# The second member of each pair is the first with one attribute changed, written
+# {persona: f25, age: 70}: everything else about the persona is copied, so age is the
+# only thing that differs. Agent index and speaking order are counterbalanced, so that
+# neither can pass for an effect of age. 2 pairs x 2 x 2 x repeats.
+#
+# Example config. It has NOT been run with the paid client.
+#
+#   python run_experiment.py configs/experiments/c3_age_only.yaml --plan
+#   python run_experiment.py configs/experiments/c3_age_only.yaml --client mock
+schema_version: 1
+experiment_name: c3_age_only_hallway
+condition: C3
+description: Identical tasks, personas differing only in age.
+
+scenario: configs/scenarios/hallway.yaml
+personas: configs/personas/personas.yaml
+
+negotiation:
+  enabled: true
+  template: persona_v1
+  max_messages_per_agent: 4
+  timing:
+    mode: pre_conflict
+    seconds_per_message: 1.0
+  info_fields: all
+  visibility: default
+
+llm:
+  client: mock
+  model: deepseek-flash
+  temperature: 1.0
+  max_tokens: 300
+  thinking: disabled
+  mock_policy: first_speaker_goes
+
+arbitration:
+  policy: strategy1
+  tie_break: lower_index
+
+budget:
+  cap_usd: 0.50
+  ledger: spend_ledger.jsonl
+
+design:
+  mode: factorial
+  seed: 24700
+  repeats: 1          # the model's replies vary from call to call even at fixed settings; raise this for a real experiment
+  pairs:
+    - [{persona: f25}, {persona: f25, age: 70}]
+    - [{persona: m25}, {persona: m25, age: 70}]
+  assignment: counterbalance
+  first_speaker: counterbalance

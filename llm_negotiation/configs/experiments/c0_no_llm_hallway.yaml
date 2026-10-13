@@ -1,0 +1,36 @@
+# Condition C0, hallway: no LLM. Strategy 1 alone decides who goes first.
+#
+# The hallway is this project's scenario, not GameChat's. The design mirrors the other
+# two C0 files so that the three scenarios can be compared: three pairs of task types in
+# both orders, in the symmetric layout and with either agent starting 0.5 m further back.
+#
+#   python run_experiment.py configs/experiments/c0_no_llm_hallway.yaml
+schema_version: 1
+experiment_name: c0_no_llm_hallway
+condition: C0
+description: Strategy 1 only, 18 hallway variants.
+
+scenario: configs/scenarios/hallway.yaml
+
+negotiation:
+  enabled: false
+
+arbitration:
+  policy: strategy1
+  tie_break: lower_index
+
+scoring:
+  ground_truth: task_priority
+
+design:
+  mode: factorial
+  seed: 24200
+  pairs:
+    - [{task_type: hospital}, {task_type: airport}]
+    - [{task_type: hospital}, {task_type: grocery}]
+    - [{task_type: airport}, {task_type: grocery}]
+  assignment: counterbalance
+  scenario_variants:
+    - {name: symmetric, overrides: {}}
+    - {name: agent0_back, overrides: {start_offsets: [0.5, 0.0]}}
+    - {name: agent1_back, overrides: {start_offsets: [0.0, 0.5]}}
