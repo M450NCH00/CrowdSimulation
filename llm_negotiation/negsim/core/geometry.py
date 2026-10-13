@@ -189,5 +189,28 @@ class Rect:
                 return False
         return True
 
+    def ray_distance(self, origin: Vec, direction: Vec) -> Optional[float]:
+        """Distance along a ray from ``origin`` to where it first meets the rectangle.
+
+        ``direction`` need not be a unit vector; the result is in units of its length.
+        Returns ``None`` if the ray misses, and 0 if it starts inside (slab method).
+        """
+        t_near, t_far = 0.0, math.inf
+        for start, delta, lo, hi in (
+            (origin[0], direction[0], self.xmin, self.xmax),
+            (origin[1], direction[1], self.ymin, self.ymax),
+        ):
+            if delta == 0.0:
+                if start < lo or start > hi:
+                    return None
+                continue
+            ta, tb = (lo - start) / delta, (hi - start) / delta
+            if ta > tb:
+                ta, tb = tb, ta
+            t_near, t_far = max(t_near, ta), min(t_far, tb)
+            if t_near > t_far:
+                return None
+        return t_near
+
     def as_dict(self) -> dict[str, float]:
         return {"xmin": self.xmin, "ymin": self.ymin, "xmax": self.xmax, "ymax": self.ymax}
