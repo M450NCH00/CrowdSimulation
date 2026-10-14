@@ -341,6 +341,45 @@ def test_a_collision_only_ever_begins_right_after_a_fallback():
     assert result.collisions["agent_wall"] == 0  # the walls are never given up
 
 
+def test_two_feasible_agents_that_perceive_each_other_never_choose_velocities_that_collide_within_tau():
+    """The guarantee itself, checked in the same crowd from positions and velocities alone,
+    without the half-plane code. Whenever two agents perceive each other and both programs
+    are feasible, the closest the two would come within the horizon, at the velocities they
+    chose, is no less than the sum of their radii. And a pair that already overlaps is
+    apart again one step later."""
+    spec = crowd("bidirectional_flow", geometry={"agents_per_direction": 24, "length": 30.0}, seed=3)
+    sim = AvoidanceSimulation(spec, record_trajectory=False)
+    agents, dt = sim.world.agents, spec.dt
+    apart = overlapping = 0
+    while sim.status is None and sim.world.step_index < spec.max_steps:
+        active = [a for a in agents if a.goal_time is None]
+        before = {a.agent_id: a.pose.xy for a in active}
+        perceived = {
+            a.agent_id: {j for _, j in sim.grid.nearest(a.agent_id, *a.pose.xy, a.spec.sensing_radius, a.spec.max_neighbours)}
+            for a in active
+        }
+        sim.step()
+        for i in perceived:
+            for j in perceived[i]:
+                if i > j or i not in perceived[j] or {i, j} & sim.fallback_agents:
+                    continue
+                a, b = agents[i], agents[j]
+                reach = a.spec.radius + b.spec.radius
+                px, py = before[j][0] - before[i][0], before[j][1] - before[i][1]
+                vx, vy = b.velocity[0] - a.velocity[0], b.velocity[1] - a.velocity[1]
+                if math.hypot(px, py) <= reach:
+                    overlapping += 1
+                    closest = math.hypot(px + vx * dt, py + vy * dt)  # where they are one step later
+                else:
+                    apart += 1
+                    speed_sq = vx * vx + vy * vy
+                    t = min(a.spec.time_horizon, max(0.0, -(px * vx + py * vy) / speed_sq)) if speed_sq else 0.0
+                    closest = math.hypot(px + vx * t, py + vy * t)  # the nearest they come within tau
+                assert closest >= reach - 1e-7, (sim.world.step_index, i, j, closest)
+    assert apart > 10_000 and overlapping > 0  # both cases were met, the first on many pairs
+    assert sim.finish().collisions["agent_agent"] > 0  # in a run in which bodies did overlap
+
+
 # --- symmetry -----------------------------------------------------------------------------------
 
 
