@@ -61,7 +61,7 @@ def read_rule_file(path: Path, validator: Validator, root: Optional[Path] = None
     The manifest is not consulted here (``RuleDatabase.load`` does that); this is also how
     a rule that is not in any database, such as a test fixture, is read.
     """
-    where = str(path.relative_to(root)) if root is not None else path.name
+    where = path.relative_to(root).as_posix() if root is not None else path.name
     name = RULE_FILE.match(path.name)
     try:
         raw = load_yaml(path)
