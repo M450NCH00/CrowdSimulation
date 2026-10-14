@@ -580,6 +580,59 @@ Kept here because the workflow asks for the dead ends, not a tidied account.
   read 09:30, 09:25 and 09:20. The times of this session's entries are good to about five
   minutes.
 
+### 2026-10-14 12:55 — On request: the plot drawn for avoidance runs, and an animated viewer
+
+- What I did: the user asked how to run the code and whether there was a UI to watch it.
+  There was none. And the one picture there was, issue #24's trajectory plot, failed on
+  every avoidance run: its title read `first_through` from the outcome, which only a
+  negotiation outcome has. They asked for the plot to be fixed and for an animated viewer.
+  - **The plot** (`negsim/viz/trajectory_plot.py`) builds its title by kind of run, colours a
+    crowd by group with one legend entry per group, and draws single-file segments.
+  - **The viewer** (`negsim/viz/viewer.py`, template `negsim/viz/viewer.html`) reads one run
+    folder or a whole experiment folder, of either kind, and writes one HTML page that
+    plays it: walls, single-file segments, agents to scale, trails, intended paths,
+    velocity and wanted-velocity arrows, rings for what ORCA or the arbiter is doing to an
+    agent, overlaps, a time slider with the events marked on it, play and step controls,
+    speed from 0.1× to 16×, pan and zoom, a run picker, a panel for the selected agent, the
+    event list, and the conversation of a negotiation run. Standard library only; nothing
+    is simulated again.
+- Why: the user's request. Neither changes what a run computes; both only read logs.
+- Decisions (mine, not signed off):
+  - **V1. A page in the browser, not a window.** It needs no GUI toolkit and no install,
+    works the same on any machine, and can be sent to the supervisor as one file.
+    Matplotlib's interactive window depends on a GUI backend and has no play or scrub
+    controls.
+  - **V2. The run data is inside the page,** so it works from a file with no server. Every
+    `<` in it is written as `<`, so that nothing in a log, an LLM's message say, can
+    close the element holding the data and run as code. A test feeds it a hostile
+    message; I checked that the test fails when the escaping is removed.
+  - **V3. Between two logged rows an agent is drawn in a straight line.** That is exact when
+    every step is logged, since within a step both dynamics models move in a straight
+    line. In the two-way flow, which logs every tenth step, it is an approximation, and the
+    page says so on screen.
+  - **V4. Collisions are shown from the logged collision episodes** in an avoidance run, so
+    they are right even where positions are interpolated; in a negotiation run, where every
+    step is logged, from the positions.
+  - **V5. Output goes to `llm_negotiation/views/`, which git ignores.** And the plot's default
+    image, which it writes into a run folder, is now ignored too: the plot's docstring says
+    images are not committed, but nothing stopped one being added to a committed folder.
+- Result / what I found:
+  - 18 new tests in `tests/test_viz.py`; **795 pass** in all, and pyflakes is clean.
+  - In headless Chrome 155, every run of every committed experiment, 112 runs (the 46 of
+    this issue and the 66 of issue #24), was drawn at four moments with every option on
+    and its first events clicked, through a self-test built into the page: no error. The
+    page's script also passes `node --check` (Node 22.16).
+  - I looked at screenshots, light and dark: the head-on pass, the bottleneck handoff, the
+    flow at 20 s, the doorway with its conversation, and the (1.0, 0.0) retreat, where the
+    velocity arrow points back while the wanted one points forward.
+  - Mistakes, each caught on a screenshot or on reading back: author CSS overrode the
+    `hidden` attribute, so the run picker showed for a single run (fixed with a
+    `[hidden]` rule); labels collided with the heading mark and with neighbours (moved);
+    and a shell heredoc turned `\001` in two Windows paths in the README into a control
+    character. That last one was repaired, and the repository was scanned for control
+    characters: none is left.
+- Next step: commit, push, tell the PR.
+
 ## Open questions / risks
 
 Each of Q2 to Q5 is a decision I or the first session made that changes what the layer
@@ -670,7 +723,11 @@ experiment configs; conflict metrics; log schema version 2; 345 tests; four new 
 and extensions to three; the READMEs; 46 committed runs and two benchmark measurements.
 By `git diff --numstat` against the branch below: 4,910 lines added under `negsim/` and 53
 removed (about 4,200 of them in new files, the rest added to existing modules), 2,922 of
-tests, 1,534 of documents.
+tests, 1,534 of documents. (Those counts are from before the viewer.)
+
+Added after the PR was opened, at the user's request (12:55 entry): the trajectory plot now
+draws avoidance runs, and an animated viewer in the browser, `python -m negsim.viz.viewer`,
+plays any run folder or experiment folder of either kind. 18 more tests.
 
 **Why.** Issue #26: the simulator could only settle a conflict by deciding who goes first,
 so a rule taken from it could only prescribe priority. This is the layer that lets a rule
@@ -678,8 +735,9 @@ prescribe avoidance, built and checked on its own, with no rule and no model in 
 
 **How it was verified.**
 
-- 777 tests pass, on Python 3.13.3 in a virtual environment built from
-  `requirements.txt`: the 432 of issue #24, none edited, and 345 new. `pyflakes` is clean.
+- 795 tests pass, on Python 3.13.3 in a virtual environment built from
+  `requirements.txt`: the 432 of issue #24, none edited, 345 for the layer and 18 for the
+  plot and the viewer. `pyflakes` is clean.
 - Existing behaviour is unchanged: issue #24's 54 no-LLM runs come out identical, checked
   by each session separately, the second time on the final tree.
 - The 46 committed runs were made from a clean tree and reproduce exactly, checked twice
