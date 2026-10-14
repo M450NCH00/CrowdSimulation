@@ -230,11 +230,13 @@ CrowdSimulation/
     negsim/                         the package: core, scenarios, conflict, control, llm,
                                     negotiation, personas, runlog, metrics, viz, experiment,
                                     avoidance
-    tests/                          777 tests; none calls a model or the network, none spends
+    tests/                          795 tests; none calls a model or the network, none spends
     docs/                           architecture, gamechat-notes, derivations, llm-backend, log-schema;
                                     orca, perception, parameters, metrics (issue #26)
     runs/                           committed run logs: C0 (no LLM), the paid smoke runs, and
                                     si1_* (the 46 avoidance runs and the benchmark)
+    views/                          the animated viewer's pages (git-ignored); see "Watch a run"
+                                    in llm_negotiation/README.md
     spend_ledger.jsonl              one line per paid API call for this work (Phase 1 spend is
                                     tracked separately in pipeline/config.py)
 ```

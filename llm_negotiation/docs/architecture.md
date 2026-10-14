@@ -35,7 +35,7 @@ negsim/
   metrics/                   makespan, minimum speed, path deviation, deadlock, ground truth
                              avoidance.py: yield events, near misses, collisions (issue #26)
   runlog/                    log schema, writers, the schema check
-  viz/                       transcript renderer, trajectory plot
+  viz/                       transcript renderer, trajectory plot, animated viewer
 
 configs/   scenarios/  personas/  experiments/  avoidance/  tasks/  llm/
 tests/     runs/       docs/       LICENSES/
@@ -283,6 +283,7 @@ core, the arbiter, the personas and the logging conventions.
 | Layer coordination | `negsim/avoidance/coordination.py` | `SingleFileDetector`, a detector for the arbiter of issue #24; `Coordinator`, which decides which pairs the arbiter holds and logs each `Handoff`. |
 | The run loop | `negsim/avoidance/simulation.py` | `AvoidanceSimulation`: one step for every agent, the interactions, the bookkeeping. |
 | Benchmark | `negsim/avoidance/benchmark.py` | Milliseconds per step for a crowd of a given size. |
+| Viewer | `negsim/viz/viewer.py`, `negsim/viz/viewer.html` | An animated, interactive view of run folders of either kind, as one self-contained HTML file. Reads only the logs. Added on request after the PR for issue #26 was opened. |
 | Dynamics | `negsim/core/dynamics.py` | `DynamicsModel`, with `UnicycleDynamics` (issue #24) and `HolonomicDynamics` (ORCA). `World` takes one. |
 | Metrics | `negsim/metrics/avoidance.py` | Yield events, near misses, collision episodes (`metrics.md`). Exposure is counted in the run loop, where the half-planes are. |
 | Scenarios | `negsim/scenarios/crowd_base.py` and one module per scenario | `CrowdScenario`, `CrowdScenarioSpec`, `AgentType`; `wide_corridor_head_on`, `open_crossing`, `overtaking`, `corridor_to_bottleneck`, `bidirectional_flow`. Configs in `configs/scenarios/`, `schema_version: 2`. |

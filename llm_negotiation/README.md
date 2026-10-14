@@ -54,8 +54,8 @@ python -m pytest
 ```
 
 All tests run on the mock client, with the network blocked and the real `.env` out of
-reach. They cost nothing. There are 777: the 432 of issue #24 and 345 for the avoidance
-layer.
+reach. They cost nothing. There are 795: the 432 of issue #24, 345 for the avoidance
+layer, and 18 for the plot and the viewer.
 
 ## Run an experiment
 
@@ -101,8 +101,54 @@ runs/<experiment_name>/<run_id>/config.json     everything that defines the run
 spend_ledger.jsonl                              one line per paid call
 ```
 
-`docs/log-schema.md` describes every field. To draw a run:
-`python -m negsim.viz.trajectory_plot runs/<experiment_name>/<run_id>`.
+`docs/log-schema.md` describes every field. To see a run rather than read it, see the next
+section.
+
+## Watch a run
+
+There is no window that opens while a run is simulated. A run is written to its folder, and
+then it can be watched or drawn from there, as often as you like and at no cost.
+
+**The animated viewer** opens a run in your web browser and plays it:
+
+```
+python -m negsim.viz.viewer runs\si1_head_on_side_preference                         # every run of an experiment
+python -m negsim.viz.viewer runs\si1_bottleneck_handoff\001_opposing_no_directive     # one run
+python -m negsim.viz.viewer runs_mock\c1_smoke                                        # your own mock runs
+```
+
+It writes one HTML file to `views\` (git ignores the folder; `--out FILE` puts it somewhere
+else) and opens it in the default browser (`--no-open` does not). The file holds the run
+data and needs nothing else: no server, no internet, no install. It can be sent to someone
+and opened on their machine. It shows both kinds of run, the negotiation runs of issue #24
+and the avoidance runs of issue #26.
+
+| In the viewer | What it does |
+|---|---|
+| ▶ Play, ◀ ▶, the slider | play, step one time step, jump to any moment. Keys: space, ← →, Shift+← → for a second, Home, End |
+| Speed | 0.1× to 16× real time |
+| Run | choose a run, when the file holds an experiment |
+| Click an agent | its details: persona, directive, speed, what ORCA or the arbiter is doing to it |
+| Drag, wheel, double-click | pan, zoom, fit the scene |
+| Events | collisions, near misses, yields, handoffs, violations, arrivals; click one to jump to it |
+| Conversation | for a negotiation run, what each agent said and the stance it took |
+| Check boxes | trails, intended paths, labels, velocity arrows, the velocity an agent *wanted* (dashed), its sensing radius |
+
+A ring round an agent says what is happening to it: amber, ORCA is changing the velocity it
+wants; pink dashed, no velocity was allowed and ORCA's fallback chose; dark, the arbiter
+holds it (L leader, F follower); red dashed, its body overlaps another. The legend in the
+viewer repeats this. Everything shown is read from the logs. Where a run logged only every
+n-th step (the two-way flow logs every tenth), positions in between are drawn in a straight
+line, and the viewer says so on screen.
+
+**A still picture** of the paths taken, for a report:
+
+```
+python -m negsim.viz.trajectory_plot runs\si1_bottleneck_handoff\001_opposing_no_directive plot.png
+```
+
+Without `plot.png` the image goes into the run folder as `trajectory.png`, which git
+ignores. It draws both kinds of run; a crowd is coloured by group.
 
 ## The conditions
 
@@ -553,3 +599,4 @@ men in Japan (`docs/parameters.md`, section 7).
 - `docs/log-schema.md`: every log file and field.
 - `THIRD_PARTY_NOTICES.md`: what is quoted from GameChat and what is adapted from RVO2,
   with their licences.
+- `negsim/viz/viewer.py` and `viewer.html`: the animated viewer (section "Watch a run").
