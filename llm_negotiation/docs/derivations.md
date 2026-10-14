@@ -7,6 +7,8 @@ in `negsim/conflict/zone.py`. Each result names the test that checks it. Paper l
 Sections 1 to 8 are issue #24's. Sections 9 to 14 were added for the avoidance layer of
 issue #26: what the directive fields do to ORCA's guarantee, the wall rule in discrete
 time, the conflict zone at a single-file segment, and why a symmetric meeting stalls.
+Section 15 was added by issue #28: when an encounter has passed, which is when a
+directive's `speed_scale`, and everything a rule told a pair, stops applying.
 There `orca:LINE` points into `refs/si1_orca_vandenberg2011.txt`, and the notation is that
 of `orca.md`, section 3.
 
@@ -541,3 +543,69 @@ numbers are the ones above.
 *Tested:* the symmetry the argument rests on, in
 `tests/test_avoidance_sim.py::test_an_exactly_symmetric_start_stays_exactly_symmetric_under_plain_orca`.
 The time itself is a result, read from the run.
+
+## 15. When an encounter has passed
+
+Issue #26 had a directive's `speed_scale` hold while the neighbour stayed within the sensing
+radius. At 12.5 m that is long after the encounter is over: in issue #26's run with a scale
+of 0.6 the two walked slowly from 1.4 s to 17.5 s, though they had passed each other at
+9.4 s. Issue #28 makes it stop when the encounter has passed, and has everything a rule
+tells a pair stop then too, unless the rule says otherwise (`rule-format.md`, section 7).
+**DD55 (decision, the issue's): the definition below, applied to `speed_scale` for every
+provider and to every field of a rule match.**
+
+**Setting.** Two agents A and B; `p = x_B - x_A` their relative position and
+`v = v_B - v_A` their relative velocity. Then
+
+    d/dt |p|² = 2 p · v
+
+so the distance between them shrinks while `p · v < 0`, is smallest where `p · v = 0`
+(their closest approach), and grows while `p · v > 0`.
+
+**Definition.** The encounter of A and B **has passed** on the first step at whose start
+
+1. they are separating: `p · v > 0`, and
+2. they are clear of each other: `|p| > r_A + r_B + c`, with `c` the pair's clearance
+   margin (the larger of the two agents' margins, DD31);
+
+or, whichever comes first, the neighbour leaves the sensing radius or the pair interaction
+ends for another reason. "The separation exceeds the summed radii plus any clearance
+margin", in the issue's words, is read as the distance between the two centres.
+
+**Why both conditions.** (1) alone would end a directive while two bodies still touch:
+ORCA pushes two overlapping discs apart (`orca.md`, section 7), and they separate while
+still in contact. (2) alone would end it at the start of every encounter, when the two are
+still far apart.
+
+**Claim.** If the velocities stay as they are, two agents for which the encounter has
+passed never come closer again.
+
+**Proof.** With constant velocities, `p(t) = p_0 + v (t - t_0)` and
+
+    |p(t)|² = |p_0|² + 2 (p_0 · v)(t - t_0) + |v|² (t - t_0)²
+
+With `p_0 · v > 0` both terms after the first are positive for every `t > t_0`, so
+`|p(t)| > |p_0|`, which already exceeds `r_A + r_B + c`. ∎
+
+**In discrete time.** The state is read at the start of each step, with the velocities
+realised on the step before, as perception reads it. So "passed" is first true on the
+first step that starts after the distance has begun to grow: no later than one step after
+closest approach, and never before it.
+
+**What it does not guarantee.** Velocities do not stay constant: ORCA, the path and other
+agents change them, and two agents that have passed can approach again (one turning back,
+or jostling in a crowd). For a rule, a genuinely new encounter is matched afresh once the
+pair's encounter class has changed (`rule-matching.md`, section 3); the hysteresis there is
+what keeps a jostle from re-arming a rule. A static directive's `speed_scale`, once expired,
+stays expired for the rest of the interaction.
+
+**The effect.** In issue #26's two runs with a scale of 0.6 (`both_left_slow`), the
+makespan goes from 18.7 s and 18.6 s to 15.4 s, and the conflict exposure stays 6.6 s: the
+encounter is the same, only the slow walk after it is gone. The other 44 runs of issue #26
+reproduce exactly (`WORK_LOG-28.md`).
+
+*Tested:* `tests/test_rules_matching.py::test_passed_means_separating_and_clear`
+(abreast is not passed, one step past is, a clearance margin delays it, still approaching
+is not), `::test_a_rules_speed_scale_applies_until_closest_approach_and_not_after`,
+`::test_a_match_expires_when_the_encounter_has_passed_and_every_field_reverts`;
+`tests/test_avoidance_sim.py::test_speed_scale_slows_the_agent_only_until_the_encounter_has_passed`.

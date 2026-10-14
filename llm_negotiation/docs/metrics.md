@@ -160,3 +160,45 @@ It is a proposal for the evaluation sub-issue, not something this sub-issue appl
 
 "Avoided" in this sense needs a reference: the same scenario under plain ORCA, to show
 that there was a conflict to avoid.
+
+## 9. The outcome of a pair interaction: `avoided`, `resolved`, `failed` (issue #28)
+
+The question of section 8, asked of every **pair interaction** (two agents, from the first
+step on which either perceives the other to the first on which neither does, one arrives, or
+the run ends; `log-schema.md`, `pair_interactions.jsonl`). It uses the definitions and
+thresholds above, unchanged, and is computed at the end of every avoidance run, with or
+without rules.
+
+| Category | Definition |
+|---|---|
+| `failed` | The two **collided** while the pair was open (a collision episode between them, section 6, overlapping the pair interaction in time), or the run ended in **deadlock** with the pair open |
+| `resolved` | Not failed, and **either agent was exposed** to the other (section 3) **or either had a yield event** (section 4) overlapping the pair interaction in time |
+| `avoided` | Neither: no exposure on either side, no yield event, no collision, no deadlock |
+
+They are tried in that order, so every pair gets exactly one.
+
+**The issue's words, and the gap in them.** Issue #28 defines `avoided` as "conflict
+exposure time zero and no yield event", `resolved` as "exposure greater than zero, ending
+without collision or deadlock", and `failed` as "collision or deadlock". A pair with **no
+exposure but a yield event** fits none of the three. It is not a rare case: it is the
+follower the arbiter holds back at a single-file segment, whose wanted speed is capped
+before ORCA ever sees a conflict, and an agent slowed below half its speed by a rule.
+**DD57 (decision): such a pair is `resolved`**, settled by somebody waiting, which is how
+section 8 already reads a yield. This needs sign-off; each pair records what decided its
+category (`outcome_detail`: `exposed`, `yield_events`, `collisions`, `deadlock`), and
+`outcome.json` counts each ingredient (`interaction_outcomes.pairs_with`), so another
+reading can be computed from the logs without running anything again.
+
+**Yields in a crowd are attributed by time (DD58).** A yield event is an agent's, not a
+pair's (section 4). A pair counts one if it overlaps the pair interaction in time. With two
+agents that is exact. In a crowd it can blame a pair for a wait that someone else caused,
+which can only move a pair from `avoided` to `resolved`, never the other way.
+
+**A run that times out.** A pair still open when the run reaches its time limit is
+categorised by the same rules, and flagged (`open_at_timeout`), because "ending without
+collision or deadlock" is not the same as having ended.
+
+**With a perturbed baseline** (`baseline.md`), the preferred velocity an agent hands ORCA
+includes the perturbation, and exposure (section 3) is measured against that velocity. At
+1e-4 m/s it can only matter for a pair that is already within that much of a collision
+course.

@@ -7,7 +7,8 @@ the paper or the issue, and each needs the supervisor's sign-off. Assumptions ar
 
 Sections 1 to 5 describe the negotiation simulator of issue #24. Section 6 describes the
 avoidance layer added by issue #26, which sits beside it: ORCA, perception, directives,
-and the handoff to the arbiter.
+and the handoff to the arbiter. Section 7 describes the rule layer of issue #28: the rule
+format, the rule database, the matching policy, and the frozen baselines.
 
 ## 1. The pieces
 
@@ -27,6 +28,7 @@ negsim/
   conflict/                  conflict zone, detection, time to the region, who leads
   control/                   controller interface, path tracker, Strategy 1 speed bound
   avoidance/                 the ORCA layer (issue #26): section 6
+  rules/                     the rule format, database, matching policy and provider (issue #28): section 7
   negotiation/               prompt templates, persona rendering, situation report,
                              turn parsing, consensus, the dialogue protocol
   personas/                  persona schema and YAML loader
@@ -37,7 +39,8 @@ negsim/
   runlog/                    log schema, writers, the schema check
   viz/                       transcript renderer, trajectory plot, animated viewer
 
-configs/   scenarios/  personas/  experiments/  avoidance/  tasks/  llm/
+configs/   scenarios/  personas/  experiments/  avoidance/  baselines/  rule_following/  tasks/  llm/
+rule_db/   schema/  rules/  rulesets/  MANIFEST.json            (issue #28)
 tests/     runs/       docs/       LICENSES/
 ```
 
@@ -498,7 +501,7 @@ physical precedence, as in issue #24, and ORCA is still there.
 
 ### 6.5 What is not here
 
-- Rules, the rule database, rule-following (the next sub-issue).
+- Rules, the rule database, rule-following: section 7 (issue #28).
 - Any call to a model. Negotiating a directive is a later sub-issue; it will be a
   `DirectiveProvider`.
 - Non-holonomic ORCA and vehicle dynamics (DD23).
@@ -509,3 +512,173 @@ physical precedence, as in issue #24, and ORCA is still there.
   made to take turns: the second waits until the first is out. The arbiter was built for
   agents going opposite ways, where that is necessary.
 - Bodies that are not discs (`parameters.md`, section 7).
+
+## 7. The rule layer (issue #28)
+
+Section 6 built a layer in which every agent holds a directive for each neighbour, from a
+`DirectiveProvider`. This section replaces directives written in a config with **stored
+rules**: a rule maps a condition on what two agents can both perceive to a directive per
+role, and lives in a rule database that records where it came from. It is the second of six
+sub-issues; it calls no model.
+
+### 7.1 Where each piece lives
+
+| Piece | Where | What it is |
+|---|---|---|
+| Pair-level perception | `negsim/avoidance/perception.py` | `PairFeatures`, `pair_features`, `encounter_of`: what both agents of a pair can tell about the two of them. Perception record version 2 (`perception.md`) |
+| What a rule may read | `negsim/rules/fields.py` | The fields, their units and the visibility each needs; the fields refused, with reasons |
+| Conditions | `negsim/rules/conditions.py` | Comparisons and `all`/`any` groups. Data, never code |
+| Snapshot | `negsim/rules/snapshot.py` | The values one evaluation reads, for one pair at one step: from the world (shared) or from one agent's record |
+| A rule | `negsim/rules/model.py` | `Rule`, `RoleAssignment`, `Match`; parsing and the load-time checks |
+| Schema | `rule_db/schema/rule.v1.schema.json`, `negsim/rules/jsonschema_subset.py` | The versioned JSON Schema and the validator for its keywords |
+| Ambiguity | `negsim/rules/ambiguity.py` | The grid of test situations; two rules that can clash |
+| Database | `negsim/rules/database.py`, `rule_db/` | Rule files, the manifest that freezes them, rule sets, the index by encounter class (`ActiveRuleSet`) |
+| Matching | `negsim/rules/matching.py` | The policy of `rule-matching.md`: `RuleMatcher`, `PairRules`, `evaluate` |
+| Provider | `negsim/rules/provider.py` | `RuleDatabaseProvider`, behind the `DirectiveProvider` interface |
+| Command line | `negsim/rules/cli.py`, `ruledb.py` | Read-only: list, validate, history, show |
+| Pair interactions | `negsim/avoidance/simulation.py` | `PairInteraction`: the unit rules are matched on and outcomes are categorised on |
+| Baselines | `configs/baselines/`, `negsim/experiment/baselines.py` | The two frozen baselines (`baseline.md`) |
+| Experiments | `negsim/experiment/avoidance.py`, `configs/rule_following/` | `baseline:` and `provider: rules` in avoidance experiments; the experiments of the behaviour checks |
+| Logs | `negsim/runlog/schema.py` | Log schema version 3 (`log-schema.md`) |
+
+### 7.2 One step, with rules
+
+```
+   every time step, before ORCA:
+   ┌──────────────────────────────────────────────────────────────────────────────┐
+   │ PERCEIVE      as in section 6.2; a new neighbour's record is version 2         │
+   │ PAIRS         open and close pair interactions; note which have passed         │
+   │ RULES         for every open pair (RuleMatcher):                               │
+   │                 class now ──hysteresis──> steady class                         │
+   │                 held and passed? ──> the match expires                         │
+   │                 nothing held? ──> shared snapshot ──> rules for the class,     │
+   │                                     highest priority first ──> roles ──>       │
+   │                                     one directive per agent                    │
+   │                 held and the steady class changed? ──> only strictly higher    │
+   │                                     priority may replace it                    │
+   │               changed directives ──> the agents' interactions                  │
+   │ then RESOLVE, COORDINATE, CHOOSE, MOVE as in section 6.2, unchanged            │
+   └──────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 7.3 What changed outside `negsim/rules/`, and what did not
+
+The issue asks for the rule provider to work behind the existing interface "with no other
+layer changed". **Unchanged**, byte for byte since the branch this one is cut from: ORCA
+(`orca.py`), the linear programs (`lp.py`), the neighbour search (`neighbours.py`), the
+coordination with the arbiter (`coordination.py`), the arbiter itself (`negsim/conflict`,
+`negsim/control`), the core (`negsim/core`), `resolve_pair`, `NullProvider` and
+`StaticProvider`. **Changed**, and why:
+
+- `perception.py`: the pair-level fields a rule may read (Part 2 asks for them).
+- `directives.py`: `DirectiveProvider` gains optional hooks with no-op defaults (DD56).
+- `simulation.py`: pair interactions and their outcome categories (Part 7); the run loop
+  calls the hooks; `speed_scale` expires when the encounter has passed (Part 5, DD55); the
+  baseline's perturbation (Part 1, DD60).
+- `negsim/experiment/`, `negsim/runlog/`: baselines, `provider: rules`, log schema 3.
+
+Of the 46 committed runs of issue #26, 44 come out exactly the same with this code; the two
+that use `speed_scale` differ, as Part 5 intends (`derivations.md`, section 15).
+
+### 7.4 Design decisions
+
+Marked as decisions: they are this project's choices where the issue left room, and each
+needs the supervisor's sign-off. `WORK_LOG-28.md` gives the reasoning at the time.
+
+**DD42. The pair-level fields are computed once per pair and step, lower-numbered agent
+first, and shared** by both records and the snapshot (`perception.md`). Equal to the last
+bit, which the equivalence of `rule-matching.md`, section 1, needs.
+
+**DD43. Encounter classes**: single-file first, then `none` if not approaching
+(`p · w ≥ 0`), then by heading difference, below 60° overtaking, above 120° head-on,
+between them crossing. The two angles cut 0–180° in three equal parts and have no source
+`[placeholder]`. The class needs `speed` and `size` visible.
+
+**DD44. The corridor width between two agents** is measured at right angles to the line
+between them, every 0.25 m, and a side with no wall in range counts as the environment
+range, so it is never missing.
+
+**DD45. A rule names a field with a prefix**: `pair.`, `either.`, `both.` (conditions),
+`agent.` (role assignments). A name that picks one agent from its own point of view
+(`observer.`, `neighbour.`, ...) is refused as unobservable.
+
+**DD46. A comparison on a missing value is false**, whatever the operator.
+
+**DD47. Every number in a condition states its unit**, which must fit the field; angles may
+also be in degrees.
+
+**DD48. The JSON Schema is checked by a validator written here**, for exactly the keywords
+the schema uses, because only `yaml`, `pytest` and `matplotlib` may be imported. It refuses
+a schema with any other keyword. Checked against `jsonschema` 4.26.0 outside the repository
+on every rule file and 20,000 mutations: no disagreement (`WORK_LOG-28.md`).
+
+**DD49. Immutability is enforced by a SHA-256 manifest** (line endings normalised), for
+rules, rule sets and the schema. A change of status, or added evidence, is a new version.
+There is no tool that writes to the database yet: the command line is read-only, as the
+issue asks, and SI-3 will need a writer.
+
+**DD50. A role assignment must state its tie policy**; version 1 offers only `no_match`.
+An optional `tie_within` makes near-equal values a tie.
+
+**DD51. A third consistency rule**: two roles told to pass on opposite sides are refused at
+load, beside the issue's two (shares, passage order). DD30 already calls that a violation at
+run time.
+
+**DD52. Ambiguity is checked when rules are switched on**, on the grid of
+`rule-matching.md`, section 8; the database also reports, as information, the pairs that
+could not be switched on together.
+
+**DD53. Re-evaluation follows the issue's list literally**: when a pair forms, on every step
+while nothing holds, and when the class changes. A held rule is not re-evaluated otherwise,
+so a higher-priority rule whose threshold is met later in the same encounter does not
+replace it.
+
+**DD54. Hysteresis**: a class change counts after 3 steady steps; holding is sticky and
+replacements must have strictly higher priority; after expiry nothing until the class has
+changed.
+
+**DD55. When an encounter has passed** (`derivations.md`, section 15): the issue's
+definition, applied to `speed_scale` for every provider and to every field of a rule match;
+a rule may say `expiry: out_of_range` instead.
+
+**DD56. The provider interface gains optional hooks** (`follows_pairs`, `update`,
+`close_pair`, `summary`), all no-ops by default. The rule provider still answers
+`directive(record)` from the record alone; the hooks let it follow a pair from step to step
+without a full perception record being rebuilt for every interaction on every step.
+
+**DD57. An outcome with no exposure but a yield event is `resolved`** (`metrics.md`,
+section 9): the issue's three definitions leave it out.
+
+**DD58. A yield counts for a pair if it overlaps the pair in time**, which can over-count in
+a crowd, in the direction of `resolved`.
+
+**DD59. Cross-pair conflicts**: side, speed scale and passage order, between fields the
+rules set themselves, settled as `rule-matching.md`, section 7, says.
+
+**DD60. The baseline's perturbation is RVO2's**: length uniform on [0, 1e-4] m/s, direction
+uniform, every agent, every step, from its own random stream (`baseline.md`, section 3).
+
+**DD61. Baselines are frozen and laid under an experiment's own overrides**; their 40
+neighbours and 12.5 m are tagged `[placeholder]`, as the issue says.
+
+**DD62. `logging.interactions: false` leaves out both per-interaction files**
+(`interactions.jsonl` and `pair_interactions.jsonl`); the outcome counts both either way.
+
+**DD63. The log schema version is one number for both kinds of run**: a negotiation run now
+says 3, with nothing else changed.
+
+**DD64. `single_file_first_arrival` keeps the `out_of_range` expiry**: its passage order
+matters while the arbiter holds the pair, which can outlast "passed" between the two bodies.
+
+### 7.5 What is not here
+
+- Any call to a model; negotiating rules (SI-3); extracting them (SI-4); evaluating and
+  validating them (SI-5, SI-6).
+- A tool that writes to the rule database (DD49).
+- Imperfect or delayed perception, which would break the equivalence of
+  `rule-matching.md`, section 1.
+- Ordering three or more agents at a single-file segment, and following in single file
+  (section 6.5): a rule can name a leader for a pair, and the arbiter still works pair by
+  pair.
+- A fix for the artefacts of issue #26 (walking backwards, being hurried along, all-round
+  vision); the behaviour checks count them.
