@@ -516,22 +516,28 @@ exactly `g / τ`, and
 
     g_next = g (1 - dt / τ)
 
-Braking starts when `g` first falls below `2 v τ`, with `v` the walking speed. From then
-on each agent's speed is `g / (2 τ)`.
+Braking starts on the first step at whose start `g` is below `2 v τ`, with `v` the walking
+speed. From then on each agent's speed is `g / (2 τ)`.
 
 For the shipped head-on scenario: `v = 1.3 m/s`, `τ = 3 s`, `dt = 0.1 s`, the two start
-16 m apart with radius 0.25 m, so the gap starts at 15.5 m.
+16 m apart with radius 0.25 m, so the gap starts at 15.5 m and, while both walk freely, is
+`15.5 - 2.6 t`.
 
-- Braking starts at a gap of `2 × 1.3 × 3 = 7.8 m`, reached after `(15.5 - 7.8) / 2.6 =
-  2.96 s`: on the step that begins at 3.0 s.
-- An agent's speed is below the deadlock threshold of 0.01 m/s once `g < 0.06 m`. The gap
-  shrinks by the factor `1 - 0.1/3` each step, so that takes
-  `ln(0.06 / 7.8) / ln(1 - 0.1/3) = 143.6` steps: 14.4 s, at about 17.4 s.
-- A deadlock is declared after 3 s below the threshold: **at about 20.4 s**, with a gap of
-  `7.8 × (1 - 0.1/3)^174 = 0.021 m`.
+- Braking starts below a gap of `2 × 1.3 × 3 = 7.8 m`, which is crossed after
+  `(15.5 - 7.8) / 2.6 = 2.96 s`. The state is only looked at every 0.1 s, so the first
+  step that brakes is the one that begins at 3.0 s, where the gap is
+  `15.5 - 2.6 × 3.0 = 7.7 m`. After `k` more steps the gap is `7.7 × (1 - 0.1/3)^k`.
+- An agent's speed is below the yield threshold of 0.65 m/s (half of 1.3) once
+  `g < 3.9 m`: from `k = 21`, at 5.1 s.
+- It is below the deadlock threshold of 0.01 m/s once `g < 0.06 m`. That takes
+  `ln(0.06 / 7.7) / ln(1 - 0.1/3) = 143.2` steps, so from `k = 144`, at 17.4 s.
+- A deadlock is declared after 3 s below the threshold: **at 20.4 s**, `k = 174`, with a
+  gap of `7.7 × (1 - 0.1/3)^174 = 0.0211 m`.
 
 The committed run `runs/si1_head_on_side_preference/001_symmetric_plain` ends in a
-deadlock at 20.4 s with a smallest separation of 0.0214 m.
+deadlock at 20.4 s with a smallest separation of 0.021118 m, each agent exposed for
+17.4 s (from 3.0 s to the end) and yielding for 15.3 s (from 5.1 s to the end). All four
+numbers are the ones above.
 *Tested:* the symmetry the argument rests on, in
 `tests/test_avoidance_sim.py::test_an_exactly_symmetric_start_stays_exactly_symmetric_under_plain_orca`.
 The time itself is a result, read from the run.

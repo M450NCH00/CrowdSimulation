@@ -121,9 +121,12 @@ the run there with status `collision`, as every run of issue #24 does. `on_colli
 continue` records the collision and goes on; the status is then whatever the run ends
 with, and the collisions are in the outcome. `bidirectional_flow` uses `continue`. The
 reason is in `orca.md`, section 7: in a crowd ORCA's fallback can let two discs overlap,
-typically by millimetres, and a run that stopped at the first such overlap would end
-before it had shown anything. Whether such an overlap matters is for the reader to judge
-from its depth, which is reported.
+and a run that stopped at the first such overlap would end before it had shown anything.
+Whether an overlap matters is for the reader to judge from its depth, which is reported
+for every episode. **The overlaps are not all small.** In the committed two-way flow
+(`runs/si1_bidirectional_flow`), with the shipped limit of ten neighbours there are 512
+episodes, with a median depth of 10 mm and a deepest of 82 mm, a third of a body radius;
+with forty neighbours there are 87, with a median of 1.9 mm and a deepest of 23 mm.
 
 *Reported:* `collisions.agent_agent` and `collisions.agent_wall` (numbers of episodes),
 `collisions.time_s` (of the first), `collisions.agents`, `collisions.max_overlap_m`;

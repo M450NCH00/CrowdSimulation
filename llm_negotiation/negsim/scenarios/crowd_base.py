@@ -52,8 +52,9 @@ _OPTIONAL = (
 )
 #: What a run does when two bodies overlap. ``stop`` ends it there, as every run of issue
 #: #24 does. ``continue`` records the collision and goes on; ORCA then pushes the two
-#: apart. It exists for crowds, where ORCA's fallback can let two discs overlap by a few
-#: millimetres and stopping would end the run before it has shown anything.
+#: apart. It exists for crowds, where ORCA's fallback can let two discs overlap (by
+#: millimetres to centimetres; ``docs/metrics.md``, section 6, has the depths measured) and
+#: stopping at the first overlap would end the run before it has shown anything.
 ON_COLLISION_STOP, ON_COLLISION_CONTINUE = "stop", "continue"
 ON_COLLISION = (ON_COLLISION_STOP, ON_COLLISION_CONTINUE)
 AGENT_TYPE_KEYS = (

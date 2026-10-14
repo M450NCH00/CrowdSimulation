@@ -249,7 +249,13 @@ overlap, and in a dense crowd it does. Every use of the fallback is counted
 (`steps_with_fallback`, `fallback_agent_steps` in the outcome, and the `fallback` column of
 the trajectory), and a test checks the converse: in a dense two-way flow no collision ever
 begins on a step on which both agents had a feasible program
-(`test_a_collision_only_ever_begins_right_after_a_fallback`).
+(`test_a_collision_only_ever_begins_right_after_a_fallback`). A second test checks the
+guarantee itself in the same flow, from positions and velocities alone and without the
+half-plane code: on every step, for every pair that perceive each other and are both
+feasible, the velocities chosen keep the two at least the sum of their radii apart for τ
+(`test_two_feasible_agents_that_perceive_each_other_never_choose_velocities_that_collide_within_tau`;
+over 40,000 such pair-steps in the test, with no exception. `WORK_LOG-26.md` records the
+same check made once on the two committed 100-agent runs).
 
 **One tie is resolved differently from the library.** Inside the fallback, a program
 maximises along a direction. When that direction is exactly at right angles to a
@@ -307,8 +313,9 @@ library was not run, so it has not been confirmed by comparing outputs.
 For two agents that perceive each other, whose directives have been combined
 (`negsim.avoidance.directives.resolve_pair`) and whose programs are both feasible: no
 collision for τ seconds if both kept their new velocities, and so none before the next
-step. *Tested* on random configurations (`test_shares_that_sum_to_at_least_one_keep_a_pair_collision_free_for_tau`)
-and on 500 seeded two-agent runs (`test_no_collision_in_random_two_agent_encounters_when_the_shares_sum_to_at_least_one`).
+step. *Tested* on random configurations (`test_shares_that_sum_to_at_least_one_keep_a_pair_collision_free_for_tau`),
+on 500 seeded two-agent runs (`test_no_collision_in_random_two_agent_encounters_when_the_shares_sum_to_at_least_one`),
+and pair by pair inside a crowd (section 7).
 
 It does not cover:
 

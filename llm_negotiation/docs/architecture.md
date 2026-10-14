@@ -465,6 +465,14 @@ Between those two steps:
   the leader's 0, and half-planes for every wall and every other agent as always.
 - The trajectory's `control_mode` is `arbiter` for both, and `role`, `role_source`,
   `speed_bound_mps`, `zone_d_in_m` and `zone_d_out_m` are filled in.
+- **One exception, at the very end.** The follower's bound is timed so that it reaches the
+  zone as the leader leaves it. On the last step or two before the leader is out, the
+  arbiter's own test (condition 3) can therefore find that the two no longer overlap in
+  time, while the zone is still live. The pair is still held on such a step and
+  `control_mode` is still `arbiter`, but the arbiter assigns no roles: `role` is empty,
+  `in_conflict` is false, the bound is lifted, and the two shares are the pair's own
+  again. In the committed opposing runs that is one step, at 8.9 s, before control passes
+  back at 9.0 s.
 
 Outside those steps `control_mode` is `orca` and those columns are empty.
 
@@ -479,7 +487,7 @@ the safety margin together (`derivations.md`, section 13).
 
 **What can go wrong, and is checked for.** If the two first perceive each other when one
 is already inside the zone, the arbiter can no longer keep it out. With the shipped
-scenario they perceive each other 2.2 s in, 3.4 m before either zone. A scenario with a
+scenario they perceive each other 2.2 s in, each 3.55 m before its zone. A scenario with a
 short sensing radius and a fast approach could be late; the arbiter then falls back on
 physical precedence, as in issue #24, and ORCA is still there.
 
