@@ -446,6 +446,25 @@ def classify_encounter(
     return ENCOUNTER_CROSSING, None
 
 
+def encounter_of(
+    a: AgentRuntime, b: AgentRuntime, visibility: Mapping[str, bool], segments: Sequence[Any] = ()
+) -> tuple[Optional[str], Optional[int], float]:
+    """The encounter class of a pair, the index of its single-file segment, and the heading
+    difference: the cheap part of :func:`pair_features`, in the same fixed order.
+
+    The class needs ``speed`` (are they approaching?) and ``size`` (is a segment too
+    narrow for them?) to be visible; without either it is ``None``.
+    """
+    if a.agent_id > b.agent_id:
+        a, b = b, a
+    heading_a, heading_b = heading_of(a), heading_of(b)
+    difference = abs(wrap_angle(heading_b - heading_a))
+    if not (visibility.get("speed", False) and visibility.get("size", False)):
+        return None, None, difference
+    encounter, index = classify_encounter(a, b, heading_a, heading_b, difference, segments)
+    return encounter, index, difference
+
+
 def pair_features(
     a: AgentRuntime,
     b: AgentRuntime,
@@ -466,19 +485,16 @@ def pair_features(
     """
     if a.agent_id > b.agent_id:
         a, b = b, a
-    heading_a, heading_b = heading_of(a), heading_of(b)
-    difference = abs(wrap_angle(heading_b - heading_a))
     if math.isinf(environment_range):
         environment_range = max(a.spec.sensing_radius, b.spec.sensing_radius)
 
-    encounter = segment_name = None
+    encounter, index, difference = encounter_of(a, b, visibility, segments)
+    segment_name = None
     times: tuple[Optional[float], Optional[float]] = (None, None)
-    if visibility.get("speed", False) and visibility.get("size", False):
-        encounter, index = classify_encounter(a, b, heading_a, heading_b, difference, segments)
-        if index is not None:
-            segment = segments[index]
-            segment_name = segment.name
-            times = (_time_to_reach(a, segment.rect), _time_to_reach(b, segment.rect))
+    if index is not None:
+        segment = segments[index]
+        segment_name = segment.name
+        times = (_time_to_reach(a, segment.rect), _time_to_reach(b, segment.rect))
 
     age_difference = None
     if visibility.get("age", False):
