@@ -597,6 +597,7 @@ def build_outcome(plan: AvoidanceRunPlan, spec: CrowdScenarioSpec, result: Simul
         "interaction_outcomes": outcomes,
         "rules": result.provider_summary,
         "baseline": None if plan.baseline is None else plan.baseline.name,
+        "artefacts": result.artefacts,
     }
 
 
@@ -700,6 +701,8 @@ def _rule_columns(config: Mapping[str, Any], outcome: Mapping[str, Any]) -> dict
         "rules_fired": ";".join(f"{key}={count}" for key, count in sorted(fired.items())) or None,
         "ambiguous_matches": (rules.get("evaluations") or {}).get("ambiguous_match") if rules else None,
         "cross_pair_conflicts": rules.get("cross_pair_conflicts") if rules else None,
+        "backward_episodes": (outcome.get("artefacts") or {}).get("totals", {}).get("backward_episodes"),
+        "hurried_episodes": (outcome.get("artefacts") or {}).get("totals", {}).get("hurried_episodes"),
     }
 
 

@@ -202,3 +202,30 @@ collision or deadlock" is not the same as having ended.
 includes the perturbation, and exposure (section 3) is measured against that velocity. At
 1e-4 m/s it can only matter for a pair that is already within that much of a collision
 course.
+
+## 10. Two diagnostics: walking backwards, and being hurried along (issue #28)
+
+Issue #26 found two things an ORCA agent does that are the algorithm's and are not offered
+as human behaviour (`WORK_LOG-26.md`, "What the checking turned up"): with shares (1, 0) and
+no side, the agent with share 1 walks backwards along its own line; and exactly behind a
+slower walker, ORCA pushes the slower one along. Issue #28 asks for both to be counted, in
+rule runs against baseline runs, and **not fixed**. They are counted in the run loop on every
+step, so that the counts do not depend on how thinly the trajectory is logged.
+
+| Diagnostic | An agent on a step | Counted as |
+|---|---|---|
+| `backward` | moves against the direction of its own path (at its progress along it) faster than **0.1 m/s** | an episode: a run of such steps lasting at least **1.0 s** |
+| `hurried` | moves faster than **1.05 times** the speed it wants (its preferred speed, scaled by its directives and capped by the arbiter), with a neighbour it perceives **behind** it (that neighbour's position more than 90° from the direction of its path) | an episode, likewise |
+
+**The thresholds are definitions with no source**, set to separate the two artefacts from
+ordinary ORCA motion: a side-step is not walking backwards, and the brief speed-ups of a
+dodge are not being hurried along. Every outcome repeats them.
+
+**What "hurried" can get wrong.** It does not know *why* the agent is fast: with two agents
+it is the one behind; in a crowd, a neighbour behind may not be the cause. It can therefore
+over-count in a crowd. The overtaking scenario is where it was found and where it is exact.
+
+*Reported:* `outcome.json`, `artefacts`: per agent `backward_episodes`, `backward_time_s`,
+`hurried_episodes`, `hurried_time_s`; in total the same and `agents_backward`,
+`agents_hurried` (how many agents had any); and the `thresholds`. The summary has
+`backward_episodes` and `hurried_episodes`.

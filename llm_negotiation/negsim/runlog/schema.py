@@ -419,8 +419,12 @@ AVOIDANCE_OUTCOME_KEYS = (
     "interaction_outcomes",
     "rules",
     "baseline",
+    "artefacts",
 )
-AVOIDANCE_OUTCOME_KEYS_V2 = AVOIDANCE_OUTCOME_KEYS[:-3]
+AVOIDANCE_OUTCOME_KEYS_V2 = AVOIDANCE_OUTCOME_KEYS[:-4]
+ARTEFACT_KEYS = ("thresholds", "agents", "totals")
+ARTEFACT_AGENT_KEYS = ("backward_episodes", "backward_time_s", "hurried_episodes", "hurried_time_s")
+ARTEFACT_TOTAL_KEYS = ARTEFACT_AGENT_KEYS + ("agents_backward", "agents_hurried")
 INTERACTION_OUTCOME_KEYS = ("pairs", "avoided", "resolved", "failed", "pairs_with")
 RULE_SUMMARY_KEYS = (
     "evaluations",
@@ -505,6 +509,8 @@ AVOIDANCE_SUMMARY_COLUMNS = (
     "rules_fired",
     "ambiguous_matches",
     "cross_pair_conflicts",
+    "backward_episodes",
+    "hurried_episodes",
     "git_commit",
 )
 
@@ -719,4 +725,9 @@ def _validate_pairs(run_dir: Path, config: dict, outcome: dict) -> list[str]:
                 problems.append(f"{OUTCOME_FILE}: interaction_outcomes.{name} does not match {PAIR_INTERACTIONS_FILE}")
     if outcome.get("rules") is not None:
         problems += _missing(outcome["rules"], RULE_SUMMARY_KEYS, f"{OUTCOME_FILE}.rules")
+    artefacts = outcome.get("artefacts") or {}
+    problems += _missing(artefacts, ARTEFACT_KEYS, f"{OUTCOME_FILE}.artefacts")
+    for agent_id, entry in (artefacts.get("agents") or {}).items():
+        problems += _missing(entry, ARTEFACT_AGENT_KEYS, f"{OUTCOME_FILE}.artefacts.agents.{agent_id}")
+    problems += _missing(artefacts.get("totals") or {}, ARTEFACT_TOTAL_KEYS, f"{OUTCOME_FILE}.artefacts.totals")
     return problems

@@ -281,3 +281,31 @@ def test_the_documents_issue_28_asks_for_exist():
     matching = (docs / "rule-matching.md").read_text(encoding="utf-8")
     for word in ("shared snapshot", "no_rule_matched", "ambiguous_match", "cross_pair_conflict", "hysteresis", "grid"):
         assert word in matching, word
+
+
+# --- the two artefacts of issue #26 are counted, not fixed ------------------------------------------
+
+
+def test_walking_backwards_is_counted_where_issue_26_saw_it():
+    """Shares (1, 0) and no side, exactly head-on: agent 0 backed away along its line for 7 s."""
+    from helpers import static
+
+    result = AvoidanceSimulation(crowd("wide_corridor_head_on"), static({"responsibility_share": 1.0}, {"responsibility_share": 0.0})).run()
+    agents = result.artefacts["agents"]
+    assert agents["0"]["backward_episodes"] == 1 and agents["0"]["backward_time_s"] >= 5.0
+    assert agents["1"]["backward_episodes"] == 0 and result.artefacts["totals"]["agents_backward"] == 1
+
+
+def test_being_hurried_along_is_counted_where_issue_26_saw_it():
+    """Exactly behind, unperturbed: the slower walker in front was pushed from 1.10 to 1.29 m/s."""
+    result = AvoidanceSimulation(crowd("overtaking")).run()
+    agents = result.artefacts["agents"]
+    assert agents["1"]["hurried_episodes"] >= 1 and agents["1"]["hurried_time_s"] > 10.0
+    assert agents["0"]["hurried_episodes"] == 0  # the one behind is held back, not hurried
+
+
+def test_an_ordinary_pass_has_neither_artefact():
+    result = AvoidanceSimulation(crowd("wide_corridor_head_on", geometry={"lateral_offsets": [0.05, -0.05]})).run()
+    totals = result.artefacts["totals"]
+    assert (totals["backward_episodes"], totals["hurried_episodes"]) == (0, 0)
+    assert result.artefacts["thresholds"] == {"backward_speed_mps": 0.1, "hurried_fraction": 0.05, "min_duration_s": 1.0}

@@ -41,7 +41,14 @@ from typing import TYPE_CHECKING, Any, Mapping, Optional
 
 from ..conflict.roles import RoleSource
 from ..control.strategy1 import AgentDecision
-from ..metrics.avoidance import ProximityEpisode, ProximityTracker, YieldEvent, YieldTracker
+from ..metrics.avoidance import (
+    ArtefactThresholds,
+    EpisodeTracker,
+    ProximityEpisode,
+    ProximityTracker,
+    YieldEvent,
+    YieldTracker,
+)
 from ..metrics.compute import DeadlockMonitor
 from .coordination import (
     FOLLOWER_SHARE,
@@ -282,6 +289,8 @@ class SimulationResult:
     segment_entry_times: dict[int, dict[int, float]]
     pairs: list[PairInteraction] = field(default_factory=list)
     provider_summary: Optional[dict[str, Any]] = None
+    #: The counts of issue #26's two ORCA artefacts (``docs/metrics.md``, section 10).
+    artefacts: Optional[dict[str, Any]] = None
 
     @property
     def min_separation_m(self) -> Optional[float]:
@@ -374,6 +383,9 @@ class AvoidanceSimulation:
             )
             for a in agents
         }
+        self.artefact_thresholds = ArtefactThresholds()
+        self.backward = {a.agent_id: EpisodeTracker(self.artefact_thresholds.min_duration_s) for a in agents}
+        self.hurried = {a.agent_id: EpisodeTracker(self.artefact_thresholds.min_duration_s) for a in agents}
         self.near_misses = ProximityTracker(thresholds.near_miss_distance)
         self.overlaps = ProximityTracker(-_CONTACT_EPS)
         self.wall_overlaps: dict[int, dict[str, Any]] = {}
@@ -408,7 +420,7 @@ class AvoidanceSimulation:
                 self._end_interaction(interaction, END_RUN_ENDED)
         for key in sorted(self.open_pairs):
             self._close_pair(self.open_pairs.pop(key), PAIR_END_RUN_ENDED)
-        for tracker in self.yield_trackers.values():
+        for tracker in [*self.yield_trackers.values(), *self.backward.values(), *self.hurried.values()]:
             tracker.close()
         self.near_misses.close()
         self.overlaps.close()
@@ -452,7 +464,27 @@ class AvoidanceSimulation:
             segment_entry_times=self.segment_entry_times,
             pairs=self.pairs,
             provider_summary=self.provider.summary(),
+            artefacts=self._artefacts(),
         )
+
+    def _artefacts(self) -> dict[str, Any]:
+        """Walking backwards and being hurried along, per agent and in total (``metrics.md``, section 10)."""
+        agents = {}
+        for agent_id in sorted(self.backward):
+            backward, hurried = self.backward[agent_id], self.hurried[agent_id]
+            agents[str(agent_id)] = {
+                "backward_episodes": len(backward.episodes),
+                "backward_time_s": round(backward.total_time_s, 6),
+                "hurried_episodes": len(hurried.episodes),
+                "hurried_time_s": round(hurried.total_time_s, 6),
+            }
+        totals = {
+            name: (round(sum(entry[name] for entry in agents.values()), 6) if name.endswith("_s") else sum(entry[name] for entry in agents.values()))
+            for name in ("backward_episodes", "backward_time_s", "hurried_episodes", "hurried_time_s")
+        }
+        totals["agents_backward"] = sum(1 for entry in agents.values() if entry["backward_episodes"])
+        totals["agents_hurried"] = sum(1 for entry in agents.values() if entry["hurried_episodes"])
+        return {"thresholds": self.artefact_thresholds.as_dict(), "agents": agents, "totals": totals}
 
     def step(self) -> None:
         world, spec = self.world, self.spec
@@ -498,6 +530,9 @@ class AvoidanceSimulation:
         # 4. Choose a velocity for every agent, all from the same state of the world.
         commands: dict[int, tuple[float, float]] = {}
         rows: dict[int, dict[str, Any]] = {}
+        #: For the artefact counts: the direction of the agent's path, the speed it wants,
+        #: and whether a neighbour it perceives is behind it (``docs/metrics.md``, section 10).
+        course: dict[int, tuple[float, float, float, bool]] = {}
         fallback_agents: set[int] = set()
         exposure_eps, tie_break = spec.thresholds.exposure_eps, spec.tie_break
         obstacles = world.obstacles
@@ -512,6 +547,10 @@ class AvoidanceSimulation:
                 # The arbiter's bound caps the speed the agent wants to walk at. Its
                 # maximum speed is untouched, so that it can still get out of the way.
                 speed = min(speed, decision.speed_bound)
+            along = a_spec.path.heading_at(a.path_s)
+            cx, cy = math.cos(along), math.sin(along)
+            behind = any((agents[j].pose.x - x) * cx + (agents[j].pose.y - y) * cy < 0.0 for _, j in neighbours[i])
+            course[i] = (cx, cy, speed, behind)
             preferred = self._preferred_velocity(a, speed)
             if self.perturbation.active:
                 angle = self._perturbation_rng.random() * 2.0 * math.pi
@@ -613,6 +652,10 @@ class AvoidanceSimulation:
             if deviation > stats.deviation_max:
                 stats.deviation_max = deviation
             self.yield_trackers[i].update(now, end, speed)
+            cx, cy, wanted, behind = course[i]
+            limits = self.artefact_thresholds
+            self.backward[i].update(now, end, vx * cx + vy * cy < -limits.backward_speed_mps)
+            self.hurried[i].update(now, end, behind and speed > (1.0 + limits.hurried_fraction) * wanted)
             for index, entry_s, _ in a.spec.single_file_stretches:
                 if index not in self.segment_entry_times[i] and a.path_s >= entry_s:
                     self.segment_entry_times[i][index] = end
@@ -624,6 +667,8 @@ class AvoidanceSimulation:
                 speeds.append(speed)
             else:
                 self.yield_trackers[i].close()
+                self.backward[i].close()
+                self.hurried[i].close()
                 for interaction in list(self.open[i].values()):
                     self._end_interaction(interaction, END_OBSERVER_ARRIVED)
 

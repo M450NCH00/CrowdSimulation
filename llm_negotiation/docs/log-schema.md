@@ -373,6 +373,7 @@ and `time_s`.
 | `interaction_outcomes` | Version 3. `pairs` (how many pair interactions), `avoided`, `resolved`, `failed`, and `pairs_with`: how many pairs were `exposed`, `yielded`, `collided`, `deadlocked` and `open_at_timeout` (a pair can count under several) |
 | `rules` | Version 3. Null unless the provider is the rule database; otherwise `evaluations` (how many evaluations ended in each outcome), `matches_begun` (by `rule_id@version`: **which rules fired, and how often**), `match_ends` (by reason), `cross_pair_conflicts` (how many were logged), `formation_checks` and `formation_mismatches` (the run-time check of the shared snapshot against each agent's own evaluation, `rule-matching.md`; the second should be 0) |
 | `baseline` | Version 3. The name of the baseline the run followed, or null |
+| `artefacts` | Version 3. Counts of the two ORCA artefacts of issue #26 (`metrics.md`, section 10): `thresholds`; per agent (`agents`) `backward_episodes`, `backward_time_s`, `hurried_episodes`, `hurried_time_s`; and `totals`, the same summed, with `agents_backward` and `agents_hurried` |
 
 ### `summary.csv` of an avoidance experiment
 
@@ -387,7 +388,7 @@ for agents 0 and 1, which is all there are in four of the five scenarios
 `path_deviation_max_1_m`, `conflict_exposure_0_s`, `conflict_exposure_1_s`); from
 version 3, the baseline and the rules (`baseline`, `ruleset`, `pairs`, `avoided`,
 `resolved`, `failed`, `rules_fired` as `rule_id@version=count` separated by `;`,
-`ambiguous_matches`, `cross_pair_conflicts`), empty for a run written before; and
+`ambiguous_matches`, `cross_pair_conflicts`, `backward_episodes`, `hurried_episodes`), empty for a run written before; and
 `git_commit`.
 
 ## `spend_ledger.jsonl`
@@ -412,7 +413,7 @@ One line per paid call: `utc`, `experiment`, `run_id`, `turn_index`, `speaker`, 
   and the active rule set under `directives`; `directive_changes` and the expiry of
   `speed_scale` in `interactions.jsonl`; the events `ambiguous_match` and
   `cross_pair_conflict`; `interaction_outcomes`, `rules` and `baseline` in
-  `outcome.json`; and nine summary columns. `logging.interactions` now also governs
+  `outcome.json`, with `artefacts` (counts of walking backwards and of being hurried along); and eleven summary columns. `logging.interactions` now also governs
   `pair_interactions.jsonl`. Perception records are version 2. A negotiation run is as in
   version 2. Folders written under versions 1 and 2 stay valid and are checked against
   their own version.
