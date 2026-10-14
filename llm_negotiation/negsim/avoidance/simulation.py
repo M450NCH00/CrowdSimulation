@@ -55,7 +55,7 @@ from .directives import (
 from .lp import solve, violation
 from .neighbours import SpatialGrid
 from .orca import agent_half_plane, wall_half_plane
-from .perception import PerceptionRecord, default_visibility, perceive
+from .perception import PairFeatures, PerceptionRecord, default_visibility, pair_features, perceive
 
 if TYPE_CHECKING:  # pragma: no cover - the scenario layer imports this package
     from ..scenarios.crowd_base import CrowdScenarioSpec
@@ -224,6 +224,8 @@ class AvoidanceSimulation:
         self.open: dict[int, dict[int, Interaction]] = {a.agent_id: {} for a in agents}
         self.interactions: list[Interaction] = []
         self.pair_cache: dict[Pair, PairResolution] = {}
+        self._features: dict[Pair, PairFeatures] = {}
+        self._features_step = -1
         self.stats: dict[int, AgentStats] = {a.agent_id: AgentStats() for a in agents}
         thresholds = spec.thresholds
         self.yield_trackers = {
@@ -492,6 +494,31 @@ class AvoidanceSimulation:
                 if j not in mine:
                     self._start_interaction(a, agents[j], step, now)
 
+    def pair_features(self, i: int, j: int) -> PairFeatures:
+        """The pair-level fields of agents ``i`` and ``j`` on the current step, computed once.
+
+        Both agents' perception records, and a rule provider's shared snapshot, take them
+        from here, so the two agents of a pair always see the same values.
+        """
+        step = self.world.step_index
+        if self._features_step != step:
+            self._features, self._features_step = {}, step
+        pair = (i, j) if i < j else (j, i)
+        features = self._features.get(pair)
+        if features is None:
+            agents = self.world.agents
+            features = pair_features(
+                agents[pair[0]],
+                agents[pair[1]],
+                self.world.obstacles,
+                self.visibility,
+                self.attributes,
+                self.environment_range,
+                self.spec.single_file_segments,
+            )
+            self._features[pair] = features
+        return features
+
     def _start_interaction(self, observer, neighbour, step: int, now: float) -> None:
         record = perceive(
             step,
@@ -504,6 +531,7 @@ class AvoidanceSimulation:
             observer.spec.preferred_speed,
             [(entry_s, exit_s) for _, entry_s, exit_s in observer.spec.single_file_stretches],
             self.environment_range,
+            pair=self.pair_features(observer.agent_id, neighbour.agent_id),
         )
         directive = self.provider.directive(record)
         if not isinstance(directive, AvoidanceDirective):

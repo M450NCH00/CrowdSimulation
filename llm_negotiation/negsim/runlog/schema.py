@@ -487,20 +487,21 @@ def _read_jsonl(path: Path) -> list[dict]:
 def _validate_avoidance(run_dir: Path, config: dict) -> list[str]:
     # Imported here: the schema of a negotiation run does not depend on the avoidance layer.
     from ..avoidance.directives import DIRECTIVE_FIELDS
-    from ..avoidance.perception import (
-        ENVIRONMENT_FIELDS,
-        NEVER_OBSERVABLE,
-        OBSERVER_FIELDS,
-        PERCEPTION_FIELDS,
-        PERCEPTION_SCHEMA_VERSION,
-    )
+    from ..avoidance.perception import FIELDS_BY_VERSION, NEVER_OBSERVABLE, PERCEPTION_SCHEMA_VERSION
 
     problems = [f"missing file {name}" for name in AVOIDANCE_RUN_FILES if not (run_dir / name).is_file()]
     if problems:
         return problems
     problems += _missing(config, AVOIDANCE_CONFIG_KEYS, CONFIG_FILE)
-    if config.get("perception_schema_version") != PERCEPTION_SCHEMA_VERSION:
-        problems.append(f"{CONFIG_FILE}: perception_schema_version is not {PERCEPTION_SCHEMA_VERSION}")
+    # A folder is checked against the perception record its own config declares, so that
+    # one written before the record last changed still checks out.
+    perception_version = config.get("perception_schema_version")
+    if perception_version not in FIELDS_BY_VERSION:
+        problems.append(
+            f"{CONFIG_FILE}: perception_schema_version {perception_version!r} is not one of {sorted(FIELDS_BY_VERSION)}"
+        )
+        perception_version = PERCEPTION_SCHEMA_VERSION
+    record_fields = FIELDS_BY_VERSION[perception_version]
 
     with (run_dir / TRAJECTORY_FILE).open("r", encoding="utf-8", newline="") as handle:
         reader = csv.reader(handle)
@@ -515,9 +516,13 @@ def _validate_avoidance(run_dir: Path, config: dict) -> list[str]:
         where = f"{INTERACTIONS_FILE} line {number + 1}"
         problems += _missing(interaction, INTERACTION_KEYS, where)
         perception = interaction.get("perception", {})
-        problems += _missing(perception, PERCEPTION_FIELDS, f"{where} perception")
-        problems += _missing(perception.get("observer", {}), OBSERVER_FIELDS, f"{where} perception.observer")
-        problems += _missing(perception.get("environment", {}), ENVIRONMENT_FIELDS, f"{where} perception.environment")
+        problems += _missing(perception, record_fields["record"], f"{where} perception")
+        problems += _missing(perception.get("observer", {}), record_fields["observer"], f"{where} perception.observer")
+        problems += _missing(
+            perception.get("environment", {}), record_fields["environment"], f"{where} perception.environment"
+        )
+        if record_fields["pair"]:
+            problems += _missing(perception.get("pair") or {}, record_fields["pair"], f"{where} perception.pair")
         problems += _missing(interaction.get("directive", {}), DIRECTIVE_FIELDS, f"{where} directive")
         if interaction.get("end_reason") not in INTERACTION_END_REASONS:
             problems.append(f"{where}: unknown end_reason {interaction.get('end_reason')!r}")
