@@ -555,6 +555,26 @@ Kept here because the workflow asks for the dead ends, not a tidied account.
     code path reads `.env`, and this session did not open it.
 - Next step: commit, push, open the PR against `feat/24-llm-negotiation-simulator`.
 
+### 2026-10-14 09:50 — Pushed; PR #27 opened
+
+- What I did: committed this session's work in five commits (`19858b3` the runs and the
+  benchmark, `3700fe6` the test, `35bda68` the corrections, `bef3b05` the READMEs,
+  `cdf32d0` this log). Ran the tests once more on the committed tree: 777 passed, tree
+  clean. Before pushing, searched everything the branch adds for an email address, for
+  anything shaped like an API key, and for `.env`: none. Pushed
+  `feat/26-orca-avoidance-layer` and opened PR #27 against
+  `feat/24-llm-negotiation-simulator`
+  (https://github.com/M450NCH00/CrowdSimulation/pull/27). Posted the link on the issue,
+  with the three things the first comment did not say.
+- Why: workflow step 6. The PR description carries what the issue asks of it: the
+  decisions, marked as decisions; the behaviour-check tables; the benchmark; the
+  placeholders that remain; and the exact field names of `AvoidanceDirective` and of the
+  perception record.
+- Result / what I found: the PR is open and mergeable into the branch below it. The issue
+  stays open, as the workflow requires; it will not close by itself, because the base is
+  not the default branch (Q12).
+- Next step: none for this issue until the open questions have answers.
+
 ## Open questions / risks
 
 Each of Q2 to Q5 is a decision I or the first session made that changes what the layer
