@@ -1,0 +1,38 @@
+# Issue #28, behaviour checks: fifty agents each way along a corridor. Rule-following against
+# both baselines, 20 seeds per condition (the seed also moves the agents' starting jitter).
+# No model is called.
+#
+#   python run_experiment.py configs/rule_following/si2_bidirectional_flow.yaml
+#
+# The rules that apply are keep_left_head_on (between agents walking opposite ways) and
+# overtaker_keeps_clear (between agents walking the same way, one catching up).
+#
+# Logging is thinned, as in issue #26's flow: a hundred agents write a great deal. The
+# trajectory keeps every hundredth step (10 s) and the per-interaction records are left out
+# (interactions.jsonl and pair_interactions.jsonl; there are thousands of pairs). The
+# outcome is complete: it counts every pair interaction by category, every rule match, and
+# both artefacts; the events are complete too. To get everything, set trajectory_stride to 1
+# and interactions to true.
+schema_version: 1
+layer: avoidance
+experiment_name: si2_bidirectional_flow
+description: Fifty agents each way along a corridor. Plain ORCA against the default rule set, on both baselines.
+scenario: configs/scenarios/bidirectional_flow.yaml
+
+logging:
+  trajectory_stride: 100
+  interactions: false
+
+design:
+  seed: 28600
+  repeats: 20
+  factors:
+    baseline:
+      - name: perturbed
+        baseline: orca_perturbed_v1
+      - name: unperturbed
+        baseline: orca_unperturbed_v1
+    mode:
+      - name: plain
+      - name: rules
+        directives: {provider: rules, ruleset: default}

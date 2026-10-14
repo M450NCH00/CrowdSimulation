@@ -1,0 +1,33 @@
+# Issue #28, behaviour checks: two paths crossing at a right angle in open space.
+# Rule-following against both baselines, 20 seeds per condition. No model is called.
+#
+#   python run_experiment.py configs/rule_following/si2_open_crossing.yaml
+#
+# No seed rule is written for a crossing, so the rule runs should follow the baseline; that
+# is what this experiment checks.
+schema_version: 1
+layer: avoidance
+experiment_name: si2_open_crossing
+description: Two paths crossing at a right angle. Plain ORCA against the default rule set, on both baselines.
+scenario: configs/scenarios/open_crossing.yaml
+
+logging:
+  trajectory_stride: 10
+
+design:
+  seed: 28300
+  repeats: 20
+  factors:
+    layout:
+      - name: symmetric
+      - name: agent_1_later
+        scenario_overrides: {geometry: {approach_distances: [8.0, 8.5]}}
+    baseline:
+      - name: perturbed
+        baseline: orca_perturbed_v1
+      - name: unperturbed
+        baseline: orca_unperturbed_v1
+    mode:
+      - name: plain
+      - name: rules
+        directives: {provider: rules, ruleset: default}
