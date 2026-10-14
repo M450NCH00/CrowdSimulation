@@ -30,12 +30,14 @@ experiment code until the literature review is complete and discussed.**
 > simulator in `llm_negotiation/` and made it conditional on `CLAUDE.md`, which on this
 > branch does not carry the instruction, so the work went ahead. Nothing in the
 > repository records the supervisor lifting it. See `WORK_LOG-24.md`, open question Q1.
+> Issue #26 (2026-10-13) went ahead on the same footing: `WORK_LOG-26.md`, assumption A2.
 
 | # | Roadmap step | Status |
 |---|---|---|
 | 1 | Literature review — `literature/llm-conflict-resolution/` | **delivered** (issue #8); awaiting supervisor discussion |
 | 2 | Design a small-scale conflict scenario (2-agent hallway) | **built** (issue #24) — `llm_negotiation/configs/scenarios/hallway.yaml`; its sizes and speeds are unsourced placeholders |
 | 3 | Implement the LLM-to-LLM exchange | **built and smoke-tested** (issue #24) — `llm_negotiation/`; 12 paid smoke runs, no experiment yet |
+| 3a | Avoidance layer, so that a rule can prescribe avoidance and not only priority (sub-issue 1 of 6) | **built** (issue #26) — `llm_negotiation/negsim/avoidance/`; 46 free runs, no rule and no LLM call yet |
 | 4 | Analyse exchanges for a reusable pattern | not started |
 | 5 | Validate the pattern against real data or sociology | **coding scheme drafted** (issue #12) — `literature/human-conflict-resolution/` |
 | 5a | Demographic personas: realism vs LLM bias | **delivered** (issue #16) — `literature/demographic-personas/` |
@@ -63,6 +65,42 @@ how to run it and for the results, and `WORK_LOG-24.md` for what needs sign-off:
   speed formula, applied literally to disc-shaped agents, lets them overlap at a
   right-angle crossing, so the conflict "point" had to become a zone
   (`llm_negotiation/docs/derivations.md`).
+
+From building the avoidance layer (issue #26, the first of six sub-issues) — see
+`llm_negotiation/README.md`, "The avoidance layer", for how to run it and for the results,
+and `WORK_LOG-26.md` for what needs sign-off. Each result is one deterministic run of an
+algorithm with stated parameters; none is evidence about how people walk:
+
+- **The layer exists, runs, and cost nothing.** ORCA collision avoidance for any number of
+  agents, with walls; a sensing radius and a versioned record of what an agent perceives
+  of a neighbour (age and gender if visible, never the task); an avoidance directive with
+  five fields (side, share of the avoiding, speed, clearance, passage order); a handoff to
+  the arbiter of issue #24 where only one agent fits; five scenarios whose physical
+  parameters are each cited or tagged as a placeholder; conflict metrics; a second kind of
+  run log. 777 tests, of which the 432 of issue #24 are unchanged, and its 54 no-LLM runs
+  come out identical. No model was called.
+- **Plain ORCA deadlocks when a meeting is exactly symmetric, and a shared side fixes it
+  for free.** Head-on in a corridor wide enough to pass, two agents brake to a stop 2 cm
+  apart; the same happens at a right-angle crossing. If both keep left (or both right)
+  they pass with no delay at all. So does a 10 cm offset with no directive, so the
+  deadlock is a property of exact symmetry. Opposite sides are logged as a violation and
+  ignored.
+- **The share decides who steps aside, and by how much.** With shares (0.5, 0.5) each
+  agent moves 0.25 m; with (1.0, 0.0) one moves 0.50 m and the other walks its line
+  untouched. The condition issue #26 gives for the shares (they must sum to at least 1)
+  turned out to cover only a pair already on a collision course; what was done about the
+  other case is a design decision that needs sign-off (`WORK_LOG-26.md`, Q2).
+- **Two things an ORCA agent does that are the algorithm's and are not offered as
+  behaviour.** Asked to do all the avoiding with no side to take, an agent walks backwards
+  down the corridor in front of the other. And a slower walker is hurried along by a
+  faster one exactly behind it, because ORCA shares the avoiding with the agent in front.
+  Both bear on the later validation against human behaviour.
+- **In a dense two-way flow bodies overlap, and 10,000 agents are slow.** Fifty agents
+  each way all arrive, but with the ten neighbours used in practice two discs overlap 512
+  times, by up to 8 cm; with forty neighbours 87 times, by up to 2.3 cm. Every overlap was
+  traced to the case ORCA's own paper says carries no guarantee. In pure Python a step for
+  10,000 agents takes about 1.5 s, some fifteen times slower than real time, so this layer
+  does not yet meet the project's 10,000-agent target for speed.
 
 Three findings from the simulation-rules review (issue #22), all drafts needing supervisor
 sign-off — see `literature/simulation-rules/`. The review is seed-led (27 sources, 5 papers
@@ -183,14 +221,20 @@ CrowdSimulation/
     requirements.txt
   integration/
     crowdgym_mapping.md             record -> CrowdGym AgentType / journey / action handler
-  llm_negotiation/                  issue #24: two-agent LLM negotiation simulator (has its own README)
-    run_experiment.py               run an experiment config; --client mock (free) or deepseek (paid)
-    configs/                        scenarios, personas, experiment designs C0-C4, task strings, API prices
+  llm_negotiation/                  issue #24: two-agent LLM negotiation simulator; issue #26: the
+                                    avoidance layer (ORCA, perception, directives). Has its own README
+    run_experiment.py               run an experiment config; --client mock (free) or deepseek (paid);
+                                    an avoidance config needs no client and costs nothing
+    configs/                        scenarios, personas, experiment designs C0-C4, task strings, API prices;
+                                    avoidance/ holds the six avoidance experiments of issue #26
     negsim/                         the package: core, scenarios, conflict, control, llm,
-                                    negotiation, personas, runlog, metrics, viz, experiment
-    tests/                          432 tests, all on the mock client, no network, no spend
-    docs/                           architecture, gamechat-notes, derivations, llm-backend, log-schema
-    runs/                           committed run logs: C0 (no LLM) and the paid smoke runs
+                                    negotiation, personas, runlog, metrics, viz, experiment,
+                                    avoidance
+    tests/                          777 tests; none calls a model or the network, none spends
+    docs/                           architecture, gamechat-notes, derivations, llm-backend, log-schema;
+                                    orca, perception, parameters, metrics (issue #26)
+    runs/                           committed run logs: C0 (no LLM), the paid smoke runs, and
+                                    si1_* (the 46 avoidance runs and the benchmark)
     spend_ledger.jsonl              one line per paid API call for this work (Phase 1 spend is
                                     tracked separately in pipeline/config.py)
 ```
