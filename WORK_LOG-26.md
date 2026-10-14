@@ -485,7 +485,7 @@ Kept here because the workflow asks for the dead ends, not a tidied account.
     to 0.07 of real time.
 - Next step: write down what the checking and the results turned up.
 
-### 2026-10-14 09:25 — What the checking turned up
+### 2026-10-14 09:20 — What the checking turned up
 
 - **Four statements in the documents that the runs or the sources do not bear out.** All
   mine or the first session's; all corrected.
@@ -536,7 +536,7 @@ Kept here because the workflow asks for the dead ends, not a tidied account.
   in `crowd_base.py`. The 46 run folders are the first session's, as it left them.
 - Next step: run everything once more on the tree as it will be committed.
 
-### 2026-10-14 09:35 — Verified again, on the tree as committed
+### 2026-10-14 09:25 — Verified again, on the tree as committed
 
 - What I did: with every edit of this session in place, ran the test suite, pyflakes, the
   46 avoidance runs and issue #24's no-LLM runs once more.
@@ -555,7 +555,7 @@ Kept here because the workflow asks for the dead ends, not a tidied account.
     code path reads `.env`, and this session did not open it.
 - Next step: commit, push, open the PR against `feat/24-llm-negotiation-simulator`.
 
-### 2026-10-14 09:50 — Pushed; PR #27 opened
+### 2026-10-14 09:30 — Pushed; PR #27 opened
 
 - What I did: committed this session's work in five commits (`19858b3` the runs and the
   benchmark, `3700fe6` the test, `35bda68` the corrections, `bef3b05` the READMEs,
@@ -574,6 +574,11 @@ Kept here because the workflow asks for the dead ends, not a tidied account.
   stays open, as the workflow requires; it will not close by itself, because the base is
   not the default branch (Q12).
 - Next step: none for this issue until the open questions have answers.
+- A correction to this log, made in the commit after this one: I had headed this entry
+  09:50 and the two before it 09:35 and 09:25, estimating as I wrote. The commit times say
+  otherwise (the commit that records the PR is at 09:30:58), so the three headings now
+  read 09:30, 09:25 and 09:20. The times of this session's entries are good to about five
+  minutes.
 
 ## Open questions / risks
 
@@ -706,8 +711,8 @@ prescribe avoidance, built and checked on its own, with no rule and no model in 
 | Five scenarios run end to end | `runs/si1_*`, 46 runs |
 | Conflict metrics defined operationally, thresholds recorded | `docs/metrics.md`; `thresholds` in every `outcome.json` |
 | Log schema extended and versioned | `docs/log-schema.md`, version 2 |
-| Behaviour checks and benchmark reported with numbers | the 09:15 entry; `llm_negotiation/README.md` |
-| Zero API spend; all existing tests pass | the 09:35 entry |
+| Behaviour checks and benchmark reported with numbers | the 09:15 entry of 2026-10-14; `llm_negotiation/README.md` |
+| Zero API spend; all existing tests pass | the 09:25 entry of 2026-10-14 |
 
 **What it found**, each one deterministic run and none of it evidence about people: plain
 ORCA deadlocks in an exactly symmetric meeting, head-on or crossing, and a shared side
