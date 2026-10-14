@@ -343,10 +343,357 @@ Kept here because the workflow asks for the dead ends, not a tidied account.
 - **A late progress comment, again.** The first comment on the issue went up after the
   build, not at the first milestone. Issue #24's log records the same mistake.
 
+### 2026-10-14 08:55 — A second session picks this up, and checks before finishing
+
+- What I did: this entry and those after it are written by a new session. It has none of
+  the first session's memory: only this log, the issue and its one comment, the
+  repository, and the first session's scratch files. It found the branch on this machine
+  only (never pushed), the eleven commits above, and, untracked, 46 run folders and a
+  benchmark file, every run stamped with commit `ac1f0b4` and a clean tree. Missing were
+  the results, the READMEs, the open questions, the summary, the push and the PR. Before
+  writing any of that I checked what the entries above claim, without relying on them:
+  1. **The tests.** A new virtual environment (Python 3.13.3, `requirements.txt`, and
+     pyflakes 4.0.3): 776 passed, pyflakes reports nothing. The 46 run folders were in
+     place, so the test that validates every committed run folder covered them.
+  2. **Issue #24's behaviour.** Its three no-LLM experiments, run again with this code and
+     compared with their committed logs: 54 runs, 0 differ. `trajectory.csv` and
+     `conversation.jsonl` byte for byte; `config.json` and `outcome.json` as data, leaving
+     out the time stamp, the git state, the schema version, `software` and `run_kind`.
+  3. **The 46 runs reproduce.** All six experiments run again through `run_experiment.py`
+     into a scratch folder: 46 runs and 236 files compared with the untracked folders, 0
+     differ. Only `created_utc` was left out.
+  4. **The code against its sources.** Read `orca.py` beside the paper's eqs. 5 and 6 and
+     beside `Agent.cc:542-608` in the cached excerpts, and `lp.py` beside
+     `Agent.cc:63-242`, line by line. They agree except where `docs/orca.md`, section 9,
+     says they do not. Worked through the wall half-plane, the tied case and the side
+     preference on paper: each half-plane stays outside its velocity obstacle.
+  5. **The locators.** Printed about forty cited line ranges of the cached sources (the
+     ORCA paper, RVO2, Moussaïd, Yamamoto, Karamouzas, Bohannon, Menge, GameChat) and read
+     each against the sentence that cites it.
+  6. **The guarantee itself, in the crowd.** The next entry.
+- Why: the summary and the PR state these things as checked, and I had not checked them.
+  And what this layer is for later, a baseline and a place for rules to act, is only as
+  good as its ORCA.
+- Result / what I found: 1 to 4 held as written. 5 found one locator a line out. 6 held.
+  The numbers, and what else turned up, are in the entries that follow.
+- Next step: the guarantee in the crowd.
+
+### 2026-10-14 09:05 — ORCA's guarantee, checked in the crowd without the half-plane code
+
+- What I did: the first session showed that every collision in the dense flow begins on a
+  step on which one of the two agents had no feasible velocity. That rules out a collision
+  from any other cause. It does not rule out a fault that leaves a pair on a collision
+  course without yet producing an overlap. So I tested the theorem directly. A scratch
+  script steps the shipped `bidirectional_flow`. Before each step it records every
+  position and every agent's neighbour set, with the simulation's own query. After the
+  step it reads the velocity each agent moved with. For every pair in which each perceives
+  the other and both programs were feasible, it computes, from positions and velocities
+  alone, how close the two would come within the 3 s horizon; for a pair already
+  overlapping, how far apart they are one step later.
+- Why: 512 overlaps, the deepest 8 cm, is the result here most likely to be a bug, and the
+  one the 10,000-agent goal leans on.
+- Result / what I found:
+
+  | | 10 neighbours | 40 neighbours |
+  |---|---|---|
+  | Pair-steps in which each perceives the other | 161,383 | 562,633 |
+  | of those, both feasible and not overlapping | 126,621 | 478,474 |
+  | of those, closest approach within 3 s less than the two radii | **0** | **0** |
+  | Both feasible, already overlapping | 177 | 17 |
+  | of those, still overlapping one step later | **0** | **0** |
+  | Collision episodes | 512 | 87 |
+  | begun on a step on which one of the two was infeasible | 512 | 87 |
+  | begun with both feasible but only one perceiving the other | 0 | 0 |
+  | begun with neither explanation | 0 | 0 |
+
+  The collision counts and the deepest overlaps (81.65 mm, 23.14 mm) are those of the
+  committed runs, so the script stepped the same simulations. On every pair-step the
+  theorem applies to, it holds. The overlaps come from the infeasible case alone.
+  - **Made it a test**, on the smaller crowd the existing test uses:
+    `test_two_feasible_agents_that_perceive_each_other_never_choose_velocities_that_collide_within_tau`
+    (40,456 pair-steps apart and 26 overlapping; worst margin −6e-16 m, which is zero in
+    floating point: ORCA picks a velocity on the boundary). I checked that the test can
+    fail. With each agent doing 80% of its share, with each using 60% of the room that is
+    left, and with the normal reversed, it fails each time.
+  - **What this does not show** is that RVO2 would overlap as often in the same scene.
+    RVO2 was not run, as the issue requires, so there is no output to compare with. Here
+    the walls follow the paper and not RVO2 (DD27) and an exact tie is not broken (DD26);
+    either could change how often a program is infeasible. Open question Q7.
+- Next step: the numbers.
+
+### 2026-10-14 09:15 — Results: the behaviour checks, the crowd, the benchmark
+
+- What I did: read every number out of the committed `summary.csv`, `outcome.json`,
+  `events.jsonl` and `trajectory.csv` files with a script, and looked at the trajectory
+  behind each result that surprised me.
+- Why: the issue asks for the behaviour checks and the benchmark "reported with numbers,
+  not asserted in advance". The full tables are in `llm_negotiation/README.md`, "Results
+  of the avoidance layer", and are not repeated here. Each row is one deterministic run.
+- Result / what I found:
+  - **Check 1, `wide_corridor_head_on`, exactly symmetric, plain ORCA against a shared
+    side.** Alone, each agent arrives in 12.2 s.
+
+    | Condition | Deadlock | Exposure, each | Time to goal | Deviation, each |
+    |---|---|---|---|---|
+    | plain ORCA | yes, at 20.4 s, 2.1 cm apart | 17.4 s | – | 0 |
+    | plain ORCA, RVO2's tie-break | yes, at 20.4 s | 17.4 s | – | 0 |
+    | both keep left | no | 3.2 s | 12.2 s | 0.251 m |
+    | both keep right | no | 3.2 s | 12.2 s | 0.251 m |
+    | one left, one right (logged as a violation, neither used) | yes, at 20.4 s | 17.4 s | – | 0 |
+
+    Plain ORCA does deadlock here. With a 10 cm offset it does not: 12.2 s, with no
+    directive.
+  - **Check 2, shares (0.5, 0.5) against (1.0, 0.0).** With both keeping left: 0.251 m and
+    0.251 m, against 0.502 m for agent 0 and 0 for agent 1. Offset, no side: 0.202 m and
+    0.202 m, against 0.402 m and 0. Agent 1 has no exposure in either. Exactly symmetric
+    with no side, (0.5, 0.5) deadlocks and (1.0, 0.0) does not, but nobody steps aside: see
+    the next entry. (0.3, 0.3) is logged and repaired to (0.5, 0.5) in all four layouts.
+  - **Check 3, `corridor_to_bottleneck`.** In all six runs with the arbiter on, control
+    passes to the arbiter once (at 2.2 s opposing, the step on which the two first perceive
+    each other, 12.3 m apart and each 3.55 m before its zone; at 0.0 s merging) and back
+    once (9.0 s). The leader is agent 0 by the arbiter's own rule; agent 1 when the
+    directives say so (`role_source: negotiated`); agent 0 again when both claim it, with a
+    violation logged. The leader is first into the segment every time and arrives at
+    13.8 s, its time alone; the follower at 18.0 s (opposing) or 17.8 s (merging). With the
+    arbiter off, both layouts deadlock (15.2 s, 8.9 s). No collision in any of the eight.
+  - **`open_crossing`.** Arriving together under plain ORCA: deadlock at 28.0 s, each
+    1.98 m off its path. Both keeping left: 12.0 s and 12.4 s. Half a metre apart: 12.1 s
+    and 12.6 s with or without a side.
+  - **`overtaking`.** Exactly behind under plain ORCA: no overtaking; 29.5 s and 29.2 s,
+    against 26.9 s and 32.6 s alone. Otherwise agent 0 overtakes: 27.1 to 27.4 s.
+  - **`bidirectional_flow`, 50 each way.** All 100 arrive in both runs; no wall is
+    touched. Ten neighbours: mean time to goal 41.0 s (33.5 s alone), last arrival 87.7 s,
+    512 overlap episodes, depth median 10.5 mm, 90th percentile 41.0 mm, deepest 81.7 mm,
+    264 deeper than 1 cm. Forty neighbours: 35.3 s, 78.6 s, 87 episodes, 1.9 mm, 9.1 mm,
+    23.1 mm, 5 deeper than 1 cm.
+  - **The property test.** 500 seeds; 15 start within half a metre of touching and are set
+    aside; 485 are run to the end and all complete; no collision; the smallest gap in any
+    of them is 3.3 micrometres. In 164 of the 485 ORCA had to change somebody's velocity;
+    in the other 321 the two never came into conflict, so the property is tested by 164.
+  - **The benchmark**, milliseconds per step, mean of 100 steps, one thread of an AMD
+    Ryzen 5 7535HS laptop (6 cores, 16 GB, Windows 11, mains power), Python 3.13.3:
+
+    | Agents | 2026-10-13 (`benchmark.json`) | 2026-10-14 (`benchmark_repeat.json`) | Per agent per step |
+    |---|---|---|---|
+    | 100 | 12.5 | 15.6 | 125 and 156 µs |
+    | 1,000 | 148.3 | 143.3 | 148 and 143 µs |
+    | 10,000 | 1,602 | 1,364 | 160 and 136 µs |
+
+    The two differ by 25%, 3% and 15%, so that is how far one of them can be trusted. Both
+    stepped the same simulation (the same counts of interactions and collisions). The
+    repeat was started before any file was edited. Ten thousand agents run at about 0.06
+    to 0.07 of real time.
+- Next step: write down what the checking and the results turned up.
+
+### 2026-10-14 09:25 — What the checking turned up
+
+- **Four statements in the documents that the runs or the sources do not bear out.** All
+  mine or the first session's; all corrected.
+  - `derivations.md`, section 14, said the symmetric run ends "with a smallest separation
+    of 0.0214 m". The run has 0.021118 m. The derivation used the gap at which braking
+    starts in continuous time, 7.8 m. The state is sampled every 0.1 s, so the first step
+    that brakes begins with a gap of 7.7 m, and 7.7 × (29/30)^174 = 0.021118 m, the run's
+    value to the last digit. The section now derives all four of the run's numbers.
+  - `architecture.md`, section 6.4, said the two perceive each other "3.4 m before either
+    zone". The trajectory has 3.55 m on that step.
+  - `parameters.md` cited the body radius at `b3_yamamoto_bodyrotation.txt:648-651`. The
+    sentence is on lines 649 to 652. The table in the 20:40 entry above still has the old
+    range; it is left as written.
+  - A comment in `crowd_base.py` said discs overlap "by a few millimetres" and
+    `metrics.md` said "typically by millimetres". With the shipped ten neighbours the
+    median is 10 mm and the deepest 82 mm. The 7 mm and 0.3 mm in the 21:10 entry were the
+    first overlaps of two early runs, not typical depths. Both now give the measured
+    depths.
+- **Six things the runs show that the entries above do not say.**
+  1. **With shares (1.0, 0.0) and no side, agent 0 walks backwards.** I first took the
+     0.700 m in that run's `path_deviation_max` for a sidestep. The trajectory has y = 0
+     throughout. Agent 0 backs away along its own line for 7.0 s, from x = −2.91 m to
+     x = −8.70 m, which is 0.70 m behind its start, while agent 1 walks through at 1.3 m/s.
+     It arrives at 24.9 s. The deviation is measured from the start point once an agent is
+     behind it, which `metrics.md` says. So a share breaks the symmetric deadlock, but it
+     is not a way of passing.
+  2. **Exactly behind a slower walker, plain ORCA hurries the slower one along.** Both
+     settle at 1.29 m/s: agent 0 held back from 1.48, agent 1 pushed up from 1.10. ORCA
+     gives the agent in front half of the avoiding of an agent behind it. Neither stops, so
+     there is no deadlock and no yield; it shows only as 22.9 s of exposure each.
+  3. **The symmetric crossing deadlocks as well**, 28.0 s, both 1.98 m off their paths. It
+     is the head-on case again in relative velocity.
+  4. **`speed_scale` lasts until the neighbour is out of range, not until it is passed.**
+     In the 60% run the two walk slowly from 1.4 s to 17.5 s.
+  5. **In the crowd most perception is one-sided.** On 63.6% of agent-steps with ten
+     neighbours (45.2% with forty) an agent is constrained by a neighbour that does not
+     have it among its own. No collision began that way (previous entry), but the pairwise
+     guarantee does not cover those steps. And 320 of the 512 overlaps are between agents
+     walking the same way. My reading, not a measurement: a crowd pressing from behind
+     more than two streams meeting.
+  6. **One step at the end of every handoff has no roles.** At 8.9 s in the opposing runs
+     the pair is still held by the arbiter, but the arbiter's own test finds the two no
+     longer overlap in time, assigns no role and lifts the bound, and the shares are
+     (0.5, 0.5) for that step. `architecture.md`, section 6.4, now says so.
+- **Added:** the test of the previous entry (777 tests now, 345 of them new), and the
+  second benchmark file.
+- **Not changed:** any behaviour. The only edit to code outside the tests is the comment
+  in `crowd_base.py`. The 46 run folders are the first session's, as it left them.
+- Next step: run everything once more on the tree as it will be committed.
+
+### 2026-10-14 09:35 — Verified again, on the tree as committed
+
+- What I did: with every edit of this session in place, ran the test suite, pyflakes, the
+  46 avoidance runs and issue #24's no-LLM runs once more.
+- Why: workflow step 5. The run folders are stamped `ac1f0b4`, and the tree has changed
+  since (a comment, a test, documents).
+- Result / what I found:
+  - `python -m pytest` in `llm_negotiation/`: **777 passed** in 58 s. `pyflakes` over
+    `negsim`, `tests` and `run_experiment.py`: nothing.
+  - The 46 avoidance runs, run again from this tree: 46 runs and 236 files compared with
+    the folders being committed, 0 differ. Left out of the comparison: `created_utc`, and
+    the git stamp, which now differs as it should.
+  - Issue #24's no-LLM runs: 54 compared, 0 differ.
+  - Spend: nothing. `spend_ledger.jsonl` is byte for byte what issue #24 left. Two tests
+    hold the line: an avoidance run that tried to build an LLM client would raise, and no
+    avoidance module imports the LLM or negotiation packages. Nothing on the avoidance
+    code path reads `.env`, and this session did not open it.
+- Next step: commit, push, open the PR against `feat/24-llm-negotiation-simulator`.
+
 ## Open questions / risks
 
-- **Q1 (carried from #24) — has the supervisor's "no simulation code until the literature
-  review is complete and discussed" instruction been lifted?** See assumption A2.
+Each of Q2 to Q5 is a decision I or the first session made that changes what the layer
+does. They are marked as decisions in `llm_negotiation/docs/architecture.md`, section 6.3,
+and none has been signed off.
 
-## Summary (fill in at the end)
+- **Q1 (carried from #24). Has the supervisor's "no simulation code until the literature
+  review is complete and discussed" instruction been lifted?** See assumption A2. Still
+  unrecorded.
+- **Q2. The reciprocity condition in the issue covers only a pair on a collision course
+  (DD29).** α_i + α_j ≥ 1 is what the issue asks to be enforced. Off a collision course,
+  ORCA lets each agent move *toward* the other by its share of the room that is left, and
+  shares summing to more than 1 would use more room than there is. The decision: the share
+  divides the avoiding only, and the room is always split in half. Then a sum of at least
+  1 is sufficient in both cases, and a share has no effect unless there is something to
+  avoid. The alternative, giving an agent with share α the fraction 1 − α of the room, is
+  also safe and was not chosen (`derivations.md`, section 9). Shares short of 1 are scaled
+  up in proportion; `equal_split` is the other policy on offer.
+- **Q3. Four of the five directive fields are settled per pair, not per agent
+  (DD30 to DD32).** The issue asks this only of the shares. If one agent states a side,
+  both use it; opposite sides are logged and neither is used; the larger clearance margin
+  wins; two claims to go first are logged and the arbiter decides. "One states a side, so
+  both use it" in particular is the layer deciding with knowledge of both directives. A
+  rule database every agent reads from makes it moot; a negotiation may not.
+- **Q4. Two departures from RVO2 (DD26, DD27).** An exact tie between the passing sides is
+  not broken, where RVO2 goes right, so that no side is built into the baseline of a study
+  of which side people take. In the shipped scenarios it made no difference. And the walls
+  follow the paper, where RVO2 projects the current velocity. With these, "plain ORCA"
+  here is the paper's and not exactly the library's.
+- **Q5. While the arbiter holds a pair, ORCA stays on and the follower takes the whole
+  share (DD32).** This replaced a first design that collided. It gives a weaker guarantee
+  than issue #24's: the bound caps what the follower wants, not what it may do, and in a
+  crowd a third agent could push it into the zone. Only two agents were tried.
+- **Q6. What should "plain ORCA" be, as the baseline of the later sub-issues?** Three
+  choices are open and each changes the baseline's numbers. Whether to perturb exactly
+  symmetric encounters as RVO2's examples do: unperturbed, it deadlocks head-on and at a
+  crossing; ten centimetres of offset and it does not. How many neighbours: ten is cited
+  from practice and gives 512 overlaps up to 8 cm in the two-way flow; forty has no source
+  and gives 87 up to 2.3 cm. And which sensing radius: the paper's bound of 12.5 m, or the
+  5 m used in practice.
+- **Q7. The overlaps were not compared with RVO2.** They are traced to the infeasible
+  case, where the paper promises nothing, and the guarantee was checked where it applies.
+  Whether the reference library would overlap as much in the same scene is not known,
+  because the issue rules out running it. If it matters, running RVO2 once as an oracle,
+  outside the dependency list, is the direct way to find out.
+- **Q8. An ORCA agent does things that are the algorithm's and are not offered as human
+  behaviour.** It walks backwards; it reacts to an agent behind it exactly as to one in
+  front, so a slower walker is hurried along; it passes with millimetres to spare.
+  Perception here has no field of view, as the issue specifies ("when another agent enters
+  R"). The sixth sub-issue validates against human behaviour; these are places where the
+  vehicle, and not a rule, may be what differs. I have no source for how people differ on
+  each point, and looked for none.
+- **Q9. Ten thousand agents are about fifteen times slower than real time** in pure
+  Python on one thread of a laptop, 1.4 to 1.6 s per 0.1 s step. The cost per agent is
+  flat, so the layer scales; it is not fast. Nothing was optimised and no way of speeding
+  it up was tried. This is against the project's stated goal.
+- **Q10. Parameters.** Nothing is from Singapore. The body radius rests on four young men
+  in Japan and the walking speed on forty people in France. Bohannon 1997 was read in
+  abstract only; Weidmann was not obtained. Four values are placeholders: the bottleneck's
+  width and length, the spawn spacing, and the forty neighbours. The metric thresholds are
+  definitions with no source.
+- **Q11. Things the directive cannot yet say.** `speed_scale` holds while a neighbour is
+  within the sensing radius, 12.5 m, which is long after it has been passed. Three or more
+  agents at a single-file segment are not ordered consistently. Two agents going the same
+  way through one take turns and do not follow each other. Each will meet the rule format
+  of the next sub-issue.
+- **Q12. The PR targets `feat/24-llm-negotiation-simulator`, not `main`**, because PR #25
+  is unmerged (assumption A1). GitHub will not close the issue when it merges.
+- **Q13. The repository is public and this branch adds cached copies of papers to
+  `refs/`**: the ORCA paper as the authors distribute it, an arXiv preprint, a PubMed
+  Central page. That follows what earlier branches do (294 files under `refs/` on the
+  branch below this one), and I followed it. Whether publisher-copyright PDFs should sit
+  in a public repository is the owner's call, and I am raising it instead of deciding it.
+- **Q14. The email address sent to Unpaywall by the first session** (21:45 entry). Nothing
+  further was sent. It is listed here so that it is not lost in the log.
+
+## Summary
+
+**What changed.** `llm_negotiation/` gains an avoidance layer beside the negotiation
+simulator of issue #24. In `negsim/avoidance/`: ORCA half-planes for agents and for walls,
+written from the paper; its linear programs and fallback, adapted from RVO2 with its
+notice; a grid for neighbour search; a versioned perception record; the
+`AvoidanceDirective`, the pairwise resolution of two directives with its logged violations,
+and the `DirectiveProvider` interface with `NullProvider` and `StaticProvider`; the handoff
+to the arbiter at single-file segments; the run loop; a benchmark. Around it: a pluggable
+`DynamicsModel` in `negsim/core/` with the unicycle as the default; five scenarios and six
+experiment configs; conflict metrics; log schema version 2; 345 tests; four new documents
+and extensions to three; the READMEs; 46 committed runs and two benchmark measurements.
+By `git diff --numstat` against the branch below: 4,910 lines added under `negsim/` and 53
+removed (about 4,200 of them in new files, the rest added to existing modules), 2,922 of
+tests, 1,534 of documents.
+
+**Why.** Issue #26: the simulator could only settle a conflict by deciding who goes first,
+so a rule taken from it could only prescribe priority. This is the layer that lets a rule
+prescribe avoidance, built and checked on its own, with no rule and no model in it.
+
+**How it was verified.**
+
+- 777 tests pass, on Python 3.13.3 in a virtual environment built from
+  `requirements.txt`: the 432 of issue #24, none edited, and 345 new. `pyflakes` is clean.
+- Existing behaviour is unchanged: issue #24's 54 no-LLM runs come out identical, checked
+  by each session separately, the second time on the final tree.
+- The 46 committed runs were made from a clean tree and reproduce exactly, checked twice
+  by the second session, the second time on the final tree.
+- ORCA's guarantee was tested from positions and velocities alone, on 500 seeded two-agent
+  encounters (485 run, none collides) and pair by pair in a crowd (over 600,000 pair-steps
+  across two 100-agent runs, none an exception). Every overlap in the crowd begins on a
+  step on which the paper gives no guarantee.
+- `orca.py` and `lp.py` were read against the paper and against RVO2's source by both
+  sessions. RVO2 was not run, built or installed.
+- About forty source locators were read against the cached copies; one was a line out and
+  is corrected.
+- Spend: zero. No model was called.
+
+**The acceptance criteria.**
+
+| Criterion | Where |
+|---|---|
+| ORCA from the paper, checked against RVO2's source (read, not run), licence recorded | `docs/orca.md`, sections 1 to 3 and 9; `THIRD_PARTY_NOTICES.md`; `LICENSES/Apache-2.0.txt` |
+| Agent-wall constraints and the infeasible case, implemented and documented | `orca.py`, `lp.py`; `docs/orca.md`, sections 5 and 7; `docs/derivations.md`, section 12 |
+| Dynamics pluggable; ORCA mode holonomic; a recorded decision | `core/dynamics.py`; DD23; the 20:50 entry |
+| Sensing radius and neighbour search, tested against brute force | `neighbours.py`; `tests/test_neighbours.py` |
+| Perception record defined, versioned, documented; hidden attributes never leak; no task | `perception.py`; `docs/perception.md`; `tests/test_perception.py` |
+| `AvoidanceDirective`, each field tested | `directives.py`; `tests/test_directives.py`, `tests/test_avoidance_sim.py` |
+| Reciprocity derivation; violations logged and resolved by a documented policy | `docs/derivations.md`, sections 9 to 11; `resolve_pair`; `events.jsonl` |
+| `DirectiveProvider` with `NullProvider` and `StaticProvider` | `directives.py` |
+| Handoff documented and tested; existing modes unchanged | `docs/architecture.md`, section 6.4; `coordination.py`; the 54 identical runs |
+| Every physical parameter cited or `[placeholder]`; physical and demographic independent | `docs/parameters.md`; a test reads the tags from the configs |
+| Five scenarios run end to end | `runs/si1_*`, 46 runs |
+| Conflict metrics defined operationally, thresholds recorded | `docs/metrics.md`; `thresholds` in every `outcome.json` |
+| Log schema extended and versioned | `docs/log-schema.md`, version 2 |
+| Behaviour checks and benchmark reported with numbers | the 09:15 entry; `llm_negotiation/README.md` |
+| Zero API spend; all existing tests pass | the 09:35 entry |
+
+**What it found**, each one deterministic run and none of it evidence about people: plain
+ORCA deadlocks in an exactly symmetric meeting, head-on or crossing, and a shared side
+removes the deadlock at no cost in time, as does a 10 cm offset. The shares divide a fixed
+sideways movement, 0.25 m each or 0.50 m and nothing. A single-file segment needs the
+arbiter; ORCA alone deadlocks there. In a two-way flow of a hundred everyone arrives and
+bodies overlap, by up to 8 cm with ten neighbours. Ten thousand agents run about fifteen
+times slower than real time.
 
