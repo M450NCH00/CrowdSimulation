@@ -8,7 +8,12 @@ before. No avoidance run calls a model, so none costs anything.
 An experiment names an avoidance scenario and describes a *design*: named factors, each a
 list of named levels. Every combination of one level per factor is one run. A level can
 change the scenario (``scenario_overrides``), the directives, the arbitration settings,
-who the agents are (``population``) and what they can see of each other (``visibility``).
+who the agents are (``population``), what they can see of each other (``visibility``), and
+which frozen baseline the ORCA layer follows (``baseline``, issue #28).
+
+Directives come from a provider: ``null`` (plain ORCA), ``static`` (written in the
+config), or, since issue #28, ``rules``: the rule database (``negsim.rules``), with a named
+rule set and any rules switched on or off on top of it.
 
 Who the agents are is kept apart from what they are physically. ``population`` attaches a
 persona (age, gender) to an agent and nothing else; an agent's size and speeds come only
@@ -36,7 +41,10 @@ from ..avoidance.directives import (
     make_provider,
 )
 from ..avoidance.perception import NEVER_OBSERVABLE, PERCEPTION_SCHEMA_VERSION, default_visibility
-from ..avoidance.simulation import AvoidanceSimulation, SimulationResult
+from ..avoidance.simulation import INTERACTION_OUTCOMES, AvoidanceSimulation, Perturbation, SimulationResult
+from ..rules import RuleDatabase, RuleDatabaseProvider, RuleError
+from ..rules.matching import DEFAULT_HYSTERESIS_STEPS
+from .baselines import Baseline, load_baseline
 from ..configutil import (
     PACKAGE_ROOT,
     ConfigError,
@@ -66,8 +74,53 @@ from ..scenarios.registry import build_crowd_scenario, load_scenario_config
 LAYER_AVOIDANCE = "avoidance"
 SCHEMA_VERSION = 1
 
-_LEVEL_KEYS = ("scenario_overrides", "directives", "arbitration", "population", "visibility")
-_DIRECTIVE_KEYS = ("provider", "default", "agents", "pairs", "share_policy")
+_LEVEL_KEYS = ("scenario_overrides", "directives", "arbitration", "population", "visibility", "baseline")
+_STATIC_DIRECTIVE_KEYS = ("provider", "default", "agents", "pairs", "share_policy")
+_RULE_DIRECTIVE_KEYS = ("provider", "ruleset", "enable", "disable", "hysteresis_steps", "database", "share_policy")
+_DIRECTIVE_KEYS = tuple(dict.fromkeys(_STATIC_DIRECTIVE_KEYS + _RULE_DIRECTIVE_KEYS))
+PROVIDER_RULES = RuleDatabaseProvider.name
+_DATABASES: dict[Path, RuleDatabase] = {}
+
+
+def rule_database(path: Any = "rule_db") -> RuleDatabase:
+    """The rule database at ``path`` (under ``llm_negotiation/``), loaded once per process."""
+    root = resolve_path(path).resolve()
+    if root not in _DATABASES:
+        _DATABASES[root] = RuleDatabase.load(root)
+    return _DATABASES[root]
+
+
+def build_provider(directives: Mapping[str, Any], visibility: Mapping[str, bool], where: str) -> DirectiveProvider:
+    """The directive provider an experiment's ``directives`` block asks for.
+
+    ``null`` and ``static`` are issue #26's (``make_provider``). ``rules`` reads the rule
+    database: ``ruleset`` names a rule set, ``disable`` lists rule ids to leave out of it,
+    ``enable`` maps rule ids to the versions to add, and ``hysteresis_steps`` sets the
+    matching policy's hysteresis (``docs/rule-matching.md``).
+    """
+    if directives.get("provider") != PROVIDER_RULES:
+        unknown = [key for key in directives if key not in _STATIC_DIRECTIVE_KEYS]
+        if unknown:
+            raise ConfigError(f"{where}: {unknown} apply only to provider 'rules'")
+        return make_provider(directives or None, where)
+    check_keys(directives, where, ("provider",), _RULE_DIRECTIVE_KEYS)
+    enable = directives.get("enable") or {}
+    if not isinstance(enable, Mapping) or not all(
+        isinstance(version, int) and not isinstance(version, bool) for version in enable.values()
+    ):
+        raise ConfigError(f"{where}.enable: expected a mapping from rule_id to version, e.g. keep_right_head_on: 1")
+    disable = directives.get("disable") or []
+    if not isinstance(disable, list):
+        raise ConfigError(f"{where}.disable: expected a list of rule ids")
+    steps = directives.get("hysteresis_steps", DEFAULT_HYSTERESIS_STEPS)
+    if isinstance(steps, bool) or not isinstance(steps, int) or steps < 1:
+        raise ConfigError(f"{where}.hysteresis_steps: expected a whole number, 1 or more, got {steps!r}")
+    database = str(directives.get("database", "rule_db"))
+    try:
+        active = rule_database(database).activate(directives.get("ruleset"), enable, disable)
+        return RuleDatabaseProvider(active, visibility, steps, database)
+    except RuleError as exc:
+        raise ConfigError(f"{where}: {exc}") from exc
 
 
 def is_avoidance_config(raw: Any) -> bool:
@@ -93,9 +146,11 @@ class AvoidanceRunPlan:
     share_policy: str
     arbitration: ArbitrationSettings
     logging: Mapping[str, Any]
+    baseline: Optional[Baseline] = None
+    perturbation: Perturbation = Perturbation()
 
     def provider(self) -> DirectiveProvider:
-        return make_provider(self.directives or None)
+        return build_provider(self.directives, self.visibility, "directives")
 
     def attributes(self) -> dict[int, Mapping[str, Any]]:
         """Each agent's persona attributes, for the perception records."""
@@ -127,6 +182,7 @@ class AvoidanceExperiment:
             "arbitration": dict(raw.get("arbitration") or {}),
             "population": dict(raw.get("population") or {}),
             "visibility": raw.get("visibility", "default"),
+            "baseline": raw.get("baseline"),
         }
         self.logging = self._logging(raw.get("logging") or {}, f"{where}.logging")
         self.design = raw["design"]
@@ -146,6 +202,8 @@ class AvoidanceExperiment:
 
     @staticmethod
     def _logging(raw: Any, where: str) -> dict[str, Any]:
+        """``interactions: false`` leaves out the per-interaction records: since issue #28
+        both ``interactions.jsonl`` and ``pair_interactions.jsonl``. The outcome still counts them."""
         check_keys(raw, where, (), ("trajectory_stride", "interactions"))
         stride = raw.get("trajectory_stride", 1)
         if isinstance(stride, bool) or not isinstance(stride, int) or stride < 1:
@@ -224,7 +282,17 @@ class AvoidanceExperiment:
                 else:
                     settings[key] = deep_merge(settings[key] or {}, level[key])
 
-        scenario_config = load_scenario_config(self.scenario_file, settings["scenario_overrides"])
+        baseline = None
+        overrides = settings["scenario_overrides"] or {}
+        if settings["baseline"] is not None:
+            try:
+                baseline = load_baseline(settings["baseline"])
+            except ConfigError as exc:
+                raise ConfigError(f"{where}: {exc}") from exc
+            # The baseline goes under the experiment's own overrides, so that a level can
+            # still vary one of its settings (and the run records both).
+            overrides = deep_merge(baseline.scenario_overrides(load_scenario_config(self.scenario_file)), overrides)
+        scenario_config = load_scenario_config(self.scenario_file, overrides)
         if repeat > 1:
             # Identical repeats of a deterministic run would be the same run. Each repeat
             # gets its own seed for whatever the scenario randomises (starting positions).
@@ -234,12 +302,13 @@ class AvoidanceExperiment:
         except ConfigError as exc:
             raise ConfigError(f"{where}: {exc}") from exc
 
+        visibility = self._visibility(settings["visibility"], f"{where}.visibility")
         directives = dict(settings["directives"] or {})
         check_keys(directives, f"{where}.directives", (), _DIRECTIVE_KEYS)
         share_policy = as_choice(
             directives.pop("share_policy", POLICY_PROPORTIONAL), f"{where}.directives.share_policy", SHARE_POLICIES
         )
-        provider = make_provider(directives or None, f"{where}.directives")
+        provider = build_provider(directives, visibility, f"{where}.directives")
         _check_directive_agents(provider, len(spec.agents), f"{where}.directives")
 
         parts = [f"{index:03d}"] + [name for name, _ in combination]
@@ -257,11 +326,13 @@ class AvoidanceExperiment:
             variant={factor: name for factor, (name, _) in zip(names, combination)},
             scenario_config=scenario_config,
             population=self._population(settings["population"] or {}, spec, f"{where}.population"),
-            visibility=self._visibility(settings["visibility"], f"{where}.visibility"),
+            visibility=visibility,
             directives=directives,
             share_policy=share_policy,
             arbitration=self._arbitration(settings["arbitration"] or {}, f"{where}.arbitration"),
             logging=self.logging,
+            baseline=baseline,
+            perturbation=baseline.perturbation if baseline is not None else Perturbation(),
         )
 
     def _population(self, raw: Any, spec: CrowdScenarioSpec, where: str) -> dict[int, dict[str, Any]]:
@@ -370,6 +441,8 @@ def resolved_config(plan: AvoidanceRunPlan, spec: CrowdScenarioSpec, provider: D
         "arbitration": plan.arbitration.as_dict(),
         "logging": dict(plan.logging),
         "perception_schema_version": PERCEPTION_SCHEMA_VERSION,
+        "baseline": None if plan.baseline is None else plan.baseline.describe(),
+        "perturbation": plan.perturbation.as_dict(),
     }
 
 
@@ -390,7 +463,34 @@ def build_events(result: SimulationResult) -> list[dict[str, Any]]:
         events.append({"type": "collision", "time_s": round(episode.start_time_s, 6), **record})
     for episode in result.wall_collision_episodes:
         events.append({"type": "wall_collision", "time_s": episode["start_time_s"], **episode})
-    order = {name: rank for rank, name in enumerate(("reciprocity_violation", "handoff", "collision", "wall_collision", "near_miss", "yield"))}
+    for pair in result.pairs:
+        record = pair.provider_record
+        if record is None:
+            continue
+        for entry in record.evaluations:
+            if entry["outcome"] == "ambiguous_match":
+                events.append(
+                    {
+                        "type": "ambiguous_match",
+                        "time_s": entry["from_time_s"],
+                        "step": entry["from_step"],
+                        "pair": list(pair.agents),
+                        "applied": entry["rule"],
+                        "ambiguous_with": entry["ambiguous_with"],
+                    }
+                )
+    conflicts = {}
+    for pair in result.pairs:
+        for event in [] if pair.provider_record is None else pair.provider_record.conflicts:
+            conflicts[id(event)] = event  # one event can be on several pairs' records
+    for event in conflicts.values():
+        events.append({"type": "cross_pair_conflict", **event})
+    order = {
+        name: rank
+        for rank, name in enumerate(
+            ("reciprocity_violation", "handoff", "ambiguous_match", "cross_pair_conflict", "collision", "wall_collision", "near_miss", "yield")
+        )
+    }
     events.sort(key=lambda event: (event["time_s"], order[event["type"]], json.dumps(event, sort_keys=True)))
     return [{"event_index": index, **event} for index, event in enumerate(events)]
 
@@ -462,6 +562,18 @@ def build_outcome(plan: AvoidanceRunPlan, spec: CrowdScenarioSpec, result: Simul
             }
         )
 
+    outcomes: dict[str, Any] = {"pairs": len(result.pairs), **{name: 0 for name in INTERACTION_OUTCOMES}}
+    ingredients = {"exposed": 0, "yielded": 0, "collided": 0, "deadlocked": 0, "open_at_timeout": 0}
+    for pair in result.pairs:
+        outcomes[pair.outcome] += 1
+        detail = pair.outcome_detail
+        ingredients["exposed"] += detail["exposed"]
+        ingredients["yielded"] += detail["yield_events"] > 0
+        ingredients["collided"] += detail["collisions"] > 0
+        ingredients["deadlocked"] += detail["deadlock"]
+        ingredients["open_at_timeout"] += detail["open_at_timeout"]
+    outcomes["pairs_with"] = ingredients
+
     all_arrived = len(goal_times) == len(ids)
     return {
         "log_schema_version": LOG_SCHEMA_VERSION,
@@ -482,6 +594,9 @@ def build_outcome(plan: AvoidanceRunPlan, spec: CrowdScenarioSpec, result: Simul
         "reciprocity_violations": list(result.violations),
         "handoffs": [handoff.as_dict() for handoff in result.handoffs],
         "thresholds": {**spec.thresholds.as_dict(), "deadlock": spec.deadlock.as_dict()},
+        "interaction_outcomes": outcomes,
+        "rules": result.provider_summary,
+        "baseline": None if plan.baseline is None else plan.baseline.name,
     }
 
 
@@ -500,6 +615,7 @@ def execute_avoidance_run(
         share_policy=plan.share_policy,
         seed=plan.seed,
         trajectory_stride=plan.logging["trajectory_stride"],
+        perturbation=plan.perturbation,
     )
     result = simulation.run()
 
@@ -508,6 +624,8 @@ def execute_avoidance_run(
     logger.write_trajectory(result.trajectory)
     interactions = result.interactions if plan.logging["interactions"] else []
     logger.write_interactions(interaction.as_dict(spec.dt) for interaction in interactions)
+    pairs = result.pairs if plan.logging["interactions"] else []
+    logger.write_pair_interactions(pair.as_dict(spec.dt) for pair in pairs)
     logger.write_events(build_events(result))
     outcome = build_outcome(plan, spec, result)
     logger.write_outcome(outcome)
@@ -562,7 +680,26 @@ def avoidance_summary_row(config: Mapping[str, Any], outcome: Mapping[str, Any])
         "path_deviation_max_1_m": of("1", "path_deviation_max_m"),
         "conflict_exposure_0_s": of("0", "conflict_exposure_time_s"),
         "conflict_exposure_1_s": of("1", "conflict_exposure_time_s"),
+        **_rule_columns(config, outcome),
         "git_commit": (config["git"].get("commit") or "")[:10],
+    }
+
+
+def _rule_columns(config: Mapping[str, Any], outcome: Mapping[str, Any]) -> dict[str, Any]:
+    """The summary columns added by issue #28 (log schema version 3); empty for older runs."""
+    counts = outcome.get("interaction_outcomes") or {}
+    rules = outcome.get("rules") or {}
+    fired = rules.get("matches_begun") or {}
+    return {
+        "baseline": outcome.get("baseline"),
+        "ruleset": config["directives"].get("ruleset"),
+        "pairs": counts.get("pairs"),
+        "avoided": counts.get("avoided"),
+        "resolved": counts.get("resolved"),
+        "failed": counts.get("failed"),
+        "rules_fired": ";".join(f"{key}={count}" for key, count in sorted(fired.items())) or None,
+        "ambiguous_matches": (rules.get("evaluations") or {}).get("ambiguous_match") if rules else None,
+        "cross_pair_conflicts": rules.get("cross_pair_conflicts") if rules else None,
     }
 
 

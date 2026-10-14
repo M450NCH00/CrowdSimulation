@@ -1,4 +1,4 @@
-# Log schema, version 2
+# Log schema, version 3
 
 The logs are this platform's research output: rule extraction will be done from them. This
 file says what every file and field means. The machine-checkable part of the schema, the
@@ -15,17 +15,18 @@ describes, in `run_kind`:
 | `run_kind` | What it is | Its files |
 |---|---|---|
 | `negotiation` | A run of issue #24: two agents, an optional dialogue, the arbiter. | `config.json`, `conversation.jsonl`, `trajectory.csv`, `outcome.json`, `transcript.md` |
-| `avoidance` | A run of the avoidance layer of issue #26: any number of agents under ORCA and directives. | `config.json`, `trajectory.csv`, `interactions.jsonl`, `events.jsonl`, `outcome.json` |
+| `avoidance` | A run of the avoidance layer of issue #26: any number of agents under ORCA and directives, which since version 3 may come from rules (issue #28). | `config.json`, `trajectory.csv`, `interactions.jsonl`, `pair_interactions.jsonl` (version 3), `events.jsonl`, `outcome.json` |
 
 The sections from "Layout" to "`summary.csv`" describe a negotiation run; they are those of
 version 1, with the one new field. The section "Avoidance runs" describes the other kind.
 The two have files of the same name with different contents; `run_kind` says which is
-which.
+which. Version 3 changed only the avoidance run.
 
 **Old folders stay valid.** A folder written under version 1 has no `run_kind` and is a
 negotiation run. `validate_run_dir` checks a folder against the version its own
-`config.json` declares, and a test runs it over every committed run folder. The 66 run
-folders of issue #24 are version 1 and were not rewritten.
+`config.json` declares (and its perception records against the perception version it
+declares), and a test runs it over every committed run folder. The 66 run folders of issue
+#24 are version 1 and the 46 of issue #26 version 2; none was rewritten.
 
 ## Layout
 
@@ -219,7 +220,8 @@ llm_negotiation/
       config.json                    everything that defines the run
       trajectory.csv                 one row per agent per time step
       interactions.jsonl             one line per interaction: the perception record and the directive
-      events.jsonl                   one line per event: violations, handoffs, yields, near misses, collisions
+      pair_interactions.jsonl        one line per pair interaction: its outcome, and every rule evaluation and match (version 3)
+      events.jsonl                   one line per event: violations, handoffs, yields, near misses, collisions, rule events
       outcome.json                   what happened: every metric, per agent and in total
 ```
 
@@ -230,7 +232,7 @@ uses the number as a string.
 
 | Field | Meaning |
 |---|---|
-| `log_schema_version`, `run_kind` | 2, `avoidance` |
+| `log_schema_version`, `run_kind` | 3 (2 in a folder of issue #26), `avoidance` |
 | `experiment_name`, `run_id`, `run_index` | Which experiment; the id of this run (also its folder name); its position in the design, from 1 |
 | `seed`, `repeat` | The seed of the run (the base seed of the design plus `run_index`), which seeds a random tie-break by the arbiter and nothing else; which repetition, from 1 |
 | `created_utc`, `git`, `software` | As for a negotiation run |
@@ -240,10 +242,12 @@ uses the number as a string.
 | `scenario.agents[]` | Per agent: `agent_id`, `agent_type`, `group`, `side`, `radius_m`, `preferred_speed_mps`, `max_speed_mps`, `initial_speed_mps`, `sensing_radius_m`, `max_neighbours`, `time_horizon_s`, `time_horizon_obst_s`, `start`, `goal`, desired `path`, `path_length_m`, and `single_file_stretches` (where its path enters and leaves each single-file segment) |
 | `population[]` | Per agent: `agent_id`, `group`, `persona_id` and `attributes` (`age`, `gender`, `backstory`), or nulls for an agent with no persona. The task of the persona is not written: it plays no part in an avoidance run |
 | `visibility` | For each attribute, whether an agent could see it of a neighbour |
-| `directives` | The provider (`provider`: `null` or `static`), what it was configured with (`default`, `agents`, `pairs`), and `share_policy` (`proportional` or `equal_split`) |
+| `directives` | The provider (`provider`: `null`, `static`, or `rules`) and `share_policy` (`proportional` or `equal_split`). For `static`, what it was configured with (`default`, `agents`, `pairs`). For `rules` (version 3), **the active rule set**: `database` (the folder), `ruleset` (the name of the rule set the run started from, or null), `rules` (every rule switched on: `rule_id`, `version`, `status`, `encounter`, `priority`, `expiry`, and the `sha256` of its frozen file), `hysteresis_steps`, and `unchecked_pairs` (pairs of rules the ambiguity check could not try; `rule-matching.md`) |
 | `arbitration` | `enabled`, `policy`, `tie_break`: how single-file segments were handled |
-| `logging` | `trajectory_stride` (every how-many-th step is in `trajectory.csv`) and `interactions` (whether `interactions.jsonl` was filled) |
-| `perception_schema_version` | Version of the perception record (`perception.md`) |
+| `logging` | `trajectory_stride` (every how-many-th step is in `trajectory.csv`) and `interactions` (whether the per-interaction records, `interactions.jsonl` and, in version 3, `pair_interactions.jsonl`, were filled; the outcome counts them either way) |
+| `perception_schema_version` | Version of the perception record (`perception.md`): 2 since issue #28, 1 in a folder of issue #26 |
+| `baseline` | Version 3. The frozen baseline the run followed (`baseline.md`), or null: `name`, `version`, `role` (`primary` or `secondary`), `file`, `sha256`, `perturbation`, `orca`, `agent_types` (the settings it laid on every agent type), `sign_off`. A level of the experiment may still have changed a setting after it; `scenario` holds what was used |
+| `perturbation` | Version 3. What was added to every preferred velocity on every step (`kind`: `rvo2_uniform`; `magnitude_mps`, 0 for none) |
 
 ### `trajectory.csv` of an avoidance run
 
@@ -286,12 +290,51 @@ became one of its perceived neighbours to the step it went out of range
 | `start_step`, `start_time_s` | When the neighbour came into range |
 | `end_step`, `end_time_s`, `end_reason` | When and why it ended: `out_of_range`, `observer_arrived`, `neighbour_arrived` or `run_ended` |
 | `perception` | **The perception record at the moment the neighbour came into range**, whole (`perception.md`) |
-| `directive` | The directive the provider returned for it: `side_preference`, `responsibility_share`, `speed_scale`, `clearance_margin`, `passage_order`. It held for the whole interaction |
+| `directive` | The directive the provider returned for it when it began: `side_preference`, `responsibility_share`, `speed_scale`, `clearance_margin`, `passage_order`. With `null` and `static` providers it holds for the whole interaction, except that its `speed_scale` stops applying once the encounter has passed (version 3) |
+| `directive_changes` | Version 3. Each later change of the directive by a provider that follows pairs (the rule database), in order: `from_step`, `from_time_s`, and the five fields. Empty otherwise. A rule match that begins, is replaced or expires shows here; `pair_interactions.jsonl` says which rule and why |
+| `speed_scale_expired_step`, `speed_scale_expired_time_s` | Version 3. When the directive's `speed_scale` stopped applying because the encounter had passed (`derivations.md`, section 15). Only with a provider that does not follow pairs, and only if the scale was not 1; null otherwise |
 | `effective` | What was actually used, as a list of entries, a new one each time it changed: `from_step`, `mutual` (whether the neighbour perceived the observer too), `responsibility_share`, `side_preference`, `clearance_margin`. It differs from `directive` when the two directives of the pair were combined, when a violation was repaired, and while the arbiter held the pair |
 | `perceived_time_s` | Time during which the neighbour was among the perceived neighbours of the observer |
 | `conflict_exposure_time_s` | Time during which the preferred velocity of the observer was outside the half-plane induced by this neighbour |
 | `arbiter_time_s` | Time during which the arbiter held the pair |
 | `min_separation_m` | Smallest distance between the surfaces of the two bodies during the interaction |
+
+### `pair_interactions.jsonl` (version 3)
+
+One JSON object per line, one line per **pair interaction**, in the order they began. A
+pair interaction is two agents, from the first step on which either perceives the other to
+the first on which neither does, one of them has arrived, or the run has ended. It is the
+unit rules are matched on (`rule-matching.md`) and the unit categorised as avoided,
+resolved or failed (`metrics.md`, section 9). Every avoidance run has them, whatever its
+provider. Empty if the experiment sets `logging.interactions: false`.
+
+| Field | Meaning |
+|---|---|
+| `pair_id` | From 0 |
+| `agents` | The two agents, the lower-numbered first |
+| `start_step`, `start_time_s` | When the pair formed |
+| `encounter_class_at_start` | The pair's encounter class on that step (`perception.md`), or null if hidden |
+| `end_step`, `end_time_s`, `end_reason` | When and why it ended: `out_of_range`, `agent_arrived` or `run_ended` |
+| `passed_step`, `passed_time_s` | The first step on which the encounter had passed: the two separating and clear of each other by more than the pair's clearance margin (`derivations.md`, section 15); null if it never did |
+| `conflict_exposure_time_s` | For each of the two (keyed by agent), the time during which its preferred velocity was outside the half-plane induced by the other |
+| `min_separation_m` | Smallest distance between the two bodies while the pair was open and one perceived the other |
+| `outcome` | `avoided`, `resolved` or `failed` (`metrics.md`, section 9) |
+| `outcome_detail` | What decided it: `exposed` (either had exposure), `yield_events` (yield events of either that overlapped the pair interaction), `collisions` (collision episodes between the two that did), `deadlock` (the run ended in deadlock with the pair open), `open_at_timeout` (the run reached its time limit with the pair open) |
+| `rules` | Null unless the provider is the rule database; otherwise what the matching policy did, below |
+
+`rules`:
+
+| Field | Meaning |
+|---|---|
+| `state_at_end` | `unmatched`, `held` or `spent` (a match expired and nothing has matched since) |
+| `independent_agrees` | Whether, on the step the pair formed, each agent evaluating the rules on its own perception record got the same directive as the shared snapshot gave it (`rule-matching.md`, "Evaluation on a shared snapshot"). Should always be true |
+| `evaluations` | **Every evaluation, with its outcome.** Consecutive evaluations with the same outcome, rule and encounter class share one entry: `from_step`, `from_time_s`, `to_step`, `count` (how many evaluations, one per step), `encounter_class`, `outcome` (`rule_matched`, `no_rule_matched`, `ambiguous_match`, or `kept`: a held rule stayed because nothing of strictly higher priority matched), `rule` (`rule_id@version` applied, or null), `ambiguous_with` (the other rules at the same priority that matched with different directives), `candidates` (how many rules were tried), and `snapshot`: the values the conditions were evaluated on, at the first evaluation of the entry (null if no rule was tried) |
+| `matches` | Every match, in order: `rule_id`, `version`, `priority`, `encounter`, `expiry`, `outcome` (`rule_matched` or `ambiguous_match`), `ambiguous_with`, `from_step`, `from_time_s`, **the role each agent received** (`roles`, keyed by agent) and **the resulting directive** (`directives`, keyed by agent: all five fields, the rule's and the baseline values of those it leaves out), the `snapshot` it matched on, and **when and why it ended**: `to_step`, `to_time_s`, `end_reason` (`passed`, `replaced` by a rule of higher priority, `out_of_range`, `agent_arrived`, `run_ended`) and `replaced_by` |
+| `cross_pair_conflicts` | The cross-pair conflicts this pair was part of, as in `events.jsonl` |
+
+A `snapshot` has `step`, `time_s`, `agents`, `pair` (every pair-level field a rule can
+read) and `agent` (every agent-level field, keyed by agent); a hidden value is null
+(`rule-format.md`).
 
 ### `events.jsonl`
 
@@ -306,6 +349,8 @@ and `time_s`.
 | `near_miss` | `pair`, `start_time_s`, `end_time_s`, `min_separation_m` | A near miss (`metrics.md`, section 5) |
 | `collision` | `pair`, `start_time_s`, `end_time_s`, `max_overlap_m` | Two bodies overlapped |
 | `wall_collision` | `agent_id`, `start_time_s`, `end_time_s`, `max_overlap_m` | A body overlapped a wall |
+| `ambiguous_match` | `step`, `pair`, `applied`, `ambiguous_with` | Version 3. Two rules at the top priority matched the pair with different directives; `applied` is the one with the lower `rule_id` (`rule-matching.md`). One event per entry of the pair's evaluation log |
+| `cross_pair_conflict` | `step`, `agent_id`, `field`, `values`, `resolution` | Version 3. The rule matches of one agent's pairs contradict each other in `field` (`side_preference`, `speed_scale` or `passage_order`); `values` lists each pair, its rule and its value; `resolution` says how it is settled (`rule-matching.md`). Logged when the conflict appears |
 
 ### `outcome.json` of an avoidance run
 
@@ -325,6 +370,9 @@ and `time_s`.
 | `reciprocity_violations` | Every violation, as in `events.jsonl` without `event_index` and `type` |
 | `handoffs` | Every handoff, likewise |
 | `thresholds` | The metric thresholds the run used, and the deadlock settings |
+| `interaction_outcomes` | Version 3. `pairs` (how many pair interactions), `avoided`, `resolved`, `failed`, and `pairs_with`: how many pairs were `exposed`, `yielded`, `collided`, `deadlocked` and `open_at_timeout` (a pair can count under several) |
+| `rules` | Version 3. Null unless the provider is the rule database; otherwise `evaluations` (how many evaluations ended in each outcome), `matches_begun` (by `rule_id@version`: **which rules fired, and how often**), `match_ends` (by reason), `cross_pair_conflicts` (how many were logged), `formation_checks` and `formation_mismatches` (the run-time check of the shared snapshot against each agent's own evaluation, `rule-matching.md`; the second should be 0) |
+| `baseline` | Version 3. The name of the baseline the run followed, or null |
 
 ### `summary.csv` of an avoidance experiment
 
@@ -336,7 +384,10 @@ the outcome (`status`, `arrived`, `collisions`, `max_overlap_m`, `deadlock`, `ma
 `fallback_agent_steps`, `reciprocity_violations`, `handoffs`, `first_through`); the same
 for agents 0 and 1, which is all there are in four of the five scenarios
 (`time_to_goal_0_s`, `time_to_goal_1_s`, `path_deviation_max_0_m`,
-`path_deviation_max_1_m`, `conflict_exposure_0_s`, `conflict_exposure_1_s`); and
+`path_deviation_max_1_m`, `conflict_exposure_0_s`, `conflict_exposure_1_s`); from
+version 3, the baseline and the rules (`baseline`, `ruleset`, `pairs`, `avoided`,
+`resolved`, `failed`, `rules_fired` as `rule_id@version=count` separated by `;`,
+`ambiguous_matches`, `cross_pair_conflicts`), empty for a run written before; and
 `git_commit`.
 
 ## `spend_ledger.jsonl`
@@ -355,3 +406,13 @@ One line per paid call: `utc`, `experiment`, `run_id`, `turn_index`, `speaker`, 
   preferred velocity, `control_mode`, and the ids of the active interactions),
   `interactions.jsonl`, `events.jsonl` and `outcome.json`; and the `summary.csv` of an
   avoidance experiment has its own columns. Folders written under version 1 stay valid.
+- **3** (2026-10-14, issue #28): rules. An avoidance run gains `pair_interactions.jsonl`
+  (each pair interaction's outcome category, and every rule evaluation and match with its
+  roles, directives, snapshot and expiry); `baseline` and `perturbation` in `config.json`,
+  and the active rule set under `directives`; `directive_changes` and the expiry of
+  `speed_scale` in `interactions.jsonl`; the events `ambiguous_match` and
+  `cross_pair_conflict`; `interaction_outcomes`, `rules` and `baseline` in
+  `outcome.json`; and nine summary columns. `logging.interactions` now also governs
+  `pair_interactions.jsonl`. Perception records are version 2. A negotiation run is as in
+  version 2. Folders written under versions 1 and 2 stay valid and are checked against
+  their own version.

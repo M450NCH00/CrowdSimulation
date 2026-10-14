@@ -15,6 +15,7 @@ from .schema import (
     EVENTS_FILE,
     INTERACTIONS_FILE,
     OUTCOME_FILE,
+    PAIR_INTERACTIONS_FILE,
     SUMMARY_COLUMNS,
     SUMMARY_FILE,
     TRAJECTORY_COLUMNS,
@@ -98,6 +99,9 @@ class AvoidanceRunLogger:
 
     def write_interactions(self, interactions: Iterable[Mapping[str, Any]]) -> None:
         _write_jsonl(self.run_dir / INTERACTIONS_FILE, interactions)
+
+    def write_pair_interactions(self, pairs: Iterable[Mapping[str, Any]]) -> None:
+        _write_jsonl(self.run_dir / PAIR_INTERACTIONS_FILE, pairs)
 
     def write_events(self, events: Iterable[Mapping[str, Any]]) -> None:
         _write_jsonl(self.run_dir / EVENTS_FILE, events)
