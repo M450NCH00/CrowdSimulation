@@ -27,6 +27,10 @@ The numbers in the sections before it are taken from the appendix.
 | `si2_bidirectional_flow` | `bidirectional_flow`: fifty agents each way | baseline × mode | 80 |
 | `si2_head_on_r5` | as `si2_head_on`, sensing radius 5 m | as `si2_head_on` | 320 |
 | `si2_overtaking_r5` | as `si2_overtaking`, sensing radius 5 m | as `si2_overtaking` | 160 |
+| `si2_bidirectional_flow_ablation` | as `si2_bidirectional_flow`, primary baseline | `default` without `overtaker_keeps_clear`; without `keep_left_head_on` | 40 |
+
+The last is a follow-up the issue did not ask for (section 3.11); everything else below is
+about the first eight.
 
 - **Baseline**: `orca_perturbed_v1` (primary) or `orca_unperturbed_v1` (secondary), both
   frozen (`baseline.md`). **Mode**: `plain`, the baseline alone; or `rules`, the same
@@ -263,7 +267,7 @@ the arrival times above 60 s, or none by the run's limit of 120 s; `collisions.a
   every overlap. The two deepest (240 and 238 mm) began in a pair under no rule and in a pair
   under `overtaker_keeps_clear`, both on such steps. So the depth is not confined to the pairs
   a rule holds, and these runs alone do not say which rule, if either, is behind it (open
-  question Q10).
+  question Q10). The follow-up of section 3.11 does: it comes with `overtaker_keeps_clear`.
 - **More pairs register some exposure, for less exposure in all.** Pairs with exposure:
   55,227 with the rules, against 40,544 without; total exposure per run 984 ± 83 s against
   1,321 ± 707 s (primary baseline). So in the flow the categories do move, and away from
@@ -338,6 +342,89 @@ No rule fired in the crossing, for which none is written. **Across all 1,600 run
 no `ambiguous_match`, no `cross_pair_conflict`, and no formation mismatch in 271,189 checks**:
 every time a pair formed, each agent's own evaluation of the rules, from its own perception
 record, agreed with the shared snapshot (`rule-matching.md`, section 1).
+
+### 3.10 What following rules costs per step (benchmark)
+
+`python -m negsim.rules.benchmark` builds the flow as issue #26's benchmark does (the same
+starting density at every size, the two crowds 6 m apart), lays the primary baseline on it
+(40 neighbours, 12.5 m, the perturbation), and steps it 100 times under plain ORCA and with
+the `default` rule set, in turn, three times each. Nothing is logged during the timing. One
+process, one thread, pure Python 3.13.3, on the laptop of issue #26 (AMD Ryzen 5 7535HS,
+Windows 11), with nothing else running, from a clean tree at `3a9bdff`
+(`runs/si2_benchmark/benchmark.json`). A measurement, not a pass mark.
+
+| Agents | Plain, ms per step | With rules, ms per step | Added | Inside the rule provider, ms per step | Its share of a rule step | Open pairs per step | Evaluations per step |
+|---|---|---|---|---|---|---|---|
+| 100 | 52.1 (51.8, 52.1, 56.6) | 120.6 (118.2, 120.6, 121.4) | 68.5 ms, × 2.3 | 62.7 (60.2, 62.7, 63.3) | 52% | about 3,200 | 1,850 |
+| 1,000 | 513.5 (511.5, 513.5, 535.8) | 1,531.0 (1,519.8, 1,531.0, 1,546.2) | 1,017.5 ms, × 3.0 | 1,017.4 (991.7, 1,017.4, 1,021.2) | 66% | about 25,000 | 19,600 |
+
+(The median of three repeats, each the mean over 100 steps, with the three in brackets.
+Open pairs and evaluations are those of the first rule repeat.)
+
+- **Following the rules costs 2.3 times the plain step at 100 agents and 3.0 times at
+  1,000**, and the time added is the provider's own: at 1,000 agents, 1,017 ms of the 1,018 ms.
+- **Where it goes.** A profile of 150 steps of the shipped flow (100 agents, primary
+  baseline, `default`; run outside the repository) puts 45.5 s of its 59.9 s in the matching
+  policy, and 23.5 s of those in one thing: measuring the corridor width between two agents,
+  by ray casts every 0.25 m, for each snapshot. Which pairs need a snapshot again and again
+  is plain from the fully logged run of section 3.6: of its 179,493 evaluations that tried a
+  rule, 171,986 (96%) were same-direction pairs classed as overtaking whose speeds were within
+  0.05 m/s of each other, so that `overtaker_keeps_clear` did not apply and, nothing holding
+  them, they were evaluated again on the next step (DD53: "on every step while no rule
+  holds"). Another 584,551 evaluations had no rule to try (almost all of them pairs not
+  approaching each other) and cost almost nothing.
+- **The baseline itself costs more than issue #26's configuration**: plain ORCA here takes
+  52 and 514 ms per step, against 12.5 and 148 ms in issue #26's benchmark, which used the
+  scenario's own 10 neighbours instead of the baseline's 40 `[placeholder]`.
+- **For the project's 10,000-agent goal**, a rule step at 1,000 agents already takes 1.5 s
+  for 0.1 s of simulated time. Performance work is not part of this issue; the profile says
+  where it would start: the corridor width is measured again for the same pair on every
+  step, and pairs that tie are evaluated again although nothing about them has changed
+  (open question Q11).
+
+### 3.11 Follow-up: the flow with one rule left out (`si2_bidirectional_flow_ablation`)
+
+**Not asked for by the issue.** Section 3.6 found the deepest overlaps about six times deeper
+with the `default` rule set, and could not say which rule, if either, they come with (Q10).
+Two rules act in the flow, so this experiment runs it on the primary baseline with each of
+them left out in turn, 20 seeds each, from a clean tree at `3a9bdff`. The first level reuses
+the seeds and starting positions of section 3.6's perturbed rule runs, so the two can be
+compared repeat by repeat; the second level's seeds follow on.
+
+| Rules on | Runs | Last arrival (s) | Mean time to goal (s) | Agents later than 60 s, or never, in all | Overlap episodes, per run | Deepest overlap, per run (mm) | Agent-steps with no allowed velocity, per run | Near misses, per run |
+|---|---|---|---|---|---|---|---|---|
+| none: plain ORCA (section 3.6) | 20 | 83.4 ± 10.2 [68.4, 114.3] | 38.67 ± 5.95 [33.99, 54.46] | 136 | 234 ± 217 [48, 842] | 32 ± 26 [6, 90] | 4,894 ± 3,530 [1,654, 14,863] | 830 ± 104 [636, 1,058] |
+| both: `default` (section 3.6) | 20 | 46.9 ± 10.6 [40.8, 84.2] | 35.87 ± 0.73 [34.92, 37.57] | 2 | 107 ± 29 [63, 177] | 201 ± 101 [48, 456] | 2,616 ± 356 [2,042, 3,406] | 399 ± 36 [359, 514] |
+| `keep_left_head_on` alone | 20 | 45.5 ± 13.9 [39.1, 83.0] | 34.98 ± 1.03 [34.48, 38.56] | 4 | 210 ± 46 [169, 325] | 54 ± 16 [29, 88] | 4,057 ± 381 [3,447, 5,194] | 437 ± 42 [399, 565] |
+| `overtaker_keeps_clear` alone | 20 | 15 runs end at the 120 s limit; the other 5 at 67.4 to 89.5 | 53.12 ± 14.42 [36.58, 99.92], of those that arrive | 1,381 (1,064 never arrive) | 2,190 ± 1,133 [325, 3,722] | 306 ± 56 [146, 439] | 36,105 ± 18,800 [5,635, 59,968] | 1,312 ± 267 [733, 1,690] |
+
+(Read from the runs' `outcome.json` as in section 3.6. The full tables are in Appendix A.)
+
+- **The deep overlaps come with `overtaker_keeps_clear`.** With `keep_left_head_on` alone the
+  deepest overlap of a run is 54 ± 16 mm, near plain ORCA's 32 mm and far from the 201 mm of
+  the two rules together. On the same seeds and starting positions it is shallower than with
+  both rules in 19 of the 20 repeats.
+- **`overtaker_keeps_clear` alone gridlocks the flow.** In 15 of its 20 runs agents are still
+  in the corridor at the 120 s limit (1,064 of the 2,000 never arrive), with thousands of
+  overlap episodes, overlaps up to 439 mm, and about seven times plain ORCA's agent-steps with
+  no allowed velocity. It is the only condition of all the runs that does worse than plain
+  ORCA on every count in the table.
+- **`keep_left_head_on` is what clears the flow.** Alone it clears it as fast as the two rules
+  together (mean time to goal 34.98 ± 1.03 s, against 35.87 ± 0.73 s), with about as many
+  overlap episodes as plain ORCA (210 against 234 per run) and overlaps a little deeper than
+  plain ORCA's (54 against 32 mm), far shallower than with both rules. Added to it, the
+  overtaking rule halves the overlap episodes and deepens the worst.
+- **A likely mechanism, not tested here.** `overtaker_keeps_clear` gives the agent in front a
+  share of 0 toward the one catching up: it makes no room at all, and the one behind must
+  find all of it. In a dense crowd the one behind often has no velocity that satisfies every
+  neighbour; ORCA then takes the least bad one, with no guarantee (issue #26), and nothing on
+  the other side gives way. The counts of agent-steps with no allowed velocity are
+  consistent with that. `keep_left_head_on` leaves the shares at 0.5 each.
+- **What it means for rules.** A rule that hands one agent all the avoiding (shares 1 and 0)
+  meets the issue's consistency check (the shares sum to 1, which is ORCA's condition for a
+  pair) and works for two agents (section 3.4); in a dense crowd it gridlocks the flow on its
+  own and deepens the overlaps alongside keep-left. The check guarantees nothing on steps with
+  no allowed velocity, which a dense crowd has thousands of.
 
 ## 4. What the numbers say about the measures themselves
 
@@ -643,3 +730,17 @@ Conditions whose seeds all gave the same trajectory: symmetric, no_personas, unp
 | offset, unperturbed, rules | 40 of 40 | 32.60 ± 0.00 | 20 / 0 / 0 / 0 / 0 | no_rule_matched 2700, rule_matched 20 | passed 20 | 0 | 0 |
 
 Conditions whose seeds all gave the same trajectory: directly_behind, unperturbed, plain; directly_behind, unperturbed, rules; offset, unperturbed, plain; offset, unperturbed, rules.
+
+### si2_bidirectional_flow_ablation
+
+40 runs, from `3a9bdff` 40.
+
+| Condition | Runs | Deadlock runs | Collision runs | Pairs: avoided / resolved / failed | Exposure, all agents (s) | Yield events | Near misses | Min separation (mm) | Mean time to goal (s) | Largest path deviation (m) | Backward / hurried episodes | Rules fired (matches begun) |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| without_overtaker_keeps_clear | 20 | 0 | 20 | 40940 / 51853 / 3423 | 982.4 ± 187.4 [810.6, 1477.0] | 6.2 ± 15.5 [0.0, 61.0] | 437.4 ± 42.4 [399.0, 565.0] | -53.932 ± 16.490 [-87.756, -29.371] | 34.98 ± 1.03 [34.48, 38.56] | 4.052 ± 2.237 [3.039, 12.331] | 27 / 314 | keep_left_head_on@1 ×49635 |
+| without_keep_left_head_on | 20 | 0 | 20 | 1557 / 79567 / 8914 | 7044.4 ± 3145.2 [1674.2, 10677.4] | 190.7 ± 46.9 [99.0, 246.0] | 1312.5 ± 267.5 [733.0, 1690.0] | -305.705 ± 56.359 [-438.633, -146.260] | 53.12 ± 14.42 [36.58, 99.92] | 3.060 ± 0.909 [2.224, 6.263] | 1611 / 232 | overtaker_keeps_clear@1 ×453072 |
+
+| Condition | Arrived | Makespan (s) | Pairs with exposure / a yield / a collision / a deadlock / open at timeout | Evaluations, by outcome | Matches ended, by reason | Formation mismatches | Cross-pair conflicts |
+|---|---|---|---|---|---|---|---|
+| without_overtaker_keeps_clear | 2000 of 2000 | 45.48 ± 13.86 [39.10, 83.00] | 52834 / 7489 / 3423 / 0 / 0 | kept 2807, no_rule_matched 17933967, rule_matched 49635 | agent_arrived 4, passed 49631 | 0 | 0 |
+| without_keep_left_head_on | 936 of 2000 | 78.24 ± 7.82 [67.40, 89.50] | 69004 / 86930 / 8914 / 0 / 32404 | kept 564890, no_rule_matched 38474839, rule_matched 453072 | agent_arrived 199, out_of_range 1, passed 449239, run_ended 3633 | 0 | 0 |

@@ -29,7 +29,8 @@ from ..configutil import PACKAGE_ROOT
 
 RUNS_DIR = PACKAGE_ROOT / "runs"
 
-#: The experiments of the behaviour checks (``configs/rule_following/``), in the order reported.
+#: The experiments of the behaviour checks (``configs/rule_following/``), in the order reported:
+#: the eight the issue asks for, then the follow-up ablation of the flow.
 EXPERIMENTS = (
     "si2_head_on",
     "si2_keep_left_vs_right",
@@ -39,6 +40,7 @@ EXPERIMENTS = (
     "si2_bidirectional_flow",
     "si2_head_on_r5",
     "si2_overtaking_r5",
+    "si2_bidirectional_flow_ablation",
 )
 
 #: A pass to one side is a lateral excursion of more than this, from where agent 0 started (m).

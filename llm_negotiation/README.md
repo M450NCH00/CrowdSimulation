@@ -623,14 +623,16 @@ python -m negsim.rules.benchmark                                       # what fo
 | `si2_bottleneck.yaml` | `corridor_to_bottleneck` | 320 | opposing or merging; equal speeds or agent 0 slower; baseline; plain or rules |
 | `si2_bidirectional_flow.yaml` | `bidirectional_flow` | 80 | baseline; plain or rules |
 | `si2_head_on_r5.yaml`, `si2_overtaking_r5.yaml` | as above | 320, 160 | the same, with a sensing radius of 5 m |
+| `si2_bidirectional_flow_ablation.yaml` | `bidirectional_flow` | 40 | a follow-up the issue did not ask for: the primary baseline with `default` minus one of its two rules that act in the flow |
 
 Every condition has 20 seeds.
 
 ### Results of the rule layer (2026-10-15)
 
-From the 1,600 committed runs in `runs/si2_*`, all written from a clean tree at commit
-`a4e1ead`. `docs/behaviour-checks.md` has every table and the reasoning; these are the main
-points. **They are statements about this algorithm and these test rules, not evidence about
+From the 1,600 committed runs of the behaviour checks in `runs/si2_*`, all written from a
+clean tree at commit `a4e1ead`, and the 40 of a follow-up (at `3a9bdff`).
+`docs/behaviour-checks.md` has every table and the reasoning; these are the main points.
+**They are statements about this algorithm and these test rules, not evidence about
 people.** A spread is the mean ± standard deviation over 20 seeds.
 
 - **A shared side removes the symmetric deadlock, and against the primary baseline it makes
@@ -659,8 +661,14 @@ people.** A spread is the mean ± standard deviation over 20 seeds.
   overlaps.** Under the primary baseline the last agent arrives at 46.9 s instead of 83.4 s,
   and the mean time to goal is 35.9 ± 0.7 s against 38.7 ± 6.0 s (33.5 s alone); overlap
   episodes per run fall from 234 to 107. But the deepest overlap of a run goes from 32 mm to
-  201 mm, up to 456 mm. Most overlaps begin on a step on which an agent has no allowed
-  velocity, in pairs with and without a rule; why the rules make them deeper is open (Q10).
+  201 mm, up to 456 mm. **A follow-up the issue did not ask for** (leaving one rule out at a
+  time) puts the depth on `overtaker_keeps_clear`, which gives the agent in front a share of
+  0: with `keep_left_head_on` alone the crowd clears as fast and the deepest overlap is 54 mm;
+  with `overtaker_keeps_clear` alone the flow gridlocks in 15 of 20 runs (Q10).
+- **Following the rules makes a step 2.3 times as long at 100 agents and 3.0 times at
+  1,000** (120.6 against 52.1 ms; 1,531 against 514 ms; `runs/si2_benchmark/benchmark.json`).
+  Almost all of the extra goes into re-measuring the corridor width between pairs that tie
+  and are therefore evaluated again on every step (Q11).
 - **Two measures need care.** Almost no pair is ever `avoided` (two agents on a collision
   course always register exposure), so the categories mainly separate deadlocks from the
   rest. And under the perturbed baseline, exposure counts changes of velocity the size of the

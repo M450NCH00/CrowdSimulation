@@ -127,8 +127,12 @@ test fixtures; none of this is evidence about how people walk:
   first, because the existing arbiter already does exactly that.
 - **In a dense two-way flow the rules help and hurt.** With them, fifty agents each way
   clear in about 47 s instead of 83 s, with half as many overlaps of two bodies; but the
-  worst overlap in a run is about six times deeper (20 cm against 3 cm). Why is an open
-  question.
+  worst overlap in a run is about six times deeper (20 cm against 3 cm). Leaving one rule out
+  at a time shows why: the keep-left rule alone clears the crowd as fast with shallow
+  overlaps, while the overtaking rule, which gives one walker all the avoiding, gridlocks the
+  flow when used alone. A rule that is safe for two people can fail in a crowd. Following the
+  rules also makes each step 2.3 to 3.0 times as slow (100 to 1,000 agents), which matters
+  for the 10,000-agent goal.
 
 Three findings from the simulation-rules review (issue #22), all drafts needing supervisor
 sign-off — see `literature/simulation-rules/`. The review is seed-led (27 sources, 5 papers
