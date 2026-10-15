@@ -200,12 +200,17 @@ the shared snapshot and the two resulting directives are combined as ORCA would 
 leaders or two followers) and non-complementary passage orders.
 
 On 20,000 random pairs for each of two rule sets, `default` and `default` with
-`keep_right_head_on` in place of `keep_left_head_on`: 4,563 pairs matched a rule; **0
-reciprocity violations and 0 non-complementary roles**; 2,339 times a rule applied but its
+`keep_right_head_on` in place of `keep_left_head_on` (the test's own `consistency_counts`,
+with its seed, 28, and `trials=20000`): in each set 4,511 pairs matched a rule, with **0
+reciprocity violations and 0 non-complementary roles**; 2,443 times a rule applied but its
 two agents tied and the rule did not match (`no_match`), falling back cleanly to a rule of
-lower priority or the baseline. All five encounter classes occurred (none 10,961, single
-file 3,261, overtaking 2,093, crossing 1,936, head-on 1,749). The test suite runs 4,000 per
-rule set (`test_the_seed_database_never_gives_a_pair_inconsistent_directives`).
+lower priority or the baseline. The two sets give the same counts, as mirror images should.
+All five encounter classes occurred (none 10,947, single file 3,320, overtaking 2,070,
+crossing 1,925, head-on 1,738). With eleven other seeds the counts move (4,377 to 4,658
+matched, 2,308 to 2,490 ties) and the violations stay at zero: 240,000 pairs in all. The test
+suite runs 4,000 per rule set (`test_the_seed_database_never_gives_a_pair_inconsistent_directives`).
+(An earlier version of this paragraph gave 4,563 matched and 2,339 ties, which could not be
+reproduced: `WORK_LOG-28.md`, entry "Resuming".)
 
 ## 10. Decisions in this policy
 
