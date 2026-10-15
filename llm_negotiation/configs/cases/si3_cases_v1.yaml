@@ -1,0 +1,31 @@
+# Issue #30, Part 2: which conflict cases to take from the case-source runs.
+#
+#   python -m negsim.rulegen.cases extract configs/cases/si3_cases_v1.yaml
+#
+# Eligible: pair interactions of the primary baseline, plain ORCA, at tier T1 or above,
+# whose two agents perceived each other when the pair formed, approaching each other. Sampled by stratum, so that
+# the cases are not all of one kind: in the two-agent scenarios each layout is its own
+# stratum (their tiers are all T3: plain ORCA passes two bodies within the near-miss
+# distance), and the two-way flow, which has every tier, gives two cases per tier.
+schema_version: 1
+case_set: si3_v1
+description: The first case set of issue #30, from the primary baseline on the five SI-1 scenarios.
+sources:
+  - runs/si3_source_head_on
+  - runs/si3_source_open_crossing
+  - runs/si3_source_overtaking
+  - runs/si3_source_bottleneck
+  - runs/si3_source_bidirectional_flow
+eligibility:
+  baseline: orca_perturbed_v1
+  min_tier: T1
+  # Pairs that were not approaching each other when they formed are left out: in the flow
+  # they are neighbours in one group, side by side from the start, whose conflict came
+  # later, so the moment the pair formed says nothing about it (docs/cases.md).
+  formation_classes: [head_on, crossing, overtaking, single_file_segment]
+strata:
+  by: [scenario, variant, tier]
+  per_stratum:
+    default: 1
+    bidirectional_flow: 2
+  seed: 30
