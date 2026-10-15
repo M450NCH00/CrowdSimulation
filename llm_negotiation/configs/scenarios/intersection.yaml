@@ -1,0 +1,43 @@
+# Intersection scenario — GameChat (Mahadevan, Zhang, Chandra, arXiv:2503.12333v1).
+# A value marked "Sec V-A" is the paper's. "repo" means the GameChat repository at commit
+# c49c35a, where the paper is silent. "design choice" means this project's own decision.
+schema_version: 1
+type: intersection
+description: >
+  Two corridors cross at right angles. One agent comes up from the south, the other in
+  from the west, and both must cross the same small square.
+
+dt: 0.2                    # s      simulation step time (Sec V-A)
+max_time: 15.0             # s      maximum runtime (Sec V-A); the repo uses 20.0 (config.py:37)
+goal_tolerance: 0.1        # m      repo, main.py:146
+
+geometry:
+  size: 0.4                # m      "the intersection ... is 0.4 m by 0.4 m" (Sec V-A); the repo's corridors are 0.5 m clear
+  wall_extent: 3.0         # m      how far the corner blocks reach from the centre
+  start_distance: 2.0      # m      "start 2 m away from the center of the intersection" (Sec V-A)
+  goal_distance: 1.0       # m      "their goals are 1 m away on the other side" (Sec V-A)
+
+agent_defaults:
+  radius: 0.1              # m      "Agents had radii of 0.1 m" (Sec V-A)
+  max_speed: 0.3           # m/s    v_max (Sec V-A)
+  max_turn_rate: 1.0       # rad/s  omega_max (Sec V-A)
+agents: [{}, {}]           # per-agent overrides of agent_defaults, by agent index
+start_offsets: [0.0, 0.0]  # m      how far each agent's start is moved back; the paper's asymmetric variants use 0.25
+swap_sides: false          # false: agent 0 comes from the south and agent 1 from the west (repo, scenarios.py:66-67)
+
+conflict:
+  predictor: heading_ray   # rays cast along the headings (Sec IV-B)
+  safety_margin: 0.05      # m      design choice; with two 0.1 m radii it gives the repo's 0.25 m (mpc_cbf.py:237-239)
+  zone_half_length: auto   # auto = (r_i + r_j + safety_margin) / sin(crossing angle); or a fixed number of metres
+
+controller:
+  backend: path_tracking
+  lookahead: 0.3           # m      design choice
+
+observation:
+  max_range: null          # no limit: the agents see each other from the start, as in GameChat
+  walls_block_sight: false # GameChat does not model occlusion; set true to make the corner a blind one
+
+deadlock:
+  window_s: 3.0            # s      "no robot can move toward its goal for a few seconds" (Sec I); "a few" read as 3 — design choice
+  speed_eps: 0.01          # m/s    repo, main.py:210

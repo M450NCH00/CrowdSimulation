@@ -1,0 +1,50 @@
+# Condition C3 (gender): two people with the same task and the same age, one female and
+# one male. See c3_age_only.yaml for how the pairs are built and what is counterbalanced.
+#
+# Example config. It has NOT been run with the paid client.
+#
+#   python run_experiment.py configs/experiments/c3_gender_only.yaml --plan
+#   python run_experiment.py configs/experiments/c3_gender_only.yaml --client mock
+schema_version: 1
+experiment_name: c3_gender_only_hallway
+condition: C3
+description: Identical tasks, personas differing only in gender.
+
+scenario: configs/scenarios/hallway.yaml
+personas: configs/personas/personas.yaml
+
+negotiation:
+  enabled: true
+  template: persona_v1
+  max_messages_per_agent: 4
+  timing:
+    mode: pre_conflict
+    seconds_per_message: 1.0
+  info_fields: all
+  visibility: default
+
+llm:
+  client: mock
+  model: deepseek-flash
+  temperature: 1.0
+  max_tokens: 300
+  thinking: disabled
+  mock_policy: first_speaker_goes
+
+arbitration:
+  policy: strategy1
+  tie_break: lower_index
+
+budget:
+  cap_usd: 0.50
+  ledger: spend_ledger.jsonl
+
+design:
+  mode: factorial
+  seed: 24800
+  repeats: 1
+  pairs:
+    - [{persona: f25}, {persona: f25, gender: male}]
+    - [{persona: f70}, {persona: f70, gender: male}]
+  assignment: counterbalance
+  first_speaker: counterbalance

@@ -1,0 +1,30 @@
+# DeepSeek API prices, copied from DeepSeek's own pricing page — not from memory.
+# Re-check the page before a paid run and update date_checked: DeepSeek's changelog records
+# two price changes in the two months before this was written (2026-08-16 and 2026-09-10,
+# see docs/llm-backend.md).
+schema_version: 1
+provider: deepseek
+source_url: https://api-docs.deepseek.com/quick_start/pricing
+date_checked: "2026-10-13"
+currency: USD
+unit: per 1M tokens
+
+# "Peak hours are 01:00 - 04:00 and 06:00 - 10:00 UTC, Monday through Friday, excluding
+# Chinese public holidays. All other hours are off-peak." Public holidays are not
+# modelled: a weekday inside these windows is always costed at the peak rate, which can
+# only overstate the spend.
+peak_hours_utc:
+  - ["01:00", "04:00"]
+  - ["06:00", "10:00"]
+
+models:
+  deepseek-flash:
+    model_version: DeepSeek-V4.1-Flash
+    input_cache_hit:  {peak: 0.006, off_peak: 0.003}
+    input_cache_miss: {peak: 0.30,  off_peak: 0.15}
+    output:           {peak: 1.20,  off_peak: 0.60}
+  deepseek-v4-pro:
+    model_version: DeepSeek-V4-Pro-0813
+    input_cache_hit:  {peak: 0.044, off_peak: 0.022}
+    input_cache_miss: {peak: 1.32,  off_peak: 0.66}
+    output:           {peak: 3.96,  off_peak: 1.98}

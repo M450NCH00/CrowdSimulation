@@ -1,0 +1,63 @@
+# Condition C1 smoke run: six doorway runs, one for each ordered pair of distinct task
+# types, i.e. every pair of types twice.
+#
+# What is balanced, and what is not:
+#   - Speaking order: within each pair of types, the higher-priority type speaks first
+#     in one run and second in the other.
+#   - Agent index and side: the higher-priority type is agent 0 (north) in three runs and
+#     agent 1 (south) in three. Agent 0 would win a Strategy 1 tie, so this matters if a
+#     dialogue fails.
+#   - Not balanced: the first speaker is agent 0 in four runs and agent 1 in two. Six runs
+#     cannot cross three factors; the 36-run c1_gamechat_replication.yaml does.
+#
+#   python run_experiment.py configs/experiments/c1_smoke.yaml --client mock       (free rehearsal)
+#   python run_experiment.py configs/experiments/c1_smoke.yaml --client deepseek   (paid)
+schema_version: 1
+experiment_name: c1_smoke
+condition: C1
+description: GameChat replication smoke run, six symmetric doorway runs.
+
+scenario: configs/scenarios/doorway.yaml
+scenario_overrides:
+  conflict:
+    zone_half_length: 0.25   # the GameChat repository's margin; see c0_no_llm.yaml
+
+negotiation:
+  enabled: true
+  template: gamechat_task_v1
+  max_messages_per_agent: 4
+  timing:
+    mode: pre_conflict
+    seconds_per_message: 1.0
+  info_fields: none
+  visibility: default
+
+llm:
+  client: mock
+  model: deepseek-flash
+  temperature: 1.0
+  max_tokens: 300
+  thinking: disabled
+  mock_policy: task_priority
+
+arbitration:
+  policy: strategy1
+  tie_break: lower_index
+
+scoring:
+  ground_truth: task_priority
+
+budget:
+  cap_usd: 0.50
+  ledger: spend_ledger.jsonl
+
+design:
+  mode: explicit
+  seed: 24400
+  runs:
+    - {agents: [{task_type: hospital}, {task_type: airport}], first_speaker: 0}
+    - {agents: [{task_type: airport}, {task_type: hospital}], first_speaker: 0}
+    - {agents: [{task_type: grocery}, {task_type: hospital}], first_speaker: 1}
+    - {agents: [{task_type: hospital}, {task_type: grocery}], first_speaker: 1}
+    - {agents: [{task_type: airport}, {task_type: grocery}], first_speaker: 0}
+    - {agents: [{task_type: grocery}, {task_type: airport}], first_speaker: 0}

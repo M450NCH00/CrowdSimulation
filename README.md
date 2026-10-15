@@ -16,7 +16,9 @@ See `integration/crowdgym_mapping.md` for exactly how records feed CrowdGym.
 
 ## Current focus (second supervisor meeting onward)
 
-The dataset work below is **Phase 1 and is on hold, not abandoned** — see `CLAUDE.md`.
+The dataset work below is **Phase 1**. It was put on hold after the second supervisor
+meeting ("on hold, not abandoned"); issue #24 (2026-10-13) describes it as retired, and
+nothing in `llm_negotiation/` uses it.
 The project now has LLM agents *communicate with each other* to resolve a conflict
 (starting with two agents crossing a narrow hallway), then looks for a reusable
 resolution pattern that can be applied without re-running the exchange.
@@ -24,11 +26,16 @@ resolution pattern that can be applied without re-running the exchange.
 Standing supervisor instruction: **no new dataset generation and no simulation or
 experiment code until the literature review is complete and discussed.**
 
+> **Status of that instruction: unconfirmed (2026-10-13).** Issue #24 commissioned the
+> simulator in `llm_negotiation/` and made it conditional on `CLAUDE.md`, which on this
+> branch does not carry the instruction, so the work went ahead. Nothing in the
+> repository records the supervisor lifting it. See `WORK_LOG-24.md`, open question Q1.
+
 | # | Roadmap step | Status |
 |---|---|---|
 | 1 | Literature review — `literature/llm-conflict-resolution/` | **delivered** (issue #8); awaiting supervisor discussion |
-| 2 | Design a small-scale conflict scenario (2-agent hallway) | blocked on step 1 discussion |
-| 3 | Implement the LLM-to-LLM exchange | not started |
+| 2 | Design a small-scale conflict scenario (2-agent hallway) | **built** (issue #24) — `llm_negotiation/configs/scenarios/hallway.yaml`; its sizes and speeds are unsourced placeholders |
+| 3 | Implement the LLM-to-LLM exchange | **built and smoke-tested** (issue #24) — `llm_negotiation/`; 12 paid smoke runs, no experiment yet |
 | 4 | Analyse exchanges for a reusable pattern | not started |
 | 5 | Validate the pattern against real data or sociology | **coding scheme drafted** (issue #12) — `literature/human-conflict-resolution/` |
 | 5a | Demographic personas: realism vs LLM bias | **delivered** (issue #16) — `literature/demographic-personas/` |
@@ -36,6 +43,26 @@ experiment code until the literature review is complete and discussed.**
 | 5c | Implemented rules in simulators, games, robots, traffic | **delivered** (issue #22) — `literature/simulation-rules/` |
 | 5d | LLMs resolving spatial conflict without conversation | **draft** (no issue; search of 2026-10-05) — `literature/llm-behavioural-conflict/` |
 | 6 | Bridge into CrowdGym — `integration/crowdgym_mapping.md` | not started |
+
+From building the negotiation simulator (issue #24) — see `llm_negotiation/README.md` for
+how to run it and for the results, and `WORK_LOG-24.md` for what needs sign-off:
+
+- **The platform exists and runs.** `llm_negotiation/` reimplements GameChat for two
+  agents in a doorway, an intersection and a head-on hallway, with age-and-gender
+  personas, switchable situational information, and a full log of every conversation.
+  All tests run on a mock LLM at no cost. It was built without the paper's MPC
+  controller, with DeepSeek's `deepseek-flash` in place of gpt-4o-mini, and with a
+  different turn format; `llm_negotiation/docs/gamechat-notes.md` lists every departure.
+- **Twelve paid smoke runs, about USD 0.004.** Task-only agents put the higher-priority
+  task first in 6 of 6 doorway runs, as the paper reports. In 6 hallway runs with
+  personas, the first speaker gave way in 5. Six runs per condition show that the
+  platform works and are not an estimate of anything.
+- **Three things the build turned up.** GameChat's dialogue code is on its repository's
+  default branch, not on `model-arcs` as issue #24 says. The formula issue #24 calls
+  garbled is intact in the paper; only the PDF text extract breaks it. And the paper's
+  speed formula, applied literally to disc-shaped agents, lets them overlap at a
+  right-angle crossing, so the conflict "point" had to become a zone
+  (`llm_negotiation/docs/derivations.md`).
 
 Three findings from the simulation-rules review (issue #22), all drafts needing supervisor
 sign-off — see `literature/simulation-rules/`. The review is seed-led (27 sources, 5 papers
@@ -156,6 +183,16 @@ CrowdSimulation/
     requirements.txt
   integration/
     crowdgym_mapping.md             record -> CrowdGym AgentType / journey / action handler
+  llm_negotiation/                  issue #24: two-agent LLM negotiation simulator (has its own README)
+    run_experiment.py               run an experiment config; --client mock (free) or deepseek (paid)
+    configs/                        scenarios, personas, experiment designs C0-C4, task strings, API prices
+    negsim/                         the package: core, scenarios, conflict, control, llm,
+                                    negotiation, personas, runlog, metrics, viz, experiment
+    tests/                          432 tests, all on the mock client, no network, no spend
+    docs/                           architecture, gamechat-notes, derivations, llm-backend, log-schema
+    runs/                           committed run logs: C0 (no LLM) and the paid smoke runs
+    spend_ledger.jsonl              one line per paid API call for this work (Phase 1 spend is
+                                    tracked separately in pipeline/config.py)
 ```
 
 ## Output files (written to `dataset/generated/`)

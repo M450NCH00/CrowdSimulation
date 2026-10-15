@@ -1,0 +1,74 @@
+# Prompt template gamechat_task, version 1.  FROZEN — do not edit.
+# The hash of this file is pinned in MANIFEST.json and checked every time it is loaded.
+# To change any wording, copy the file to gamechat_task_v2.yaml, change it there, add the
+# new file to MANIFEST.json, and record the reason in the work log.
+template_id: gamechat_task
+version: 1
+description: >-
+  GameChat replication (condition C1). Each agent is told its task and nothing else: no
+  persona, no scene, and by default no situation report.
+provenance: >-
+  The first paragraph of `system` is the initial prompt printed in the paper
+  (Mahadevan, Zhang, Chandra, arXiv:2503.12333v1, Sec IV-C) with one sentence removed:
+  "Once you have reached a consensus with the other agent, output the number 1 and
+  nothing else." This platform reads agreement from the `stance` field, so that sentence
+  is replaced by the `output_format` block. The turn wording ("Other agent says: ...",
+  "Begin the conversation") is the GameChat repository's (main.py:85-92, commit c49c35a,
+  MIT licence; see THIRD_PARTY_NOTICES.md).
+requires_persona: false
+
+system: |-
+  You are taking someone to {task}. There is another agent taking someone to a location. You will have a conversation until you determine whether you have more or less priority as them depending on the tasks you and they are performing. Do not include pleasantries and be concise. Remembering your task correctly is paramount!
+
+  {output_format}
+
+output_format: |-
+  Reply with a single JSON object and nothing else. It must have exactly these two keys:
+  "message": what you say to the other agent, as plain text.
+  "stance": your current position on who has priority and so goes first. Use exactly one of:
+    "I_GO_FIRST" if you have more priority,
+    "YOU_GO_FIRST" if the other agent has more priority,
+    "UNDECIDED" if that has not been determined yet.
+  Only "message" is passed to the other agent. They are not shown "stance".
+  The format, with placeholders: {"message": "<what you say>", "stance": "<I_GO_FIRST, YOU_GO_FIRST or UNDECIDED>"}
+
+turns:
+  first: "Other agent says: Begin the conversation"
+  incoming: "Other agent says: {message}"
+  no_reply: "The other agent's reply could not be understood."
+  retry: >-
+    Your last reply could not be read. Reply again with only a JSON object of the form
+    {"message": "<what you say>", "stance": "<I_GO_FIRST, YOU_GO_FIRST or UNDECIDED>"}.
+
+# The situation report. Condition C1 switches every field off; the wording is here so
+# that a task-only agent can be given situational information in an ablation.
+report:
+  header: "Current situation:"
+  own_region:
+    doorway: the doorway
+    intersection: the intersection
+    hallway: your end of the hallway
+  other_region:
+    doorway: the doorway
+    intersection: the intersection
+    hallway: its end of the hallway
+  lines:
+    elapsed_time: "- Time since you first observed each other: {elapsed_time} s."
+    own_speed: "- Your current speed: {own_speed} m/s."
+    own_max_speed: "- Your maximum speed: {own_max_speed} m/s."
+    own_size: "- Your width: {own_size} m."
+    own_distance_to_region: "- Your distance to {own_region}: {own_distance} m."
+    own_distance_inside: "- You are inside the {region_kind}."
+    own_distance_past: "- You have already passed through the {region_kind}."
+    own_time_to_region: "- At your maximum speed you would reach {own_region} in about {own_time} s."
+    other_speed: "- The other agent's current speed: {other_speed} m/s."
+    other_size: "- The other agent's width: {other_size} m."
+    other_distance_to_region: "- The other agent's distance to {other_region}: {other_distance} m."
+    other_distance_inside: "- The other agent is inside the {region_kind}."
+    other_distance_past: "- The other agent has already passed through the {region_kind}."
+    other_time_to_region: "- At its current speed the other agent would reach {other_region} in about {other_time} s."
+    other_time_stationary: "- The other agent is not moving at the moment."
+  region_geometry:
+    doorway: "- The doorway is {width} m wide."
+    intersection: "- The intersection is {width} m by {length} m."
+    hallway: "- The hallway is {width} m wide and {length} m long."

@@ -1,0 +1,35 @@
+# Condition C0, intersection: no LLM. Strategy 1 alone decides who goes first.
+# The paper's 18 intersection variants (arXiv:2503.12333v1, Sec V-A); see c0_no_llm.yaml.
+#
+#   python run_experiment.py configs/experiments/c0_no_llm_intersection.yaml
+schema_version: 1
+experiment_name: c0_no_llm_intersection
+condition: C0
+description: Strategy 1 only, the paper's 18 intersection variants.
+
+# No zone override is needed here: at a right angle, with two 0.1 m radii and the 0.05 m
+# safety margin, the scenario's automatic zone half-length is the repository's 0.25 m.
+scenario: configs/scenarios/intersection.yaml
+
+negotiation:
+  enabled: false
+
+arbitration:
+  policy: strategy1
+  tie_break: lower_index
+
+scoring:
+  ground_truth: task_priority
+
+design:
+  mode: factorial
+  seed: 24100
+  pairs:
+    - [{task_type: hospital}, {task_type: airport}]
+    - [{task_type: hospital}, {task_type: grocery}]
+    - [{task_type: airport}, {task_type: grocery}]
+  assignment: counterbalance
+  scenario_variants:
+    - {name: symmetric, overrides: {}}
+    - {name: agent0_back, overrides: {start_offsets: [0.25, 0.0]}}
+    - {name: agent1_back, overrides: {start_offsets: [0.0, 0.25]}}

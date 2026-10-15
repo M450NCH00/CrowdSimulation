@@ -1,0 +1,82 @@
+# Condition C2 smoke run: six hallway runs between personas that differ in both age and
+# gender, each with a task.
+#
+# Three pairings, each run twice. Between the two runs of a pairing the participants
+# swap agent index (and so swap ends of the hallway) and the other one speaks first.
+# In two of the pairings the tasks differ; in the third they are the same, so that only
+# the personas differ.
+#
+# There is no ground truth here. Nothing in the logs marks an outcome as correct or
+# incorrect. "task_type" is a label kept for later analysis; it is not shown to the model
+# and is not scored.
+#
+# Each task is written out in full, so that it reads naturally after "You are on
+# your way to ...".
+#
+#   python run_experiment.py configs/experiments/c2_smoke.yaml --client mock       (free rehearsal)
+#   python run_experiment.py configs/experiments/c2_smoke.yaml --client deepseek   (paid)
+schema_version: 1
+experiment_name: c2_smoke
+condition: C2
+description: Task plus persona (age and gender) smoke run, six hallway runs.
+
+scenario: configs/scenarios/hallway.yaml
+personas: configs/personas/personas.yaml
+
+negotiation:
+  enabled: true
+  template: persona_v1
+  max_messages_per_agent: 4
+  timing:
+    mode: pre_conflict
+    seconds_per_message: 1.0
+  info_fields: all       # every line of the situation report
+  visibility: default    # the other person's age, gender, speed and size are visible; task and backstory are not
+
+llm:
+  client: mock
+  model: deepseek-flash
+  temperature: 1.0
+  max_tokens: 300
+  thinking: disabled
+  mock_policy: first_speaker_goes
+
+arbitration:
+  policy: strategy1
+  tie_break: lower_index
+
+budget:
+  cap_usd: 0.50
+  ledger: spend_ledger.jsonl
+
+design:
+  mode: explicit
+  seed: 24500
+  runs:
+    # Pairing A: an older woman going shopping, a younger man catching a flight.
+    - agents:
+        - {persona: f70, task: the supermarket to buy groceries, task_type: grocery}
+        - {persona: m25, task: the airport to catch a flight, task_type: airport}
+      first_speaker: 0
+    - agents:
+        - {persona: m25, task: the airport to catch a flight, task_type: airport}
+        - {persona: f70, task: the supermarket to buy groceries, task_type: grocery}
+      first_speaker: 0
+    # Pairing B: an older man going to the emergency room, a younger woman going shopping.
+    - agents:
+        - {persona: f25, task: the supermarket to buy groceries, task_type: grocery}
+        - {persona: m70, task: the hospital emergency room, task_type: hospital}
+      first_speaker: 1
+    - agents:
+        - {persona: m70, task: the hospital emergency room, task_type: hospital}
+        - {persona: f25, task: the supermarket to buy groceries, task_type: grocery}
+      first_speaker: 1
+    # Pairing C: the same task for both, so only age and gender differ.
+    - agents:
+        - {persona: f25, task: the airport to catch a flight, task_type: airport}
+        - {persona: m70, task: the airport to catch a flight, task_type: airport}
+      first_speaker: 0
+    - agents:
+        - {persona: m70, task: the airport to catch a flight, task_type: airport}
+        - {persona: f25, task: the airport to catch a flight, task_type: airport}
+      first_speaker: 0

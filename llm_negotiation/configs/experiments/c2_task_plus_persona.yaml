@@ -1,0 +1,59 @@
+# Condition C2: task plus persona with age and gender, in the hallway.
+#
+# A fuller design than c2_smoke.yaml and an example of the factorial mode: four pairings,
+# each run with either participant as agent 0 and with either agent speaking first,
+# 16 runs. This file has NOT been run with the paid client. Check the cost first:
+#
+#   python run_experiment.py configs/experiments/c2_task_plus_persona.yaml --plan
+#   python run_experiment.py configs/experiments/c2_task_plus_persona.yaml --client mock
+#
+# There is no ground truth for persona conditions; see c2_smoke.yaml.
+schema_version: 1
+experiment_name: c2_task_plus_persona_hallway
+condition: C2
+description: Task plus persona (age and gender), four pairings, agent index and speaking order counterbalanced.
+
+scenario: configs/scenarios/hallway.yaml
+personas: configs/personas/personas.yaml
+
+negotiation:
+  enabled: true
+  template: persona_v1
+  max_messages_per_agent: 4
+  timing:
+    mode: pre_conflict
+    seconds_per_message: 1.0
+  info_fields: all
+  visibility: default
+
+llm:
+  client: mock
+  model: deepseek-flash
+  temperature: 1.0
+  max_tokens: 300
+  thinking: disabled
+  mock_policy: first_speaker_goes
+
+arbitration:
+  policy: strategy1
+  tie_break: lower_index
+
+budget:
+  cap_usd: 0.50
+  ledger: spend_ledger.jsonl
+
+design:
+  mode: factorial
+  seed: 24600
+  repeats: 1
+  pairs:
+    - - {persona: f70, task: the supermarket to buy groceries, task_type: grocery}
+      - {persona: m25, task: the airport to catch a flight, task_type: airport}
+    - - {persona: m70, task: the supermarket to buy groceries, task_type: grocery}
+      - {persona: f25, task: the airport to catch a flight, task_type: airport}
+    - - {persona: f25, task: the supermarket to buy groceries, task_type: grocery}
+      - {persona: m70, task: the hospital emergency room, task_type: hospital}
+    - - {persona: m25, task: the supermarket to buy groceries, task_type: grocery}
+      - {persona: f70, task: the hospital emergency room, task_type: hospital}
+  assignment: counterbalance      # each participant is agent 0 (west end) once
+  first_speaker: counterbalance
