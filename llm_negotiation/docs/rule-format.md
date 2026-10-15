@@ -1,4 +1,4 @@
-# The rule format, schema version 1
+# The rule format, schema versions 1 and 2
 
 A rule says: **when** two agents meet in a certain way, **give them roles**, and **tell each
 role what to do**. Rules are stored in the rule database (`rule_db/`), one file per version
@@ -13,7 +13,10 @@ any other way. A test scans the package for such calls (`tests/test_rules_format
 
 The structure is fixed by a JSON Schema, `rule_db/schema/rule.v1.schema.json`, and every
 rule is checked against it when it is loaded. The schema can only say what is allowed where;
-the checks of section 9 say the rest.
+the checks of section 9 say the rest. Sections 1 to 11 describe version 1. **Version 2**
+(issue #30, section 12) adds what generated rules need: the source type `stated`, an
+`intent`, and the results of `screening` them; a version 1 file loads exactly as before.
+Section 13 defines the **canonical form** of a rule, by which two rules are the same.
 
 ## 1. An example
 
@@ -69,7 +72,7 @@ priority: 20
 
 | Key | Value |
 |---|---|
-| `source_type` | `hand_written`, `negotiated` (SI-3) or `extracted` (SI-4) |
+| `source_type` | `hand_written`, `negotiated` (SI-3) or `extracted` (SI-4); in version 2 also `stated` (section 12) |
 | `source_ref` | Free text now: where it came from. Later a run id, a conversation id, or a paper reference |
 | `created_at` | The date, `YYYY-MM-DD` |
 | `author` | A person, or a model with its prompt version |
@@ -253,7 +256,7 @@ what and where. `python ruledb.py validate --file <path>` checks any rule file t
 |---|---|
 | `file` | The file cannot be read, or is not named `<rule_id>.v<version>.yaml` after what it holds |
 | `no_tie_policy` | A role assignment does not state `tie` (checked first, so that the reason is plain) |
-| `schema` | The structure does not fit the JSON Schema: a missing or unknown key, a wrong type, a value outside its list |
+| `schema` | The structure does not fit the JSON Schema of the version the rule names: a missing or unknown key, a wrong type, a value outside its list, a version that does not exist |
 | `unknown_field` | A field not in section 5, or a prefix where it does not belong |
 | `unobservable_field` | A field the two agents cannot both see (section 5) |
 | `unit` | A number without its unit, a unit that does not fit the field, or a unit on a name |
@@ -316,3 +319,93 @@ version and the SHA-256 of its file (`log-schema.md`).
 - **`min_corridor_width_m` is measured across the line between the two**, so a slanted line
   measures a little wider than the corridor (0.80 m for the 0.8 m bottleneck at the start of
   the shipped scenario).
+
+## 12. Schema version 2 (issue #30)
+
+Version 2 is for rules that a model generates (issue #30): one model stating a rule, or two
+negotiating one (`rule-generation.md`). **What a rule does is the same in both versions**:
+encounter, condition, roles, directives, priority, expiry, and every check of section 9.
+Version 2 adds three keys and two records of provenance; the schema is
+`rule_db/schema/rule.v2.schema.json`.
+
+| Key | Where | Required | Value |
+|---|---|---|---|
+| `schema_version` | top | yes | `2` |
+| `stated` | a value of `provenance.source_type` | | One model stated the rule, seeing both agents (condition B of issue #30). Beside `negotiated` (two model agents agreed on it, condition A), `hand_written` and `extracted` |
+| `intent` | top | no | What the rule is meant to do, in words, at most 500 characters. **Never executed.** Used later to find rules the format could not express (`rule-generation.md`, section 6) |
+| `screening` | top | no | The results of replaying the rule and of screening it in a crowd, a list of objects: `kind` (`replay` or `crowd`), `experiment`, `scenario`, `baseline`, `case_id`, `seeds`, `screened_utc`, `verdict` (`passed`, `failed`, or `recorded` for a replay, which has no pass mark), `reasons`, and `results` (the numbers, against the baseline on the same seeds) |
+| `generation` | `provenance` | no | Filled only by the rule writer: `experiment`, `condition` (`negotiated` or `stated`), `case_id`, `canonical_hash` (section 13), and `sessions`, every session that produced the rule, each with `session_id`, `design_cell`, `model`, `model_returned`, `prompt_template`, `created_utc`, `proposed_by` and `repeat` |
+| `promotion` | `provenance` | no | Filled only by the promotion command: `from_database`, `staged_rule`, `staged_sha256`, `reason`, `promoted_utc`, `by` |
+
+A version 2 rule, as the test fixture `tests/fixtures/rules/v2/stated_keeps_clear_any.v1.yaml`
+has it (shortened):
+
+```yaml
+schema_version: 2
+rule_id: stated_keeps_clear_any
+version: 1
+status: candidate
+intent: Keep a little more room between the two whenever they meet.
+provenance:
+  source_type: stated
+  ...
+  generation: {experiment: ..., condition: stated, case_id: ..., canonical_hash: ..., sessions: [...]}
+encounter: any
+when: {all: []}
+roles: symmetric
+directive:
+  both: {clearance_margin: 0.15}
+priority: 100
+screening:
+  - {kind: crowd, scenario: bidirectional_flow, baseline: orca_perturbed_v1, verdict: passed, ...}
+```
+
+**Reading both versions.** The loader reads `schema_version` first and checks the rule
+against the schema of that version (`negsim/rules/database.py`, `RuleSchemas`); both
+schema files are frozen in the manifest. A version 1 file is therefore read exactly as it
+was before version 2 existed: version 1 has no `intent`, no `screening` and no `stated`,
+and a version 1 file that uses any of them is still refused (`schema`). Any other version
+number is refused with the versions that exist.
+
+**Migration notes.** Nothing is migrated automatically, and no file is rewritten: a version
+is never edited (section 8).
+
+- A version 1 rule stays a version 1 rule, and loads, matches and is followed exactly as
+  before.
+- To give a rule an intent, a screening record or a promotion record, write its **next
+  version** (`<rule_id>.v<n+1>.yaml`) with `schema_version: 2`, and freeze it in the
+  manifest. Every version 1 key means the same in version 2, so the rest may be copied as
+  it is; the test `test_version_1_is_unchanged_it_does_not_take_stated_or_intent` checks
+  that one rule written in either version is the same rule.
+- Rules the writer of issue #30 generates are version 2 from their first version.
+- `python ruledb.py history <rule_id>` lists, between consecutive versions, changes to
+  `schema_version`, `intent` and `screening` as well as to the rest.
+
+## 13. The canonical form of a rule (issue #30)
+
+Two rules are **the same rule** when their canonical forms are equal. The canonical form is
+what the two agents of condition A accept by hash, and what the writer stores a rule once
+under however many sessions produced it (`rule-generation.md`); SI-4 will reuse it. It is
+`negsim/rules/canonical.py`:
+
+1. **What is in it**: what the rule does, and nothing else. The keys `encounter` and `when`
+   (its condition), `roles`, `directive`, and `expiry` if the rule states one. Everything
+   else is metadata and left out: `schema_version`, `rule_id`, `version`, `status`,
+   `description`, `intent`, `provenance`, `priority`, `screening`.
+2. **Keys sorted**, at every depth.
+3. **Numbers normalised**: every number is written the same way whatever way it was
+   written: a whole number as an integer (`6`, `6.0` and `6.00` are all `6`), any other
+   number rounded to 12 significant digits and written as the shortest decimal that gives
+   it back. `true` and `false` are not numbers.
+4. **Nothing else is changed.** Units are not converted (`90 deg` and `1.5708 rad` differ),
+   the items of `all`, `any` and `in` keep their order, and a field set to its baseline
+   value is not removed. Telling such rules apart from rules that differ in substance is
+   semantic equivalence, which is SI-4's.
+5. **Serialised** as JSON with no spaces (`separators=(",", ":")`), keys sorted, UTF-8,
+   and **hashed** with SHA-256. The hash is 64 hexadecimal characters; a *proposal id* is
+   its first 12, which is what an agent is shown and writes back.
+
+The canonical form can be computed for anything shaped like a rule, valid or not: a
+proposal that the loader would refuse still has a hash, so that it can be accepted, counted
+and compared like any other (`rule-generation.md`, section 6).
+*Tested:* `tests/test_rulegen_canonical.py`.

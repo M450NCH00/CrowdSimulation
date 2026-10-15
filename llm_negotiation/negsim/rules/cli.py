@@ -23,7 +23,10 @@ from .errors import RuleError
 from .model import Rule
 
 #: Fields of a rule that ``history`` compares between consecutive versions.
-COMPARED = ("status", "description", "provenance", "encounter", "when", "roles", "directive", "priority", "expiry")
+COMPARED = (
+    "schema_version", "status", "description", "intent", "provenance", "encounter", "when", "roles", "directive",
+    "priority", "expiry", "screening",
+)
 
 
 def main(argv: Optional[list[str]] = None, out: Optional[TextIO] = None, err: Optional[TextIO] = None) -> int:
