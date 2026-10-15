@@ -1,0 +1,34 @@
+# Issue #28, a follow-up the issue did not ask for: which seed rule makes the flow's overlaps
+# deeper? In si2_bidirectional_flow, with the default rule set the crowd clears sooner and
+# with fewer overlaps, but the deepest overlap of two bodies in a run is several times deeper
+# than under plain ORCA. Two rules apply in that flow: keep_left_head_on (between agents
+# walking opposite ways) and overtaker_keeps_clear (between agents walking the same way, one
+# catching up). Each level leaves one of them out. Primary baseline only, 20 seeds each.
+# No model is called.
+#
+#   python run_experiment.py configs/rule_following/si2_bidirectional_flow_ablation.yaml
+#
+# The first level's seeds (28621 to 28640) and starting positions are those of
+# si2_bidirectional_flow's perturbed rule runs (021 to 040), so the two can be compared
+# repeat by repeat; the second level's seeds follow on. Logging is thinned as in that flow.
+schema_version: 1
+layer: avoidance
+experiment_name: si2_bidirectional_flow_ablation
+description: Fifty agents each way, primary baseline, the default rule set with one rule left out in turn.
+scenario: configs/scenarios/bidirectional_flow.yaml
+
+logging:
+  trajectory_stride: 100
+  interactions: false
+
+baseline: orca_perturbed_v1
+
+design:
+  seed: 28620
+  repeats: 20
+  factors:
+    rules:
+      - name: without_overtaker_keeps_clear
+        directives: {provider: rules, ruleset: default, disable: [overtaker_keeps_clear]}
+      - name: without_keep_left_head_on
+        directives: {provider: rules, ruleset: default, disable: [keep_left_head_on]}
