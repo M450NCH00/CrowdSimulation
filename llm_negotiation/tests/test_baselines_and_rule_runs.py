@@ -148,7 +148,7 @@ def test_a_rule_run_writes_six_files_that_pass_the_schema_check(rule_run):
     run_dir, outcome = rule_run
     assert sorted(path.name for path in run_dir.iterdir()) == sorted(AVOIDANCE_RUN_FILES)
     assert PAIR_INTERACTIONS_FILE in AVOIDANCE_RUN_FILES and validate_run_dir(run_dir) == []
-    assert outcome["log_schema_version"] == 3 and outcome["baseline"] == "orca_perturbed_v1"
+    assert outcome["log_schema_version"] == 4 and outcome["baseline"] == "orca_perturbed_v1"  # 3 before issue #30
 
 
 def test_the_run_records_its_active_rule_set_and_baseline(rule_run):
@@ -204,7 +204,8 @@ def test_a_plain_run_has_pair_interactions_too_without_rules(tmp_path):
     assert pair["outcome"] == "failed" and pair["outcome_detail"]["deadlock"]  # the exactly symmetric head-on
     assert outcome["interaction_outcomes"] == {
         "pairs": 1, "avoided": 0, "resolved": 0, "failed": 1,
-        "pairs_with": {"exposed": 1, "yielded": 1, "collided": 0, "deadlocked": 1, "open_at_timeout": 0},
+        "pairs_with": {"exposed": 1, "pair_exposed": 1, "yielded": 1, "collided": 0, "deadlocked": 1, "open_at_timeout": 0},
+        "tiers": {"T0": 0, "T1": 0, "T2": 0, "T3": 0, "T4": 1},  # issue #30: a deadlock is T4
     }
 
 

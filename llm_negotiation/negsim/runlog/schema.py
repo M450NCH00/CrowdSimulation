@@ -25,6 +25,13 @@ match), the baseline and the perturbation in ``config.json``, the directive's la
 changes and the expiry of its ``speed_scale`` in ``interactions.jsonl``, two rule events,
 and the outcome categories and rule counts in ``outcome.json``. A negotiation run is as in
 version 2. Folders written under version 2 are checked against version 2.
+
+Version 4 (issue #30) adds pair exposure and the severity tiers to the avoidance run: in
+``pair_interactions.jsonl`` the pair's own exposure, its first exposed step, its tier and
+what decided it, and ``pair_exposed`` beside the per-agent ``exposed``; in ``outcome.json``
+the tier counts and the total pair exposure; and the two new metric thresholds. A
+negotiation run is as in version 3. Folders written under version 3 are checked against
+version 3.
 """
 
 from __future__ import annotations
@@ -33,8 +40,8 @@ import csv
 import json
 from pathlib import Path
 
-LOG_SCHEMA_VERSION = 3
-SUPPORTED_LOG_SCHEMA_VERSIONS = (1, 2, 3)
+LOG_SCHEMA_VERSION = 4
+SUPPORTED_LOG_SCHEMA_VERSIONS = (1, 2, 3, 4)
 
 RUN_KIND_NEGOTIATION = "negotiation"
 RUN_KIND_AVOIDANCE = "avoidance"
@@ -258,6 +265,7 @@ AVOIDANCE_CONFIG_KEYS = (
     "run_id",
     "run_index",
     "seed",
+    "seeding",
     "repeat",
     "created_utc",
     "git",
@@ -274,7 +282,9 @@ AVOIDANCE_CONFIG_KEYS = (
     "baseline",
     "perturbation",
 )
-AVOIDANCE_CONFIG_KEYS_V2 = AVOIDANCE_CONFIG_KEYS[:-2]
+#: As version 3 wrote it, without ``seeding``; version 2 had no baseline or perturbation either.
+AVOIDANCE_CONFIG_KEYS_V3 = tuple(key for key in AVOIDANCE_CONFIG_KEYS if key != "seeding")
+AVOIDANCE_CONFIG_KEYS_V2 = AVOIDANCE_CONFIG_KEYS_V3[:-2]
 
 AVOIDANCE_TRAJECTORY_COLUMNS = (
     "step",
@@ -328,7 +338,7 @@ INTERACTION_KEYS_V2 = tuple(
 )
 INTERACTION_END_REASONS = ("out_of_range", "observer_arrived", "neighbour_arrived", "run_ended")
 
-#: ``pair_interactions.jsonl`` (version 3): one line per pair interaction.
+#: ``pair_interactions.jsonl`` (version 4): one line per pair interaction.
 PAIR_INTERACTION_KEYS = (
     "pair_id",
     "agents",
@@ -341,13 +351,26 @@ PAIR_INTERACTION_KEYS = (
     "passed_step",
     "passed_time_s",
     "conflict_exposure_time_s",
+    "pair_exposure_time_s",
+    "first_pair_exposed_step",
     "min_separation_m",
     "outcome",
     "outcome_detail",
+    "severity_tier",
+    "tier_detail",
     "rules",
 )
+#: The same, as version 3 wrote it: no pair exposure and no tier.
+PAIR_INTERACTION_KEYS_V3 = tuple(
+    key
+    for key in PAIR_INTERACTION_KEYS
+    if key not in ("pair_exposure_time_s", "first_pair_exposed_step", "severity_tier", "tier_detail")
+)
 PAIR_INTERACTION_END_REASONS = ("out_of_range", "agent_arrived", "run_ended")
-PAIR_OUTCOME_DETAIL_KEYS = ("exposed", "yield_events", "collisions", "deadlock", "open_at_timeout")
+PAIR_OUTCOME_DETAIL_KEYS = ("exposed", "pair_exposed", "yield_events", "collisions", "deadlock", "open_at_timeout")
+PAIR_OUTCOME_DETAIL_KEYS_V3 = tuple(key for key in PAIR_OUTCOME_DETAIL_KEYS if key != "pair_exposed")
+PAIR_TIER_DETAIL_KEYS = ("pair_exposure_time_s", "yield_events", "near_misses", "collisions", "deadlock")
+SEVERITY_TIERS = ("T0", "T1", "T2", "T3", "T4")
 #: The ``rules`` block of a pair interaction, when the run's provider follows rules.
 PAIR_RULE_KEYS = ("state_at_end", "independent_agrees", "evaluations", "matches", "cross_pair_conflicts")
 RULE_EVALUATION_KEYS = (
@@ -425,7 +448,8 @@ AVOIDANCE_OUTCOME_KEYS_V2 = AVOIDANCE_OUTCOME_KEYS[:-4]
 ARTEFACT_KEYS = ("thresholds", "agents", "totals")
 ARTEFACT_AGENT_KEYS = ("backward_episodes", "backward_time_s", "hurried_episodes", "hurried_time_s")
 ARTEFACT_TOTAL_KEYS = ARTEFACT_AGENT_KEYS + ("agents_backward", "agents_hurried")
-INTERACTION_OUTCOME_KEYS = ("pairs", "avoided", "resolved", "failed", "pairs_with")
+INTERACTION_OUTCOME_KEYS = ("pairs", "avoided", "resolved", "failed", "pairs_with", "tiers")
+INTERACTION_OUTCOME_KEYS_V3 = INTERACTION_OUTCOME_KEYS[:-1]
 RULE_SUMMARY_KEYS = (
     "evaluations",
     "matches_begun",
@@ -455,6 +479,7 @@ AVOIDANCE_AGENT_KEYS = (
 AVOIDANCE_TOTAL_KEYS = (
     "interactions",
     "conflict_exposure_time_s",
+    "pair_exposure_time_s",
     "yield_events",
     "yield_time_s",
     "near_misses",
@@ -466,6 +491,7 @@ AVOIDANCE_TOTAL_KEYS = (
     "fallback_agent_steps",
     "one_sided_agent_steps",
 )
+AVOIDANCE_TOTAL_KEYS_V3 = tuple(key for key in AVOIDANCE_TOTAL_KEYS if key != "pair_exposure_time_s")
 
 AVOIDANCE_SUMMARY_COLUMNS = (
     "experiment_name",
@@ -511,6 +537,12 @@ AVOIDANCE_SUMMARY_COLUMNS = (
     "cross_pair_conflicts",
     "backward_episodes",
     "hurried_episodes",
+    "pair_exposure_time_s",
+    "pairs_t0",
+    "pairs_t1",
+    "pairs_t2",
+    "pairs_t3",
+    "pairs_t4",
     "git_commit",
 )
 
@@ -603,12 +635,14 @@ def _validate_avoidance(run_dir: Path, config: dict) -> list[str]:
 
     # A folder is checked against the log schema and the perception record its own config
     # declares, so that one written before either last changed still checks out.
-    v3 = config.get("log_schema_version", LOG_SCHEMA_VERSION) >= 3
+    version = config.get("log_schema_version", LOG_SCHEMA_VERSION)
+    v3 = version >= 3
     files = AVOIDANCE_RUN_FILES if v3 else AVOIDANCE_RUN_FILES_V2
     problems = [f"missing file {name}" for name in files if not (run_dir / name).is_file()]
     if problems:
         return problems
-    problems += _missing(config, AVOIDANCE_CONFIG_KEYS if v3 else AVOIDANCE_CONFIG_KEYS_V2, CONFIG_FILE)
+    config_keys = AVOIDANCE_CONFIG_KEYS if version >= 4 else AVOIDANCE_CONFIG_KEYS_V3 if v3 else AVOIDANCE_CONFIG_KEYS_V2
+    problems += _missing(config, config_keys, CONFIG_FILE)
     perception_version = config.get("perception_schema_version")
     if perception_version not in FIELDS_BY_VERSION:
         problems.append(
@@ -669,7 +703,9 @@ def _validate_avoidance(run_dir: Path, config: dict) -> list[str]:
         problems.append(f"{OUTCOME_FILE}: agents does not have one entry per agent")
     for agent_id, metrics in agents.items():
         problems += _missing(metrics, AVOIDANCE_AGENT_KEYS, f"{OUTCOME_FILE}.agents.{agent_id}")
-    problems += _missing(outcome.get("totals", {}), AVOIDANCE_TOTAL_KEYS, f"{OUTCOME_FILE}.totals")
+    v4 = config.get("log_schema_version", LOG_SCHEMA_VERSION) >= 4
+    totals_keys = AVOIDANCE_TOTAL_KEYS if v4 else AVOIDANCE_TOTAL_KEYS_V3
+    problems += _missing(outcome.get("totals", {}), totals_keys, f"{OUTCOME_FILE}.totals")
 
     def count(event_type: str) -> int:
         return sum(1 for event in events if event.get("type") == event_type)
@@ -687,17 +723,27 @@ def _validate_avoidance(run_dir: Path, config: dict) -> list[str]:
 
 
 def _validate_pairs(run_dir: Path, config: dict, outcome: dict) -> list[str]:
-    """The additions of version 3: pair interactions, their rule records, and the counts."""
+    """The additions of version 3: pair interactions, their rule records, and the counts;
+    and of version 4: pair exposure and the severity tiers."""
     problems: list[str] = []
+    v4 = config.get("log_schema_version", LOG_SCHEMA_VERSION) >= 4
     pairs = _read_jsonl(run_dir / PAIR_INTERACTIONS_FILE)
     for number, pair in enumerate(pairs):
         where = f"{PAIR_INTERACTIONS_FILE} line {number + 1}"
-        problems += _missing(pair, PAIR_INTERACTION_KEYS, where)
-        problems += _missing(pair.get("outcome_detail") or {}, PAIR_OUTCOME_DETAIL_KEYS, f"{where} outcome_detail")
+        problems += _missing(pair, PAIR_INTERACTION_KEYS if v4 else PAIR_INTERACTION_KEYS_V3, where)
+        problems += _missing(
+            pair.get("outcome_detail") or {},
+            PAIR_OUTCOME_DETAIL_KEYS if v4 else PAIR_OUTCOME_DETAIL_KEYS_V3,
+            f"{where} outcome_detail",
+        )
         if pair.get("outcome") not in INTERACTION_OUTCOMES:
             problems.append(f"{where}: unknown outcome {pair.get('outcome')!r}")
         if pair.get("end_reason") not in PAIR_INTERACTION_END_REASONS:
             problems.append(f"{where}: unknown end_reason {pair.get('end_reason')!r}")
+        if v4:
+            if pair.get("severity_tier") not in SEVERITY_TIERS:
+                problems.append(f"{where}: unknown severity_tier {pair.get('severity_tier')!r}")
+            problems += _missing(pair.get("tier_detail") or {}, PAIR_TIER_DETAIL_KEYS, f"{where} tier_detail")
         rules = pair.get("rules")
         if rules is None:
             continue
@@ -714,15 +760,24 @@ def _validate_pairs(run_dir: Path, config: dict, outcome: dict) -> list[str]:
         problems.append(f"{PAIR_INTERACTIONS_FILE}: pair_id is not 0, 1, 2, ...")
 
     counts = outcome.get("interaction_outcomes") or {}
-    problems += _missing(counts, INTERACTION_OUTCOME_KEYS, f"{OUTCOME_FILE}.interaction_outcomes")
+    problems += _missing(
+        counts, INTERACTION_OUTCOME_KEYS if v4 else INTERACTION_OUTCOME_KEYS_V3, f"{OUTCOME_FILE}.interaction_outcomes"
+    )
     if sum(counts.get(name, 0) for name in INTERACTION_OUTCOMES) != counts.get("pairs"):
         problems.append(f"{OUTCOME_FILE}: avoided + resolved + failed is not the number of pairs")
+    tiers = counts.get("tiers") or {}
+    if v4 and sum(tiers.get(tier, 0) for tier in SEVERITY_TIERS) != counts.get("pairs"):
+        problems.append(f"{OUTCOME_FILE}: the tier counts do not add up to the number of pairs")
     if config.get("logging", {}).get("interactions", True):
         if counts.get("pairs") != len(pairs):
             problems.append(f"{OUTCOME_FILE}: interaction_outcomes.pairs does not match {PAIR_INTERACTIONS_FILE}")
         for name in INTERACTION_OUTCOMES:
             if counts.get(name) != sum(1 for pair in pairs if pair.get("outcome") == name):
                 problems.append(f"{OUTCOME_FILE}: interaction_outcomes.{name} does not match {PAIR_INTERACTIONS_FILE}")
+        if v4:
+            for tier in SEVERITY_TIERS:
+                if tiers.get(tier) != sum(1 for pair in pairs if pair.get("severity_tier") == tier):
+                    problems.append(f"{OUTCOME_FILE}: interaction_outcomes.tiers.{tier} does not match {PAIR_INTERACTIONS_FILE}")
     if outcome.get("rules") is not None:
         problems += _missing(outcome["rules"], RULE_SUMMARY_KEYS, f"{OUTCOME_FILE}.rules")
     artefacts = outcome.get("artefacts") or {}

@@ -17,6 +17,10 @@ conflict that was *avoided* (it never arose) from one that arose and was then *r
 
 A collision keeps the definition of issue #24: two discs overlapping. It is found here
 with the same tracker as a near miss, with the distance set to zero.
+
+Issue #30 adds a severity tier for every pair interaction (:func:`severity_tier`), built on
+*pair exposure* (``negsim.avoidance.exposure``), which unlike the per-agent exposure above
+does not depend on the responsibility shares.
 """
 
 from __future__ import annotations
@@ -26,6 +30,44 @@ from dataclasses import dataclass, field
 from typing import Any, Optional
 
 Pair = tuple[int, int]
+
+# The severity tiers of a pair interaction (``docs/metrics.md``, section 11), lowest first.
+TIER_INTERACTION = "T0"  # in range of each other, never on a collision course
+TIER_COLLISION_COURSE = "T1"  # pair exposure above the threshold
+TIER_YIELD = "T2"  # a yield event of either agent while the pair was open
+TIER_NEAR_MISS = "T3"  # the two bodies came within the near-miss distance
+TIER_FAILED = "T4"  # the two collided, or the run ended in deadlock with the pair open
+TIERS = (TIER_INTERACTION, TIER_COLLISION_COURSE, TIER_YIELD, TIER_NEAR_MISS, TIER_FAILED)
+
+
+def severity_tier(
+    pair_exposure_s: float,
+    collision_course_min_s: float,
+    yield_events: int,
+    near_misses: int,
+    collisions: int,
+    deadlock: bool,
+) -> str:
+    """The highest tier that applies to a pair interaction.
+
+    T4 a collision between the two or a deadlock with the pair open; T3 a near miss between
+    them; T2 a yield event of either; T1 pair exposure above ``collision_course_min_s``; T0
+    none of these. Every count is of events that overlap the pair interaction in time.
+    """
+    if collisions or deadlock:
+        return TIER_FAILED
+    if near_misses:
+        return TIER_NEAR_MISS
+    if yield_events:
+        return TIER_YIELD
+    if pair_exposure_s > collision_course_min_s:
+        return TIER_COLLISION_COURSE
+    return TIER_INTERACTION
+
+
+def tier_rank(tier: str) -> int:
+    """0 for T0 up to 4 for T4."""
+    return TIERS.index(tier)
 
 
 @dataclass(frozen=True)

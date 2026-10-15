@@ -168,12 +168,20 @@ class SingleFileSegment:
 
 @dataclass(frozen=True)
 class MetricThresholds:
-    """Thresholds of the conflict metrics (``docs/metrics.md``)."""
+    """Thresholds of the conflict metrics (``docs/metrics.md``).
+
+    ``pair_exposure_eps`` and ``collision_course_min_s`` were added by issue #30: how deep
+    inside the velocity obstacle the two intended velocities must be for a step to count
+    as pair exposure, and how much pair exposure makes a pair interaction tier T1
+    (``docs/metrics.md``, section 11).
+    """
 
     near_miss_distance: float
     yield_speed_fraction: float
     yield_min_duration: float
     exposure_eps: float
+    pair_exposure_eps: float = 1e-3
+    collision_course_min_s: float = 0.0
 
     def as_dict(self) -> dict[str, float]:
         return {
@@ -181,13 +189,20 @@ class MetricThresholds:
             "yield_speed_fraction": self.yield_speed_fraction,
             "yield_min_duration_s": self.yield_min_duration,
             "exposure_eps_mps": self.exposure_eps,
+            "pair_exposure_eps_mps": self.pair_exposure_eps,
+            "collision_course_min_s": self.collision_course_min_s,
         }
 
 
 #: Defaults of the metric thresholds. Each is this project's choice, not a sourced value;
 #: ``docs/metrics.md`` and ``docs/parameters.md`` say so.
 DEFAULT_THRESHOLDS = MetricThresholds(
-    near_miss_distance=0.1, yield_speed_fraction=0.5, yield_min_duration=1.0, exposure_eps=1e-6
+    near_miss_distance=0.1,
+    yield_speed_fraction=0.5,
+    yield_min_duration=1.0,
+    exposure_eps=1e-6,
+    pair_exposure_eps=1e-3,
+    collision_course_min_s=0.0,
 )
 
 
@@ -335,7 +350,14 @@ class CrowdScenario(ABC):
             cfg.get("metrics") or {},
             f"{where}.metrics",
             (),
-            ("near_miss_distance", "yield_speed_fraction", "yield_min_duration", "exposure_eps"),
+            (
+                "near_miss_distance",
+                "yield_speed_fraction",
+                "yield_min_duration",
+                "exposure_eps",
+                "pair_exposure_eps",
+                "collision_course_min_s",
+            ),
         )
         defaults = DEFAULT_THRESHOLDS
         fraction = as_number(
@@ -385,6 +407,16 @@ class CrowdScenario(ABC):
                 ),
                 exposure_eps=as_number(
                     metrics.get("exposure_eps", defaults.exposure_eps), f"{where}.metrics.exposure_eps", minimum=0.0
+                ),
+                pair_exposure_eps=as_number(
+                    metrics.get("pair_exposure_eps", defaults.pair_exposure_eps),
+                    f"{where}.metrics.pair_exposure_eps",
+                    minimum=0.0,
+                ),
+                collision_course_min_s=as_number(
+                    metrics.get("collision_course_min_s", defaults.collision_course_min_s),
+                    f"{where}.metrics.collision_course_min_s",
+                    minimum=0.0,
                 ),
             ),
             geometry=geometry,

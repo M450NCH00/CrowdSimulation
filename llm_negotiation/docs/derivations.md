@@ -9,6 +9,8 @@ issue #26: what the directive fields do to ORCA's guarantee, the wall rule in di
 time, the conflict zone at a single-file segment, and why a symmetric meeting stalls.
 Section 15 was added by issue #28: when an encounter has passed, which is when a
 directive's `speed_scale`, and everything a rule told a pair, stops applying.
+Section 16 was added by issue #30: pair exposure, the conflict measure of a pair, and why
+it does not depend on the responsibility shares.
 There `orca:LINE` points into `refs/si1_orca_vandenberg2011.txt`, and the notation is that
 of `orca.md`, section 3.
 
@@ -609,3 +611,89 @@ reproduce exactly (`WORK_LOG-28.md`).
 is not), `::test_a_rules_speed_scale_applies_until_closest_approach_and_not_after`,
 `::test_a_match_expires_when_the_encounter_has_passed_and_every_field_reverts`;
 `tests/test_avoidance_sim.py::test_speed_scale_slows_the_agent_only_until_the_encounter_has_passed`.
+
+## 16. Pair exposure, and why it does not depend on the shares (issue #30)
+
+Issue #30 defines a conflict for a *pair* (`metrics.md`, section 11): the pair is exposed on
+a step if the two intended velocities put it inside the two bodies' truncated velocity
+obstacle. This section shows what the measure reads, why the responsibility shares are not
+among it, what that does and does not imply for whole runs, and why the tolerance is what
+it is. The notation is `orca.md`'s, section 3.
+
+**The intended velocity.** On step `k` the run loop (`simulation.py`, step 4) gives every
+agent `A` that has not arrived
+
+    v̂_A = s_A · d_A + δ_A,        s_A = min(b_A, min(σ_A · v_A^pref, v_A^max))
+
+with `d_A` the unit vector from `A`'s position toward the point `navigation.lookahead`
+metres further along its path, `v_A^pref` and `v_A^max` its preferred and maximum speeds,
+`σ_A` the smallest `speed_scale` of its unexpired directives toward the neighbours it
+perceives, `b_A` the arbiter's bound if the arbiter holds `A` (no bound otherwise), and
+`δ_A` the baseline's perturbation draw. What goes in: positions, paths, speeds, the
+`speed_scale` fields, the arbiter's bound (which reads positions, preferred speeds, and the
+leader named by the `passage_order` fields), and the perturbation stream.
+
+**Where the shares enter.** In exactly two places, both after every `v̂` of the step is
+fixed: `resolve_pair` combines the two directives of a pair into its shares, and the share
+is handed to `agent_half_plane`, which offsets the agent's half-plane (section 9). The
+half-planes go to the linear program, whose answer is the velocity the agent *moves* at.
+The shares never reach `v̂`.
+
+**The measure.** With `p = x_j − x_i`, `w = v̂_i − v̂_j` and `R = r_i + r_j`, the pair is
+exposed on step `k` if
+
+    |p| ≤ R    or    depth_τ(p, w, R) > ε
+
+where `depth_τ` is the signed distance from `w` to the boundary of the truncated obstacle
+VO^τ (positive inside), computed with ORCA's own geometry (`exposure.py` calls
+`agent_half_plane` with no share, side or clearance and reads its `margin`), and
+`τ = max(τ_i, τ_j)`. It is a function of `x_i, x_j, v̂_i, v̂_j, r_i, r_j, τ_i, τ_j` and `ε`.
+
+**Claim 1.** On any given state, the pair exposure of the step does not depend on the
+responsibility shares, nor on the sides or the clearance margins.
+**Proof.** None of its arguments is a share, a side or a margin, and `v̂` is computed
+before any of them is read. ∎
+
+**What it does not say.** The shares do change the velocity the agents move at on a step
+on which ORCA finds them on a collision course, and so where they are on every step after.
+Two runs that differ only in their shares are therefore different runs from that step on,
+and their total pair exposure can differ, because the states differ, not because the
+measure reads the shares. Two consequences, each tested:
+
+1. *Until the shares first act, the runs are the same.* A share or a side acts only on a
+   collision course in ORCA's own sense (sections 9 and 10; off one, the room is split in
+   half whatever the share, and the side does nothing). So two runs on the same seed that
+   differ only in shares and sides are identical up to that step, and their first exposed
+   step is the same.
+   *Tested:* `tests/test_pair_exposure.py::test_a_side_and_shares_leave_the_first_exposed_step_as_it_was`.
+2. *The same state gives the same answer under any shares.* One step taken from one state
+   under shares (0.5, 0.5), (1, 0), (0, 1) and (0.8, 0.2) counts the same pair exposure,
+   while the per-agent exposure of section 3 differs between them.
+   *Tested:* `::test_one_state_gives_the_same_pair_exposure_under_any_shares`, and
+   `::test_pair_exposure_can_be_recomputed_from_the_trajectory_alone`, which recomputes it
+   from the positions and intended velocities in `trajectory.csv` with no directive at hand.
+
+**The contrast with the per-agent measure.** Agent `A` is exposed (`metrics.md`, section 3)
+if its intended velocity violates its own half-plane, which on a collision course is
+`(v − (v_A + α_A |u| n)) · n ≥ 0`. For an agent walking as it intends (`v_A = v̂_A`) the
+violation is `α_A |u|`: zero for a share of 0, positive otherwise. The per-agent measure
+reads the share directly, on one and the same state.
+
+**Symmetry.** Swapping the two agents maps `(p, w)` to `(−p, −w)`. Since
+`|t(−w) − (−p)| = |t w − p|`, the obstacle of the swapped pair is the reflection of the
+original through the origin, and `depth_τ` is unchanged: the measure is the pair's, not
+either agent's.
+*Tested:* `::test_the_measure_is_symmetric_in_the_two_agents`.
+
+**The tolerance.** The obstacle is convex (section 9), so its signed distance function is
+1-Lipschitz: moving `w` by `δ` moves the depth by at most `|δ|`. Outside the obstacle,
+ORCA's `margin` is that distance (to the arc or a leg, whichever is nearer). The primary
+baseline perturbs each intended velocity by at most 1e-4 m/s (`baseline.md`), so `w` by at
+most 2e-4 m/s. A pair that is not on a collision course without the perturbation
+(depth ≤ 0) therefore has a depth of at most 2e-4 m/s with it, below the default
+`ε = 1e-3` m/s: **the perturbation alone never makes a step count**. (The one place
+`margin` is not the exact distance is ORCA's tie between the legs, `orca.md`, section 4,
+which lies inside the obstacle and on its axis exactly; a random perturbation lands there
+with probability zero.) A depth of `ε` means that, had neither changed velocity, the two
+bodies would have overlapped: on the axis, by about `ε τ` = 3 mm.
+*Tested:* `::test_the_obstacle_depth_matches_hand_computed_cases`.

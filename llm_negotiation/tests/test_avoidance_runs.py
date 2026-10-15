@@ -112,7 +112,7 @@ def test_factors_are_crossed_in_order_and_each_level_lays_its_settings_on_the_ba
         "001_symmetric_none", "002_symmetric_left", "003_symmetric_off",
         "004_offset_none", "005_offset_left", "006_offset_off",
     ]
-    assert [plan.seed for plan in plans] == [501, 502, 503, 504, 505, 506]
+    assert [plan.seed for plan in plans] == [501] * 6  # paired seeds since issue #30; 501 to 506 per run before
     assert plans[4].variant == {"layout": "offset", "side": "left"}
     assert plans[4].scenario_config["geometry"]["lateral_offsets"] == [0.05, -0.05]
     assert plans[4].scenario_config["geometry"]["width"] == 1.75  # the rest of the scenario is kept
@@ -224,14 +224,17 @@ def test_a_run_writes_its_five_files_and_they_pass_the_schema_check(side_run):
 
 def test_config_json_is_fully_resolved(side_run):
     saved = read_json(side_run[0] / CONFIG_FILE)
-    assert (saved["log_schema_version"], saved["run_kind"]) == (LOG_SCHEMA_VERSION, "avoidance") == (3, "avoidance")  # 2 before issue #28
+    assert (saved["log_schema_version"], saved["run_kind"]) == (LOG_SCHEMA_VERSION, "avoidance") == (4, "avoidance")  # 2 before issue #28, 3 before #30
     assert (saved["experiment_name"], saved["run_id"], saved["run_index"], saved["seed"], saved["repeat"]) == ("test_avoidance", "001_base", 1, 301, 1)
     assert saved["git"] == GIT and saved["variant"] == {} and saved["perception_schema_version"] == PERCEPTION_SCHEMA_VERSION
     scene = saved["scenario"]
     assert scene["type"] == "wide_corridor_head_on" and scene["dynamics"] == "holonomic" and scene["dt_s"] == 0.1
     assert scene["geometry"]["lateral_offsets"] == [0.05, -0.05] and scene["on_collision"] == "stop"
     assert scene["orca"] == {"tie_break": "brake"} and scene["navigation"] == {"lookahead_m": 2.0}
-    assert scene["metrics"] == {"near_miss_distance_m": 0.1, "yield_speed_fraction": 0.5, "yield_min_duration_s": 1.0, "exposure_eps_mps": 1e-06}
+    assert scene["metrics"] == {
+        "near_miss_distance_m": 0.1, "yield_speed_fraction": 0.5, "yield_min_duration_s": 1.0, "exposure_eps_mps": 1e-06,
+        "pair_exposure_eps_mps": 0.001, "collision_course_min_s": 0.0,  # issue #30
+    }
     assert [agent["preferred_speed_mps"] for agent in scene["agents"]] == [1.3, 1.3]
     assert saved["population"] == [
         {"agent_id": 0, "group": "eastbound", "persona_id": "f25", "attributes": {"age": 25, "gender": "female", "backstory": ""}},
@@ -496,7 +499,7 @@ def test_a_negotiation_run_now_says_its_kind_and_the_new_version(tmp_path):
     plan = experiment(c1_config()).plans()[0]
     execute_run(plan, MockClient(policy="task_priority"), tmp_path / "talk", git=GIT)
     saved = read_json(tmp_path / "talk" / CONFIG_FILE)
-    assert (saved["log_schema_version"], saved["run_kind"]) == (3, "negotiation")  # 2 before issue #28
+    assert (saved["log_schema_version"], saved["run_kind"]) == (4, "negotiation")  # 2 before issue #28, 3 before #30
     assert sorted(path.name for path in (tmp_path / "talk").iterdir()) == sorted(RUN_FILES)  # its files are unchanged
     assert validate_run_dir(tmp_path / "talk") == []
 

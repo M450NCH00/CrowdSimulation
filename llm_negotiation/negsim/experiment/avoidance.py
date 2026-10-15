@@ -42,6 +42,7 @@ from ..avoidance.directives import (
 )
 from ..avoidance.perception import NEVER_OBSERVABLE, PERCEPTION_SCHEMA_VERSION, default_visibility
 from ..avoidance.simulation import INTERACTION_OUTCOMES, AvoidanceSimulation, Perturbation, SimulationResult
+from ..metrics.avoidance import TIERS
 from ..rules import RuleDatabase, RuleDatabaseProvider, RuleError
 from ..rules.matching import DEFAULT_HYSTERESIS_STEPS
 from .baselines import Baseline, load_baseline
@@ -73,6 +74,14 @@ from ..scenarios.registry import build_crowd_scenario, load_scenario_config
 
 LAYER_AVOIDANCE = "avoidance"
 SCHEMA_VERSION = 1
+
+# How the runs of an experiment get their seeds (issue #30, Part 1.2; ``docs/baseline.md``,
+# section 6). ``paired``: the base seed plus the run's repeat number, so every level of every
+# factor runs the same scenario instance on the same seed, and a baseline run and a rule run
+# can be compared repeat by repeat. ``per_run``: the base seed plus the run's index in the
+# design, as issues #26 and #28 had it; their committed experiments say so.
+SEEDING_PAIRED, SEEDING_PER_RUN = "paired", "per_run"
+SEEDINGS = (SEEDING_PAIRED, SEEDING_PER_RUN)
 
 _LEVEL_KEYS = ("scenario_overrides", "directives", "arbitration", "population", "visibility", "baseline")
 _STATIC_DIRECTIVE_KEYS = ("provider", "default", "agents", "pairs", "share_policy")
@@ -148,6 +157,8 @@ class AvoidanceRunPlan:
     logging: Mapping[str, Any]
     baseline: Optional[Baseline] = None
     perturbation: Perturbation = Perturbation()
+    #: How ``seed`` was derived: ``paired`` or ``per_run`` (issue #30).
+    seeding: str = SEEDING_PAIRED
 
     def provider(self) -> DirectiveProvider:
         return build_provider(self.directives, self.visibility, "directives")
@@ -240,9 +251,10 @@ class AvoidanceExperiment:
 
     def _expand(self) -> list[AvoidanceRunPlan]:
         where = f"{self._where}.design"
-        check_keys(self.design, where, (), ("seed", "repeats", "factors"))
+        check_keys(self.design, where, (), ("seed", "repeats", "factors", "seeding"))
         base_seed = int(as_number(self.design.get("seed", 0), f"{where}.seed", minimum=0))
         repeats = int(as_number(self.design.get("repeats", 1), f"{where}.repeats", minimum=1))
+        self.seeding = as_choice(self.design.get("seeding", SEEDING_PAIRED), f"{where}.seeding", SEEDINGS)
 
         factors = self.design.get("factors") or {}
         if not isinstance(factors, Mapping):
@@ -320,7 +332,7 @@ class AvoidanceExperiment:
             index=index,
             run_id="_".join(parts),
             experiment_name=self.experiment_name,
-            seed=base_seed + index,
+            seed=base_seed + (repeat if self.seeding == SEEDING_PAIRED else index),
             repeat=repeat,
             scenario_file=self.scenario_file,
             variant={factor: name for factor, (name, _) in zip(names, combination)},
@@ -333,6 +345,7 @@ class AvoidanceExperiment:
             logging=self.logging,
             baseline=baseline,
             perturbation=baseline.perturbation if baseline is not None else Perturbation(),
+            seeding=self.seeding,
         )
 
     def _population(self, raw: Any, spec: CrowdScenarioSpec, where: str) -> dict[int, dict[str, Any]]:
@@ -428,6 +441,7 @@ def resolved_config(plan: AvoidanceRunPlan, spec: CrowdScenarioSpec, provider: D
         "run_id": plan.run_id,
         "run_index": plan.index,
         "seed": plan.seed,
+        "seeding": plan.seeding,
         "repeat": plan.repeat,
         "created_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "git": dict(git),
@@ -533,6 +547,7 @@ def build_outcome(plan: AvoidanceRunPlan, spec: CrowdScenarioSpec, result: Simul
     totals = {
         "interactions": len(result.interactions),
         "conflict_exposure_time_s": _rounded(sum(stats.exposure_steps for stats in result.stats.values()) * dt),
+        "pair_exposure_time_s": _rounded(sum(pair.pair_exposure_steps for pair in result.pairs) * dt),
         "yield_events": len(result.yields),
         "yield_time_s": _rounded(sum(item.duration_s for item in result.yields)),
         "near_misses": len(result.near_misses),
@@ -563,16 +578,20 @@ def build_outcome(plan: AvoidanceRunPlan, spec: CrowdScenarioSpec, result: Simul
         )
 
     outcomes: dict[str, Any] = {"pairs": len(result.pairs), **{name: 0 for name in INTERACTION_OUTCOMES}}
-    ingredients = {"exposed": 0, "yielded": 0, "collided": 0, "deadlocked": 0, "open_at_timeout": 0}
+    ingredients = {"exposed": 0, "pair_exposed": 0, "yielded": 0, "collided": 0, "deadlocked": 0, "open_at_timeout": 0}
+    tiers = {tier: 0 for tier in TIERS}
     for pair in result.pairs:
         outcomes[pair.outcome] += 1
+        tiers[pair.severity_tier] += 1
         detail = pair.outcome_detail
         ingredients["exposed"] += detail["exposed"]
+        ingredients["pair_exposed"] += detail["pair_exposed"]
         ingredients["yielded"] += detail["yield_events"] > 0
         ingredients["collided"] += detail["collisions"] > 0
         ingredients["deadlocked"] += detail["deadlock"]
         ingredients["open_at_timeout"] += detail["open_at_timeout"]
     outcomes["pairs_with"] = ingredients
+    outcomes["tiers"] = tiers
 
     all_arrived = len(goal_times) == len(ids)
     return {
@@ -687,10 +706,12 @@ def avoidance_summary_row(config: Mapping[str, Any], outcome: Mapping[str, Any])
 
 
 def _rule_columns(config: Mapping[str, Any], outcome: Mapping[str, Any]) -> dict[str, Any]:
-    """The summary columns added by issue #28 (log schema version 3); empty for older runs."""
+    """The summary columns added by issue #28 (log schema version 3) and issue #30 (version
+    4: pair exposure and the severity tiers); empty for older runs."""
     counts = outcome.get("interaction_outcomes") or {}
     rules = outcome.get("rules") or {}
     fired = rules.get("matches_begun") or {}
+    tiers = counts.get("tiers") or {}
     return {
         "baseline": outcome.get("baseline"),
         "ruleset": config["directives"].get("ruleset"),
@@ -703,6 +724,8 @@ def _rule_columns(config: Mapping[str, Any], outcome: Mapping[str, Any]) -> dict
         "cross_pair_conflicts": rules.get("cross_pair_conflicts") if rules else None,
         "backward_episodes": (outcome.get("artefacts") or {}).get("totals", {}).get("backward_episodes"),
         "hurried_episodes": (outcome.get("artefacts") or {}).get("totals", {}).get("hurried_episodes"),
+        "pair_exposure_time_s": (outcome.get("totals") or {}).get("pair_exposure_time_s"),
+        **{f"pairs_{tier.lower()}": tiers.get(tier) for tier in TIERS},
     }
 
 
