@@ -1,0 +1,53 @@
+# Two paths crossing at a right angle in open space (issue #26). An avoidance scenario:
+# holonomic agents steered by ORCA, no walls.
+#
+# Tags: [cited] read in a source; [derived] worked out from cited values; [placeholder] no
+# source; [design] a choice about the scene or the numerics. docs/parameters.md has the
+# locators.
+schema_version: 2
+type: open_crossing
+description: >
+  One person walks east and another north; their paths cross at a right angle with
+  nothing around them.
+
+dt: 0.1                      # s      time step                                   [design]
+max_time: 60.0               # s      the run is a timeout after this             [design]
+goal_tolerance: 0.2          # m      how close to the end of its path an agent has arrived   [design]
+dynamics: holonomic
+on_collision: stop
+
+geometry:
+  approach_distances: [8.0, 8.0]   # m   how far from the crossing each agent starts. Equal: both would be there at the same instant   [design]
+  goal_distance: 8.0         # m      how far beyond the crossing each goal is    [design]
+
+agent_types:
+  pedestrian:
+    radius: 0.25             # m      body radius: half the effective shoulder width of 49.8 cm   [cited: Yamamoto et al. 2019, Sec 4.3]
+    preferred_speed: 1.3     # m/s    walking speed when nothing is in the way; measured 1.29 +/- 0.19   [cited: Moussaid et al. 2009, Sec 2(c) and 4(a)]
+    max_speed: 2.0           # m/s    the fastest an agent will go to get out of the way   [cited: Menge 4squareS.xml line 15; inside Bohannon 1997's range of maximum gait speeds]
+    time_horizon: 3.0        # s      how far ahead a collision with another agent matters (ORCA's tau)   [cited: Karamouzas et al. 2014, p. 3]
+    time_horizon_obst: 0.15  # s      the same for walls. A setting used in practice, not a measurement   [cited: Menge 4squareS.xml line 22]
+    max_neighbours: 10       #        how many neighbours an agent attends to. A setting used in practice   [cited: Menge 4squareS.xml line 15]
+    sensing_radius: 12.5     # m      R. time_horizon * (max_speed + max_speed) + the two radii   [derived: ORCA paper, Sec 5.1]
+
+agents:
+  default_type: pedestrian
+
+orca:
+  tie_break: brake           # an exact tie between the two passing sides is not broken (docs/orca.md, section 4)
+
+navigation:
+  lookahead: 2.0             # m      how far ahead on its path an agent aims     [design]
+
+neighbour_search:
+  cell_size: 2.0             # m      grid cell of the neighbour search; no effect on the result   [design]
+
+deadlock:
+  window_s: 3.0              # s      as in issue #24                             [design]
+  speed_eps: 0.01            # m/s    as in issue #24                             [design]
+
+metrics:
+  near_miss_distance: 0.1    # m      two bodies closer than this are a near miss   [design]
+  yield_speed_fraction: 0.5  #        below this fraction of preferred speed an agent is yielding   [design]
+  yield_min_duration: 1.0    # s      ... if it lasts at least this long          [design]
+  exposure_eps: 1.0e-6       # m/s    numerical tolerance of the exposure test    [design]

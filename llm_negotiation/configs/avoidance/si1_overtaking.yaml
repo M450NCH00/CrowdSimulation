@@ -1,0 +1,28 @@
+# Issue #26: overtaking, run end to end. A faster walker comes up behind a slower one.
+# No model is called.
+#
+#   python run_experiment.py configs/avoidance/si1_overtaking.yaml
+schema_version: 1
+layer: avoidance
+experiment_name: si1_overtaking
+description: A faster walker behind a slower one.
+
+scenario: configs/scenarios/overtaking.yaml
+
+design:
+  seed: 26500
+  factors:
+    layout:
+      - name: directly_behind    # exactly behind: neither side is nearer
+      - name: offset             # the faster walker 5 cm to the left of the slower one's line
+        scenario_overrides: {geometry: {lateral_offsets: [0.05, 0.0]}}
+    condition:
+      - name: plain
+      - name: both_left
+        directives: {provider: static, default: {side_preference: left}}
+      - name: overtaker_keeps_clear   # pass on the left, and the one behind does all the avoiding
+        directives:
+          provider: static
+          agents:
+            0: {side_preference: left, responsibility_share: 1.0}
+            1: {side_preference: left, responsibility_share: 0.0}

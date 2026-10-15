@@ -1,0 +1,957 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__NEGSIM_TITLE__</title>
+<!--
+  The run viewer of llm_negotiation (negsim/viz/viewer.py fills in the data below).
+  Self-contained: no network, no library. Open it in any modern browser.
+-->
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f4f5f8;
+    --panel: #ffffff;
+    --text: #1c2230;
+    --muted: #5f687a;
+    --border: #d8dce4;
+    --accent: #2f6fde;
+    --stage: #ffffff;
+    --grid: #eef0f4;
+    --wall: #4b5262;
+    --segment: rgba(240, 180, 0, 0.20);
+    --segment-edge: rgba(200, 140, 0, 0.75);
+    --ring-exposed: #f2a900;
+    --ring-fallback: #ff2d95;
+    --ring-arbiter: #1c2230;
+    --overlap: #e00000;
+    --focus: #1c2230;
+    --c0: #2f6fde; --c1: #d9483b; --c2: #2f9e5b; --c3: #8e5bd6; --c4: #e08a1e; --c5: #149aa8;
+    --ev-collision: #e00000; --ev-wall_collision: #9b0000; --ev-near_miss: #e0a100; --ev-yield: #8a93a5;
+    --ev-handoff: #6f42c1; --ev-reciprocity_violation: #e0681e; --ev-arrival: #2f9e5b; --ev-region: #2f6fde;
+    --ev-dialogue: #149aa8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --bg: #0f1218;
+      --panel: #171b23;
+      --text: #e6e9ef;
+      --muted: #9aa3b5;
+      --border: #2b3240;
+      --accent: #6c9cff;
+      --stage: #12161d;
+      --grid: #1b2029;
+      --wall: #8c95a8;
+      --segment: rgba(240, 190, 40, 0.16);
+      --segment-edge: rgba(240, 190, 40, 0.65);
+      --ring-exposed: #ffc233;
+      --ring-fallback: #ff5cb0;
+      --ring-arbiter: #f2f4f8;
+      --overlap: #ff4d4d;
+      --focus: #f2f4f8;
+      --c0: #5b8def; --c1: #ef6a5c; --c2: #4cc27a; --c3: #a77ff0; --c4: #f0a040; --c5: #3cc2d0;
+    }
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    display: grid;
+    grid-template-rows: auto 1fr;
+  }
+  header {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    padding: 8px 16px; background: var(--panel); border-bottom: 1px solid var(--border);
+  }
+  header h1 { font-size: 15px; margin: 0; font-weight: 600; }
+  header .sub { color: var(--muted); font-size: 13px; }
+  .picker { display: flex; align-items: center; gap: 8px; }
+  select, button {
+    font: inherit; color: var(--text); background: var(--panel);
+    border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px;
+  }
+  button { cursor: pointer; }
+  button:hover, select:hover { border-color: var(--accent); }
+  button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  main {
+    display: grid; grid-template-columns: minmax(0, 1fr) 360px; min-height: 0;
+  }
+  .stage { display: grid; grid-template-rows: minmax(0, 1fr) auto; min-height: 0; min-width: 0; }
+  .canvas-wrap { position: relative; min-height: 260px; background: var(--stage); border-right: 1px solid var(--border); }
+  #canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+  #canvas.dragging { cursor: grabbing; }
+  .overlay {
+    position: absolute; top: 8px; left: 10px; pointer-events: none;
+    font-variant-numeric: tabular-nums; color: var(--text);
+    background: color-mix(in srgb, var(--stage) 80%, transparent); padding: 2px 6px; border-radius: 4px;
+  }
+  .overlay .note { color: var(--muted); font-size: 12px; }
+  .hint { position: absolute; bottom: 8px; right: 10px; color: var(--muted); font-size: 12px; pointer-events: none; }
+  .error {
+    position: absolute; inset: 20px; padding: 16px; border-radius: 8px;
+    background: var(--panel); border: 2px solid var(--overlap); color: var(--text); white-space: pre-wrap;
+  }
+  .controls { padding: 8px 12px 10px; background: var(--panel); border-top: 1px solid var(--border); border-right: 1px solid var(--border); }
+  .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .clock { font-variant-numeric: tabular-nums; margin-left: auto; color: var(--muted); }
+  .timeline { margin: 6px 0 4px; }
+  #scrub { width: 100%; margin: 0; accent-color: var(--accent); }
+  #ticks { width: 100%; height: 12px; display: block; }
+  .toggles { gap: 4px 14px; color: var(--muted); font-size: 13px; }
+  .toggles label { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+  aside { overflow: auto; background: var(--panel); padding: 4px 14px 16px; min-height: 0; }
+  aside h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin: 14px 0 6px; }
+  dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; margin: 0; font-size: 13px; }
+  dt { color: var(--muted); }
+  dd { margin: 0; overflow-wrap: anywhere; }
+  ul.legend { list-style: none; padding: 0; margin: 0; font-size: 13px; display: grid; gap: 3px; }
+  ul.legend li { display: flex; align-items: center; gap: 8px; }
+  .sw { width: 14px; height: 14px; border-radius: 50%; flex: none; display: inline-block; }
+  .sw.ring { background: transparent; border: 3px solid; }
+  .sw.square { border-radius: 2px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+  .chip { font-size: 12px; padding: 2px 8px; border-radius: 999px; display: inline-flex; align-items: center; gap: 6px; }
+  .chip[aria-pressed="false"] { opacity: 0.45; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  ol.events, ol.talk { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+  ol.events button {
+    width: 100%; text-align: left; border: none; border-left: 3px solid var(--border); border-radius: 0 4px 4px 0;
+    padding: 3px 6px; font-size: 13px; background: transparent;
+  }
+  ol.events button:hover { background: var(--bg); }
+  ol.events li.past button { color: var(--muted); }
+  .ev-t { font-variant-numeric: tabular-nums; color: var(--muted); margin-right: 6px; }
+  ol.talk li { padding: 4px 6px; border-radius: 4px; font-size: 13px; }
+  ol.talk li.future { opacity: 0.45; }
+  .stance { font-size: 11px; font-weight: 600; color: var(--muted); }
+  .empty { color: var(--muted); font-size: 13px; }
+  .agent-head { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-bottom: 4px; }
+  @media (max-width: 900px) {
+    main { grid-template-columns: 1fr; }
+    .stage { min-height: 70vh; }
+    .canvas-wrap, .controls { border-right: none; }
+    aside { border-top: 1px solid var(--border); }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1 id="title">Run viewer</h1>
+    <div class="sub" id="subtitle"></div>
+  </div>
+  <label class="picker" id="picker-wrap">Run <select id="picker" aria-label="Choose a run"></select></label>
+</header>
+<main>
+  <section class="stage">
+    <div class="canvas-wrap" id="wrap">
+      <canvas id="canvas" aria-label="Animated view of the run"></canvas>
+      <div class="overlay" id="overlay"></div>
+      <div class="hint">drag to pan · wheel to zoom · double-click to fit · click an agent</div>
+      <div class="error" id="error" hidden></div>
+    </div>
+    <div class="controls">
+      <div class="row">
+        <button id="play" aria-label="Play">▶ Play</button>
+        <button id="back" title="One step back (←)" aria-label="One step back">◀</button>
+        <button id="fwd" title="One step forward (→)" aria-label="One step forward">▶</button>
+        <button id="restart" title="Back to the start (Home)" aria-label="Back to the start">⟲</button>
+        <label>Speed
+          <select id="speed" aria-label="Playback speed">
+            <option value="0.1">0.1×</option><option value="0.25">0.25×</option><option value="0.5">0.5×</option>
+            <option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option>
+            <option value="8">8×</option><option value="16">16×</option>
+          </select>
+        </label>
+        <span class="clock" id="clock"></span>
+      </div>
+      <div class="timeline">
+        <input type="range" id="scrub" min="0" max="10000" step="1" value="0" aria-label="Time">
+        <canvas id="ticks" aria-hidden="true"></canvas>
+      </div>
+      <div class="row toggles">
+        <label><input type="checkbox" id="opt-trails" checked> Trails</label>
+        <label><input type="checkbox" id="opt-paths" checked> Intended paths</label>
+        <label><input type="checkbox" id="opt-labels" checked> Labels</label>
+        <label><input type="checkbox" id="opt-velocity"> Velocity</label>
+        <label id="wanted-wrap"><input type="checkbox" id="opt-wanted"> Wanted velocity</label>
+        <label id="sensing-wrap"><input type="checkbox" id="opt-sensing"> Sensing radius</label>
+        <label><input type="checkbox" id="opt-arrived" checked> Arrived agents</label>
+        <label><input type="checkbox" id="opt-follow"> Follow selected</label>
+        <button id="fit" title="Fit the scene (F)">Fit view</button>
+      </div>
+    </div>
+  </section>
+  <aside>
+    <h2>Run</h2>
+    <dl id="summary"></dl>
+    <h2>Legend</h2>
+    <ul class="legend" id="legend"></ul>
+    <h2>Selected agent</h2>
+    <div id="agent"><p class="empty">Click an agent to see what it knows and does.</p></div>
+    <h2 id="events-title">Events</h2>
+    <div class="chips" id="filters"></div>
+    <ol class="events" id="events"></ol>
+    <div id="talk-section" hidden>
+      <h2>Conversation</h2>
+      <ol class="talk" id="talk"></ol>
+    </div>
+  </aside>
+</main>
+<script id="run-data" type="application/json">__NEGSIM_RUN_DATA__</script>
+<script>
+(function () {
+  "use strict";
+
+  const $ = (id) => document.getElementById(id);
+  const root = document.documentElement;
+
+  function fail(error) {
+    const text = (error && (error.stack || error.message)) || String(error);
+    root.dataset.viewerError = String((error && error.message) || error);
+    const box = $("error");
+    box.hidden = false;
+    box.textContent = "The viewer stopped with an error:\n\n" + text;
+  }
+  window.addEventListener("error", (event) => fail(event.error || event.message));
+
+  const DATA = JSON.parse($("run-data").textContent);
+  const FLAG = DATA.flags;
+  const EVENT_NAMES = {
+    collision: "Collision", wall_collision: "Wall collision", near_miss: "Near miss", yield: "Yield",
+    handoff: "Handoff", reciprocity_violation: "Violation", arrival: "Arrival", region: "Enters region",
+    dialogue: "Dialogue",
+  };
+  const CROWD = 12;
+
+  const canvas = $("canvas");
+  const ctx = canvas.getContext("2d");
+  const ticks = $("ticks");
+  const tctx = ticks.getContext("2d");
+
+  const state = {
+    run: null, index: 0, t: 0, playing: false, speed: 1, lastFrame: null,
+    selected: null, focus: [], view: { scale: 40, cx: 0, cy: 0 }, userView: false,
+    hidden: new Set(), dirty: true, colours: {}, width: 0, height: 0,
+  };
+  const opt = {};
+  ["trails", "paths", "labels", "velocity", "wanted", "sensing", "arrived", "follow"].forEach((name) => {
+    const box = $("opt-" + name);
+    opt[name] = box.checked;
+    box.addEventListener("change", () => { opt[name] = box.checked; state.dirty = true; });
+  });
+
+  // --- colours, from the CSS variables, so that light and dark both work -----------------------
+  function readColours() {
+    const style = getComputedStyle(root);
+    const get = (name) => style.getPropertyValue(name).trim();
+    const c = {};
+    ["bg", "text", "muted", "border", "stage", "grid", "wall", "segment", "segment-edge", "ring-exposed",
+     "ring-fallback", "ring-arbiter", "overlap", "focus", "accent"].forEach((name) => { c[name] = get("--" + name); });
+    c.palette = [0, 1, 2, 3, 4, 5].map((k) => get("--c" + k));
+    c.event = {};
+    Object.keys(EVENT_NAMES).forEach((name) => { c.event[name] = get("--ev-" + name) || c.muted; });
+    state.colours = c;
+  }
+  readColours();
+  if (window.matchMedia) {
+    const scheme = window.matchMedia("(prefers-color-scheme: dark)");
+    const update = () => { readColours(); buildLegend(); buildTicks(); state.dirty = true; };
+    if (scheme.addEventListener) scheme.addEventListener("change", update);
+  }
+
+  function colourOf(agent) {
+    const run = state.run;
+    const palette = state.colours.palette;
+    if (run.agents.length <= palette.length) return palette[agent.id % palette.length];
+    return palette[run.groups.indexOf(agent.group) % palette.length];
+  }
+
+  // --- formatting --------------------------------------------------------------------------------
+  const fmt = (value, digits) => (value == null || !isFinite(value) ? "–" : Number(value).toFixed(digits));
+  function el(tag, attrs, text) {
+    const node = document.createElement(tag);
+    if (attrs) Object.entries(attrs).forEach(([key, value]) => {
+      if (key === "class") node.className = value; else if (key === "style") node.style.cssText = value; else node.setAttribute(key, value);
+    });
+    if (text != null) node.textContent = text;
+    return node;
+  }
+  function fillDl(dl, rows) {
+    dl.replaceChildren();
+    rows.forEach(([key, value]) => { dl.append(el("dt", null, key), el("dd", null, value)); });
+  }
+
+  // --- where each agent is at time t ---------------------------------------------------------------
+  function sampleIndex(agent, t) {
+    const ts = agent.t;
+    let lo = 0, hi = ts.length - 1;
+    if (hi <= 0 || t <= ts[0]) return 0;
+    if (t >= ts[hi]) return hi;
+    while (hi - lo > 1) {
+      const mid = (lo + hi) >> 1;
+      if (ts[mid] <= t) lo = mid; else hi = mid;
+    }
+    return lo;
+  }
+  function agentAt(agent, t) {
+    const i = sampleIndex(agent, t);
+    const ts = agent.t;
+    let x = agent.x[i], y = agent.y[i];
+    if (i < ts.length - 1 && t > ts[i]) {
+      const f = (t - ts[i]) / (ts[i + 1] - ts[i]);
+      x += f * (agent.x[i + 1] - x);
+      y += f * (agent.y[i + 1] - y);
+    }
+    const arrived = agent.arrival != null && t >= agent.arrival - 1e-9;
+    const moving = !arrived && agent.vx[i] != null;
+    return {
+      x, y, i, arrived,
+      vx: moving ? agent.vx[i] : 0, vy: moving ? agent.vy[i] : 0,
+      wx: moving ? agent.wx[i] : null, wy: moving ? agent.wy[i] : null,
+      h: agent.h[i], f: arrived ? 0 : agent.f[i] || 0, n: agent.n[i],
+    };
+  }
+
+  // --- choosing a run ------------------------------------------------------------------------------
+  function selectRun(index) {
+    const run = DATA.runs[index];
+    state.index = index;
+    state.run = run;
+    if (!run.groups) run.groups = Array.from(new Set(run.agents.map((a) => a.group)));
+    run.crowd = run.agents.length > CROWD;
+    run.byId = new Map(run.agents.map((a) => [a.id, a]));
+    state.t = 0;
+    state.selected = null;
+    state.focus = [];
+    setPlaying(false);
+    state.hidden = new Set();
+    if (run.crowd) { state.hidden.add("near_miss"); state.hidden.add("yield"); }
+    $("opt-labels").checked = opt.labels = !run.crowd;
+    $("wanted-wrap").hidden = run.kind !== "avoidance";
+    $("sensing-wrap").hidden = !run.agents.some((a) => a.sensing);
+    $("title").textContent = run.experiment + " / " + run.run_id;
+    $("subtitle").textContent = (run.kind === "avoidance" ? "Avoidance run (issue #26)" : "Negotiation run (issue #24)") +
+      " · " + run.scenario + " · " + run.agents.length + " agents" + (run.description ? " · " + run.description : "");
+    $("picker").value = String(index);
+    fillDl($("summary"), run.summary);
+    buildLegend();
+    buildEvents();
+    buildConversation();
+    state.userView = false;
+    fitView();
+    buildTicks();
+    updateAgentPanel();
+    state.dirty = true;
+  }
+
+  function bounds(run) {
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    const add = (x, y) => { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; };
+    run.walls.forEach((w) => { add(w[0], w[1]); add(w[2], w[3]); });
+    run.segments.forEach((s) => { add(s[0], s[1]); add(s[2], s[3]); });
+    run.agents.forEach((a) => {
+      a.path.forEach((p) => add(p[0], p[1]));
+      for (let k = 0; k < a.t.length; k++) add(a.x[k], a.y[k]);
+    });
+    if (!isFinite(x0)) { x0 = -1; y0 = -1; x1 = 1; y1 = 1; }
+    const pad = Math.max(0.6, 0.06 * Math.max(x1 - x0, y1 - y0));
+    return [x0 - pad, y0 - pad, x1 + pad, y1 + pad];
+  }
+  function fitView() {
+    if (!state.run || !state.width) return;
+    const [x0, y0, x1, y1] = bounds(state.run);
+    const scale = Math.min(state.width / (x1 - x0), (state.height - 30) / (y1 - y0));
+    state.view = { scale: Math.max(1, Math.min(scale, 400)), cx: (x0 + x1) / 2, cy: (y0 + y1) / 2 };
+    state.fitScale = state.view.scale;
+    state.dirty = true;
+  }
+
+  // --- the side panel ----------------------------------------------------------------------------------
+  function legendItem(swatch, text) {
+    const li = el("li");
+    li.append(swatch, el("span", null, text));
+    return li;
+  }
+  function buildLegend() {
+    const run = state.run;
+    if (!run) return;
+    const c = state.colours;
+    const list = $("legend");
+    list.replaceChildren();
+    if (run.agents.length <= c.palette.length) {
+      run.agents.forEach((a) => list.append(legendItem(el("span", { class: "sw", style: "background:" + colourOf(a) }), "agent " + a.id + " (" + a.group + ")")));
+    } else {
+      run.groups.forEach((g) => {
+        const count = run.agents.filter((a) => a.group === g).length;
+        const any = run.agents.find((a) => a.group === g);
+        list.append(legendItem(el("span", { class: "sw", style: "background:" + colourOf(any) }), g + " (" + count + " agents)"));
+      });
+    }
+    if (run.kind === "avoidance") {
+      list.append(legendItem(el("span", { class: "sw ring", style: "border-color:" + c["ring-exposed"] }), "ORCA is changing the velocity it wants (exposed)"));
+      list.append(legendItem(el("span", { class: "sw ring", style: "border-color:" + c["ring-fallback"] + ";border-style:dashed" }), "no allowed velocity: ORCA's fallback chose"));
+      list.append(legendItem(el("span", { class: "sw ring", style: "border-color:" + c["ring-arbiter"] }), "held by the arbiter (L leader, F follower)"));
+    } else {
+      list.append(legendItem(el("span", { class: "sw ring", style: "border-color:" + c["ring-arbiter"] }), "in a conflict the arbiter is managing (L leader, F follower)"));
+    }
+    list.append(legendItem(el("span", { class: "sw ring", style: "border-color:" + c.overlap + ";border-style:dashed" }), "bodies overlapping (a collision)"));
+    list.append(legendItem(el("span", { class: "sw", style: "background:" + c.muted + ";opacity:0.3" }), "arrived" + (run.kind === "avoidance" ? " (has left the scene)" : "")));
+    list.append(legendItem(el("span", { class: "sw square", style: "background:" + c.wall }), "wall"));
+    if (run.segments.length) list.append(legendItem(el("span", { class: "sw square", style: "background:" + c.segment + ";border:1px dashed " + c["segment-edge"] }), "single-file segment"));
+  }
+
+  function eventVisible(event) { return !state.hidden.has(event.type); }
+
+  function buildEvents() {
+    const run = state.run;
+    const list = $("events");
+    const filters = $("filters");
+    list.replaceChildren();
+    filters.replaceChildren();
+    const counts = {};
+    run.events.forEach((e) => { counts[e.type] = (counts[e.type] || 0) + 1; });
+    $("events-title").textContent = "Events (" + run.events.length + ")";
+    Object.keys(counts).forEach((type) => {
+      const chip = el("button", { class: "chip", "aria-pressed": String(!state.hidden.has(type)), title: "Show or hide these events" });
+      chip.append(el("span", { class: "dot", style: "background:" + (state.colours.event[type] || state.colours.muted) }), el("span", null, (EVENT_NAMES[type] || type) + " " + counts[type]));
+      chip.addEventListener("click", () => {
+        if (state.hidden.has(type)) state.hidden.delete(type); else state.hidden.add(type);
+        chip.setAttribute("aria-pressed", String(!state.hidden.has(type)));
+        renderEventList();
+        buildTicks();
+      });
+      filters.append(chip);
+    });
+    renderEventList();
+  }
+  function renderEventList() {
+    const run = state.run;
+    const list = $("events");
+    list.replaceChildren();
+    const shown = run.events.filter(eventVisible);
+    if (!shown.length) { list.append(el("li", { class: "empty" }, run.events.length ? "All hidden by the filters above." : "Nothing happened that is logged as an event.")); return; }
+    const limit = 400;
+    shown.slice(0, limit).forEach((event) => {
+      const li = el("li");
+      li.dataset.t = event.t;
+      const button = el("button", { style: "border-left-color:" + (state.colours.event[event.type] || state.colours.muted) });
+      button.append(el("span", { class: "ev-t" }, fmt(event.t, 1) + " s"), el("span", null, event.text));
+      button.addEventListener("click", () => {
+        setPlaying(false);
+        seek(Math.max(0, event.t - 1));
+        state.focus = event.agents || [];
+        if (state.focus.length) state.selected = state.focus[0];
+        updateAgentPanel();
+        state.dirty = true;
+      });
+      li.append(button);
+      list.append(li);
+    });
+    if (shown.length > limit) list.append(el("li", { class: "empty" }, (shown.length - limit) + " more not listed; use the filters to narrow the list."));
+    markPastEvents();
+  }
+  function markPastEvents() {
+    $("events").querySelectorAll("li[data-t]").forEach((li) => { li.classList.toggle("past", Number(li.dataset.t) > state.t); });
+  }
+
+  function buildConversation() {
+    const run = state.run;
+    const section = $("talk-section");
+    const list = $("talk");
+    list.replaceChildren();
+    section.hidden = !run.conversation.length;
+    run.conversation.forEach((turn) => {
+      const li = el("li");
+      li.dataset.t = turn.t;
+      const agent = run.byId.get(Number(turn.speaker));
+      li.style.borderLeft = "3px solid " + (agent ? colourOf(agent) : state.colours.muted);
+      li.append(el("div", { class: "stance" }, "agent " + turn.speaker + " · " + (turn.stance || "") + " · " + fmt(turn.t, 1) + " s"), el("div", null, turn.message));
+      list.append(li);
+    });
+  }
+
+  function updateAgentPanel() {
+    const box = $("agent");
+    const run = state.run;
+    const agent = state.selected == null ? null : run.byId.get(state.selected);
+    if (!agent) {
+      box.replaceChildren(el("p", { class: "empty" }, "Click an agent to see what it knows and does."));
+      box.dataset.agent = "";
+      return;
+    }
+    const now = agentAt(agent, state.t);
+    const head = el("div", { class: "agent-head" });
+    head.append(el("span", { class: "sw", style: "background:" + colourOf(agent) }), el("span", null, "Agent " + agent.id + " (" + agent.group + ")"));
+    const live = [
+      ["Position", fmt(now.x, 2) + ", " + fmt(now.y, 2) + " m"],
+      ["Speed", now.arrived ? "arrived" : fmt(Math.hypot(now.vx, now.vy), 2) + " m/s"],
+    ];
+    if (run.kind === "avoidance" && !now.arrived && now.wx != null) live.push(["Wanted", fmt(Math.hypot(now.wx, now.wy), 2) + " m/s"]);
+    const flags = [];
+    if (now.f & FLAG.exposed) flags.push("ORCA is changing what it wants");
+    if (now.f & FLAG.fallback) flags.push("no allowed velocity (fallback)");
+    if (now.f & FLAG.arbiter) flags.push("held by the arbiter");
+    if (now.f & FLAG.leader) flags.push("leader");
+    if (now.f & FLAG.follower) flags.push("follower");
+    if (now.f & FLAG.dialogue) flags.push("negotiating");
+    live.push(["Now", now.arrived ? "arrived at " + fmt(agent.arrival, 1) + " s" : (flags.join("; ") || "walking freely")]);
+    if (now.n != null && !now.arrived) live.push(["Neighbours perceived", String(now.n)]);
+    const liveDl = el("dl");
+    fillDl(liveDl, live);
+    const fixed = el("dl");
+    fillDl(fixed, agent.details);
+    box.replaceChildren(head, liveDl, el("h2", null, "About it"), fixed);
+    box.dataset.agent = String(agent.id);
+  }
+
+  // --- time ------------------------------------------------------------------------------------------
+  function seek(t) {
+    const run = state.run;
+    state.t = Math.max(0, Math.min(run.end_time, t));
+    $("scrub").value = String(Math.round((state.t / Math.max(run.end_time, 1e-9)) * 10000));
+    markPastEvents();
+    markConversation();
+    state.dirty = true;
+  }
+  function markConversation() {
+    $("talk").querySelectorAll("li").forEach((li) => { li.classList.toggle("future", Number(li.dataset.t) > state.t + 1e-9); });
+  }
+  function setPlaying(playing) {
+    if (playing && state.run && state.t >= state.run.end_time - 1e-9) seek(0);
+    state.playing = playing;
+    state.lastFrame = null;
+    const button = $("play");
+    button.textContent = playing ? "❚❚ Pause" : "▶ Play";
+    button.setAttribute("aria-label", playing ? "Pause" : "Play");
+  }
+  function stepBy(seconds) { setPlaying(false); seek(state.t + seconds); updateAgentPanel(); }
+
+  // --- drawing ----------------------------------------------------------------------------------------
+  function toScreen(x, y) {
+    const v = state.view;
+    return [(x - v.cx) * v.scale + state.width / 2, state.height / 2 - (y - v.cy) * v.scale];
+  }
+  function toWorld(px, py) {
+    const v = state.view;
+    return [(px - state.width / 2) / v.scale + v.cx, (state.height / 2 - py) / v.scale + v.cy];
+  }
+  function niceLength(target) {
+    const options = [0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100, 200];
+    return options.find((value) => value >= target) || 500;
+  }
+  function arrow(x0, y0, x1, y1, colour, dashed) {
+    const length = Math.hypot(x1 - x0, y1 - y0);
+    if (length < 2) return;
+    ctx.save();
+    ctx.strokeStyle = colour; ctx.fillStyle = colour; ctx.lineWidth = 2;
+    if (dashed) ctx.setLineDash([4, 3]);
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+    ctx.setLineDash([]);
+    const angle = Math.atan2(y1 - y0, x1 - x0), head = Math.min(8, length / 2);
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x1 - head * Math.cos(angle - 0.45), y1 - head * Math.sin(angle - 0.45));
+    ctx.lineTo(x1 - head * Math.cos(angle + 0.45), y1 - head * Math.sin(angle + 0.45));
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+
+  function overlapping(run, t, positions) {
+    const pairs = [];
+    if (run.kind === "avoidance") {
+      const slack = run.dt / 2;
+      run.events.forEach((e) => {
+        if (e.type === "collision" && t >= e.t - slack && t <= (e.t_end == null ? e.t : e.t_end) + slack) pairs.push(e.agents);
+        if (e.type === "wall_collision" && t >= e.t - slack && t <= (e.t_end == null ? e.t : e.t_end) + slack) pairs.push(e.agents);
+      });
+    } else {
+      const list = run.agents;
+      for (let a = 0; a < list.length; a++) for (let b = a + 1; b < list.length; b++) {
+        const p = positions[a], q = positions[b];
+        if (Math.hypot(p.x - q.x, p.y - q.y) < list[a].radius + list[b].radius - 1e-9) pairs.push([list[a].id, list[b].id]);
+      }
+    }
+    return new Set(pairs.flat());
+  }
+
+  function draw() {
+    const run = state.run;
+    if (!run) return;
+    const c = state.colours;
+    const dpr = window.devicePixelRatio || 1;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = c.stage;
+    ctx.fillRect(0, 0, state.width, state.height);
+    const scale = state.view.scale;
+    const t = state.t;
+    const positions = run.agents.map((a) => agentAt(a, t));
+
+    if (opt.follow && state.selected != null) {
+      const k = run.agents.findIndex((a) => a.id === state.selected);
+      if (k >= 0) { state.view.cx = positions[k].x; state.view.cy = positions[k].y; }
+    }
+
+    // A one-metre grid, when it is not too dense to read.
+    if (scale >= 12) {
+      const [wx0, wy1] = toWorld(0, 0), [wx1, wy0] = toWorld(state.width, state.height);
+      ctx.strokeStyle = c.grid; ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let gx = Math.ceil(wx0); gx <= wx1; gx++) { const [sx] = toScreen(gx, 0); ctx.moveTo(sx, 0); ctx.lineTo(sx, state.height); }
+      for (let gy = Math.ceil(wy0); gy <= wy1; gy++) { const [, sy] = toScreen(0, gy); ctx.moveTo(0, sy); ctx.lineTo(state.width, sy); }
+      ctx.stroke();
+    }
+
+    run.segments.forEach((s) => {
+      const [x0, y0] = toScreen(s[0], s[3]), [x1, y1] = toScreen(s[2], s[1]);
+      ctx.fillStyle = c.segment; ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+      ctx.save(); ctx.setLineDash([5, 4]); ctx.strokeStyle = c["segment-edge"]; ctx.strokeRect(x0, y0, x1 - x0, y1 - y0); ctx.restore();
+    });
+    ctx.fillStyle = c.wall;
+    run.walls.forEach((w) => {
+      const [x0, y0] = toScreen(w[0], w[3]), [x1, y1] = toScreen(w[2], w[1]);
+      ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+    });
+
+    if (opt.paths) {
+      ctx.save();
+      ctx.setLineDash([3, 4]); ctx.lineWidth = 1; ctx.globalAlpha = run.crowd ? 0.25 : 0.6;
+      run.agents.forEach((a) => {
+        ctx.strokeStyle = colourOf(a);
+        ctx.beginPath();
+        a.path.forEach((p, k) => { const [sx, sy] = toScreen(p[0], p[1]); if (k) ctx.lineTo(sx, sy); else ctx.moveTo(sx, sy); });
+        ctx.stroke();
+        if (!run.crowd) {
+          const [gx, gy] = toScreen(a.goal[0], a.goal[1]);
+          ctx.setLineDash([]); ctx.lineWidth = 2; ctx.globalAlpha = 0.8;
+          ctx.beginPath(); ctx.moveTo(gx - 5, gy - 5); ctx.lineTo(gx + 5, gy + 5); ctx.moveTo(gx + 5, gy - 5); ctx.lineTo(gx - 5, gy + 5); ctx.stroke();
+          ctx.setLineDash([3, 4]); ctx.lineWidth = 1; ctx.globalAlpha = 0.6;
+        }
+      });
+      ctx.restore();
+    }
+
+    if (opt.trails) {
+      const tail = run.crowd ? 5 : Infinity; // seconds of trail to draw
+      ctx.save();
+      ctx.lineJoin = "round";
+      run.agents.forEach((a, k) => {
+        const now = positions[k];
+        if (now.arrived && a.leaves && !opt.arrived) return;
+        const selected = a.id === state.selected;
+        ctx.strokeStyle = colourOf(a);
+        ctx.globalAlpha = selected ? 0.9 : 0.45;
+        ctx.lineWidth = selected ? 2.5 : 1.5;
+        ctx.beginPath();
+        let started = false;
+        const from = selected ? -Infinity : t - tail;
+        for (let s = 0; s <= now.i; s++) {
+          if (a.t[s] < from) continue;
+          const [sx, sy] = toScreen(a.x[s], a.y[s]);
+          if (started) ctx.lineTo(sx, sy); else { ctx.moveTo(sx, sy); started = true; }
+        }
+        const [sx, sy] = toScreen(now.x, now.y);
+        if (started) ctx.lineTo(sx, sy);
+        ctx.stroke();
+      });
+      ctx.restore();
+    }
+
+    const overlap = overlapping(run, t, positions);
+    const focus = new Set(state.focus);
+    run.agents.forEach((a, k) => {
+      const now = positions[k];
+      if (now.arrived && a.leaves && !opt.arrived) return;
+      const [sx, sy] = toScreen(now.x, now.y);
+      const r = Math.max(2.5, a.radius * scale);
+      const colour = colourOf(a);
+      ctx.save();
+      ctx.globalAlpha = now.arrived ? 0.28 : 0.92;
+      ctx.fillStyle = colour;
+      ctx.beginPath(); ctx.arc(sx, sy, r, 0, 2 * Math.PI); ctx.fill();
+      ctx.globalAlpha = now.arrived ? 0.4 : 1;
+      ctx.lineWidth = 1; ctx.strokeStyle = c.stage;
+      ctx.stroke();
+      // Which way it faces.
+      if (!now.arrived && r >= 5) {
+        const heading = (now.vx || now.vy) ? Math.atan2(now.vy, now.vx) : now.h;
+        ctx.strokeStyle = c.stage; ctx.lineWidth = Math.max(1.5, r / 6);
+        // Only the outer part of the radius, so that it does not cross a label in the middle.
+        const cos = Math.cos(heading), sin = Math.sin(heading);
+        ctx.beginPath(); ctx.moveTo(sx + r * 0.5 * cos, sy - r * 0.5 * sin); ctx.lineTo(sx + r * 0.95 * cos, sy - r * 0.95 * sin); ctx.stroke();
+      }
+      ctx.restore();
+
+      if (!now.arrived) {
+        const ring = (colour, width, dash, gap) => {
+          ctx.save(); ctx.strokeStyle = colour; ctx.lineWidth = width; if (dash) ctx.setLineDash(dash);
+          ctx.beginPath(); ctx.arc(sx, sy, r + gap, 0, 2 * Math.PI); ctx.stroke(); ctx.restore();
+        };
+        let gap = 2.5;
+        if (now.f & FLAG.fallback) { ring(c["ring-fallback"], 2.5, [4, 3], gap); gap += 3.5; }
+        else if (now.f & FLAG.exposed) { ring(c["ring-exposed"], 2.5, null, gap); gap += 3.5; }
+        if (now.f & (FLAG.arbiter | FLAG.in_conflict)) { ring(c["ring-arbiter"], 2, null, gap); gap += 3; }
+        if (overlap.has(a.id)) { ring(c.overlap, 3, [5, 3], gap); gap += 4; }
+      }
+      if (a.id === state.selected || focus.has(a.id)) {
+        ctx.save(); ctx.strokeStyle = c.focus; ctx.lineWidth = 1.5; ctx.setLineDash([2, 2]);
+        ctx.beginPath(); ctx.arc(sx, sy, r + 13, 0, 2 * Math.PI); ctx.stroke(); ctx.restore();
+      }
+    });
+
+    // Arrows and labels go on top of every body.
+    run.agents.forEach((a, k) => {
+      const now = positions[k];
+      if (now.arrived) return;
+      const [sx, sy] = toScreen(now.x, now.y);
+      const colour = colourOf(a);
+      const show = !run.crowd || a.id === state.selected || focus.has(a.id);
+      if (opt.velocity && (show || run.agents.length <= 200)) arrow(sx, sy, sx + now.vx * scale, sy - now.vy * scale, colour, false);
+      if (opt.wanted && now.wx != null && show) arrow(sx, sy, sx + now.wx * scale, sy - now.wy * scale, c.muted, true);
+    });
+    if (opt.sensing && state.selected != null) {
+      const k = run.agents.findIndex((a) => a.id === state.selected);
+      const a = run.agents[k];
+      if (a && a.sensing && !positions[k].arrived) {
+        const [sx, sy] = toScreen(positions[k].x, positions[k].y);
+        ctx.save(); ctx.strokeStyle = colourOf(a); ctx.globalAlpha = 0.6; ctx.setLineDash([6, 5]); ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(sx, sy, a.sensing * scale, 0, 2 * Math.PI); ctx.stroke(); ctx.restore();
+      }
+    }
+    if (opt.labels || state.selected != null) {
+      ctx.save();
+      ctx.font = "600 12px system-ui, -apple-system, 'Segoe UI', sans-serif";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      run.agents.forEach((a, k) => {
+        const now = positions[k];
+        if (!opt.labels && a.id !== state.selected) return;
+        if (now.arrived && a.leaves && !opt.arrived) return;
+        const [sx, sy] = toScreen(now.x, now.y);
+        const r = Math.max(2.5, a.radius * scale);
+        let text = String(a.id);
+        if (now.f & FLAG.leader) text += " L"; else if (now.f & FLAG.follower) text += " F";
+        // Inside the body when it is big enough to hold the text, otherwise just above it.
+        const inside = r >= 4 + 3.2 * text.length;
+        ctx.globalAlpha = now.arrived ? 0.5 : 1;
+        ctx.fillStyle = inside ? "#ffffff" : c.text;
+        ctx.font = (inside ? "600 11px" : "600 12px") + " system-ui, -apple-system, 'Segoe UI', sans-serif";
+        ctx.fillText(text, sx, inside ? sy : sy - r - 9);
+      });
+      ctx.restore();
+    }
+
+    // Scale bar, bottom left.
+    const length = niceLength(90 / scale);
+    const px = length * scale;
+    ctx.save();
+    ctx.strokeStyle = c.text; ctx.fillStyle = c.text; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(14, state.height - 18); ctx.lineTo(14 + px, state.height - 18); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(14, state.height - 23); ctx.lineTo(14, state.height - 13); ctx.moveTo(14 + px, state.height - 23); ctx.lineTo(14 + px, state.height - 13); ctx.stroke();
+    ctx.font = "12px system-ui, sans-serif"; ctx.textBaseline = "bottom";
+    ctx.fillText(length >= 1 ? length + " m" : Math.round(length * 100) + " cm", 14, state.height - 24);
+    ctx.restore();
+
+    // Time, and what the agents are doing in a crowd.
+    const overlay = $("overlay");
+    const lines = ["t = " + fmt(t, 2) + " s"];
+    if (run.crowd) {
+      const arrived = positions.filter((p) => p.arrived).length;
+      lines.push(arrived + " of " + run.agents.length + " arrived" + (overlap.size ? " · " + overlap.size + " overlapping" : ""));
+    }
+    overlay.replaceChildren(...lines.map((line) => el("div", null, line)));
+    if (run.stride > 1) overlay.append(el("div", { class: "note" }, "logged every " + run.stride + " steps (" + fmt(run.stride * run.dt, 1) + " s): in between, positions are interpolated"));
+    $("clock").textContent = fmt(t, 1) + " / " + fmt(run.end_time, 1) + " s · " + run.status;
+  }
+
+  function buildTicks() {
+    const run = state.run;
+    if (!run) return;
+    const dpr = window.devicePixelRatio || 1;
+    const width = ticks.clientWidth || 300, height = ticks.clientHeight || 12;
+    ticks.width = Math.round(width * dpr); ticks.height = Math.round(height * dpr);
+    tctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    tctx.clearRect(0, 0, width, height);
+    const end = Math.max(run.end_time, 1e-9);
+    // The thumb of a range input does not reach the very ends; keep the ticks under it.
+    const inset = 8, span = Math.max(1, width - 2 * inset);
+    run.events.filter(eventVisible).forEach((e) => {
+      const x0 = inset + (e.t / end) * span;
+      const x1 = e.t_end != null ? inset + (e.t_end / end) * span : x0;
+      tctx.fillStyle = state.colours.event[e.type] || state.colours.muted;
+      tctx.globalAlpha = 0.85;
+      tctx.fillRect(x0 - 1, 2, Math.max(2, x1 - x0 + 2), height - 4);
+    });
+    tctx.globalAlpha = 1;
+  }
+
+  // --- size and input --------------------------------------------------------------------------------------
+  function resize() {
+    const wrap = $("wrap");
+    const width = wrap.clientWidth, height = wrap.clientHeight;
+    if (!width || !height) return;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.round(width * dpr); canvas.height = Math.round(height * dpr);
+    const first = !state.width;
+    state.width = width; state.height = height;
+    if (first || !state.userView) fitView();
+    buildTicks();
+    state.dirty = true;
+  }
+  if (window.ResizeObserver) new ResizeObserver(resize).observe($("wrap"));
+  window.addEventListener("resize", resize);
+
+  function hit(px, py) {
+    const run = state.run;
+    const [wx, wy] = toWorld(px, py);
+    let best = null, bestDistance = Infinity;
+    run.agents.forEach((a) => {
+      const now = agentAt(a, state.t);
+      if (now.arrived && a.leaves && !opt.arrived) return;
+      const distance = Math.hypot(now.x - wx, now.y - wy);
+      const reach = Math.max(a.radius, 8 / state.view.scale);
+      if (distance <= reach && distance < bestDistance) { best = a.id; bestDistance = distance; }
+    });
+    return best;
+  }
+
+  let drag = null;
+  canvas.addEventListener("pointerdown", (event) => {
+    drag = { x: event.clientX, y: event.clientY, cx: state.view.cx, cy: state.view.cy, moved: false };
+    canvas.setPointerCapture(event.pointerId);
+  });
+  canvas.addEventListener("pointermove", (event) => {
+    if (!drag) return;
+    const dx = event.clientX - drag.x, dy = event.clientY - drag.y;
+    if (!drag.moved && Math.hypot(dx, dy) < 4) return;
+    drag.moved = true;
+    canvas.classList.add("dragging");
+    state.view.cx = drag.cx - dx / state.view.scale;
+    state.view.cy = drag.cy + dy / state.view.scale;
+    state.userView = true;
+    state.dirty = true;
+  });
+  canvas.addEventListener("pointerup", (event) => {
+    if (drag && !drag.moved) {
+      const box = canvas.getBoundingClientRect();
+      state.selected = hit(event.clientX - box.left, event.clientY - box.top);
+      state.focus = [];
+      updateAgentPanel();
+      state.dirty = true;
+    }
+    drag = null;
+    canvas.classList.remove("dragging");
+  });
+  canvas.addEventListener("dblclick", () => { state.userView = false; fitView(); });
+  canvas.addEventListener("wheel", (event) => {
+    event.preventDefault();
+    const box = canvas.getBoundingClientRect();
+    const px = event.clientX - box.left, py = event.clientY - box.top;
+    const [wx, wy] = toWorld(px, py);
+    const factor = Math.exp(-event.deltaY * 0.0015);
+    const floor = (state.fitScale || 1) / 20;
+    state.view.scale = Math.max(floor, Math.min(2000, state.view.scale * factor));
+    const [nx, ny] = toWorld(px, py);
+    state.view.cx += wx - nx; state.view.cy += wy - ny;
+    state.userView = true;
+    state.dirty = true;
+  }, { passive: false });
+
+  $("play").addEventListener("click", () => setPlaying(!state.playing));
+  $("back").addEventListener("click", () => stepBy(-state.run.dt));
+  $("fwd").addEventListener("click", () => stepBy(state.run.dt));
+  $("restart").addEventListener("click", () => { setPlaying(false); seek(0); updateAgentPanel(); });
+  $("fit").addEventListener("click", () => { state.userView = false; fitView(); });
+  $("speed").addEventListener("change", (event) => { state.speed = Number(event.target.value); });
+  $("scrub").addEventListener("input", (event) => {
+    seek((Number(event.target.value) / 10000) * state.run.end_time);
+    updateAgentPanel();
+  });
+  $("picker").addEventListener("change", (event) => selectRun(Number(event.target.value)));
+  document.addEventListener("keydown", (event) => {
+    const tag = event.target && event.target.tagName;
+    if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA" || (tag === "BUTTON" && (event.key === " " || event.key === "Enter"))) return;
+    const big = event.shiftKey ? 1 : null;
+    if (event.key === " ") { event.preventDefault(); setPlaying(!state.playing); }
+    else if (event.key === "ArrowRight") { event.preventDefault(); stepBy(big || state.run.dt); }
+    else if (event.key === "ArrowLeft") { event.preventDefault(); stepBy(-(big || state.run.dt)); }
+    else if (event.key === "Home") { setPlaying(false); seek(0); updateAgentPanel(); }
+    else if (event.key === "End") { setPlaying(false); seek(state.run.end_time); updateAgentPanel(); }
+    else if (event.key === "f" || event.key === "F") { state.userView = false; fitView(); }
+    else if (event.key === "Escape") { state.selected = null; state.focus = []; updateAgentPanel(); state.dirty = true; }
+    else if (event.key === "+" || event.key === "=" || event.key === "-") {
+      const speed = $("speed");
+      const index = Math.max(0, Math.min(speed.options.length - 1, speed.selectedIndex + (event.key === "-" ? -1 : 1)));
+      speed.selectedIndex = index; state.speed = Number(speed.value);
+    }
+  });
+
+  let lastPanel = 0;
+  function frame(now) {
+    if (state.playing) {
+      if (state.lastFrame != null) {
+        const elapsed = Math.min(0.25, (now - state.lastFrame) / 1000);
+        seek(state.t + elapsed * state.speed);
+        if (state.t >= state.run.end_time - 1e-9) setPlaying(false);
+      }
+      state.lastFrame = now;
+      if (now - lastPanel > 120) { updateAgentPanel(); lastPanel = now; }
+    }
+    if (state.dirty || state.playing || opt.follow) { draw(); state.dirty = false; }
+    requestAnimationFrame(frame);
+  }
+
+  // --- start -------------------------------------------------------------------------------------------------
+  try {
+    const picker = $("picker");
+    DATA.runs.forEach((run, index) => picker.append(el("option", { value: String(index) }, run.run_id + " · " + run.status)));
+    $("picker-wrap").hidden = DATA.runs.length < 2;
+
+    const params = new URLSearchParams(location.hash.replace(/^#/, ""));
+    const wanted = params.get("run");
+    let first = 0;
+    if (wanted) { const k = DATA.runs.findIndex((run) => run.key === wanted || run.run_id === wanted); if (k >= 0) first = k; }
+    resize();
+    selectRun(first);
+    if (params.has("t")) seek(Number(params.get("t")) || 0);
+    if (params.has("agent")) { state.selected = Number(params.get("agent")); updateAgentPanel(); }
+    ["velocity", "wanted", "sensing"].forEach((name) => {
+      if (params.get(name) === "1") { $("opt-" + name).checked = true; opt[name] = true; }
+    });
+    draw();
+    root.dataset.viewerReady = String(DATA.runs.length);
+    if (params.has("selftest")) selfTest();
+    else if (params.get("play") === "1") setPlaying(true);
+    requestAnimationFrame(frame);
+  } catch (error) {
+    fail(error);
+  }
+
+  // Draws every run at several moments with every option on, so that a headless browser can
+  // check that nothing throws (used when the viewer itself is tested).
+  function selfTest() {
+    const report = [];
+    DATA.runs.forEach((run, index) => {
+      selectRun(index);
+      Object.keys(opt).forEach((name) => { opt[name] = true; });
+      [0, run.end_time / 3, run.end_time / 2, run.end_time].forEach((t) => {
+        seek(t);
+        state.selected = run.agents[run.agents.length - 1].id;
+        updateAgentPanel();
+        draw();
+      });
+      $("events").querySelectorAll("button").forEach((button, k) => { if (k < 3) button.click(); });
+      draw();
+      report.push(run.run_id + ":" + run.agents.length + ":" + run.events.length);
+    });
+    selectRun(0);
+    root.dataset.selftest = "ok " + report.join(" ");
+  }
+})();
+</script>
+</body>
+</html>

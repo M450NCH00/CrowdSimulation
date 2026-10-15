@@ -45,7 +45,7 @@ from ..negotiation.protocol import (
     Dialogue,
     NegotiationSettings,
 )
-from ..runlog.schema import LOG_SCHEMA_VERSION, validate_run_dir
+from ..runlog.schema import LOG_SCHEMA_VERSION, RUN_KIND_NEGOTIATION, validate_run_dir
 from ..runlog.writer import RunLogger
 from ..scenarios.base import ScenarioSpec
 from ..scenarios.registry import build_scenario
@@ -93,6 +93,7 @@ def resolved_config(
     client_info = client.describe() if (client is not None and dialogue is not None) else {"client": None}
     return {
         "log_schema_version": LOG_SCHEMA_VERSION,
+        "run_kind": RUN_KIND_NEGOTIATION,
         "experiment_name": plan.experiment_name,
         "run_id": plan.run_id,
         "run_index": plan.index,

@@ -1,0 +1,42 @@
+# Issue #26, behaviour check 2: who does the avoiding. The head-on corridor with the
+# responsibility shares at (0.5, 0.5), the ORCA standard, against (1.0, 0.0), where agent 0
+# takes all of it. A third pair, (0.3, 0.3), sums to less than 1 and is a reciprocity
+# violation. Each is run with no side preference and with both agents keeping left. No
+# model is called.
+#
+#   python run_experiment.py configs/avoidance/si1_head_on_responsibility.yaml
+schema_version: 1
+layer: avoidance
+experiment_name: si1_head_on_responsibility
+description: Head-on in a wide corridor. How the responsibility shares decide who deviates.
+
+scenario: configs/scenarios/wide_corridor_head_on.yaml
+
+design:
+  seed: 26200
+  factors:
+    layout:
+      - name: symmetric
+      - name: offset
+        scenario_overrides: {geometry: {lateral_offsets: [0.05, -0.05]}}
+    side:
+      - name: no_side
+        directives: {provider: static}
+      - name: both_left
+        directives: {provider: static, default: {side_preference: left}}
+    shares:
+      - name: half_half          # (0.5, 0.5)
+        directives:
+          agents:
+            0: {responsibility_share: 0.5}
+            1: {responsibility_share: 0.5}
+      - name: all_on_0           # (1.0, 0.0)
+        directives:
+          agents:
+            0: {responsibility_share: 1.0}
+            1: {responsibility_share: 0.0}
+      - name: short              # (0.3, 0.3): sums to 0.6, a reciprocity violation
+        directives:
+          agents:
+            0: {responsibility_share: 0.3}
+            1: {responsibility_share: 0.3}

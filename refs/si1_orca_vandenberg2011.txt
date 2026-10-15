@@ -1,0 +1,756 @@
+Reciprocal n-body Collision Avoidance
+
+Jur van den Berg, Stephen J. Guy, Ming Lin, and Dinesh Manocha
+
+Abstract In this paper, we present a formal approach to reciprocal n-body collision
+avoidance, where multiple mobile robots need to avoid collisions with each other
+while moving in a common workspace. In our formulation, each robot acts fully in-
+dependently, and does not communicate with other robots. Based on the definition
+of velocity obstacles [5], we derive sufficient conditions for collision-free motion
+by reducing the problem to solving a low-dimensional linear program. We test our
+approach on several dense and complex simulation scenarios involving thousands
+of robots and compute collision-free actions for all of them in only a few millisec-
+onds. To the best of our knowledge, this method is the first that can guarantee local
+collision-free motion for a large number of robots in a cluttered workspace.
+
+1 Introduction
+
+Collision avoidance is a fundamental problem in robotics. The problem can gen-
+erally be defined in the context of an autonomous mobile robot navigating in an
+environment with obstacles and/or other moving entities, where the robot employs a
+continuous cycle of sensing and acting. In each cycle, an action for the robot must be
+computed based on local observations of the environment, such that the robot stays
+free of collisions with the obstacles and the other moving entities, while making
+progress towards a goal.1
+
+The authors are with the Department of Computer Science, University of North Carolina at Chapel
+Hill, USA. E-mail: {berg, sjguy, lin, dm}@cs.unc.edu.
+This research is supported in part by ARO Contracts W911NF-04-1-0088, NSF award 0636208,
+DARPA/RDECOM Contracts N61339-04-C-0043 and WR91CRB-08-C-0137, Intel, and Mi-
+crosoft.
+1 Note that the problem of (local) collision-avoidance differs from motion planning, where the
+global environment of the robot is considered to be known and a complete path towards a goal
+configuration is planned at once [18], and collision detection, which simply determines if two
+geometric objects intersect or not (see e.g. [17]).
+
+                                                                                                                     1
+2  Jur van den Berg, Stephen J. Guy, Ming Lin, and Dinesh Manocha
+
+   The problem of collision avoidance has been well studied for one robot avoid-
+ing static or moving obstacles. In this paper, we address the more involved and less
+studied problem of reciprocal n-body collision avoidance, where collisions need to
+be avoided among multiple robots (or any decision-making entities). This problem
+has important applications in many areas in robotics, such as multi-robot naviga-
+tion and coordination among swarms of robots [20]. It is also an key component in
+crowd simulation for computer graphics and VR [11, 21], modeling of non-player
+characters in AI, studying flocks of birds and fish in biology [23], and real-time (air)
+traffic control [16]. In this paper, we propose a fast and novel method that simulta-
+neously determines actions for many (possibly thousands of) robots that each may
+have different objectives. The actions are computed for each robot independently,
+without communication among the robots or central coordination. Yet, we prove
+that our method guarantees collision-free motion for each of the robots.
+
+   We use a simplified robot model, where each robot is assumed to have a sim-
+ple shape (circular or convex polygon) moving in a two-dimensional workspace.
+Furthermore, we assume that the robot is holonomic, i.e. it can move in any direc-
+tion, such that the control input of each robot is simply given by a two-dimensional
+velocity vector. Also, we assume that each robot has perfect sensing, and is able
+to infer the exact shape, position and velocity of obstacles and other robots in the
+environment.
+
+   Main results: We present a rigorous approach for reciprocal n-body collision
+avoidance that provides a sufficient condition for each robot to be collision-free for
+at least a fixed amount of time into the future, only assuming that the other robots use
+the same collision-avoidance protocol. Our approach is velocity-based. That implies
+that each robot takes into account the observed velocity of other robots in order to
+avoid collisions with them, and also that the robot selects its own velocity from
+its velocity space in which certain regions are marked as `forbidden' because of the
+presence of other robots. Our formulation, "optimal reciprocal collision avoidance",
+infers for each other robot a half-plane (in velocity-space) of velocities that are
+allowed to be selected in order to guarantee collision avoidance. The robot then
+selects its optimal velocity from the intersection of all permitted half-planes, which
+can be done efficiently using linear programming. Under certain conditions with
+densely packed robots, the resulting linear program may be infeasible, in which case
+we select the `safest possible' velocity using a three-dimensional linear program.
+
+   We experimented with our approach on several complex simulation scenarios
+containing thousands of robots. As each robot is independent, we can fully paral-
+lellize the computation of the actions for each robot and report very fast real-time
+running times. Furthermore, our experiments show that our approach achieves con-
+vincing motions that are smooth and collision-free.
+
+   The rest of this paper is organized as follows. We start by discussing previous
+work in Section 2. In Section 3, we formally define the problem we address in
+this paper. We derive the half-plane of permitted velocities for optimal reciprocal
+collision avoidance of a robot with respect to another robot in Section 4, and show
+how this approach is used to navigate among multiple robots in Section 5. We report
+experimental results in Section 6 and conclude in Section 7.
+Reciprocal n-body Collision Avoidance  3
+
+2 Previous Work
+
+The problem of collision avoidance has been extensively studied. Many approaches
+assume the observed obstacles to be static (i.e. non-moving) [2, 4, 6, 7, 13, 14, 24],
+and compute an immediate action for the robot that would avert collisions with the
+obstacle, in many cases taking into account the robot's kinematics and dynamics. If
+the obstacles are also moving, such approaches typically repeatedly "replan" based
+on new readings of the positions of the obstacles. This may work well if the obstacles
+move slower than the robot, but among fast obstacles (such as crossing a highway),
+the velocity of the obstacles need to be specifically taken into account. This problem
+is generally referred to as "asteroid avoidance", and approaches typically extrapolate
+the observed velocities in order to estimate the future positions of obstacles [8, 9,
+12, 19, 22, 28].
+
+   The problem of collision avoidance becomes harder when the obstacles are
+not simply moving without considering their environment, but are also intelligent
+decision-making entities that try to avoid collisions as well. Simply considering
+them as moving obstacles may lead to oscillations if the other entity considers all
+other robots as moving obstacles as well [15, 26]. Therefore, the reactive nature of
+the other entities must be specifically taken into account in order to guarantee that
+collisions are avoided. Yet, the robot may not be able to communicate with other
+entities and may not know their intents. We call this problem reciprocal collision
+avoidance, and is the focus of this paper.
+
+   Velocity obstacles (VO) [5] have been a successful velocity-based approach to
+avoid collisions with moving obstacles; they provide a sufficient and necessary con-
+dition for a robot to select velocity that avoids collisions with an obstacle moving at
+a known velocity. This approach was extended for robot-robot collision avoidance
+with the definition of Reciprocal Velocity Obstacles (RVO) [10, 26], where both
+robots were assumed to select a velocity outside the RVO induced by the other robot.
+However, this formulation only guarantees collision-avoidance under specific con-
+ditions, and does not provide a sufficient condition for collision-avoidance in gen-
+eral.2 In this paper, we present the principle of optimal reciprocal collision avoid-
+ance (ORCA) that overcomes this limitation; ORCA provides a sufficient condition
+for multiple robots to avoid collisions among one another, and thus can guarantee
+collision-free navigation.
+
+   We note that it is possible to provide a sufficient and necessary condition for
+multiple (say n) robots to select collision-avoiding velocities, by defining a com-
+posite velocity obstacle in the 2n-dimensional space of velocities of all n robots
+[1]. However, this is not only computationally impractical, it also requires central
+coordination among robots. This is incompatible with the type of distributed multi-
+robot navigation we focus on in this paper, in which each robot independently and
+simultaneously selects its velocity from its own 2-D velocity space.
+
+2 In fact, both robots selecting a velocity inside each other's RVO is a sufficient condition to end
+up in a collision.
+4                  Jur van den Berg, Stephen J. Guy, Ming Lin, and Dinesh Manocha
+
+3 Problem Definition
+
+The problem we discuss in this paper is formally defined as follows. Let there be a
+set of n robots sharing an environment. For simplicity we assume the robots are disc-
+shaped and move in the plane R2 (the definitions and algorithms we present in this
+paper can easily be extended to translating polygons, and also to higher dimensions).
+Each robot A has a current position pA (the center of its disc), a current velocity
+vA and a radius rA. These parameters are part of the robot's external state, i.e. we
+assume that they can be observed by other robots. Furthermore, each robot has a
+maximum speed vmA ax and a preferred velocity vApref, which is the velocity the robot
+would assume had no other robots been in its way (for instance a velocity directed
+towards the robot's goal with a magnitude equal to the robot's preferred speed). We
+consider these parameters part of the internal state of the robot, and can therefore
+not be observed by other robots.
+
+   The task is for each robot A to independently (and simultaneously) select a new
+velocity vnAew for itself such that all robots are guaranteed to be collision-free for at
+least a preset amount of time  when they would continue to move at their new ve-
+locity. As a secondary objective, the robots should select their new velocity as close
+as possible to their preferred velocity. The robots are not allowed to communicate
+with each other, and can only use observations of the other robot's current position
+and velocity. However, each of the robots may assume that the other robots use the
+same strategy as itself to select a new velocity.
+
+   We name this problem "reciprocal n-body collision avoidance". Note that this
+problem cannot be solved using central coordination, as the preferred velocity of
+each robot is only known to the robot itself. In Section 4, we present a sufficient
+condition for each robot to select a velocity that is collision-free for (at least) 
+time. In Section 5 we show how we use this principle in a continuous cycle for
+multi-robot navigation.
+
+4 Reciprocal Collision Avoidance
+
+4.1 Preliminaries
+
+For two robots A and B, the velocity obstacle V OA |B (read: the velocity obstacle for
+A induced by B for time window ) is the set of all relative velocities of A with
+
+respect to B that will result in a collision between A and B at some moment before
+
+time  [5]. It is formally defined as follows. Let D(p, r) denote an open disc of radius
+
+r centered at p;
+
+                      D(p, r) = {q | q - p < r},                       (1)
+
+then:             V OA |B = {v | t  [0, ] :: tv  D(pB - pA, rA + rB)}
+
+                                                                       (2)
+Reciprocal n-body Collision Avoidance        5
+
+(a)  (b)                                (c)
+
+Fig. 1 (a) A configuration of two robots A and B. (b) The velocity obstacle VOA |B (gray) can
+geometrically be interpreted as a truncated cone with its apex at the origin (in velocity space)
+
+and its legs tangent to the disc of radius rA + rB centered at pB - pA. The amount of truncation
+depends on the value of ; the cone is truncated by an arc of a disc of radius (rA + rB)/ centered
+at (pB - pA)/. The velocity obstacle shown here is for  = 2. (c) The set of collision-avoiding
+velocities CAA |B(VB) for robot A given that robot B selects its velocity from some set VB (dark gray)
+is the complement of the Minkowski sum (light gray) of VOA |B and VB.
+
+The geometric interpretation of velocity obstacles is shown in Fig. 1(b). Note that
+V OA|B and V OB|A are symmetric in the origin.
+
+   Let vA and vB be current the velocities of robots A and B, respectively. The def-
+inition of the velocity obstacle implies that if vA - vB  V OA |B, or equivalently if
+vB - vA  V OB |A, then A and B will collide at some moment before time  if they
+continue moving at their current velocity. Conversely, if vA - vB  V OA|B, robot A
+and B are guaranteed to be collision-free for at least  time.
+
+   More generally, let X  Y denote the Minkowski sum of sets X and Y ;
+
+     X Y = {x + y | x  X, y  Y },            (3)
+
+then for any set VB, if vB  VB and vA  V OA|B  VB, then A and B are guaranteed
+to be collision-free at their current velocities for at least  time. This leads to the
+definition of the set of collision-avoiding velocities CAA|B(VB) for A given that B
+
+selects its velocity from VB (see Fig. 1(c)):
+
+     CAA |B(VB) = {v | v  V OA |B  VB}       (4)
+
+   We call a pair of sets VA and VB of velocities for A and B reciprocally collision-
+avoiding if VA  CAA|B(VB) and VB  CAB |A(VA). If VA = CAA |B(VB) and VB =
+CAB |A(VA), we call VA and VB reciprocally maximal.
+6                               Jur van den Berg, Stephen J. Guy, Ming Lin, and Dinesh Manocha
+
+4.2 Optimal Reciprocal Collision Avoidance
+
+Given the definitions above, we would like to choose sets of permitted velocities
+VA for A and VB for B such that CAA |B(VB) = VA and CAB |A(VA) = VB, i.e. they
+
+are reciprocally collision-avoiding and maximal and guarantee that A and B are
+
+collision-free for at least  time. Also, because A and B are individual robots, they
+
+should be able to infer their set of permitted velocities without communication with
+
+the other robot. There are infinitely many pairs of sets VA and VB that obey these
+
+requirements, but among those we select the pair that maximizes the amount of
+                                ftooroAptaimndizOatRioCnAvBe|lAocfoitrieBs,vaAonptdfoforrAmaanlldy  voBpt for B.3 We
+permitted velocities "close"                                                                        define them as
+denote these sets ORCAA|B
+
+follows. Let |V | denote the measure (i.e. area in R2) of set V ;
+
+Definition 1 (Optimal Reciprocal Collision Avoidance). ORCAA|B and ORCAB|A
+are defined such that they are reciprocally collision-avoiding and maximal, i.e.
+CAA |B(ORCAB |A) = ORCAA|B and CAB|A(ORCAA|B) = ORCAB|A, and such that for
+all other pairs of sets of reciprocally collision-avoiding velocities VA and VB (i.e.
+VA  CAA|B(VB) and VB  CAB |A(VA)), and for all radii r > 0,
+
+     |ORCAA |B  D(voApt, r)| = |ORCAB |A  D(voBpt, r)| 
+
+                                              min(|VA  D(voApt, r)|, |VB  D(voBpt, r)|).
+
+   This means that ORCAA|B and ORCAB|A contain more velocities close to voApt
+and vBopt, respectively, than any other pair of sets of reciprocally collision-avoiding
+velocities. Also, the distribution of permitted velocities is "fair", as the amount of
+
+velocities close to the optimization velocity is equal for A and B.
+
+   We can geometrically construct ORCAA |B and ORCAB |A as follows. Let us as-
+
+sume that A and B adopt velocities vAopt and vBopt, respectively, and let us assume that
+that causes A and B to be on collision course, i.e. voApt - voBpt  V OA|B. Let u be the
+
+vector from vAopt - voBpt to the closest point on the boundary of the velocity obstacle
+
+(see Fig. 2):                             v - (vAopt - vBopt)  ) - (vAopt - vBopt),
+
+                    u = ( arg min                                                                            (5)
+
+                            vV OA |B
+
+and let n be the outward normal of the boundary of V OA|B at point (voApt - vBopt) + u.
+
+Then, u is the smallest change required to the relative velocity of A and B to avert
+
+collision within  time. To "share the responsibility" of avoiding collisions among
+
+the  robots  in  a  fair  way,  robot  A  adapts  its  velocity  by  (at  least)  1  u  and         assumes  that
+                                                                                  2
+
+3 We introduce these optimization velocities to generalize the definition of ORCA. Nominally, the
+optimization velocities are equal to the current velocities, such that the robots have to deviate as
+little as possible from their current trajectories to avoid collisions. Other choices are discussed in
+detail in Section 5.2.
+Reciprocal n-body Collision Avoidance                                                                                   7
+
+Fig. 2 The set ORCAA|B of permitted velocities for A for optimal reciprocal collision avoidance
+
+with  B  is  a  half-plane  delimited  by  the  line  perpendicular    to  u  through      the  point  voApt  +  1  u,  where
+                                                                                                                 2
+u is the vector from voApt - voBpt to the closest point on the boundary of VOA|B.
+
+B takes care of the other half. Hence, the set ORCAA|B of permitted velocities for A
+
+is  the  half-plane  pointing  in      the    direction     of  n   starting      at  the  point  voApt  +    1  u.     More
+                                                                                                              2
+
+formally:
+
+                            ORCAA |B       =  {v  |  (v  -  (voApt  +  1  u))  ·  n     0}.                             (6)
+                                                                       2
+
+The set ORCAB |A for B is defined symmetrically (see Fig. 2). The above equations
+also apply if A and B are not on a collision course when adopting their optimization
+velocities, i.e. voApt - vBopt  V OA |B. In this case, both robots each will take half of the
+responsibility to remain on a collision-free trajectory.
+
+   It can be seen that ORCAA|B and ORCAB |A as constructed above are in fact opti-
+mal according to the criterion of Definition 1. Agents A and B can infer ORCAA |B
+and ORCAB |A, respectively, without communicating with each other, as long the
+
+robots can observe each other's position, radius, and optimization velocity. In Sec-
+
+tion 5.2, we discuss reasonable choices for the optimization velocity of the robots.
+
+5 n-Body Collision Avoidance
+
+In this section we show how to apply the ORCA principle as defined above to per-
+form n-body collision avoidance among multiple moving robots, and discuss how
+we can incorporate static obstacles in this framework.
+8                          Jur van den Berg, Stephen J. Guy, Ming Lin, and Dinesh Manocha
+
+Fig. 3 A schematic overview of the continuous cycle of sensing and acting that is independently
+executed by each robot.
+
+5.1 Basic Approach
+
+The overall approach is as follows. Each robot A performs a continuous cycle of
+
+sensing and acting with time step t. In each iteration, the robot acquires the radius,
+
+the current position and the current optimization velocity of the other robots (and
+
+of itself). Based on this information, the robot infers the permitted half-plane of
+
+velocities ORCAA |B with respect to each other robot B. The set of velocities that
+
+are permitted for A with respect to all robots is the intersection of the half-planes
+
+of permitted velocities induced by each other robot, and we denote this set ORCAA
+
+(see Fig. 4):
+
+               ORCAA = D(0, vmA ax)  ORCAA |B.               (7)
+
+                                              B=A
+
+Note that this definition also includes the maximum speed constraint on robot A.
+   Next, the robot selects a new velocity vAnew for itself that is closest to its preferred
+
+velocity vpAref amongst all velocities inside the region of permitted velocities:
+
+                           vnAew  =  arg min  v - vApref  .  (8)
+
+                                     vORCAA
+
+We will show below how to compute this velocity efficiently. Finally, the robot
+
+reaches its new position;
+
+                           pnAew = pA + vAnew t,             (9)
+
+and the sensing-acting cycle repeats (see Fig. 3).
+   The key step in the above procedure is to compute the new velocity vnAew as
+
+defined by Equations (7) and (8). This can efficiently be done using linear program-
+ming, as ORCAA is a convex region bounded by linear constraints induced by the
+half-planes of permitted velocities with respect to each of the other robots (see Fig.
+4). The optimization function is the distance to the preferred velocity vpAref. Even
+though this is a quadratic optimization function, it does not invalidate the linear
+
+programming characteristics, as it has only one local minimum.
+
+   We use the efficient algorithm of [3], which adds the constraints one by one in
+
+random order while keeping track of the current optimal new velocity. The algorithm
+Reciprocal n-body Collision Avoidance                                                                                                                                     9
+
+                 (a)                   (b)
+
+Fig. 4 (a) A configuration with eight robots. Their current velocities are shown using arrows. (b)
+
+The half-planes of permitted velocities for robot A induced by each of the other robots with  = 2
+and with vopt = v for all robots (i.e. the optimization velocity equals the current velocity). The
+half-planes of E and C coincide. The dashed region is ORCAA , and contains the velocities for A
+that are permitted with respect to all other robots. The arrow indicates the current velocity of A.
+
+has an expected running time of O(n), where n is the total number of constraints in
+
+the linear program (which equals the number of robots in our case). The fact that we
+
+include a circular constraint for the maximum speed does not significantly alter the
+
+algorithm, and does not affect the running time. The algorithm returns the velocity
+
+icsniabrOleefR,uiCl.leAy.A(watshhewanteiOwsRcilClloAdsieAssc=tutso0/s.viInApfrSetfhe,ecatoniopdntirm5ep.i2zo)ar,ttOsioRfnaCivlAuelrAoecwiiftiiltelhsneefolvirenrethbaere  program is infea-
+                                                                                                                                                                          robots are chosen
+                                                                                                                                                                          empty, and hence
+
+there will always be a solution that guarantees that the robots are collision-free for
+
+at least  time.
+
+We can increase the efficiency of selecting velocities by not including the con-
+
+straints of all other robots, but only of those that are "close" by. In fact, robots B
+that are farther away from robot A than (vAmax + vBmax) will never collide with robot
+A within  time, so they can safely be left out of the linear program when comput-
+
+ing the new velocity for robot A. A minor issue is that robot A does not know the
+
+maximum speed of other robots, but this can be worked around by "guessing" the
+
+maximum speed of other robots to be equal A's own. We can efficiently find the set
+
+of close-by robots whose constraints should be included using a kD-tree.
+10              Jur van den Berg, Stephen J. Guy, Ming Lin, and Dinesh Manocha
+
+           (a)  (b)                     (c)
+
+Fig. 5 (a) A dense configuration with three robots moving towards robot A. The current velocities
+of the robots are shown using arrows; robot A has zero velocity. (b) The half-planes of permitted
+velocities for robot A induced by each of the other robots with  = 2 and vopt = v for all robots.
+The region ORCAA is empty, so avoiding collisions within  time cannot be guaranteed. (c) The
+half-planes of permitted velocities for robot A induced by each of the other robots with  = 2 and
+vopt = 0 for all robots. The dashed region is ORCAA .
+
+5.2 Choosing the Optimization Velocity
+
+One issue that we have left open is how to choose voApt for each robot A. In order for
+the robots to infer the half-planes without communication, vAopt must be observable
+to other robots. Here, we discuss some reasonable possibilities:
+
+·   voApt  = 0 for all robots A. If we set the optimization velocity to zero  for all  robots,
+    it is  guaranteed that ORCAA is non-empty for all robots A (see Fig.      5(c)).   Hence,
+
+    the linear programming algorithm as described above will find a velocity for all
+
+    robots that guarantees them to be collision-free for at least  time. This can be
+
+    seen as follows. For any other robot B, the point 0 always lies outside the velocity
+    obstacle V OA|B (for finite ). Hence the half-plane ORCAA |B always includes at
+    least velocity 0. In fact, the line delimiting ORCAA |B is perpendicular to the line
+
+    connecting the current positions of A and B.
+
+    A drawback of setting the optimization velocity to zero is that the behavior of
+
+    the robots is unconvincing, as they only take into account the current positions of
+
+    the other robots, and not their current velocities. In densely packed conditions,
+
+    this may also lead to a global deadlock, as the chosen velocities for the robots
+
+   converge to zero when the robots are very close to one another.
+
+· voApt = vpAref (i.e. the preferred velocity) for all robots A. The preferred velocity
+   is part of the internal state of the robots, so it cannot be observed by the other
+
+    robots. Let us, for the sake of the discussion, assume that it is somehow possi-
+
+    ble to infer the preferred velocity of the other robots, and that the optimization
+
+    velocity is set to the preferred velocity for all robots. This would work well in
+
+    low-density conditions, but, as the magnitude of the optimization velocity in-
+
+    creases, it is increasingly more likely that the linear program is infeasible. As
+Reciprocal n-body Collision Avoidance                                                           11
+
+   in most cases the preferred velocity has a constant (large) magnitude, regardless
+   of the density conditions, this would lead to unsafe navigation in even medium
+   density conditions.
+· vAopt = vA (i.e. the current velocity) for all robots A. Setting the optimization to
+   the current velocity is the ideal trade-off between the above two choices, as the
+   current velocity automatically adapts to the situation: it is (very) indicative of the
+   preferred velocity in low-density cases, and is close to zero in dense scenarios.
+   Also, the current velocity can be observed by the other robots. Nevertheless,
+   the linear program may be infeasible in high-density conditions (see Fig. 5(b)).
+   In this case, choosing a collision-free velocity cannot be guaranteed. Instead,
+   we select the `safest possible' velocity for the robot using a 3-D linear program
+   (which we discuss in Section 5.3).
+
+5.3 Densely Packed Conditions
+
+If we choose voApt = vA for all robots A, there might not be a single velocity that
+satisfies all the constraints of the linear program in situations where the density of
+the robots is very high. In other words, the set ORCAA is empty (see Fig. 5(b)),
+and the algorithm of Section 5.1 returns that the linear program is infeasible. In this
+
+case, choosing a collision-free velocity cannot be guaranteed. Instead, we select the
+
+`safest possible' velocity for the robot, i.e. the velocity that minimally `penetrates'
+
+the constraints induced by the other robots. More formally, let dA|B(v) denote the
+signed (Euclidean) distance of velocity v to the edge of the half-plane ORCAA |B. If
+v  ORCAA|B, then dA|B(v) is negative. We now choose the velocity that minimizes
+the maximum distance to any of the half-planes induced by the other robots:
+
+                           vAnew   =    arg min      max  dA|B(v).                         (10)
+
+                                       vD(0,vmA ax)  B=A
+
+Geometrically, this can be interpreted as moving the edges of the half-planes
+ORCAA |B perpendicularly outward with equal speed, until exactly one velocity be-
+
+comes valid.
+
+We can find this velocity using a three-dimensional linear program. For each
+
+other robot B, the distance function dA|B(v) is a plane in the three-dimensional (v, d)
+space. We now look for a point (v, d) that lies above all planes induced by the
+
+distance  functions,  and  has  a  minimal  d-value.  Our  new  velocity  vnAew  is  then  set  to
+v.
+
+We can use the same randomized algorithm as above to solve this 3-D linear
+
+program. It still runs in O(n) expected time, where n is the number of other robots.
+
+In fact, we can project the problem down on the v-plane, such that all geometric
+
+operations can be performed in 2-D. The 3-D linear program is always feasible, so
+
+it always returns a solution.
+12                    Jur van den Berg, Stephen J. Guy, Ming Lin, and Dinesh Manocha
+
+    (a)               (b)  (c)
+
+Fig. 6 (a) A configuration of a robot A and a line-segment obstacle O. (b) Geometric construction
+of the velocity obstacle VOA|O for  = 2. (c) The delimiting line of the half-plane ORCAA |O is
+
+tangent to VOA |O at the closest point on its boundary to voApt, which equals 0 in the case of obstacles.
+
+   Note that in these dense cases, the new velocity selected for the robot does not
+depend on the robot's preferred velocity. This means that the robot `goes with the
+flow', and its behavior is fully determined by the robots surrounding the robot.
+
+5.4 Static Obstacles
+
+So far we have only discussed how robots avoid collisions with each other, but
+typical multi-robot environments also contain (static) obstacles. We can easily in-
+corporate those in the above framework. We basically follow the same approach as
+above, with a key difference being that obstacles do not move, so the robots should
+take full responsibility of avoiding collisions with them.
+
+   We can generally assume that obstacles are modeled as a collection of line seg-
+ments. Let O be one of such line segments, and let A be a robot with radius rA
+positioned at pA. Then, the velocity obstacle V OA|O induced by the obstacle O is
+defined as (see Fig. 6(a) and (b)):
+
+         V OA|O = {v | t  [0, ] :: tv  O  -D(pA, rA)}.  (11)
+
+Agent A will collide with obstacle O within  time if its velocity vA is inside V OA |O,
+and it will be collision-free for at least  time if its velocity is outside the velocity
+
+obstacle. Hence, we could define the region of permitted velocities for A with re-
+spect to O as the complement of V OA|O. However, this would disallow us to use the
+efficient linear programming algorithm of Section 5.1, as the complement of V OA |O
+is a non-convex region. Therefore, we define the set of permitted velocities for A
+Reciprocal n-body Collision Avoidance       13
+
+(a)                                    (b)
+
+Fig. 7 Trace of robots in two small behavioral simulations. Robots are shown as colored disks
+which are light at their initial positions and darken as time progresses. (a) Trace of two simulated
+robots passing each other. (b) Trace of five simulated robots crossing each other to antipodal points
+in a circle.
+
+with respect to O as the half-plane ORCAA|O whose delimiting line is the tangent
+line to V OA|O at the closest point to vAopt on the boundary of V OA |O (see Fig. 6(c)).
+
+   In case of obstacles, we choose vAopt = 0 for all robots A. This guarantees that
+there always exists a valid velocity for the robot that avoids collisions with the ob-
+stacles within  time. We can typically use a smaller value of  with respect to obsta-
+
+cles than with respect to other robots, as robots should typically not be `shy' to move
+towards an obstacle if this is necessary to avoid other robots. On the other hand, the
+
+constraints on the permitted velocities for the robot with respect to obstacles should
+
+be hard, as collisions with obstacles should be avoided at all cost. Therefore, when
+the linear program of Section 5.1 is infeasible due to a high density of robots, the
+
+constraints of the obstacles are not relaxed.
+
+   We note that the half-planes of permitted velocities with respect to obstacles as
+defined above only make sure that the robot avoids collisions with the obstacle; they
+
+do not make the robot move around them. The direction of motion around obstacles
+towards the robot's goal should be reflected in the robot's preferred velocity, which
+
+could be obtained using (efficient) global path planning techniques.
+
+6 Experimental Results
+
+To test our technique we ran several simulations. We performed both small-scale
+simulations to test local behavior and large-scale simulations to analyze perfor-
+mance scaling.
+
+   Behavioral Results: We first show two scenarios which highlight how robots
+smoothly avoid collisions with each other on the local level. In the first, shown in
+Fig. 7(a), two robots exchange position. When the robots notice that a collision
+is imminent (i.e. it will happen within  time), they change velocities to smoothly
+14  Jur van den Berg, Stephen J. Guy, Ming Lin, and Dinesh Manocha
+
+Fig. 8 Simulation of 1,000 agents trying to move through the center of a circle to antipodal posi-
+tions. Robots smoothly move through the congestion that forms in the center.
+
+Fig. 9 Snapshots from simulation of 1,000 virtual agents evacuating an office as part of a crowd
+simulation.
+
+avoid it. The second scenario shows five robots whose goal is to move across a circle
+to the antipodal position. As Fig. 7(b) shows, the robots smoothly spiral around each
+other to avoid collisions.
+
+   Performance Results: In order to test the performance of our method we ran
+two large-scale simulations. The first test was a simulation of 1,000 agents in a large
+circle moving to antipodal positions as shown in Fig. 8. For the second test, shown in
+Fig. 9, we incorporated our optimal reciprocal collision avoidance formulation into
+the existing crowd simulation framework of [10]. In this simulation, virtual agents
+attempt to evacuate an office environment. The preferred velocity for each agent is
+set to follow a globally-planned path out of the office.
+
+   Because each agent makes independent decisions, we are able to efficiently paral-
+lelize the simulation by distributing the computations for agents across multiple pro-
+cessors. We used OpenMP multi-threading to parallelize key computations across
+eight Intel Xeon 2.66GHz (Clovertown) cores. Fig. 10(a) shows how our method
+scales across various numbers of cores in the Office scenario. There is a fairly good
+scaling in all scenarios ­ with best observed results in nearly linear scaling for a
+large number of agents where the constant system overhead becomes far less signif-
+icant in the overall computation time.
+
+   In terms of absolute performance, Fig. 10(b) shows the running time for various
+numbers of agents for both simulations. For 5,000 agents on eight cores, it takes
+8 ms (125 frames per second) to solve the collision-avoidance linear program for
+every agent in the large circle simulation, and 15.6 ms (64 frames per second) to
+update every agent in the office evacuation simulation.
+Reciprocal n-body Collision Avoidance       15
+
+(a)                                    (b)
+
+Fig. 10 Performance Graphs: (a) Performance scaling on the evacuation simulation for 1 to 8
+cores. (b) Runtime for various number of agents on 8 cores (lower is better). Both simulations
+scale approximately linearly with the number of agents.
+
+7 Conclusion and Future Work
+
+In this paper, we have presented an efficient method that provides a sufficient con-
+dition for multiple robots to select an action that avoids collisions with other robots,
+though each acts independently without communication with others. Our approach
+to reciprocal n-body collision avoidance exhibits fast running times and smooth,
+convincing behavior in our experiments.
+
+   We have used a simple robot model, in which kinematics and dynamics are ig-
+nored. An important extension for future work is to take such constraints into ac-
+count. We can either do this as a post-processing step, in which the computed new
+velocity is `clamped' to what the kinematic and dynamic constraints allow. This
+would not strictly guarantee avoiding collisions anymore, but it may work well in
+practice [25]. A more thorough solution would be to take these factors intrinsically
+into account in the derivation of the permitted velocities for the robots. [27] and [19]
+provide some interesting ideas in this direction.
+
+   In this paper, we have demonstrated results for only 2-D environments. However,
+all definitions and the algorithm can be extended to 3-D. This may be interesting
+for applications such as autonomous aerial vehicles, or flocking simulation of birds
+or fish. Another important direction for future work is to implement the presented
+framework on real robots and incorporate sensing uncertainty. This has been done
+for reciprocal velocity obstacles in [25]. We believe that we can relatively easily
+replace the RVO formulation by our ORCA formulation in that implementation.
+
+References
+
+  1. Y. Abe, M. Yoshiki. Collision avoidance method for multiple autonomous mobile agents by
+      implicit cooperation. IEEE RSJ Int. Conf. Intell. Robot. Syst., pp. 1207-1212, 2001.
+
+  2. J. Borenstein, Y. Koren. The vector field histogram - fast obstacle avoidance for mobile robots.
+      IEEE Journal of Robotics and Automation 7(3):278-288, 1991.
+16  Jur van den Berg, Stephen J. Guy, Ming Lin, and Dinesh Manocha
+
+ 3. M. de Berg, O. Cheong, M. van Kreveld, M. Overmars. Computational Geometry: Algorithms
+     and Applications. Springer-Verlag, 2008.
+
+ 4. B. Faverjon, P. Tournassoud. A local based approach for path planning of manipulators with
+     a high number of degrees of freedom. IEEE Int. Conf. Robot. Autom., pp. 1152­1159, 1987.
+
+ 5. P. Fiorini, Z. Shiller. Motion planning in dynamic environments using Velocity Obstacles. Int.
+     Journal of Robotics Research 17(7), pp. 760-772, 1998.
+
+ 6. D. Fox, W. Burgard, S. Thrun. The dynamic window approach to collision avoidance. IEEE
+     Robot. Autom. Mag. 4:23-33, 1997.
+
+ 7. T. Fraichard, H. Asama. Inevitable collision states - a step towards safer robots? Advanced
+     Robotics 18(10):10011024, 2004.
+
+ 8. C. Fulgenzi, A. Spalanzani, C. Laugier. Dynamic obstacle avoidance in uncertain environment
+     combining PVOs and occupancy grid. IEEE Int. Conf. Robot. Autom., pp. 1610-1616, 2007.
+
+ 9. J. Gil de Lamadrid. Avoidance of Obstacles With Unknown Trajectories: Locally Optimal
+     Paths and Periodic Sensor Readings. Int. Journal of Robotics Research 13(6):496­507, 1994.
+
+10. S. Guy, J. Chhugani, C. Kim, N. Satish, P. Dubey, M. Lin, D. Manocha. Highly parallel
+     collision avoidance for multi-agent simulation. University of North Carolina at Chapel Hill,
+     Tech. Rep., 2009.
+
+11. D. Helbing, I. Farkas, T. Vicsek. Simulating dynamical features of escape panic. Nature
+     407:487­490, 2000.
+
+12. D. Hsu, R. Kindel, J. Latombe, S. Rock. Randomized kinodynamic motion planning with
+     moving obstacles. Int. J. Robot. Res. 21(3):233-255, 2002.
+
+13. F. Kanehiro, F. Lamiraux, O. Kanoun, E. Yoshida, J.-P. Laumond. A local collision avoidance
+     method for non-strictly convex polyhedra. Robotics: Science and Systems, 2008.
+
+14. O. Khatib. Real-Time Obstacle Avoidance for Manipulators and Mobile Robots. Int. Journal
+     of Robotics Research 5(1):90­98, 1986.
+
+15. B. Kluge, E. Prassler. Reflective navigation: Individual behaviors and group behaviors. IEEE
+     Int. Conf. Robot. Autom., pp. 4172-4177, 2004.
+
+16. J. Kuchar, L. Chang. Survey of conflict detection and resolution modeling methods. AIAA
+     Guidance, Navigation, and Control Conf., 1997.
+
+17. M. Lin. Efficient collision detection for animation and robotics. PhD thesis, University of
+     California, Berkeley, 1993.
+
+18. S. LaValle, Planning Algorithms. Cambridge University Press, 2006.
+19. L. Martinez-Gomez, T. Fraichard. Collision avoidance in dynamic environments: an ICS-
+
+     based solution and its comparative evaluation. IEEE Int. Conf. on Robotics and Automation,
+     2009.
+20. J. McLurkin, E. Demaine. A Distributed Boundary Detection Algorithm for Multi-Robot Sys-
+     tems. (under review), 2009.
+21. J. Pettre´, P. de Heras Ciechomski, J. Ma¨im, B. Yershin, J.-P. Laumond, D. Thalmann. Real-
+     time navigating crowds: scalable simulation and rendering. Computer Animation and Virtual
+     Worlds 17:445­455, 2006.
+22. S. Petti, T. Fraichard. Safe motion planning in dynamic environments. IEEE RSJ Int. Conf.
+     Intell. Robot. Syst., pp. 2210-2215, 2005.
+23. C. Reynolds. Flocks, herds and schools: A distributed behavioral model. Int. Conf. on Com-
+     puter Graphics and Interactive Techniques, pp. 25­34, 1987.
+24. R. Simmons. The curvature-velocity method for local obstacle avoidance. IEEE Int. Conf. on
+     Robotics and Automation, pp. 3375­3382, 1996.
+25. J. Snape, J. van den Berg, S. Guy, D. Manocha. Independent navigation of multiple mo-
+     bile robots with hybrid reciprocal velocity obstacles. IEEE/RSJ Int. Conf. Intell. Robot. Syst.,
+     2009.
+26. J. van den Berg, M. Lin, D. Manocha. Reciprocal Velocity Obstacles for real-time multi-agent
+     navigation. IEEE Int. Conf. on Robotics and Automation, pp. 1928­1935, 2008.
+27. D. Wilkie, J. van den Berg, D. Manocha. Generalized velocity obstacles. IEEE RSJ Int. Conf.
+     Intell. Robot. Syst., 2009.
+28. M. Zucker, J. Kuffner, M. Branicky. Multipartite RRTs for rapid replanning in dynamic envi-
+     ronments. IEEE Int. Conf. on Robotics and Automation, pp. 1603-1609, 2007.
+

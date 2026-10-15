@@ -1,0 +1,505 @@
+"""Watch runs move: an animated, interactive view of run folders, in the browser.
+
+    python -m negsim.viz.viewer runs/<experiment>/<run_id>       # one run
+    python -m negsim.viz.viewer runs/<experiment>                # every run of an experiment, with a picker
+    python -m negsim.viz.viewer PATH [PATH ...] [--out FILE] [--no-open]
+
+The viewer is a single HTML file with the runs' logs inside it. It needs no server, no
+network and no library, so it opens anywhere and can be sent to anyone. It is written to
+``views/`` in ``llm_negotiation/``, which git ignores, unless ``--out`` says otherwise, and
+opened in the default browser unless ``--no-open`` is given.
+
+Both kinds of run can be shown: a negotiation run of issue #24 and an avoidance run of
+issue #26. Nothing is simulated again; everything on screen is read from the log files.
+
+A row of ``trajectory.csv`` gives an agent's position at the start of a step and the
+velocity it moved with during that step, so between two consecutive steps an agent moves in
+a straight line and drawing it that way is exact. Where a run logged only every n-th step
+(``logging.trajectory_stride``), the positions in between are drawn in a straight line as
+well. That is an approximation, and the viewer says so on screen.
+"""
+
+from __future__ import annotations
+
+import argparse
+import csv
+import json
+import math
+import sys
+import webbrowser
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Iterable, Optional
+
+from .. import __version__
+from ..configutil import PACKAGE_ROOT
+from ..runlog.schema import (
+    CONFIG_FILE,
+    CONVERSATION_FILE,
+    EVENTS_FILE,
+    OUTCOME_FILE,
+    RUN_KIND_AVOIDANCE,
+    RUN_KIND_NEGOTIATION,
+    TRAJECTORY_FILE,
+)
+
+TEMPLATE = Path(__file__).with_name("viewer.html")
+VIEWS_DIR = PACKAGE_ROOT / "views"
+DATA_PLACEHOLDER = "__NEGSIM_RUN_DATA__"
+TITLE_PLACEHOLDER = "__NEGSIM_TITLE__"
+
+# What an agent was doing on a step, one bit each. viewer.html reads the same values.
+FLAG_EXPOSED = 1  # ORCA had to change the velocity it wanted, because of another agent
+FLAG_FALLBACK = 2  # no velocity satisfied every half-plane; ORCA's fallback chose
+FLAG_ARBITER = 4  # in a pair the arbiter held
+FLAG_LEADER = 8
+FLAG_FOLLOWER = 16
+FLAG_IN_CONFLICT = 32  # the arbiter found a live conflict for it on this step
+FLAG_DIALOGUE = 64  # a negotiation was going on (issue #24)
+
+#: Above this many agents a run is drawn as a crowd: no arrival events, labels off.
+CROWD = 12
+
+
+class ViewerError(ValueError):
+    """A path that is not a run folder, or a run folder that cannot be read."""
+
+
+# --- reading run folders ---------------------------------------------------------------------------
+
+
+def run_folders(path: Path | str) -> list[Path]:
+    """The run folders at ``path``: the folder itself, or every run folder directly inside it."""
+    path = Path(path)
+    if (path / CONFIG_FILE).is_file():
+        return [path]
+    if path.is_dir():
+        found = sorted(child for child in path.iterdir() if (child / CONFIG_FILE).is_file())
+        if found:
+            return found
+    raise ViewerError(f"{path}: not a run folder (it has no {CONFIG_FILE}) and holds no run folders")
+
+
+def _read_json(path: Path) -> Any:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise ViewerError(f"{path.parent}: missing {path.name}") from exc
+
+
+def _read_jsonl(path: Path) -> list[dict[str, Any]]:
+    if not path.is_file():
+        return []
+    with path.open("r", encoding="utf-8") as handle:
+        return [json.loads(line) for line in handle if line.strip()]
+
+
+def _read_rows(path: Path) -> dict[int, list[dict[str, str]]]:
+    """Trajectory rows grouped by agent, in the order they were written."""
+    if not path.is_file():
+        raise ViewerError(f"{path.parent}: missing {path.name}")
+    rows: dict[int, list[dict[str, str]]] = {}
+    with path.open("r", encoding="utf-8", newline="") as handle:
+        for row in csv.DictReader(handle):
+            rows.setdefault(int(row["agent_id"]), []).append(row)
+    return rows
+
+
+def _number(text: Optional[str]) -> Optional[float]:
+    return None if text in (None, "") else float(text)
+
+
+def _r(value: Optional[float], digits: int = 4) -> Optional[float]:
+    return None if value is None else round(value, digits)
+
+
+def _flag(row: dict[str, str], column: str) -> bool:
+    return row.get(column) == "true"
+
+
+def _role_flags(row: dict[str, str]) -> int:
+    role = row.get("role")
+    flags = FLAG_LEADER if role == "leader" else FLAG_FOLLOWER if role == "follower" else 0
+    return flags | (FLAG_IN_CONFLICT if _flag(row, "in_conflict") else 0)
+
+
+def _fmt(value: Optional[float], unit: str = "", digits: int = 1) -> str:
+    if value is None:
+        return "–"
+    return f"{value:.{digits}f}{(' ' + unit) if unit else ''}"
+
+
+def _base(config: dict, outcome: dict, kind: str) -> dict[str, Any]:
+    scenario = config["scenario"]
+    return {
+        "key": f"{config['experiment_name']}/{config['run_id']}",
+        "experiment": config["experiment_name"],
+        "run_id": config["run_id"],
+        "kind": kind,
+        "scenario": scenario["type"],
+        "description": scenario.get("description", ""),
+        "dt": scenario["dt_s"],
+        "status": outcome["status"],
+        "end_time": outcome["sim_time_s"],
+        "walls": [[w["xmin"], w["ymin"], w["xmax"], w["ymax"]] for w in scenario.get("obstacles", [])],
+        "segments": [],
+        "stride": 1,
+        "conversation": [],
+    }
+
+
+def _track(samples: Iterable[tuple]) -> dict[str, list]:
+    """Column arrays from ``(t, x, y, heading, vx, vy, wanted vx, wanted vy, flags, neighbours)``."""
+    columns: dict[str, list] = {key: [] for key in ("t", "x", "y", "h", "vx", "vy", "wx", "wy", "f", "n")}
+    for t, x, y, heading, vx, vy, wx, wy, flags, neighbours in samples:
+        columns["t"].append(round(t, 4))
+        columns["x"].append(_r(x))
+        columns["y"].append(_r(y))
+        columns["h"].append(_r(heading))
+        columns["vx"].append(_r(vx))
+        columns["vy"].append(_r(vy))
+        columns["wx"].append(_r(wx))
+        columns["wy"].append(_r(wy))
+        columns["f"].append(flags)
+        columns["n"].append(neighbours)
+    return columns
+
+
+# --- an avoidance run (issue #26) ------------------------------------------------------------------
+
+
+def _directive_text(config: dict, agent_id: int) -> str:
+    directives = config.get("directives", {})
+    if directives.get("provider") != "static":
+        return "plain ORCA (no directives)"
+    entry = dict(directives.get("default", {}))
+    entry.update(directives.get("agents", {}).get(str(agent_id), {}))
+    text = (
+        f"side {entry.get('side_preference', 'none')}, share {entry.get('responsibility_share', 0.5):g}, "
+        f"speed ×{entry.get('speed_scale', 1.0):g}, clearance {entry.get('clearance_margin', 0.0):g} m, "
+        f"order {entry.get('passage_order', 'none')}"
+    )
+    pairs = [pair for pair in directives.get("pairs", []) if pair.get("observer") == agent_id]
+    if pairs:
+        text += f"; {len(pairs)} entr{'y' if len(pairs) == 1 else 'ies'} for particular neighbours"
+    return text
+
+
+def _avoidance_events(events: list[dict], goal_times: dict, n_agents: int) -> list[dict]:
+    shown = []
+    for event in events:
+        kind = event["type"]
+        item: dict[str, Any] = {"type": kind, "t": event["time_s"], "t_end": event.get("end_time_s")}
+        if kind == "collision":
+            a, b = event["pair"]
+            item.update(agents=[a, b], text=f"Agents {a} and {b} overlap, by up to {event['max_overlap_m'] * 1000:.1f} mm")
+        elif kind == "wall_collision":
+            item.update(agents=[event["agent_id"]], text=f"Agent {event['agent_id']} overlaps a wall, by up to {event['max_overlap_m'] * 1000:.1f} mm")
+        elif kind == "near_miss":
+            a, b = event["pair"]
+            item.update(agents=[a, b], text=f"Near miss: agents {a} and {b} come within {max(event['min_separation_m'], 0.0) * 100:.1f} cm")
+        elif kind == "yield":
+            item.update(
+                agents=[event["agent_id"]],
+                text=f"Agent {event['agent_id']} yields for {event['duration_s']:.1f} s (slowest {event['min_speed_mps']:.2f} m/s)",
+            )
+        elif kind == "handoff":
+            a, b = event["pair"]
+            if event["to"] == "arbiter":
+                text = f"Agents {a} and {b} handed to the arbiter: agent {event['leader']} goes first ({event['role_source']})"
+            else:
+                text = f"Agents {a} and {b} handed back to ORCA: {event['reason']}"
+            item.update(agents=[a, b], text=text)
+        elif kind == "reciprocity_violation":
+            a, b = event["agents"]
+            item.update(
+                agents=[a, b],
+                text=(
+                    f"Reciprocity violation between {a} and {b} on {event['field']}: asked for "
+                    f"{event['given'][0]} and {event['given'][1]}, used {event['resolved'][0]} and {event['resolved'][1]}"
+                ),
+            )
+        else:
+            item.update(agents=[], text=kind)
+        shown.append(item)
+    if n_agents <= CROWD:
+        for agent_id, time in sorted(goal_times.items(), key=lambda kv: (kv[1] is None, kv[1], int(kv[0]))):
+            if time is not None:
+                shown.append({"type": "arrival", "t": time, "t_end": None, "agents": [int(agent_id)], "text": f"Agent {agent_id} arrives"})
+    shown.sort(key=lambda item: item["t"])
+    return shown
+
+
+def _avoidance_run(run_dir: Path, config: dict, outcome: dict) -> dict[str, Any]:
+    run = _base(config, outcome, RUN_KIND_AVOIDANCE)
+    scenario = config["scenario"]
+    run["stride"] = config.get("logging", {}).get("trajectory_stride", 1)
+    run["segments"] = [
+        [s["xmin"], s["ymin"], s["xmax"], s["ymax"], s["name"]] for s in scenario.get("single_file", {}).get("segments", [])
+    ]
+    rows = _read_rows(run_dir / TRAJECTORY_FILE)
+    personas = {entry["agent_id"]: entry for entry in config.get("population", [])}
+    goal_times = outcome["time_to_goal_s"]
+
+    agents = []
+    for spec in scenario["agents"]:
+        agent_id = spec["agent_id"]
+        mine = rows.get(agent_id, [])
+        steps = [row for row in mine if row["speed_mps"] != ""]  # a step: state at its start, motion during it
+        final = [row for row in mine if row["speed_mps"] == ""]  # the state at the end of the run
+        samples = [
+            (
+                float(row["time_s"]), float(row["x_m"]), float(row["y_m"]), float(row["theta_rad"]),
+                _number(row["vx_mps"]), _number(row["vy_mps"]), _number(row["pref_vx_mps"]), _number(row["pref_vy_mps"]),
+                (FLAG_EXPOSED if _flag(row, "exposed") else 0)
+                | (FLAG_FALLBACK if _flag(row, "fallback") else 0)
+                | (FLAG_ARBITER if row["control_mode"] == "arbiter" else 0)
+                | _role_flags(row),
+                int(row["n_neighbours"]) if row["n_neighbours"] != "" else None,
+            )
+            for row in steps
+        ]
+        arrival = goal_times.get(str(agent_id))
+        if final:
+            end = final[-1]
+            # An agent that arrives leaves the scene and stops where it arrived, so its last
+            # sample is its final position at the moment it arrived, not at the end of the run.
+            when = arrival if arrival is not None else float(end["time_s"])
+            if not samples or when > samples[-1][0]:
+                samples.append(
+                    (when, float(end["x_m"]), float(end["y_m"]), float(end["theta_rad"]), None, None, None, None, 0, None)
+                )
+        stats = outcome["agents"][str(agent_id)]
+        persona = personas.get(agent_id, {})
+        attributes = persona.get("attributes") or {}
+        details = [
+            ["Group", spec["group"]],
+            ["Persona", f"{persona['persona_id']} ({', '.join(f'{k} {v}' for k, v in attributes.items() if v not in (None, ''))})"]
+            if persona.get("persona_id") else ["Persona", "none"],
+            ["Body radius", f"{spec['radius_m']:g} m"],
+            ["Preferred / maximum speed", f"{spec['preferred_speed_mps']:g} / {spec['max_speed_mps']:g} m/s"],
+            ["Sensing radius, neighbours", f"{spec['sensing_radius_m']:g} m, at most {spec['max_neighbours']}"],
+            ["Directive", _directive_text(config, agent_id)],
+            ["Time to goal", _fmt(stats["time_to_goal_s"], "s") if stats["time_to_goal_s"] is not None else "did not arrive"],
+            ["Conflict exposure", _fmt(stats["conflict_exposure_time_s"], "s")],
+            ["Yield time", _fmt(stats["yield_time_s"], "s")],
+            ["Largest path deviation", _fmt(stats["path_deviation_max_m"], "m", 3)],
+            ["Smallest gap to a neighbour", _fmt(stats["min_separation_m"], "m", 3)],
+        ]
+        agents.append(
+            {
+                "id": agent_id,
+                "group": spec["group"],
+                "radius": spec["radius_m"],
+                "sensing": spec["sensing_radius_m"],
+                "path": [[_r(x), _r(y)] for x, y in spec["path"]],
+                "goal": [spec["goal"]["x"], spec["goal"]["y"]],
+                "arrival": arrival,
+                "leaves": True,
+                "details": details,
+                **_track(samples),
+            }
+        )
+    run["agents"] = agents
+
+    totals, collisions = outcome["totals"], outcome["collisions"]
+    variant = ", ".join(f"{factor} = {level}" for factor, level in config.get("variant", {}).items())
+    ended = "every agent arrived" if outcome["status"] == "completed" else outcome["status"]
+    summary = [
+        ["Scenario", scenario["type"]],
+        ["Variant", variant or "–"],
+        ["Outcome", f"{ended}, at {outcome['sim_time_s']:.1f} s"],
+        ["Arrived", f"{outcome['arrived']} of {outcome['n_agents']}"],
+        [
+            "Collisions",
+            f"{collisions['agent_agent']} between agents, {collisions['agent_wall']} with walls"
+            + (f"; deepest {collisions['max_overlap_m'] * 1000:.1f} mm" if collisions["max_overlap_m"] else ""),
+        ],
+        ["Conflict exposure, all agents", _fmt(totals["conflict_exposure_time_s"], "s")],
+        ["Yield events", f"{totals['yield_events']} ({_fmt(totals['yield_time_s'], 's')})"],
+        ["Near misses", str(totals["near_misses"])],
+        ["Smallest gap between bodies", _fmt(totals["min_separation_m"], "m", 3)],
+        ["Steps with no allowed velocity", str(totals["steps_with_fallback"])],
+        ["Reciprocity violations", str(len(outcome["reciprocity_violations"]))],
+        ["Handoffs to and from the arbiter", str(len(outcome["handoffs"]))],
+        ["Directives", config.get("directives", {}).get("provider", "null")],
+    ]
+    if run["stride"] > 1:
+        summary.append(["Logged", f"every {run['stride']} steps; positions in between are interpolated"])
+    run["summary"] = summary
+    run["events"] = _avoidance_events(_read_jsonl(run_dir / EVENTS_FILE), goal_times, len(agents))
+    return run
+
+
+# --- a negotiation run (issue #24) -----------------------------------------------------------------
+
+
+def _negotiation_run(run_dir: Path, config: dict, outcome: dict) -> dict[str, Any]:
+    run = _base(config, outcome, RUN_KIND_NEGOTIATION)
+    scenario = config["scenario"]
+    rows = _read_rows(run_dir / TRAJECTORY_FILE)
+    participants = {entry["agent_id"]: entry for entry in config.get("participants", [])}
+    goal_times = outcome.get("time_to_goal_s", {})
+    roles = outcome.get("roles", {})
+
+    agents = []
+    for spec in scenario["agents"]:
+        agent_id = spec["agent_id"]
+        samples = []
+        for row in rows.get(agent_id, []):
+            heading, speed = float(row["theta_rad"]), _number(row["v_mps"])
+            vx = None if speed is None else speed * math.cos(heading)
+            vy = None if speed is None else speed * math.sin(heading)
+            flags = _role_flags(row) | (FLAG_DIALOGUE if _flag(row, "dialogue_active") else 0)
+            samples.append((float(row["time_s"]), float(row["x_m"]), float(row["y_m"]), heading, vx, vy, None, None, flags, None))
+        participant = participants.get(agent_id, {})
+        persona = participant.get("persona") or {}
+        role = (
+            "leader" if roles.get("executed_leader") == agent_id else "follower" if roles.get("executed_follower") == agent_id else "–"
+        )
+        details = [
+            ["Starts", spec["side"]],
+            ["Task", f"{participant.get('task', '–')} ({participant.get('task_type', '–')})"],
+            ["Persona", f"{persona.get('persona_id')} ({persona.get('gender')}, {persona.get('age')})" if persona else "none"],
+            ["Body radius", f"{spec['radius_m']:g} m"],
+            ["Maximum speed", f"{spec['max_speed_mps']:g} m/s"],
+            ["Role it played", role],
+            ["Time to goal", _fmt(goal_times.get(str(agent_id)), "s") if goal_times.get(str(agent_id)) is not None else "did not arrive"],
+        ]
+        agents.append(
+            {
+                "id": agent_id,
+                "group": spec["side"],
+                "radius": spec["radius_m"],
+                "sensing": None,
+                "path": [[_r(x), _r(y)] for x, y in spec["path"]],
+                "goal": [spec["goal"]["x"], spec["goal"]["y"]],
+                "arrival": goal_times.get(str(agent_id)),
+                "leaves": False,
+                "details": details,
+                **_track(samples),
+            }
+        )
+    run["agents"] = agents
+
+    dialogue = outcome.get("negotiation", {})
+    turns = _read_jsonl(run_dir / CONVERSATION_FILE)
+    run["conversation"] = [
+        {"t": turn.get("sim_time_s") or 0.0, "speaker": turn["speaker"], "stance": turn.get("stance"), "message": turn.get("message") or ""}
+        for turn in turns
+    ]
+    if not dialogue.get("enabled"):
+        talk = "no dialogue (this condition does not negotiate)"
+    else:
+        talk = f"{dialogue.get('end_reason') or 'not started'}, {dialogue.get('turns_used', 0)} messages"
+    collisions = outcome.get("collisions", {})
+    truth = outcome.get("ground_truth")
+    summary = [
+        ["Condition", str(config.get("condition", "–"))],
+        ["Scenario", f"{scenario['type']} ({config.get('scenario_variant', '–')})"],
+        ["Outcome", f"{outcome['status']}, at {outcome['sim_time_s']:.1f} s"],
+        ["Dialogue", talk],
+        ["Agreed leader", str(roles.get("negotiated_leader")) if roles.get("negotiated_leader") is not None else "none"],
+        ["First through", str(outcome.get("first_through"))],
+        ["Makespan", _fmt(outcome.get("makespan_s"), "s")],
+        ["Follower's slowest speed", _fmt(outcome.get("follower_min_speed_mps"), "m/s", 3)],
+        ["Collisions", str(collisions.get("agent_agent", 0) + collisions.get("agent_wall", 0))],
+    ]
+    if truth:
+        summary.append(["Higher-priority task went first", "yes" if truth.get("higher_priority_first") else "no"])
+    run["summary"] = summary
+
+    events: list[dict[str, Any]] = []
+    if dialogue.get("started"):
+        events.append({"type": "dialogue", "t": dialogue.get("start_time_s") or 0.0, "t_end": dialogue.get("end_time_s"), "agents": [], "text": f"Dialogue: {talk}"})
+    for agent_id, time in (outcome.get("region_entry_time_s") or {}).items():
+        if time is not None:
+            events.append({"type": "region", "t": time, "t_end": None, "agents": [int(agent_id)], "text": f"Agent {agent_id} enters the conflict region"})
+    for agent_id, time in goal_times.items():
+        if time is not None:
+            events.append({"type": "arrival", "t": time, "t_end": None, "agents": [int(agent_id)], "text": f"Agent {agent_id} arrives"})
+    if collisions.get("time_s") is not None:
+        events.append({"type": "collision", "t": collisions["time_s"], "t_end": None, "agents": list(collisions.get("agents", [])), "text": "Collision: the run stops"})
+    events.sort(key=lambda item: item["t"])
+    run["events"] = events
+    return run
+
+
+# --- the viewer ------------------------------------------------------------------------------------
+
+
+def load_run(run_dir: Path | str) -> dict[str, Any]:
+    """Everything the viewer shows of one run, read from its log folder."""
+    run_dir = Path(run_dir)
+    config = _read_json(run_dir / CONFIG_FILE)
+    outcome = _read_json(run_dir / OUTCOME_FILE)
+    kind = config.get("run_kind", RUN_KIND_NEGOTIATION)
+    if kind == RUN_KIND_AVOIDANCE:
+        return _avoidance_run(run_dir, config, outcome)
+    if kind == RUN_KIND_NEGOTIATION:
+        return _negotiation_run(run_dir, config, outcome)
+    raise ViewerError(f"{run_dir}: unknown run_kind {kind!r}")
+
+
+def render(runs: list[dict[str, Any]], title: str) -> str:
+    """The viewer page with ``runs`` inside it."""
+    template = TEMPLATE.read_text(encoding="utf-8")
+    payload = {
+        "generated_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "negsim_version": __version__,
+        "flags": {
+            "exposed": FLAG_EXPOSED, "fallback": FLAG_FALLBACK, "arbiter": FLAG_ARBITER, "leader": FLAG_LEADER,
+            "follower": FLAG_FOLLOWER, "in_conflict": FLAG_IN_CONFLICT, "dialogue": FLAG_DIALOGUE,
+        },
+        "runs": runs,
+    }
+    # "<" is escaped so that nothing in a log (an LLM's message, say) can close the script
+    # element that holds the data. JSON.parse reads < back as "<".
+    data = json.dumps(payload, ensure_ascii=False, separators=(",", ":"), allow_nan=False).replace("<", "\\u003c")
+    safe_title = title.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    return template.replace(TITLE_PLACEHOLDER, safe_title, 1).replace(DATA_PLACEHOLDER, data, 1)
+
+
+def default_output(paths: list[Path]) -> Path:
+    """Where the viewer goes without ``--out``: ``views/``, named after what it shows."""
+    if len(paths) == 1:
+        path = paths[0].resolve()
+        name = f"{path.parent.name}__{path.name}" if (path / CONFIG_FILE).is_file() else path.name
+    else:
+        name = "viewer"
+    return VIEWS_DIR / f"{name}.html"
+
+
+def build_viewer(paths: Iterable[Path | str], output: Optional[Path | str] = None) -> Path:
+    """Write the viewer for the runs at ``paths`` and return where it was written."""
+    paths = [Path(path) for path in paths]
+    if not paths:
+        raise ViewerError("give at least one run folder or experiment folder")
+    folders = [folder for path in paths for folder in run_folders(path)]
+    runs = [load_run(folder) for folder in folders]
+    output = Path(output) if output is not None else default_output(paths)
+    title = runs[0]["key"] if len(runs) == 1 else f"{runs[0]['experiment']} ({len(runs)} runs)"
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(render(runs, f"Run viewer: {title}"), encoding="utf-8", newline="\n")
+    return output
+
+
+def main(argv: Optional[list[str]] = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("paths", nargs="+", type=Path, help="run folders, or experiment folders holding run folders")
+    parser.add_argument("--out", type=Path, help="where to write the viewer (default: views/<name>.html)")
+    parser.add_argument("--no-open", action="store_true", help="write the file but do not open it in the browser")
+    args = parser.parse_args(argv)
+    try:
+        output = build_viewer(args.paths, args.out)
+    except (ViewerError, json.JSONDecodeError, KeyError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    print(f"viewer: {output.resolve()}")
+    if not args.no_open:
+        webbrowser.open(output.resolve().as_uri())
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

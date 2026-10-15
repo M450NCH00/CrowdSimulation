@@ -1,0 +1,22 @@
+# Issue #26: the open crossing, run end to end. Two paths at a right angle, no walls.
+# No model is called.
+#
+#   python run_experiment.py configs/avoidance/si1_open_crossing.yaml
+schema_version: 1
+layer: avoidance
+experiment_name: si1_open_crossing
+description: Two paths crossing at a right angle in open space.
+
+scenario: configs/scenarios/open_crossing.yaml
+
+design:
+  seed: 26400
+  factors:
+    layout:
+      - name: symmetric          # both would reach the crossing at the same instant
+      - name: agent_1_later      # agent 1 starts half a metre further away
+        scenario_overrides: {geometry: {approach_distances: [8.0, 8.5]}}
+    condition:
+      - name: plain
+      - name: both_left
+        directives: {provider: static, default: {side_preference: left}}

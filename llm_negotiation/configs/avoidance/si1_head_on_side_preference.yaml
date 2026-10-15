@@ -1,0 +1,47 @@
+# Issue #26, behaviour check 1: two agents head-on in a corridor wide enough to pass.
+# Plain ORCA against a side preference, in the exactly symmetric layout and in one that
+# is 10 cm off it. No model is called; the experiment costs nothing.
+#
+#   python run_experiment.py configs/avoidance/si1_head_on_side_preference.yaml
+#
+# The two agents are given personas (a woman of 25 and a man of 70) so that the committed
+# perception records show what a rule will be able to read. Their bodies and speeds are
+# identical: a persona changes nothing physical.
+schema_version: 1
+layer: avoidance
+experiment_name: si1_head_on_side_preference
+description: Head-on in a wide corridor. Plain ORCA versus a side preference.
+
+scenario: configs/scenarios/wide_corridor_head_on.yaml
+personas: configs/personas/personas.yaml
+population:
+  agents:
+    0: {persona: f25}
+    1: {persona: m70}
+visibility: default
+
+design:
+  seed: 26100
+  factors:
+    layout:
+      - name: symmetric          # both exactly on the centre line
+      - name: offset             # each 5 cm to its own left of the centre line
+        scenario_overrides: {geometry: {lateral_offsets: [0.05, -0.05]}}
+    condition:
+      - name: plain              # NullProvider: plain ORCA
+      - name: plain_rvo2_tie     # plain ORCA with the RVO2 library's way of breaking an exact tie
+        scenario_overrides: {orca: {tie_break: right}}
+      - name: both_left
+        directives: {provider: static, default: {side_preference: left}}
+      - name: both_right
+        directives: {provider: static, default: {side_preference: right}}
+      - name: left_vs_right      # the two contradict each other: a reciprocity violation
+        directives:
+          provider: static
+          agents:
+            0: {side_preference: left}
+            1: {side_preference: right}
+      - name: both_left_berth    # the same side, and 20 cm of extra clearance
+        directives: {provider: static, default: {side_preference: left, clearance_margin: 0.2}}
+      - name: both_left_slow     # the same side, at 60% of preferred speed while the other is in range
+        directives: {provider: static, default: {side_preference: left, speed_scale: 0.6}}

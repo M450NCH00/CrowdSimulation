@@ -90,6 +90,125 @@ def c1_config(**changes: Any) -> dict[str, Any]:
     return config
 
 
+# --- the avoidance layer (issue #26) -----------------------------------------------------------
+
+WIDE_CORRIDOR = "configs/scenarios/wide_corridor_head_on.yaml"
+OPEN_CROSSING = "configs/scenarios/open_crossing.yaml"
+OVERTAKING = "configs/scenarios/overtaking.yaml"
+BOTTLENECK = "configs/scenarios/corridor_to_bottleneck.yaml"
+BIDIRECTIONAL = "configs/scenarios/bidirectional_flow.yaml"
+CROWD_SCENARIOS = {
+    "wide_corridor_head_on": WIDE_CORRIDOR,
+    "open_crossing": OPEN_CROSSING,
+    "overtaking": OVERTAKING,
+    "corridor_to_bottleneck": BOTTLENECK,
+    "bidirectional_flow": BIDIRECTIONAL,
+}
+
+
+def crowd(name: str, **overrides: Any):
+    """A shipped avoidance scenario, with overrides laid on top of its config."""
+    from negsim.scenarios import load_crowd_scenario
+
+    return load_crowd_scenario(CROWD_SCENARIOS[name], overrides or None)
+
+
+def static(agent_0: Optional[Mapping[str, Any]] = None, agent_1: Optional[Mapping[str, Any]] = None, **default: Any):
+    """A StaticProvider: ``default`` for everyone, then per-agent fields for agents 0 and 1."""
+    from negsim.avoidance.directives import AvoidanceDirective, StaticProvider
+
+    base = AvoidanceDirective(**default)
+    agents = {}
+    for agent_id, fields in ((0, agent_0), (1, agent_1)):
+        if fields is not None:
+            agents[agent_id] = AvoidanceDirective(**{**base.as_dict(), **fields})
+    return StaticProvider(default=base, agents=agents)
+
+
+def run_avoidance(spec, provider=None, **kwargs: Any):
+    """Run an avoidance scenario to its end and return the result (no logging to disk)."""
+    from negsim.avoidance.simulation import AvoidanceSimulation
+
+    return AvoidanceSimulation(spec, provider, **kwargs).run()
+
+
+def free_space(agents: list[Mapping[str, Any]], **settings: Any):
+    """An avoidance scenario with no walls, built directly: one entry per agent.
+
+    Each entry gives ``start`` and ``goal`` and may override ``radius``,
+    ``preferred_speed``, ``max_speed``, ``sensing_radius``, ``max_neighbours``,
+    ``time_horizon``. Used for encounters no shipped scenario lays out.
+    """
+    import math
+
+    from negsim.core.geometry import Polyline
+    from negsim.core.state import Pose
+    from negsim.scenarios import CrowdAgentSpec, CrowdScenarioSpec
+    from negsim.scenarios.base import DeadlockSettings
+    from negsim.scenarios.crowd_base import DEFAULT_THRESHOLDS
+
+    specs = []
+    for agent_id, entry in enumerate(agents):
+        path = Polyline([entry["start"], entry["goal"]])
+        preferred = entry.get("preferred_speed", 1.3)
+        specs.append(
+            CrowdAgentSpec(
+                agent_id=agent_id,
+                radius=entry.get("radius", 0.25),
+                max_speed=entry.get("max_speed", 2.0),
+                max_turn_rate=math.inf,
+                start=Pose(entry["start"][0], entry["start"][1], path.heading_at(0.0)),
+                goal=tuple(entry["goal"]),
+                path=path,
+                side=f"agent_{agent_id}",
+                region_entry_s=path.length,
+                region_exit_s=path.length,
+                initial_speed=preferred,
+                agent_type="test",
+                group=f"agent_{agent_id}",
+                preferred_speed=preferred,
+                sensing_radius=entry.get("sensing_radius", 12.5),
+                max_neighbours=entry.get("max_neighbours", 10),
+                time_horizon=entry.get("time_horizon", 3.0),
+                time_horizon_obst=0.15,
+                single_file_stretches=(),
+            )
+        )
+    return CrowdScenarioSpec(
+        scenario_type="free_space",
+        description="",
+        dt=settings.get("dt", 0.1),
+        max_time=settings.get("max_time", 60.0),
+        goal_tolerance=0.2,
+        dynamics="holonomic",
+        agents=tuple(specs),
+        agent_types={},
+        obstacles=(),
+        single_file_segments=(),
+        single_file_safety_margin=0.1,
+        tie_break=settings.get("tie_break", "brake"),
+        lookahead=settings.get("lookahead", 2.0),
+        cell_size=2.0,
+        deadlock=DeadlockSettings(3.0, 0.01),
+        thresholds=DEFAULT_THRESHOLDS,
+        geometry={},
+        seed=0,
+        on_collision=settings.get("on_collision", "stop"),
+    )
+
+
+def avoidance_config(**changes: Any) -> dict[str, Any]:
+    """A small avoidance experiment on the wide corridor, as a plain dict that tests can edit."""
+    config: dict[str, Any] = {
+        "layer": "avoidance",
+        "experiment_name": "test_avoidance",
+        "scenario": WIDE_CORRIDOR,
+        "design": {"seed": 300},
+    }
+    config.update(changes)
+    return config
+
+
 def c2_config(**changes: Any) -> dict[str, Any]:
     """A small persona experiment in the hallway."""
     config: dict[str, Any] = {

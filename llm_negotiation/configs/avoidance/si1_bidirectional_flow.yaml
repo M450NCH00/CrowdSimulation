@@ -1,0 +1,29 @@
+# Issue #26: the bidirectional flow, run end to end. Fifty agents each way along a
+# corridor, under plain ORCA. Run twice: with the neighbour limit used in practice (10),
+# and with a larger one (40), because the limit turns out to decide how often two bodies
+# overlap. No model is called.
+#
+#   python run_experiment.py configs/avoidance/si1_bidirectional_flow.yaml
+#
+# Logging is thinned for these two runs, because a hundred agents write a great deal: the
+# trajectory keeps every tenth step, and the per-interaction records are left out (there
+# are thousands). The events and the outcome are complete. To get everything, set
+# trajectory_stride to 1 and interactions to true.
+schema_version: 1
+layer: avoidance
+experiment_name: si1_bidirectional_flow
+description: Fifty agents each way along a corridor, plain ORCA.
+
+scenario: configs/scenarios/bidirectional_flow.yaml
+
+logging:
+  trajectory_stride: 10
+  interactions: false
+
+design:
+  seed: 26600
+  factors:
+    neighbours:
+      - name: limit_10           # the scenario's default
+      - name: limit_40           # [placeholder]: no source for this value; it is here to show the effect
+        scenario_overrides: {agent_types: {pedestrian: {max_neighbours: 40}}}
