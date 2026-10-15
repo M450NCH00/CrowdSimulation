@@ -164,6 +164,69 @@ matplotlib 3.10.8, pyflakes 4.0.3); pyflakes clean.
 - Next step: read the code and documents of #24, #26 and #28 that this issue builds on, then
   fill in the understanding and the plan.
 
+### 2026-10-15 16:24 — Part 1 done: pair exposure, tiers, paired seeds, schema v2, viewer
+
+- What I did: read `WORK_LOG-28.md`, every document under `docs/` that this issue names, and
+  the code of the run loop, perception, directives, the rule package, the experiment runner,
+  the LLM layer, the negotiation protocol, the log schema and the viewer. Built the scratchpad
+  virtual environment and took the baseline (984 passed). Then Part 1, in three commits
+  (`99abe41`, `c89e58f`, `71f57b3`):
+  - **1.1 Pair exposure and tiers.** `negsim/avoidance/exposure.py` (the obstacle depth, using
+    ORCA's own `agent_half_plane` geometry, so `orca.py` is unchanged); the run loop records
+    each agent's intended velocity and tests every open pair before anyone moves; tiers in
+    `negsim/metrics/avoidance.py`; log schema version 4; `metrics.md` section 11,
+    `derivations.md` section 16.
+  - **1.2 Paired seeds.** `design.seeding: paired` (default) or `per_run`; the 15 committed
+    configs of #26 and #28 pinned to `per_run`; `baseline.md` section 6.
+  - **1.3 Schema v2**, frozen in the manifest; the loader dispatches on `schema_version`
+    (`RuleSchemas`); `rule-format.md` sections 12 and 13. The canonical form
+    (`negsim/rules/canonical.py`) was written here too, since section 13 defines it.
+  - **1.4 Viewer**: rule runs were labelled "plain ORCA (no directives)" for every agent.
+- Why: the issue's Part 1 is what the rest depends on (tiers for case eligibility, paired
+  seeds for replay, schema v2 for the writer).
+- Result / what I found:
+  - **1037 passed** (53 new), pyflakes clean. Eight existing tests changed, each because it
+    pinned what the issue changes (log schema version 3 in four places, the exact
+    `interaction_outcomes` and `scenario.metrics` dicts, the per-run seeds of one design,
+    and three documentation checks); #28's A2 reading applies (the issue wins, no regression).
+  - **How each directive field acts** (checked in the code, `metrics.md` 11.1):
+    `speed_scale` and `passage_order` act on the intended velocity (before the projection);
+    `side_preference` and `responsibility_share` only inside the projection and only on a
+    collision course; `clearance_margin` only inside the projection but on every step.
+    **Consequence:** a rule of sides and shares cannot make a pair T0 where the baseline put
+    it on a collision course; on the same seed its first exposed step is the baseline's
+    (tested: the two runs are identical before that step and diverge on it).
+  - **Plain ORCA's two-agent passes are T3**, not T1: ORCA passes the bodies within a few
+    millimetres, inside the 0.1 m near-miss distance. Under the primary baseline, one seed
+    each: head-on, crossing, overtaking, bottleneck all T3. A clearance margin of 0.15 m
+    takes the head-on to T1; offsets of ±0.26 m give a T3 near miss with no pair exposure
+    at all; ±0.3 m, a staggered crossing, a 0.6 m overtaking offset, a merging bottleneck
+    give T0. So T1 and T2 cases will be rare in the two-agent baselines; the crowd should
+    supply them. Recorded in `metrics.md` without a claim I have not checked over seeds.
+  - A bug of my own, found by the tests: a number that rounds to a whole number at 12
+    significant digits stayed a float in the canonical form (20.000000000001 gave `20.0`,
+    not `20`), so two equal rules could hash differently. Fixed: round first, then test for
+    a whole number.
+  - A test of my own was wrong first (a brute-force distance that skipped rays which cross
+    the obstacle and leave it); the measure was right (0.380 m/s, checked by hand).
+- Decisions (numbered on from #28's DD64; `architecture.md` will list them):
+  - **DD65.** Tiers are the conflict classification from #30 on; #28's categories are kept
+    exactly as defined (per-agent exposure) for continuity, with `pair_exposed` logged so
+    they can be recomputed on pair exposure.
+  - **DD66.** Paired seeding is the default; committed configs pinned to `per_run`.
+  - **DD67.** Pair exposure: the bodies' obstacle (no clearance margin), the larger of the two
+    horizons, depth tolerance 1e-3 m/s (five times what the perturbation can move the
+    relative velocity), overlapping bodies exposed.
+  - **DD68.** `collision_course_min_s` = 0 s: T1 is any exposed step, so T0 is exactly "no
+    exposure" as the issue words it; it is a setting.
+  - **DD69.** The canonical form: the keys `encounter`, `when`, `roles`, `directive`, and
+    `expiry` if stated; no unit conversion, no reordering of lists, no removal of fields at
+    their baseline values; numbers to 12 significant digits; proposal id = 12 hex
+    characters. `expiry` is included because it changes how long the directive applies; the
+    issue names "condition, roles, and directive".
+- Next step: conflict cases (Part 2): case-source baseline runs on the five scenarios, then
+  the extractor and the store.
+
 ## Open questions / risks
 
 - **Q1 (carried from #24, #26, #28). Has the supervisor's "no simulation code until the
