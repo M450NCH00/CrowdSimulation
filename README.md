@@ -31,6 +31,8 @@ experiment code until the literature review is complete and discussed.**
 > branch does not carry the instruction, so the work went ahead. Nothing in the
 > repository records the supervisor lifting it. See `WORK_LOG-24.md`, open question Q1.
 > Issue #26 (2026-10-13) went ahead on the same footing: `WORK_LOG-26.md`, assumption A2.
+> Issue #28 (2026-10-14) made a recorded approval a prerequisite; none is recorded, and the
+> user chose to proceed and leave the question open: `WORK_LOG-28.md`, P1 and Q1.
 
 | # | Roadmap step | Status |
 |---|---|---|
@@ -38,6 +40,7 @@ experiment code until the literature review is complete and discussed.**
 | 2 | Design a small-scale conflict scenario (2-agent hallway) | **built** (issue #24) — `llm_negotiation/configs/scenarios/hallway.yaml`; its sizes and speeds are unsourced placeholders |
 | 3 | Implement the LLM-to-LLM exchange | **built and smoke-tested** (issue #24) — `llm_negotiation/`; 12 paid smoke runs, no experiment yet |
 | 3a | Avoidance layer, so that a rule can prescribe avoidance and not only priority (sub-issue 1 of 6) | **built** (issue #26) — `llm_negotiation/negsim/avoidance/`; 46 free runs, no rule and no LLM call yet |
+| 3b | Rule format, rule database and rule-following mode (sub-issue 2 of 6) | **built** (issue #28) — `llm_negotiation/negsim/rules/`, `llm_negotiation/rule_db/`; five hand-written test rules, 1,600 free runs, no LLM call |
 | 4 | Analyse exchanges for a reusable pattern | not started |
 | 5 | Validate the pattern against real data or sociology | **coding scheme drafted** (issue #12) — `literature/human-conflict-resolution/` |
 | 5a | Demographic personas: realism vs LLM bias | **delivered** (issue #16) — `literature/demographic-personas/` |
@@ -101,6 +104,31 @@ algorithm with stated parameters; none is evidence about how people walk:
   traced to the case ORCA's own paper says carries no guarantee. In pure Python a step for
   10,000 agents takes about 1.5 s, some fifteen times slower than real time, so this layer
   does not yet meet the project's 10,000-agent target for speed.
+
+From building the rule layer (issue #28, the second of six sub-issues) — see
+`llm_negotiation/README.md`, "The rule layer", and `llm_negotiation/docs/behaviour-checks.md`
+for the results, and `WORK_LOG-28.md` for what needs sign-off. The five rules are hand-written
+test fixtures; none of this is evidence about how people walk:
+
+- **Rules are stored data that a future LLM can write.** A rule is a condition on what two
+  agents can both see, a role for each, and a directive per role, in a versioned format with
+  a JSON Schema; it cannot run code, and a rule that reads what only one agent knows (its
+  task, say) is refused on loading. Rules live in a database where a version is never
+  edited and every rule records where it came from. Matching, priorities, ties and expiry
+  are fixed and logged. No model was called.
+- **"Plain ORCA" is now fixed before any comparison**, in two frozen versions: one with the
+  reference library's tiny random perturbation (the primary), one without.
+- **The rules do what they say, and the comparisons show where that matters.** A shared side
+  removes the symmetric head-on deadlock; against the perturbed baseline, which never
+  deadlocks, it only makes the side predictable. An overtaking rule stops a slower walker
+  being pushed along. A rule giving one person all the avoiding but no side makes her step
+  aside or walk backwards, depending on a perturbation of 0.1 mm/s: such a rule is
+  underspecified. A first-come-first-served rule at a narrow passage never changes who goes
+  first, because the existing arbiter already does exactly that.
+- **In a dense two-way flow the rules help and hurt.** With them, fifty agents each way
+  clear in about 47 s instead of 83 s, with half as many overlaps of two bodies; but the
+  worst overlap in a run is about six times deeper (20 cm against 3 cm). Why is an open
+  question.
 
 Three findings from the simulation-rules review (issue #22), all drafts needing supervisor
 sign-off — see `literature/simulation-rules/`. The review is seed-led (27 sources, 5 papers

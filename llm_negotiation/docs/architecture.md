@@ -536,6 +536,7 @@ sub-issues; it calls no model.
 | Matching | `negsim/rules/matching.py` | The policy of `rule-matching.md`: `RuleMatcher`, `PairRules`, `evaluate` |
 | Provider | `negsim/rules/provider.py` | `RuleDatabaseProvider`, behind the `DirectiveProvider` interface |
 | Command line | `negsim/rules/cli.py`, `ruledb.py` | Read-only: list, validate, history, show |
+| Tables, benchmark | `negsim/rules/report.py`, `negsim/rules/benchmark.py` | The tables of the behaviour checks, read from the committed logs (`behaviour-checks.md`); what matching costs per step |
 | Pair interactions | `negsim/avoidance/simulation.py` | `PairInteraction`: the unit rules are matched on and outcomes are categorised on |
 | Baselines | `configs/baselines/`, `negsim/experiment/baselines.py` | The two frozen baselines (`baseline.md`) |
 | Experiments | `negsim/experiment/avoidance.py`, `configs/rule_following/` | `baseline:` and `provider: rules` in avoidance experiments; the experiments of the behaviour checks |
