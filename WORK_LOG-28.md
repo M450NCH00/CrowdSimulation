@@ -564,6 +564,70 @@ so its time is approximate.)
   benchmark (alone on the machine) and an ablation of the flow that leaves out one rule at a
   time, to see which rule the deeper overlaps come with.
 
+### 2026-10-15 10:55 — Commits, the milestone comment, the benchmark, a profile
+
+- What I did: ran the whole suite (984 passed, pyflakes clean), then committed in seven
+  steps: the runs (`3f92501`, 9,608 files), the corrected property counts (`d088c70`), the
+  benchmark module (`ece6a69`), the tables, their tests and `behaviour-checks.md`
+  (`cbab7cc`), the READMEs and the architecture (`3c104b0`), this log (`3b1c384`) and the
+  ablation's config (`3a9bdff`). From that clean tree: the benchmark, alone on the machine
+  (10:42 to 10:54); posted the milestone comment on the issue meanwhile (network only); then
+  a profile of 150 steps of the shipped flow with rules (scratchpad, `flow_rules.prof`);
+  then started the ablation.
+- **Decision**: the ablation is extra (the issue does not ask for it), so it is a separate
+  experiment with its own config, committed before it ran, and reported as a follow-up.
+- Result / what I found (`behaviour-checks.md`, section 3.10):
+  - With rules, a step takes 120.6 ms instead of 52.1 at 100 agents (× 2.3) and 1,531 ms
+    instead of 514 at 1,000 (× 3.0). The three repeats of each agree within 9% (the plain
+    100-agent ones: 51.8 to 56.6 ms). The time added is the provider's own (1,017 of 1,018 ms
+    at 1,000 agents). The report records the commit (`3a9bdff`, clean).
+  - The profile: 45.5 s of 59.9 s in the matching policy, 23.5 s of it measuring the corridor
+    width between two agents by ray casts (8.8 million of them).
+  - Which pairs need those snapshots, from the fully logged run of 10:20: of 179,493
+    evaluations that tried a rule, 171,986 (96%) were same-direction pairs classed as
+    overtaking whose speeds tied within 0.05 m/s, evaluated again every step because nothing
+    holds them (Q11).
+  - Plain ORCA on the baseline (40 neighbours) costs 52 and 514 ms per step, against 12.5
+    and 148 ms in issue #26's benchmark with the scenario's 10 neighbours.
+
+### 2026-10-15 11:20 — The machine slept during the ablation
+
+- What happened: the ablation's sixteenth run took 17 minutes where the others took 25 s.
+  The process was using a full core when I looked, but had used only 392 s of CPU in 23
+  minutes. The System log says why: the laptop entered Modern Standby at 11:02:00 and left
+  it at 11:19:03 (Kernel-Power events 506 and 507), with the run suspended in between.
+- Why it does not matter for the results: a run is deterministic and reads no clock, so a
+  pause changes when its files are written and nothing in them. The benchmark, which does
+  read the clock, had finished at 10:54. If it sleeps again, the ablation just takes longer.
+- First look at the ablation, 17 of the 20 repeats of its first level (keep-left only, same
+  seeds and starting positions as the default rule runs): the deepest overlap of a run is
+  shallower without `overtaker_keeps_clear` in 16 of 17 repeats (54 ± 14 mm against 201 ±
+  101 mm), and the crowd still clears as fast. The second level (the overtaker rule without
+  keep-left) is running.
+
+### 2026-10-15 12:15 — The ablation: the deep overlaps come with the overtaking rule
+
+- What I did: the ablation finished at 12:11 (40 runs, all at `3a9bdff`, clean; the
+  overtaker-only runs took two to three minutes each, because they run to the time limit).
+  Read it against the flow's plain and rule runs (scratchpad `ablation_compare.py`), added it
+  to the report's experiments, regenerated Appendix A, and wrote section 3.11 of
+  `behaviour-checks.md`, the READMEs and Q10 from it.
+- Result / what I found:
+  - **`keep_left_head_on` alone** clears the flow as fast as both rules (mean time to goal
+    34.98 ± 1.03 s against 35.87 ± 0.73 s; last arrival 45.5 against 46.9 s), with the
+    deepest overlap of a run at 54 ± 16 mm, near plain ORCA's 32 ± 26 mm. Repeat by repeat
+    (same seeds and starting positions), shallower than with both rules in 19 of 20.
+  - **`overtaker_keeps_clear` alone gridlocks the flow**: 15 of 20 runs end at the 120 s
+    limit, 1,064 of the 2,000 agents never arrive, overlap episodes 2,190 ± 1,133 per run,
+    the deepest overlap 306 ± 56 mm, agent-steps with no allowed velocity 36,105 ± 18,800
+    (plain ORCA: 4,894). The only condition of all the runs worse than plain ORCA on every
+    count.
+  - So the depth comes with the rule that gives the agent in front a share of 0. A likely
+    mechanism (not tested): the one behind must make all the room, often has no allowed
+    velocity in a dense crowd, and ORCA's least-bad choice then has nobody on the other side
+    giving way. The rule passes the issue's consistency check and works for two agents
+    (section 3.4); it fails in a crowd (Q10).
+
 ## Open questions / risks
 
 - **Q1 (carried from #24 and #26). Has the supervisor's "no simulation code until the
@@ -608,9 +672,90 @@ so its time is approximate.)
   overlap of a run is 201 ± 101 mm with the rules (up to 456 mm) against 32 ± 26 mm without
   (primary baseline), while overlap episodes halve and the crowd clears in 47 s instead of
   83 s. In the one run examined step by step, overlaps began on steps where an agent had no
-  allowed velocity, in pairs with and without a rule. Which rule, if either, is behind the
-  depth is what an ablation of the flow tests (progress log). Either way, overlaps of 20 cm between bodies of
-  radius 25 cm would have to be dealt with before rules are used in crowds (SI-5).
+  allowed velocity, in pairs with and without a rule. **The ablation (`behaviour-checks.md`,
+  section 3.11) puts it on `overtaker_keeps_clear`**: without it the deepest overlap is 54 ±
+  16 mm and the crowd clears as fast (shallower in 19 of 20 repeats on the same seeds);
+  alone it gridlocks the flow in 15 of 20 runs. So a rule that gives one agent all the
+  avoiding (shares 1 and 0) passes the issue's consistency check, works for two agents, and
+  fails in a dense crowd. Should such rules be restricted to sparse encounters, have their
+  shares softened in a crowd, or be refused? For SI-3 and SI-5; overlaps of 20 cm between
+  bodies of radius 25 cm would have to be dealt with before rules are used in crowds.
+- **Q11. What matching costs in a crowd.** A rule step costs 2.3 times a plain one at 100
+  agents and 3.0 times at 1,000 (`behaviour-checks.md`, section 3.10), almost all of it the
+  matching policy re-measuring the corridor width between two agents for pairs evaluated
+  again on every step: same-direction pairs whose speeds tie, which `overtaker_keeps_clear`
+  never matches. Cheaper would be caching the width per pair, computing only the fields the
+  candidate rules read, or not re-evaluating a pair whose inputs have not changed; the last
+  touches DD53's "on every step while no rule holds". Performance work is out of scope here,
+  and the 10,000-agent goal makes it a question for later.
 
-## Summary (fill in at the end)
+## Summary
 
+**What changed** (two sessions, 2026-10-14 and 2026-10-15):
+
+- **The rule layer**, `negsim/rules/`: the rule format (a field catalogue, conditions as data,
+  role assignments with a tie policy, directives, the load-time checks), a versioned JSON
+  Schema with a validator for exactly its keywords, the rule database (one file per version,
+  frozen by a SHA-256 manifest; rule sets; an index by encounter class; the ambiguity grid),
+  the matching policy, `RuleDatabaseProvider`, a read-only command line, the tables of the
+  behaviour checks, and the benchmark.
+- **`rule_db/`**: five seed rules, all `test_seed`; the `default` rule set; the manifest.
+- **The two frozen baselines** and `docs/baseline.md`, sign-off pending.
+- **The avoidance layer, changed only where the issue needed it**: perception record v2 with
+  the pair-level fields; pair interactions and their outcome categories; optional provider
+  hooks; `speed_scale` (and every field a rule sets) ending when the encounter has passed;
+  the perturbation; counts of issue #26's two artefacts. Log schema version 3.
+- **Documents**: `rule-format.md`, `rule-matching.md`, `baseline.md`, `behaviour-checks.md`
+  (new); `perception.md`, `derivations.md` (section 15), `metrics.md` (sections 9 and 10),
+  `architecture.md` (section 7, DD42 to DD64), `log-schema.md`, both READMEs.
+- **Runs**: the 1,600 behaviour-check runs, the 40 runs of the follow-up ablation, and the
+  benchmark. No model was called; nothing was spent.
+
+**Why**: issue #28 replaces directives written in a config with stored rules, in the format
+and the database that SI-3 (negotiated rules) and SI-4 (extracted rules) will write into and
+SI-5 and SI-6 will evaluate and validate.
+
+**How it was verified**:
+
+- `python -m pytest` in `llm_negotiation/`: **984 passed** (795 before the issue; 189 new;
+  seven existing functions changed because they pinned what the issue changes, listed in the
+  20:33 entry). Pyflakes clean.
+- The JSON Schema validator agrees with `jsonschema` 4.26.0 on all 24 rule and fixture files
+  and 20,000 mutations. Every invalid fixture is refused for its named reason. No code path
+  runs a rule.
+- The consistency property: 0 reciprocity violations and 0 non-complementary roles in 4,000
+  random pairs per rule set in the suite and in 240,000 outside it (twelve seeds).
+- The shared snapshot equals each agent's own evaluation: in the suite (300 random states, five
+  visibility settings) and in every run (271,189 checks, 0 mismatches).
+- Issue #26's 46 runs: 44 identical with this code; the two `speed_scale` runs differ as
+  Part 5 intends.
+- Provenance: every run folder records its commit and a clean tree; determinism checked
+  across the session break; the tables in `behaviour-checks.md` are checked against the logs
+  by a test.
+
+**Acceptance criteria** (the issue's list):
+
+- [x] Prerequisites checked; the failure (P1) logged and raised with the user, who chose to
+  proceed (Q1); the branch base (P2) stated.
+- [x] Both baselines frozen and documented, sign-off pending.
+- [x] The rule format is declarative, versioned and schema-validated; no code execution path.
+- [x] Mutual observability and consistency enforced at load; every invalid fixture refused or
+  flagged.
+- [x] Rule versions immutable (the manifest); provenance and status in every rule.
+- [x] `RuleDatabaseProvider` behind the existing interface. *Judgement call:* the run loop
+  changed where the issue's own parts needed it (DD56; `architecture.md`, section 7.3); ORCA,
+  the solver, the neighbour search, the coordination, the arbiter and the other providers did
+  not.
+- [x] The matching policy implemented and documented.
+- [x] `speed_scale` expires at "passed": derived, documented, tested.
+- [x] Five seed rules and every fixture.
+- [x] Every evaluation and match logged with rule id and version; every pair categorised.
+- [x] Consistency property: zero violations, zero non-complementary roles.
+- [x] Behaviour checks, the 5 m sensitivity check, the artefact counts and the benchmark,
+  reported with numbers (`behaviour-checks.md`).
+- [x] Zero spend; all tests pass.
+
+**For a human to decide**: Q1 to Q11 above. The four that bear most on the next sub-issues:
+Q3 (re-evaluation while a rule holds), Q8 (whether `avoided` is the measure wanted), Q10
+(the overtaking rule, which gives one agent all the avoiding, deepens the overlaps of a
+dense crowd and gridlocks it on its own), and Q11 (what matching costs in a crowd).
