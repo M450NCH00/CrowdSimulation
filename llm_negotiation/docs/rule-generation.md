@@ -237,7 +237,10 @@ agreed or not; in condition B the stated rule. Each gets **exactly one category*
 in `validation.jsonl` with the session, the proposer, the canonical hash, whether it was the
 agreed (or stated) rule, the loader's reason, the fields it reads, and its review flags.
 **Nothing is discarded.** The proposal is read by issue #28's loader (`parse_rule`) under
-placeholder metadata, and by checks of its own, in this order of precedence:
+placeholder metadata, and by checks of its own. The order of precedence is: needs
+communication, then format limit, then whatever the loader refuses first, which checks a
+rule's structure before its consistency (so a malformed rule whose shares also sum below 1 is
+a schema error):
 
 | Category | What puts a proposal in it |
 |---|---|
@@ -351,9 +354,9 @@ Found while testing it, in a flow of 4 + 4: a rule that stops both people when t
 until the encounter has **passed** does not gridlock the flow (ORCA still steps a stopped
 agent aside, the encounter passes, the scale ends with it, DD55), it only slows it; one that
 stops them until they are **out of sight** of each other deadlocks it in 6 s. In the 50 + 50
-flow (one seed), the mock's rules that give both people 15 cm or 30 cm more room on every
-meeting reached the time limit with 98 and 23 of 100 arrived (274 and 384 collision
-episodes), where the baseline finished in 52 s (86): so an innocuous-looking rule can fail
+flow (one seed), the mock's rules that give both people 15 cm more room on every meeting, or
+30 cm when closer than 6 m, reached the time limit with 98 and 23 of 100 arrived (274 and 384
+collision episodes), where the baseline finished in 52 s (86): so an innocuous-looking rule can fail
 screening, which is the point of screening. The mock's rule that the faster person does all
 the avoiding passed (all arrived in 77 s, 90 collision episodes). A screening run of the
 50 + 50 flow with a rule took one and a half to four minutes.
