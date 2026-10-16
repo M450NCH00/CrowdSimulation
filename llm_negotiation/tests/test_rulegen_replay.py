@@ -44,6 +44,8 @@ def test_the_source_run_of_a_case_is_rebuilt_and_checked():
         rp.source_plan({**CASE, "scenario": {**CASE["scenario"], "resolved_sha256": "0" * 64}})
     with pytest.raises(rp.ReplayError, match="expected one experiment config"):
         rp.find_source_config("no_such_experiment")
+    flow = CaseStore().get("flow_ba3c7962")  # a crowd case: its scenario still resolves as it was frozen
+    assert rp.source_plan(flow).seed == flow["source"]["seed"]
 
 
 def test_a_rule_is_replayed_alone_on_its_cases_run_beside_a_baseline_that_reproduces_the_case(tmp_path):

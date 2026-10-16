@@ -4,6 +4,7 @@ shipped config is tagged with where it comes from."""
 
 from __future__ import annotations
 
+import itertools
 import math
 import re
 
@@ -171,6 +172,52 @@ def test_bidirectional_flow_is_reproducible_and_the_seed_matters():
     assert starts(crowd("bidirectional_flow")) != starts(crowd("bidirectional_flow", seed=27))
     lattice = crowd("bidirectional_flow", geometry={"spawn_jitter": 0.0})
     assert {round(agent.start.y, 9) for agent in lattice.agents} == {-1.5, -0.5, 0.5, 1.5}
+
+
+def test_the_flow_can_start_from_random_places():
+    spec = crowd("bidirectional_flow", geometry={"spawn_pattern": "random"})
+    east = [agent for agent in spec.agents if agent.group == "eastbound"]
+    west = [agent for agent in spec.agents if agent.group == "westbound"]
+    assert len(east) == len(west) == 50
+    # In the block the lattice would fill: the same density, out of each other's sensing range.
+    assert all(-25.0 <= agent.start.x <= -13.0 and abs(agent.start.y) <= 1.5 for agent in east)
+    assert all(13.0 <= agent.start.x <= 25.0 and abs(agent.start.y) <= 1.5 for agent in west)
+    for group in (east, west):
+        for one, other in itertools.combinations(group, 2):
+            assert math.dist(one.start.xy, other.start.xy) >= 0.6
+    assert len({round(agent.start.y, 3) for agent in spec.agents}) > 90  # not four lanes
+    assert all(agent.goal[1] == agent.start.y for agent in spec.agents)  # each keeps its lateral position
+    assert [agent.start.x for agent in east] == sorted((agent.start.x for agent in east), reverse=True)  # front first
+    starts = lambda spec: [agent.start.xy for agent in spec.agents]
+    assert starts(crowd("bidirectional_flow", geometry={"spawn_pattern": "random"})) == starts(spec)
+    assert starts(crowd("bidirectional_flow", geometry={"spawn_pattern": "random"}, seed=27)) != starts(spec)
+    wider = crowd("bidirectional_flow", geometry={"spawn_pattern": "random", "spawn_min_distance": 0.7})
+    assert min(math.dist(a.start.xy, b.start.xy) for a, b in itertools.combinations(wider.agents[:50], 2)) >= 0.7
+
+
+def test_without_a_spawn_pattern_the_flow_resolves_exactly_as_before():
+    """Runs and frozen conflict cases hash the resolved scenario (issue #30), so the keys
+    are only written when set."""
+    spec = crowd("bidirectional_flow")
+    assert "spawn_pattern" not in spec.geometry and "spawn_min_distance" not in spec.geometry
+    assert {round(agent.start.y, 1) for agent in crowd("bidirectional_flow", geometry={"spawn_jitter": 0.0}).agents} == {-1.5, -0.5, 0.5, 1.5}
+    explicit = crowd("bidirectional_flow", geometry={"spawn_pattern": "lattice"})
+    assert [agent.start.xy for agent in explicit.agents] == [agent.start.xy for agent in spec.agents]
+
+
+@pytest.mark.parametrize(
+    "geometry, message",
+    [
+        ({"spawn_pattern": "spiral"}, "expected one of"),
+        ({"spawn_min_distance": 0.7}, "applies to spawn_pattern random only"),
+        ({"spawn_pattern": "random", "spawn_min_distance": 0.0}, "greater than"),
+        ({"spawn_pattern": "random", "spawn_min_distance": 1.5}, "could not place 50 agents"),
+        ({"spawn_pattern": "random", "spawn_min_distance": 0.3}, "overlap at their starting positions"),
+    ],
+)
+def test_a_random_start_that_cannot_be_had_is_refused(geometry, message):
+    with pytest.raises(ConfigError, match=message):
+        crowd("bidirectional_flow", geometry=geometry)
 
 
 def test_the_number_of_agents_in_the_flow_is_configurable():

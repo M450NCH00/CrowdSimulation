@@ -780,6 +780,7 @@ and say nothing about any model or about people.**
 | To | Edit |
 |---|---|
 | change a scenario's sizes, or give the two agents different speeds or sizes | `configs/scenarios/*.yaml` (`agents:` takes per-agent overrides), or `scenario_overrides:` in an experiment |
+| start the two-way crowd at random places instead of on a lattice | `scenario_overrides: {geometry: {spawn_pattern: random}}` in the experiment; `spawn_min_distance` (default 0.6 m) is the closest two starts may be (`docs/parameters.md`) |
 | give agents an avoidance directive | `directives:` in a config under `configs/avoidance/`: `provider: static`, then `default`, `agents` (by index) or `pairs` (observer and neighbour) |
 | give avoidance agents an age and a gender | `population:` in the same config. It changes what a neighbour perceives and nothing physical. To make an agent slower as well, set its speed under `scenario_overrides`, in the same file. |
 | change how single-file segments are handled | `arbitration:` in the same config (`enabled`, `policy`, `tie_break`) |

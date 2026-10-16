@@ -70,6 +70,7 @@ is a claim about people.
 | `approach_length`, `start_setback`, `merge_distance`, `lateral_offset` of `corridor_to_bottleneck` | 8, 7, 0.6, 0.4 m | The layout of issue #24's hallway, fitted into the 1.75 m corridor. |
 | `agents_per_direction` | 50 | The default the issue asks for. |
 | `spawn_jitter` | 0.1 m | Breaks the lattice's symmetry (`orca.md`, section 6). |
+| `spawn_pattern`, `spawn_min_distance` of `bidirectional_flow` | not set (the lattice); 0.6 m when `random` | Optional, set in no shipped scenario. `random` places each group at random in the block the lattice would fill, at the same density, no two starts closer than the distance centre to centre (a 0.5 m body and 10 cm); the jitter is not used. Drawn one start at a time, a start too close is drawn again, so at the shipped density no more than about 0.7 m can be had. Neither key is written into a resolved scenario unless set, so runs and cases made before they existed resolve as they did. |
 | `wall_clearance`, `wall_thickness` | 0.5 m | Where the lattice starts, and how walls are drawn. Wall thickness has no effect on the motion. |
 | `lookahead` | 2.0 m (0.6 m in the bottleneck) | How far ahead on its path an agent aims. Shorter where the path has corners. |
 | `cell_size` | 2.0 m | Grid cell of the neighbour search. No effect on the result. |
