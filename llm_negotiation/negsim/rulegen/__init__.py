@@ -17,4 +17,5 @@ one stating model (condition B); every proposed rule is **validated** and catego
 ``replay``      single-rule replay and crowd screening
 ``experiment``  the rule-generation experiment type, its cost preview and its logs
 ``mock``        mock-client policies that exercise every path without a network
+``cli``         ``python -m negsim.rulegen``: list a staging database, promote a rule
 """
