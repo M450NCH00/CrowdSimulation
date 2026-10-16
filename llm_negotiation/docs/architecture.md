@@ -8,7 +8,9 @@ the paper or the issue, and each needs the supervisor's sign-off. Assumptions ar
 Sections 1 to 5 describe the negotiation simulator of issue #24. Section 6 describes the
 avoidance layer added by issue #26, which sits beside it: ORCA, perception, directives,
 and the handoff to the arbiter. Section 7 describes the rule layer of issue #28: the rule
-format, the rule database, the matching policy, and the frozen baselines.
+format, the rule database, the matching policy, and the frozen baselines. Section 8
+describes rule generation of issue #30: conflict cases, the design matrix, the two
+protocols, validation, the writer and its staging databases, replay and screening.
 
 ## 1. The pieces
 
@@ -683,3 +685,161 @@ matters while the arbiter holds the pair, which can outlast "passed" between the
   pair.
 - A fix for the artefacts of issue #26 (walking backwards, being hurried along, all-round
   vision); the behaviour checks count them.
+
+## 8. Rule generation (issue #30)
+
+Sections 6 and 7 let agents follow rules; nothing yet produced a new one. This section turns a
+conflict into a **candidate rule**, in two ways to be compared later: two model agents
+negotiating a standing rule (condition A), and one model stating a rule (condition B). It is
+the first half of the third of six sub-issues (SI-3a). Everything is built and rehearsed on
+the mock client; the paid pilot is held (`rule-generation.md`, section 10).
+
+### 8.1 Where each piece lives
+
+| Piece | Where | What it is |
+|---|---|---|
+| Pair exposure, tiers | `negsim/avoidance/exposure.py`, `negsim/metrics/avoidance.py`, `negsim/avoidance/simulation.py` | A conflict measure that reads no directive, and the severity tiers T0 to T4 (`metrics.md`, section 11) |
+| Paired seeds | `negsim/experiment/avoidance.py` | `design.seeding: paired` (`baseline.md`, section 6) |
+| Rule schema 2, canonical form | `rule_db/schema/rule.v2.schema.json`, `negsim/rules/model.py`, `negsim/rules/database.py`, `negsim/rules/canonical.py` | `stated`, `intent`, `screening`; when two rules are the same rule (`rule-format.md`, sections 12 and 13) |
+| Cases | `negsim/rulegen/cases.py`, `cases/`, `configs/cases/` | Conflicts of finished baseline runs, frozen (`cases.md`) |
+| Design matrix | `negsim/rulegen/design.py` | Sessions: a case, a persona pair, a condition, an order, a repeat |
+| Descriptions | `negsim/rulegen/describe.py`, `negsim/negotiation/templates/rulegen_*_v1.yaml` | The situation in words, the field glossary, the format example, all frozen |
+| Protocols | `negsim/rulegen/protocol.py`, `negsim/negotiation/protocol.py` (`request_with_retry`) | Condition A (negotiate) and B (state), on issue #24's ask-and-retry loop |
+| Validation | `negsim/rulegen/validate.py` | The category of every proposal |
+| Writer, promotion | `negsim/rulegen/writer.py`, `negsim/rulegen/cli.py` | Staging databases; `python -m negsim.rulegen promote` |
+| Replay, screening | `negsim/rulegen/replay.py` | Each rule alone, on its case's run and in the two-way flow |
+| Experiment type | `negsim/rulegen/experiment.py`, `configs/rule_generation/` | `layer: rule_generation`: the whole pipeline, the cost preview, the logs |
+| Mock paths | `negsim/rulegen/mock.py` | Mock-client policies that take every path of both protocols |
+| Budget scope | `negsim/llm/budget.py` | A cap on one experiment's own calls |
+
+### 8.2 One experiment, step by step
+
+```
+   cases (frozen) ──> design matrix ──> sessions, in a seeded order
+        │
+        ├── cost preview ──> paid client? needs the preview under the cap and --confirm
+        │
+        ├── condition A: two agents, first-person prompts, turns of
+        │     {message, proposal, accept, no_rule_possible} ──> agreed / no rule possible /
+        │     no agreement / parse failure                     (every turn kept, every attempt)
+        ├── condition B: one call, third-person, {rule, reason}, K repeats
+        │
+        ├── validation: every proposal ──> valid / needs communication / inconsistent /
+        │                                   schema error / format limit     (none discarded)
+        ├── writer: valid agreed or stated rules ──> rule_db_staging/<condition>/  (rule_db/
+        │                                             is never written; promotion is by hand)
+        ├── replay: each rule alone on its case's own run, beside the baseline on the same seed
+        ├── screening: each rule alone in the 50 + 50 flow, beside the flow with no rule
+        │                ──> the rule's next version, with its screening block
+        └── report: categories, agreement, stability, tokens and cost against the preview
+```
+
+### 8.3 What changed outside `negsim/rulegen/`, and what did not
+
+**Unchanged** since the branch this one is cut from: ORCA (`orca.py`), the linear programs,
+the neighbour search, the coordination with the arbiter, the arbiter, the core, the matching
+policy (`negsim/rules/matching.py`) and the rule provider. **Changed**, and why:
+
+- `avoidance/simulation.py`, `avoidance/exposure.py`, `metrics/avoidance.py`,
+  `runlog/schema.py`, `scenarios/crowd_base.py`: pair exposure and the tiers, log schema 4
+  (Part 1.1). The run loop records each agent's intended velocity before the projection;
+  nothing it does changed.
+- `experiment/avoidance.py`: paired seeds (Part 1.2), and a way to reload a rule database
+  that grows while an experiment writes to it.
+- `rules/model.py`, `rules/database.py`, `rules/cli.py`, `rules/canonical.py`: schema 2 and
+  the canonical form (Part 1.3).
+- `viz/viewer.py`: which rule fired for each pair (Part 1.4).
+- `avoidance/perception.py`: reading a perception record back from a log, for cases.
+- `negotiation/protocol.py`: #24's turn loop split out as `request_with_retry`, which both
+  protocols reuse; `Dialogue` behaves as before (its tests pass unchanged).
+- `negotiation/prompts.py`, `negotiation/freeze.py`: a template may say its `kind`, and only
+  negotiation templates are offered to negotiation experiments.
+- `llm/budget.py`: the scoped cap (DD83). `experiment/cli.py`, `run_experiment.py`: the
+  new layer and `--confirm`.
+
+The committed experiments of issues #26 and #28 are pinned to `per_run` seeding, so that they
+stay reproducible (DD66).
+
+### 8.4 Design decisions
+
+Marked as decisions, as in section 7.4: this project's choices where the issue left room,
+each needing the supervisor's sign-off. `WORK_LOG-30.md` gives the reasoning at the time.
+
+**DD65. Tiers are the conflict classification from issue #30 on** (`metrics.md`, section
+11.3); the categories of issue #28 are kept as they were.
+
+**DD66. Paired seeding is the default**; the committed configs of #26 and #28 are pinned to
+`per_run` (`baseline.md`, section 6).
+
+**DD67. Pair exposure** uses the bodies' obstacle (no clearance margin), the larger of the
+two horizons, a depth tolerance of 1e-3 m/s, and counts overlapping bodies as exposed
+(`metrics.md`, section 11.2).
+
+**DD68. `collision_course_min_s` is 0 s**: T1 is any exposed step.
+
+**DD69. The canonical form** keeps `encounter`, `when`, `roles`, `directive` and `expiry`,
+numbers to 12 significant digits, and nothing else changed; a proposal id is 12 hexadecimal
+characters (`rule-format.md`, section 13).
+
+**DD70. A pair that formed one-sided is not a case**, and **DD71. a pair must be approaching
+when it forms** (`cases.md`, section 2).
+
+**DD72. The design's levels mean:** a base age of 25 and an older person of 70; errands "the
+emergency room" (urgent) and "the supermarket" (routine), GameChat's highest- and
+lowest-priority task types; four gender pairs; the full factorial; session ids from what a
+session is; no names (`rule-generation.md`, section 2).
+
+**DD73. What a description shows**, and how numbers are rounded: an agent's own perception
+record and its own state and errand, never the other's errand, usual or maximum speed, goal
+or path; third-person, both; a generated glossary whose hash is pinned; a placeholder format
+example (`rule-generation.md`, section 3).
+
+**DD74. A turn of condition A has a fourth key, `no_rule_possible`**, and "no rule is
+possible" is an outcome when both say so on consecutive turns.
+
+**DD75. Agreement** is accepting the other's latest proposal by its proposal id, or any
+longer prefix of its hash, in either case, without proposing a different rule in the same
+turn; re-proposing the same canonical rule is not a difference. The words and priority of
+an agreed rule are the proposer's.
+
+**DD76. A turn unreadable after its one retry ends a negotiation** (`parse_failure`), where
+issue #24's dialogue counted it as silence.
+
+**DD77. Stability** counts "no rule" and "parse failure" as answers and leaves aborted repeats
+out.
+
+**DD78. Validation's precedence** (needs communication, then format limit, then the loader's
+reasons); a field the session hides needs communication; a formula must depend on something;
+roles given by a category are a format limit; the manual-review patterns
+(`rule-generation.md`, section 6).
+
+**DD79. The writer** stores only valid agreed or stated rules, once per condition, case and
+canonical rule, in the earliest supporting session's words, and stores a rule again as its
+next version when more sessions support it.
+
+**DD80. Replay** uses the people and visibility of the rule's earliest supporting session, on
+the case's own run, and checks that the baseline reproduces the case.
+
+**DD81. Screening** is in the 50 + 50 flow on the primary baseline, seeds from 30900 paired,
+with a crowd given the design's two ages and two genders in turn; **gridlock** is a deadlock,
+or the time limit reached with people still walking, on a seed on which the baseline did
+neither. A canonical rule is screened once per invocation and visibility.
+
+**DD82. The cost preview's terms**: S includes room for a failed reply and the retry
+instruction, m is the reply cap plus the longest turn wrapper, every text is estimated 1.5
+times high as the budget guard does, and every send of a turn is counted, 2 × (1 + transport
+retries); peak cache-miss prices (`rule-generation.md`, section 9).
+
+**DD83. A pilot's cap is on its own calls** (a scoped budget guard), since the ledger already
+holds earlier spending; a scoped guard labels unlabelled calls and refuses others'.
+
+**DD84. A paid run needs `--confirm` after its preview**; running again resumes; a changed
+config needs a new name.
+
+### 8.5 What is not here
+
+- The paid pilot (held), the full paid collection and the A versus B comparison (SI-3b).
+- Generated rules switched on together, semantic equivalence of rules, Q3, rules inferred
+  from behaviour (SI-4).
+- Live negotiation during a run, unseen scenarios (SI-5); evidence about people (SI-6).
+- Matching cost (Q11), and a rule format that reads private information.

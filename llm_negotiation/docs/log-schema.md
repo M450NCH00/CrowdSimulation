@@ -20,7 +20,9 @@ describes, in `run_kind`:
 The sections from "Layout" to "`summary.csv`" describe a negotiation run; they are those of
 version 1, with the one new field. The section "Avoidance runs" describes the other kind.
 The two have files of the same name with different contents; `run_kind` says which is
-which. Versions 3 and 4 changed only the avoidance run.
+which. Versions 3 and 4 changed only the avoidance run. The folder of a rule-generation
+experiment (issue #30) is not a run of either kind; section "Rule-generation experiments"
+describes it.
 
 **Old folders stay valid.** A folder written under version 1 has no `run_kind` and is a
 negotiation run. `validate_run_dir` checks a folder against the version its own
@@ -398,12 +400,118 @@ version 4, pair exposure and the tiers (`pair_exposure_time_s`, `pairs_t0`, `pai
 `pairs_t4`), empty for a run written before; and
 `git_commit`.
 
+## Rule-generation experiments (issue #30)
+
+A rule-generation experiment (`rule-generation.md`) is not a run: it holds sessions with a
+model, the rules they produced, and avoidance runs that replay and screen those rules. Its
+folder, `runs/<experiment_name>/` (`runs_mock/` with the mock client), is laid out as below.
+Its own files are **version 1** of the rule-generation log (`rulegen_log_version` in
+`config.json`); the run folders under `replay/` and `screening/` are avoidance runs of log
+schema version 4, described above.
+
+```
+runs/<experiment_name>/
+  config.json            the experiment's config as read, the client, git, the templates
+  invocations.jsonl      one line per time the experiment was run or resumed
+  cases.json             the cases used
+  design.jsonl           the session list, one session per line
+  preview.json           the worst-case cost preview, written before any call
+  sessions/<session_id>.json            one file per session, written when it ends
+  sessions/<session_id>.aborted<n>.json the log of a session that was aborted and run again
+  validation.jsonl       one line per proposed rule: its category
+  written.jsonl          one line per rule the writer stored
+  rule_db_staging/<negotiated|stated>/  the staging databases (rule-format.md, section 12)
+  replay/<rule_id>/baseline/, replay/<rule_id>/rule/   avoidance runs: the replay of a rule
+  screening/baseline/<run_id>/, screening/<rule_id>/<run_id>/  avoidance runs: the crowd screening
+  screening.jsonl        one line per rule replayed or screened: the entries stored on it
+  cost.json              the actual cost against the preview, per session
+  summary.json           the report's numbers
+  report.md              the report, for reading
+```
+
+**`config.json`**: `rulegen_log_version`, `layer` (`rule_generation`), `experiment` (every
+setting, as read: `experiment_name`, `description`, `source`, `cases`, `conditions`,
+`design`, `negotiation`, `statement`, `llm`, `budget`, `replay`, `screening`),
+`client_name` (`mock` or `deepseek`), `created_utc`, `git`, `software`, and `templates` (each
+condition's template and the common template it uses, with their SHA-256). Written once; an
+invocation with a different config or client is refused.
+
+**`invocations.jsonl`**: `utc`, `git`, `client` (what the client says of itself, without
+credentials), `confirm`, `limit`, `status` (`completed`, `partial`, `aborted`,
+`awaiting_confirmation` or `refused_over_cap`), `executed` (the sessions run this time),
+`aborted` (why, if so), `preview_usd`.
+
+**`design.jsonl`**, one session per line: `session_id`, `index` (its place in the shuffled
+list), `condition`, `case_id`, `case_version`, `agents`, `cell` (the level of each of the
+six factors), `repeat`, `personas` (keyed by agent: `age`, `gender`, `task`, `urgency`),
+`visibility`, `first` (the first speaker in A, Person 1 in B).
+
+**`preview.json`**: `model`, `prices` (the peak cache-miss input and peak output prices per
+million tokens, the price table's source and date), `reply_cap_tokens`,
+`max_messages_per_agent`, `sends_per_turn` and `max_retries_per_turn` (with `sends_from`),
+`sessions` and `sessions_by_condition`, `usd_by_condition`, `usd_total`, `cap_usd`,
+`fits_the_cap`, and `per_session`: `session_id`, `condition`, `S_tokens`, `m_tokens`,
+`reply_cap_tokens`, `M_messages_per_agent`, `input_tokens_bound` and `output_tokens_bound`
+(every send included), `usd_bound` (`rule-generation.md`, section 9).
+
+**`sessions/<session_id>.json`, condition A**: `session` (as in `design.jsonl`),
+`started_utc`, `ended_utc`, `templates`, `llm` (`model`, `temperature`, `max_tokens`,
+`thinking`, `json_mode`), `condition` (`negotiated`), `outcome` (`agreed`,
+`no_rule_possible`, `no_agreement`, `parse_failure` or `aborted`), `error`, `first_speaker`,
+`second_speaker`, `max_messages_per_agent`, `max_attempts_per_turn`, `agreement` (null, or
+`rule` as the proposer wrote it, `canonical_hash`, `proposal_id`, `proposed_by`,
+`proposed_at_turn`, `accepted_by`, `accepted_at_turn`, `proposer_spoke_first`),
+`system_prompts` (keyed by agent), `turns`, `proposals`, `totals` (`turns`, `llm_calls`,
+`retries`, `tokens`, `cost_usd`), and `model_returned` (the model names the API returned).
+A turn: `turn_index`, `speaker`, `shown` (what it was told on its turn), `parse_ok`,
+`parse_error`, `message`, `proposal` (as written), `proposal_hash` and `proposal_id`,
+`accept`, `accept_status` (`rule-generation.md`, section 4), `no_rule_possible`,
+`n_attempts`, `tokens`, `cost_usd`, and `attempts`, each as in `conversation.jsonl`
+(`attempt`, `wall_clock_utc`, `prompt_messages`, `request`, `raw_output`, `finish_reason`,
+`response_id`, `model`, `system_fingerprint`, `usage`, `cost_usd`, `price_tier`,
+`latency_s`, `parse_error`, `api_error`). `proposals`: every proposal in order, with
+`turn_index`, `proposer`, `proposal`, `canonical_hash`, and `agreed`.
+
+**`sessions/<session_id>.json`, condition B**: `session`, `started_utc`, `ended_utc`,
+`templates`, `llm`, `condition` (`stated`), `outcome` (`stated`, `no_rule`, `parse_failure`
+or `aborted`), `error`, `person_1`, `person_2`, `max_attempts`, `system_prompt`,
+`parse_error`, `rule` (as written, or null), `reason`, `canonical_hash`, `attempts`,
+`totals` (`llm_calls`, `retries`, `tokens`, `cost_usd`), `model_returned`.
+
+**`validation.jsonl`**, one line per proposal (A: every proposal of every turn; B: the stated
+rule): `session_id`, `condition`, `case_id`, `scenario`, `turn_index`, `proposer`,
+`canonical_hash`, `agreed` (the agreed or stated rule), `category` (`valid`,
+`needs_communication`, `inconsistent`, `schema_error` or `format_limit`),
+`loader_category` (the loader's or the check's reason), `message`, `fields` (those the
+proposal reads), `ignored_metadata` (what the model wrote in the writer's keys),
+`review_flags`.
+
+**`written.jsonl`**: `rule_id`, `version` (the version holding the rule now), `condition`,
+`case_id`, `canonical_hash`, `file` (under the experiment folder), `written` (whether this
+invocation wrote it), `sessions` (the supporting sessions, earliest first).
+
+**`screening.jsonl`**: per rule with any: `rule_id`, `version`, `condition`, `case_id`,
+`file`, and `entries`, the screening entries this experiment stored on the rule
+(`rule-format.md`, section 12): for `kind: replay`, `results` has `run` and `pair` (each for
+`baseline` and `rule`), `folders`, `rule_matched_the_case_pair` and
+`baseline_reproduces_case`; for `kind: crowd`, `settings`, `summary`, `per_seed` (`seed`,
+`baseline`, `rule`, `folders`) and `same_runs_as`.
+
+**`cost.json`**: `preview_usd`, `actual_usd`, `of_which_aborted_sessions_usd`, `cap_usd`,
+`client`, `sessions` (per session: the calls, prompt and completion tokens and cost, against
+its preview), and a `note` on what the figures are. **`summary.json`** is the report's
+numbers (`rule-generation.md`, section 9); **`report.md`** the same, for reading.
+
 ## `spend_ledger.jsonl`
 
 One line per paid call: `utc`, `experiment`, `run_id`, `turn_index`, `speaker`, `attempt`,
 `model`, the token counts, `price_tier` (`peak` or `off_peak`), `cost_usd`,
 `cost_is_upper_bound` (true when a send failed and was counted at its worst case),
 `prices_date_checked`, `error`, and `cumulative_usd`. See `llm-backend.md`, section 5.
+A call of a rule-generation experiment (issue #30) has, instead of `run_id`, `session_id`,
+`condition`, `case_id`, `repeat`, `speaker_role` (condition A) and `path_index` (read only by
+the mock client; never sent to a provider). A budget cap scoped to one experiment counts the
+lines whose `experiment` is that experiment's name.
 
 ## Change log
 
@@ -432,3 +540,6 @@ One line per paid call: `utc`, `experiment`, `run_id`, `turn_index`, `speaker`, 
   and six summary columns. The categories `avoided`, `resolved`, `failed` mean what they meant in
   version 3. A negotiation run is as in version 3. Folders written under versions 1 to 3 stay valid
   and are checked against their own version.
+- (2026-10-16, issue #30; not a run format, the run schema stays at version 4.) The folder of a
+  rule-generation experiment, version 1 of its own (`rulegen_log_version`), section
+  "Rule-generation experiments"; and the spend ledger's labels for its calls.

@@ -119,6 +119,12 @@ every file written for the key and for the words `Authorization` and `Bearer`
   the last few cents of a budget are not spendable.
 - **Failed sends.** A send that times out may still have been billed. It is recorded at its
   worst-case cost and flagged `cost_is_upper_bound`.
+- **A cap on one experiment's own calls** (issue #30). A guard may be scoped to an
+  experiment's name: its cap then counts only the ledger lines of that experiment, so that a
+  pilot can have a cap of its own beside what earlier experiments spent. It records a call
+  with no experiment label under its scope, and refuses one labelled for another experiment.
+  Rule-generation experiments use it (`rule-generation.md`, section 9); the experiments of
+  issue #24 do not.
 - **The mock client is never charged and never writes to the ledger.** Its runs go to
   `runs_mock/`, which git ignores.
 
