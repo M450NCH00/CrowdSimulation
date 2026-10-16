@@ -44,7 +44,7 @@ from typing import Any, Mapping, Optional, Sequence
 import yaml
 
 from ..configutil import ConfigError, PACKAGE_ROOT
-from ..rules.database import MANIFEST_FILE, RULE_DB_ROOT, RuleDatabase, file_sha256, schema_path
+from ..rules.database import MANIFEST_FILE, RULE_DB_ROOT, RULE_FILE, RuleDatabase, file_sha256, load_validator, read_rule_file, schema_path
 from ..rules.model import SCHEMA_VERSIONS, Rule
 from .design import CONDITION_NEGOTIATED, CONDITION_STATED
 
@@ -133,11 +133,26 @@ class StagingDatabase:
         return RuleDatabase.load(self.root)
 
     def latest(self, rule_id: str) -> Optional[Rule]:
-        """The newest version of a rule, or ``None`` if the database has none."""
+        """The newest version of a rule, or ``None`` if the database has none.
+
+        Read on its own, checked against the manifest, rather than by loading the whole
+        database, whose check of every pair of rules for clashes grows with the square of their
+        number and is not needed to find one rule.
+        """
         if not self.manifest_path.is_file():
             return None
-        versions = [rule for rule in self.load().rules if rule.rule_id == rule_id]
-        return max(versions, key=lambda rule: rule.version) if versions else None
+        files = self.manifest()["files"]
+        versions = sorted(
+            int(found["version"])
+            for name in files
+            if name.startswith("rules/") and (found := RULE_FILE.match(name[len("rules/"):])) and found["rule_id"] == rule_id
+        )
+        if not versions:
+            return None
+        name = f"rules/{rule_id}.v{versions[-1]}.yaml"
+        if file_sha256(self.root / name) != files[name]["sha256"]:
+            raise WriterError(f"{self.root / name}: its contents are not the version frozen in the staging manifest")
+        return read_rule_file(self.root / name, load_validator(self.root), self.root)
 
     def stage(self, rule: Mapping[str, Any], note: str) -> tuple[str, int, bool]:
         """Store a generated rule (``build_rule``) idempotently.

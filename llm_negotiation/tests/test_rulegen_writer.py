@@ -91,8 +91,14 @@ def test_staging_is_idempotent_and_grows_by_versions(tmp_path):
     assert third.version == 3 and len(third.screening) == 1  # the screening is kept: what the rule does is the same
     assert len(third.provenance["generation"]["sessions"]) == 2 and "adds 1 supporting session" in third.provenance["notes"]
     assert staging.stage(two, "same")[1:] == (3, False)
+    newest = max((r for r in staging.load().rules if r.rule_id == one["rule_id"]), key=lambda r: r.version)
+    assert (third.key, third.sha256, third.source) == (newest.key, newest.sha256, newest.source)  # read alone, as the whole database reads it
+    assert staging.latest("not_there") is None
     with pytest.raises(WriterError, match="no longer support it"):
         staging.stage(built(support("A_other_r1")), "fewer")
+    (staging.root / third.source).write_text("edited", encoding="utf-8")
+    with pytest.raises(WriterError, match="not the version frozen"):
+        staging.latest(one["rule_id"])
 
 
 def test_promotion_needs_a_reason_and_records_it(tmp_path):
