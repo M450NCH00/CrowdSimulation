@@ -378,3 +378,25 @@ def test_guard_refuses_a_model_it_cannot_price(tmp_path):
 def test_negative_cap_is_rejected(tmp_path):
     with pytest.raises(ValueError):
         guard(tmp_path, cap=-1.0)
+
+
+def test_a_cap_scoped_to_an_experiment_counts_that_experiments_calls_only(tmp_path):
+    """Issue #30: a pilot has a cap of its own, beside what earlier experiments spent."""
+    ledger = SpendLedger(tmp_path / "ledger.jsonl")
+    ledger.append({"experiment": "an_earlier_one", "cost_usd": 0.40})
+    ledger.append({"experiment": "pilot", "cost_usd": 0.01})
+    assert ledger.total_usd() == pytest.approx(0.41) and ledger.total_usd("pilot") == pytest.approx(0.01)
+    scoped = BudgetGuard(ledger, 0.05, PriceTable.from_yaml(), scope="pilot")
+    assert scoped.remaining_usd() == pytest.approx(0.04)
+    deepseek, transport = client((200, api_response()))
+    budgeted = BudgetedClient(deepseek, scoped)
+    budgeted.complete(request(metadata={"session_id": "s1"}))  # unlabelled: recorded under the scope
+    assert len(transport.calls) == 1 and ledger.entries()[-1]["experiment"] == "pilot"
+    assert budgeted.describe()["budget_scope"] == "pilot"
+    with pytest.raises(BudgetExceededError, match="labelled for experiment 'another'"):
+        budgeted.complete(request(metadata={"experiment": "another"}))
+    with pytest.raises(BudgetExceededError, match=r"ledger\.jsonl, "):  # unscoped, 0.41 counts against 0.05
+        BudgetedClient(client((200, api_response()))[0], BudgetGuard(ledger, 0.05, PriceTable.from_yaml())).complete(request())
+    tight = BudgetGuard(ledger, ledger.total_usd("pilot") + 0.0001, PriceTable.from_yaml(), scope="pilot")
+    with pytest.raises(BudgetExceededError, match="ledger.jsonl for pilot"):
+        BudgetedClient(client((200, api_response()))[0], tight).complete(request())
