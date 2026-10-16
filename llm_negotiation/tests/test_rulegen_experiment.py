@@ -244,9 +244,13 @@ def test_every_written_rule_is_replayed_and_screened_alone(full_run):
         assert crowd["verdict"] in ("passed", "failed") and crowd["scenario"] == "bidirectional_flow"
         assert crowd["results"]["per_seed"][0]["baseline"]["n_agents"] == 8
         config = json.loads((folder / crowd["results"]["per_seed"][0]["folders"]["rule"] / "config.json").read_text(encoding="utf-8"))
-        assert [rule["rule_id"] for rule in config["directives"]["rules"]] == [row["rule_id"]]  # alone
+        ran = crowd["results"]["same_runs_as"] or f"{row['rule_id']}@1"
+        assert [f"{rule['rule_id']}@{rule['version']}" for rule in config["directives"]["rules"]] == [ran]  # alone
+        assert ran.split("@")[0].endswith(row["rule_id"][-10:])  # the same canonical rule, if another's runs
         rule = StagingDatabase(folder / "rule_db_staging" / row["condition"]).latest(row["rule_id"])
         assert rule.version == row["version"] == 2 and len(rule.screening) == 2
+    reused = [row for row in rows if next(e for e in row["entries"] if e["kind"] == "crowd")["results"]["same_runs_as"]]
+    assert reused and len(reused) < len(rows)  # a canonical rule is screened once per visibility
 
 
 def test_the_report_and_the_logs(full_run):
