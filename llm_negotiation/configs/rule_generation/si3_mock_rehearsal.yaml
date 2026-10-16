@@ -1,0 +1,76 @@
+# Issue #30, Part 10: the rule-generation pipeline rehearsed end to end on the mock client:
+# both protocols, every path of each, every validation category, the writer, single-rule
+# replay and crowd screening. No network and no cost; the output goes under runs_mock/,
+# which git does not track.
+#
+#   python run_experiment.py configs/rule_generation/si3_mock_rehearsal.yaml
+#
+# The mock does not imitate a model (negsim/rulegen/mock.py): each design cell of a condition
+# is given one scripted path, in turn, so that with 80 cells per condition (5 cases x 16 cells)
+# every path is taken several times: 80 negotiations and 240 statements. One case per SI-1
+# scenario type, so that every kind of situation description and every scenario's replay is
+# exercised. The persona factors are those of a real run, with gender and the mapping held at
+# one level to keep the list short; nothing here is a finding about a model.
+#
+# Running it again resumes it (sessions already done are not run again).
+schema_version: 1
+layer: rule_generation
+experiment_name: si3_mock_rehearsal
+description: >-
+  Mock rehearsal of rule generation: both conditions, every path, five cases (one per SI-1
+  scenario type), replay and crowd screening of every rule written.
+
+cases:
+  store: cases
+  set: si3_v1
+  ids:
+    - head_on_de176842      # wide_corridor_head_on, aligned
+    - crossing_6c29d99f     # open_crossing, together
+    - overtaking_2d08db11   # overtaking, in line
+    - bottleneck_a35e31ca   # corridor_to_bottleneck, opposing
+    - flow_ba3c7962         # bidirectional_flow, T4
+
+conditions: [negotiated, stated]
+
+design:
+  seed: 30
+  base_age: 25
+  age_difference: 45
+  factors:
+    age_pair: [same, p1_older]
+    gender_pair: [p1_female]
+    task: [none, p1_urgent]
+    demographics_visible: [true, false]
+    mapping: [p1_lower]
+    order: [lower_first, higher_first]
+
+negotiation:
+  template: rulegen_negotiate_v1
+  max_messages_per_agent: 4      # the issue's default
+
+statement:
+  template: rulegen_state_v1
+  repeats: 3                     # the issue's default K
+
+llm:
+  client: mock
+  mock_policy: rulegen_paths
+  model: deepseek-flash          # what the preview is priced for
+  temperature: 1.0
+  max_tokens: 600
+  thinking: disabled
+  transport_retries: 2
+
+budget:
+  cap_usd: 0.05
+  ledger: spend_ledger.jsonl
+
+replay:
+  enabled: true
+
+screening:
+  enabled: true
+  scenario: configs/scenarios/bidirectional_flow.yaml
+  baseline: orca_perturbed_v1
+  seed: 30900
+  repeats: 1                     # a rehearsal: one seed of the 50 + 50 flow per rule

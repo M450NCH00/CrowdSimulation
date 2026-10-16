@@ -904,6 +904,8 @@ def cli_run(args: argparse.Namespace) -> int:
                 f"({', '.join(f'{name} USD {value:.6f}' for name, value in preview['usd_by_condition'].items())}); "
                 f"cap USD {preview['cap_usd']:.2f}; {'fits' if preview['fits_the_cap'] else 'DOES NOT FIT'}"
             )
+            if (args.client or config.llm["client"]) == "mock":
+                print("  (with the mock client nothing is charged: this is what the same sessions could cost with deepseek)")
             return 0
         result = run_rule_generation(config, client_name=args.client, out_root=args.out, confirm=args.confirm, limit=args.limit)
     except (ConfigError, LLMFatalError) as exc:
