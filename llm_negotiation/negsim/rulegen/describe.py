@@ -19,8 +19,11 @@ speeds to 0.01 m/s; angles to the whole degree; ages in whole years.
 
 **The glossary** is generated from the rule format's field catalogue (``negsim.rules.fields``,
 documented in ``docs/rule-format.md`` section 5 and ``docs/perception.md``) and the rule
-schema (``rule_db/schema/rule.v2.schema.json``), in a fixed order. Its SHA-256 is pinned in
-the common template, so a change to either is refused until a new template version is frozen.
+schema, in a fixed order. Its SHA-256 is pinned in the common template, so a change to either
+is refused until a new template version is frozen. **A common template describes one version
+of the rule format** (issue #32): its ``rule_schema_version`` (2 for ``rulegen_common_v1``,
+which predates the key), whose schema file and whose fields (``fields_of``) the glossary is made
+from, so that adding fields to a later version leaves an earlier template's glossary as it was.
 """
 
 from __future__ import annotations
@@ -33,8 +36,7 @@ from typing import Any, Mapping, Optional
 
 from ..negotiation.prompts import TemplateIntegrityError, load_template_data
 from ..rules.database import RULE_DB_ROOT, schema_path
-from ..rules.fields import AGENT_FIELDS, CATEGORY, PAIR_FIELDS, FieldSpec
-from ..rules.model import LATEST_SCHEMA_VERSION
+from ..rules.fields import BOOLEAN, CATEGORY, FieldSpec, fields_of
 from .design import Session
 
 KIND_COMMON = "rule_generation_common"
@@ -100,8 +102,18 @@ def listing(values: Any, quote: bool = True) -> str:
     return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " or " + items[-1]
 
 
-def rule_schema() -> dict[str, Any]:
-    return json.loads((RULE_DB_ROOT / schema_path(LATEST_SCHEMA_VERSION)).read_text(encoding="utf-8"))
+#: The version of the rule format ``rulegen_common_v1`` describes; it was frozen before common
+#: templates said so themselves (issue #32).
+DEFAULT_RULE_SCHEMA_VERSION = 2
+
+
+def rule_schema_version_of(common: Mapping[str, Any]) -> int:
+    """The version of the rule format a common template describes."""
+    return int(common.get("rule_schema_version", DEFAULT_RULE_SCHEMA_VERSION))
+
+
+def rule_schema(version: int = DEFAULT_RULE_SCHEMA_VERSION) -> dict[str, Any]:
+    return json.loads((RULE_DB_ROOT / schema_path(version)).read_text(encoding="utf-8"))
 
 
 def meaning_of(spec: FieldSpec) -> Optional[str]:
@@ -126,7 +138,9 @@ def shown_fields(table: Mapping[str, FieldSpec], demographics_visible: bool) -> 
 def glossary_text(common: Mapping[str, Any], demographics_visible: bool) -> str:
     """The description of the rule format and of every field a rule may read."""
     g = common["glossary"]
-    schema = rule_schema()
+    version = rule_schema_version_of(common)
+    schema = rule_schema(version)
+    pair_fields, agent_fields = fields_of(version)
     defs, properties = schema["$defs"], schema["properties"]
     directive = defs["directive"]["properties"]
     units = [unit for unit in defs["unit"]["enum"] if unit != "deg"]
@@ -142,11 +156,13 @@ def glossary_text(common: Mapping[str, Any], demographics_visible: bool) -> str:
     lines += [f"- {g['encounters'][name]}" for name in properties["encounter"]["enum"]]
     lines += ["", fill(" ".join(g["comparison"].split()), operators=listing(defs["comparison"]["properties"]["op"]["enum"], quote=True), units=listing(units, quote=False))]
     lines += ["", " ".join(g["prefixes"].split())]
-    for header, table, prefix in ((g["pair_fields_header"], PAIR_FIELDS, "pair."), (g["agent_fields_header"], AGENT_FIELDS, "")):
+    for header, table, prefix in ((g["pair_fields_header"], pair_fields, "pair."), (g["agent_fields_header"], agent_fields, "")):
         lines += ["", header]
         for spec in shown_fields(table, demographics_visible):
             meaning = meaning_of(spec)
-            if spec.kind == CATEGORY:
+            if spec.kind == BOOLEAN:
+                line = fill(g["boolean_line"], name=prefix + spec.name)
+            elif spec.kind == CATEGORY:
                 line = fill(g["category_line"], name=prefix + spec.name, values=listing(spec.categories))
             else:
                 line = fill(g["field_line"], name=prefix + spec.name, unit=spec.unit)

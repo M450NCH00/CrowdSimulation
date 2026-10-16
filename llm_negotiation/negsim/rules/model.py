@@ -13,7 +13,10 @@ category, if it is not usable. In this order:
    one follower, and one side for the pair (``docs/derivations.md``, sections 9 to 11).
 
 A role assignment that does not say what happens on a tie is refused on its own
-(``no_tie_policy``), before the schema check, so that its reason is plain.
+(``no_tie_policy``), before the schema check, so that its reason is plain. Before even that, a
+rule whose condition or role assignment (its tie policy included) names a person's group, or
+anything derived from it, is refused as ``protected_attribute`` (issue #32): whatever else is
+wrong with it, that is what it is counted as.
 
 Two schema versions exist (``docs/rule-format.md``, section 12). Version 2 (issue #30) adds
 the source type ``stated``, an ``intent`` in words and a ``screening`` list, for rules a
@@ -25,7 +28,7 @@ from __future__ import annotations
 
 import datetime as _dt
 from dataclasses import dataclass, field
-from typing import Any, Mapping, Optional
+from typing import Any, Iterable, Iterator, Mapping, Optional
 
 from ..avoidance.directives import (
     ORDER_FOLLOWER,
@@ -39,7 +42,7 @@ from ..avoidance.directives import (
 from ..configutil import ConfigError
 from .conditions import Condition, parse_condition
 from .errors import RuleError
-from .fields import CATEGORY, ROLE_PREFIXES, FieldRef, resolve
+from .fields import BOOLEAN, CATEGORY, ROLE_PREFIXES, FieldRef, protected_reference, resolve
 from .jsonschema_subset import Validator
 from .snapshot import PairSnapshot
 
@@ -191,11 +194,53 @@ def normalise(raw: Any) -> Any:
     return raw
 
 
-def parse_rule(raw: Any, validator: Validator, where: str = "rule") -> Rule:
-    """A :class:`Rule` from its written form, or a :class:`RuleError` saying why not."""
+def _strings(value: Any, path: str) -> Iterator[tuple[str, str]]:
+    """Every key and string value under ``value``, with where it is."""
+    if isinstance(value, str):
+        yield path, value
+    elif isinstance(value, Mapping):
+        for key, item in value.items():
+            yield f"{path}.{key}", str(key)
+            yield from _strings(item, f"{path}.{key}")
+    elif isinstance(value, list):
+        for index, item in enumerate(value):
+            yield from _strings(item, f"{path}[{index}]")
+
+
+def protected_part(raw: Mapping[str, Any], terms: Iterable[str] = ()) -> Optional[tuple[str, str, str]]:
+    """Where a written rule names a person's group: ``(where, the text, the protected word)``.
+
+    Every key and string of its condition (``when``) and of its roles (the role assignment:
+    its field, its role names and its tie policy) is read, in its written form, before the
+    rule is checked against anything else (issue #32).
+    """
+    terms = tuple(terms)
+    for part in ("when", "roles"):
+        if part in raw:
+            for where, text in _strings(raw[part], part):
+                word = protected_reference(text, terms)
+                if word is not None:
+                    return where, text, word
+    return None
+
+
+def parse_rule(raw: Any, validator: Validator, where: str = "rule", terms: Iterable[str] = ()) -> Rule:
+    """A :class:`Rule` from its written form, or a :class:`RuleError` saying why not.
+
+    ``terms`` are more words that name a person's group, beside the attribute's name and the
+    default labels: a rule-generation session's labels and the words it introduced groups with.
+    """
     raw = normalise(raw)
     if not isinstance(raw, Mapping):
         raise RuleError("schema", f"{where}: a rule is a mapping, got {type(raw).__name__}")
+    found = protected_part(raw, terms)
+    if found is not None:
+        part, text, word = found
+        raise RuleError(
+            "protected_attribute",
+            f"{where}.{part}: {text!r} refers to a person's group ({word!r}), which no rule may read, in a condition, a "
+            "role assignment or a tie policy (docs/rule-format.md, section 14). The attempt is kept, as data.",
+        )
     roles_raw = raw.get("roles")
     if isinstance(roles_raw, Mapping) and isinstance(roles_raw.get("by"), Mapping) and "tie" not in roles_raw["by"]:
         raise RuleError(
@@ -208,8 +253,9 @@ def parse_rule(raw: Any, validator: Validator, where: str = "rule") -> Rule:
     if problems:
         raise RuleError("schema", f"{where} does not fit the rule schema:\n  " + "\n  ".join(problems))
 
-    when = parse_condition(raw["when"], f"{where}.when")
-    roles = None if raw["roles"] == "symmetric" else _role_assignment(raw["roles"]["by"], f"{where}.roles.by")
+    version = raw["schema_version"]
+    when = parse_condition(raw["when"], f"{where}.when", version, terms)
+    roles = None if raw["roles"] == "symmetric" else _role_assignment(raw["roles"]["by"], f"{where}.roles.by", version, terms)
     names = (SYMMETRIC_ROLE,) if roles is None else roles.assign
     written = raw["directive"]
     if set(written) != set(names):
@@ -246,11 +292,12 @@ def parse_rule(raw: Any, validator: Validator, where: str = "rule") -> Rule:
     )
 
 
-def _role_assignment(raw: Mapping[str, Any], where: str) -> RoleAssignment:
-    ref = resolve(raw["field"], f"{where}.field", ROLE_PREFIXES)
-    if ref.spec.kind == CATEGORY:
+def _role_assignment(raw: Mapping[str, Any], where: str, schema_version: Optional[int] = None, terms: Iterable[str] = ()) -> RoleAssignment:
+    ref = resolve(raw["field"], f"{where}.field", ROLE_PREFIXES, schema_version, terms)
+    if ref.spec.kind in (CATEGORY, BOOLEAN):
+        kind = "a category" if ref.spec.kind == CATEGORY else "true or false"
         raise RuleError(
-            "operator", f"{where}.field: roles are given by ordering the two agents on a number; '{ref.written}' is a category"
+            "operator", f"{where}.field: roles are given by ordering the two agents on a number; '{ref.written}' is {kind}"
         )
     if SYMMETRIC_ROLE in raw["assign"]:
         raise RuleError("roles", f"{where}.assign: '{SYMMETRIC_ROLE}' is the role of a symmetric rule; name the two roles otherwise")

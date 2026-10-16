@@ -10,6 +10,7 @@ CATEGORIES = (
     "schema",  # the JSON Schema check failed
     "unknown_field",  # a field no rule can read, or not where it was used
     "unobservable_field",  # a field that exists but that the two agents cannot both see
+    "protected_attribute",  # a person's group, or anything derived from it, which no rule may read (issue #32)
     "unit",  # a number without its unit, or in a unit that does not fit the field
     "value",  # a value of the wrong kind for its field or operator
     "operator",  # an operator that does not apply to its field
@@ -17,6 +18,7 @@ CATEGORIES = (
     "no_tie_policy",  # a role assignment that does not say what happens on a tie
     "reciprocity",  # responsibility shares that sum to less than 1
     "passage_order",  # passage orders that are not one leader and one follower
+    "back_up",  # a rule that says who backs up but not exactly one role (issue #32)
     "side",  # two roles told to pass on opposite sides
     "ambiguous",  # two rules at one priority that can match the same pair with different directives
     "visibility",  # a rule reads a field the run's visibility settings hide

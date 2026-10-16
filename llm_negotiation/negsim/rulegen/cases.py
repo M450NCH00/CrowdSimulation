@@ -105,13 +105,21 @@ def _variant_label(variant: Mapping[str, str]) -> str:
 # --- building one case ----------------------------------------------------------------------------
 
 
+#: The rule fields a snapshot taken from a perception record of each version holds: those of
+#: the rule format whose fields that record carries (issue #32). A record of version 2 gives
+#: the fields of rule schema 2, so a case taken from one is what it always was.
+SNAPSHOT_SCHEMA_OF_PERCEPTION = {2: 2, 3: 3}
+
+
 def shared_snapshot(record: Mapping[str, Any], visibility: Mapping[str, bool]) -> dict[str, Any]:
     """The values a rule could read for the pair, from one agent's logged perception record.
 
     The same as the shared snapshot the run loop evaluates rules on, up to the log's rounding
     (``rule-matching.md``, section 1); demographic fields are empty unless the run had personas.
+    It holds the fields the record's version carries (:data:`SNAPSHOT_SCHEMA_OF_PERCEPTION`).
     """
-    return snapshot_of_record(PerceptionRecord.from_dict(record), visibility).as_dict()
+    snapshot = snapshot_of_record(PerceptionRecord.from_dict(record), visibility)
+    return snapshot.as_dict(SNAPSHOT_SCHEMA_OF_PERCEPTION[record["schema_version"]])
 
 
 def build_case(

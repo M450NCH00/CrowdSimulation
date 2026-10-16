@@ -163,6 +163,18 @@ Agent-level fields (`either.`, `both.`, `agent.`):
 | `speed_mps` | m/s | Present speed | `speed` |
 | `radius_m` | m | Body radius | `size` |
 | `time_to_segment_s` | s | Distance to the single-file segment over present speed; 0 inside; missing standing still or outside that class | `speed`, `size` |
+| `in_segment` | true/false | **Version 3.** Whether this person is inside the single-file segment; missing outside that class | `speed`, `size` |
+| `segment_distance_travelled` | m | **Version 3.** How far this person has walked into the segment; missing unless inside it | `speed`, `size` |
+| `segment_distance_ahead` | m | **Version 3.** Distance to the segment's end in front of this person; missing unless inside it | `speed`, `size` |
+| `segment_distance_behind` | m | **Version 3.** Distance to the segment's end behind this person; missing unless inside it | `speed`, `size` |
+
+The four version 3 fields (issue #32, `perception.md`, "Passage fields") are computed once per
+pair from the two positions and the passage: "ahead" is the end on the other person's side,
+"behind" the other end, and in a meeting `segment_distance_travelled` equals
+`segment_distance_behind`. **A rule may read a field only if its `schema_version` has it**: to a
+rule of version 1 or 2 the four are `unknown_field`, so such a rule reads what it always could.
+`in_segment` is true or false: it is compared with `==`, `!=` or `in`, with `true` or `false` and
+no unit, and cannot order two agents.
 
 Every rule also reads the encounter class, so every rule needs `speed` and `size` visible.
 A run whose visibility settings hide something one of its rules reads is refused before it
@@ -183,6 +195,13 @@ starts (`visibility`), naming the rule.
 needs such a field could only be followed if the two agents told each other something first.
 It is not executed in SI-2; it is reported with the reason, and SI-3 can take it up.
 Anything not in these tables is `unknown_field`.
+
+**What a rule may never read: a person's group** (`protected_attribute`, issue #32). An agent may
+see another's fictional group (`perception.md`, "The group"), but no rule may condition on it.
+A rule whose condition or role assignment, its tie policy and role names included, names it, or
+anything derived from it (any name containing `ethnic`, such as `pair.same_ethnic_group`), or a
+group label, is refused as `protected_attribute`, **before every other check**: whatever else is
+wrong with such a rule, that is what it is counted as. Section 14 has the details.
 
 ## 6. Roles
 
@@ -255,6 +274,7 @@ what and where. `python ruledb.py validate --file <path>` checks any rule file t
 | Category | Refused when |
 |---|---|
 | `file` | The file cannot be read, or is not named `<rule_id>.v<version>.yaml` after what it holds |
+| `protected_attribute` | The condition or the role assignment (its tie policy and role names included) names a person's group, anything derived from it, or a group label (issue #32; checked before everything else, section 14) |
 | `no_tie_policy` | A role assignment does not state `tie` (checked first, so that the reason is plain) |
 | `schema` | The structure does not fit the JSON Schema of the version the rule names: a missing or unknown key, a wrong type, a value outside its list, a version that does not exist |
 | `unknown_field` | A field not in section 5, or a prefix where it does not belong |
