@@ -259,7 +259,7 @@ matplotlib 3.10.8, pyflakes 4.0.3); pyflakes clean.
   Part 1 finding that plain ORCA's ordinary pass is a near miss. Both numbers were given in
   the 2026-10-16 session.
 
-### 2026-10-16 09:15 — Session resumed: what was left, and what an end-to-end run found
+### 2026-10-16 08:35 — Session resumed: what was left, and what an end-to-end run found
 
 - What I found: the branch at `47c44fb` (Parts 1 to 4), and in the working tree, uncommitted
   and untested, the code of Parts 5 to 10 written at the end of the last session: six new
@@ -302,6 +302,95 @@ matplotlib 3.10.8, pyflakes 4.0.3); pyflakes clean.
   tests of the parts, written to the code as it stood, would have encoded.
 - Next step: tests for Parts 5 to 10, the command line, the configs, then the documents.
 
+### 2026-10-16 09:10 — Part 11: the pilot's cost preview, and why it cannot run as issued
+
+- What I did: computed the worst-case preview of the pilot exactly as the issue specifies it
+  (two cases, A with both speaking orders, B with both description orders at K = 2,
+  demographics shown in one case and hidden in the other: 4 negotiations, 8 statements), and
+  of the ways to shrink it. Nothing was sent; the pricing check was not done, by the user's
+  choice of 2026-10-15 (P1, P3).
+- Result: **USD 0.619 against the USD 0.05 cap** (A USD 0.532, B USD 0.087). A dominates: its
+  bound is 2M·S + m·M(2M − 1) input tokens a send, with S about 4,200 tokens for these
+  prompts (estimated 1.5 times high, as the guard does), at M = 4 about 55,000, times 6
+  sends a turn can make. One negotiation alone can cost up to USD 0.13, so **no design with
+  four messages per agent fits USD 0.05**. The previews:
+
+  | Change | A, B sessions | USD |
+  |---|---|---|
+  | none | 4, 8 | 0.619 |
+  | no transport retries | 4, 8 | 0.206 |
+  | and replies capped at 400 tokens | 4, 8 | 0.169 |
+  | and 2 messages per agent | 4, 8 | 0.086 |
+  | 3 messages per agent, one order per case | 2, 4 | 0.062 |
+  | 2 messages per agent, one order per case | 2, 4 | **0.043** |
+
+  For scale: #24's 37 paid calls had no transport error and replies of at most 46 tokens;
+  30% of their prompt tokens were cache hits. The realistic cost is a fraction of the worst
+  case, but the preview is what the code checks, and it must be a bound.
+- Why not shrink it myself, as the issue says to: the only design that fits halves the
+  negotiation (M = 2 against the issue's default of 4) and the design (one speaking order per
+  case, confounding order with case), and the pilot's stated purpose is to measure tokens per
+  session for SI-3b's design. That is a trade between the issue's two instructions (the
+  design and the cap), so it is open question Q5. Nothing is spent until it is answered and
+  P1 is resolved.
+- Next step: Q5 goes into the PR description.
+
+### 2026-10-16 09:30 — Parts 5 to 10: tested, wired in, configured, documented
+
+- What I did, in commits `0b9e479` to `0877014`:
+  - **Tests**, 118 new: the protocols 25 (agreement by hash, the full hash and a short id,
+    counter-proposals, a rule re-proposed in another key order, stale, own and unknown ids,
+    no rule possible, the limit, the retry, speaking order and each agent's own history and
+    prompt, refusals mid-turn, condition B, stability); validation 47 (every category, by the
+    loader's reason, the precedence, the formula test, the review flags, ignored metadata);
+    the writer 7 (ids, provenance, the model's metadata never reaching a file, the earliest
+    session's words, idempotence, versions, promotion with and without a reason, the command
+    line on a copy of `rule_db/`); replay and screening 8; the experiment 30 (the config, the
+    preview's arithmetic against the issue's formula and against a negotiation whose every
+    reply is as long as the cap allows, a paid client unconfirmed and over the cap, the budget
+    guard stopping an experiment and the resume after it, a partial run, the whole experiment
+    on the mock with every path and category, replay and screening in a 4 + 4 flow, resuming,
+    the command line, the shipped configs); the scoped cap 1.
+  - **The command line**: `layer: rule_generation` in `run_experiment.py`, with `--plan`,
+    `--confirm` and `--limit`; `python -m negsim.rulegen list|promote`.
+  - **Configs**: `si3_mock_rehearsal.yaml` (five cases, one per scenario type; 80
+    negotiations, 240 statements) and `si3_pilot.yaml` (Part 11 as the issue specifies it,
+    not run).
+  - **Documents**: `rule-generation.md` (new), `pricing-check.md` (new), `log-schema.md`
+    ("Rule-generation experiments"), `llm-backend.md` (the scoped cap), `architecture.md`
+    section 8, both READMEs.
+- What testing found, beyond the bugs of the 08:35 entry:
+  1. **A rule that stops both people does not necessarily gridlock a crowd.** With
+     `speed_scale: 0` until the encounter has passed, a 4 + 4 flow got through in 28.7 s
+     instead of 16.2 s: ORCA still steps a stopped agent aside, the encounter passes, and the
+     scale ends with it (DD55). With `expiry: out_of_range` it deadlocks in 6.3 s. The
+     screening test uses the second; the first is recorded in `rule-generation.md` section 8.
+  2. **Screening in the 50 + 50 flow is slow and informative.** In a scratchpad run of 9 rules
+     (the mock's three canonical rules, written once per case and condition), a rule run took
+     1.5 to 4 minutes; the two clearance rules failed (98 and 23 of 100 arrived by the
+     120 s limit; collision episodes 274 and 384 against the baseline's 86, which finished in
+     52 s) and the speed-ordered rule passed (77.4 s). Identical canonical rules gave identical
+     results, as they must: the crowd does not depend on the case. So a canonical rule is now
+     screened once per invocation and visibility (`f48c43a`).
+  3. **The pilot config named the paid client**, against this project's convention that
+     every shipped config names the mock and paying is an explicit `--client deepseek` (a
+     test enforces it for issue #24's configs). It now names the mock, and a test checks every
+     rule-generation config.
+- Decisions taken (`architecture.md`, section 8.4, which also lists DD65 to DD71):
+  **DD72** the design's levels (25 and 70; "the emergency room" and "the supermarket";
+  no names); **DD73** what a description shows, and the rounding; **DD74** the fourth turn
+  key `no_rule_possible`, an outcome when both say so on consecutive turns; **DD75**
+  agreement by the latest proposal's id or a longer prefix of its hash, a changed rule
+  being a counter-proposal; **DD76** a turn unreadable after its retry ends the negotiation;
+  **DD77** stability counts "no rule" and "parse failure" as answers; **DD78** validation's
+  precedence, the formula test, the review patterns; **DD79** what the writer stores, once,
+  in the earliest session's words, with versions as sessions are added; **DD80** replay with
+  the earliest session's people, checked against the case; **DD81** screening in the 50 + 50
+  flow, and gridlock as a deadlock or the time limit reached with people walking where the
+  baseline did neither; **DD82** the cost preview's terms; **DD83** a cap scoped to the
+  experiment's own calls; **DD84** `--confirm`, resuming, a new name for a changed config.
+- Next step: the mock rehearsal (running), the pilot's preview (below), the final checks.
+
 ## Open questions / risks
 
 - **Q1 (carried from #24, #26, #28). Has the supervisor's "no simulation code until the
@@ -318,6 +407,20 @@ matplotlib 3.10.8, pyflakes 4.0.3); pyflakes clean.
   flow's 2,224 pairs at T1 or above, 1,727 formed one-sided and are not eligible, so the crowd
   cases favour pairs that came into each other's view at the same step. Whether that biases
   what rules are generated is untested.
+- **Q5. The pilot as issued cannot run under its cap** (the 2026-10-16 09:10 entry): its
+  worst case is USD 0.619 against USD 0.05. Options: (a) cut to 2 messages per agent, replies
+  of 400 tokens, no transport retries, and one speaking or description order per case (6
+  sessions, USD 0.043, fits); (b) keep the issue's design and protocol, drop the transport
+  retries, cap replies at 400 tokens, and raise the pilot's cap to USD 0.17 (worst case
+  USD 0.169); (c) something between. **Recommendation: (b)**, because the pilot exists to
+  measure tokens per session for SI-3b's design, which (a) changes; its realistic cost is a
+  small fraction of USD 0.17, and USD 1.90 of the USD 2 credit remains. Your and the
+  supervisor's call; `configs/rule_generation/si3_pilot.yaml` is one edit from either.
+- **Q6. Is "the time limit reached with people still walking" a gridlock?** Screening fails a
+  rule whose crowd run ends in deadlock *or* at its time limit where the baseline did neither
+  (DD81). A rule that only slows the flow past 120 s fails too: the mock's 15 cm rule had 98 of
+  100 arrived. A stricter reading (deadlock only, or a throughput threshold) would pass it.
+  Neither is wrong; it decides which rules SI-3b's evaluation sees as failing.
 
 ## Summary (fill in at the end)
 
