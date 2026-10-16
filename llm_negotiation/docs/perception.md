@@ -1,4 +1,4 @@
-# The perception record, version 2
+# The perception record, version 3
 
 A perception record is what one agent can tell about a neighbour, and about where it is
 itself, at the moment the neighbour comes into range. It is built once per interaction and
@@ -8,6 +8,10 @@ input that rules read** (`rule-format.md`), so its fields are a contract.
 Version 2 (issue #28) adds the **pair-level fields**: what the two agents of a pair can
 *both* tell about the two of them together. They are the fields a rule's condition may
 use, and they are defined in their own section below.
+
+Version 3 (issue #32) adds **where each of the two is in a single-file passage** they meet in
+(section "Passage fields") and a **fictional group**, `ethnic_group`, which an agent may see
+but **no rule may read** (section "The group").
 
 The code is `negsim/avoidance/perception.py`. The record is logged, whole, in
 `interactions.jsonl` (`log-schema.md`).
@@ -37,8 +41,8 @@ crowded out of the other's `max_neighbours`.
 
 | Of | An agent perceives | And never |
 |---|---|---|
-| the neighbour | where it is, how it is moving, which way it faces, how big it is, and the persona attributes the run's visibility settings switch on | its **task**; its preferred or maximum speed; its goal; its path; any directive it holds |
-| itself | its motion, size and preferred speed; its own age and gender | its own task (see the note below) |
+| the neighbour | where it is, how it is moving, which way it faces, how big it is, and the persona attributes the run's visibility settings switch on (its group among them, version 3) | its **task**; its preferred or maximum speed; its goal; its path; any directive it holds |
+| itself | its motion, size and preferred speed; its own age, gender and group | its own task (see the note below) |
 | its surroundings | the nearest wall, the free width of the passage it is in, and how far ahead a single-file segment is | anything about walls beyond the environment range |
 
 **The task is never in a record.** Not the neighbour's, whatever the visibility settings
@@ -57,6 +61,7 @@ to add that deliberately, with a new version of this record.
 | `gender` | on | `neighbour_attributes.gender` |
 | `backstory` | off | `neighbour_attributes.backstory` |
 | `task` | off | nothing: the task is never shown, on or off |
+| `ethnic_group` | off | `neighbour_attributes.ethnic_group` (version 3; independent of `age` and `gender`) |
 | `speed` | on | `neighbour_speed_mps`, `relative_velocity_mps`, `closing_speed_mps`, `time_to_collision_s` |
 | `size` | on | `neighbour_radius_m`, `time_to_collision_s` |
 
@@ -75,7 +80,7 @@ radians, anticlockwise positive. Values are rounded to six decimal places in the
 
 | Field | Unit | Meaning |
 |---|---|---|
-| `schema_version` | | 1 |
+| `schema_version` | | 3 |
 | `step`, `time_s` | –, s | The step and the simulated time at which the record was built: when the neighbour came into range |
 | `observer_id`, `neighbour_id` | | The agent whose record this is, and the neighbour it is about |
 | `relative_position_m` | m, m | The neighbour's position minus the observer's, `[dx, dy]` |
@@ -89,6 +94,9 @@ radians, anticlockwise positive. Values are rounded to six decimal places in the
 | `neighbour_heading_rad` | rad | The direction the neighbour is moving in, in the world frame; the direction it faces if it is standing still |
 | `neighbour_heading_relative_rad` | rad | The same, relative to the observer's heading: 0 means the same way, ±π means head-on, +π/2 means crossing from the observer's right to its left |
 | `neighbour_time_to_segment_s` | s | How soon the neighbour would reach the single-file segment named in `pair.single_file_segment`: its distance to the segment divided by its present speed; 0 if it is inside; `null` if it is standing still, or if `pair.single_file_segment` is `null` |
+| `neighbour_in_segment` | true/false | Version 3. Whether the neighbour's centre is inside that segment; `null` if `pair.single_file_segment` is `null` (section "Passage fields") |
+| `neighbour_segment_distance_travelled` | m | Version 3. How far the neighbour has walked into the segment; `null` unless it is inside |
+| `neighbour_segment_distance_ahead`, `neighbour_segment_distance_behind` | m | Version 3. From the neighbour to the segment's end in front of it and behind it; `null` unless it is inside |
 | `neighbour_attributes` | | The neighbour's persona attributes that are visible, e.g. `{"age": 70, "gender": "male"}`. Never `task` |
 | `observer` | | The observer's knowledge of itself, below |
 | `environment` | | The observer's surroundings, below |
@@ -102,8 +110,9 @@ radians, anticlockwise positive. Values are rounded to six decimal places in the
 | `speed_mps` | m/s | Its own speed |
 | `heading_rad` | rad | The direction it is moving in |
 | `preferred_speed_mps` | m/s | The speed it walks at when nothing is in its way, before any directive scales it |
-| `attributes` | | Its own age and gender, if it has a persona. Never its task |
+| `attributes` | | Its own age and gender, if it has a persona, and (version 3) its group, if it has one. Never its task |
 | `time_to_segment_s` | s | The same as `neighbour_time_to_segment_s`, for itself |
+| `in_segment`, `segment_distance_travelled`, `segment_distance_ahead`, `segment_distance_behind` | true/false, m | Version 3. The same as the neighbour's passage fields above, for itself |
 
 `environment`:
 
@@ -189,16 +198,75 @@ These are the only places a pair-level field is not simply a number: `encounter_
 and `single_file_segment` are names, and every field is `null` when what it needs is
 hidden. A rule's comparison on a `null` value is false (`rule-format.md`).
 
+## Passage fields (version 3)
+
+Two agents that meet **inside** a single-file passage cannot pass, and one of them has to back
+out (`derivations.md`, section 17). Who should can depend on how far each has walked in, which
+version 2 could not say. Four values per agent say it, computed by `segment_position`
+(`negsim/avoidance/perception.py`) **once per pair, in the same `pair_features` call as the
+times to the segment**, so the two agents' records carry the same values:
+
+| Field | Unit | Meaning |
+|---|---|---|
+| `in_segment` | true/false | Whether the agent's centre is inside the passage (its free space, the segment's rectangle, edges included) |
+| `segment_distance_travelled` | m | How far it has walked in: its distance, along the passage, from the end it came in by |
+| `segment_distance_ahead` | m | Its distance, along the passage, to the end in front of it |
+| `segment_distance_behind` | m | Its distance, along the passage, to the end behind it |
+
+**Which passage.** The one named in `pair.single_file_segment`: the segment that makes the
+pair's class `single_file_segment` (the passage too narrow for the two, which each is inside or
+facing). For any other class, or with `speed` or `size` hidden, there is no such passage and all
+four are `null`.
+
+**Ahead and behind come from the two positions alone.** The passage's axis is its long side, and
+its ends are its short sides. The end *ahead* of an agent is the one on the other agent's side
+along the axis; the end *behind* it, the other one. In a meeting each faces the other, so this
+needs nothing the other cannot see: no path, no goal, not even a heading, which for an agent
+that is backing out points the wrong way. The end it came in by is, in a meeting, the end behind
+it, so **`segment_distance_travelled` equals `segment_distance_behind`**; both are kept, as the
+issue names both, and the first says what it is for. The four are a *meeting*'s fields: for two
+agents walking the **same** way through a passage, the leading agent's "ahead" end is behind it.
+No shipped rule or scenario uses them so (open question Q3 of `WORK_LOG-32.md`).
+
+**Null handling.** `in_segment` is `false` for an agent outside the passage and `null` when the
+pair has no passage; the three distances are `null` unless the agent is inside, and when the two
+are level along the axis (which two bodies in a single-file passage cannot be). A rule's
+comparison on a `null` value is false, and a role assignment on one does not apply
+(`rule-format.md`, section 4), so a rule about a meeting inside a passage matches only when both
+are inside.
+
+*Tested:* `tests/test_perception.py` (the definitions, both agents' records equal, null
+handling); `tests/test_rules_matching.py` (the shared snapshot equals each agent's own).
+
+## The group (version 3)
+
+`ethnic_group` is a persona attribute (`negsim/personas/schema.py`) holding a **fictional** label
+such as `Zorvel`, from a configurable set of invented names that carry no description
+(`fictional-groups.md`). An agent knows its own (`observer.attributes`); it sees the neighbour's
+(`neighbour_attributes`) only when the run's `ethnic_group` switch is on, which it is not by
+default, independently of the `age` and `gender` switches. A persona that has no group has no
+`ethnic_group` key anywhere, so records of runs without groups are as before.
+
+**No rule may read it.** The attribute is flagged as not readable by rules
+(`AttributeSpec.rule_referenceable` is false; `NOT_RULE_REFERENCEABLE` in
+`negsim.personas.schema`). The rule loader refuses any rule that names it, in a condition, a role
+assignment or a tie policy, derived names included, as `protected_attribute`
+(`rule-format.md`, section 14); and nothing a rule can read is derived from it: no pair-level
+field uses it, and a snapshot (`rule-matching.md`) never holds it, so even a rule that got past
+the loader would find nothing to read. It is in the record for what an agent may *see*: the
+situation a model is told, and analysis.
+
 ## An example
 
 Agent 0 (a woman of 25) in the wide corridor, at the moment agent 1 (a man of 70) comes
 within its 12.5 m sensing radius, walking toward it: step 14 of the exactly symmetric
 head-on under plain ORCA. The committed `runs/si1_head_on_side_preference/001_symmetric_plain`
-holds this record as version 1; this is the same moment as version 2 records it:
+holds this record as version 1; this is the same moment as version 3 records it (no passage,
+so the passage fields are `null`; no group):
 
 ```json
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "step": 14,
   "time_s": 1.4,
   "observer_id": 0,
@@ -214,6 +282,10 @@ holds this record as version 1; this is the same moment as version 2 records it:
   "neighbour_heading_rad": 3.141593,
   "neighbour_heading_relative_rad": 3.141593,
   "neighbour_time_to_segment_s": null,
+  "neighbour_in_segment": null,
+  "neighbour_segment_distance_travelled": null,
+  "neighbour_segment_distance_ahead": null,
+  "neighbour_segment_distance_behind": null,
   "neighbour_attributes": {"age": 70, "gender": "male"},
   "observer": {
     "radius_m": 0.25,
@@ -221,7 +293,11 @@ holds this record as version 1; this is the same moment as version 2 records it:
     "heading_rad": 0.0,
     "preferred_speed_mps": 1.3,
     "attributes": {"age": 25, "gender": "female"},
-    "time_to_segment_s": null
+    "time_to_segment_s": null,
+    "in_segment": null,
+    "segment_distance_travelled": null,
+    "segment_distance_ahead": null,
+    "segment_distance_behind": null
   },
   "environment": {
     "nearest_wall_distance_m": 0.875,
@@ -271,3 +347,10 @@ A negotiation provider is to come behind the same interface.
   `age_difference_years`, `single_file_segment`), `observer.time_to_segment_s` and
   `neighbour_time_to_segment_s`. Nothing of version 1 was removed or changed meaning. A run
   folder written under version 1 is still checked against version 1.
+- **3** (2026-10-16, issue #32): the passage fields, `observer.in_segment`,
+  `observer.segment_distance_travelled`, `observer.segment_distance_ahead`,
+  `observer.segment_distance_behind` and the four `neighbour_` fields of the same names; and the
+  group, `ethnic_group`, in `observer.attributes` and, when its switch is on, in
+  `neighbour_attributes`, flagged as not readable by rules. Nothing of version 2 was removed or
+  changed meaning. Folders written under versions 1 and 2 are checked against their own; a
+  version 2 record still reads back (`PerceptionRecord.from_dict`), its passage fields missing.

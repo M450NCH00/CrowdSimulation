@@ -136,7 +136,10 @@ def test_distance_to_a_single_file_segment_ahead():
 
 def test_default_visibility_is_that_of_issue_24():
     assert default_visibility() == prompts.default_visibility()
-    assert default_visibility() == {"age": True, "gender": True, "backstory": False, "task": False, "speed": True, "size": True}
+    # Issue #32 added the ethnic_group switch, off by default: a group is seen only where a run says so.
+    assert default_visibility() == {
+        "age": True, "gender": True, "backstory": False, "task": False, "ethnic_group": False, "speed": True, "size": True,
+    }
 
 
 def test_by_default_age_and_gender_are_seen_and_nothing_else_of_the_persona():
@@ -238,3 +241,103 @@ def test_the_perception_document_names_every_field_and_the_version():
     for field in (*PERCEPTION_FIELDS, *OBSERVER_FIELDS, *ENVIRONMENT_FIELDS):
         pattern = r"(?<![A-Za-z0-9_])" + re.escape(field) + r"(?![A-Za-z0-9_])"
         assert re.search(pattern, document), f"'{field}' is not described in docs/perception.md"
+
+
+# --- version 3: where each is in a passage, and the group (issue #32) --------------------------
+
+
+def in_the_bottleneck(x0: float, x1: float, speed: float = 1.3):
+    """The bottleneck's two agents moved inside its 4 m segment (x from -2 to 2), facing each other."""
+    from negsim.core.state import Pose
+
+    spec = crowd("corridor_to_bottleneck")
+    world = spec.build_world()
+    a, b = world.agents
+    a.pose, a.velocity = Pose(x0, 0.0, 0.0), (speed, 0.0)
+    b.pose, b.velocity = Pose(x1, 0.0, math.pi), (-speed, 0.0)
+    return spec, world
+
+
+def passage_of(spec, world, observer=0, neighbour=1, visibility=None, attributes=None):
+    return perceive(
+        3, 0.3, world.agents[observer], world.agents[neighbour], world.obstacles,
+        default_visibility() if visibility is None else visibility, attributes or {}, 1.3,
+        segments=spec.single_file_segments,
+    )
+
+
+def test_segment_position_is_measured_from_the_ends_toward_and_away_from_the_other():
+    from negsim.avoidance.perception import segment_position
+
+    passage = Rect(-2.0, -0.4, 2.0, 0.4)
+    # Agent at x = 0.7 meeting one at 1.3: the end ahead is the east end (1.3 m), the end behind the west (2.7 m).
+    assert segment_position((0.7, 0.0), (1.3, 0.0), passage) == (True, pytest.approx(2.7), pytest.approx(1.3), pytest.approx(2.7))
+    assert segment_position((1.3, 0.0), (0.7, 0.0), passage) == (True, pytest.approx(0.7), pytest.approx(3.3), pytest.approx(0.7))
+    assert segment_position((2.5, 0.0), (0.7, 0.0), passage) == (False, None, None, None)  # outside: no distances
+    assert segment_position((2.0, 0.0), (0.7, 0.0), passage) == (True, 0.0, 4.0, 0.0)  # on the end: inside
+    assert segment_position((0.5, 0.1), (0.5, -0.1), passage) == (True, None, None, None)  # level: no ahead or behind
+    upright = Rect(-0.4, -2.0, 0.4, 2.0)  # a passage along y
+    assert segment_position((0.0, -1.5), (0.0, 1.0), upright) == (True, pytest.approx(0.5), pytest.approx(3.5), pytest.approx(0.5))
+
+
+def test_both_agents_records_carry_the_same_passage_fields():
+    spec, world = in_the_bottleneck(0.7, 1.3)
+    first, second = passage_of(spec, world, 0, 1), passage_of(spec, world, 1, 0)
+    assert first.pair.encounter_class == "single_file_segment" and first.pair is not None
+    mine, theirs = first.as_dict(), second.as_dict()
+    for name in ("in_segment", "segment_distance_travelled", "segment_distance_ahead", "segment_distance_behind"):
+        assert mine["observer"][name] == theirs[f"neighbour_{name}"]
+        assert mine[f"neighbour_{name}"] == theirs["observer"][name]
+    assert mine["observer"]["in_segment"] is True and mine["observer"]["segment_distance_travelled"] == pytest.approx(2.7)
+    assert mine["neighbour_segment_distance_travelled"] == pytest.approx(0.7)
+    assert mine["observer"]["segment_distance_ahead"] == pytest.approx(1.3) and mine["neighbour_segment_distance_ahead"] == pytest.approx(3.3)
+    # travelled is, in a meeting, the distance to the end behind
+    assert mine["observer"]["segment_distance_travelled"] == mine["observer"]["segment_distance_behind"]
+
+
+def test_passage_fields_are_null_outside_the_passage_and_without_one():
+    spec, world = in_the_bottleneck(-3.5, 1.3)  # agent 0 still in the wide part, facing the segment
+    record_ = passage_of(spec, world).as_dict()
+    assert record_["pair"]["encounter_class"] == "single_file_segment"
+    assert record_["observer"]["in_segment"] is False
+    assert [record_["observer"][name] for name in ("segment_distance_travelled", "segment_distance_ahead", "segment_distance_behind")] == [None, None, None]
+    assert record_["neighbour_in_segment"] is True and record_["neighbour_segment_distance_travelled"] == pytest.approx(0.7)
+    hidden = passage_of(spec, world, visibility={**default_visibility(), "size": False}).as_dict()  # no class: no passage
+    assert hidden["observer"]["in_segment"] is None and hidden["neighbour_in_segment"] is None
+    open_space = record().as_dict()  # the wide corridor has no segment at all
+    assert open_space["observer"]["in_segment"] is None and open_space["neighbour_segment_distance_ahead"] is None
+
+
+def test_an_agent_knows_its_own_group_and_sees_the_others_only_when_switched_on():
+    groups = {0: {"age": 31, "gender": "female", "ethnic_group": "Zorvel"}, 1: {"age": 83, "gender": "male", "ethnic_group": "Kestrop"}}
+    hidden = record(attributes=groups)
+    assert hidden.observer.attributes == {"age": 31, "gender": "female", "ethnic_group": "Zorvel"}
+    assert "ethnic_group" not in hidden.neighbour_attributes and default_visibility()["ethnic_group"] is False
+    shown = record(visibility={**default_visibility(), "ethnic_group": True}, attributes=groups)
+    assert shown.neighbour_attributes == {"age": 83, "gender": "male", "ethnic_group": "Kestrop"}
+    alone = record(visibility={**default_visibility(), "ethnic_group": True, "age": False, "gender": False}, attributes=groups)
+    assert alone.neighbour_attributes == {"ethnic_group": "Kestrop"}  # independent of age and gender
+    assert "Kestrop" not in json.dumps(record(attributes=groups).as_dict())
+
+
+def test_the_group_is_flagged_as_not_readable_by_rules():
+    from negsim.personas.schema import NOT_RULE_REFERENCEABLE
+
+    assert NOT_RULE_REFERENCEABLE == {"ethnic_group"}
+    assert ATTRIBUTES["ethnic_group"].observable is False and ATTRIBUTES["ethnic_group"].rule_referenceable is False
+
+
+def test_a_version_2_record_reads_back_with_its_passage_fields_missing():
+    from negsim.avoidance.perception import FIELDS_BY_VERSION, PerceptionRecord
+
+    spec, world = in_the_bottleneck(0.7, 1.3)
+    current = passage_of(spec, world).as_dict()
+    assert PerceptionRecord.from_dict(current).as_dict() == current  # version 3 reads back as it was written
+    old = {key: value for key, value in current.items() if key in FIELDS_BY_VERSION[2]["record"]}
+    old["observer"] = {key: value for key, value in current["observer"].items() if key in FIELDS_BY_VERSION[2]["observer"]}
+    old["schema_version"] = 2
+    back = PerceptionRecord.from_dict(old)
+    assert back.observer.in_segment is None and back.neighbour_segment == dict.fromkeys(back.neighbour_segment)
+    assert back.pair.time_to_segment_s == PerceptionRecord.from_dict(current).pair.time_to_segment_s
+    with pytest.raises(ValueError, match="version 2 or 3"):
+        PerceptionRecord.from_dict({**current, "schema_version": 1})

@@ -88,7 +88,9 @@ def test_the_smallest_experiment_is_one_plain_orca_run():
     assert (plan.index, plan.run_id, plan.seed, plan.repeat, plan.variant) == (1, "001_base", 301, 1, {})
     assert plan.directives == {} and plan.provider().name == "null" and plan.share_policy == "proportional"
     assert plan.arbitration.enabled and plan.population == {} and plan.attributes() == {}
-    assert plan.visibility == {"age": True, "gender": True, "backstory": False, "task": False, "speed": True, "size": True}
+    assert plan.visibility == {  # ethnic_group: issue #32, off by default
+        "age": True, "gender": True, "backstory": False, "task": False, "ethnic_group": False, "speed": True, "size": True,
+    }
     assert plan.logging == {"trajectory_stride": 1, "interactions": True}
 
 

@@ -126,8 +126,8 @@ def test_the_schema_is_a_table_so_an_attribute_can_be_added_without_touching_the
 
 def test_default_visibility_shows_what_a_bystander_could_see():
     assert default_visibility() == {
-        "age": True, "gender": True, "backstory": False, "task": False, "speed": True, "size": True,
-    }
+        "age": True, "gender": True, "backstory": False, "task": False, "ethnic_group": False, "speed": True, "size": True,
+    }  # ethnic_group: issue #32, off unless a run switches it on
 
 
 def test_visibility_can_be_changed_per_attribute():

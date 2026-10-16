@@ -160,7 +160,7 @@ def test_the_run_records_its_active_rule_set_and_baseline(rule_run):
     ]
     assert all(re.fullmatch(r"[0-9a-f]{64}", rule["sha256"]) for rule in directives["rules"])
     assert config["baseline"]["name"] == "orca_perturbed_v1" and config["perturbation"] == {"kind": "rvo2_uniform", "magnitude_mps": 0.0001}
-    assert config["scenario"]["agent_types"]["pedestrian"]["max_neighbours"] == 40 and config["perception_schema_version"] == 2
+    assert config["scenario"]["agent_types"]["pedestrian"]["max_neighbours"] == 40 and config["perception_schema_version"] == 3  # 2 before issue #32
 
 
 def test_the_pair_record_has_every_evaluation_the_match_its_roles_snapshot_and_expiry(rule_run):
