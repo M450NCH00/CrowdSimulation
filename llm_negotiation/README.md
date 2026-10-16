@@ -17,7 +17,12 @@ Since issue #28 the directives can come from a **rule database**: stored rules, 
 condition on what two agents can both see, a role for each, and a directive per role,
 followed by a rule provider. That calls no model either; see "The rule layer" below.
 
-Built for issues #24, #26 and #28. Nothing here uses the Phase 1 folders `pipeline/` and
+Since issue #30 a conflict taken from a finished run can be turned into a **candidate rule**
+by two LLM agents negotiating one, or one LLM stating one; every proposal is categorised, and
+the rules are written to a staging database and tested alone. Built and rehearsed on the
+mock; the paid pilot is held. See "Rule generation" below.
+
+Built for issues #24, #26, #28 and #30. Nothing here uses the Phase 1 folders `pipeline/` and
 `dataset/`.
 
 ## How it works, in one list
@@ -58,8 +63,9 @@ python -m pytest
 ```
 
 All tests run on the mock client, with the network blocked and the real `.env` out of
-reach. They cost nothing. There are 984: the 432 of issue #24, 345 for the avoidance
-layer, 18 for the plot and the viewer, and 189 for the rule layer (issue #28).
+reach. They cost nothing. There are 1,222: the 984 of issues #24 to #28 (432 of issue #24,
+345 for the avoidance layer, 18 for the plot and the viewer, 189 for the rule layer), and 238
+added by issue #30.
 
 ## Run an experiment
 
@@ -87,7 +93,7 @@ interrupted experiment can simply be started again.
 | Use it for | checking that a config does what you meant | the experiment itself |
 
 Every shipped config names the mock client, so nothing is spent unless `--client deepseek`
-is typed. Before the first paid run of a session, open DeepSeek's pricing page and compare
+is typed (and, for a rule-generation experiment, `--confirm` as well). Before the first paid run of a session, open DeepSeek's pricing page and compare
 it with `configs/llm/deepseek_pricing.yaml`; `docs/llm-backend.md` explains why.
 
 The budget guard refuses a call that *could* take the total in `spend_ledger.jsonl` past
@@ -688,6 +694,58 @@ people.** A spread is the mean ± standard deviation over 20 seeds.
 | The artefact counts (`docs/metrics.md`, section 10) | 0.1 m/s backwards; 1.05 times the wanted speed; 1 s | Definitions |
 | The outcome categories (DD57) | no exposure but a yield counts as `resolved` | A decision: the issue's definitions leave that case out |
 
+## Rule generation (issue #30)
+
+The rule layer follows stored rules; this section **produces new ones**. A conflict is taken
+from a finished run of the primary baseline as a **case** (`docs/cases.md`). A **session**
+puts two people into it (an age, a gender, perhaps an errand; no names) and tells a model
+about it in words. Then, in **condition A**, two model agents, each told the situation as it
+sees it and its own errand, negotiate a standing rule for future meetings like theirs; in
+**condition B**, one model, told both people's side, states one. Comparing the two (SI-3b,
+SI-4) tests whether negotiation produces different rules from one model reasoning alone.
+`docs/rule-generation.md` describes all of it. This is the first half of the third of six
+sub-issues.
+
+1. **Cases** (`negsim/rulegen/cases.py`, `cases/`): 18 conflicts of the five SI-1 scenarios,
+   frozen with a SHA-256 manifest, each with what both agents saw when the pair formed, and
+   what happened under the baseline (shown to no model).
+2. **Severity.** A conflict is graded T0 (only in range) to T4 (a collision or a deadlock) by
+   a measure no sharing of the avoiding can change (`docs/metrics.md`, section 11).
+3. **The design matrix** (`negsim/rulegen/design.py`): age pair, gender pair, errand, whether
+   age and gender are shown, which person is which agent, who speaks or is described first,
+   crossed in full and shuffled by a seed.
+4. **What a model is shown** (`negsim/rulegen/describe.py`): frozen templates, a field list
+   generated from the rule format, a placeholder example; nothing about the other person
+   that cannot be seen, and nothing that hints at a convention.
+5. **Condition A** agrees when one agent accepts the other's latest proposal by its hash;
+   a changed rule is a counter-proposal, never an acceptance. **Condition B** is one call,
+   repeated K times to measure stability.
+6. **Every proposal is categorised, none discarded**: valid; needs communication (it reads
+   an errand or what the session hides); inconsistent; schema error; format limit (it asks
+   for what the format cannot say).
+7. **The writer** puts valid agreed or stated rules into a staging database of the
+   experiment, never `rule_db/`, with an id and provenance it assigns itself; `python -m
+   negsim.rulegen promote` copies one into `rule_db/` only with a reason.
+8. **Each rule is tested alone**: replayed on its case's own run beside the baseline, and
+   screened in the 50 + 50 flow; a rule that gridlocks the flow fails screening.
+9. **The experiment type** (`layer: rule_generation`) does all of it, with a worst-case cost
+   preview before any paid call, a budget cap on the experiment's own calls, and a paid run
+   only with `--confirm`.
+
+### Run it
+
+```
+python run_experiment.py configs/rule_generation/si3_mock_rehearsal.yaml       # every path, on the mock: free
+python run_experiment.py configs/rule_generation/si3_pilot.yaml --plan         # the pilot's sessions and worst-case cost
+python -m negsim.rulegen list runs_mock/si3_mock_rehearsal/rule_db_staging/stated
+python -m negsim.rulegen.cases list --set si3_v1
+```
+
+The paid pilot would be `--client deepseek --confirm`. **It is held**: the supervisor's
+approval is not recorded, the pricing check is not done (`docs/pricing-check.md`), and as the
+issue specifies it, its worst case (USD 0.62) is twelve times its cap (USD 0.05), so the code
+refuses it (`docs/rule-generation.md`, section 10; `WORK_LOG-30.md`, Q5).
+
 ## Changing things
 
 | To | Edit |
@@ -701,6 +759,9 @@ people.** A spread is the mean ± standard deviation over 20 seeds.
 | choose which stored rules an experiment follows | `directives: {provider: rules, ruleset: default}` in an avoidance config, then `disable: [...]` and `enable: {rule_id: version}` (`docs/rule-format.md`, section 10) |
 | write a rule, or a new version of one | a new file `rule_db/rules/<rule_id>.v<n>.yaml` in the format of `docs/rule-format.md`, its SHA-256 added to `rule_db/MANIFEST.json`, then `python ruledb.py validate`. **Never edit a version that exists**: a change is the next version (`rule_db/README.md`) |
 | change what "plain ORCA" means | never edit a baseline: write `configs/baselines/<name>_v2.yaml` and add it to that folder's `MANIFEST.json` (`docs/baseline.md`, section 4) |
+| take new conflict cases | a new case-set config like `configs/cases/si3_cases_v1.yaml` (a new `case_set` name), then `python -m negsim.rulegen.cases extract <config>`; existing cases are never rewritten (`docs/cases.md`) |
+| generate rules from other cases or people | a config under `configs/rule_generation/`: `cases`, `conditions`, the design's `factors` (`docs/rule-generation.md`, section 9). A changed config needs a new `experiment_name`: running one again resumes it |
+| put a generated rule into the rule database | `python -m negsim.rulegen promote <staging database> <rule_id> --reason "..."`; never by copying a file (`docs/rule-generation.md`, section 7) |
 | add a dynamics model | a subclass of `DynamicsModel` (`negsim/core/dynamics.py`). The avoidance scenarios accept only `holonomic` for now. |
 | add or change a persona | `configs/personas/personas.yaml`. No personal names: the loader rejects them. |
 | vary one persona attribute for one run | `{persona: f25, age: 70}` in an experiment's design |
@@ -725,20 +786,31 @@ people.** A spread is the mean ± standard deviation over 20 seeds.
   against RVO2; every departure from either.
 - `docs/perception.md`: the perception record, version 2, field by field, with the
   pair-level fields that rules read (issue #28).
-- `docs/rule-format.md`: the rule format, schema version 1, in full: what a rule may read,
-  and every check made when one is loaded. SI-3 will have a model write rules in it.
+- `docs/rule-format.md`: the rule format, schema versions 1 and 2, in full: what a rule may
+  read, every check made when one is loaded, and the canonical form that says when two rules
+  are the same rule (issue #30).
 - `docs/rule-matching.md`: which rule a pair follows, step by step, and why one shared
   snapshot stands for each agent deciding alone.
-- `docs/baseline.md`: the two frozen baselines that "plain ORCA" means.
+- `docs/baseline.md`: the two frozen baselines that "plain ORCA" means, and paired seeds
+  (issue #30).
 - `docs/behaviour-checks.md`: the behaviour checks of issue #28, every number from the
   committed logs, and what they show.
 - `docs/parameters.md`: every physical parameter of the avoidance scenarios with its
   source and locator, or the word placeholder.
 - `docs/metrics.md`: the conflict metrics, defined operationally, with their thresholds;
-  since issue #28 also the outcome of a pair interaction and the two artefact counts.
+  since issue #28 also the outcome of a pair interaction and the two artefact counts; since
+  issue #30 pair exposure and the severity tiers.
+- `docs/cases.md`: the conflict cases of issue #30, what each holds, where they came from,
+  and how they were sampled.
+- `docs/rule-generation.md`: rule generation (issue #30): the design matrix, what a model is
+  shown, both protocols, the validation categories, the writer and promotion, replay and
+  screening, the cost preview, and the held pilot.
+- `docs/pricing-check.md`: how the price table is checked against DeepSeek's page before a
+  paid call, and the record of each check.
 - `docs/llm-backend.md`: DeepSeek's API as documented on 2026-10-13, the client, the
   budget guard.
-- `docs/log-schema.md`: every log file and field.
+- `docs/log-schema.md`: every log file and field, and the folder of a rule-generation
+  experiment.
 - `THIRD_PARTY_NOTICES.md`: what is quoted from GameChat and what is adapted from RVO2,
   with their licences.
 - `negsim/viz/viewer.py` and `viewer.html`: the animated viewer (section "Watch a run").

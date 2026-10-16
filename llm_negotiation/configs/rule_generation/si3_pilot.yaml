@@ -4,8 +4,12 @@
 # (docs/pricing-check.md).
 #
 #   python run_experiment.py configs/rule_generation/si3_pilot.yaml --plan
+#   python run_experiment.py configs/rule_generation/si3_pilot.yaml                              (the mock: free, runs_mock/)
 #   python run_experiment.py configs/rule_generation/si3_pilot.yaml --client deepseek            (writes the preview; sends nothing)
 #   python run_experiment.py configs/rule_generation/si3_pilot.yaml --client deepseek --confirm  (paid)
+#
+# As every shipped config, it names the mock client: paying is always an explicit
+# --client deepseek, and here --confirm as well.
 #
 # The design: two cases, one wide_corridor_head_on and one overtaking; condition A with both
 # speaking orders; condition B with both description orders, K = 2; demographics shown in the
@@ -67,7 +71,8 @@ statement:
   repeats: 2                     # K = 2, as the issue's pilot says
 
 llm:
-  client: deepseek
+  client: mock                   # the paid run is --client deepseek --confirm
+  mock_policy: rulegen_paths
   model: deepseek-flash
   temperature: 1.0
   max_tokens: 600
