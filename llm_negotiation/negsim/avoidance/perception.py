@@ -1,8 +1,8 @@
 """The perception record: what one agent can tell about a neighbour that has come into range.
 
 A record is built once, at the moment a neighbour enters an agent's sensing radius, and is
-handed to the agent's directive provider. It is the input that rules will read in the next
-sub-issue, so its fields are a contract: ``docs/perception.md`` describes each one, and
+handed to the agent's directive provider. It is the input that rules read, so its fields
+are a contract: ``docs/perception.md`` describes each one, and
 :data:`PERCEPTION_SCHEMA_VERSION` must be raised whenever a field is added, removed,
 renamed or changes meaning.
 
@@ -15,6 +15,14 @@ never in a record**, whatever the settings say, and neither are its preferred or
 speed, its goal, its path, or any directive it holds. Of itself, an agent knows its own
 motion, size, preferred speed, age and gender. Of its surroundings, it perceives the
 nearest wall and the free width of the passage it is in.
+
+Version 2 (issue #28) adds what the two agents of a pair can *both* tell about the two of
+them together (:class:`PairFeatures`): the kind of encounter, how far apart their
+directions of travel are, how wide the passage between them is, their difference in age,
+and, at a single-file segment, how soon each would reach it. These are computed once per
+pair, with the lower-numbered agent first, so that the two agents' records carry the same
+values to the last bit. That is what lets a rule evaluated on one shared snapshot stand
+for each agent evaluating it on its own (``docs/rule-matching.md``).
 
 A field whose value is hidden, or does not exist, is ``None``; it is never left out and
 never replaced by a default.
@@ -30,7 +38,30 @@ from ..core.agent import AgentRuntime
 from ..core.geometry import Rect, Vec, wrap_angle
 from ..personas.schema import ATTRIBUTES
 
-PERCEPTION_SCHEMA_VERSION = 1
+PERCEPTION_SCHEMA_VERSION = 2
+
+# The kinds of encounter of a pair (``docs/perception.md``, "Pair-level fields").
+ENCOUNTER_HEAD_ON = "head_on"
+ENCOUNTER_CROSSING = "crossing"
+ENCOUNTER_OVERTAKING = "overtaking"
+ENCOUNTER_SINGLE_FILE = "single_file_segment"
+ENCOUNTER_NONE = "none"  # not approaching each other, and no single-file segment between them
+ENCOUNTER_CLASSES = (
+    ENCOUNTER_HEAD_ON,
+    ENCOUNTER_CROSSING,
+    ENCOUNTER_OVERTAKING,
+    ENCOUNTER_SINGLE_FILE,
+    ENCOUNTER_NONE,
+)
+#: Directions of travel that differ by less than this make an overtaking encounter, by
+#: more than :data:`HEAD_ON_MIN_DIFFERENCE_RAD` a head-on one, and in between a crossing:
+#: the range from 0 to 180 degrees cut into three equal parts. A definition with no
+#: source [placeholder].
+OVERTAKING_MAX_DIFFERENCE_RAD = math.pi / 3.0
+HEAD_ON_MIN_DIFFERENCE_RAD = 2.0 * math.pi / 3.0
+#: The corridor width between two agents is measured at points this far apart, at most,
+#: along the straight line from one to the other.
+CORRIDOR_SAMPLE_SPACING_M = 0.25
 
 #: Persona attributes that never appear in a record, whatever the visibility settings.
 NEVER_OBSERVABLE = frozenset({"task"})
@@ -49,6 +80,7 @@ class ObserverState:
     heading_rad: float
     preferred_speed_mps: float
     attributes: Mapping[str, Any]
+    time_to_segment_s: Optional[float] = None
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -57,6 +89,37 @@ class ObserverState:
             "heading_rad": _r(self.heading_rad),
             "preferred_speed_mps": self.preferred_speed_mps,
             "attributes": dict(self.attributes),
+            "time_to_segment_s": _r(self.time_to_segment_s),
+        }
+
+
+@dataclass(frozen=True)
+class PairFeatures:
+    """What both agents of a pair can tell about the two of them together.
+
+    Built by :func:`pair_features` with the lower-numbered agent first, once per pair and
+    step, so that each of the two gets exactly the same values. ``time_to_segment_s`` is
+    in the order of ``agents``. ``docs/perception.md`` defines every field.
+    """
+
+    agents: tuple[int, int]
+    encounter_class: Optional[str]
+    heading_difference_rad: float
+    min_corridor_width_m: float
+    age_difference_years: Optional[float]
+    single_file_segment: Optional[str]
+    time_to_segment_s: tuple[Optional[float], Optional[float]]
+
+    def time_to_segment_of(self, agent_id: int) -> Optional[float]:
+        return self.time_to_segment_s[self.agents.index(agent_id)]
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "encounter_class": self.encounter_class,
+            "heading_difference_rad": _r(self.heading_difference_rad),
+            "min_corridor_width_m": _r(self.min_corridor_width_m),
+            "age_difference_years": self.age_difference_years,
+            "single_file_segment": self.single_file_segment,
         }
 
 
@@ -108,6 +171,11 @@ class PerceptionRecord:
     neighbour_attributes: Mapping[str, Any]
     observer: ObserverState
     environment: EnvironmentFeatures
+    pair: PairFeatures
+
+    @property
+    def neighbour_time_to_segment_s(self) -> Optional[float]:
+        return self.pair.time_to_segment_of(self.neighbour_id)
 
     def as_dict(self) -> dict[str, Any]:
         velocity = self.relative_velocity_mps
@@ -127,9 +195,11 @@ class PerceptionRecord:
             "neighbour_speed_mps": _r(self.neighbour_speed_mps),
             "neighbour_heading_rad": _r(self.neighbour_heading_rad),
             "neighbour_heading_relative_rad": _r(self.neighbour_heading_relative_rad),
+            "neighbour_time_to_segment_s": _r(self.neighbour_time_to_segment_s),
             "neighbour_attributes": dict(self.neighbour_attributes),
             "observer": self.observer.as_dict(),
             "environment": self.environment.as_dict(),
+            "pair": self.pair.as_dict(),
         }
 
 
@@ -150,11 +220,13 @@ PERCEPTION_FIELDS = (
     "neighbour_speed_mps",
     "neighbour_heading_rad",
     "neighbour_heading_relative_rad",
+    "neighbour_time_to_segment_s",
     "neighbour_attributes",
     "observer",
     "environment",
+    "pair",
 )
-OBSERVER_FIELDS = ("radius_m", "speed_mps", "heading_rad", "preferred_speed_mps", "attributes")
+OBSERVER_FIELDS = ("radius_m", "speed_mps", "heading_rad", "preferred_speed_mps", "attributes", "time_to_segment_s")
 ENVIRONMENT_FIELDS = (
     "nearest_wall_distance_m",
     "free_width_m",
@@ -162,6 +234,25 @@ ENVIRONMENT_FIELDS = (
     "free_width_right_m",
     "single_file_ahead_m",
 )
+PAIR_FIELDS = (
+    "encounter_class",
+    "heading_difference_rad",
+    "min_corridor_width_m",
+    "age_difference_years",
+    "single_file_segment",
+)
+
+#: The fields of each earlier version, so that a run folder written then still checks
+#: out against what it declares (``negsim.runlog.schema``).
+FIELDS_BY_VERSION = {
+    1: {
+        "record": tuple(name for name in PERCEPTION_FIELDS if name not in ("neighbour_time_to_segment_s", "pair")),
+        "observer": OBSERVER_FIELDS[:-1],
+        "environment": ENVIRONMENT_FIELDS,
+        "pair": (),
+    },
+    2: {"record": PERCEPTION_FIELDS, "observer": OBSERVER_FIELDS, "environment": ENVIRONMENT_FIELDS, "pair": PAIR_FIELDS},
+}
 
 
 def _r(value: Optional[float], digits: int = 6) -> Optional[float]:
@@ -261,6 +352,168 @@ def environment_features(
     return EnvironmentFeatures(nearest, free_width, free_left, free_right, ahead)
 
 
+def corridor_width_between(
+    start: Vec,
+    end: Vec,
+    obstacles: Sequence[Rect],
+    environment_range: float,
+    spacing: float = CORRIDOR_SAMPLE_SPACING_M,
+) -> float:
+    """The narrowest free width of the passage along the straight line from ``start`` to ``end``.
+
+    At points no more than ``spacing`` apart along the line, including both ends, the
+    distance to the nearest wall is measured at right angles to the line on each side,
+    and the two are added. A side with no wall within ``environment_range`` counts as
+    ``environment_range``: as far as either agent can see. A point inside a wall has
+    width 0. The smallest width found is returned.
+    """
+    dx, dy = end[0] - start[0], end[1] - start[1]
+    length = math.hypot(dx, dy)
+    nx, ny = (-dy / length, dx / length) if length > 0.0 else (0.0, 1.0)
+    count = max(1, math.ceil(length / spacing))
+    narrowest = math.inf
+    for k in range(count + 1):
+        t = k / count
+        point = (start[0] + t * dx, start[1] + t * dy)
+        width = 0.0
+        for direction in ((nx, ny), (-nx, -ny)):
+            nearest = environment_range
+            for wall in obstacles:
+                hit = wall.ray_distance(point, direction)
+                if hit is not None and hit < nearest:
+                    nearest = hit
+            width += nearest
+        if width < narrowest:
+            narrowest = width
+    return narrowest
+
+
+def _heading_into(position: Vec, heading: float, rect: Rect) -> bool:
+    """Inside ``rect``, or facing it: its nearest point is less than 90 degrees off ``heading``."""
+    if rect.distance_to(position) == 0.0:
+        return True
+    qx = min(max(position[0], rect.xmin), rect.xmax)
+    qy = min(max(position[1], rect.ymin), rect.ymax)
+    return math.cos(heading) * (qx - position[0]) + math.sin(heading) * (qy - position[1]) > 0.0
+
+
+def _time_to_reach(agent: AgentRuntime, rect: Rect) -> Optional[float]:
+    """Distance to ``rect`` divided by the agent's present speed; 0 inside; ``None`` standing still."""
+    distance = rect.distance_to(agent.pose.xy)
+    if distance == 0.0:
+        return 0.0
+    speed = agent.speed
+    return distance / speed if speed > STATIONARY_SPEED else None
+
+
+def classify_encounter(
+    a: AgentRuntime,
+    b: AgentRuntime,
+    heading_a: float,
+    heading_b: float,
+    heading_difference: float,
+    segments: Sequence[Any] = (),
+) -> tuple[str, Optional[int]]:
+    """The kind of encounter of a pair, and the single-file segment it is about, if any.
+
+    In this order (``docs/perception.md``, "Pair-level fields"):
+
+    1. ``single_file_segment`` if a segment the scenario declares is too narrow for the two
+       to pass in (narrower than their two diameters together, as for the arbiter) and
+       each is inside it or facing it;
+    2. ``none`` if they are not approaching each other: ``p · w >= 0``, with ``p`` and
+       ``w`` the relative position and velocity;
+    3. otherwise by how far apart their directions of travel are: ``overtaking`` below
+       60 degrees, ``head_on`` above 120, ``crossing`` in between.
+
+    ``segments`` are objects with ``rect`` and ``width``, such as the scenario's
+    ``SingleFileSegment``.
+    """
+    diameters = 2.0 * (a.spec.radius + b.spec.radius)
+    for index, segment in enumerate(segments):
+        if segment.width >= diameters:
+            continue
+        if _heading_into(a.pose.xy, heading_a, segment.rect) and _heading_into(b.pose.xy, heading_b, segment.rect):
+            return ENCOUNTER_SINGLE_FILE, index
+    px, py = b.pose.x - a.pose.x, b.pose.y - a.pose.y
+    wx, wy = b.velocity[0] - a.velocity[0], b.velocity[1] - a.velocity[1]
+    if px * wx + py * wy >= 0.0:
+        return ENCOUNTER_NONE, None
+    if heading_difference < OVERTAKING_MAX_DIFFERENCE_RAD:
+        return ENCOUNTER_OVERTAKING, None
+    if heading_difference > HEAD_ON_MIN_DIFFERENCE_RAD:
+        return ENCOUNTER_HEAD_ON, None
+    return ENCOUNTER_CROSSING, None
+
+
+def encounter_of(
+    a: AgentRuntime, b: AgentRuntime, visibility: Mapping[str, bool], segments: Sequence[Any] = ()
+) -> tuple[Optional[str], Optional[int], float]:
+    """The encounter class of a pair, the index of its single-file segment, and the heading
+    difference: the cheap part of :func:`pair_features`, in the same fixed order.
+
+    The class needs ``speed`` (are they approaching?) and ``size`` (is a segment too
+    narrow for them?) to be visible; without either it is ``None``.
+    """
+    if a.agent_id > b.agent_id:
+        a, b = b, a
+    heading_a, heading_b = heading_of(a), heading_of(b)
+    difference = abs(wrap_angle(heading_b - heading_a))
+    if not (visibility.get("speed", False) and visibility.get("size", False)):
+        return None, None, difference
+    encounter, index = classify_encounter(a, b, heading_a, heading_b, difference, segments)
+    return encounter, index, difference
+
+
+def pair_features(
+    a: AgentRuntime,
+    b: AgentRuntime,
+    obstacles: Sequence[Rect],
+    visibility: Mapping[str, bool],
+    attributes: Mapping[int, Mapping[str, Any]],
+    environment_range: float,
+    segments: Sequence[Any] = (),
+) -> PairFeatures:
+    """What both agents of a pair can tell about the two of them, computed in a fixed order.
+
+    The lower-numbered agent is always taken first, whichever order the two are given in,
+    so the result is the same for both. Visibility: ``encounter_class`` (and with it the
+    times to a single-file segment) needs ``speed``, to tell whether the two are
+    approaching, and ``size``, to tell whether a segment is too narrow for them; without
+    either it is ``None``. ``age_difference_years`` needs ``age``. The direction of travel
+    and the walls are always perceived.
+    """
+    if a.agent_id > b.agent_id:
+        a, b = b, a
+    if math.isinf(environment_range):
+        environment_range = max(a.spec.sensing_radius, b.spec.sensing_radius)
+
+    encounter, index, difference = encounter_of(a, b, visibility, segments)
+    segment_name = None
+    times: tuple[Optional[float], Optional[float]] = (None, None)
+    if index is not None:
+        segment = segments[index]
+        segment_name = segment.name
+        times = (_time_to_reach(a, segment.rect), _time_to_reach(b, segment.rect))
+
+    age_difference = None
+    if visibility.get("age", False):
+        age_a = (attributes.get(a.agent_id) or {}).get("age")
+        age_b = (attributes.get(b.agent_id) or {}).get("age")
+        if age_a not in (None, "") and age_b not in (None, ""):
+            age_difference = abs(age_a - age_b)
+
+    return PairFeatures(
+        agents=(a.agent_id, b.agent_id),
+        encounter_class=encounter,
+        heading_difference_rad=difference,
+        min_corridor_width_m=corridor_width_between(a.pose.xy, b.pose.xy, obstacles, environment_range),
+        age_difference_years=age_difference,
+        single_file_segment=segment_name,
+        time_to_segment_s=times,
+    )
+
+
 def perceive(
     step: int,
     time_s: float,
@@ -272,8 +525,18 @@ def perceive(
     preferred_speed: float,
     single_file_intervals: Sequence[tuple[float, float]] = (),
     environment_range: float = math.inf,
+    *,
+    segments: Sequence[Any] = (),
+    pair: Optional[PairFeatures] = None,
 ) -> PerceptionRecord:
-    """Build the record of ``neighbour`` as ``observer`` perceives it right now."""
+    """Build the record of ``neighbour`` as ``observer`` perceives it right now.
+
+    ``pair`` may be passed in when it has already been computed for this pair on this
+    step (the run loop does, so that the two records share it); otherwise it is computed
+    here from ``segments`` and the rest.
+    """
+    if pair is None:
+        pair = pair_features(observer, neighbour, obstacles, visibility, attributes, environment_range, segments)
     px, py = neighbour.pose.x - observer.pose.x, neighbour.pose.y - observer.pose.y
     distance = math.hypot(px, py)
     own_heading = heading_of(observer)
@@ -312,6 +575,8 @@ def perceive(
             heading_rad=own_heading,
             preferred_speed_mps=preferred_speed,
             attributes=own_attributes(attributes.get(observer.agent_id)),
+            time_to_segment_s=pair.time_to_segment_of(observer.agent_id),
         ),
         environment=environment_features(observer, obstacles, single_file_intervals, environment_range),
+        pair=pair,
     )

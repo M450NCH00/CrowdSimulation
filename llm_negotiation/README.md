@@ -13,7 +13,11 @@ each other under ORCA, with the manner of avoiding set by a directive, and the s
 arbiter taking over where only one agent fits. That layer calls no model. It has its own
 section below, "The avoidance layer".
 
-Built for issues #24 and #26. Nothing here uses the Phase 1 folders `pipeline/` and
+Since issue #28 the directives can come from a **rule database**: stored rules, each a
+condition on what two agents can both see, a role for each, and a directive per role,
+followed by a rule provider. That calls no model either; see "The rule layer" below.
+
+Built for issues #24, #26 and #28. Nothing here uses the Phase 1 folders `pipeline/` and
 `dataset/`.
 
 ## How it works, in one list
@@ -54,8 +58,8 @@ python -m pytest
 ```
 
 All tests run on the mock client, with the network blocked and the real `.env` out of
-reach. They cost nothing. There are 795: the 432 of issue #24, 345 for the avoidance
-layer, and 18 for the plot and the viewer.
+reach. They cost nothing. There are 984: the 432 of issue #24, 345 for the avoidance
+layer, 18 for the plot and the viewer, and 189 for the rule layer (issue #28).
 
 ## Run an experiment
 
@@ -283,7 +287,8 @@ no call to a model: directives come from a config, and **every run is free**.
    every neighbour and every wall allows (`negsim/avoidance/`). Where a single-file segment
    lies ahead of two agents the arbiter decides the order, and ORCA goes on keeping the
    bodies apart (`docs/architecture.md`, section 6.4).
-4. **Log.** An avoidance run has its own files, under log schema version 2.
+4. **Log.** An avoidance run has its own files, under log schema version 2 (version 3
+   since issue #28, which adds the pair interactions and the rules).
 
 ORCA was written from the paper and checked against the source of the RVO2 library, which
 was read and not run. The linear-program solver is adapted from that library (Apache-2.0;
@@ -377,7 +382,10 @@ Two agents start 16 m apart in a corridor 1.75 m wide. Alone, each would arrive 
 - **`speed_scale` lasts as long as the other agent is in range**, and the range is the
   12.5 m sensing radius, so the two walk at 60% speed from 1.4 s until 17.5 s, long after
   they have passed. A rule that means "slow down until you are past" will need more than
-  this field.
+  this field. *(Issue #28 changed this: `speed_scale` now ends when the encounter has
+  passed, `docs/derivations.md`, section 15. Run again with that code, the two "60% speed"
+  runs arrive at 15.4 s instead of 18.7 s and 18.6 s; the committed folders are the record
+  of the code that wrote them.)*
 
 #### The same corridor: who does the avoiding
 
@@ -558,6 +566,128 @@ measurements. And of the values that *are* cited, none is from Singapore: the wa
 speed and the corridor come from forty people in France, the body radius from four young
 men in Japan (`docs/parameters.md`, section 7).
 
+## The rule layer (issue #28)
+
+The avoidance layer took its directives from a config. Here they come from **stored
+rules**. A rule says: when two agents meet in a certain way, give them roles, and tell each
+role what to do. It is data, never code; it lives in a rule database that records where it
+came from; and the `RuleDatabaseProvider` follows it behind the same interface as before.
+ORCA and the arbiter are unchanged, and the run loop changed only where
+`docs/architecture.md`, section 7.3, lists. This is the second of six sub-issues. It calls
+no model, and **every run is free**.
+
+1. **A rule** (`docs/rule-format.md`) has a condition built from a fixed list of fields,
+   seven comparison operators with units, and `all`/`any` groups; one directive for both
+   agents (`symmetric`), or two roles assigned by ordering the two agents on a field, with a
+   tie policy; a directive per role; a priority; a status; and its provenance. A rule may
+   read only what both agents of a pair compute identically: pair-level quantities, and
+   attributes of either agent that the other can see. A rule that reads anything else, such
+   as an agent's task, is refused when it is loaded: it could only be followed after the
+   two had talked, which is SI-3's subject.
+2. **The rule database** (`rule_db/`) holds one YAML file per version of each rule. A
+   SHA-256 manifest freezes every file, so a version is never edited; a change is a new
+   version. Rule sets name the versions an experiment switches on. The five seed rules are
+   all `test_seed`: they exercise the machinery and make no claim about people.
+3. **Matching** (`docs/rule-matching.md`). Rules are evaluated once per pair, on one
+   snapshot both agents share, and each agent gets its role's directive; that equals each
+   agent deciding alone because perception here is perfect and simultaneous, an assumption
+   stated there. The highest priority wins; a match holds, with hysteresis, until the
+   encounter has passed; with no match the pair follows plain ORCA.
+4. **Plain ORCA is two frozen baselines** (`docs/baseline.md`): `orca_perturbed_v1`, the
+   primary, adds the RVO2 library's own perturbation of 1e-4 m/s to every preferred velocity
+   to break exact symmetry; `orca_unperturbed_v1` does not.
+5. **`speed_scale`, and anything else a rule sets, ends when the encounter has passed**: the
+   two are separating and clear of each other (`docs/derivations.md`, section 15).
+6. **Logs.** Log schema version 3 adds `pair_interactions.jsonl` (per pair: every
+   evaluation with its snapshot, every match with its rule and version, when and why it
+   ended, and the outcome, `avoided`, `resolved` or `failed`), the rules each run followed,
+   and counts of issue #26's two artefacts.
+
+### Run it
+
+```
+python ruledb.py list                                                  # the rules, their status, the rule sets
+python ruledb.py validate                                              # load and check everything; writes nothing
+python ruledb.py history keep_left_head_on                             # every version of a rule
+python run_experiment.py configs/rule_following/si2_head_on.yaml       # one of the behaviour checks
+python -m negsim.rules.report                                          # their tables, from the committed logs
+python -m negsim.rules.benchmark                                       # what following rules costs per step
+```
+
+| Config in `configs/rule_following/` | Scenario | Runs | What it varies |
+|---|---|---|---|
+| `si2_head_on.yaml` | `wide_corridor_head_on` | 320 | exactly head-on or 10 cm off; no personas, or a woman of 25 and a man of 70; baseline; plain or rules |
+| `si2_keep_left_vs_right.yaml` | `wide_corridor_head_on` | 80 | baseline; `keep_left_head_on` or `keep_right_head_on` |
+| `si2_open_crossing.yaml` | `open_crossing` | 160 | arriving together or half a metre apart; baseline; plain or rules |
+| `si2_overtaking.yaml` | `overtaking` | 160 | exactly behind or 5 cm off; baseline; plain or rules |
+| `si2_bottleneck.yaml` | `corridor_to_bottleneck` | 320 | opposing or merging; equal speeds or agent 0 slower; baseline; plain or rules |
+| `si2_bidirectional_flow.yaml` | `bidirectional_flow` | 80 | baseline; plain or rules |
+| `si2_head_on_r5.yaml`, `si2_overtaking_r5.yaml` | as above | 320, 160 | the same, with a sensing radius of 5 m |
+| `si2_bidirectional_flow_ablation.yaml` | `bidirectional_flow` | 40 | a follow-up the issue did not ask for: the primary baseline with `default` minus one of its two rules that act in the flow |
+
+Every condition has 20 seeds.
+
+### Results of the rule layer (2026-10-15)
+
+From the 1,600 committed runs of the behaviour checks in `runs/si2_*`, all written from a
+clean tree at commit `a4e1ead`, and the 40 of a follow-up (at `3a9bdff`).
+`docs/behaviour-checks.md` has every table and the reasoning; these are the main points.
+**They are statements about this algorithm and these test rules, not evidence about
+people.** A spread is the mean ± standard deviation over 20 seeds.
+
+- **A shared side removes the symmetric deadlock, and against the primary baseline it makes
+  the pass predictable.** Exactly head-on, unperturbed ORCA deadlocks in 20 of 20 runs; with
+  `keep_left_head_on` both arrive in 12.2 s, as if alone. The perturbed baseline does not
+  deadlock: plain ORCA passes on a side the noise picks (left 9, right 11) in 12.32 ± 0.04 s,
+  and the rule makes it left in 20 of 20, in 12.20 s.
+- **`keep_left_head_on` and `keep_right_head_on` differ only in the side.** Every other number
+  is the same to the precision of the logs.
+- **A share without a side is underspecified.** `younger_yields_head_on` gives the woman of 25
+  the whole share and no side. Under the perturbed baseline she steps aside half a metre;
+  under the unperturbed one, exactly head-on, she walks backwards in 20 of 20 runs and arrives
+  at 24.9 s, issue #26's artefact, now produced by a rule.
+- **`overtaker_keeps_clear` stops the slower walker being hurried along.** It arrives at its
+  own pace, 32.6 s, in all 80 rule runs, against 120 "hurried" episodes in the 80 plain runs;
+  the overtaker does all the stepping aside (up to 0.50 m).
+- **At the single-file segment the rule never changes who goes first**, because it says what
+  the arbiter already does. With equal speeds it "fires" one step after the arbiter has
+  decided, on times that the arbiter's slowdown has changed, and so ratifies that decision.
+- **The default rule set has no crossing rule**, so the crossing's rule runs follow plain
+  ORCA, deadlock included; their differences from the plain runs show the size of the seed
+  noise.
+- **A sensing radius of 5 m changes no outcome count.** It changes when ORCA starts steering
+  and how hard (exposure 3.8 s instead of 6.4 s, head-on with `keep_left_head_on`).
+- **Fifty each way, the rules let the crowd clear far sooner, with fewer but much deeper
+  overlaps.** Under the primary baseline the last agent arrives at 46.9 s instead of 83.4 s,
+  and the mean time to goal is 35.9 ± 0.7 s against 38.7 ± 6.0 s (33.5 s alone); overlap
+  episodes per run fall from 234 to 107. But the deepest overlap of a run goes from 32 mm to
+  201 mm, up to 456 mm. **A follow-up the issue did not ask for** (leaving one rule out at a
+  time) puts the depth on `overtaker_keeps_clear`, which gives the agent in front a share of
+  0: with `keep_left_head_on` alone the crowd clears as fast and the deepest overlap is 54 mm;
+  with `overtaker_keeps_clear` alone the flow gridlocks in 15 of 20 runs (Q10).
+- **Following the rules makes a step 2.3 times as long at 100 agents and 3.0 times at
+  1,000** (120.6 against 52.1 ms; 1,531 against 514 ms; `runs/si2_benchmark/benchmark.json`).
+  Almost all of the extra goes into re-measuring the corridor width between pairs that tie
+  and are therefore evaluated again on every step (Q11).
+- **Two measures need care.** Almost no pair is ever `avoided` (two agents on a collision
+  course always register exposure), so the categories mainly separate deadlocks from the
+  rest. And under the perturbed baseline, exposure counts changes of velocity the size of the
+  perturbation for an agent with a share of 0. Both are open questions in `WORK_LOG-28.md`.
+
+### What is still a placeholder (issue #28)
+
+| Where | Value | |
+|---|---|---|
+| Baselines | 40 neighbours; sensing radius 12.5 m, and 5 m in the sensitivity check | Set by the user in the issue; supervisor sign-off pending (`docs/baseline.md`) |
+| Encounter classes (DD43) | heading differences of 60° and 120° | 0–180° cut in three equal parts |
+| Matching hysteresis (DD54) | 3 steps | A definition |
+| `keep_left_head_on`, `keep_right_head_on` | a corridor of at least 1.0 m | Two effective shoulder widths (Yamamoto et al. 2019), rounded: derived, not a measured passing width |
+| `overtaker_keeps_clear` | speeds within 0.05 m/s tie | A definition |
+| `single_file_first_arrival` | times within 0.5 s tie | A definition |
+| `younger_yields_head_on` | time to collision 6 s; age difference 20 years | The issue's example values |
+| The artefact counts (`docs/metrics.md`, section 10) | 0.1 m/s backwards; 1.05 times the wanted speed; 1 s | Definitions |
+| The outcome categories (DD57) | no exposure but a yield counts as `resolved` | A decision: the issue's definitions leave that case out |
+
 ## Changing things
 
 | To | Edit |
@@ -567,7 +697,10 @@ men in Japan (`docs/parameters.md`, section 7).
 | give avoidance agents an age and a gender | `population:` in the same config. It changes what a neighbour perceives and nothing physical. To make an agent slower as well, set its speed under `scenario_overrides`, in the same file. |
 | change how single-file segments are handled | `arbitration:` in the same config (`enabled`, `policy`, `tie_break`) |
 | change a threshold of the conflict metrics | `metrics:` in an avoidance scenario. Every `outcome.json` records the values used. |
-| add a source of directives (a rule database, a negotiation) | a subclass of `DirectiveProvider` with one method, `directive(record)` (`negsim/avoidance/directives.py`) |
+| add a source of directives (a negotiation, say) | a subclass of `DirectiveProvider` with one method, `directive(record)` (`negsim/avoidance/directives.py`); optional hooks let it follow pairs from step to step, as the rule provider does (DD56) |
+| choose which stored rules an experiment follows | `directives: {provider: rules, ruleset: default}` in an avoidance config, then `disable: [...]` and `enable: {rule_id: version}` (`docs/rule-format.md`, section 10) |
+| write a rule, or a new version of one | a new file `rule_db/rules/<rule_id>.v<n>.yaml` in the format of `docs/rule-format.md`, its SHA-256 added to `rule_db/MANIFEST.json`, then `python ruledb.py validate`. **Never edit a version that exists**: a change is the next version (`rule_db/README.md`) |
+| change what "plain ORCA" means | never edit a baseline: write `configs/baselines/<name>_v2.yaml` and add it to that folder's `MANIFEST.json` (`docs/baseline.md`, section 4) |
 | add a dynamics model | a subclass of `DynamicsModel` (`negsim/core/dynamics.py`). The avoidance scenarios accept only `holonomic` for now. |
 | add or change a persona | `configs/personas/personas.yaml`. No personal names: the loader rejects them. |
 | vary one persona attribute for one run | `{persona: f25, age: 70}` in an experiment's design |
@@ -586,14 +719,23 @@ men in Japan (`docs/parameters.md`, section 7).
   and where this platform departs from both.
 - `docs/derivations.md`: the follower's speed bound and the conflict zone; and, for the
   avoidance layer, the reciprocity condition on the shares, the side preference, walls in
-  discrete time, and how long a symmetric meeting takes to stall.
+  discrete time, how long a symmetric meeting takes to stall, and when an encounter has
+  passed (issue #28).
 - `docs/orca.md`: ORCA as implemented, section by section of the paper; what was checked
   against RVO2; every departure from either.
-- `docs/perception.md`: the perception record, version 1, field by field. The next
-  sub-issue's rules read it.
+- `docs/perception.md`: the perception record, version 2, field by field, with the
+  pair-level fields that rules read (issue #28).
+- `docs/rule-format.md`: the rule format, schema version 1, in full: what a rule may read,
+  and every check made when one is loaded. SI-3 will have a model write rules in it.
+- `docs/rule-matching.md`: which rule a pair follows, step by step, and why one shared
+  snapshot stands for each agent deciding alone.
+- `docs/baseline.md`: the two frozen baselines that "plain ORCA" means.
+- `docs/behaviour-checks.md`: the behaviour checks of issue #28, every number from the
+  committed logs, and what they show.
 - `docs/parameters.md`: every physical parameter of the avoidance scenarios with its
   source and locator, or the word placeholder.
-- `docs/metrics.md`: the conflict metrics, defined operationally, with their thresholds.
+- `docs/metrics.md`: the conflict metrics, defined operationally, with their thresholds;
+  since issue #28 also the outcome of a pair interaction and the two artefact counts.
 - `docs/llm-backend.md`: DeepSeek's API as documented on 2026-10-13, the client, the
   budget guard.
 - `docs/log-schema.md`: every log file and field.

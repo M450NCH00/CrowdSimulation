@@ -18,6 +18,13 @@ kind it is in ``run_kind``:
     its own set of files (:data:`AVOIDANCE_RUN_FILES`) and its own fields.
 
 A folder written under version 1 is still valid and is checked against version 1.
+
+Version 3 (issue #28) adds rules to the avoidance run: a new file of pair interactions
+(``pair_interactions.jsonl``: each pair's outcome category, and every rule evaluation and
+match), the baseline and the perturbation in ``config.json``, the directive's later
+changes and the expiry of its ``speed_scale`` in ``interactions.jsonl``, two rule events,
+and the outcome categories and rule counts in ``outcome.json``. A negotiation run is as in
+version 2. Folders written under version 2 are checked against version 2.
 """
 
 from __future__ import annotations
@@ -26,8 +33,8 @@ import csv
 import json
 from pathlib import Path
 
-LOG_SCHEMA_VERSION = 2
-SUPPORTED_LOG_SCHEMA_VERSIONS = (1, 2)
+LOG_SCHEMA_VERSION = 3
+SUPPORTED_LOG_SCHEMA_VERSIONS = (1, 2, 3)
 
 RUN_KIND_NEGOTIATION = "negotiation"
 RUN_KIND_AVOIDANCE = "avoidance"
@@ -40,11 +47,13 @@ OUTCOME_FILE = "outcome.json"
 TRANSCRIPT_FILE = "transcript.md"
 SUMMARY_FILE = "summary.csv"
 INTERACTIONS_FILE = "interactions.jsonl"
+PAIR_INTERACTIONS_FILE = "pair_interactions.jsonl"
 EVENTS_FILE = "events.jsonl"
 #: The files of a negotiation run.
 RUN_FILES = (CONFIG_FILE, CONVERSATION_FILE, TRAJECTORY_FILE, OUTCOME_FILE, TRANSCRIPT_FILE)
-#: The files of an avoidance run.
-AVOIDANCE_RUN_FILES = (CONFIG_FILE, TRAJECTORY_FILE, INTERACTIONS_FILE, EVENTS_FILE, OUTCOME_FILE)
+#: The files of an avoidance run (version 3; version 2 had no pair interactions).
+AVOIDANCE_RUN_FILES = (CONFIG_FILE, TRAJECTORY_FILE, INTERACTIONS_FILE, PAIR_INTERACTIONS_FILE, EVENTS_FILE, OUTCOME_FILE)
+AVOIDANCE_RUN_FILES_V2 = tuple(name for name in AVOIDANCE_RUN_FILES if name != PAIR_INTERACTIONS_FILE)
 
 CONFIG_KEYS = (
     "log_schema_version",
@@ -262,7 +271,10 @@ AVOIDANCE_CONFIG_KEYS = (
     "arbitration",
     "logging",
     "perception_schema_version",
+    "baseline",
+    "perturbation",
 )
+AVOIDANCE_CONFIG_KEYS_V2 = AVOIDANCE_CONFIG_KEYS[:-2]
 
 AVOIDANCE_TRAJECTORY_COLUMNS = (
     "step",
@@ -302,15 +314,87 @@ INTERACTION_KEYS = (
     "end_reason",
     "perception",
     "directive",
+    "directive_changes",
+    "speed_scale_expired_step",
+    "speed_scale_expired_time_s",
     "effective",
     "perceived_time_s",
     "conflict_exposure_time_s",
     "arbiter_time_s",
     "min_separation_m",
 )
+INTERACTION_KEYS_V2 = tuple(
+    key for key in INTERACTION_KEYS if key not in ("directive_changes", "speed_scale_expired_step", "speed_scale_expired_time_s")
+)
 INTERACTION_END_REASONS = ("out_of_range", "observer_arrived", "neighbour_arrived", "run_ended")
 
-EVENT_TYPES = ("reciprocity_violation", "handoff", "yield", "near_miss", "collision", "wall_collision")
+#: ``pair_interactions.jsonl`` (version 3): one line per pair interaction.
+PAIR_INTERACTION_KEYS = (
+    "pair_id",
+    "agents",
+    "start_step",
+    "start_time_s",
+    "encounter_class_at_start",
+    "end_step",
+    "end_time_s",
+    "end_reason",
+    "passed_step",
+    "passed_time_s",
+    "conflict_exposure_time_s",
+    "min_separation_m",
+    "outcome",
+    "outcome_detail",
+    "rules",
+)
+PAIR_INTERACTION_END_REASONS = ("out_of_range", "agent_arrived", "run_ended")
+PAIR_OUTCOME_DETAIL_KEYS = ("exposed", "yield_events", "collisions", "deadlock", "open_at_timeout")
+#: The ``rules`` block of a pair interaction, when the run's provider follows rules.
+PAIR_RULE_KEYS = ("state_at_end", "independent_agrees", "evaluations", "matches", "cross_pair_conflicts")
+RULE_EVALUATION_KEYS = (
+    "from_step",
+    "from_time_s",
+    "to_step",
+    "count",
+    "encounter_class",
+    "outcome",
+    "rule",
+    "ambiguous_with",
+    "candidates",
+    "snapshot",
+)
+RULE_EVALUATION_OUTCOMES = ("rule_matched", "no_rule_matched", "ambiguous_match", "kept")
+RULE_MATCH_KEYS = (
+    "rule_id",
+    "version",
+    "priority",
+    "encounter",
+    "expiry",
+    "outcome",
+    "ambiguous_with",
+    "from_step",
+    "from_time_s",
+    "roles",
+    "directives",
+    "snapshot",
+    "to_step",
+    "to_time_s",
+    "end_reason",
+    "replaced_by",
+)
+RULE_MATCH_END_REASONS = ("passed", "replaced", "out_of_range", "agent_arrived", "run_ended")
+INTERACTION_OUTCOMES = ("avoided", "resolved", "failed")
+
+EVENT_TYPES = (
+    "reciprocity_violation",
+    "handoff",
+    "yield",
+    "near_miss",
+    "collision",
+    "wall_collision",
+    "ambiguous_match",
+    "cross_pair_conflict",
+)
+EVENT_TYPES_V2 = EVENT_TYPES[:6]
 EVENT_KEYS = ("event_index", "type", "time_s")
 
 AVOIDANCE_OUTCOME_KEYS = (
@@ -332,6 +416,23 @@ AVOIDANCE_OUTCOME_KEYS = (
     "reciprocity_violations",
     "handoffs",
     "thresholds",
+    "interaction_outcomes",
+    "rules",
+    "baseline",
+    "artefacts",
+)
+AVOIDANCE_OUTCOME_KEYS_V2 = AVOIDANCE_OUTCOME_KEYS[:-4]
+ARTEFACT_KEYS = ("thresholds", "agents", "totals")
+ARTEFACT_AGENT_KEYS = ("backward_episodes", "backward_time_s", "hurried_episodes", "hurried_time_s")
+ARTEFACT_TOTAL_KEYS = ARTEFACT_AGENT_KEYS + ("agents_backward", "agents_hurried")
+INTERACTION_OUTCOME_KEYS = ("pairs", "avoided", "resolved", "failed", "pairs_with")
+RULE_SUMMARY_KEYS = (
+    "evaluations",
+    "matches_begun",
+    "match_ends",
+    "cross_pair_conflicts",
+    "formation_checks",
+    "formation_mismatches",
 )
 AVOIDANCE_AGENT_KEYS = (
     "time_to_goal_s",
@@ -399,6 +500,17 @@ AVOIDANCE_SUMMARY_COLUMNS = (
     "path_deviation_max_1_m",
     "conflict_exposure_0_s",
     "conflict_exposure_1_s",
+    "baseline",
+    "ruleset",
+    "pairs",
+    "avoided",
+    "resolved",
+    "failed",
+    "rules_fired",
+    "ambiguous_matches",
+    "cross_pair_conflicts",
+    "backward_episodes",
+    "hurried_episodes",
     "git_commit",
 )
 
@@ -487,20 +599,23 @@ def _read_jsonl(path: Path) -> list[dict]:
 def _validate_avoidance(run_dir: Path, config: dict) -> list[str]:
     # Imported here: the schema of a negotiation run does not depend on the avoidance layer.
     from ..avoidance.directives import DIRECTIVE_FIELDS
-    from ..avoidance.perception import (
-        ENVIRONMENT_FIELDS,
-        NEVER_OBSERVABLE,
-        OBSERVER_FIELDS,
-        PERCEPTION_FIELDS,
-        PERCEPTION_SCHEMA_VERSION,
-    )
+    from ..avoidance.perception import FIELDS_BY_VERSION, NEVER_OBSERVABLE, PERCEPTION_SCHEMA_VERSION
 
-    problems = [f"missing file {name}" for name in AVOIDANCE_RUN_FILES if not (run_dir / name).is_file()]
+    # A folder is checked against the log schema and the perception record its own config
+    # declares, so that one written before either last changed still checks out.
+    v3 = config.get("log_schema_version", LOG_SCHEMA_VERSION) >= 3
+    files = AVOIDANCE_RUN_FILES if v3 else AVOIDANCE_RUN_FILES_V2
+    problems = [f"missing file {name}" for name in files if not (run_dir / name).is_file()]
     if problems:
         return problems
-    problems += _missing(config, AVOIDANCE_CONFIG_KEYS, CONFIG_FILE)
-    if config.get("perception_schema_version") != PERCEPTION_SCHEMA_VERSION:
-        problems.append(f"{CONFIG_FILE}: perception_schema_version is not {PERCEPTION_SCHEMA_VERSION}")
+    problems += _missing(config, AVOIDANCE_CONFIG_KEYS if v3 else AVOIDANCE_CONFIG_KEYS_V2, CONFIG_FILE)
+    perception_version = config.get("perception_schema_version")
+    if perception_version not in FIELDS_BY_VERSION:
+        problems.append(
+            f"{CONFIG_FILE}: perception_schema_version {perception_version!r} is not one of {sorted(FIELDS_BY_VERSION)}"
+        )
+        perception_version = PERCEPTION_SCHEMA_VERSION
+    record_fields = FIELDS_BY_VERSION[perception_version]
 
     with (run_dir / TRAJECTORY_FILE).open("r", encoding="utf-8", newline="") as handle:
         reader = csv.reader(handle)
@@ -513,11 +628,15 @@ def _validate_avoidance(run_dir: Path, config: dict) -> list[str]:
     interactions = _read_jsonl(run_dir / INTERACTIONS_FILE)
     for number, interaction in enumerate(interactions):
         where = f"{INTERACTIONS_FILE} line {number + 1}"
-        problems += _missing(interaction, INTERACTION_KEYS, where)
+        problems += _missing(interaction, INTERACTION_KEYS if v3 else INTERACTION_KEYS_V2, where)
         perception = interaction.get("perception", {})
-        problems += _missing(perception, PERCEPTION_FIELDS, f"{where} perception")
-        problems += _missing(perception.get("observer", {}), OBSERVER_FIELDS, f"{where} perception.observer")
-        problems += _missing(perception.get("environment", {}), ENVIRONMENT_FIELDS, f"{where} perception.environment")
+        problems += _missing(perception, record_fields["record"], f"{where} perception")
+        problems += _missing(perception.get("observer", {}), record_fields["observer"], f"{where} perception.observer")
+        problems += _missing(
+            perception.get("environment", {}), record_fields["environment"], f"{where} perception.environment"
+        )
+        if record_fields["pair"]:
+            problems += _missing(perception.get("pair") or {}, record_fields["pair"], f"{where} perception.pair")
         problems += _missing(interaction.get("directive", {}), DIRECTIVE_FIELDS, f"{where} directive")
         if interaction.get("end_reason") not in INTERACTION_END_REASONS:
             problems.append(f"{where}: unknown end_reason {interaction.get('end_reason')!r}")
@@ -532,16 +651,17 @@ def _validate_avoidance(run_dir: Path, config: dict) -> list[str]:
         problems.append(f"{INTERACTIONS_FILE}: interaction_id is not 0, 1, 2, ...")
 
     events = _read_jsonl(run_dir / EVENTS_FILE)
+    event_types = EVENT_TYPES if v3 else EVENT_TYPES_V2
     for number, event in enumerate(events):
         where = f"{EVENTS_FILE} line {number + 1}"
         problems += _missing(event, EVENT_KEYS, where)
-        if event.get("type") not in EVENT_TYPES:
+        if event.get("type") not in event_types:
             problems.append(f"{where}: unknown event type {event.get('type')!r}")
     if [event.get("event_index") for event in events] != list(range(len(events))):
         problems.append(f"{EVENTS_FILE}: event_index is not 0, 1, 2, ...")
 
     outcome = json.loads((run_dir / OUTCOME_FILE).read_text(encoding="utf-8"))
-    problems += _missing(outcome, AVOIDANCE_OUTCOME_KEYS, OUTCOME_FILE)
+    problems += _missing(outcome, AVOIDANCE_OUTCOME_KEYS if v3 else AVOIDANCE_OUTCOME_KEYS_V2, OUTCOME_FILE)
     if outcome.get("status") not in AVOIDANCE_STATUSES:
         problems.append(f"{OUTCOME_FILE}: unknown status {outcome.get('status')!r}")
     agents = outcome.get("agents", {})
@@ -561,4 +681,53 @@ def _validate_avoidance(run_dir: Path, config: dict) -> list[str]:
     if config.get("logging", {}).get("interactions", True):
         if outcome.get("totals", {}).get("interactions") != len(interactions):
             problems.append(f"{OUTCOME_FILE}: totals.interactions does not match {INTERACTIONS_FILE}")
+    if v3:
+        problems += _validate_pairs(run_dir, config, outcome)
+    return problems
+
+
+def _validate_pairs(run_dir: Path, config: dict, outcome: dict) -> list[str]:
+    """The additions of version 3: pair interactions, their rule records, and the counts."""
+    problems: list[str] = []
+    pairs = _read_jsonl(run_dir / PAIR_INTERACTIONS_FILE)
+    for number, pair in enumerate(pairs):
+        where = f"{PAIR_INTERACTIONS_FILE} line {number + 1}"
+        problems += _missing(pair, PAIR_INTERACTION_KEYS, where)
+        problems += _missing(pair.get("outcome_detail") or {}, PAIR_OUTCOME_DETAIL_KEYS, f"{where} outcome_detail")
+        if pair.get("outcome") not in INTERACTION_OUTCOMES:
+            problems.append(f"{where}: unknown outcome {pair.get('outcome')!r}")
+        if pair.get("end_reason") not in PAIR_INTERACTION_END_REASONS:
+            problems.append(f"{where}: unknown end_reason {pair.get('end_reason')!r}")
+        rules = pair.get("rules")
+        if rules is None:
+            continue
+        problems += _missing(rules, PAIR_RULE_KEYS, f"{where} rules")
+        for entry in rules.get("evaluations", []):
+            problems += _missing(entry, RULE_EVALUATION_KEYS, f"{where} rules.evaluations")
+            if entry.get("outcome") not in RULE_EVALUATION_OUTCOMES:
+                problems.append(f"{where}: unknown evaluation outcome {entry.get('outcome')!r}")
+        for entry in rules.get("matches", []):
+            problems += _missing(entry, RULE_MATCH_KEYS, f"{where} rules.matches")
+            if entry.get("end_reason") not in RULE_MATCH_END_REASONS:
+                problems.append(f"{where}: unknown end_reason of a match {entry.get('end_reason')!r}")
+    if [pair.get("pair_id") for pair in pairs] != list(range(len(pairs))):
+        problems.append(f"{PAIR_INTERACTIONS_FILE}: pair_id is not 0, 1, 2, ...")
+
+    counts = outcome.get("interaction_outcomes") or {}
+    problems += _missing(counts, INTERACTION_OUTCOME_KEYS, f"{OUTCOME_FILE}.interaction_outcomes")
+    if sum(counts.get(name, 0) for name in INTERACTION_OUTCOMES) != counts.get("pairs"):
+        problems.append(f"{OUTCOME_FILE}: avoided + resolved + failed is not the number of pairs")
+    if config.get("logging", {}).get("interactions", True):
+        if counts.get("pairs") != len(pairs):
+            problems.append(f"{OUTCOME_FILE}: interaction_outcomes.pairs does not match {PAIR_INTERACTIONS_FILE}")
+        for name in INTERACTION_OUTCOMES:
+            if counts.get(name) != sum(1 for pair in pairs if pair.get("outcome") == name):
+                problems.append(f"{OUTCOME_FILE}: interaction_outcomes.{name} does not match {PAIR_INTERACTIONS_FILE}")
+    if outcome.get("rules") is not None:
+        problems += _missing(outcome["rules"], RULE_SUMMARY_KEYS, f"{OUTCOME_FILE}.rules")
+    artefacts = outcome.get("artefacts") or {}
+    problems += _missing(artefacts, ARTEFACT_KEYS, f"{OUTCOME_FILE}.artefacts")
+    for agent_id, entry in (artefacts.get("agents") or {}).items():
+        problems += _missing(entry, ARTEFACT_AGENT_KEYS, f"{OUTCOME_FILE}.artefacts.agents.{agent_id}")
+    problems += _missing(artefacts.get("totals") or {}, ARTEFACT_TOTAL_KEYS, f"{OUTCOME_FILE}.artefacts.totals")
     return problems

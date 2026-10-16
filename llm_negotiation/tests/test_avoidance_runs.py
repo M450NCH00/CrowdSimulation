@@ -224,7 +224,7 @@ def test_a_run_writes_its_five_files_and_they_pass_the_schema_check(side_run):
 
 def test_config_json_is_fully_resolved(side_run):
     saved = read_json(side_run[0] / CONFIG_FILE)
-    assert (saved["log_schema_version"], saved["run_kind"]) == (LOG_SCHEMA_VERSION, "avoidance") == (2, "avoidance")
+    assert (saved["log_schema_version"], saved["run_kind"]) == (LOG_SCHEMA_VERSION, "avoidance") == (3, "avoidance")  # 2 before issue #28
     assert (saved["experiment_name"], saved["run_id"], saved["run_index"], saved["seed"], saved["repeat"]) == ("test_avoidance", "001_base", 1, 301, 1)
     assert saved["git"] == GIT and saved["variant"] == {} and saved["perception_schema_version"] == PERCEPTION_SCHEMA_VERSION
     scene = saved["scenario"]
@@ -486,7 +486,7 @@ def test_schema_check_notices_damage_to_the_other_files(side_run, tmp_path):
         elif damage in ("status", "version", "kind"):
             file = OUTCOME_FILE if damage == "status" else CONFIG_FILE
             data = read_json(copy_dir / file)
-            data.update({"status": "aborted"} if damage == "status" else {"log_schema_version": 3} if damage == "version" else {"run_kind": "other"})
+            data.update({"status": "aborted"} if damage == "status" else {"log_schema_version": LOG_SCHEMA_VERSION + 1} if damage == "version" else {"run_kind": "other"})
             (copy_dir / file).write_text(json.dumps(data), encoding="utf-8")
         assert validate_run_dir(copy_dir) != [], damage
     assert "never observable" in " ".join(validate_run_dir(tmp_path / "leaked_task"))
@@ -496,15 +496,15 @@ def test_a_negotiation_run_now_says_its_kind_and_the_new_version(tmp_path):
     plan = experiment(c1_config()).plans()[0]
     execute_run(plan, MockClient(policy="task_priority"), tmp_path / "talk", git=GIT)
     saved = read_json(tmp_path / "talk" / CONFIG_FILE)
-    assert (saved["log_schema_version"], saved["run_kind"]) == (2, "negotiation")
+    assert (saved["log_schema_version"], saved["run_kind"]) == (3, "negotiation")  # 2 before issue #28
     assert sorted(path.name for path in (tmp_path / "talk").iterdir()) == sorted(RUN_FILES)  # its files are unchanged
     assert validate_run_dir(tmp_path / "talk") == []
 
 
 def test_every_committed_run_folder_still_passes_the_schema_check():
     """The 66 run folders of issue #24 were written under version 1 and must stay valid;
-    the folders of issue #26 are version 2."""
-    versions = {1: 0, 2: 0}
+    the folders of issue #26 are version 2, and those of issue #28 version 3."""
+    versions = {1: 0, 2: 0, 3: 0}
     kinds = {"negotiation": 0, "avoidance": 0}
     for config_path in sorted((PACKAGE_ROOT / "runs").glob("*/*/config.json")):
         config = read_json(config_path)
@@ -514,7 +514,7 @@ def test_every_committed_run_folder_still_passes_the_schema_check():
         if config_path.parent.parent.name.startswith(("c0_", "c1_", "c2_")):
             assert config["log_schema_version"] == 1 and "run_kind" not in config
     assert versions[1] == 66  # 54 no-LLM runs and 12 paid ones, as issue #24 left them
-    assert kinds["avoidance"] == versions[2]
+    assert kinds["avoidance"] == versions[2] + versions[3]
 
 
 # --- a whole experiment, and the command line -----------------------------------------------------

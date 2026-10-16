@@ -88,6 +88,57 @@ class YieldTracker:
         return sum(event.duration_s for event in self.events)
 
 
+@dataclass(frozen=True)
+class ArtefactThresholds:
+    """When the two ORCA artefacts issue #26 found are counted (``docs/metrics.md``, section 10).
+
+    Diagnostics, not conflict metrics: they count where the vehicle, not a rule, may be
+    what differs from people. Each is a definition with no source.
+    """
+
+    #: Walking backwards: moving against the direction of one's own path faster than this.
+    backward_speed_mps: float = 0.1
+    #: Hurried along: moving faster than (1 + this) times the speed one wants, with a
+    #: perceived neighbour behind.
+    hurried_fraction: float = 0.05
+    #: Either counts only if it lasts at least this long.
+    min_duration_s: float = 1.0
+
+    def as_dict(self) -> dict[str, float]:
+        return {
+            "backward_speed_mps": self.backward_speed_mps,
+            "hurried_fraction": self.hurried_fraction,
+            "min_duration_s": self.min_duration_s,
+        }
+
+
+class EpisodeTracker:
+    """Runs of consecutive time steps on which a condition held, lasting at least ``min_duration``."""
+
+    def __init__(self, min_duration: float):
+        self.min_duration = min_duration
+        self.episodes: list[tuple[float, float]] = []
+        self._start: Optional[float] = None
+        self._end = 0.0
+
+    def update(self, step_start: float, step_end: float, holding: bool) -> None:
+        if holding:
+            if self._start is None:
+                self._start = step_start
+            self._end = step_end
+        else:
+            self.close()
+
+    def close(self) -> None:
+        if self._start is not None and self._end - self._start >= self.min_duration - 1e-9:
+            self.episodes.append((self._start, self._end))
+        self._start = None
+
+    @property
+    def total_time_s(self) -> float:
+        return sum(end - start for start, end in self.episodes)
+
+
 @dataclass
 class ProximityEpisode:
     """A stretch of time during which two bodies were closer than a threshold."""

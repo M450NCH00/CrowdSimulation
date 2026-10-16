@@ -1,9 +1,13 @@
-# The perception record, version 1
+# The perception record, version 2
 
 A perception record is what one agent can tell about a neighbour, and about where it is
 itself, at the moment the neighbour comes into range. It is built once per interaction and
 handed to the agent's directive provider, which answers with a directive. **It is the
-input that rules will read in the next sub-issue**, so its fields are a contract.
+input that rules read** (`rule-format.md`), so its fields are a contract.
+
+Version 2 (issue #28) adds the **pair-level fields**: what the two agents of a pair can
+*both* tell about the two of them together. They are the fields a rule's condition may
+use, and they are defined in their own section below.
 
 The code is `negsim/avoidance/perception.py`. The record is logged, whole, in
 `interactions.jsonl` (`log-schema.md`).
@@ -84,9 +88,11 @@ radians, anticlockwise positive. Values are rounded to six decimal places in the
 | `neighbour_speed_mps` | m/s | The neighbour's speed. `null` if `speed` is hidden |
 | `neighbour_heading_rad` | rad | The direction the neighbour is moving in, in the world frame; the direction it faces if it is standing still |
 | `neighbour_heading_relative_rad` | rad | The same, relative to the observer's heading: 0 means the same way, ±π means head-on, +π/2 means crossing from the observer's right to its left |
+| `neighbour_time_to_segment_s` | s | How soon the neighbour would reach the single-file segment named in `pair.single_file_segment`: its distance to the segment divided by its present speed; 0 if it is inside; `null` if it is standing still, or if `pair.single_file_segment` is `null` |
 | `neighbour_attributes` | | The neighbour's persona attributes that are visible, e.g. `{"age": 70, "gender": "male"}`. Never `task` |
 | `observer` | | The observer's knowledge of itself, below |
 | `environment` | | The observer's surroundings, below |
+| `pair` | | What both agents can tell about the two of them together: the pair-level fields, below |
 
 `observer`:
 
@@ -97,6 +103,7 @@ radians, anticlockwise positive. Values are rounded to six decimal places in the
 | `heading_rad` | rad | The direction it is moving in |
 | `preferred_speed_mps` | m/s | The speed it walks at when nothing is in its way, before any directive scales it |
 | `attributes` | | Its own age and gender, if it has a persona. Never its task |
+| `time_to_segment_s` | s | The same as `neighbour_time_to_segment_s`, for itself |
 
 `environment`:
 
@@ -116,15 +123,82 @@ segment, and without this a rule would have no way of telling that one is coming
 Left and right for the free widths are taken from the direction of the *path*, not of the
 velocity, so that they do not flip when an agent sidesteps.
 
+## Pair-level fields (version 2)
+
+A rule is evaluated once per pair, on one snapshot that both agents share
+(`rule-matching.md`). For that to stand for each agent evaluating the rule on its own, a
+condition may use only what **both** agents compute **identically**: quantities of the
+pair, and attributes of either agent that the other can see. The environment fields above
+fail that test (each is measured at the observer's own position, along its own path), and
+so do `bearing_rad`, `relative_position_m`, `relative_velocity_mps` and
+`neighbour_heading_relative_rad` (each is in the observer's frame, so the two agents get
+different numbers). `distance_m`, `closing_speed_mps` and `time_to_collision_s` pass it:
+swapping the two agents leaves each unchanged.
+
+The fields of `pair` are added for rules. They are computed by `pair_features`
+(`negsim/avoidance/perception.py`) **once per pair and step, with the lower-numbered agent
+first**, and the same object goes into both agents' records, so the two carry the same
+values to the last bit, not merely the same values up to rounding.
+
+| Field | Unit | Meaning | Needs to be visible |
+|---|---|---|---|
+| `encounter_class` | | The kind of encounter, decided in the order below | `speed` and `size`; otherwise `null` |
+| `heading_difference_rad` | rad | How far apart the two directions of travel are, from 0 (the same way) to π (opposite ways) | nothing: headings are always perceived |
+| `min_corridor_width_m` | m | The narrowest free width of the passage along the straight line between the two centres, below | nothing: walls are always perceived |
+| `age_difference_years` | years | The difference between the two ages, never negative | `age`, and both agents must have one; otherwise `null` |
+| `single_file_segment` | | The name of the single-file segment that makes the class `single_file_segment`; `null` for any other class | as `encounter_class` |
+
+The record also carries, for each of the two, how soon it would reach that segment
+(`observer.time_to_segment_s`, `neighbour_time_to_segment_s`): its distance to the
+segment's free space, divided by its present speed; 0 if it is inside; `null` if it is
+standing still or the class is not `single_file_segment`. Both come from the same
+`pair_features` call.
+
+**`encounter_class`.** Decided in this order:
+
+1. **`single_file_segment`**, if a single-file segment the scenario declares is too narrow
+   for the two to pass in (narrower than their two diameters together: the arbiter's own
+   test, `coordination.py`) and **each** of the two is inside it or facing it. "Facing"
+   means the nearest point of the segment is less than 90° off the agent's direction of
+   travel. An agent that has come out of the far end has the segment behind it, so the
+   pair stops being in this class once one of them is through.
+2. **`none`**, if the two are not approaching each other: `p · w ≥ 0`, where `p` is the
+   relative position and `w` the relative velocity. Since `d/dt |p|² = 2 p · w`, the
+   distance between them is not shrinking. Two agents standing still are `none`.
+3. Otherwise by `heading_difference_rad`: **`overtaking`** below 60°, **`head_on`** above
+   120°, **`crossing`** from 60° to 120°.
+
+The two angles cut the range from 0° to 180° into three equal parts. **They are a
+definition with no source `[placeholder]`**; a sourced classification of pedestrian
+encounters would replace them. Both are constants in `perception.py`; changing either is a
+new version of this record.
+
+**`min_corridor_width_m`.** Along the straight line from the lower-numbered agent's centre
+to the other's, at points no more than 0.25 m apart and including both ends, the distance
+to the nearest wall is measured at right angles to the line on each side, and the two are
+added. The smallest such width is the value. A side with no wall within the environment
+range counts as the environment range: the passage is as wide as either agent can tell.
+So in open ground the value is twice the environment range (25 m with the 12.5 m sensing
+radius), never `null`, and a rule's "wide enough" test is true there. A point inside a
+wall counts as width 0. Between two agents walking along a corridor this is the corridor's
+width; between two agents on either side of a bottleneck it is the bottleneck's. The
+sampling can miss a narrowing shorter than 0.25 m along the line; no shipped scenario has
+one.
+
+These are the only places a pair-level field is not simply a number: `encounter_class`
+and `single_file_segment` are names, and every field is `null` when what it needs is
+hidden. A rule's comparison on a `null` value is false (`rule-format.md`).
+
 ## An example
 
 Agent 0 (a woman of 25) in the wide corridor, at the moment agent 1 (a man of 70) comes
-within its 12.5 m sensing radius, walking toward it. From
-`runs/si1_head_on_side_preference/001_symmetric_plain/interactions.jsonl`:
+within its 12.5 m sensing radius, walking toward it: step 14 of the exactly symmetric
+head-on under plain ORCA. The committed `runs/si1_head_on_side_preference/001_symmetric_plain`
+holds this record as version 1; this is the same moment as version 2 records it:
 
 ```json
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "step": 14,
   "time_s": 1.4,
   "observer_id": 0,
@@ -139,13 +213,15 @@ within its 12.5 m sensing radius, walking toward it. From
   "neighbour_speed_mps": 1.3,
   "neighbour_heading_rad": 3.141593,
   "neighbour_heading_relative_rad": 3.141593,
+  "neighbour_time_to_segment_s": null,
   "neighbour_attributes": {"age": 70, "gender": "male"},
   "observer": {
     "radius_m": 0.25,
     "speed_mps": 1.3,
     "heading_rad": 0.0,
     "preferred_speed_mps": 1.3,
-    "attributes": {"age": 25, "gender": "female"}
+    "attributes": {"age": 25, "gender": "female"},
+    "time_to_segment_s": null
   },
   "environment": {
     "nearest_wall_distance_m": 0.875,
@@ -153,25 +229,45 @@ within its 12.5 m sensing radius, walking toward it. From
     "free_width_left_m": 0.875,
     "free_width_right_m": 0.875,
     "single_file_ahead_m": null
+  },
+  "pair": {
+    "encounter_class": "head_on",
+    "heading_difference_rad": 3.141593,
+    "min_corridor_width_m": 1.75,
+    "age_difference_years": 45,
+    "single_file_segment": null
   }
 }
 ```
 
 The two have the same body and the same speeds. A persona changes what is perceived and
-nothing physical (`parameters.md`, section 5).
+nothing physical (`parameters.md`, section 5). Agent 1's record of agent 0, built on the
+same step, has the same `pair` block, object for object.
 
 ## What a provider does with it
 
 A directive provider is a class with one method, `directive(record) -> AvoidanceDirective`
 (`negsim/avoidance/directives.py`). It is called once per interaction, with the record
-above, and what it returns holds until the interaction ends. Two are provided:
+above. Three are provided:
 
 - `NullProvider`: plain ORCA for everyone.
 - `StaticProvider`: directives written in the experiment config, by default, per agent, or
-  per ordered pair of observer and neighbour.
+  per ordered pair of observer and neighbour. What it returns holds until the interaction
+  ends, except `speed_scale`, which since issue #28 stops applying once the encounter has
+  passed (`derivations.md`, section 15).
+- `RuleDatabaseProvider` (issue #28, `negsim/rules/provider.py`): directives from stored
+  rules. Answering `directive(record)` it evaluates the rules on the record alone, as one
+  agent on its own would. In a run it also follows each pair from step to step, which is
+  where the matching policy of `rule-matching.md` lives: one shared snapshot per pair,
+  re-evaluation, holding, priority, expiry.
 
-A rule-database provider and a negotiation provider are to come behind the same interface.
+A negotiation provider is to come behind the same interface.
 
 ## Change log
 
 - **1** (2026-10-13, issue #26): first version.
+- **2** (2026-10-14, issue #28): the pair-level fields for rules: `pair` (with
+  `encounter_class`, `heading_difference_rad`, `min_corridor_width_m`,
+  `age_difference_years`, `single_file_segment`), `observer.time_to_segment_s` and
+  `neighbour_time_to_segment_s`. Nothing of version 1 was removed or changed meaning. A run
+  folder written under version 1 is still checked against version 1.

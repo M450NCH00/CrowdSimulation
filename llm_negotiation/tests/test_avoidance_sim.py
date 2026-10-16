@@ -107,16 +107,25 @@ def test_a_larger_share_means_a_larger_deviation():
 
 
 @pytest.mark.parametrize("scale", [1.0, 0.6, 0.3])
-def test_speed_scale_slows_the_agent_only_while_the_neighbour_is_in_range(scale):
+def test_speed_scale_slows_the_agent_only_until_the_encounter_has_passed(scale):
+    """Issue #28, Part 5: the scale applies while the neighbour is perceived and the two
+    have not yet passed each other, and not before or after. (Issue #26's version of this
+    test had it last while the neighbour was in range.)"""
     result = run_avoidance(crowd(HEAD_ON), static(side_preference="left", speed_scale=scale))
     assert result.status == STATUS_COMPLETED
-    wanted = [(row["n_neighbours"], math.hypot(row["pref_vx_mps"], row["pref_vy_mps"])) for row in rows_of(result, 0)]
-    alone = [speed for n, speed in wanted if n == 0]
-    together = [speed for n, speed in wanted if n == 1]
-    assert alone and together
-    assert all(speed == pytest.approx(1.3, abs=1e-5) for speed in alone)
-    assert all(speed == pytest.approx(1.3 * scale, abs=1e-5) for speed in together)
-    assert {row["speed_scale"] for row in rows_of(result, 0) if row["n_neighbours"] == 1} == {scale}
+    expired = result.interactions[0].speed_scale_expired_step
+    assert (expired is None) == (scale == 1.0)
+    passed = result.pairs[0].passed_step
+    wanted = [(row["step"], row["n_neighbours"], math.hypot(row["pref_vx_mps"], row["pref_vy_mps"])) for row in rows_of(result, 0)]
+    alone = [speed for step, n, speed in wanted if n == 0]
+    before = [speed for step, n, speed in wanted if n == 1 and step < passed]
+    after = [speed for step, n, speed in wanted if n == 1 and step >= passed]
+    assert alone and before and after
+    assert all(speed == pytest.approx(1.3, abs=1e-5) for speed in alone + after)
+    assert all(speed == pytest.approx(1.3 * scale, abs=1e-5) for speed in before)
+    assert {row["speed_scale"] for row in rows_of(result, 0) if row["n_neighbours"] == 1 and row["step"] < passed} == {scale}
+    if expired is not None:
+        assert expired == passed
 
 
 def test_a_smaller_speed_scale_takes_longer_and_shows_up_as_yielding():
@@ -125,7 +134,9 @@ def test_a_smaller_speed_scale_takes_longer_and_shows_up_as_yielding():
         result = run_avoidance(crowd(HEAD_ON), static(side_preference="left", speed_scale=scale))
         times.append(result.goal_times[0])
         yields.append(len(result.yields))
-    assert times == sorted(times) and times[2] > 2 * times[0]
+    # Issue #26's version also asked that 0.3 take more than twice as long as 1.0, which held
+    # only while the scale lasted until the neighbour was out of range (issue #28, Part 5).
+    assert times[0] < times[1] < times[2]
     # Below half its preferred speed for over a second, an agent is yielding: 0.3 is, 0.6 is not.
     assert yields == [0, 0, 2]
 
@@ -133,7 +144,8 @@ def test_a_smaller_speed_scale_takes_longer_and_shows_up_as_yielding():
 def test_speed_scale_never_takes_an_agent_past_its_maximum_speed():
     result = run_avoidance(crowd(HEAD_ON), static(side_preference="left", speed_scale=5.0))
     assert max(row["speed_mps"] for row in rows_of(result, 0)) <= 2.0 + 1e-9
-    wanted = [math.hypot(r["pref_vx_mps"], r["pref_vy_mps"]) for r in rows_of(result, 0) if r["n_neighbours"]]
+    passed = result.pairs[0].passed_step  # after this the scale no longer applies (issue #28)
+    wanted = [math.hypot(r["pref_vx_mps"], r["pref_vy_mps"]) for r in rows_of(result, 0) if r["n_neighbours"] and r["step"] < passed]
     assert wanted and all(speed == pytest.approx(2.0, abs=1e-5) for speed in wanted)
 
 

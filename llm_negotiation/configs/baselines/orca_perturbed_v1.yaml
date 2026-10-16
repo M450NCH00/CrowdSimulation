@@ -1,0 +1,25 @@
+# The PRIMARY baseline of issue #28: "plain ORCA", against which every rule is compared,
+# here and in the later sub-issues. docs/baseline.md gives the reason for every value.
+#
+# FROZEN. configs/baselines/MANIFEST.json holds this file's SHA-256 and the loader refuses
+# it if it has been edited. Any change is a new file, orca_perturbed_v2.yaml.
+schema_version: 1
+name: orca_perturbed_v1
+version: 1
+role: primary
+description: >
+  Plain ORCA, with a small random perturbation of every agent's preferred velocity on
+  every step to break exact symmetry, as the RVO2 library's own examples do. No directives.
+sign_off: >
+  Values set by the user in issue #28. Supervisor sign-off: pending unless WORK_LOG-28.md
+  records otherwise.
+
+perturbation:
+  magnitude_mps: 0.0001      # m/s  length uniform in [0, this], direction uniform, every agent, every step   [cited: RVO2 examples/Blocks.cc:178-186, examples/Roadmap.cc:322-331]
+
+orca:
+  tie_break: brake           # an exact tie between the two passing sides is not broken (DD26)   [design]
+
+agent_types:                 # applied to every agent type of a scenario
+  max_neighbours: 40         # how many neighbours an agent attends to   [placeholder]
+  sensing_radius: 12.5       # m    R   [placeholder]

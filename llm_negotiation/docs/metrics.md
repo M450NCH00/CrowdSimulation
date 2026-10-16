@@ -160,3 +160,72 @@ It is a proposal for the evaluation sub-issue, not something this sub-issue appl
 
 "Avoided" in this sense needs a reference: the same scenario under plain ORCA, to show
 that there was a conflict to avoid.
+
+## 9. The outcome of a pair interaction: `avoided`, `resolved`, `failed` (issue #28)
+
+The question of section 8, asked of every **pair interaction** (two agents, from the first
+step on which either perceives the other to the first on which neither does, one arrives, or
+the run ends; `log-schema.md`, `pair_interactions.jsonl`). It uses the definitions and
+thresholds above, unchanged, and is computed at the end of every avoidance run, with or
+without rules.
+
+| Category | Definition |
+|---|---|
+| `failed` | The two **collided** while the pair was open (a collision episode between them, section 6, overlapping the pair interaction in time), or the run ended in **deadlock** with the pair open |
+| `resolved` | Not failed, and **either agent was exposed** to the other (section 3) **or either had a yield event** (section 4) overlapping the pair interaction in time |
+| `avoided` | Neither: no exposure on either side, no yield event, no collision, no deadlock |
+
+They are tried in that order, so every pair gets exactly one.
+
+**The issue's words, and the gap in them.** Issue #28 defines `avoided` as "conflict
+exposure time zero and no yield event", `resolved` as "exposure greater than zero, ending
+without collision or deadlock", and `failed` as "collision or deadlock". A pair with **no
+exposure but a yield event** fits none of the three. It is not a rare case: it is the
+follower the arbiter holds back at a single-file segment, whose wanted speed is capped
+before ORCA ever sees a conflict, and an agent slowed below half its speed by a rule.
+**DD57 (decision): such a pair is `resolved`**, settled by somebody waiting, which is how
+section 8 already reads a yield. This needs sign-off; each pair records what decided its
+category (`outcome_detail`: `exposed`, `yield_events`, `collisions`, `deadlock`), and
+`outcome.json` counts each ingredient (`interaction_outcomes.pairs_with`), so another
+reading can be computed from the logs without running anything again.
+
+**Yields in a crowd are attributed by time (DD58).** A yield event is an agent's, not a
+pair's (section 4). A pair counts one if it overlaps the pair interaction in time. With two
+agents that is exact. In a crowd it can blame a pair for a wait that someone else caused,
+which can only move a pair from `avoided` to `resolved`, never the other way.
+
+**A run that times out.** A pair still open when the run reaches its time limit is
+categorised by the same rules, and flagged (`open_at_timeout`), because "ending without
+collision or deadlock" is not the same as having ended.
+
+**With a perturbed baseline** (`baseline.md`), the preferred velocity an agent hands ORCA
+includes the perturbation, and exposure (section 3) is measured against that velocity. At
+1e-4 m/s it can only matter for a pair that is already within that much of a collision
+course.
+
+## 10. Two diagnostics: walking backwards, and being hurried along (issue #28)
+
+Issue #26 found two things an ORCA agent does that are the algorithm's and are not offered
+as human behaviour (`WORK_LOG-26.md`, "What the checking turned up"): with shares (1, 0) and
+no side, the agent with share 1 walks backwards along its own line; and exactly behind a
+slower walker, ORCA pushes the slower one along. Issue #28 asks for both to be counted, in
+rule runs against baseline runs, and **not fixed**. They are counted in the run loop on every
+step, so that the counts do not depend on how thinly the trajectory is logged.
+
+| Diagnostic | An agent on a step | Counted as |
+|---|---|---|
+| `backward` | moves against the direction of its own path (at its progress along it) faster than **0.1 m/s** | an episode: a run of such steps lasting at least **1.0 s** |
+| `hurried` | moves faster than **1.05 times** the speed it wants (its preferred speed, scaled by its directives and capped by the arbiter), with a neighbour it perceives **behind** it (that neighbour's position more than 90° from the direction of its path) | an episode, likewise |
+
+**The thresholds are definitions with no source**, set to separate the two artefacts from
+ordinary ORCA motion: a side-step is not walking backwards, and the brief speed-ups of a
+dodge are not being hurried along. Every outcome repeats them.
+
+**What "hurried" can get wrong.** It does not know *why* the agent is fast: with two agents
+it is the one behind; in a crowd, a neighbour behind may not be the cause. It can therefore
+over-count in a crowd. The overtaking scenario is where it was found and where it is exact.
+
+*Reported:* `outcome.json`, `artefacts`: per agent `backward_episodes`, `backward_time_s`,
+`hurried_episodes`, `hurried_time_s`; in total the same and `agents_backward`,
+`agents_hurried` (how many agents had any); and the `thresholds`. The summary has
+`backward_episodes` and `hurried_episodes`.

@@ -2,7 +2,10 @@
 
 An :class:`AvoidanceDirective` is one agent's instruction for dealing with one neighbour.
 It is obtained from a :class:`DirectiveProvider` at the moment the neighbour enters the
-agent's sensing radius, and it holds for as long as the neighbour stays inside it.
+agent's sensing radius, and it holds for as long as the neighbour stays inside it, with
+two exceptions added by issue #28: its ``speed_scale`` stops applying once the encounter
+has passed (``docs/derivations.md``, section 15), and a provider that follows pairs (the
+rule database) may replace it during the interaction.
 
 Two agents that perceive each other each hold a directive about the other. ORCA's
 guarantee depends on the two acting consistently, so the pair's directives are combined by
@@ -244,15 +247,36 @@ def resolve_pair(
 class DirectiveProvider(ABC):
     """Supplies a directive when a neighbour enters an agent's sensing radius.
 
-    Later sub-issues add a rule-database provider and a negotiation provider behind this
-    same interface.
+    ``directive(record)`` is the whole interface for a provider whose directive, once
+    given, holds for the interaction (``NullProvider``, ``StaticProvider``). A provider
+    whose directives change while the agents interact (the rule-database provider of issue
+    #28) sets ``follows_pairs``, and the run loop then also calls :meth:`update` on every
+    step and :meth:`close_pair` when a pair interaction ends. Both default to doing
+    nothing, so a provider that does not follow pairs behaves exactly as in issue #26.
     """
 
     name: ClassVar[str]
+    #: Whether the run loop should call :meth:`update` and :meth:`close_pair`.
+    follows_pairs: ClassVar[bool] = False
 
     @abstractmethod
     def directive(self, record: PerceptionRecord) -> AvoidanceDirective:
         """The directive ``record.observer_id`` holds toward ``record.neighbour_id``."""
+
+    def update(self, view: Any) -> Mapping[tuple[int, int], AvoidanceDirective]:
+        """The directives that change on this step, keyed by ``(observer, neighbour)``.
+
+        ``view`` is what the run loop shows of the step (``negsim.rules.matching.StepView``).
+        Called only if ``follows_pairs``.
+        """
+        return {}
+
+    def close_pair(self, pair: Any, step: int, time_s: float, reason: str) -> None:
+        """A pair interaction has ended, for ``reason``. Called only if ``follows_pairs``."""
+
+    def summary(self) -> Optional[dict[str, Any]]:
+        """What a run's outcome records about the provider's work, if anything."""
+        return None
 
     def describe(self) -> dict[str, Any]:
         """What a run records about its provider."""

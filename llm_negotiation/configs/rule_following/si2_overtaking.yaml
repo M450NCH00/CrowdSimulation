@@ -1,0 +1,32 @@
+# Issue #28, behaviour checks: a faster walker behind a slower one. Rule-following against
+# both baselines, 20 seeds per condition. No model is called.
+#
+#   python run_experiment.py configs/rule_following/si2_overtaking.yaml
+#
+# The rule that applies is overtaker_keeps_clear.
+schema_version: 1
+layer: avoidance
+experiment_name: si2_overtaking
+description: A faster walker behind a slower one. Plain ORCA against the default rule set, on both baselines.
+scenario: configs/scenarios/overtaking.yaml
+
+logging:
+  trajectory_stride: 10
+
+design:
+  seed: 28400
+  repeats: 20
+  factors:
+    layout:
+      - name: directly_behind
+      - name: offset
+        scenario_overrides: {geometry: {lateral_offsets: [0.05, 0.0]}}
+    baseline:
+      - name: perturbed
+        baseline: orca_perturbed_v1
+      - name: unperturbed
+        baseline: orca_unperturbed_v1
+    mode:
+      - name: plain
+      - name: rules
+        directives: {provider: rules, ruleset: default}

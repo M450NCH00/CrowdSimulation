@@ -1,0 +1,29 @@
+# Issue #28, behaviour checks: keep_left_head_on against keep_right_head_on in the exactly
+# symmetric head-on, on both baselines, 20 seeds each. The two rules are each other's mirror
+# image at the same priority, so they cannot be switched on together; each level switches on
+# one of them. A difference, or none, is a result. No model is called.
+#
+#   python run_experiment.py configs/rule_following/si2_keep_left_vs_right.yaml
+schema_version: 1
+layer: avoidance
+experiment_name: si2_keep_left_vs_right
+description: The exactly symmetric head-on under keep_left_head_on and under keep_right_head_on.
+scenario: configs/scenarios/wide_corridor_head_on.yaml
+
+logging:
+  trajectory_stride: 10
+
+design:
+  seed: 28200
+  repeats: 20
+  factors:
+    baseline:
+      - name: perturbed
+        baseline: orca_perturbed_v1
+      - name: unperturbed
+        baseline: orca_unperturbed_v1
+    rule:
+      - name: keep_left
+        directives: {provider: rules, enable: {keep_left_head_on: 1}}
+      - name: keep_right
+        directives: {provider: rules, enable: {keep_right_head_on: 1}}

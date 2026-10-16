@@ -1,0 +1,31 @@
+# A seed rule of issue #28 (SI-2). It is here to exercise the rule machinery. It is not a
+# claim about how people behave; checking that is the validation sub-issue's (SI-6).
+schema_version: 1
+rule_id: younger_yields_head_on
+version: 1
+status: test_seed
+description: >
+  When two people of quite different ages meet head-on and are within six seconds of
+  colliding, the younger does all of the avoiding.
+provenance:
+  source_type: hand_written
+  source_ref: "issue #28 (SI-2), Part 6, seed rules; the example rule of Part 2"
+  created_at: 2026-10-14
+  author: "the user (specification in issue #28); written out by Claude Code (claude-opus-5-5)"
+  notes: >
+    Test fixture only. Not a claim about human behaviour. It is the issue's example rule
+    with the field names of docs/perception.md: it shows a demographic condition and a
+    role assignment with a tie policy. With an age difference of at least 20 years the two
+    ages cannot tie, but every role assignment must state its tie policy all the same.
+  validation_evidence: []
+encounter: head_on
+when:
+  all:
+    - {field: pair.time_to_collision_s, op: "<=", value: 6.0, unit: s}
+    - {field: pair.age_difference_years, op: ">=", value: 20, unit: years}
+roles:
+  by: {field: agent.age, order: ascending, assign: [yielder, other], tie: no_match}
+directive:
+  yielder: {responsibility_share: 1.0}
+  other: {responsibility_share: 0.0}
+priority: 20
