@@ -417,7 +417,8 @@ runs/<experiment_name>/
   design.jsonl           the session list, one session per line
   preview.json           the worst-case cost preview, written before any call
   sessions/<session_id>.json            one file per session, written when it ends
-  sessions/<session_id>.aborted<n>.json the log of a session that was aborted and run again
+  sessions/<session_id>.md              the same session, for reading
+  sessions/<session_id>.aborted<n>.json the log of a session that was aborted and run again (and .md)
   validation.jsonl       one line per proposed rule: its category
   written.jsonl          one line per rule the writer stored
   rule_db_staging/<negotiated|stated>/  the staging databases (rule-format.md, section 12)
@@ -478,6 +479,12 @@ A turn: `turn_index`, `speaker`, `shown` (what it was told on its turn), `parse_
 or `aborted`), `error`, `person_1`, `person_2`, `max_attempts`, `system_prompt`,
 `parse_error`, `rule` (as written, or null), `reason`, `canonical_hash`, `attempts`,
 `totals` (`llm_calls`, `retries`, `tokens`, `cost_usd`), `model_returned`.
+
+**`sessions/<session_id>.md`**: the session for reading, rendered from its record alone
+(`negsim/rulegen/transcript.py`), as issue #24's `transcript.md` is: who the people were,
+the system prompts, every turn as it was shown and answered (with any attempt that could not
+be used, and what it replied), every proposal with its id, how each acceptance was read, and
+the outcome with its tokens and cost. The record is the `.json`; this adds nothing to it.
 
 **`validation.jsonl`**, one line per proposal (A: every proposal of every turn; B: the stated
 rule): `session_id`, `condition`, `case_id`, `scenario`, `turn_index`, `proposer`,

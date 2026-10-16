@@ -65,6 +65,7 @@ from .protocol import (
     stability,
 )
 from .replay import KIND_CROWD, KIND_REPLAY, CrowdScreen, ScreeningSettings, crowd_size, mixed_population, replay
+from .transcript import render as render_transcript
 from .validate import CATEGORIES, VALID, validate_proposal
 from .writer import STAGING_DIR, StagingDatabase, Support, build_rule, with_screening
 
@@ -410,11 +411,14 @@ def _read_record(path: Path) -> Optional[dict[str, Any]]:
 
 
 def _set_aside(path: Path) -> Path:
-    """Keep an aborted session's log under a name of its own before the session runs again."""
+    """Keep an aborted session's log, and its transcript, under names of their own before the
+    session runs again."""
     number = 1
     while (aside := path.with_name(f"{path.stem}.aborted{number}.json")).exists():
         number += 1
     path.rename(aside)
+    if path.with_suffix(".md").is_file():
+        path.with_suffix(".md").rename(aside.with_suffix(".md"))
     return aside
 
 
@@ -857,6 +861,7 @@ def run_rule_generation(
             _set_aside(path)
         record = run_session(config, session, cases[session.case_id], templates[session.condition], client, indices[session.session_id])
         _write_json(path, record)
+        path.with_suffix(".md").write_text(render_transcript(record), encoding="utf-8", newline="\n")
         result.executed.append(session.session_id)
         report(f"[{session.index}/{len(sessions)}] {session.session_id}: {record['outcome']}, USD {record['totals']['cost_usd']:.6f}")
         if record["outcome"] == OUTCOME_ABORTED:

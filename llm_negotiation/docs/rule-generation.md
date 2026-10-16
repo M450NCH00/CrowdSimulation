@@ -208,6 +208,11 @@ ends the negotiation as `parse_failure`, where #24's dialogue counted it as sile
 on: here a turn carries a proposal and an acceptance, and silence would change what the other
 can accept.
 
+**Logged** whole, as #24 logs a dialogue: every prompt, raw reply, parsed turn, proposal with
+its hash, acceptance with its status, and every attempt with its tokens and cost, in
+`sessions/<session_id>.json`; and the same for reading, as #24's `transcript.md`, in
+`sessions/<session_id>.md`.
+
 **Counterbalancing.** The speaking order and the persona mapping are factors of the design
 (section 2) and are recorded with every session. In #24's hallway smoke runs the first
 speaker gave way in 5 of 6; the report counts how often the accepted rule was proposed by the

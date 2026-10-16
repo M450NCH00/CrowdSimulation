@@ -273,6 +273,23 @@ def test_the_report_and_the_logs(full_run):
     assert {"session", "templates", "llm", "outcome", "totals", "model_returned"} <= set(record)
 
 
+def test_every_session_has_a_transcript_for_reading(full_run):
+    folder, records = full_run["folder"], full_run["records"]
+    texts = {session_id: (folder / rg.SESSIONS_DIR / f"{session_id}.md").read_text(encoding="utf-8") for session_id in records}
+    assert len(texts) == 48
+    for session_id, text in texts.items():
+        record = records[session_id]
+        assert text.startswith(f"# Transcript: {session_id}") and f"- **{record['outcome']}**" in text
+        if record["condition"] == "negotiated":
+            assert text.count("### Turn ") == len(record["turns"]) and "## System prompts" in text
+        else:
+            assert "## System prompt" in text and (record.get("rule") is None or record["canonical_hash"][:12] in text)
+    by_outcome = {record["outcome"]: texts[session_id] for session_id, record in records.items()}
+    assert "read as **accepted_but_counter_proposed**" in "".join(texts.values())
+    assert "**No readable turn**" in by_outcome["parse_failure"] or "could not be used" in by_outcome["parse_failure"]
+    assert "its proposer spoke first" in by_outcome["agreed"]
+
+
 def test_running_again_resumes_and_changes_nothing(full_run, tmp_path):
     folder = full_run["folder"]
     before = {path: path.read_text(encoding="utf-8") for path in (folder / "rule_db_staging").rglob("*") if path.is_file()}
@@ -333,6 +350,7 @@ def test_the_budget_guard_stops_the_experiment_and_a_resume_runs_the_stopped_ses
     second = rg.run_rule_generation(cfg, client=client(1.0), out_root=tmp_path, report=quiet, git=GIT)
     assert second.status == "completed" and second.executed[0] == stopped
     assert (first.experiment_dir / rg.SESSIONS_DIR / f"{stopped}.aborted1.json").is_file()  # the stopped attempt's log is kept
+    assert (first.experiment_dir / rg.SESSIONS_DIR / f"{stopped}.aborted1.md").is_file()  # and its transcript
     assert second.summary["cost"]["actual_usd"] == pytest.approx(ledger.total_usd(cfg.experiment_name), rel=1e-6)
 
 
