@@ -99,6 +99,12 @@ def rule_database(path: Any = "rule_db") -> RuleDatabase:
     return _DATABASES[root]
 
 
+def forget_rule_database(path: Any) -> None:
+    """Load the database at ``path`` afresh next time: a staging database grows while an
+    experiment of issue #30 writes to it."""
+    _DATABASES.pop(resolve_path(path).resolve(), None)
+
+
 def build_provider(directives: Mapping[str, Any], visibility: Mapping[str, bool], where: str) -> DirectiveProvider:
     """The directive provider an experiment's ``directives`` block asks for.
 
