@@ -227,12 +227,97 @@ matplotlib 3.10.8, pyflakes 4.0.3); pyflakes clean.
 - Next step: conflict cases (Part 2): case-source baseline runs on the five scenarios, then
   the extractor and the store.
 
+### 2026-10-15 16:26–16:48 — Parts 2 to 4: cases, the design matrix, the descriptions (logged afterwards)
+
+- **How this entry was written.** The session that did Parts 2 to 4 committed them
+  (`c644294`, `0e34feb`, `bac47d5`, `4bab440`, `47c44fb`) but ended before it logged them.
+  This entry was written on 2026-10-16, in the next session, from those commits, their
+  messages and the documents they added, not from a memory of the work. Nothing is claimed
+  here that those do not show.
+- What was done:
+  - **Part 2, conflict cases** (`docs/cases.md`). Five case-source experiments on the primary
+    baseline, one per SI-1 scenario, under `configs/cases/` (26 runs, paired seeds, layouts
+    varied in the two-agent scenarios because their tiers depend on the geometry, not the
+    seed); the extractor and the frozen case store (`negsim/rulegen/cases.py`, a SHA-256
+    manifest, stable ids, a case set with its extraction report); case set `si3_v1`, 18 cases
+    (`configs/cases/si3_cases_v1.yaml`). Of 9,689 pair interactions, 210 were eligible.
+    Decisions **DD70** (a pair that formed one-sided is not eligible) and **DD71** (a pair
+    must be approaching when it forms), both in `cases.md`.
+  - **Part 3, the persona design matrix** (`negsim/rulegen/design.py`): six factors (age
+    pair, gender pair, task, demographics visible, mapping, order), crossed in full per case
+    and condition, ids derived from what a session is, the order shuffled by the seed, no
+    names.
+  - **Part 4, the situation descriptions** (`negsim/rulegen/describe.py`): three templates
+    frozen with #24's tool (`rulegen_common_v1`, `rulegen_negotiate_v1`, `rulegen_state_v1`),
+    first- and third-person renderers for the five scenario types, the field glossary
+    generated from the field catalogue and the rule schema with its SHA-256 pinned in the
+    common template, a placeholder format example.
+- Result: 67 tests added (11 for cases, 15 for the design, 41 for the descriptions); 1,037
+  after Part 1 plus 67 is the 1,104 that pass at the start of the next session (below).
+- Two things the commits left unrecorded here: `cases.md` cites "open question Q4 of
+  `WORK_LOG-30.md`", which this log did not have; it is added below, as is a Q3 for the
+  Part 1 finding that plain ORCA's ordinary pass is a near miss. Both numbers were given in
+  the 2026-10-16 session.
+
+### 2026-10-16 09:15 — Session resumed: what was left, and what an end-to-end run found
+
+- What I found: the branch at `47c44fb` (Parts 1 to 4), and in the working tree, uncommitted
+  and untested, the code of Parts 5 to 10 written at the end of the last session: six new
+  modules (`negsim/rulegen/protocol.py`, `validate.py`, `writer.py`, `replay.py`, `mock.py`,
+  `experiment.py`) and changes to three (#24's dialogue loop split out as
+  `request_with_retry`; a budget guard scoped to one experiment; a way to reload a rule
+  database). No tests, no command-line wiring, no experiment configs, no documents.
+- What I did first: a fresh virtual environment in this session's scratchpad (Python
+  3.13.3, PyYAML 6.0.3, pytest 9.1.1, matplotlib 3.10.8, pyflakes 4.0.3); **1,104 passed**
+  with the uncommitted code in place (233 s); pyflakes found three unused imports. Then an
+  end-to-end mock run in the scratchpad (2 cases, 48 sessions) before writing any test.
+- What it found (each fixed, and each now has a test):
+  1. **Replay crashed** on a run folder path of 261 characters: Windows' limit is 260. The
+     folder names repeated the rule id twice. Now `replay/<rule_id>/baseline` and `.../rule`.
+  2. **The model was told something false.** After a counter-proposal (an `accept` of the
+     other's latest id written beside a different rule), the other agent was told "They put
+     <id> under "accept", which is not the id of your latest proposal" when it *was* that
+     id. That line is now shown only for a stale, own or unknown id; a counter-proposal is
+     shown as the new proposal it is.
+  3. **The manual-review phrase "the faster"** flagged every rule that orders the two by
+     speed ("the faster one does the avoiding"), which says nothing about scaling. The
+     phrases are now patterns (scaling, "the more ..., the more ...", a rate, more than two
+     people); "%" and "percent" are gone.
+  4. **Running an experiment again crashed**: replay and screening rewrote the next rule
+     version with new timestamps, which the frozen staging database refuses. Writing,
+     replay and screening are now idempotent, and a rule that more sessions support later is
+     stored as its next version.
+  5. Smaller: the stored rule took its words and priority from whichever session came first
+     in the shuffled list (now the earliest, documented, since the canonical form leaves
+     them out); its author named the model asked for, not the one that replied (a mock run
+     said "from deepseek-flash"); the output bound used the reply cap plus a wrapper (now the
+     cap, as the issue's formula says); a paid client was built, needing the API key, before
+     the run was confirmed; resuming overwrote the log of an aborted session; a changed config
+     could be resumed into the same folder; `screening.jsonl` was rewritten with only the
+     latest invocation's entries; a scoped budget guard let an unlabelled call escape its
+     cap; formulas were told from constants by arithmetic alone, so "1/2" (a constant
+     written oddly) was a format limit while "0.6 per year" and "left if older" (values that
+     depend on something) were schema errors.
+- Why the order: running the whole pipeline once before writing tests found bugs that unit
+  tests of the parts, written to the code as it stood, would have encoded.
+- Next step: tests for Parts 5 to 10, the command line, the configs, then the documents.
+
 ## Open questions / risks
 
 - **Q1 (carried from #24, #26, #28). Has the supervisor's "no simulation code until the
   literature review is complete and discussed" instruction been lifted?** Not recorded in
   `CLAUDE.md`. The paid pilot (Part 11) is held until it is.
 - **Q2. Branch base.** Stacked on PR #29's branch (P2).
+- **Q3. Is the near-miss distance right for ORCA?** Plain ORCA passes two bodies a few
+  millimetres apart, inside the 0.1 m near-miss distance (`metrics.md` section 5, a
+  `[design]` value), so under the primary baseline every eligible two-agent pair is T3 and
+  T1, T2 and T4 cases come only from the crowd (`cases.md`, section 2). Either that is the
+  finding (ORCA's passes are near misses by a human standard), or the distance should be
+  tied to a cited personal-space figure. A question for the supervisor; nothing was changed.
+- **Q4. The one-sided-formation rule is a selection** (DD70, `cases.md` section 2): of the
+  flow's 2,224 pairs at T1 or above, 1,727 formed one-sided and are not eligible, so the crowd
+  cases favour pairs that came into each other's view at the same step. Whether that biases
+  what rules are generated is untested.
 
 ## Summary (fill in at the end)
 
