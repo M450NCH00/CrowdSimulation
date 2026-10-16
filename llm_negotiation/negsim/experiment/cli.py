@@ -15,6 +15,11 @@ A config that says ``layer: avoidance`` is an avoidance experiment (ORCA under d
 It calls no model at all, so ``--client`` does not apply to it and it costs nothing; its
 output goes under ``runs/``.
 
+A config that says ``layer: rule_generation`` is a rule-generation experiment (issue #30).
+``--plan`` prints its sessions and worst-case cost; with ``--client deepseek`` it writes the
+preview and sends nothing unless ``--confirm`` is given too. ``--limit N`` runs at most N
+sessions that have no record yet; running it again resumes it.
+
 Run it from the ``llm_negotiation`` folder. Paths inside configs are relative to that folder.
 """
 
@@ -27,6 +32,8 @@ from typing import Optional
 
 from ..configutil import ConfigError, load_yaml, resolve_path
 from ..llm import LLMError
+from ..rulegen.experiment import cli_run as run_rule_generation
+from ..rulegen.experiment import is_rule_generation_config
 from .avoidance import AvoidanceExperiment, is_avoidance_config, run_avoidance_experiment
 from .batch import make_client, run_experiment, worst_case_cost
 from .config import ExperimentConfig
@@ -60,10 +67,21 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser.add_argument("--limit", type=int, help="run only the first N runs of the design")
     parser.add_argument("--overwrite", action="store_true", help="redo runs that already have an outcome")
     parser.add_argument("--plan", action="store_true", help="list the runs and the worst-case cost, then stop")
+    parser.add_argument(
+        "--confirm", action="store_true",
+        help="rule generation with a paid client: send the calls, having read the worst-case cost preview",
+    )
     args = parser.parse_args(argv)
 
     try:
-        if is_avoidance_config(load_yaml(resolve_path(args.config))):
+        raw = load_yaml(resolve_path(args.config))
+        if is_rule_generation_config(raw):
+            if args.overwrite:
+                raise ConfigError("--overwrite does not apply to rule generation, which resumes; give the config a new experiment_name")
+            return run_rule_generation(args)
+        if args.confirm:
+            raise ConfigError("--confirm applies only to rule-generation experiments")
+        if is_avoidance_config(raw):
             return run_avoidance(args)
 
         config = ExperimentConfig.load(args.config)

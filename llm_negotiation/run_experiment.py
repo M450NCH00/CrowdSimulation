@@ -15,6 +15,14 @@ A config that says ``layer: avoidance`` is an avoidance experiment (ORCA under d
 It calls no model at all, so ``--client`` does not apply to it and it costs nothing; its
 output goes under ``runs/``.
 
+A config that says ``layer: rule_generation`` turns conflict cases into candidate rules
+(issue #30). ``--plan`` prints the worst-case cost; with ``--client deepseek`` nothing is sent
+without ``--confirm``:
+
+    python run_experiment.py configs/rule_generation/si3_mock_rehearsal.yaml
+    python run_experiment.py configs/rule_generation/si3_pilot.yaml --plan
+    python run_experiment.py configs/rule_generation/si3_pilot.yaml --client deepseek --confirm
+
 Run it from the ``llm_negotiation`` folder. Paths inside configs are relative to that folder.
 
 (The work is done in ``negsim/experiment/cli.py``, where the tests can reach it.)
