@@ -255,10 +255,15 @@ def test_prompts_never_contain_a_personal_name_field():
 def test_every_template_file_matches_its_pinned_hash():
     manifest = prompts.load_manifest()
     files = sorted(path.stem for path in prompts.TEMPLATE_DIR.glob("*.yaml"))
-    assert files == sorted(manifest) == available_templates()
+    assert files == sorted(manifest)
+    # Since issue #30 the manifest also freezes templates of other kinds (rule generation).
+    assert available_templates() == sorted(key for key, entry in manifest.items() if "kind" not in entry)
     for key, entry in manifest.items():
         assert template_sha256(prompts.TEMPLATE_DIR / f"{key}.yaml") == entry["sha256"]
-        assert load_template(key).identity()["sha256"] == entry["sha256"]
+        if "kind" in entry:
+            assert prompts.load_template_data(key, entry["kind"])[1] == entry["sha256"]
+        else:
+            assert load_template(key).identity()["sha256"] == entry["sha256"]
 
 
 def test_an_edited_template_is_refused(tmp_path, monkeypatch):

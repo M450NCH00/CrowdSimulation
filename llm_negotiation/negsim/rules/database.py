@@ -4,6 +4,7 @@ Layout (``llm_negotiation/rule_db/``)::
 
     MANIFEST.json                    SHA-256 of every frozen file
     schema/rule.v1.schema.json       the rule format, version 1
+    schema/rule.v2.schema.json       version 2 (issue #30): stated rules, intent, screening
     rules/<rule_id>.v<version>.yaml  one file per version of each rule
     rulesets/<name>.yaml             named sets of (rule, version) to switch on together
 
@@ -33,13 +34,19 @@ from ..configutil import PACKAGE_ROOT, ConfigError, load_yaml
 from .ambiguity import RULE_CLASSES, Clash, clashes
 from .errors import RuleError
 from .jsonschema_subset import Validator
-from .model import SCHEMA_VERSION, USABLE_STATUSES, Rule, parse_rule
+from .model import SCHEMA_VERSION, SCHEMA_VERSIONS, USABLE_STATUSES, Rule, parse_rule
 
 RULE_DB_ROOT = PACKAGE_ROOT / "rule_db"
 MANIFEST_FILE = "MANIFEST.json"
+#: The version 1 schema, which every database has.
 SCHEMA_PATH = f"schema/rule.v{SCHEMA_VERSION}.schema.json"
 RULE_FILE = re.compile(r"^(?P<rule_id>[a-z][a-z0-9_]{2,63})\.v(?P<version>[1-9][0-9]*)\.yaml$")
 RULESET_KEYS = ("name", "description", "rules")
+
+
+def schema_path(version: int) -> str:
+    """Where the schema of one version of the rule format lives in a database."""
+    return f"schema/rule.v{version}.schema.json"
 
 
 def file_sha256(path: Path) -> str:
@@ -48,14 +55,46 @@ def file_sha256(path: Path) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-def load_validator(root: Path) -> Validator:
-    path = root / SCHEMA_PATH
-    if not path.is_file():
-        raise ConfigError(f"the rule schema is missing: {path}")
-    return Validator(json.loads(path.read_text(encoding="utf-8")))
+class RuleSchemas:
+    """The schemas of every version of the rule format a database holds.
+
+    A rule is checked against the schema of the version it names in ``schema_version``,
+    so that a version 1 file is read exactly as it was before version 2 existed. It offers
+    the one method of :class:`Validator` that ``parse_rule`` uses.
+    """
+
+    def __init__(self, validators: Mapping[int, Validator]):
+        self.validators = dict(validators)
+
+    @property
+    def versions(self) -> tuple[int, ...]:
+        return tuple(sorted(self.validators))
+
+    def errors(self, instance: Any) -> list[str]:
+        if not isinstance(instance, Mapping):
+            return self.validators[max(self.validators)].errors(instance)
+        if "schema_version" not in instance:
+            return ["$: missing required property 'schema_version'"]
+        version = instance["schema_version"]
+        if isinstance(version, int) and not isinstance(version, bool) and version in self.validators:
+            return self.validators[version].errors(instance)
+        return [f"$.schema_version: must be one of {list(self.versions)}, got {version!r}"]
 
 
-def read_rule_file(path: Path, validator: Validator, root: Optional[Path] = None) -> Rule:
+def load_validator(root: Path) -> RuleSchemas:
+    """The schemas of the database at ``root``: version 1, which every database has, and
+    any later version whose schema file is there."""
+    validators = {}
+    for version in SCHEMA_VERSIONS:
+        path = root / schema_path(version)
+        if path.is_file():
+            validators[version] = Validator(json.loads(path.read_text(encoding="utf-8")))
+    if SCHEMA_VERSION not in validators:
+        raise ConfigError(f"the rule schema is missing: {root / SCHEMA_PATH}")
+    return RuleSchemas(validators)
+
+
+def read_rule_file(path: Path, validator: Validator | RuleSchemas, root: Optional[Path] = None) -> Rule:
     """One rule file, checked against the format and against its own file name.
 
     The manifest is not consulted here (``RuleDatabase.load`` does that); this is also how
@@ -138,10 +177,11 @@ class RuleDatabase:
                     "edited: write the change as the next version, in a new file.",
                 )
 
-        try:
-            frozen(root / SCHEMA_PATH)
-        except RuleError as exc:
-            report.refused.append((SCHEMA_PATH, exc))
+        for version in validator.versions:
+            try:
+                frozen(root / schema_path(version))
+            except RuleError as exc:
+                report.refused.append((schema_path(version), exc))
         for path in sorted((root / "rules").glob("*.yaml")):
             source = path.relative_to(root).as_posix()
             try:

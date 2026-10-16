@@ -11,6 +11,8 @@ opened in the default browser unless ``--no-open`` is given.
 
 Both kinds of run can be shown: a negotiation run of issue #24 and an avoidance run of
 issue #26. Nothing is simulated again; everything on screen is read from the log files.
+A run that follows rules (issue #28) shows which rule fired for each pair, when, with the
+role and directive each agent got, read from ``pair_interactions.jsonl`` (issue #30).
 
 A row of ``trajectory.csv`` gives an agent's position at the start of a step and the
 velocity it moved with during that step, so between two consecutive steps an agent moves in
@@ -38,6 +40,7 @@ from ..runlog.schema import (
     CONVERSATION_FILE,
     EVENTS_FILE,
     OUTCOME_FILE,
+    PAIR_INTERACTIONS_FILE,
     RUN_KIND_AVOIDANCE,
     RUN_KIND_NEGOTIATION,
     TRAJECTORY_FILE,
@@ -168,9 +171,49 @@ def _track(samples: Iterable[tuple]) -> dict[str, list]:
 # --- an avoidance run (issue #26) ------------------------------------------------------------------
 
 
-def _directive_text(config: dict, agent_id: int) -> str:
+#: Plain ORCA's directive: what a field left out of a directive is (``rule-format.md``, section 7).
+_PLAIN = {
+    "side_preference": "none",
+    "responsibility_share": 0.5,
+    "speed_scale": 1.0,
+    "clearance_margin": 0.0,
+    "passage_order": "none",
+}
+
+
+def _directive_fields(directive: dict) -> str:
+    """The fields of a directive that are not plain ORCA's, in words; "plain ORCA" if none."""
+    words = {
+        "side_preference": lambda value: f"side {value}",
+        "responsibility_share": lambda value: f"share {value:g}",
+        "speed_scale": lambda value: f"speed ×{value:g}",
+        "clearance_margin": lambda value: f"clearance {value:g} m",
+        "passage_order": lambda value: f"order {value}",
+    }
+    shown = [words[name](directive[name]) for name in _PLAIN if name in directive and directive[name] != _PLAIN[name]]
+    return ", ".join(shown) or "plain ORCA"
+
+
+def _rule_matches(pairs: list[dict]) -> list[tuple[dict, dict]]:
+    """Every rule match of a run, with its pair, in order."""
+    return [(pair, match) for pair in pairs for match in ((pair.get("rules") or {}).get("matches") or [])]
+
+
+def _directive_text(config: dict, agent_id: int, pairs: Optional[list[dict]] = None) -> str:
     directives = config.get("directives", {})
-    if directives.get("provider") != "static":
+    provider = directives.get("provider")
+    if provider == "rules":
+        switched_on = ", ".join(f"{rule['rule_id']}@{rule['version']}" for rule in directives.get("rules", [])) or "none"
+        mine = [
+            f"{match['rule_id']}@{match['version']} with agent {next(a for a in pair['agents'] if a != agent_id)} "
+            f"from {match['from_time_s']:.1f} s: {match['roles'][str(agent_id)]}, "
+            f"{_directive_fields(match['directives'][str(agent_id)])}"
+            for pair, match in _rule_matches(pairs or [])
+            if agent_id in pair["agents"]
+        ]
+        fired = "; ".join(mine) if mine else "no rule fired for it, so plain ORCA throughout"
+        return f"from the rule database (switched on: {switched_on}). {fired}"
+    if provider != "static":
         return "plain ORCA (no directives)"
     entry = dict(directives.get("default", {}))
     entry.update(directives.get("agents", {}).get(str(agent_id), {}))
@@ -185,8 +228,35 @@ def _directive_text(config: dict, agent_id: int) -> str:
     return text
 
 
-def _avoidance_events(events: list[dict], goal_times: dict, n_agents: int) -> list[dict]:
+def _rule_events(pairs: list[dict]) -> list[dict]:
+    """One event per rule match: which rule, for which pair, each agent's role and directive."""
     shown = []
+    for pair, match in _rule_matches(pairs):
+        a, b = pair["agents"]
+        given = "; ".join(
+            f"agent {agent} {match['roles'][str(agent)]} ({_directive_fields(match['directives'][str(agent)])})" for agent in (a, b)
+        )
+        ending = (
+            f"; ends at {match['to_time_s']:.1f} s ({match['end_reason']}"
+            + (f", by {match['replaced_by']}" if match.get("replaced_by") else "")
+            + ")"
+            if match.get("to_time_s") is not None
+            else ""
+        )
+        shown.append(
+            {
+                "type": "rule",
+                "t": match["from_time_s"],
+                "t_end": match.get("to_time_s"),
+                "agents": [a, b],
+                "text": f"Rule {match['rule_id']}@{match['version']} fires for agents {a} and {b}: {given}{ending}",
+            }
+        )
+    return shown
+
+
+def _avoidance_events(events: list[dict], goal_times: dict, n_agents: int, pairs: Optional[list[dict]] = None) -> list[dict]:
+    shown = _rule_events(pairs or [])
     for event in events:
         kind = event["type"]
         item: dict[str, Any] = {"type": kind, "t": event["time_s"], "t_end": event.get("end_time_s")}
@@ -219,6 +289,15 @@ def _avoidance_events(events: list[dict], goal_times: dict, n_agents: int) -> li
                     f"{event['given'][0]} and {event['given'][1]}, used {event['resolved'][0]} and {event['resolved'][1]}"
                 ),
             )
+        elif kind == "ambiguous_match":
+            a, b = event["pair"]
+            item.update(
+                agents=[a, b],
+                text=f"Ambiguous match for agents {a} and {b}: {event['applied']} applied, also {', '.join(event['ambiguous_with'])}",
+            )
+        elif kind == "cross_pair_conflict":
+            values = ", ".join(f"{entry['rule']} says {entry['value']} with agents {entry['pair']}" for entry in event["values"])
+            item.update(agents=[event["agent_id"]], text=f"Agent {event['agent_id']}'s rules disagree on {event['field']}: {values}")
         else:
             item.update(agents=[], text=kind)
         shown.append(item)
@@ -238,6 +317,7 @@ def _avoidance_run(run_dir: Path, config: dict, outcome: dict) -> dict[str, Any]
         [s["xmin"], s["ymin"], s["xmax"], s["ymax"], s["name"]] for s in scenario.get("single_file", {}).get("segments", [])
     ]
     rows = _read_rows(run_dir / TRAJECTORY_FILE)
+    pairs = _read_jsonl(run_dir / PAIR_INTERACTIONS_FILE)
     personas = {entry["agent_id"]: entry for entry in config.get("population", [])}
     goal_times = outcome["time_to_goal_s"]
 
@@ -279,7 +359,7 @@ def _avoidance_run(run_dir: Path, config: dict, outcome: dict) -> dict[str, Any]
             ["Body radius", f"{spec['radius_m']:g} m"],
             ["Preferred / maximum speed", f"{spec['preferred_speed_mps']:g} / {spec['max_speed_mps']:g} m/s"],
             ["Sensing radius, neighbours", f"{spec['sensing_radius_m']:g} m, at most {spec['max_neighbours']}"],
-            ["Directive", _directive_text(config, agent_id)],
+            ["Directives", _directive_text(config, agent_id, pairs)],
             ["Time to goal", _fmt(stats["time_to_goal_s"], "s") if stats["time_to_goal_s"] is not None else "did not arrive"],
             ["Conflict exposure", _fmt(stats["conflict_exposure_time_s"], "s")],
             ["Yield time", _fmt(stats["yield_time_s"], "s")],
@@ -322,13 +402,33 @@ def _avoidance_run(run_dir: Path, config: dict, outcome: dict) -> dict[str, Any]
         ["Steps with no allowed velocity", str(totals["steps_with_fallback"])],
         ["Reciprocity violations", str(len(outcome["reciprocity_violations"]))],
         ["Handoffs to and from the arbiter", str(len(outcome["handoffs"]))],
-        ["Directives", config.get("directives", {}).get("provider", "null")],
+        ["Directives", _provider_text(config)],
     ]
+    rules = outcome.get("rules")
+    if rules is not None:
+        fired = rules.get("matches_begun") or {}
+        summary.append(["Rules fired", ", ".join(f"{key} ×{count}" for key, count in sorted(fired.items())) or "none"])
+    tiers = (outcome.get("interaction_outcomes") or {}).get("tiers")
+    if tiers is not None:
+        summary.append(["Pair interactions by tier", ", ".join(f"{tier} {count}" for tier, count in tiers.items())])
     if run["stride"] > 1:
         summary.append(["Logged", f"every {run['stride']} steps; positions in between are interpolated"])
     run["summary"] = summary
-    run["events"] = _avoidance_events(_read_jsonl(run_dir / EVENTS_FILE), goal_times, len(agents))
+    run["events"] = _avoidance_events(_read_jsonl(run_dir / EVENTS_FILE), goal_times, len(agents), pairs)
     return run
+
+
+def _provider_text(config: dict) -> str:
+    """Where the run's directives came from, in words."""
+    directives = config.get("directives", {})
+    provider = directives.get("provider", "null")
+    if provider == "rules":
+        named = directives.get("ruleset")
+        count = len(directives.get("rules", []))
+        return f"rules: {count} switched on" + (f", from rule set {named}" if named else "")
+    if provider == "static":
+        return "static: written in the experiment config"
+    return "none: plain ORCA"
 
 
 # --- a negotiation run (issue #24) -----------------------------------------------------------------

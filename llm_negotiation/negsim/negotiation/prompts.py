@@ -204,12 +204,39 @@ class PromptTemplate:
         return self._data["turns"]["retry"]
 
 
+#: Templates of a kind other than the negotiation templates above (issue #30): the keys each
+#: must have. They are frozen in the same manifest, by the same tool, and loaded with
+#: :func:`load_template_data`; ``negsim.rulegen.describe`` renders them.
+TEMPLATE_KINDS: dict[str, tuple[str, ...]] = {
+    "rule_generation_common": ("template_id", "version", "kind", "description", "glossary", "format_example", "glossary_sha256"),
+    "rule_generation_negotiate": ("template_id", "version", "kind", "description", "uses", "system", "reply_format", "turns", "situation"),
+    "rule_generation_state": ("template_id", "version", "kind", "description", "uses", "system", "reply_format", "retry", "situation"),
+}
+
+
+def check_template_data(key: str, data: Any) -> None:
+    """Refuse template data that is not well formed for its kind (no kind: a negotiation template)."""
+    if not isinstance(data, Mapping):
+        raise ConfigError(f"prompt template {key!r}: expected a mapping")
+    kind = data.get("kind")
+    if kind is None:
+        PromptTemplate(key, data, "")
+        return
+    if kind not in TEMPLATE_KINDS:
+        raise ConfigError(f"prompt template {key!r}: unknown kind {kind!r}; known: {sorted(TEMPLATE_KINDS)}")
+    missing = [name for name in TEMPLATE_KINDS[kind] if name not in data]
+    if missing:
+        raise ConfigError(f"prompt template {key!r}: missing key(s) {missing}")
+    if f"{data['template_id']}_v{data['version']}" != key:
+        raise ConfigError(f"prompt template file {key}.yaml declares {data['template_id']!r} version {data['version']!r}")
+
+
 def available_templates() -> list[str]:
-    return sorted(load_manifest())
+    """The negotiation templates (those without a ``kind``)."""
+    return sorted(key for key, entry in load_manifest().items() if entry.get("kind") is None)
 
 
-def load_template(key: str) -> PromptTemplate:
-    """Load a template by key (e.g. ``persona_v1``) and check it against the manifest."""
+def _frozen(key: str) -> tuple[Path, str]:
     manifest = load_manifest()
     path = TEMPLATE_DIR / f"{key}.yaml"
     if key not in manifest or not path.is_file():
@@ -222,5 +249,21 @@ def load_template(key: str) -> PromptTemplate:
             "file, or save the new wording as the next version, add it to the manifest, and "
             "record the reason in the work log."
         )
+    return path, digest
+
+
+def load_template(key: str) -> PromptTemplate:
+    """Load a template by key (e.g. ``persona_v1``) and check it against the manifest."""
+    path, digest = _frozen(key)
     data = yaml.safe_load(path.read_text(encoding="utf-8"))
     return PromptTemplate(key, data, digest)
+
+
+def load_template_data(key: str, kind: str) -> tuple[dict[str, Any], str]:
+    """A frozen template of another kind, checked against the manifest: its data and its SHA-256."""
+    path, digest = _frozen(key)
+    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    check_template_data(key, data)
+    if data.get("kind") != kind:
+        raise ConfigError(f"prompt template {key!r} is of kind {data.get('kind')!r}, not {kind!r}")
+    return data, digest

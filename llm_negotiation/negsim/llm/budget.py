@@ -50,9 +50,14 @@ class SpendLedger:
         with self.path.open("r", encoding="utf-8") as handle:
             return [json.loads(line) for line in handle if line.strip()]
 
-    def total_usd(self) -> float:
-        """Sum of every recorded cost, read from the file so that it survives restarts."""
-        return math.fsum(entry.get("cost_usd", 0.0) for entry in self.entries())
+    def total_usd(self, experiment: Optional[str] = None) -> float:
+        """Sum of every recorded cost, read from the file so that it survives restarts; only
+        that of one experiment's calls if ``experiment`` is given (issue #30)."""
+        return math.fsum(
+            entry.get("cost_usd", 0.0)
+            for entry in self.entries()
+            if experiment is None or entry.get("experiment") == experiment
+        )
 
     def append(self, entry: Mapping[str, Any]) -> dict[str, Any]:
         record = dict(entry)
@@ -64,15 +69,28 @@ class SpendLedger:
 
 
 class BudgetGuard:
-    def __init__(self, ledger: SpendLedger, cap_usd: float, prices: PriceTable):
+    """Refuses a call that could take the recorded spend past the cap.
+
+    By default the cap is on everything the ledger records. With ``scope``, an experiment's
+    name, it is on that experiment's calls alone (issue #30: a pilot with a cap of its own);
+    every call is still recorded in the one ledger. A scoped guard records its calls under its
+    scope (a call with no ``experiment`` label gets it) and refuses a call labelled for another
+    experiment, whose cost its cap would not count.
+    """
+
+    def __init__(self, ledger: SpendLedger, cap_usd: float, prices: PriceTable, scope: Optional[str] = None):
         if cap_usd < 0.0:
             raise ValueError(f"the budget cap must not be negative, got {cap_usd}")
         self.ledger = ledger
         self.cap_usd = cap_usd
         self.prices = prices
+        self.scope = scope
+
+    def spent_usd(self) -> float:
+        return self.ledger.total_usd(self.scope)
 
     def remaining_usd(self) -> float:
-        return self.cap_usd - self.ledger.total_usd()
+        return self.cap_usd - self.spent_usd()
 
     def worst_case(self, request: LLMRequest) -> float:
         """The most one send of ``request`` could cost."""
@@ -86,11 +104,17 @@ class BudgetGuard:
         A client that retries may send the request ``max_attempts`` times, so that many
         worst cases have to fit under the cap.
         """
-        worst = self.worst_case(request)
-        spent = self.ledger.total_usd()
-        if spent + worst * max_attempts > self.cap_usd:
+        labelled = request.metadata.get("experiment", self.scope)
+        if self.scope is not None and labelled != self.scope:
             raise BudgetExceededError(
-                f"call refused: USD {spent:.6f} is already recorded in {self.ledger.path.name}, "
+                f"call refused: it is labelled for experiment {labelled!r}, but this guard's cap is on {self.scope!r}'s calls"
+            )
+        worst = self.worst_case(request)
+        spent = self.spent_usd()
+        if spent + worst * max_attempts > self.cap_usd:
+            where = self.ledger.path.name if self.scope is None else f"{self.ledger.path.name} for {self.scope}"
+            raise BudgetExceededError(
+                f"call refused: USD {spent:.6f} is already recorded in {where}, "
                 f"this call could cost up to USD {worst * max_attempts:.6f}, and the cap is "
                 f"USD {self.cap_usd:.2f}"
             )
@@ -106,10 +130,13 @@ class BudgetGuard:
         cost_is_upper_bound: bool = False,
         error: Optional[str] = None,
     ) -> dict[str, Any]:
+        labels = dict(request.metadata)
+        if self.scope is not None:
+            labels.setdefault("experiment", self.scope)
         return self.ledger.append(
             {
                 "utc": when_utc.astimezone(timezone.utc).isoformat(timespec="seconds"),
-                **dict(request.metadata),
+                **labels,
                 "model": request.model,
                 **usage.as_dict(),
                 "price_tier": tier,
@@ -171,6 +198,7 @@ class BudgetedClient(LLMClient):
         return {
             **self.inner.describe(),
             "budget_cap_usd": self.guard.cap_usd,
+            "budget_scope": self.guard.scope,
             "spend_ledger": self.guard.ledger.path.name,
             "prices": self.guard.prices.describe(),
         }

@@ -219,3 +219,55 @@ def test_without_out_the_viewer_goes_to_a_folder_git_ignores():
     ignored = (REPO_ROOT / ".gitignore").read_text(encoding="utf-8").splitlines()
     assert "llm_negotiation/views/" in ignored
     assert "llm_negotiation/runs/**/trajectory.png" in ignored  # nor does the plot's default image get committed
+
+
+# --- rule runs (issue #30, Part 1.4) ----------------------------------------------------------------
+
+RULE_RUN = RUNS / "si2_head_on" / "021_symmetric_no_personas_perturbed_rules_r1"
+PLAIN_RUN = RUNS / "si2_head_on" / "001_symmetric_no_personas_perturbed_plain_r1"
+
+
+def test_a_rule_run_shows_which_rule_fired_for_each_pair(tmp_path):
+    _, data = build(tmp_path, RULE_RUN)
+    run = data["runs"][0]
+    (pair,) = read_jsonl(RULE_RUN / "pair_interactions.jsonl")
+    (match,) = pair["rules"]["matches"]
+    (event,) = [event for event in run["events"] if event["type"] == "rule"]
+    assert event["t"] == match["from_time_s"] and event["t_end"] == match["to_time_s"] and event["agents"] == [0, 1]
+    assert event["text"].startswith("Rule keep_left_head_on@1 fires for agents 0 and 1: agent 0 both (side left)")
+    assert "ends at" in event["text"] and match["end_reason"] in event["text"]
+    summary = dict(run["summary"])
+    assert summary["Directives"] == "rules: 4 switched on, from rule set default"
+    assert summary["Rules fired"] == "keep_left_head_on@1 ×1"
+
+
+def test_an_agent_of_a_rule_run_is_not_labelled_plain_orca(tmp_path):
+    _, data = build(tmp_path, RULE_RUN)
+    for agent in data["runs"][0]["agents"]:
+        text = dict(agent["details"])["Directives"]
+        assert text.startswith("from the rule database (switched on: keep_left_head_on@1, overtaker_keeps_clear@1")
+        assert f"keep_left_head_on@1 with agent {1 - agent['id']}" in text and "both, side left" in text
+        assert "plain ORCA (no directives)" not in text
+    _, plain = build(tmp_path, PLAIN_RUN)
+    assert {dict(agent["details"])["Directives"] for agent in plain["runs"][0]["agents"]} == {"plain ORCA (no directives)"}
+    assert dict(plain["runs"][0]["summary"])["Directives"] == "none: plain ORCA"
+
+
+def test_a_static_run_still_shows_its_configured_directive(tmp_path):
+    _, data = build(tmp_path, HEAD_ON / "003_symmetric_both_left")
+    texts = {dict(agent["details"])["Directives"] for agent in data["runs"][0]["agents"]}
+    assert all(text.startswith("side left, share 0.5") for text in texts)
+    assert dict(data["runs"][0]["summary"])["Directives"] == "static: written in the experiment config"
+
+
+def test_a_version_4_run_shows_its_tiers(tmp_path):
+    from negsim.experiment import AvoidanceExperiment, execute_avoidance_run
+
+    config = AvoidanceExperiment(
+        {"layer": "avoidance", "experiment_name": "view_tiers", "scenario": "configs/scenarios/wide_corridor_head_on.yaml",
+         "baseline": "orca_perturbed_v1", "directives": {"provider": "rules", "ruleset": "default"}, "design": {"seed": 1}}
+    )
+    execute_avoidance_run(config.plans()[0], tmp_path / "run", {"commit": "test", "dirty": False})
+    _, data = build(tmp_path, tmp_path / "run")
+    summary = dict(data["runs"][0]["summary"])
+    assert summary["Pair interactions by tier"].startswith("T0 ") and "keep_left_head_on@1" in summary["Rules fired"]

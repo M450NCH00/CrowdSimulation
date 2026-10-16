@@ -21,6 +21,8 @@ Every threshold can be set per scenario, under `metrics:` in its config, and eve
 | `yield_speed_fraction` | 0.5 | `yield_event` |
 | `yield_min_duration_s` | 1.0 s | `yield_event` |
 | `exposure_eps_mps` | 1e-6 m/s | `conflict_exposure_time` |
+| `pair_exposure_eps_mps` | 1e-3 m/s | `pair_exposure_time` (issue #30, section 11) |
+| `collision_course_min_s` | 0 s | severity tier T1 (issue #30, section 11) |
 | `deadlock.window_s` | 3.0 s | `deadlock` |
 | `deadlock.speed_eps_mps` | 0.01 m/s | `deadlock` |
 
@@ -67,6 +69,13 @@ Three things about what is and is not counted:
   if the agent was slow enough for long enough, as a yield event.
 - **Exposure is one agent's.** In a pair with shares (1, 0), only the agent that takes the
   whole share is exposed; the other was never asked to change anything.
+
+**It depends on the responsibility shares** (issue #30). The half-plane an agent is held to
+is offset by its own share of the change needed (`derivations.md`, section 9), so the same
+state of the world is counted differently under different shares: under shares (1, 0) the
+agent with share 0 is not exposed at all on a step on which, under (0.5, 0.5), it would be.
+It is kept, unchanged, for continuity with issues #26 and #28. A measure of the *pair* that
+does not depend on the shares is section 11's pair exposure; the severity tiers use that one.
 
 *Reported:* per agent and in total, `conflict_exposure_time_s`; per interaction, the
 exposure due to that one neighbour; per step, the `exposed` column of the trajectory.
@@ -229,3 +238,101 @@ over-count in a crowd. The overtaking scenario is where it was found and where i
 `hurried_episodes`, `hurried_time_s`; in total the same and `agents_backward`,
 `agents_hurried` (how many agents had any); and the `thresholds`. The summary has
 `backward_episodes` and `hurried_episodes`.
+
+## 11. Pair exposure and severity tiers (issue #30)
+
+Issue #30 asks for one definition of a conflict, used wherever one is classified, that does
+not depend on how a rule shares out the avoiding; and for more grades than the three
+categories of section 9, which in the two-agent scenarios are almost always `resolved`
+(`WORK_LOG-28.md`, Q7 and Q8). The arithmetic is in `negsim/avoidance/exposure.py`,
+`negsim/metrics/avoidance.py` and `negsim/avoidance/simulation.py`; the derivation is
+`derivations.md`, section 16.
+
+### 11.1 The intended velocity, and where each directive field acts
+
+An agent's **intended velocity** v̂ on a step is the velocity it hands ORCA: along its
+desired path at its preferred speed, times the smallest `speed_scale` of its directives,
+no faster than the arbiter's bound, plus the baseline's perturbation. It is fixed before
+ORCA's projection and is logged as `pref_vx_mps`, `pref_vy_mps` in the trajectory. Checked
+in the code, the five directive fields act as follows:
+
+| Field | Acts on | Where | What follows for measuring avoidance |
+|---|---|---|---|
+| `speed_scale` | v̂ itself, before the projection | `simulation.py`, `_travel_speed` | It can take a pair off a collision course on the step it applies |
+| `passage_order` | v̂ of the follower, through the arbiter's speed bound; and, while the arbiter holds the pair, the shares (1 and 0) inside the projection | `coordination.py`; `simulation.py`, steps 3 and 4 | As `speed_scale`, for the follower |
+| `side_preference` | Only inside the projection, and only while ORCA finds the pair on a collision course (`derivations.md`, section 10) | `orca.py`, `agent_half_plane` | It cannot change pair exposure on the step it acts: v̂ is the same with it or without it. It can lower it only on later steps, through where the agents have moved meanwhile |
+| `responsibility_share` | Only inside the projection, and only on a collision course (`derivations.md`, section 9) | `orca.py`, `_half_plane` | As `side_preference` |
+| `clearance_margin` | Only inside the projection, but on every step: it enlarges the obstacle ORCA uses | `simulation.py`, step 4 | It does not enter pair exposure, whose obstacle is the two bodies'. ORCA reacts earlier, which can keep v̂ off a collision course on later steps |
+
+**The consequence.** A rule made of a side and shares only (as `keep_left_head_on` is)
+changes nothing until ORCA finds the pair on a collision course, so on the same seed the
+pair's first exposed step is the baseline's: such a rule cannot make the pair T0 (below)
+where the baseline put it on a collision course. Its effect shows in how long the exposure
+lasts and in the higher tiers. A rule can *avoid* a conflict in the sense of section 8 only
+through `speed_scale`, `passage_order`, or a clearance margin that makes ORCA act before the
+bodies' own obstacle is reached.
+*Tested:* `tests/test_pair_exposure.py::test_a_side_and_shares_leave_the_first_exposed_step_as_it_was`.
+
+### 11.2 `pair_exposure_time`
+
+**The time during which the two agents' intended velocities put them on a collision
+course.** On each step, for every open pair interaction (section 9) of two agents that have
+not arrived: with `p` the second agent's position minus the first's and `w = v̂_i − v̂_j`,
+the pair is **exposed** if `w` lies inside the truncated velocity obstacle VO^τ_{i|j} of
+the two bodies, the relative velocities that bring them into contact within τ
+(`orca.md`, section 3), by more than `pair_exposure_eps_mps`: the relative velocity would
+have to change by more than that for them to miss. Bodies that already overlap are exposed.
+`pair_exposure_time_s` is the number of exposed steps times the time step.
+
+- **The obstacle is the bodies'**: radius `r_i + r_j`, with no clearance margin, so that the
+  measure is the same function in every condition, whatever the directives ask of ORCA.
+- **The horizon** is the larger of the two agents' ORCA horizons (`time_horizon`, 3 s in
+  every shipped scenario, where the two are always equal).
+- **The tolerance**, 1e-3 m/s by default, is five times the most that the primary
+  baseline's perturbation can change `w` (2 × 1e-4 m/s), so the perturbation alone never
+  decides whether a step counts (Q7 of `WORK_LOG-28.md`).
+- **It reads no directive.** The responsibility shares in particular enter only ORCA's
+  projection, after v̂ is fixed, so the same state of the world gives the same answer under
+  any shares (`derivations.md`, section 16).
+- **It is the pair's**, symmetric in the two agents, and measured whether one perceives the
+  other or both do.
+
+*Reported:* per pair interaction, `pair_exposure_time_s` and `first_pair_exposed_step`; in
+total (`totals.pair_exposure_time_s`), and in the summary.
+
+### 11.3 Severity tiers
+
+Each pair interaction gets the **highest** tier that applies:
+
+| Tier | Name | Applies when |
+|---|---|---|
+| T4 | deadlock or collision | The two collided while the pair was open, or the run ended in deadlock with the pair open: `failed` of section 9 |
+| T3 | near miss | A near miss between the two (section 5) overlapping the pair interaction |
+| T2 | yield event | A yield event (section 4) of either agent overlapping the pair interaction |
+| T1 | on a collision course | `pair_exposure_time_s` above `collision_course_min_s` |
+| T0 | interaction only | None of the above: the two were in range and never on a collision course |
+
+Events are attributed to the pair by overlap in time, as for the categories (DD58): exact
+with two agents, and in a crowd able to move a pair only upward. A near miss or a yield can
+make a pair T3 or T2 without any pair exposure, for example when ORCA steps two agents that
+were never on a collision course closer than 0.1 m.
+
+**What the tiers look like under plain ORCA.** Plain ORCA passes two bodies with their
+discs just clear of each other, inside the near-miss distance (section 5), so under the
+primary baseline an ordinary pass of two agents on a collision course is T3, not T1. A
+count of T3 is therefore not an alarm; a rule that keeps the two further apart than the
+near-miss distance is what can bring such a pair down to T1 or T2. `cases.md` gives the
+counts in the case-source runs.
+
+**The categories of section 9 are kept as issue #28 defined them**, on the per-agent
+exposure, so that every result reported so far stays comparable; the tier is recorded
+beside the category (`severity_tier`, with what decided it in `tier_detail`), and
+`outcome_detail.pair_exposed` lets the categories be recomputed on pair exposure without
+running anything again. **DD65 (decision).** Every conflict classified from issue #30 on
+(the eligibility of conflict cases, their strata, the replay of a generated rule) uses the
+tiers.
+
+*Reported:* per pair interaction, `severity_tier` and `tier_detail` (`pair_exposure_time_s`,
+`yield_events`, `near_misses`, `collisions`, `deadlock`); in `outcome.json`,
+`interaction_outcomes.tiers`, the number of pairs in each tier; in the summary,
+`pairs_t0` to `pairs_t4`.

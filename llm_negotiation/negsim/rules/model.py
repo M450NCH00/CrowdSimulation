@@ -14,6 +14,11 @@ category, if it is not usable. In this order:
 
 A role assignment that does not say what happens on a tie is refused on its own
 (``no_tie_policy``), before the schema check, so that its reason is plain.
+
+Two schema versions exist (``docs/rule-format.md``, section 12). Version 2 (issue #30) adds
+the source type ``stated``, an ``intent`` in words and a ``screening`` list, for rules a
+model generates; a version 1 file is read against the version 1 schema, as before. What a
+rule *does* is the same in both, so everything after the schema check is shared.
 """
 
 from __future__ import annotations
@@ -39,6 +44,9 @@ from .jsonschema_subset import Validator
 from .snapshot import PairSnapshot
 
 SCHEMA_VERSION = 1
+#: Every version of the rule format, oldest first; a rule names its own in ``schema_version``.
+SCHEMA_VERSIONS = (1, 2)
+LATEST_SCHEMA_VERSION = SCHEMA_VERSIONS[-1]
 #: The single role of a symmetric rule: both agents get its directive.
 SYMMETRIC_ROLE = "both"
 TIE_NO_MATCH = "no_match"
@@ -109,6 +117,11 @@ class Rule:
     written: Mapping[str, Any] = field(repr=False, compare=False)
     source: str = ""
     sha256: Optional[str] = None
+    schema_version: int = SCHEMA_VERSION
+    #: Version 2: what the rule is meant to do, in words. Never executed.
+    intent: str = ""
+    #: Version 2: the results of replaying and screening the rule (issue #30, Part 9).
+    screening: tuple[Mapping[str, Any], ...] = field(default=(), compare=False)
 
     @property
     def key(self) -> str:
@@ -155,6 +168,7 @@ class Rule:
         return {
             "rule_id": self.rule_id,
             "version": self.version,
+            "schema_version": self.schema_version,
             "status": self.status,
             "encounter": self.encounter,
             "priority": self.priority,
@@ -226,6 +240,9 @@ def parse_rule(raw: Any, validator: Validator, where: str = "rule") -> Rule:
         priority=raw["priority"],
         expiry=raw.get("expiry", EXPIRY_PASSED),
         written=raw,
+        schema_version=raw["schema_version"],
+        intent=" ".join(str(raw.get("intent", "")).split()),
+        screening=tuple(raw.get("screening") or ()),
     )
 
 

@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Mapping, Optional
+from typing import Any, Callable, Mapping, Optional
 
 from ..core.world import World
 from ..llm.base import LLMClient, LLMRequest, LLMResponse, LLMTransientError, Usage
@@ -140,6 +140,88 @@ class Turn:
         }
 
 
+@dataclass
+class Reply:
+    """What :func:`request_with_retry` got: every attempt, the parsed reply if any attempt
+    could be read, why the last one could not, and the error that should stop the caller."""
+
+    attempts: list[Attempt]
+    parsed: Any
+    failure: Optional[str]
+    stopped: Optional[Exception]
+
+
+def request_with_retry(
+    client: LLMClient,
+    base_messages: list[dict[str, str]],
+    model: str,
+    temperature: float,
+    max_tokens: int,
+    thinking: bool,
+    metadata: Mapping[str, Any],
+    parse: Callable[[Optional[str]], Any],
+    retry_text: str,
+    max_attempts: int = MAX_ATTEMPTS_PER_TURN,
+) -> Reply:
+    """Ask the model, read its reply with ``parse``, and on a reply that cannot be read ask once
+    more, showing it what it sent and ``retry_text``: issue #24's retry policy, for any turn
+    format whose reader raises :class:`TurnParseError`.
+
+    A transient error counts as a failed attempt. Any other error (the budget guard refused,
+    the model cannot be used) is raised at once if nothing has been sent yet; otherwise the
+    attempts so far are kept and the error is returned in ``stopped``.
+    """
+    attempts: list[Attempt] = []
+    parsed: Any = None
+    stopped: Optional[Exception] = None
+    messages = base_messages
+    for number in range(1, max_attempts + 1):
+        request = LLMRequest(
+            messages=messages,
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            json_mode=True,
+            thinking=thinking,
+            metadata={**metadata, "attempt": number},
+        )
+        attempt = Attempt(
+            attempt=number,
+            prompt_messages=[dict(m) for m in messages],
+            request=request.params(),
+            wall_clock_utc=_utc_now(),
+        )
+        try:
+            response = client.complete(request)
+        except LLMTransientError as exc:
+            attempt.api_error = str(exc)
+            attempts.append(attempt)
+            continue
+        except Exception as exc:  # the budget guard refused, or the model cannot be used
+            if not attempts:
+                raise  # nothing was said and nothing was paid for: there is no turn to record
+            attempt.api_error = f"{type(exc).__name__}: {exc}"
+            attempts.append(attempt)
+            stopped = exc
+            break
+        attempts.append(attempt)
+        _fill(attempt, response)
+        try:
+            parsed = parse(response.content)
+            break
+        except TurnParseError as exc:
+            attempt.parse_error = str(exc)
+            # Show the model what it sent, then ask again.
+            messages = list(base_messages)
+            if response.content and response.content.strip():
+                messages.append({"role": "assistant", "content": response.content})
+            messages.append({"role": "user", "content": retry_text})
+    failure = None
+    if parsed is None:
+        failure = attempts[-1].parse_error or f"api_error: {attempts[-1].api_error}"
+    return Reply(attempts, parsed, failure, stopped)
+
+
 class Dialogue:
     def __init__(
         self,
@@ -231,56 +313,20 @@ class Dialogue:
             {"role": "user", "content": user_content},
         ]
 
-        attempts: list[Attempt] = []
-        parsed: Optional[ParsedTurn] = None
-        stopped: Optional[Exception] = None
-        messages = base_messages
-        for number in range(1, MAX_ATTEMPTS_PER_TURN + 1):
-            request = LLMRequest(
-                messages=messages,
-                model=settings.model,
-                temperature=settings.temperature,
-                max_tokens=settings.max_tokens,
-                json_mode=True,
-                thinking=settings.thinking,
-                metadata={**self.labels, "turn_index": index, "speaker": speaker, "attempt": number},
-            )
-            attempt = Attempt(
-                attempt=number,
-                prompt_messages=[dict(m) for m in messages],
-                request=request.params(),
-                wall_clock_utc=_utc_now(),
-            )
-            try:
-                response = self.client.complete(request)
-            except LLMTransientError as exc:
-                attempt.api_error = str(exc)
-                attempts.append(attempt)
-                continue
-            except Exception as exc:  # the budget guard refused, or the model cannot be used
-                if not attempts:
-                    raise  # nothing was said and nothing was paid for: there is no turn to record
-                attempt.api_error = f"{type(exc).__name__}: {exc}"
-                attempts.append(attempt)
-                stopped = exc
-                break
-            attempts.append(attempt)
-            _fill(attempt, response)
-            try:
-                parsed = parse_turn_output(response.content)
-                break
-            except TurnParseError as exc:
-                attempt.parse_error = str(exc)
-                # Show the model what it sent, then ask again.
-                messages = list(base_messages)
-                if response.content and response.content.strip():
-                    messages.append({"role": "assistant", "content": response.content})
-                messages.append({"role": "user", "content": template.retry()})
-
-        failure = None
+        reply = request_with_retry(
+            self.client,
+            base_messages,
+            settings.model,
+            settings.temperature,
+            settings.max_tokens,
+            settings.thinking,
+            {**self.labels, "turn_index": index, "speaker": speaker},
+            parse_turn_output,
+            template.retry(),
+        )
+        attempts, parsed, failure, stopped = reply.attempts, reply.parsed, reply.failure, reply.stopped
         if parsed is None:
             # No attempt produced a readable turn: it stands as silence, with no position taken.
-            failure = attempts[-1].parse_error or f"api_error: {attempts[-1].api_error}"
             parsed = ParsedTurn("", Stance.UNDECIDED)
         turn = Turn(
             turn_index=index,

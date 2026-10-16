@@ -177,6 +177,56 @@ class PerceptionRecord:
     def neighbour_time_to_segment_s(self) -> Optional[float]:
         return self.pair.time_to_segment_of(self.neighbour_id)
 
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "PerceptionRecord":
+        """A record of version 2 read back from a log (``as_dict``), as far as the log keeps it.
+
+        The log rounds to six decimal places, so the record read back is the logged one, not
+        the one the run held. Used by issue #30 to take conflict cases from finished runs.
+        """
+        if data.get("schema_version") != PERCEPTION_SCHEMA_VERSION:
+            raise ValueError(f"a perception record of version {PERCEPTION_SCHEMA_VERSION} is needed, got {data.get('schema_version')!r}")
+        observer, environment, pair = data["observer"], data["environment"], data["pair"]
+        first, second = sorted((data["observer_id"], data["neighbour_id"]))
+        own, other = observer.get("time_to_segment_s"), data.get("neighbour_time_to_segment_s")
+        velocity = data["relative_velocity_mps"]
+        return cls(
+            schema_version=data["schema_version"],
+            step=data["step"],
+            time_s=data["time_s"],
+            observer_id=data["observer_id"],
+            neighbour_id=data["neighbour_id"],
+            relative_position_m=tuple(data["relative_position_m"]),
+            distance_m=data["distance_m"],
+            bearing_rad=data["bearing_rad"],
+            relative_velocity_mps=None if velocity is None else tuple(velocity),
+            closing_speed_mps=data["closing_speed_mps"],
+            time_to_collision_s=data["time_to_collision_s"],
+            neighbour_radius_m=data["neighbour_radius_m"],
+            neighbour_speed_mps=data["neighbour_speed_mps"],
+            neighbour_heading_rad=data["neighbour_heading_rad"],
+            neighbour_heading_relative_rad=data["neighbour_heading_relative_rad"],
+            neighbour_attributes=dict(data["neighbour_attributes"]),
+            observer=ObserverState(
+                radius_m=observer["radius_m"],
+                speed_mps=observer["speed_mps"],
+                heading_rad=observer["heading_rad"],
+                preferred_speed_mps=observer["preferred_speed_mps"],
+                attributes=dict(observer["attributes"]),
+                time_to_segment_s=own,
+            ),
+            environment=EnvironmentFeatures(**{name: environment[name] for name in ENVIRONMENT_FIELDS}),
+            pair=PairFeatures(
+                agents=(first, second),
+                encounter_class=pair["encounter_class"],
+                heading_difference_rad=pair["heading_difference_rad"],
+                min_corridor_width_m=pair["min_corridor_width_m"],
+                age_difference_years=pair["age_difference_years"],
+                single_file_segment=pair["single_file_segment"],
+                time_to_segment_s=(own, other) if data["observer_id"] == first else (other, own),
+            ),
+        )
+
     def as_dict(self) -> dict[str, Any]:
         velocity = self.relative_velocity_mps
         return {

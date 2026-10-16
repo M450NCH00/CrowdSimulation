@@ -76,6 +76,7 @@ is a claim about people.
 | `safety_margin` of `single_file` | 0.1 m | As in issue #24. |
 | `deadlock` window and speed | 3.0 s, 0.01 m/s | As in issue #24. |
 | Metric thresholds: `near_miss_distance`, `yield_speed_fraction`, `yield_min_duration`, `exposure_eps` | 0.1 m, 0.5, 1.0 s, 1e-6 m/s | Definitions, not measurements. They decide what gets *counted*, so `metrics.md` records them and every outcome file repeats them. None has a source. |
+| Metric thresholds of issue #30: `pair_exposure_eps`, `collision_course_min_s` | 1e-3 m/s, 0 s | Definitions of pair exposure and of tier T1 (`metrics.md`, section 11). The first is five times the most that the primary baseline's perturbation can move a relative velocity (2 × 1e-4 m/s), so that the perturbation alone never makes a step count; the second counts any exposed step. Neither has a source. |
 | `seed` | 26 | Of the starting jitter. |
 
 ## 5. Physical parameters and demographic attributes are separate

@@ -33,6 +33,9 @@ experiment code until the literature review is complete and discussed.**
 > Issue #26 (2026-10-13) went ahead on the same footing: `WORK_LOG-26.md`, assumption A2.
 > Issue #28 (2026-10-14) made a recorded approval a prerequisite; none is recorded, and the
 > user chose to proceed and leave the question open: `WORK_LOG-28.md`, P1 and Q1.
+> Issue #30 (2026-10-15) made it a hard stop for anything that spends money; none is
+> recorded, so the user chose to build everything on the free mock client and hold the paid
+> pilot: `WORK_LOG-30.md`, P1.
 
 | # | Roadmap step | Status |
 |---|---|---|
@@ -41,6 +44,7 @@ experiment code until the literature review is complete and discussed.**
 | 3 | Implement the LLM-to-LLM exchange | **built and smoke-tested** (issue #24) — `llm_negotiation/`; 12 paid smoke runs, no experiment yet |
 | 3a | Avoidance layer, so that a rule can prescribe avoidance and not only priority (sub-issue 1 of 6) | **built** (issue #26) — `llm_negotiation/negsim/avoidance/`; 46 free runs, no rule and no LLM call yet |
 | 3b | Rule format, rule database and rule-following mode (sub-issue 2 of 6) | **built** (issue #28) — `llm_negotiation/negsim/rules/`, `llm_negotiation/rule_db/`; five hand-written test rules, 1,600 free runs, no LLM call |
+| 3c | Conflict cases, rule generation by two LLMs negotiating or one stating, the rule writer (sub-issue 3 of 6, first half) | **built and rehearsed on the mock** (issue #30) — `llm_negotiation/negsim/rulegen/`, `llm_negotiation/cases/`; 18 conflict cases; the paid pilot is **held** (no recorded approval; its worst case exceeds its cap, `WORK_LOG-30.md` Q5) |
 | 4 | Analyse exchanges for a reusable pattern | not started |
 | 5 | Validate the pattern against real data or sociology | **coding scheme drafted** (issue #12) — `literature/human-conflict-resolution/` |
 | 5a | Demographic personas: realism vs LLM bias | **delivered** (issue #16) — `literature/demographic-personas/` |
@@ -133,6 +137,31 @@ test fixtures; none of this is evidence about how people walk:
   flow when used alone. A rule that is safe for two people can fail in a crowd. Following the
   rules also makes each step 2.3 to 3.0 times as slow (100 to 1,000 agents), which matters
   for the 10,000-agent goal.
+
+From building rule generation (issue #30, the first half of the third sub-issue) — see
+`llm_negotiation/README.md`, "Rule generation", and `llm_negotiation/docs/rule-generation.md`;
+`WORK_LOG-30.md` for what needs sign-off. **No model was called**: everything ran on the free
+mock client, which stands in for a model and imitates none, so none of this is evidence
+about LLMs or about people:
+
+- **A conflict now has a severity**, from "only in range" (T0) through "on a collision
+  course" (T1), a yield (T2) and a near miss (T3) to a collision or deadlock (T4), measured in
+  a way no rule's sharing of the avoiding can change. Plain ORCA passes two people a few
+  millimetres apart, so its ordinary two-person pass is already a near miss; milder and worse
+  conflicts come from the crowd (Q3). 18 conflict cases are frozen from 26 baseline runs.
+- **A conflict can now become a candidate rule in two ways**: two model agents negotiate,
+  proposing rules and accepting one by its hash, so that a changed rule is never mistaken for
+  an acceptance; or one model, seeing both sides, states a rule. Every proposal is kept and
+  categorised (valid; needs talking first, because it reads someone's errand; inconsistent;
+  malformed; or beyond what the format can say). Generated rules go to a staging database,
+  never the main one, and reach it only by a person promoting one with a reason.
+- **Each generated rule is tested alone**, on its own conflict and in a crowd of 100. The
+  crowd check already earns its place: the mock's rules that only ask both people for 15 or
+  30 cm more room fail it in the two-way flow (by the two-minute limit 98 and 23 of 100 have
+  arrived, against all 100 in 52 s without them).
+- **The paid pilot is held, and as specified it cannot run**: its worst case is USD 0.62
+  against its USD 0.05 cap. Whether to cut the negotiation, the design, or raise the cap is
+  open (Q5).
 
 Three findings from the simulation-rules review (issue #22), all drafts needing supervisor
 sign-off — see `literature/simulation-rules/`. The review is seed-led (27 sources, 5 papers
@@ -254,17 +283,24 @@ CrowdSimulation/
   integration/
     crowdgym_mapping.md             record -> CrowdGym AgentType / journey / action handler
   llm_negotiation/                  issue #24: two-agent LLM negotiation simulator; issue #26: the
-                                    avoidance layer (ORCA, perception, directives). Has its own README
+                                    avoidance layer (ORCA, perception, directives); issue #28: rules;
+                                    issue #30: rule generation. Has its own README
     run_experiment.py               run an experiment config; --client mock (free) or deepseek (paid);
-                                    an avoidance config needs no client and costs nothing
+                                    an avoidance config needs no client and costs nothing; a
+                                    rule-generation config with deepseek sends nothing without --confirm
     configs/                        scenarios, personas, experiment designs C0-C4, task strings, API prices;
-                                    avoidance/ holds the six avoidance experiments of issue #26
+                                    avoidance/ (issue #26), rule_following/ (#28), cases/ and
+                                    rule_generation/ (#30)
     negsim/                         the package: core, scenarios, conflict, control, llm,
                                     negotiation, personas, runlog, metrics, viz, experiment,
-                                    avoidance
-    tests/                          795 tests; none calls a model or the network, none spends
+                                    avoidance, rules, rulegen
+    cases/                          the frozen conflict cases of issue #30, with their manifest
+    rule_db/                        the rule database (issue #28); generated rules never go here
+    tests/                          1,223 tests; none calls a model or the network, none spends
     docs/                           architecture, gamechat-notes, derivations, llm-backend, log-schema;
-                                    orca, perception, parameters, metrics (issue #26)
+                                    orca, perception, parameters, metrics (issue #26); rule-format,
+                                    rule-matching, baseline, behaviour-checks (#28); cases,
+                                    rule-generation, pricing-check (#30)
     runs/                           committed run logs: C0 (no LLM), the paid smoke runs, and
                                     si1_* (the 46 avoidance runs and the benchmark)
     views/                          the animated viewer's pages (git-ignored); see "Watch a run"

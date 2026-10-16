@@ -103,3 +103,36 @@ The baseline's settings are laid on the scenario before the experiment's own
 such a level. Every run records the baseline (`config.json`: `baseline`, with the file's
 SHA-256, and `perturbation`) and the scenario as actually used (`scenario`). An experiment
 without `baseline:` runs as in issue #26: the scenario's own settings, no perturbation.
+
+## 6. Seeds: a baseline run and a rule run are paired (issue #30)
+
+**What a seed decides.** A run's seed (`config.json`: `seed`) seeds two random streams, each
+of its own: the baseline's perturbation (section 3) and the arbiter's tie-break, if a run
+asks for a random one. Where the agents start is the scenario's own business: a scenario
+that randomises it (the jitter of the two-way flow) uses `scenario.seed`, which is the
+scenario's seed plus `repeat − 1`, the same for every level of an experiment.
+
+**How it is derived.** An avoidance experiment says how in `design.seeding`:
+
+| `seeding` | A run's seed | Since |
+|---|---|---|
+| `paired` (the default) | `design.seed` plus the run's `repeat` | issue #30 |
+| `per_run` | `design.seed` plus the run's `run_index`, its place in the design | issues #26 and #28 |
+
+Under `paired`, every level of every factor of one repeat runs on the same seed, so the plain
+run and the rule run of one scenario instance draw the same perturbations and differ only
+where the rules act: a comparison between them is paired, repeat by repeat. Under
+`per_run` two levels of one repeat drew different perturbations, and a comparison between
+them was between two samples (`WORK_LOG-28.md`, Q9). **DD66 (decision):** `paired` is the
+default; every committed experiment config of issues #26 and #28 says `seeding: per_run`, so
+that it still reproduces its committed runs. Every run records its `seeding`.
+
+**Why a rule run with no rule reproduces the baseline exactly.** With no rule switched on,
+the rule provider gives every agent plain ORCA's directive on every step. The run loop then
+does the same computations in the same order, draws the same perturbations from the same
+stream, and writes the same trajectory, to the byte.
+*Tested:* `tests/test_pair_exposure.py::test_a_rule_run_with_no_rule_writes_the_baseline_trajectory`, which also
+checks that under `per_run` the two differ.
+
+A generated rule is replayed on the seed of the very baseline run its conflict case came
+from (`rule-generation.md`, replay), so that comparison is paired too.

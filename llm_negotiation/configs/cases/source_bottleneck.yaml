@@ -1,0 +1,25 @@
+# Issue #30, Part 2: the baseline runs that conflict cases are taken from. A single-file
+# segment between two wide corridors, under the primary baseline (plain ORCA, perturbed,
+# with the arbiter at the segment). No model is called.
+#
+#   python run_experiment.py configs/cases/source_bottleneck.yaml
+#
+# The layouts are the scenario's two flows: one agent from each end (opposing), and both
+# from the same end side by side (merging; under plain ORCA the two never conflict there,
+# tier T0, not eligible as a case).
+schema_version: 1
+layer: avoidance
+experiment_name: si3_source_bottleneck
+description: Conflict-case source. Corridor to bottleneck, opposing and merging, primary baseline, plain ORCA.
+scenario: configs/scenarios/corridor_to_bottleneck.yaml
+baseline: orca_perturbed_v1
+
+design:
+  seed: 30400
+  seeding: paired
+  repeats: 2
+  factors:
+    flow:
+      - name: opposing
+      - name: merging
+        scenario_overrides: {geometry: {flow: merging}}

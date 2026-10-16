@@ -26,7 +26,11 @@ Once per time step, for every agent that has not arrived:
    holds, the follower takes all of the avoidance and the leader none.
 5. **Move.** All agents move at once, through the world's dynamics model.
 
-Then the bookkeeping: arrivals, collisions, near misses, yields, deadlock.
+Then the bookkeeping: arrivals, collisions, near misses, yields, deadlock. Between 4 and 5
+every open pair is also tested for *pair exposure* (issue #30): whether the two intended
+velocities of step 4, before ORCA's projection, put the pair on a collision course
+(``negsim.avoidance.exposure``). It changes nothing the agents do; at the end of the run it
+gives each pair interaction its severity tier (``docs/metrics.md``, section 11).
 
 An agent that reaches the end of its path leaves the scene: it is no longer a neighbour
 of anyone and cannot be collided with.
@@ -48,6 +52,7 @@ from ..metrics.avoidance import (
     ProximityTracker,
     YieldEvent,
     YieldTracker,
+    severity_tier,
 )
 from ..metrics.compute import DeadlockMonitor
 from .coordination import (
@@ -67,6 +72,7 @@ from .directives import (
     PairResolution,
     resolve_pair,
 )
+from .exposure import pair_exposed
 from .lp import solve, violation
 from .neighbours import SpatialGrid
 from .orca import agent_half_plane, wall_half_plane
@@ -205,7 +211,8 @@ class PairInteraction:
 
     This is the unit rules are matched on, and the unit whose outcome is categorised as
     ``avoided``, ``resolved`` or ``failed`` (``docs/metrics.md``, section 9). It exists in
-    every avoidance run, with any provider.
+    every avoidance run, with any provider. Since issue #30 it also counts the pair's own
+    exposure and gets a severity tier, T0 to T4 (``docs/metrics.md``, section 11).
     """
 
     pair_id: int
@@ -221,9 +228,15 @@ class PairInteraction:
     passed_step: Optional[int] = None
     passed_time_s: Optional[float] = None
     exposure_steps: dict[int, int] = field(default_factory=dict)
+    #: Steps on which the two intended velocities put the pair on a collision course
+    #: (issue #30); the first of them.
+    pair_exposure_steps: int = 0
+    first_pair_exposed_step: Optional[int] = None
     min_separation_m: float = math.inf
     outcome: Optional[str] = None
     outcome_detail: dict[str, Any] = field(default_factory=dict)
+    severity_tier: Optional[str] = None
+    tier_detail: dict[str, Any] = field(default_factory=dict)
     #: What the directive provider recorded about the pair, if it follows pairs.
     provider_record: Any = None
 
@@ -244,9 +257,13 @@ class PairInteraction:
             "conflict_exposure_time_s": {
                 str(agent): round(self.exposure_steps.get(agent, 0) * dt, 6) for agent in self.agents
             },
+            "pair_exposure_time_s": round(self.pair_exposure_steps * dt, 6),
+            "first_pair_exposed_step": self.first_pair_exposed_step,
             "min_separation_m": separation,
             "outcome": self.outcome,
             "outcome_detail": dict(self.outcome_detail),
+            "severity_tier": self.severity_tier,
+            "tier_detail": dict(self.tier_detail),
             "rules": None if record is None else record.as_dict(),
         }
 
@@ -529,6 +546,8 @@ class AvoidanceSimulation:
 
         # 4. Choose a velocity for every agent, all from the same state of the world.
         commands: dict[int, tuple[float, float]] = {}
+        #: Each agent's intended velocity: what it hands ORCA, after its directives.
+        intended: dict[int, tuple[float, float]] = {}
         rows: dict[int, dict[str, Any]] = {}
         #: For the artefact counts: the direction of the agent's path, the speed it wants,
         #: and whether a neighbour it perceives is behind it (``docs/metrics.md``, section 10).
@@ -556,6 +575,7 @@ class AvoidanceSimulation:
                 angle = self._perturbation_rng.random() * 2.0 * math.pi
                 length = self._perturbation_rng.random() * self.perturbation.magnitude_mps
                 preferred = (preferred[0] + length * math.cos(angle), preferred[1] + length * math.sin(angle))
+            intended[i] = preferred
 
             lines = []
             for wall in obstacles:
@@ -634,6 +654,7 @@ class AvoidanceSimulation:
                 )
         self.fallback_agents = fallback_agents
         self.steps_with_fallback += bool(fallback_agents)
+        self._measure_pair_exposure(intended, step)
 
         # 5. Move.
         applied = world.step(commands)
@@ -809,27 +830,65 @@ class AvoidanceSimulation:
         vx, vy = b.velocity[0] - a.velocity[0], b.velocity[1] - a.velocity[1]
         return px * vx + py * vy > 0.0 and math.hypot(px, py) > a.spec.radius + b.spec.radius + clearance
 
+    def _measure_pair_exposure(self, intended: Mapping[int, tuple[float, float]], step: int) -> None:
+        """Count the step for every open pair whose intended velocities are on a collision course.
+
+        ``intended`` holds each active agent's velocity as handed to ORCA on this step, after
+        its directives and before the projection. The obstacle is the two bodies' alone and
+        the horizon the larger of the two agents' (``negsim.avoidance.exposure``); no
+        directive is read, so the count is the same whatever the responsibility shares.
+        """
+        agents, eps = self.world.agents, self.spec.thresholds.pair_exposure_eps
+        for (i, j), pair in self.open_pairs.items():
+            if i not in intended or j not in intended:
+                continue
+            a, b = agents[i], agents[j]
+            if pair_exposed(
+                (a.pose.x, a.pose.y),
+                (b.pose.x, b.pose.y),
+                intended[i],
+                intended[j],
+                a.spec.radius + b.spec.radius,
+                max(a.spec.time_horizon, b.spec.time_horizon),
+                eps,
+            ):
+                pair.pair_exposure_steps += 1
+                if pair.first_pair_exposed_step is None:
+                    pair.first_pair_exposed_step = step
+
     def _close_pair(self, pair: PairInteraction, reason: str) -> None:
         pair.end_step, pair.end_time_s, pair.end_reason = self.world.step_index, self.world.time, reason
         if self.provider.follows_pairs:
             self.provider.close_pair(pair, pair.end_step, pair.end_time_s, reason)
 
     def _categorise(self, pair: PairInteraction, yields: list[YieldEvent]) -> None:
-        """``avoided``, ``resolved`` or ``failed`` (``docs/metrics.md``, section 9).
+        """``avoided``, ``resolved`` or ``failed`` (``docs/metrics.md``, section 9), and the
+        severity tier (section 11).
 
         ``failed``: the two collided while the pair was open, or the run ended in deadlock
         with it open. Otherwise ``resolved``: one of them was exposed to the other, or one
-        of them yielded while the pair was open. Otherwise ``avoided``.
+        of them yielded while the pair was open. Otherwise ``avoided``. The category keeps
+        issue #28's definition, on the per-agent exposure; ``pair_exposed`` in the detail
+        lets it be recomputed on the pair's own.
+
+        The tier is the highest that applies: T4 failed, T3 a near miss between the two, T2 a
+        yield of either, T1 pair exposure above the threshold, else T0. Events count if
+        they overlap the pair interaction in time (DD58).
         """
         start, end = pair.start_time_s, pair.end_time_s
+
+        def overlapping(episodes):
+            return [
+                episode for episode in episodes
+                if tuple(sorted(episode.pair)) == pair.agents and episode.start_time_s <= end and episode.end_time_s >= start
+            ]
+
         yielded = [
             event for event in yields
             if event.agent_id in pair.agents and event.start_time_s <= end and event.end_time_s >= start
         ]
-        collided = [
-            episode for episode in self.overlaps.events
-            if tuple(sorted(episode.pair)) == pair.agents and episode.start_time_s <= end and episode.end_time_s >= start
-        ]
+        collided = overlapping(self.overlaps.events)
+        near = overlapping(self.near_misses.events)
         deadlocked = self.deadlock and pair.end_reason == PAIR_END_RUN_ENDED
         exposed = any(steps > 0 for steps in pair.exposure_steps.values())
         if collided or deadlocked:
@@ -840,10 +899,22 @@ class AvoidanceSimulation:
             pair.outcome = OUTCOME_AVOIDED
         pair.outcome_detail = {
             "exposed": exposed,
+            "pair_exposed": pair.pair_exposure_steps > 0,
             "yield_events": len(yielded),
             "collisions": len(collided),
             "deadlock": deadlocked,
             "open_at_timeout": self.status == STATUS_TIMEOUT and pair.end_reason == PAIR_END_RUN_ENDED,
+        }
+        exposure_s = pair.pair_exposure_steps * self.world.dt
+        pair.severity_tier = severity_tier(
+            exposure_s, self.spec.thresholds.collision_course_min_s, len(yielded), len(near), len(collided), deadlocked
+        )
+        pair.tier_detail = {
+            "pair_exposure_time_s": round(exposure_s, 6),
+            "yield_events": len(yielded),
+            "near_misses": len(near),
+            "collisions": len(collided),
+            "deadlock": deadlocked,
         }
 
     def _resolution(self, i: int, j: int, step: int, now: float) -> PairResolution:
