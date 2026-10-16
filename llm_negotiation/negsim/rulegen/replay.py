@@ -30,6 +30,7 @@ from typing import Any, Mapping, Optional, Sequence
 
 from ..configutil import PACKAGE_ROOT, ConfigError, as_number, check_keys, load_yaml
 from ..experiment.avoidance import AvoidanceExperiment, AvoidanceRunPlan, execute_avoidance_run, forget_rule_database
+from ..rules.canonical import canonical_hash
 from ..rules.model import Rule
 from ..runlog.schema import PAIR_INTERACTIONS_FILE
 from .cases import text_sha256
@@ -267,7 +268,11 @@ def crowd_size(settings: ScreeningSettings) -> int:
 class CrowdScreen:
     """Screens rules one at a time in the same crowd, running each baseline seed once.
 
-    ``out_dir`` gets the run folders; ``where`` is how the screening entries name it.
+    The runs are deterministic and the crowd does not depend on a rule's case, so a rule
+    whose canonical form (``rule-format.md``, section 13) was screened already, with the same
+    visibility, gets the results of that screening without the flow being run again; its
+    entry says which rule version's runs they are (``same_runs_as``). ``out_dir`` gets the run
+    folders; ``where`` is how the screening entries name it.
     """
 
     def __init__(
@@ -283,6 +288,7 @@ class CrowdScreen:
         self.population = population_of(population, "crowd")
         self.plans = crowd_plans(settings, experiment)
         self._baseline: dict[int, dict[str, Any]] = {}
+        self._screened: dict[tuple, tuple[str, list[dict[str, Any]]]] = {}
 
     def baseline(self, plan: AvoidanceRunPlan) -> dict[str, Any]:
         if plan.seed not in self._baseline:
@@ -292,24 +298,35 @@ class CrowdScreen:
         return self._baseline[plan.seed]
 
     def screen(self, rule: Rule, staging_root: Path, visibility: Mapping[str, bool]) -> dict[str, Any]:
-        forget_rule_database(staging_root)
-        per_seed, reasons = [], []
-        for plan in self.plans:
-            base = self.baseline(plan)
-            run = replace(
-                plan,
-                run_id=f"{rule.rule_id}_v{rule.version}_{plan.run_id}",
-                population=self.population,
-                visibility=dict(visibility),
-                directives=_directives(rule, staging_root),
-            )
-            ruled = _run_numbers(execute_avoidance_run(run, self.out_dir / rule.rule_id / plan.run_id, self.git))
-            per_seed.append({
-                "seed": plan.seed, "baseline": base, "rule": ruled,
-                "folders": {"baseline": f"{self.where}/baseline/{plan.run_id}", "rule": f"{self.where}/{rule.rule_id}/{plan.run_id}"},
-            })
-            if ruled["gridlocked"] and not base["gridlocked"]:
-                reasons.append(f"seed {plan.seed}: the flow gridlocked ({ruled['status']}, {ruled['arrived']} of {ruled['n_agents']} arrived) where the baseline did not")
+        key = (canonical_hash(rule.written), tuple(sorted(visibility.items())))
+        same_runs_as = None
+        if key in self._screened:
+            same_runs_as, per_seed = self._screened[key]
+            per_seed = json.loads(json.dumps(per_seed))
+        else:
+            forget_rule_database(staging_root)
+            per_seed = []
+            for plan in self.plans:
+                base = self.baseline(plan)
+                run = replace(
+                    plan,
+                    run_id=f"{rule.rule_id}_v{rule.version}_{plan.run_id}",
+                    population=self.population,
+                    visibility=dict(visibility),
+                    directives=_directives(rule, staging_root),
+                )
+                ruled = _run_numbers(execute_avoidance_run(run, self.out_dir / rule.rule_id / plan.run_id, self.git))
+                per_seed.append({
+                    "seed": plan.seed, "baseline": base, "rule": ruled,
+                    "folders": {"baseline": f"{self.where}/baseline/{plan.run_id}", "rule": f"{self.where}/{rule.rule_id}/{plan.run_id}"},
+                })
+            self._screened[key] = (rule.key, per_seed)
+        reasons = [
+            f"seed {entry['seed']}: the flow gridlocked ({entry['rule']['status']}, {entry['rule']['arrived']} of "
+            f"{entry['rule']['n_agents']} arrived) where the baseline did not"
+            for entry in per_seed
+            if entry["rule"]["gridlocked"] and not entry["baseline"]["gridlocked"]
+        ]
         summary = {
             "gridlocked_runs": sum(entry["rule"]["gridlocked"] for entry in per_seed),
             "baseline_gridlocked_runs": sum(entry["baseline"]["gridlocked"] for entry in per_seed),
@@ -329,5 +346,5 @@ class CrowdScreen:
             "screened_utc": _utc_now(),
             "verdict": "failed" if reasons else "passed",
             "reasons": reasons,
-            "results": {"settings": self.settings.as_dict(), "summary": summary, "per_seed": per_seed},
+            "results": {"settings": self.settings.as_dict(), "summary": summary, "per_seed": per_seed, "same_runs_as": same_runs_as},
         }

@@ -69,7 +69,10 @@ from .validate import CATEGORIES, VALID, validate_proposal
 from .writer import STAGING_DIR, StagingDatabase, Support, build_rule, with_screening
 
 LAYER_RULE_GENERATION = "rule_generation"
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 1  # of the config
+#: The version of the files a rule-generation experiment writes (``docs/log-schema.md``,
+#: "Rule-generation experiments"); the run folders of its replays are avoidance runs.
+RULEGEN_LOG_VERSION = 1
 CLIENTS = ("mock", "deepseek")
 RUNS_DIR, MOCK_RUNS_DIR = PACKAGE_ROOT / "runs", PACKAGE_ROOT / "runs_mock"
 
@@ -768,7 +771,7 @@ def _start_folder(experiment_dir: Path, config: RuleGenConfig, client_name: str,
             raise ConfigError(f"{experiment_dir} was run with the {existing.get('client_name')} client, not {client_name}")
         return
     _write_json(path, {
-        "layer": LAYER_RULE_GENERATION, "experiment": config.as_dict(), "client_name": client_name,
+        "rulegen_log_version": RULEGEN_LOG_VERSION, "layer": LAYER_RULE_GENERATION, "experiment": config.as_dict(), "client_name": client_name,
         "created_utc": _utc_now(), "git": dict(git),
         "software": {"negsim_version": __version__, "python": platform.python_version()},
         "templates": {condition: plan_.templates[condition].identity() for condition in config.conditions},

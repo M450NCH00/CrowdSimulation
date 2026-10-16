@@ -241,6 +241,8 @@ def test_the_report_and_the_logs(full_run):
     folder, summary = full_run["folder"], full_run["result"].summary
     for name in (rg.CONFIG_FILE, rg.INVOCATIONS_FILE, rg.CASES_FILE, rg.DESIGN_FILE, rg.PREVIEW_FILE, rg.COST_FILE, rg.SUMMARY_FILE, rg.REPORT_FILE):
         assert (folder / name).is_file(), name
+    written_config = json.loads((folder / rg.CONFIG_FILE).read_text(encoding="utf-8"))
+    assert written_config["rulegen_log_version"] == rg.RULEGEN_LOG_VERSION and written_config["client_name"] == "mock"
     assert sum(sum(counts.values()) for counts in summary["outcomes"].values()) == summary["sessions"] == 48
     agreement = summary["agreement"]
     assert agreement["rate"] == pytest.approx(agreement["agreed"] / 16)

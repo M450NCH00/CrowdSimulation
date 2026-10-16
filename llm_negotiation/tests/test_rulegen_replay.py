@@ -86,6 +86,7 @@ def test_a_rule_that_gridlocks_the_crowd_fails_screening_and_one_that_does_not_p
         assert passed["verdict"] == "passed" and passed["reasons"] == [] and ruled["rule_fired"] > 0 and ruled["arrived"] == ruled["n_agents"]
         assert passed["results"]["per_seed"][0]["baseline"] == seed["baseline"]  # the baseline seed is run once
     assert ruled["sim_time_s"] > seed["baseline"]["sim_time_s"]  # stopping until passed: through, but slower
+    assert failed["results"]["same_runs_as"] is None
     assert len(list((tmp_path / "screening" / "baseline").iterdir())) == 1
     assert staging.latest(stops.rule_id).version == 1  # screening never deletes or edits a rule
 
@@ -118,3 +119,20 @@ def test_screening_settings():
     with pytest.raises(rp.ConfigError):
         rp.ScreeningSettings.from_config({"repeats": 0})
     assert replace(settings, repeats=1).as_dict()["repeats"] == 1
+
+
+def test_a_rule_screened_already_in_another_case_is_not_run_again(tmp_path):
+    settings = rp.ScreeningSettings(repeats=1, scenario_overrides=SMALL_CROWD)
+    screen = rp.CrowdScreen(settings, tmp_path / "screening", "test", GIT, rp.mixed_population(rp.crowd_size(settings), (25, 70), ("female", "male")))
+    staging, first = staged(tmp_path, KEEP_ROOM)
+    one = screen.screen(first, staging.root, default_visibility())
+    other = StagingDatabase(tmp_path / "rule_db_staging" / "negotiated")
+    other.create()
+    support = Support("A_test_r1", {"order": "lower_first"}, "deepseek-flash", None, {"key": "rulegen_negotiate_v1"}, "2026-10-16T00:00:00+00:00", proposal={**KEEP_ROOM, "priority": 5})
+    built = build_rule("negotiated", "overtaking_2d08db11", canonical_hash(KEEP_ROOM), [support], "test")
+    other.stage(built, "test")
+    second = screen.screen(other.latest(built["rule_id"]), other.root, default_visibility())
+    assert second["results"]["same_runs_as"] == first.key and second["results"]["per_seed"] == one["results"]["per_seed"]
+    assert not (tmp_path / "screening" / built["rule_id"]).exists()  # no run of its own
+    hidden = screen.screen(other.latest(built["rule_id"]), other.root, {**default_visibility(), "age": False, "gender": False})
+    assert hidden["results"]["same_runs_as"] is None  # another visibility is another screening
