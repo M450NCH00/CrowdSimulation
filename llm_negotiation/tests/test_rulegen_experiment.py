@@ -293,8 +293,12 @@ def test_every_session_has_a_transcript_for_reading(full_run):
 def test_running_again_resumes_and_changes_nothing(full_run, tmp_path):
     folder = full_run["folder"]
     before = {path: path.read_text(encoding="utf-8") for path in (folder / "rule_db_staging").rglob("*") if path.is_file()}
+    transcript = next((folder / rg.SESSIONS_DIR).glob("*.md"))
+    text = transcript.read_text(encoding="utf-8")
+    transcript.unlink()  # as if written before transcripts were: a resume writes it again
     again = rg.run_rule_generation(config(), out_root=folder.parent, report=quiet, git=GIT)
     assert again.executed == [] and len(again.skipped) == 48 and again.status == "completed"
+    assert transcript.read_text(encoding="utf-8") == text
     after = {path: path.read_text(encoding="utf-8") for path in (folder / "rule_db_staging").rglob("*") if path.is_file()}
     assert after == before
     assert len((folder / rg.INVOCATIONS_FILE).read_text(encoding="utf-8").splitlines()) == 2

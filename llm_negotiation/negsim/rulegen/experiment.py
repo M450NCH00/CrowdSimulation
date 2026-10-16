@@ -854,6 +854,8 @@ def run_rule_generation(
         if previous is not None and previous["outcome"] != OUTCOME_ABORTED:
             records[session.session_id] = previous
             result.skipped.append(session.session_id)
+            if not path.with_suffix(".md").is_file():  # a record written before transcripts were
+                path.with_suffix(".md").write_text(render_transcript(previous), encoding="utf-8", newline="\n")
             continue
         if result.aborted is not None or len(result.executed) >= budget:
             continue
