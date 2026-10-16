@@ -746,6 +746,35 @@ approval is not recorded, the pricing check is not done (`docs/pricing-check.md`
 issue specifies it, its worst case (USD 0.62) is twelve times its cap (USD 0.05), so the code
 refuses it (`docs/rule-generation.md`, section 10; `WORK_LOG-30.md`, Q5).
 
+### The mock rehearsal (2026-10-16)
+
+`si3_mock_rehearsal.yaml`, run from a clean tree at commit `66adfbb` and resumed at `7cd2b16`
+(which ran nothing and wrote the transcripts), in 27 minutes, at no cost. **The mock follows
+a script, one path per design cell; its numbers show that every path of the pipeline works,
+and say nothing about any model or about people.**
+
+- **320 sessions**: of 80 negotiations, 62 agreed, 6 reached the message limit, 6 ended with
+  both saying no rule is possible, 6 with a turn unreadable after its retry; of 240
+  statements, 192 stated a rule, 24 said none is possible, 24 could not be read. Accepted
+  rules were proposed by the first speaker 43 times and by the second 19; one path changes its
+  rule between repeats, so the mean stability is 0.967, not 1.
+- **Every category in both conditions**: of the 135 negotiated proposals, 111 valid and 6
+  each needing communication, inconsistent, schema errors and format limits; of the 192
+  stated rules, 96 valid and 24 of each other category. 30 proposals carried an id or a
+  provenance of the model's own, which was ignored; 30 were flagged for manual review.
+- **25 rules written**, once per condition, case and canonical rule, from 3 distinct rules.
+  **Every replay's baseline reproduced its case** (25 of 25), and the rule matched the case's
+  pair in 24 (the exception orders the two by speed, and they walk at the same speed: a tie).
+  The 15 cm and 30 cm clearance rules took the head-on and crossing pairs from T3 to T1 and
+  the flow's colliding pair (T4) to T2; at the bottleneck the 30 cm rule gave T2 and the 15 cm
+  rule changed no tier, and in the overtaking case neither did. **In the 50 + 50 flow all 20
+  clearance rules failed screening**, while the 5 rules giving the faster person the whole
+  avoiding passed: a rule that settles its own conflict can still jam a crowd. 19 of the 25
+  crowd results were reused from a rule of the same canonical form and visibility (6 flows
+  run).
+- **The worst-case preview held**: no session used more than 6.2% (negotiations) or 18.5%
+  (statements) of its bound, by the mock's own token count.
+
 ## Changing things
 
 | To | Edit |

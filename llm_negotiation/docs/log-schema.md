@@ -494,9 +494,12 @@ rule): `session_id`, `condition`, `case_id`, `scenario`, `turn_index`, `proposer
 proposal reads), `ignored_metadata` (what the model wrote in the writer's keys),
 `review_flags`.
 
-**`written.jsonl`**: `rule_id`, `version` (the version holding the rule now), `condition`,
-`case_id`, `canonical_hash`, `file` (under the experiment folder), `written` (whether this
-invocation wrote it), `sessions` (the supporting sessions, earliest first).
+**`written.jsonl`**: the writer's step of the latest invocation: `rule_id`, `version` and
+`file` (the rule's newest version when the writer had finished, which on a resumed experiment
+can be one that replay and screening wrote earlier), `condition`, `case_id`,
+`canonical_hash`, `written` (whether this invocation's writer wrote a version),
+`sessions` (the supporting sessions, earliest first). The versions that replay and
+screening add are in `screening.jsonl`.
 
 **`screening.jsonl`**: per rule with any: `rule_id`, `version`, `condition`, `case_id`,
 `file`, and `entries`, the screening entries this experiment stored on the rule

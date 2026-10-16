@@ -391,6 +391,49 @@ matplotlib 3.10.8, pyflakes 4.0.3); pyflakes clean.
   experiment's own calls; **DD84** `--confirm`, resuming, a new name for a changed config.
 - Next step: the mock rehearsal (running), the pilot's preview (below), the final checks.
 
+### 2026-10-16 10:10 — The mock rehearsal, and what was fixed while it ran
+
+- What I did: the first rehearsal (started 09:18, at `b7897ad`, before the screening cache)
+  had screened 5 of its 25 rules after 20 minutes; I stopped it rather than report a run of
+  superseded code (its folder, `runs_mock/si3_mock_rehearsal/`, is left as it is, git-ignored
+  and not used). I ran it again from a clean tree at `66adfbb` into `runs_mock/final/`
+  (27 minutes), then resumed it at `7cd2b16`.
+- Found and fixed while it ran:
+  1. The full suite failed one test I had not run when committing the screening cache
+     (`f48c43a`): the end-to-end test assumed every crowd entry's runs were the rule's own.
+     Fixed in `3b2d0c9`. Since then the full suite is run before every report of it passing.
+  2. A paid run refused over its cap, or awaiting confirmation, wrote the config and then
+     locked the folder to it, so raising the pilot's cap (Q5) would have needed a new name for
+     a run that never happened (`30d9591`).
+  3. `StagingDatabase.latest` loaded the whole staging database, whose clash check is
+     quadratic, once per rule: cubic, minutes at SI-3b's scale (`721a219`).
+  4. Part 5 asks for #24's transcript logging; the session record had everything but no
+     readable transcript, which the manual review needs. Added (`a0d2e0e`), and a resume
+     writes any that is missing (`7cd2b16`).
+- Result (`runs_mock/final/si3_mock_rehearsal/summary.json`; mock output, so these show that
+  every path works and say nothing about a model):
+  - 320 of 320 sessions. A: 80 negotiations, 62 agreed (rate 0.775; the accepted rule
+    proposed by the first speaker 43 times, the second 19), 6 no agreement, 6 no rule
+    possible, 6 parse failures. B: 240 statements, 192 stated, 24 no rule, 24 parse failures;
+    80 cells, mean stability 0.967.
+  - Every category in both conditions: A's 135 proposals, 111 valid and 6 of each other; B's
+    192 rules, 96 valid and 24 of each other. 30 proposals carried the model's own id and
+    provenance (ignored); 30 flagged for review.
+  - 25 rules written (3 distinct canonical rules, once per condition and case). Replay: the
+    baseline reproduced the case in 25 of 25; the rule matched the case's pair in 24 (the
+    exception: ordering by speed, at equal speeds). Screening in the 50 + 50 flow: the 20
+    clearance rules failed, the 5 speed-ordered rules passed; 19 of the 25 crowd entries reused
+    runs (6 flows run).
+  - The preview held: at most 6.2% (A) and 18.5% (B) of a session's bound, by the mock's count.
+  - The resume ran nothing, wrote the 320 transcripts, and left the staging databases,
+    `validation.jsonl` and `screening.jsonl` byte for byte as they were. `written.jsonl` did
+    change, by design: it reports the writer's step of the latest invocation (version 2, not
+    written, where the first run had version 1, written); `log-schema.md` now says so.
+- An observation, not looked into: in the overtaking case (agents in line) neither clearance
+  rule changed the pair's tier or its separation (0.0 m to 0.0003 m), while in every other
+  scenario they did. Something for SI-3b's evaluation of real rules to check.
+- Next step: the summary, the PR.
+
 ## Open questions / risks
 
 - **Q1 (carried from #24, #26, #28). Has the supervisor's "no simulation code until the
