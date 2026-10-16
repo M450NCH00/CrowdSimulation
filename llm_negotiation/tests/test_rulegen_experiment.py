@@ -304,6 +304,13 @@ def test_a_preview_over_the_cap_is_refused_before_anything(tmp_path):
     cfg = config(llm={"client": "deepseek"}, budget={"cap_usd": 0.0001})
     with pytest.raises(ConfigError, match="exceeds the cap"):
         rg.run_rule_generation(cfg, out_root=tmp_path, confirm=True, report=quiet, git=GIT)
+    # Nothing was sent, so the config may still change, here its cap (Q5 of WORK_LOG-30.md).
+    raised = config(llm={"client": "deepseek"}, budget={"cap_usd": 100.0, "ledger": str(tmp_path / "ledger.jsonl")})
+    result = rg.run_rule_generation(raised, out_root=tmp_path, report=quiet, git=GIT)
+    assert result.status == "awaiting_confirmation"
+    statuses = [json.loads(line)["status"] for line in (result.experiment_dir / rg.INVOCATIONS_FILE).read_text(encoding="utf-8").splitlines()]
+    assert statuses == ["refused_over_cap", "awaiting_confirmation"]
+    assert json.loads((result.experiment_dir / rg.CONFIG_FILE).read_text(encoding="utf-8"))["experiment"]["budget"]["cap_usd"] == 100.0
 
 
 def test_the_budget_guard_stops_the_experiment_and_a_resume_runs_the_stopped_session_again(tmp_path):

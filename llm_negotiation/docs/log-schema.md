@@ -433,8 +433,9 @@ runs/<experiment_name>/
 setting, as read: `experiment_name`, `description`, `source`, `cases`, `conditions`,
 `design`, `negotiation`, `statement`, `llm`, `budget`, `replay`, `screening`),
 `client_name` (`mock` or `deepseek`), `created_utc`, `git`, `software`, and `templates` (each
-condition's template and the common template it uses, with their SHA-256). Written once; an
-invocation with a different config or client is refused.
+condition's template and the common template it uses, with their SHA-256). Once a session
+has run, an invocation with a different config or client is refused; before that, the file is
+written again with the new config.
 
 **`invocations.jsonl`**: `utc`, `git`, `client` (what the client says of itself, without
 credentials), `confirm`, `limit`, `status` (`completed`, `partial`, `aborted`,

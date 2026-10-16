@@ -758,9 +758,15 @@ class RuleGenResult:
 
 
 def _start_folder(experiment_dir: Path, config: RuleGenConfig, client_name: str, git: Mapping[str, Any], plan_: Plan) -> None:
-    """Write the config, or check that the folder's is this one: one folder, one experiment."""
+    """Write the config, or check that the folder's is this one: one folder, one experiment.
+
+    Until a session has run (a paid run refused over its cap, or awaiting confirmation, sends
+    nothing), the config may still change: it is written again, and ``invocations.jsonl``
+    keeps the earlier attempts.
+    """
     path = experiment_dir / CONFIG_FILE
-    if path.is_file():
+    started = any((experiment_dir / SESSIONS_DIR).glob("*.json"))
+    if path.is_file() and started:
         existing = json.loads(path.read_text(encoding="utf-8"))
         if _comparable(existing.get("experiment", {})) != _comparable(config.as_dict()):
             raise ConfigError(

@@ -447,9 +447,11 @@ actual cost (from the tokens the API reported) beside the preview, session by se
 **Resuming.** Running an experiment again resumes it: a session with a record is read back,
 not run again; a session that was `aborted` runs again, its first log kept beside the new
 one (`<session>.aborted1.json`), and what it cost is counted; writing, replay and screening
-are idempotent. A folder that holds another config of the same name, or a run with another
-client, is refused: give the changed config a new name. `--limit N` runs at most N sessions
-that have no record. Every invocation is a line of `invocations.jsonl`. **DD84 (decision).**
+are idempotent. Once a session has run, a folder that holds another config of the same name,
+or a run with another client, is refused: give the changed config a new name. Before that
+(a paid run refused over its cap, or not yet confirmed, has sent nothing) the config may
+still change, its cap say. `--limit N` runs at most N sessions that have no record. Every
+invocation is a line of `invocations.jsonl`. **DD84 (decision).**
 
 **The mock** (`negsim/rulegen/mock.py`) stands in for a model; it does not imitate one. Each
 design cell of a condition is given one scripted path, in turn, so that a design with 13 or
