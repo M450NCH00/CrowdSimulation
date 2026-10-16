@@ -53,6 +53,7 @@ SCENARIO_SHORT = {
     "overtaking": "overtaking",
     "corridor_to_bottleneck": "bottleneck",
     "bidirectional_flow": "flow",
+    "passage_meeting": "passage",  # issue #32
 }
 #: What a stratum may be made of.
 STRATUM_KEYS = ("scenario", "variant", "tier", "encounter_class")

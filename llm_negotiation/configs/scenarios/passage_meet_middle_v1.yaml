@@ -1,0 +1,72 @@
+# Two people who meet INSIDE a single-file passage (issue #32, Part 2.2), version 1. An
+# avoidance scenario: the bottleneck's layout, with the two starting where they meet, inside the
+# passage, facing each other 0.1 m apart. What ORCA, the arbiter or a rule does next is the
+# experiment. A new file, never an edit: a change is passage_meet_middle_v2.yaml.
+#
+# Variants (set by an experiment's scenario_overrides, geometry.travelled):
+#   symmetric    [1.7, 1.7]  each has walked 1.7 m in: they meet in the middle
+#   asymmetric   [2.7, 0.7]  agent 0 has walked 2.0 m further in than agent 1
+#
+# Tags: [cited] read in a source; [derived] worked out from cited values; [placeholder] no
+# source; [design] a choice about the scene or the numerics. docs/parameters.md has the
+# locators.
+schema_version: 2
+type: passage_meeting
+description: >
+  Two people meet inside a stretch of corridor that only one of them can use at a time, each
+  having walked some way in from its own end, with a wide corridor beyond each end.
+
+dt: 0.1                      # s      time step                                   [design]
+max_time: 60.0               # s      the run is a timeout after this             [design]
+goal_tolerance: 0.2          # m      how close to the end of its path an agent has arrived   [design]
+dynamics: holonomic
+on_collision: stop
+
+geometry:
+  approach_width: 1.75       # m      width of the wide parts: the corridor two people pass in   [cited: Moussaid et al. 2009, Sec 2(a)]
+  approach_length: 8.0       # m      length of each wide part                    [design]
+  passage_width: 0.8         # m      width of the single-file passage, as the bottleneck's. NOT a sourced single-file width (docs/parameters.md)   [placeholder]
+  passage_length: 4.0        # m      length of the passage, as the bottleneck's  [placeholder]
+  travelled: [1.7, 1.7]      # m      how far agent 0 (from the west end) and agent 1 (from the east end) have walked in; 0.1 m apart   [design]
+  merge_distance: 0.6        # m      how far beyond the passage a path leaves the centre line   [design]
+  lateral_offset: 0.4        # m      how far from the centre line each path ends   [design]
+  exit_setback: 7.0          # m      how far beyond the far end each path ends   [design]
+  wall_thickness: 0.5        # m      how the outer walls are drawn; no effect on the motion   [design]
+
+agent_types:
+  pedestrian:
+    radius: 0.25             # m      body radius: half the effective shoulder width of 49.8 cm   [cited: Yamamoto et al. 2019, Sec 4.3]
+    preferred_speed: 1.3     # m/s    walking speed when nothing is in the way; measured 1.29 +/- 0.19   [cited: Moussaid et al. 2009, Sec 2(c) and 4(a)]
+    max_speed: 2.0           # m/s    the fastest an agent will go to get out of the way   [cited: Menge 4squareS.xml line 15; inside Bohannon 1997's range of maximum gait speeds]
+    backing_speed: 0.92      # m/s    walking backwards at a normal, comfortable pace: mean of 10 healthy young adults   [cited: Nakahara et al. 2005, p. 824]
+    time_horizon: 3.0        # s      how far ahead a collision with another agent matters (ORCA's tau)   [cited: Karamouzas et al. 2014, p. 3]
+    time_horizon_obst: 0.15  # s      the same for walls. A setting used in practice, not a measurement   [cited: Menge 4squareS.xml line 22]
+    max_neighbours: 10       #        how many neighbours an agent attends to. A setting used in practice   [cited: Menge 4squareS.xml line 15]
+    sensing_radius: 12.5     # m      R. time_horizon * (max_speed + max_speed) + the two radii   [derived: ORCA paper, Sec 5.1]
+
+agents:
+  default_type: pedestrian
+
+orca:
+  tie_break: brake           # an exact tie between the two passing sides is not broken (docs/orca.md, section 4)
+
+navigation:
+  lookahead: 0.6             # m      how far ahead on its path an agent aims. Short, because the paths have corners   [design]
+
+neighbour_search:
+  cell_size: 2.0             # m      grid cell of the neighbour search; no effect on the result   [design]
+
+single_file:
+  safety_margin: 0.1         # m      clearance the arbiter keeps between the two bodies, and that a backing agent adds to the two radii (docs/derivations.md, section 17)   [design]
+
+deadlock:
+  window_s: 3.0              # s      as in issue #24                             [design]
+  speed_eps: 0.01            # m/s    as in issue #24                             [design]
+
+metrics:
+  near_miss_distance: 0.1    # m      two bodies closer than this are a near miss   [design]
+  yield_speed_fraction: 0.5  #        below this fraction of preferred speed an agent is yielding   [design]
+  yield_min_duration: 1.0    # s      ... if it lasts at least this long          [design]
+  exposure_eps: 1.0e-6       # m/s    numerical tolerance of the exposure test    [design]
+  pair_exposure_eps: 1.0e-3  # m/s    how far inside the two bodies' velocity obstacle the intended velocities must be for pair exposure (issue #30)   [design]
+  collision_course_min_s: 0.0  # s    pair exposure above this makes a pair interaction tier T1 (issue #30)   [design]

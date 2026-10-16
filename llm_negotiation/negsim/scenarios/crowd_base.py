@@ -66,6 +66,13 @@ AGENT_TYPE_KEYS = (
     "time_horizon",
     "time_horizon_obst",
 )
+#: Optional physical parameters (issue #32). Each is written into a resolved scenario only when
+#: it is set, so that a scenario that does not set it resolves, and hashes, as before.
+OPTIONAL_AGENT_TYPE_KEYS = ("backing_speed",)
+#: How fast an agent backs out of a single-file passage when its type does not say: healthy young
+#: adults' mean backward walking speed at a "normal, comfortable" pace, 0.92 m/s (n = 10)
+#: [cited: Nakahara et al. 2005, p. 824]. Never above the agent's maximum speed.
+DEFAULT_BACKING_SPEED = 0.92
 
 
 @dataclass(frozen=True)
@@ -80,14 +87,17 @@ class AgentType:
     max_neighbours: int
     time_horizon: float
     time_horizon_obst: float
+    #: How fast this kind of agent backs out of a single-file passage (issue #32); ``None``:
+    #: :data:`DEFAULT_BACKING_SPEED`.
+    backing_speed: Optional[float] = None
 
     @classmethod
     def from_mapping(cls, name: str, raw: Any, where: str) -> "AgentType":
-        check_keys(raw, where, AGENT_TYPE_KEYS)
+        check_keys(raw, where, AGENT_TYPE_KEYS, OPTIONAL_AGENT_TYPE_KEYS)
         positive = {
             key: as_number(raw[key], f"{where}.{key}", minimum=0.0, strict_minimum=True)
-            for key in AGENT_TYPE_KEYS
-            if key != "max_neighbours"
+            for key in (*AGENT_TYPE_KEYS, *OPTIONAL_AGENT_TYPE_KEYS)
+            if key != "max_neighbours" and key in raw
         }
         neighbours = raw["max_neighbours"]
         if isinstance(neighbours, bool) or not isinstance(neighbours, int) or neighbours < 0:
@@ -96,14 +106,18 @@ class AgentType:
             raise ConfigError(
                 f"{where}: preferred_speed {positive['preferred_speed']} exceeds max_speed {positive['max_speed']}"
             )
+        if positive.get("backing_speed", 0.0) > positive["max_speed"]:
+            raise ConfigError(f"{where}: backing_speed {positive['backing_speed']} exceeds max_speed {positive['max_speed']}")
         return cls(name=name, max_neighbours=neighbours, **positive)
 
     def with_overrides(self, overrides: Mapping[str, Any], where: str) -> "AgentType":
-        check_keys(overrides, where, (), AGENT_TYPE_KEYS)
+        check_keys(overrides, where, (), (*AGENT_TYPE_KEYS, *OPTIONAL_AGENT_TYPE_KEYS))
         return AgentType.from_mapping(self.name, {**self.as_dict(), **overrides}, where)
 
     def as_dict(self) -> dict[str, Any]:
-        return {key: getattr(self, key) for key in AGENT_TYPE_KEYS}
+        described = {key: getattr(self, key) for key in AGENT_TYPE_KEYS}
+        described.update({key: getattr(self, key) for key in OPTIONAL_AGENT_TYPE_KEYS if getattr(self, key) is not None})
+        return described
 
 
 @dataclass(frozen=True)
@@ -124,8 +138,22 @@ class CrowdAgentSpec(AgentSpec):
     time_horizon: float
     time_horizon_obst: float
     single_file_stretches: tuple[tuple[int, float, float], ...]
+    #: Its type's backing speed, if the type sets one (issue #32); see :attr:`backing_speed_mps`.
+    backing_speed: Optional[float] = None
+
+    @property
+    def backing_speed_mps(self) -> float:
+        """How fast it backs out of a single-file passage: its type's, or the cited default,
+        never above its maximum speed."""
+        return min(DEFAULT_BACKING_SPEED if self.backing_speed is None else self.backing_speed, self.max_speed)
 
     def as_dict(self) -> dict:
+        described = self._as_dict()
+        if self.backing_speed is not None:  # only when set: a scenario without it hashes as before
+            described["backing_speed_mps"] = self.backing_speed
+        return described
+
+    def _as_dict(self) -> dict:
         return {
             "agent_id": self.agent_id,
             "agent_type": self.agent_type,
@@ -490,6 +518,7 @@ class CrowdScenario(ABC):
                     max_neighbours=agent_type.max_neighbours,
                     time_horizon=agent_type.time_horizon,
                     time_horizon_obst=agent_type.time_horizon_obst,
+                    backing_speed=agent_type.backing_speed,
                     single_file_stretches=tuple(
                         (index, interval[0], interval[1])
                         for index, interval in (

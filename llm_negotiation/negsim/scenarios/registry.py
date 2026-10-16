@@ -24,6 +24,7 @@ from .hallway import HallwayScenario
 from .intersection import IntersectionScenario
 from .open_crossing import OpenCrossingScenario
 from .overtaking import OvertakingScenario
+from .passage_meeting import PassageMeetingScenario
 from .wide_corridor_head_on import WideCorridorHeadOnScenario
 
 SCENARIOS: dict[str, type[Scenario]] = {
@@ -38,6 +39,7 @@ CROWD_SCENARIOS: dict[str, type[CrowdScenario]] = {
         OvertakingScenario,
         CorridorToBottleneckScenario,
         BidirectionalFlowScenario,
+        PassageMeetingScenario,  # issue #32
     )
 }
 
