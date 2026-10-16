@@ -434,6 +434,15 @@ matplotlib 3.10.8, pyflakes 4.0.3); pyflakes clean.
   scenario they did. Something for SI-3b's evaluation of real rules to check.
 - Next step: the summary, the PR.
 
+### 2026-10-16 10:25 — Pushed; PR #31
+
+- What I did: pushed `feat/30-conflict-cases-rule-generation` (32 commits on `ec10073`) and
+  opened **PR #31** into `feat/28-rule-format-database-following`, as P2 decided. Its
+  description says it **does not close #30**: Part 11 is held (P1), and needs Q5 answered
+  first. Commented on the issue with the link.
+- Next step: the user's and the supervisor's answers to P1 and Q5; then the pricing check
+  (`docs/pricing-check.md`) and the pilot.
+
 ## Open questions / risks
 
 - **Q1 (carried from #24, #26, #28). Has the supervisor's "no simulation code until the
