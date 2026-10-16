@@ -63,8 +63,8 @@ python -m pytest
 ```
 
 All tests run on the mock client, with the network blocked and the real `.env` out of
-reach. They cost nothing. There are 1,222: the 984 of issues #24 to #28 (432 of issue #24,
-345 for the avoidance layer, 18 for the plot and the viewer, 189 for the rule layer), and 238
+reach. They cost nothing. There are 1,223: the 984 of issues #24 to #28 (432 of issue #24,
+345 for the avoidance layer, 18 for the plot and the viewer, 189 for the rule layer), and 239
 added by issue #30.
 
 ## Run an experiment

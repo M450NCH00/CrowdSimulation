@@ -467,4 +467,49 @@ matplotlib 3.10.8, pyflakes 4.0.3); pyflakes clean.
 
 ## Summary (fill in at the end)
 
-<What changed, why, how it was verified.>
+**What changed.** Parts 1 to 10 of issue #30 (SI-3a), built and rehearsed on the mock client;
+Part 11, the paid pilot, **not run**. In order: pair exposure, severity tiers T0 to T4, paired
+seeds, rule schema 2 and the canonical form of a rule, the viewer (Part 1); 18 frozen conflict
+cases from 26 primary-baseline runs (2); the persona design matrix (3); frozen situation
+templates with a generated field glossary (4); condition A, negotiation with agreement by
+canonical hash, and condition B, a stated rule with repeats (5, 6); a category for every
+proposal (7); the writer, staging databases and promotion with a reason (8); single-rule
+replay and crowd screening (9); the `rule_generation` experiment type with its worst-case
+cost preview, `--confirm`, a budget cap on the experiment's own calls, resuming, transcripts
+and mock paths for every branch (10); the configs of a mock rehearsal and of the pilot as the
+issue specifies it (11, not run). Documents: `rule-generation.md`, `cases.md` and
+`pricing-check.md` (new); `metrics.md`, `derivations.md`, `rule-format.md`, `baseline.md`,
+`log-schema.md`, `llm-backend.md`, `architecture.md` section 8 (DD65 to DD84); both READMEs.
+
+**Why.** Nothing yet turned a conflict into a rule. SI-3b will compare rules negotiated by two
+model agents with rules stated by one model, to test whether negotiation produces different
+rules from one model reasoning alone; this builds everything that comparison needs, and checks
+it end to end without spending anything until the supervisor's approval is recorded.
+
+**How it was verified.**
+- **1,223 tests pass** at `3c4f8d6`, from a clean tree (`python -m pytest`, Python 3.13.3,
+  pytest 9.1.1; every test on the mock client with the network blocked and the real `.env`
+  out of reach), 239 of them added by this issue (120 in Parts 1 to 4, 119 in Parts 5 to 10);
+  pyflakes 4.0.3 clean. They cover every item of the issue's list (the 2026-10-16 09:30 and
+  10:10 entries).
+- **The mock rehearsal** (`si3_mock_rehearsal`), from a clean tree at `66adfbb`, resumed at
+  `7cd2b16`: 320 sessions, every path and category, 25 rules replayed and screened (10:10).
+- **The API key appears nowhere**: no tracked file, no commit of any branch, no run or mock
+  run log, not the ledger, checked by a script that read it from `.env` and printed counts only.
+- The case store matches its manifest; `rule_db/` validates and gained only the version 2
+  schema; every section a document or a docstring cites exists (checked by a script).
+
+**Acceptance criteria.** Met: tiers and pair exposure (with independence from the shares);
+shared seeds; schema 2; the viewer; cases; the design matrix with the hidden-demographics
+control; descriptions that leak nothing and suggest no rule; agreement by canonical hash with
+the speaking order and the accepted proposer recorded; condition B's repeats and stability;
+every proposal categorised; the writer writing only to staging, with its own ids and
+provenance; replay and screening stored on the rule; every path on the mock with the network
+blocked; all existing tests passing. **Not met**: the prerequisites failed (P1, P2; the user
+chose mock-only and to stack), the pricing check was not done (P3), and the pilot did not run,
+so there is no preview-against-actual comparison and no measured SI-3b budget; and as issued
+the pilot cannot run under its cap (Q5).
+
+**Spend.** USD 0 in this issue. To date about USD 0.101 of the USD 2 credit: Phase 1's run01
+USD 0.097 and issue #24's smoke runs USD 0.0043 (`spend_ledger.jsonl`, unchanged since
+2026-10-13).

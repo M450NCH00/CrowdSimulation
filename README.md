@@ -296,7 +296,7 @@ CrowdSimulation/
                                     avoidance, rules, rulegen
     cases/                          the frozen conflict cases of issue #30, with their manifest
     rule_db/                        the rule database (issue #28); generated rules never go here
-    tests/                          1,222 tests; none calls a model or the network, none spends
+    tests/                          1,223 tests; none calls a model or the network, none spends
     docs/                           architecture, gamechat-notes, derivations, llm-backend, log-schema;
                                     orca, perception, parameters, metrics (issue #26); rule-format,
                                     rule-matching, baseline, behaviour-checks (#28); cases,
