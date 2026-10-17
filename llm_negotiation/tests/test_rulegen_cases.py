@@ -198,6 +198,33 @@ def test_the_committed_case_store_matches_its_manifest_and_its_source_runs():
     assert scenarios == {"wide_corridor_head_on", "open_crossing", "overtaking", "corridor_to_bottleneck", "bidirectional_flow"}
 
 
+def test_the_committed_re_stepped_set_and_the_passage_set():
+    """Issue #32: si3_v2 is si3_v1 re-stepped, each case's version 2, made from a clean tree; and
+    si32_passage_v1 has one case per in-passage source experiment and layout."""
+    store = CaseStore(CASES_ROOT)
+    old, new = dict(store.case_set("si3_v1")), dict(store.case_set("si3_v2"))
+    assert set(old) == set(new) and set(old.values()) == {1} and set(new.values()) == {2}
+    for case_id in new:
+        case = store.get(case_id, 2)
+        assert case["case_format_version"] == 2 and case["derived_from"]["case"] == f"{case_id}@1"
+        assert case["derived_from"]["git_dirty"] is False
+        assert {record["schema_version"] for record in case["observations"].values()} == {3}
+        assert store.get(case_id, 1)["case_format_version"] == 1  # the old version is kept as it was
+    layouts = set()
+    for case_id, version in store.case_set("si32_passage_v1"):
+        case = store.get(case_id, version)
+        assert case["scenario"]["type"] == "passage_meeting" and case["case_format_version"] == 2
+        assert case["formation"] == {"step": 0, "time_s": 0.0, "encounter_class": "single_file_segment"}
+        assert case["source"]["git_dirty"] is False and case["source"]["log_schema_version"] == 5
+        assert all(record["observer"]["in_segment"] is True for record in case["observations"].values())
+        assert all(fields["in_segment"] is True for fields in case["snapshot"]["agent"].values())
+        # From rest the arbiter's way gets neither through; walking, the one further in goes first.
+        expected = None if case["scenario"]["variant"]["start"] == "rest" else 0
+        assert case["baseline_outcome"]["first_out"] == expected and case["baseline_outcome"]["first_through"] is None
+        layouts.add((case["source"]["experiment"], tuple(sorted(case["scenario"]["variant"].items()))))
+    assert len(layouts) == 8
+
+
 def test_extracting_again_from_issue_30s_runs_gives_the_committed_files(tmp_path):
     """Issue #32 raised the case format to 2 for what it adds; a case that holds none of it (its
     records are of perception version 2) is written as version 1, as before."""

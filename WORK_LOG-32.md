@@ -591,6 +591,32 @@ written only when set, and the old versions keep working.
 - Next step: commit; then, from the clean tree, the case-source runs, the behaviour-check runs,
   the re-stepped set, and the passage cases.
 
+### 2026-10-17 14:35 — The runs and the cases, made from a clean tree at `d57e854`
+
+- What I did, in this order (the order matters: run logs do not make a tree dirty, the case
+  store does):
+  1. The two case-source experiments (`runs/si32_source_passage_meet_*`, 16 runs) and the two
+     behaviour checks (`runs/si32_passage_meet_*`, 560 runs): 90 s, every run's config records
+     `d57e854`, not dirty. 23 MB, with a trajectory stride of 10 in the checks, as #28's.
+  2. **The re-stepped set**, `python -m negsim.rulegen.cases restep --set si3_v1 --new-set
+     si3_v2` (63 s): **every field of all 18 cases came out equal**, and each version 2 records
+     `d57e854`, not dirty, in `derived_from`. Version 1 of each is kept as it was.
+  3. **The passage cases**, `extract configs/cases/si32_passage_cases_v1.yaml`: 16 eligible pairs
+     (every pair forms on step 0, both inside, class `single_file_segment`, T3 walking, T3 or T4
+     from rest), **8 cases**, the ids the scratch trial gave.
+- A mistake, found and undone: the first extraction wrote the case set's description as "The
+  in-passage cases of issue", because in YAML an unquoted ` #32` starts a comment. Nothing was
+  committed. I removed only that extraction's 8 files, its report and its two manifest entries
+  (the re-stepped set untouched), quoted the description, and extracted again: the same 8 cases.
+  **Issue #30's `si3_cases_v1.yaml` has the same defect**: its frozen set reads "The first case
+  set of issue". Its config and its manifest entry are frozen, so it stays, recorded here.
+- Tests: a test of the two committed sets (si3_v2: version 2 of every si3_v1 case, records of
+  perception version 3, from a clean tree; si32_passage_v1: one case per experiment and layout,
+  both inside on step 0, `first_out` null from rest and agent 0 walking). The case, replay,
+  description, prompt and hygiene tests pass (82).
+- Next step: the behaviour-check tables in `negsim.rules.report`, quoted in
+  `behaviour-checks.md`; `cases.md`.
+
 ## Open questions / risks
 
 - **Q1 (carried from #30). The supervisor's approval of simulation work, and now of the
