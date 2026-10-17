@@ -1,10 +1,12 @@
-"""Personas: the schema and the YAML loader."""
+"""Personas: the schema, the YAML loader, and the fictional group labels (issue #32)."""
 
+from .groups import DEFAULT_FRAMING, DEFAULT_GROUP_LABELS, GroupLabelError, check_framing, check_label, check_labels
 from .loader import load_personas
 from .schema import (
     ATTRIBUTES,
     GENDERS,
     NAME_LIKE_FIELDS,
+    NOT_RULE_REFERENCEABLE,
     SCHEMA_VERSION,
     AttributeSpec,
     Persona,
@@ -14,12 +16,19 @@ from .schema import (
 
 __all__ = [
     "ATTRIBUTES",
+    "DEFAULT_FRAMING",
+    "DEFAULT_GROUP_LABELS",
     "GENDERS",
     "NAME_LIKE_FIELDS",
+    "NOT_RULE_REFERENCEABLE",
     "SCHEMA_VERSION",
     "AttributeSpec",
+    "GroupLabelError",
     "Persona",
     "PersonaError",
+    "check_framing",
+    "check_label",
+    "check_labels",
     "load_personas",
     "validate_persona",
 ]

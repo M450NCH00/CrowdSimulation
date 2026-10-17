@@ -1,0 +1,74 @@
+# Issue #32: rule generation rehearsed end to end on the mock client, with prompt version 2 and
+# no fictional group: the pair of si32_mock_groups_on.yaml, with the group not in the design at
+# all, as in every config but that one. No network and no cost; the output goes under
+# runs_mock/, which git does not track. Nothing it produces is a finding about a model.
+#
+#   python run_experiment.py configs/rule_generation/si32_mock_no_groups.yaml
+#
+# The same cases, people and protocols as si32_mock_groups_on.yaml. Without the group's factors
+# those persona levels give only 4 cells per case and condition, so demographics are shown and
+# hidden here as well: 8 cells per case, 48 sessions per condition, so that each of the mock's
+# 16 negotiation paths is taken three times.
+schema_version: 1
+layer: rule_generation
+experiment_name: si32_mock_no_groups
+description: >-
+  Mock rehearsal of rule generation with prompt version 2 and no fictional group: both
+  conditions, every path of rulegen_paths_v2, two re-stepped cases and four in-passage cases,
+  replay and screening of every rule written.
+
+cases:
+  store: cases
+  ids:
+    - head_on_de176842      # wide_corridor_head_on, aligned: version 2 (si3_v2)
+    - overtaking_2d08db11   # overtaking, in line: version 2 (si3_v2)
+    - passage_10e542c2      # passage_meet_middle_v1, agent 0 2.7 m in, agent 1 0.7 m; at rest
+    - passage_067961e3      # passage_meet_middle_v1, 1.7 m each; walking
+    - passage_f89f5745      # passage_meet_with_speeds_v1, 2.0 and 1.4 m; at rest
+    - passage_25f09e61      # passage_meet_with_speeds_v1, 1.7 m each; walking
+
+conditions: [negotiated, stated]
+
+design:
+  seed: 32
+  base_age: 25
+  age_difference: 45
+  factors:
+    age_pair: [p1_older]
+    gender_pair: [p1_female]
+    task: [none, p1_urgent]
+    demographics_visible: [true, false]
+    mapping: [p1_lower]
+    order: [lower_first, higher_first]
+
+negotiation:
+  template: rulegen_negotiate_v2
+  max_messages_per_agent: 4
+
+statement:
+  template: rulegen_state_v2
+  repeats: 1
+
+llm:
+  client: mock
+  mock_policy: rulegen_paths_v2
+  model: deepseek-flash
+  temperature: 1.0
+  max_tokens: 600
+  thinking: disabled
+  transport_retries: 2
+
+budget:
+  cap_usd: 0.05
+  ledger: spend_ledger.jsonl
+
+replay:
+  enabled: true
+
+screening:
+  enabled: true
+  scenario: configs/scenarios/bidirectional_flow.yaml
+  baseline: orca_perturbed_v1
+  seed: 30900
+  repeats: 1
+  scenario_overrides: {geometry: {agents_per_direction: 10, length: 20.0}, max_time: 60.0}   # a rehearsal: a small crowd

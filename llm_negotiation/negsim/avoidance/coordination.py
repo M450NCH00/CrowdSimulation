@@ -29,6 +29,12 @@ for it.
 *Arbiter to ORCA*, on the first step on which the conflict zone is no longer live (one of
 the two has cleared it) or one of the two has arrived.
 
+*Arbiter to a back-up manoeuvre* (issue #32), on the step on which one of the two starts to
+back out of the segment on a ``back_up`` directive: the directive has already decided who goes
+first and how, so the pair is not the arbiter's while the manoeuvre lasts
+(``negsim.avoidance.simulation``; ``docs/derivations.md``, section 17). A pair in a manoeuvre is
+never taken by the arbiter.
+
 **The conflict zone** of a pair at a segment is, on each agent's path, the stretch inside
 the segment plus a run-out at each end as long as the two radii and the safety margin
 together. An agent whose centre is outside its zone cannot touch an agent whose centre is
@@ -55,7 +61,7 @@ from ..core.world import World
 
 Pair = tuple[int, int]
 
-TO_ARBITER, TO_ORCA = "arbiter", "orca"
+TO_ARBITER, TO_ORCA, TO_BACK_UP = "arbiter", "orca", "back_up"
 
 #: While the arbiter holds a pair, the follower does all of the avoiding and the leader none.
 FOLLOWER_SHARE, LEADER_SHARE = 1.0, 0.0
@@ -192,15 +198,18 @@ class Coordinator:
         travel_speeds: Mapping[int, float],
         mutual_pairs: Iterable[Pair],
         leaders: Mapping[Pair, int],
+        released: Iterable[Pair] = (),
     ) -> tuple[dict[int, AgentDecision], dict[Pair, tuple[int, int]], list[Handoff]]:
         """Decide this step's speed bounds and update the set of pairs the arbiter holds.
 
         ``mutual_pairs`` are the pairs that perceive each other now (condition 1 of the
         module docstring). ``leaders`` maps a pair to the agent its directives say goes
-        first. Returns the arbiter's decision for every agent in a pair it holds, the
+        first. ``released`` are the pairs in a back-up manoeuvre (issue #32), which the arbiter
+        does not hold. Returns the arbiter's decision for every agent in a pair it holds, the
         ``(leader, follower)`` of every held pair that has roles on this step, and the
         handoffs that happened on this step.
         """
+        released = set(released)
         watched = set(mutual_pairs) | self.arbitrated
         if not watched:
             return {}, {}, []
@@ -209,6 +218,12 @@ class Coordinator:
         handoffs: list[Handoff] = []
         holding: set[Pair] = set()
         for pair in sorted(watched):
+            if pair in released:
+                if pair in self.arbitrated:
+                    handoffs.append(
+                        Handoff(world.step_index, world.time, pair, TO_BACK_UP, None, None, "a back-up manoeuvre took the pair")
+                    )
+                continue
             a, b = view.agents[pair[0]], view.agents[pair[1]]
             conflict = None if a.done or b.done else self.detector.zone(a, b)
             live = conflict is not None and conflict.live

@@ -22,6 +22,20 @@ gender and possibly an errand, and nothing else (``docs/rule-generation.md``, se
 The session list is the full factorial for every case and condition, so every level of
 every factor occurs equally often within each; it is in an order shuffled by the design's
 seed, and every session has an id derived from what it is, so the list is reproducible.
+
+**A fictional group** (issue #32; ``docs/fictional-groups.md``, section 3). With
+``design.ethnicity`` enabled, each person also belongs to a fictional group, and three more
+factors are crossed with the six above:
+
+``group_pair``         ``same`` (both people in one group) or ``different``
+``label_rotation``     ``0``, ``1``, ... : which label person 1 gets (the label set's first,
+                       second, ...); person 2 gets the same one or, in a ``different`` pair, the
+                       next one round the set, so that each label is each person's equally often
+``ethnicity_visible``  ``true`` or ``false``, apart from ``demographics_visible``. False is the
+                       control: the groups appear nowhere in what a model is shown
+
+It is **off by default**, and a design without it has exactly the cells and session ids it
+had before issue #32.
 """
 
 from __future__ import annotations
@@ -29,12 +43,14 @@ from __future__ import annotations
 import hashlib
 import itertools
 import json
+import math
 import random
 from dataclasses import dataclass, field
 from typing import Any, Mapping, Optional, Sequence
 
 from ..avoidance.perception import default_visibility
-from ..configutil import ConfigError, as_number, check_keys
+from ..configutil import ConfigError, as_bool, as_number, check_keys
+from ..personas.groups import DEFAULT_FRAMING, DEFAULT_GROUP_LABELS, GroupLabelError, check_framing, check_labels
 
 CONDITION_NEGOTIATED, CONDITION_STATED = "negotiated", "stated"
 CONDITIONS = (CONDITION_NEGOTIATED, CONDITION_STATED)
@@ -54,6 +70,65 @@ FACTORS = tuple(FACTOR_LEVELS)
 #: a hospital errand, highest in its priority order, and a grocery errand, lowest.
 DEFAULT_TASKS = {"urgent": "the emergency room", "routine": "the supermarket"}
 
+#: The factors of the fictional group (issue #32), crossed with the six above when enabled.
+GROUP_SAME, GROUP_DIFFERENT = "same", "different"
+ETHNICITY_FACTORS = ("group_pair", "label_rotation", "ethnicity_visible")
+
+
+@dataclass(frozen=True)
+class EthnicitySettings:
+    """The fictional-group factor of a design (issue #32): its labels, the words that introduce
+    them (the framing), and the levels of its three factors. Off unless ``enabled``."""
+
+    enabled: bool
+    labels: tuple[str, ...]
+    framing: str
+    levels: Mapping[str, tuple[Any, ...]]
+
+    @classmethod
+    def from_config(cls, raw: Any, where: str = "design.ethnicity") -> "EthnicitySettings":
+        check_keys(raw, where, ("enabled",), ("labels", "framing", "factors"))
+        enabled = as_bool(raw["enabled"], f"{where}.enabled")
+        try:
+            labels = check_labels(raw.get("labels", list(DEFAULT_GROUP_LABELS)))
+            framing = check_framing(raw.get("framing", DEFAULT_FRAMING))
+        except GroupLabelError as exc:
+            raise ConfigError(f"{where}: {exc}") from exc
+        every = {
+            "group_pair": (GROUP_SAME, GROUP_DIFFERENT),
+            "label_rotation": tuple(range(len(labels))),
+            "ethnicity_visible": (True, False),
+        }
+        factors = check_keys(raw.get("factors") or {}, f"{where}.factors", (), ETHNICITY_FACTORS)
+        levels = {}
+        for name in ETHNICITY_FACTORS:
+            chosen = factors.get(name, list(every[name]))
+            kind = bool if name == "ethnicity_visible" else int if name == "label_rotation" else str
+            if not isinstance(chosen, list) or not chosen:
+                raise ConfigError(f"{where}.factors.{name}: expected a non-empty list of levels from {list(every[name])}")
+            unknown = [level for level in chosen if level not in every[name] or isinstance(level, bool) != (kind is bool)]
+            if unknown:
+                raise ConfigError(f"{where}.factors.{name}: unknown level(s) {unknown}; the levels are {list(every[name])}")
+            if len(set(chosen)) != len(chosen):
+                raise ConfigError(f"{where}.factors.{name}: a level is listed twice")
+            levels[name] = tuple(chosen)
+        return cls(enabled, labels, framing, levels)
+
+    def labels_of(self, cell: Mapping[str, Any]) -> tuple[str, str]:
+        """Person 1's label and person 2's: the rotation's label, then the same one, or in a
+        ``different`` pair the next one round the label set."""
+        rotation = cell["label_rotation"]
+        first = self.labels[rotation]
+        return first, first if cell["group_pair"] == GROUP_SAME else self.labels[(rotation + 1) % len(self.labels)]
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "enabled": self.enabled,
+            "labels": list(self.labels),
+            "framing": self.framing,
+            "factors": {name: list(levels) for name, levels in self.levels.items()},
+        }
+
 
 @dataclass(frozen=True)
 class DesignSettings:
@@ -65,10 +140,22 @@ class DesignSettings:
     age_difference: int
     tasks: Mapping[str, str]
     per_case: Mapping[str, Mapping[str, tuple[Any, ...]]] = field(default_factory=dict)
+    #: The fictional group (issue #32), if the config has the block; it acts only if enabled.
+    ethnicity: Optional[EthnicitySettings] = None
+
+    @property
+    def groups(self) -> Optional[EthnicitySettings]:
+        """The fictional-group settings if the factor is on, else ``None``."""
+        return self.ethnicity if self.ethnicity is not None and self.ethnicity.enabled else None
+
+    @property
+    def factors(self) -> tuple[str, ...]:
+        """The factors a cell has: the six, and the fictional group's three when it is on."""
+        return FACTORS + (ETHNICITY_FACTORS if self.groups is not None else ())
 
     @classmethod
     def from_config(cls, raw: Any, where: str = "design") -> "DesignSettings":
-        check_keys(raw, where, ("seed", "factors"), ("base_age", "age_difference", "tasks", "per_case"))
+        check_keys(raw, where, ("seed", "factors"), ("base_age", "age_difference", "tasks", "per_case", "ethnicity"))
         levels = cls._levels(raw["factors"], f"{where}.factors", require_all=True)
         per_case = {}
         for case_id, factors in (raw.get("per_case") or {}).items():
@@ -81,7 +168,8 @@ class DesignSettings:
         if raw.get("tasks") is not None:
             check_keys(raw["tasks"], f"{where}.tasks", ("urgent", "routine"))
             tasks = {key: " ".join(str(raw["tasks"][key]).split()) for key in ("urgent", "routine")}
-        return cls(int(as_number(raw["seed"], f"{where}.seed", minimum=0)), levels, base_age, difference, tasks, per_case)
+        ethnicity = None if raw.get("ethnicity") is None else EthnicitySettings.from_config(raw["ethnicity"], f"{where}.ethnicity")
+        return cls(int(as_number(raw["seed"], f"{where}.seed", minimum=0)), levels, base_age, difference, tasks, per_case, ethnicity)
 
     @staticmethod
     def _levels(raw: Any, where: str, require_all: bool) -> dict[str, tuple[Any, ...]]:
@@ -99,10 +187,18 @@ class DesignSettings:
         return levels
 
     def levels_for(self, case_id: str) -> dict[str, tuple[Any, ...]]:
-        return {**self.levels, **self.per_case.get(case_id, {})}
+        levels = {**self.levels, **self.per_case.get(case_id, {})}
+        if self.groups is not None:
+            levels.update(self.groups.levels)
+        return levels
+
+    def cells_per_case(self, case_id: Optional[str] = None) -> int:
+        """How many cells the full factorial has for one case (issue #32 asks for the size)."""
+        levels = self.levels_for(case_id or "")
+        return math.prod(len(levels[name]) for name in self.factors)
 
     def as_dict(self) -> dict[str, Any]:
-        return {
+        described = {
             "seed": self.seed,
             "factors": {name: list(levels) for name, levels in self.levels.items()},
             "base_age": self.base_age,
@@ -110,6 +206,9 @@ class DesignSettings:
             "tasks": dict(self.tasks),
             "per_case": {case: {name: list(levels) for name, levels in factors.items()} for case, factors in self.per_case.items()},
         }
+        if self.ethnicity is not None:  # only when the config has the block: a design without it is described as before
+            described["ethnicity"] = self.ethnicity.as_dict()
+        return described
 
 
 @dataclass(frozen=True)
@@ -129,13 +228,16 @@ class Session:
     visibility: Mapping[str, bool]
     #: Condition A: the first speaker. Condition B: the agent described as Person 1.
     first: int
+    #: The words that introduce the fictional group in a prompt (issue #32); ``None`` when the
+    #: design has no group.
+    framing: Optional[str] = None
 
     @property
     def second(self) -> int:
         return self.agents[1] if self.first == self.agents[0] else self.agents[0]
 
     def as_dict(self) -> dict[str, Any]:
-        return {
+        described = {
             "session_id": self.session_id,
             "index": self.index,
             "condition": self.condition,
@@ -148,11 +250,16 @@ class Session:
             "visibility": dict(self.visibility),
             "first": self.first,
         }
+        if self.framing is not None:
+            described["framing"] = self.framing
+        return described
 
 
 def cell_code(cell: Mapping[str, Any]) -> str:
-    """Eight hexadecimal characters that name a cell of the design."""
-    return hashlib.sha256(json.dumps({name: cell[name] for name in FACTORS}, sort_keys=True).encode("utf-8")).hexdigest()[:8]
+    """Eight hexadecimal characters that name a cell of the design. A cell without the fictional
+    group's factors has the code it had before issue #32."""
+    named = {name: cell[name] for name in (*FACTORS, *ETHNICITY_FACTORS) if name in cell}
+    return hashlib.sha256(json.dumps(named, sort_keys=True).encode("utf-8")).hexdigest()[:8]
 
 
 def personas_of(cell: Mapping[str, Any], agents: tuple[int, int], settings: DesignSettings) -> dict[int, dict[str, Any]]:
@@ -175,6 +282,9 @@ def personas_of(cell: Mapping[str, Any], agents: tuple[int, int], settings: Desi
         }
         for k in (0, 1)
     ]
+    if settings.groups is not None:  # issue #32: each person's fictional group
+        for person, label in zip(people, settings.groups.labels_of(cell)):
+            person["ethnic_group"] = label
     lower, higher = agents
     first, second = (lower, higher) if cell["mapping"] == "p1_lower" else (higher, lower)
     return {first: people[0], second: people[1]}
@@ -182,10 +292,13 @@ def personas_of(cell: Mapping[str, Any], agents: tuple[int, int], settings: Desi
 
 def visibility_of(cell: Mapping[str, Any]) -> dict[str, bool]:
     """What one agent can see of the other in a session: the defaults, with age and gender
-    switched off when the cell hides demographics. A task is never visible."""
+    switched off when the cell hides demographics, and the fictional group switched on when the
+    cell shows it (issue #32; hidden by default). A task is never visible."""
     visibility = default_visibility()
     if not cell["demographics_visible"]:
         visibility["age"] = visibility["gender"] = False
+    if "ethnicity_visible" in cell:
+        visibility["ethnic_group"] = bool(cell["ethnicity_visible"])
     return visibility
 
 
@@ -203,13 +316,14 @@ def sessions_for(
     is, never from its place in the list.
     """
     unordered = []
+    names = settings.factors
     for condition in conditions:
         if condition not in CONDITIONS:
             raise ConfigError(f"unknown condition {condition!r}; the conditions are {list(CONDITIONS)}")
         for case_id, version, agents in cases:
             levels = settings.levels_for(case_id)
-            for values in itertools.product(*(levels[name] for name in FACTORS)):
-                cell = dict(zip(FACTORS, values))
+            for values in itertools.product(*(levels[name] for name in names)):
+                cell = dict(zip(names, values))
                 for repeat in range(1, repeats.get(condition, 1) + 1):
                     session_id = f"{CONDITION_LETTER[condition]}_{case_id}_{cell_code(cell)}_r{repeat}"
                     unordered.append((session_id, condition, case_id, version, agents, cell, repeat))
@@ -235,6 +349,7 @@ def sessions_for(
                 personas=personas_of(cell, agents, settings),
                 visibility=visibility_of(cell),
                 first=lower if cell["order"] == "lower_first" else higher,
+                framing=None if settings.groups is None else settings.groups.framing,
             )
         )
     return sessions
@@ -250,8 +365,9 @@ def balance(sessions: Sequence[Session], by: Optional[Sequence[str]] = None) -> 
     blocks: dict[str, dict[str, dict[str, int]]] = {}
     for session in sessions:
         block = "/".join(str(getattr(session, key)) for key in by)
-        counts = blocks.setdefault(block, {name: {} for name in FACTORS})
-        for name in FACTORS:
+        names = [name for name in (*FACTORS, *ETHNICITY_FACTORS) if name in session.cell]
+        counts = blocks.setdefault(block, {name: {} for name in names})
+        for name in names:
             level = str(session.cell[name])
             counts[name][level] = counts[name].get(level, 0) + 1
     return blocks

@@ -199,10 +199,14 @@ def test_the_format_example_is_a_placeholder_and_no_real_rule():
 
 def test_the_glossary_lists_every_field_in_the_catalogues_order():
     glossary = describe.glossary_text(A.common, True)
-    positions = [glossary.index(f"- pair.{name} (") for name in fields.PAIR_FIELDS]
+    # A common template describes one version of the rule format (issue #32): version 1 describes
+    # rule schema 2, so its glossary lists the fields of version 2, and no later field.
+    pair_fields, agent_fields = fields.fields_of(describe.rule_schema_version_of(A.common))
+    assert describe.rule_schema_version_of(A.common) == 2 and "in_segment" not in glossary
+    positions = [glossary.index(f"- pair.{name} (") for name in pair_fields]
     assert positions == sorted(positions)
     agent_part = glossary[glossary.index("Fields of each person"):]
-    positions = [agent_part.index(f"- {name} (") for name in fields.AGENT_FIELDS]
+    positions = [agent_part.index(f"- {name} (") for name in agent_fields]
     assert positions == sorted(positions)
     hidden = describe.glossary_text(A.common, False)
     assert "pair.age_difference_years" not in hidden and "- age (" not in hidden and "- gender (" not in hidden
@@ -220,7 +224,7 @@ def test_the_catalogue_and_its_documentation_agree():
     assert set(documented) == set(fields.PAIR_FIELDS) | set(fields.AGENT_FIELDS)
     for name, unit in documented.items():
         spec = fields.PAIR_FIELDS.get(name) or fields.AGENT_FIELDS[name]
-        assert (unit.startswith("name") and spec.kind == "category") or unit == spec.unit, name
+        assert (unit.startswith("name") and spec.kind == "category") or (unit == "true/false" and spec.kind == "boolean") or unit == spec.unit, name
 
 
 @pytest.mark.parametrize(

@@ -10,7 +10,9 @@ themselves. The grid is documented in ``docs/rule-matching.md``; in short:
   value just below and just above each, and "missing";
 * for every agent-level field either rule reads: the same values, plus values that put
   the two agents in either order and within any tie tolerance, for each of the two agents
-  independently, and "missing".
+  independently, and "missing";
+* for a field that is a name or is true or false (issue #32), every value it can take, and
+  "missing".
 
 **Why the grid is enough.** Every comparison is between one field and a constant, so
 whether it holds can change only at that constant. Between two consecutive constants of a
@@ -37,7 +39,7 @@ from dataclasses import dataclass
 from typing import Any, Iterator, Optional, Sequence
 
 from ..avoidance.perception import ENCOUNTER_CLASSES
-from .fields import CATEGORY, PAIR
+from .fields import BOOLEAN, CATEGORY, PAIR
 from .model import Match, Rule
 from .snapshot import PairSnapshot
 
@@ -159,6 +161,8 @@ def _candidates(spec: Any, thresholds: list[Any], tolerance: Optional[float] = N
     """The values to try for one field: see the module docstring. ``None`` is "missing"."""
     if spec.kind == CATEGORY:
         return [*spec.categories, None]
+    if spec.kind == BOOLEAN:  # issue #32: every value a true-or-false field can take
+        return [True, False, None]
     points = sorted({float(value) for value in thresholds})
     gaps = [b - a for a, b in zip(points, points[1:])]
     scale = max([1.0] + [abs(point) for point in points])

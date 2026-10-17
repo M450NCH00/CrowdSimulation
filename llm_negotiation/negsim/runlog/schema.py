@@ -32,6 +32,14 @@ what decided it, and ``pair_exposed`` beside the per-agent ``exposed``; in ``out
 the tier counts and the total pair exposure; and the two new metric thresholds. A
 negotiation run is as in version 3. Folders written under version 3 are checked against
 version 3.
+
+Version 5 (issue #32) adds backing up: the directive field ``back_up`` in
+``interactions.jsonl``; a ``back_up`` column in ``trajectory.csv`` (the phase of the agent's
+back-up manoeuvre); a ``back_up`` event; in ``outcome.json`` a ``back_up`` block (every
+manoeuvre, and its times and distances per agent) and, among the artefacts, how far each agent
+walked backwards on steps that count toward the artefact; three summary columns. Perception
+records are version 3 (the passage fields and the group). A negotiation run is as in version 4.
+Folders written under version 4 are checked against version 4.
 """
 
 from __future__ import annotations
@@ -40,8 +48,8 @@ import csv
 import json
 from pathlib import Path
 
-LOG_SCHEMA_VERSION = 4
-SUPPORTED_LOG_SCHEMA_VERSIONS = (1, 2, 3, 4)
+LOG_SCHEMA_VERSION = 5
+SUPPORTED_LOG_SCHEMA_VERSIONS = (1, 2, 3, 4, 5)
 
 RUN_KIND_NEGOTIATION = "negotiation"
 RUN_KIND_AVOIDANCE = "avoidance"
@@ -311,7 +319,10 @@ AVOIDANCE_TRAJECTORY_COLUMNS = (
     "exposed",
     "fallback",
     "interactions",
+    "back_up",
 )
+#: As versions 2 to 4 wrote it, without the back-up phase (issue #32).
+AVOIDANCE_TRAJECTORY_COLUMNS_V4 = AVOIDANCE_TRAJECTORY_COLUMNS[:-1]
 
 INTERACTION_KEYS = (
     "interaction_id",
@@ -416,8 +427,12 @@ EVENT_TYPES = (
     "wall_collision",
     "ambiguous_match",
     "cross_pair_conflict",
+    "back_up",
 )
+EVENT_TYPES_V4 = EVENT_TYPES[:8]
 EVENT_TYPES_V2 = EVENT_TYPES[:6]
+#: The phases a ``back_up`` event reports (issue #32).
+BACK_UP_EVENT_PHASES = ("started", "out", "ended")
 EVENT_KEYS = ("event_index", "type", "time_s")
 
 AVOIDANCE_OUTCOME_KEYS = (
@@ -443,11 +458,26 @@ AVOIDANCE_OUTCOME_KEYS = (
     "rules",
     "baseline",
     "artefacts",
+    "back_up",
 )
-AVOIDANCE_OUTCOME_KEYS_V2 = AVOIDANCE_OUTCOME_KEYS[:-4]
+AVOIDANCE_OUTCOME_KEYS_V4 = AVOIDANCE_OUTCOME_KEYS[:-1]
+AVOIDANCE_OUTCOME_KEYS_V2 = AVOIDANCE_OUTCOME_KEYS[:-5]
 ARTEFACT_KEYS = ("thresholds", "agents", "totals")
-ARTEFACT_AGENT_KEYS = ("backward_episodes", "backward_time_s", "hurried_episodes", "hurried_time_s")
+ARTEFACT_AGENT_KEYS_V4 = ("backward_episodes", "backward_time_s", "hurried_episodes", "hurried_time_s")
+ARTEFACT_AGENT_KEYS = ARTEFACT_AGENT_KEYS_V4 + ("backward_distance_m",)
+ARTEFACT_TOTAL_KEYS_V4 = ARTEFACT_AGENT_KEYS_V4 + ("agents_backward", "agents_hurried")
 ARTEFACT_TOTAL_KEYS = ARTEFACT_AGENT_KEYS + ("agents_backward", "agents_hurried")
+#: The ``back_up`` block of an outcome (version 5, issue #32).
+BACK_UP_KEYS = ("manoeuvres", "agents", "totals")
+BACK_UP_MANOEUVRE_KEYS = (
+    "backer", "other", "pair_id", "segment", "travelled_m", "speed_mps", "runout_m", "target_m",
+    "start_step", "start_time_s", "out_step", "out_time_s", "end_step", "end_time_s", "end_reason",
+    "backing_time_s", "waiting_time_s", "backing_distance_m",
+)
+BACK_UP_AGENT_KEYS = ("manoeuvres", "backing_time_s", "waiting_time_s", "backing_distance_m")
+BACK_UP_END_REASONS = ("other_cleared", "other_arrived", "pair_ended", "run_ended")
+#: An entry of an outcome's ``single_file`` (version 5 adds when each agent came out at the far end).
+SINGLE_FILE_KEYS = ("segment", "entry_time_s", "first_through", "exit_time_s", "first_out")
 INTERACTION_OUTCOME_KEYS = ("pairs", "avoided", "resolved", "failed", "pairs_with", "tiers")
 INTERACTION_OUTCOME_KEYS_V3 = INTERACTION_OUTCOME_KEYS[:-1]
 RULE_SUMMARY_KEYS = (
@@ -543,6 +573,10 @@ AVOIDANCE_SUMMARY_COLUMNS = (
     "pairs_t2",
     "pairs_t3",
     "pairs_t4",
+    "back_up_manoeuvres",
+    "backing_distance_m",
+    "backward_distance_m",
+    "first_out",
     "git_commit",
 )
 
@@ -630,13 +664,13 @@ def _read_jsonl(path: Path) -> list[dict]:
 
 def _validate_avoidance(run_dir: Path, config: dict) -> list[str]:
     # Imported here: the schema of a negotiation run does not depend on the avoidance layer.
-    from ..avoidance.directives import DIRECTIVE_FIELDS
+    from ..avoidance.directives import DIRECTIVE_FIELDS, DIRECTIVE_FIELDS_V4
     from ..avoidance.perception import FIELDS_BY_VERSION, NEVER_OBSERVABLE, PERCEPTION_SCHEMA_VERSION
 
     # A folder is checked against the log schema and the perception record its own config
     # declares, so that one written before either last changed still checks out.
     version = config.get("log_schema_version", LOG_SCHEMA_VERSION)
-    v3 = version >= 3
+    v3, v5 = version >= 3, version >= 5
     files = AVOIDANCE_RUN_FILES if v3 else AVOIDANCE_RUN_FILES_V2
     problems = [f"missing file {name}" for name in files if not (run_dir / name).is_file()]
     if problems:
@@ -654,7 +688,7 @@ def _validate_avoidance(run_dir: Path, config: dict) -> list[str]:
     with (run_dir / TRAJECTORY_FILE).open("r", encoding="utf-8", newline="") as handle:
         reader = csv.reader(handle)
         header = next(reader, None)
-        if header is None or tuple(header) != AVOIDANCE_TRAJECTORY_COLUMNS:
+        if header is None or tuple(header) != (AVOIDANCE_TRAJECTORY_COLUMNS if v5 else AVOIDANCE_TRAJECTORY_COLUMNS_V4):
             problems.append(f"{TRAJECTORY_FILE}: header does not match the schema")
         elif next(reader, None) is None:
             problems.append(f"{TRAJECTORY_FILE}: no rows")
@@ -671,7 +705,7 @@ def _validate_avoidance(run_dir: Path, config: dict) -> list[str]:
         )
         if record_fields["pair"]:
             problems += _missing(perception.get("pair") or {}, record_fields["pair"], f"{where} perception.pair")
-        problems += _missing(interaction.get("directive", {}), DIRECTIVE_FIELDS, f"{where} directive")
+        problems += _missing(interaction.get("directive", {}), DIRECTIVE_FIELDS if v5 else DIRECTIVE_FIELDS_V4, f"{where} directive")
         if interaction.get("end_reason") not in INTERACTION_END_REASONS:
             problems.append(f"{where}: unknown end_reason {interaction.get('end_reason')!r}")
         for block in ("neighbour_attributes",), ("observer", "attributes"):
@@ -685,7 +719,7 @@ def _validate_avoidance(run_dir: Path, config: dict) -> list[str]:
         problems.append(f"{INTERACTIONS_FILE}: interaction_id is not 0, 1, 2, ...")
 
     events = _read_jsonl(run_dir / EVENTS_FILE)
-    event_types = EVENT_TYPES if v3 else EVENT_TYPES_V2
+    event_types = EVENT_TYPES if v5 else EVENT_TYPES_V4 if v3 else EVENT_TYPES_V2
     for number, event in enumerate(events):
         where = f"{EVENTS_FILE} line {number + 1}"
         problems += _missing(event, EVENT_KEYS, where)
@@ -695,7 +729,7 @@ def _validate_avoidance(run_dir: Path, config: dict) -> list[str]:
         problems.append(f"{EVENTS_FILE}: event_index is not 0, 1, 2, ...")
 
     outcome = json.loads((run_dir / OUTCOME_FILE).read_text(encoding="utf-8"))
-    problems += _missing(outcome, AVOIDANCE_OUTCOME_KEYS if v3 else AVOIDANCE_OUTCOME_KEYS_V2, OUTCOME_FILE)
+    problems += _missing(outcome, AVOIDANCE_OUTCOME_KEYS if v5 else AVOIDANCE_OUTCOME_KEYS_V4 if v3 else AVOIDANCE_OUTCOME_KEYS_V2, OUTCOME_FILE)
     if outcome.get("status") not in AVOIDANCE_STATUSES:
         problems.append(f"{OUTCOME_FILE}: unknown status {outcome.get('status')!r}")
     agents = outcome.get("agents", {})
@@ -719,6 +753,31 @@ def _validate_avoidance(run_dir: Path, config: dict) -> list[str]:
             problems.append(f"{OUTCOME_FILE}: totals.interactions does not match {INTERACTIONS_FILE}")
     if v3:
         problems += _validate_pairs(run_dir, config, outcome)
+    if v5:
+        problems += _validate_back_up(outcome, count("back_up"))
+    return problems
+
+
+def _validate_back_up(outcome: dict, events: int) -> list[str]:
+    """The additions of version 5 (issue #32): the back-up manoeuvres and their counts, and when
+    each agent came out of each single-file segment."""
+    problems: list[str] = []
+    for number, entry in enumerate(outcome.get("single_file") or []):
+        problems += _missing(entry, SINGLE_FILE_KEYS, f"{OUTCOME_FILE}.single_file[{number}]")
+    block = outcome.get("back_up") or {}
+    problems += _missing(block, BACK_UP_KEYS, f"{OUTCOME_FILE}.back_up")
+    manoeuvres = block.get("manoeuvres") or []
+    for number, entry in enumerate(manoeuvres):
+        where = f"{OUTCOME_FILE}.back_up.manoeuvres[{number}]"
+        problems += _missing(entry, BACK_UP_MANOEUVRE_KEYS, where)
+        if entry.get("end_reason") not in BACK_UP_END_REASONS:
+            problems.append(f"{where}: unknown end_reason {entry.get('end_reason')!r}")
+    for agent_id, entry in (block.get("agents") or {}).items():
+        problems += _missing(entry, BACK_UP_AGENT_KEYS, f"{OUTCOME_FILE}.back_up.agents.{agent_id}")
+    problems += _missing(block.get("totals") or {}, BACK_UP_AGENT_KEYS, f"{OUTCOME_FILE}.back_up.totals")
+    expected = sum(1 + (entry.get("out_step") is not None) + (entry.get("end_step") is not None) for entry in manoeuvres)
+    if events != expected:
+        problems.append(f"{OUTCOME_FILE}: back_up.manoeuvres does not match the back_up events of {EVENTS_FILE}")
     return problems
 
 
@@ -780,9 +839,10 @@ def _validate_pairs(run_dir: Path, config: dict, outcome: dict) -> list[str]:
                     problems.append(f"{OUTCOME_FILE}: interaction_outcomes.tiers.{tier} does not match {PAIR_INTERACTIONS_FILE}")
     if outcome.get("rules") is not None:
         problems += _missing(outcome["rules"], RULE_SUMMARY_KEYS, f"{OUTCOME_FILE}.rules")
+    v5 = config.get("log_schema_version", LOG_SCHEMA_VERSION) >= 5
     artefacts = outcome.get("artefacts") or {}
     problems += _missing(artefacts, ARTEFACT_KEYS, f"{OUTCOME_FILE}.artefacts")
     for agent_id, entry in (artefacts.get("agents") or {}).items():
-        problems += _missing(entry, ARTEFACT_AGENT_KEYS, f"{OUTCOME_FILE}.artefacts.agents.{agent_id}")
-    problems += _missing(artefacts.get("totals") or {}, ARTEFACT_TOTAL_KEYS, f"{OUTCOME_FILE}.artefacts.totals")
+        problems += _missing(entry, ARTEFACT_AGENT_KEYS if v5 else ARTEFACT_AGENT_KEYS_V4, f"{OUTCOME_FILE}.artefacts.agents.{agent_id}")
+    problems += _missing(artefacts.get("totals") or {}, ARTEFACT_TOTAL_KEYS if v5 else ARTEFACT_TOTAL_KEYS_V4, f"{OUTCOME_FILE}.artefacts.totals")
     return problems

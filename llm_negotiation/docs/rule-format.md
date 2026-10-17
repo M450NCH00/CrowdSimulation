@@ -1,4 +1,4 @@
-# The rule format, schema versions 1 and 2
+# The rule format, schema versions 1 to 3
 
 A rule says: **when** two agents meet in a certain way, **give them roles**, and **tell each
 role what to do**. Rules are stored in the rule database (`rule_db/`), one file per version
@@ -17,6 +17,10 @@ the checks of section 9 say the rest. Sections 1 to 11 describe version 1. **Ver
 (issue #30, section 12) adds what generated rules need: the source type `stated`, an
 `intent`, and the results of `screening` them; a version 1 file loads exactly as before.
 Section 13 defines the **canonical form** of a rule, by which two rules are the same.
+**Version 3** (issue #32, section 14) adds what a meeting inside a single-file passage needs:
+the directive field `back_up`, `true` or `false` as the value of a comparison, and four
+passage fields; versions 1 and 2 load exactly as before. In every version, a rule that reads
+a person's group is refused (`protected_attribute`, section 14).
 
 ## 1. An example
 
@@ -163,6 +167,18 @@ Agent-level fields (`either.`, `both.`, `agent.`):
 | `speed_mps` | m/s | Present speed | `speed` |
 | `radius_m` | m | Body radius | `size` |
 | `time_to_segment_s` | s | Distance to the single-file segment over present speed; 0 inside; missing standing still or outside that class | `speed`, `size` |
+| `in_segment` | true/false | **Version 3.** Whether this person is inside the single-file segment; missing outside that class | `speed`, `size` |
+| `segment_distance_travelled` | m | **Version 3.** How far this person has walked into the segment; missing unless inside it | `speed`, `size` |
+| `segment_distance_ahead` | m | **Version 3.** Distance to the segment's end in front of this person; missing unless inside it | `speed`, `size` |
+| `segment_distance_behind` | m | **Version 3.** Distance to the segment's end behind this person; missing unless inside it | `speed`, `size` |
+
+The four version 3 fields (issue #32, `perception.md`, "Passage fields") are computed once per
+pair from the two positions and the passage: "ahead" is the end on the other person's side,
+"behind" the other end, and in a meeting `segment_distance_travelled` equals
+`segment_distance_behind`. **A rule may read a field only if its `schema_version` has it**: to a
+rule of version 1 or 2 the four are `unknown_field`, so such a rule reads what it always could.
+`in_segment` is true or false: it is compared with `==`, `!=` or `in`, with `true` or `false` and
+no unit, and cannot order two agents.
 
 Every rule also reads the encounter class, so every rule needs `speed` and `size` visible.
 A run whose visibility settings hide something one of its rules reads is refused before it
@@ -183,6 +199,13 @@ starts (`visibility`), naming the rule.
 needs such a field could only be followed if the two agents told each other something first.
 It is not executed in SI-2; it is reported with the reason, and SI-3 can take it up.
 Anything not in these tables is `unknown_field`.
+
+**What a rule may never read: a person's group** (`protected_attribute`, issue #32). An agent may
+see another's fictional group (`perception.md`, "The group"), but no rule may condition on it.
+A rule whose condition or role assignment, its tie policy and role names included, names it, or
+anything derived from it (any name containing `ethnic`, such as `pair.same_ethnic_group`), or a
+group label, is refused as `protected_attribute`, **before every other check**: whatever else is
+wrong with such a rule, that is what it is counted as. Section 14 has the details.
 
 ## 6. Roles
 
@@ -209,8 +232,8 @@ A missing value cannot be ordered: the rule does not apply either.
 ## 7. Directives
 
 `directive` has one entry per role, named as the roles are (`both` for a symmetric rule).
-Each entry may set any of the five fields of `AvoidanceDirective` (`architecture.md`, DD28),
-with exactly these names:
+Each entry may set any of the fields of `AvoidanceDirective` (`architecture.md`, DD28), with
+exactly these names: the first five in every version, `back_up` from version 3:
 
 | Field | Values | What it does |
 |---|---|---|
@@ -219,9 +242,10 @@ with exactly these names:
 | `speed_scale` | 0 or more | Multiplies the agent's preferred speed |
 | `clearance_margin` | metres, 0 or more | Extra space kept between the two bodies |
 | `passage_order` | `leader`, `follower`, `none` | Who goes first through a single-file segment, handed to the arbiter |
+| `back_up` | `true`, `false` | Version 3. Inside a single-file segment the two meet in, back out of it at one's own backing speed, wait for the other to come through, and go on (`derivations.md`, section 17). The other goes first. A rule that sets it makes exactly one of two roles back up (section 14) |
 
 **A field the rule does not set takes its baseline value** (plain ORCA: no side, 0.5, 1, 0,
-none). A pair follows one rule at a time; fields are never merged across rules
+none, false). A pair follows one rule at a time; fields are never merged across rules
 (`rule-matching.md`).
 
 **Expiry.** By default everything a rule tells a pair stops applying when the encounter has
@@ -255,6 +279,7 @@ what and where. `python ruledb.py validate --file <path>` checks any rule file t
 | Category | Refused when |
 |---|---|
 | `file` | The file cannot be read, or is not named `<rule_id>.v<version>.yaml` after what it holds |
+| `protected_attribute` | The condition or the role assignment (its tie policy and role names included) names a person's group, anything derived from it, or a group label (issue #32; checked before everything else, section 14) |
 | `no_tie_policy` | A role assignment does not state `tie` (checked first, so that the reason is plain) |
 | `schema` | The structure does not fit the JSON Schema of the version the rule names: a missing or unknown key, a wrong type, a value outside its list, a version that does not exist |
 | `unknown_field` | A field not in section 5, or a prefix where it does not belong |
@@ -265,6 +290,7 @@ what and where. `python ruledb.py validate --file <path>` checks any rule file t
 | `roles` | The directive's entries do not match the role names |
 | `reciprocity` | The two roles' responsibility shares sum to less than 1 (a symmetric rule: its share is below 0.5). ORCA keeps a pair free of collisions only if they sum to at least 1 (`derivations.md`, section 9) |
 | `passage_order` | Passage orders that are not one `leader` and one `follower` (or neither set) |
+| `back_up` | Version 3. A rule that sets `back_up` for any role does not make exactly one of two roles back up, or makes the role that backs up go first (section 14) |
 | `side` | Two roles told to pass on opposite sides: both would step the same way (`derivations.md`, section 10) |
 
 In the database, also: `manifest` and `history` (section 8). When an experiment switches
@@ -409,3 +435,97 @@ The canonical form can be computed for anything shaped like a rule, valid or not
 proposal that the loader would refuse still has a hash, so that it can be accepted, counted
 and compared like any other (`rule-generation.md`, section 6).
 *Tested:* `tests/test_rulegen_canonical.py`.
+
+## 14. Schema version 3 (issue #32), and what no rule may read
+
+Version 3 is for two people who meet **inside** a single-file passage, where neither can pass
+and one has to back out (`derivations.md`, sections 17 and 18). Before it, the format could
+not say "the one who has walked less far in backs out": it had no field for how far each had
+walked in, and no directive for backing out. Everything of version 2 is in version 3 and means
+the same; version 3 adds three things, and the schema is `rule_db/schema/rule.v3.schema.json`.
+
+| What | Where | Value |
+|---|---|---|
+| `schema_version` | top | `3` |
+| `back_up` | a directive field | `true` or `false` (section 7) |
+| `true`, `false` | the value of a comparison | For a field that is true or false, so far only `in_segment`: compared with `==`, `!=` or `in`, with no unit; it cannot order two agents |
+| `in_segment`, `segment_distance_travelled`, `segment_distance_ahead`, `segment_distance_behind` | agent-level fields (`either.`, `both.`, `agent.`) | Section 5 and `perception.md`, "Passage fields": whether each is inside the single-file segment the two meet in, and how far it has walked in and is from each end. Missing (null) outside the passage, and a comparison of a missing value is false |
+
+The seed rule `passage_shorter_backs_out` (`status: test_seed`, not in the `default` rule set)
+is version 3, shortened:
+
+```yaml
+schema_version: 3
+rule_id: passage_shorter_backs_out
+version: 1
+status: test_seed
+encounter: single_file_segment
+when:
+  all:
+    - {field: both.in_segment, op: "==", value: true}
+roles:
+  by: {field: agent.segment_distance_travelled, order: ascending, assign: [backs_out, goes_on], tie: no_match, tie_within: 0.1, unit: m}
+directive:
+  backs_out: {back_up: true}
+  goes_on: {}
+priority: 30
+expiry: out_of_range
+```
+
+It applies the distance criterion of `derivations.md`, section 18; distances walked in within
+0.1 m of each other are a tie, and then the rule does not apply and the arbiter's own rule
+decides. **It is a test fixture, not a claim about how people behave.** `expiry: out_of_range`
+because `passed` is measured between the two bodies, which separate while one backs out; the
+manoeuvre, once begun, runs to its end whatever the directive does.
+
+**Reading three versions.** As in section 12: the loader checks a rule against the schema of
+the version it names. A version 1 or 2 rule is read exactly as before, and can use none of
+what version 3 added: `back_up` in its directive and `true` or `false` as a value are `schema`
+errors, and a passage field is `unknown_field` ("added in version 3"). Every field records the
+version that added it (`fields.py`, `since`), and a rule reads only those of its own version.
+
+**Who backs up: the consistency check** (DD97). A rule that sets `back_up` for any of its
+roles must make **exactly one of two roles** back up, and the one that backs up may not also
+be told to go first:
+
+| The rule says | Result |
+|---|---|
+| `back_up: true` for one role, nothing or `false` for the other | loads |
+| `back_up: true` for both roles | refused, `back_up`: neither would get through |
+| `back_up: false` for one or both roles, `true` for neither | refused, `back_up`: both would go on |
+| `back_up` (true or false) in a symmetric rule | refused, `back_up`: both would back up, or neither would |
+| `back_up: true` and `passage_order: leader` in one role | refused, `back_up`: the one that backs out lets the other go first |
+| nothing about `back_up` | not checked for it: a meeting inside a passage is then left to the arbiter (`derivations.md`, section 17.1) |
+
+So "both back up, or both proceed, is inconsistent" (the issue's words) is read as being about
+a rule that says who backs up; a rule that says nothing of it is not made to. Rule generation
+counts the category `back_up` as `inconsistent` (`rule-generation.md`, section 6). When two
+agents' directives disagree at run time instead (two that back up, from two providers or two
+rules), the pair's combination repairs it as for the other fields (`architecture.md`, DD96):
+neither backs up.
+
+**What no rule may read: a person's group** (`protected_attribute`, DD88). An agent may see
+another's fictional group when a run shows it (`perception.md`, "The group";
+`fictional-groups.md`), but no rule may condition on it. A rule is refused as
+`protected_attribute`, **before every other check**, if its condition or its role assignment
+(the field, the role names and the tie policy included) names:
+
+- anything containing `ethnic` (`either.ethnic_group`, `pair.same_ethnic_group`,
+  `agent.ethnicity`, a role named `ethnic_insider`);
+- the attribute itself, or one of the default group labels, as a word (`value: Dremmik`, a role
+  named `kestrop`);
+- in rule generation, a word the session introduced groups with, or one of its labels
+  (`negsim.rulegen.validate`).
+
+Whatever else is wrong with such a rule, that is what it is counted as: a model trying to
+condition a rule on ethnicity is a finding, and the attempt is kept as data, in a category of
+its own (`rule-generation.md`, section 6). Independently of the loader, **no field a rule can
+read is the group or derived from it, and no snapshot holds it** (`snapshot.py`); tests check
+both, and that whether a rule matches never changes with whether the group is seen
+(`tests/test_protected_attribute.py`).
+
+**Migration notes.** As for version 2, nothing is rewritten. A rule that is to back one up, or
+to read a passage field, is written as its next version with `schema_version: 3`. Rules the
+writer generates from sessions of the second prompt version (issue #32) are version 3
+(`rule-generation.md`, section 3); those of the first stay version 2.
+*Tested:* `tests/test_rules_schema_v3.py`, `tests/test_protected_attribute.py`.

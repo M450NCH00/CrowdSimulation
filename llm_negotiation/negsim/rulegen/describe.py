@@ -19,8 +19,11 @@ speeds to 0.01 m/s; angles to the whole degree; ages in whole years.
 
 **The glossary** is generated from the rule format's field catalogue (``negsim.rules.fields``,
 documented in ``docs/rule-format.md`` section 5 and ``docs/perception.md``) and the rule
-schema (``rule_db/schema/rule.v2.schema.json``), in a fixed order. Its SHA-256 is pinned in
-the common template, so a change to either is refused until a new template version is frozen.
+schema, in a fixed order. Its SHA-256 is pinned in the common template, so a change to either
+is refused until a new template version is frozen. **A common template describes one version
+of the rule format** (issue #32): its ``rule_schema_version`` (2 for ``rulegen_common_v1``,
+which predates the key), whose schema file and whose fields (``fields_of``) the glossary is made
+from, so that adding fields to a later version leaves an earlier template's glossary as it was.
 """
 
 from __future__ import annotations
@@ -33,8 +36,7 @@ from typing import Any, Mapping, Optional
 
 from ..negotiation.prompts import TemplateIntegrityError, load_template_data
 from ..rules.database import RULE_DB_ROOT, schema_path
-from ..rules.fields import AGENT_FIELDS, CATEGORY, PAIR_FIELDS, FieldSpec
-from ..rules.model import LATEST_SCHEMA_VERSION
+from ..rules.fields import BOOLEAN, CATEGORY, FieldSpec, fields_of
 from .design import Session
 
 KIND_COMMON = "rule_generation_common"
@@ -100,8 +102,18 @@ def listing(values: Any, quote: bool = True) -> str:
     return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " or " + items[-1]
 
 
-def rule_schema() -> dict[str, Any]:
-    return json.loads((RULE_DB_ROOT / schema_path(LATEST_SCHEMA_VERSION)).read_text(encoding="utf-8"))
+#: The version of the rule format ``rulegen_common_v1`` describes; it was frozen before common
+#: templates said so themselves (issue #32).
+DEFAULT_RULE_SCHEMA_VERSION = 2
+
+
+def rule_schema_version_of(common: Mapping[str, Any]) -> int:
+    """The version of the rule format a common template describes."""
+    return int(common.get("rule_schema_version", DEFAULT_RULE_SCHEMA_VERSION))
+
+
+def rule_schema(version: int = DEFAULT_RULE_SCHEMA_VERSION) -> dict[str, Any]:
+    return json.loads((RULE_DB_ROOT / schema_path(version)).read_text(encoding="utf-8"))
 
 
 def meaning_of(spec: FieldSpec) -> Optional[str]:
@@ -126,7 +138,9 @@ def shown_fields(table: Mapping[str, FieldSpec], demographics_visible: bool) -> 
 def glossary_text(common: Mapping[str, Any], demographics_visible: bool) -> str:
     """The description of the rule format and of every field a rule may read."""
     g = common["glossary"]
-    schema = rule_schema()
+    version = rule_schema_version_of(common)
+    schema = rule_schema(version)
+    pair_fields, agent_fields = fields_of(version)
     defs, properties = schema["$defs"], schema["properties"]
     directive = defs["directive"]["properties"]
     units = [unit for unit in defs["unit"]["enum"] if unit != "deg"]
@@ -142,11 +156,13 @@ def glossary_text(common: Mapping[str, Any], demographics_visible: bool) -> str:
     lines += [f"- {g['encounters'][name]}" for name in properties["encounter"]["enum"]]
     lines += ["", fill(" ".join(g["comparison"].split()), operators=listing(defs["comparison"]["properties"]["op"]["enum"], quote=True), units=listing(units, quote=False))]
     lines += ["", " ".join(g["prefixes"].split())]
-    for header, table, prefix in ((g["pair_fields_header"], PAIR_FIELDS, "pair."), (g["agent_fields_header"], AGENT_FIELDS, "")):
+    for header, table, prefix in ((g["pair_fields_header"], pair_fields, "pair."), (g["agent_fields_header"], agent_fields, "")):
         lines += ["", header]
         for spec in shown_fields(table, demographics_visible):
             meaning = meaning_of(spec)
-            if spec.kind == CATEGORY:
+            if spec.kind == BOOLEAN:
+                line = fill(g["boolean_line"], name=prefix + spec.name)
+            elif spec.kind == CATEGORY:
                 line = fill(g["category_line"], name=prefix + spec.name, values=listing(spec.categories))
             else:
                 line = fill(g["field_line"], name=prefix + spec.name, unit=spec.unit)
@@ -223,6 +239,15 @@ def _segment(case: Mapping[str, Any]) -> Optional[Mapping[str, Any]]:
     return segments[0] if len(segments) == 1 else None
 
 
+#: The lines about a person's surroundings; the last is version 2's (issue #32) and is used only
+#: by a template that has it.
+PLACE_LINES = ("passage", "wall", "open", "narrowing", "inside_narrowing", "inside_passage")
+
+
+def _lines(situation: Mapping[str, str], prefix: str) -> dict[str, str]:
+    return {name: situation[f"{prefix}_{name}"] for name in PLACE_LINES if f"{prefix}_{name}" in situation}
+
+
 def _place(case: Mapping[str, Any], record: Mapping[str, Any], lines: Mapping[str, str], **who: Any) -> list[str]:
     """The observer's surroundings, from its own record."""
     environment = record["environment"]
@@ -239,11 +264,36 @@ def _place(case: Mapping[str, Any], record: Mapping[str, Any], lines: Mapping[st
             out.append(fill(lines["narrowing"], distance=along(ahead), width=across(segment["width_m"]), length=along(segment["length_m"]), **who))
         else:
             out.append(fill(lines["inside_narrowing"], width=across(segment["width_m"]), length=along(segment["length_m"]), **who))
+    observer = record["observer"]
+    if "inside_passage" in lines and _inside(observer.get("in_segment"), observer.get("segment_distance_travelled")):
+        out.append(
+            fill(
+                lines["inside_passage"], travelled=along(observer["segment_distance_travelled"]),
+                ahead=along(observer["segment_distance_ahead"]), behind=along(observer["segment_distance_behind"]), **who,
+            )
+        )
     return out
+
+
+def _inside(in_segment: Any, travelled: Any) -> bool:
+    """Inside the single-file stretch the two meet in, with the distances known (perception
+    record version 3; a version 2 record has neither, and nothing is said)."""
+    return in_segment is True and travelled is not None
+
+
+def _still(mps: Optional[float]) -> bool:
+    """A speed that reads 0.00 m/s: the person is standing still."""
+    return mps is not None and round(mps, 2) == 0.0
 
 
 def _demographics_visible(session: Session) -> bool:
     return all(session.visibility.get(name, False) for name in DEMOGRAPHIC_SWITCHES)
+
+
+def _groups_shown(session: Session) -> bool:
+    """Whether the session shows the two people's fictional groups (issue #32). When it does
+    not, they appear nowhere in what a model is shown, a person's own included."""
+    return bool(session.visibility.get("ethnic_group", False)) and session.framing is not None
 
 
 def first_person(case: Mapping[str, Any], session: Session, agent: int, templates: Templates) -> str:
@@ -255,32 +305,45 @@ def first_person(case: Mapping[str, Any], session: Session, agent: int, template
     visible = _demographics_visible(session)
     observer = record["observer"]
 
+    groups = _groups_shown(session) and "self_group" in s
     lines = [s["self_header"]]
     if visible:
         lines += [fill(s["self_age"], age=me["age"]), fill(s["self_gender"], gender=s["genders"][me["gender"]])]
+    if groups and me.get("ethnic_group"):
+        lines.append(fill(s["self_group"], label=me["ethnic_group"], framing=session.framing))
     if me.get("task"):
         lines.append(fill(s["self_task"], task=me["task"]))
-    lines.append(fill(s["self_motion"], speed=speed(observer["speed_mps"]), preferred=speed(observer["preferred_speed_mps"])))
+    if "self_still" in s and _still(observer["speed_mps"]):
+        lines.append(fill(s["self_still"], preferred=speed(observer["preferred_speed_mps"])))
+    else:
+        lines.append(fill(s["self_motion"], speed=speed(observer["speed_mps"]), preferred=speed(observer["preferred_speed_mps"])))
     lines.append(fill(s["self_body"], width=across(2.0 * observer["radius_m"])))
 
     lines += ["", s["place_header"]]
-    lines += _place(case, record, {name: s[f"place_{name}"] for name in ("passage", "wall", "open", "narrowing", "inside_narrowing")})
+    lines += _place(case, record, _lines(s, "place"))
     if case["scenario"]["n_agents"] > 2:
         lines.append(s["place_others"])
 
     lines += ["", s["other_header"]]
     lines.append(fill(s["other_where"], distance=along(record["distance_m"]), direction=_direction(record["bearing_rad"], s["directions"])))
-    lines.append(
-        fill(
-            s["other_motion"],
-            speed=speed(record["neighbour_speed_mps"]),
-            heading=_heading(record["neighbour_heading_relative_rad"], s["headings"]),
-            change=_change(record["closing_speed_mps"], s["changes"]),
+    heading = _heading(record["neighbour_heading_relative_rad"], s["headings"])
+    if "other_still" in s and _still(record["neighbour_speed_mps"]):
+        lines.append(fill(s["other_still"], heading=heading))
+    else:
+        lines.append(
+            fill(s["other_motion"], speed=speed(record["neighbour_speed_mps"]), heading=heading, change=_change(record["closing_speed_mps"], s["changes"]))
         )
-    )
+    if (
+        "other_inside" in s
+        and _inside(observer.get("in_segment"), observer.get("segment_distance_travelled"))
+        and _inside(record.get("neighbour_in_segment"), record.get("neighbour_segment_distance_travelled"))
+    ):
+        lines.append(fill(s["other_inside"], travelled=along(record["neighbour_segment_distance_travelled"])))
     lines.append(fill(s["other_body"], width=across(2.0 * record["neighbour_radius_m"])))
     if visible:
         lines += [fill(s["other_age"], age=them["age"]), fill(s["other_gender"], gender=s["genders"][them["gender"]])]
+    if groups and them.get("ethnic_group"):
+        lines.append(fill(s["other_group"], label=them["ethnic_group"], framing=session.framing))
     if any(person.get("task") for person in session.personas.values()):
         lines.append(s["other_task"])
     return "\n".join(lines)
@@ -290,6 +353,7 @@ def third_person(case: Mapping[str, Any], session: Session, templates: Templates
     """The situation as condition B is told it: Person 1 is ``session.first``."""
     s = templates.data["situation"]
     visible = _demographics_visible(session)
+    groups = _groups_shown(session) and "person_group" in s
     people = (session.first, session.second)
     lines: list[str] = []
     for n, agent in enumerate(people, start=1):
@@ -300,15 +364,24 @@ def third_person(case: Mapping[str, Any], session: Session, templates: Templates
         lines.append(fill(s["person_header"], n=n))
         if visible:
             lines += [fill(s["person_age"], n=n, age=person["age"]), fill(s["person_gender"], n=n, gender=s["genders"][person["gender"]])]
+        if groups and person.get("ethnic_group"):
+            lines.append(fill(s["person_group"], n=n, label=person["ethnic_group"], framing=session.framing))
         if person.get("task"):
             lines.append(fill(s["person_task"], n=n, task=person["task"]))
-        lines.append(fill(s["person_motion"], n=n, speed=speed(observer["speed_mps"]), preferred=speed(observer["preferred_speed_mps"])))
+        if "person_still" in s and _still(observer["speed_mps"]):
+            lines.append(fill(s["person_still"], n=n, preferred=speed(observer["preferred_speed_mps"])))
+        else:
+            lines.append(fill(s["person_motion"], n=n, speed=speed(observer["speed_mps"]), preferred=speed(observer["preferred_speed_mps"])))
         lines.append(fill(s["person_body"], n=n, width=across(2.0 * observer["radius_m"])))
-        lines += _place(case, record, {name: s[f"person_{name}"] for name in ("passage", "wall", "open", "narrowing", "inside_narrowing")}, n=n)
+        lines += _place(case, record, _lines(s, "person"), n=n)
     record = case["observations"][str(people[0])]
     lines += ["", s["pair_header"]]
     lines.append(fill(s["pair_where"], distance=along(record["distance_m"]), direction=_direction(record["bearing_rad"], s["directions"])))
-    lines.append(fill(s["pair_motion"], heading=_heading(record["neighbour_heading_relative_rad"], s["headings"]), change=_change(record["closing_speed_mps"], s["changes"])))
+    heading = _heading(record["neighbour_heading_relative_rad"], s["headings"])
+    if "pair_still" in s and _still(record["neighbour_speed_mps"]):
+        lines.append(fill(s["pair_still"], heading=heading))
+    else:
+        lines.append(fill(s["pair_motion"], heading=heading, change=_change(record["closing_speed_mps"], s["changes"])))
     if case["scenario"]["n_agents"] > 2:
         lines.append(s["pair_others"])
     return "\n".join(lines)

@@ -1,4 +1,4 @@
-"""Tables of issue #28's behaviour checks, read from the committed run logs.
+"""Tables of the behaviour checks of issues #28 and #32, read from the committed run logs.
 
     python -m negsim.rules.report                              # every experiment of the checks
     python -m negsim.rules.report si2_head_on --out FILE.md
@@ -7,10 +7,13 @@ One section per experiment, one row per condition (a combination of the levels o
 factors), over that condition's seeds. The first table has the outcome of every pair
 interaction, the conflict metrics as mean ± standard deviation [min, max], the counts of
 issue #26's two artefacts, and the rules that fired; the second, what decided the outcomes
-and what the matching policy did. Every number is read from a run's ``config.json``,
-``outcome.json`` and ``trajectory.csv``; nothing is simulated, and the same logs always give
-the same tables. ``docs/behaviour-checks.md`` quotes them, and a test checks that it does so
-exactly.
+and what the matching policy did. Issue #32's experiments, two people who meet inside a
+single-file passage, have tables of their own (:func:`passage_tables`): how each run ended,
+who came out first and who backed out, when the first and the second were out of the
+passage, how far each kind of backing went, and the makespan. Every number is read from a
+run's ``config.json``, ``outcome.json`` and ``trajectory.csv``; nothing is simulated, and the
+same logs always give the same tables. ``docs/behaviour-checks.md`` quotes them, and a test
+checks that it does so exactly.
 """
 
 from __future__ import annotations
@@ -42,6 +45,8 @@ EXPERIMENTS = (
     "si2_overtaking_r5",
     "si2_bidirectional_flow_ablation",
 )
+#: Issue #32's behaviour checks (``configs/rule_following/si32_*``): a meeting inside a passage.
+PASSAGE_EXPERIMENTS = ("si32_passage_meet_middle", "si32_passage_meet_with_speeds")
 
 #: A pass to one side is a lateral excursion of more than this, from where agent 0 started (m).
 SIDE_THRESHOLD_M = 0.05
@@ -171,13 +176,98 @@ def experiment_tables(experiment: str, runs_dir: Path = RUNS_DIR) -> list[str]:
             f"| {mismatches if has_rules else '–'} | {conflicts if has_rules else '–'} |"
         )
 
+    lines += _same_trajectories(groups)
+    lines.append("")
+    return lines
+
+
+def _same_trajectories(groups: dict) -> list[str]:
     same = [
         _label(key)
         for key, runs in groups.items()
         if len(runs) > 1 and len({(run_dir / "trajectory.csv").read_bytes() for run_dir, _, _ in runs}) == 1
     ]
-    if same:
-        lines += ["", f"Conditions whose seeds all gave the same trajectory: {'; '.join(same)}."]
+    return ["", f"Conditions whose seeds all gave the same trajectory: {'; '.join(same)}."] if same else []
+
+
+def _spread_in(values: Iterable[Optional[float]], digits: int, runs: int) -> str:
+    """A spread over the runs that have the value, saying in how many when not all do."""
+    values = list(values)
+    present = sum(1 for value in values if value is not None)
+    text = spread(values, digits)
+    return text if present in (0, runs) else f"{text} (in {present})"
+
+
+def passage_tables(experiment: str, runs_dir: Path = RUNS_DIR) -> list[str]:
+    """The Markdown lines of one section of issue #32's checks: two people inside a passage.
+
+    "First out" and "both out" are when the first, and the second, of the two came out of the
+    passage at its far end (``outcome.json``, ``single_file``, ``exit_time_s``): the meeting is
+    over at the first, the passage is clear of both at the second. Intentional backing is the
+    back-up manoeuvres' (``back_up``), the artefact issue #26's walking backwards
+    (``artefacts``), never the one counted as the other."""
+    groups = load_conditions(runs_dir / experiment)
+    if not groups:
+        return [f"### {experiment}", "", "No runs found.", ""]
+    code = Counter(
+        f"`{config['git']['commit'][:7]}`" + (" with uncommitted changes" if config["git"]["dirty"] else "")
+        for runs in groups.values()
+        for _, config, _ in runs
+    )
+    total = sum(len(runs) for runs in groups.values())
+    lines = [f"### {experiment}", "", f"{total} runs, from {_counted(code)}.", ""]
+    head = (
+        "| Condition | Runs | Ended | Out first | Backed out | First out (s) | Both out (s) "
+        "| Backing, intentional (m) | Backing, artefact (m) | Backing, both (m) | Makespan (s) | Min separation (mm) |"
+    )
+    lines += [head, "|" + "---|" * (head.count("|") - 1)]
+    for key, runs in groups.items():
+        outcomes = [outcome for _, _, outcome in runs]
+        segments = [outcome["single_file"][0] for outcome in outcomes]
+        exits = [segment["exit_time_s"] for segment in segments]
+        intentional = [outcome["back_up"]["totals"]["backing_distance_m"] for outcome in outcomes]
+        artefact = [outcome["artefacts"]["totals"]["backward_distance_m"] for outcome in outcomes]
+        out_first = Counter("neither" if segment["first_out"] is None else f"agent {segment['first_out']}" for segment in segments)
+        backers = Counter(f"agent {manoeuvre['backer']}" for outcome in outcomes for manoeuvre in outcome["back_up"]["manoeuvres"])
+        lines.append(
+            f"| {_label(key)} | {len(runs)} | {_counted(Counter(outcome['status'] for outcome in outcomes))} "
+            f"| {_counted(out_first)} | {_counted(backers)} "
+            f"| {_spread_in((min(times.values()) if times else None for times in exits), 2, len(runs))} "
+            f"| {_spread_in((max(times.values()) if len(times) == 2 else None for times in exits), 2, len(runs))} "
+            f"| {spread(intentional, 2)} | {spread(artefact, 2)} | {spread((a + b for a, b in zip(intentional, artefact)), 2)} "
+            f"| {_spread_in((outcome['makespan_s'] for outcome in outcomes), 2, len(runs))} "
+            f"| {spread((1000.0 * outcome['totals']['min_separation_m'] for outcome in outcomes), 1)} |"
+        )
+
+    lines += [
+        "",
+        "| Condition | Rules fired (matches begun) | Handoffs: to the arbiter / to a manoeuvre / back to ORCA "
+        "| Manoeuvre began (s) | Manoeuvres ended, by reason | Backing / waiting time (s) | Backward / hurried episodes "
+        "| Backward time (s) |",
+        "|---|---|---|---|---|---|---|---|",
+    ]
+    for key, runs in groups.items():
+        outcomes = [outcome for _, _, outcome in runs]
+        fired: Counter = Counter()
+        handoffs: Counter = Counter()
+        ends: Counter = Counter()
+        for outcome in outcomes:
+            fired.update((outcome.get("rules") or {}).get("matches_begun") or {})
+            handoffs.update(handoff["to"] for handoff in outcome["handoffs"])
+            ends.update(manoeuvre["end_reason"] for manoeuvre in outcome["back_up"]["manoeuvres"])
+        totals = [outcome["back_up"]["totals"] for outcome in outcomes]
+        artefacts = [outcome["artefacts"]["totals"] for outcome in outcomes]
+        began = [manoeuvre["start_time_s"] for outcome in outcomes for manoeuvre in outcome["back_up"]["manoeuvres"]]
+        timing = "–"
+        if ends:
+            timing = f"{spread((t['backing_time_s'] for t in totals), 2, ranged=False)} / {spread((t['waiting_time_s'] for t in totals), 2, ranged=False)}"
+        lines.append(
+            f"| {_label(key)} | {', '.join(f'{rule} ×{count}' for rule, count in sorted(fired.items())) or '–'} "
+            f"| {handoffs['arbiter']} / {handoffs['back_up']} / {handoffs['orca']} | {spread(began, 2)} | {_counted(ends)} | {timing} "
+            f"| {sum(a['backward_episodes'] for a in artefacts)} / {sum(a['hurried_episodes'] for a in artefacts)} "
+            f"| {spread((a['backward_time_s'] for a in artefacts), 2)} |"
+        )
+    lines += _same_trajectories(groups)
     lines.append("")
     return lines
 
@@ -185,17 +275,18 @@ def experiment_tables(experiment: str, runs_dir: Path = RUNS_DIR) -> list[str]:
 def report(experiments: Sequence[str] = EXPERIMENTS, runs_dir: Path = RUNS_DIR) -> str:
     lines: list[str] = []
     for experiment in experiments:
-        lines += experiment_tables(experiment, runs_dir)
+        lines += (passage_tables if experiment in PASSAGE_EXPERIMENTS else experiment_tables)(experiment, runs_dir)
     return "\n".join(lines)
 
 
 def main(argv: Optional[list[str]] = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("experiments", nargs="*", help=f"experiment names (default: the {len(EXPERIMENTS)} of the behaviour checks)")
+    every = EXPERIMENTS + PASSAGE_EXPERIMENTS
+    parser.add_argument("experiments", nargs="*", help=f"experiment names (default: the {len(every)} of the behaviour checks)")
     parser.add_argument("--runs", type=Path, default=RUNS_DIR, help="the folder holding the experiments (default: runs/)")
     parser.add_argument("--out", type=Path, help="write the tables to this file instead of printing them")
     args = parser.parse_args(argv)
-    text = report(args.experiments or EXPERIMENTS, args.runs)
+    text = report(args.experiments or every, args.runs)
     if args.out is None:
         if hasattr(sys.stdout, "reconfigure"):
             sys.stdout.reconfigure(encoding="utf-8")  # the tables use ± and ×

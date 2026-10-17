@@ -4,8 +4,9 @@ This guide explains, in plain words, what every part of this repository does and
 parts fit together. It assumes you know a little Python (what a function, a dictionary and
 a file are) and nothing about crowd simulation or language models.
 
-Every example in it was run on 2026-10-16, and the output printed under it is what came out.
-To run one yourself, save the code as a file **inside the `llm_negotiation` folder** (for
+Every example in it was run on 2026-10-16, and all of them again on 2026-10-17 after issue
+#32 (the earlier ones still print exactly the same), and the output printed under each is what
+came out. To run one yourself, save the code as a file **inside the `llm_negotiation` folder** (for
 example `llm_negotiation/try_it.py`), open a terminal in that folder, and type
 `python try_it.py`.
 
@@ -19,13 +20,14 @@ example `llm_negotiation/try_it.py`), open a terminal in that folder, and type
 6. [Layer 2: a crowd that steps around each other (issue #26)](#6-layer-2-a-crowd-that-steps-around-each-other-issue-26)
 7. [Layer 3: rules written down as data (issue #28)](#7-layer-3-rules-written-down-as-data-issue-28)
 8. [Layer 4: language models that write new rules (issue #30)](#8-layer-4-language-models-that-write-new-rules-issue-30)
-9. [Talking to DeepSeek safely: the LLM layer](#9-talking-to-deepseek-safely-the-llm-layer)
-10. [Experiments, logs and watching a run](#10-experiments-logs-and-watching-a-run)
-11. [Tests: how you know it works](#11-tests-how-you-know-it-works)
-12. [Phase 1: the dataset pipeline (retired)](#12-phase-1-the-dataset-pipeline-retired)
-13. [Follow one run from start to finish](#13-follow-one-run-from-start-to-finish)
-14. [Glossary](#14-glossary)
-15. [Where to read more](#15-where-to-read-more)
+9. [Across the layers: fictional groups and meetings inside a passage (issue #32)](#9-across-the-layers-fictional-groups-and-meetings-inside-a-passage-issue-32)
+10. [Talking to DeepSeek safely: the LLM layer](#10-talking-to-deepseek-safely-the-llm-layer)
+11. [Experiments, logs and watching a run](#11-experiments-logs-and-watching-a-run)
+12. [Tests: how you know it works](#12-tests-how-you-know-it-works)
+13. [Phase 1: the dataset pipeline (retired)](#13-phase-1-the-dataset-pipeline-retired)
+14. [Follow one run from start to finish](#14-follow-one-run-from-start-to-finish)
+15. [Glossary](#15-glossary)
+16. [Where to read more](#16-where-to-read-more)
 
 ---
 
@@ -47,12 +49,16 @@ of the one before:
 
   Phase 2: llm_negotiation/  (the simulator; everything below lives in llm_negotiation/negsim/)
   ────────────────────────────────────────────────────────────────────────────────────────
+  Across   issue #32               a fictional GROUP no rule may read; BACKING OUT of a passage
   Layer 4  issue #30  rulegen/     LLMs turn a conflict into a new RULE, which is then tested
   Layer 3  issue #28  rules/       RULES stored as data tell the avoidance layer what to do
   Layer 2  issue #26  avoidance/   a CROWD of agents steps around each other (ORCA)
   Layer 1  issue #24  negotiation/ TWO agents talk through an LLM, then one goes first
   Layer 0             core/        agents are discs that move, one time step at a time
 ```
+
+Issue #32 does not add a layer of its own. It adds two things that run through several layers
+at once (section 9).
 
 You can read the guide top to bottom: each section only needs the ones before it.
 
@@ -90,7 +96,7 @@ At the top of the repository:
 | `WORK_LOG-<n>.md` | A diary of how each issue was done, decisions and mistakes included |
 | `literature/` | Literature reviews (no code) |
 | `refs/` | Saved copies of papers and web pages the code and documents cite |
-| `pipeline/`, `dataset/` | Phase 1: the dataset generator and its output (section 12) |
+| `pipeline/`, `dataset/` | Phase 1: the dataset generator and its output (section 13) |
 | `integration/` | How this work maps onto CrowdGym, the senior's project |
 | `llm_negotiation/` | **Phase 2: the simulator.** Almost all the code |
 
@@ -103,12 +109,12 @@ Inside `llm_negotiation/`:
 | `configs/` | Every YAML config: scenarios, experiments, baselines, cases, prices |
 | `negsim/` | The Python package: the actual code (below) |
 | `rule_db/` | The rule database: one file per rule version, plus a "fingerprint" list |
-| `cases/` | 18 frozen conflicts that LLMs write rules from (issue #30) |
+| `cases/` | Frozen conflicts that LLMs write rules from: 18 (issue #30), a second version of each, and 8 meetings inside a passage (issue #32) |
 | `runs/` | Logs of experiments that are kept (committed to git) |
 | `runs_mock/` | Logs of free practice runs (git ignores this folder) |
 | `views/` | Animated viewer pages you have generated (git ignores this too) |
 | `docs/` | Detailed documents, one per topic |
-| `tests/` | About 1,230 automatic tests |
+| `tests/` | About 1,380 automatic tests |
 | `spend_ledger.jsonl` | One line for every paid call to DeepSeek, with its cost |
 
 Inside `llm_negotiation/negsim/` (the package), one folder per job:
@@ -119,7 +125,7 @@ Inside `llm_negotiation/negsim/` (the package), one folder per job:
 | `scenarios/` | building maps and starting positions from YAML | 0 |
 | `conflict/`, `control/` | finding where two paths clash; who goes first; speed limits | 1 |
 | `negotiation/` | the conversation between two agents; prompt templates | 1 |
-| `personas/` | who an agent is: age, gender (never a name) | 1 |
+| `personas/` | who an agent is: age, gender, perhaps a fictional group (never a name) | 1 |
 | `avoidance/` | ORCA, perception, directives, the crowd simulation | 2 |
 | `metrics/` | measuring what happened: collisions, near misses, yields | 2 |
 | `rules/` | the rule format, the rule database, matching rules to pairs | 3 |
@@ -252,12 +258,13 @@ The leader has 1 + 4 + 0.5 = 5.5 m to go before its back has left the hallway, w
   sees is in YAML files, and a "fingerprint" of each (a SHA-256 hash, see the glossary) is
   stored in `MANIFEST.json`. If anyone edits a template, the fingerprint no longer matches and
   the code refuses to load it. New wording means a new version (`_v2`). So nobody can quietly
-  tune a prompt.
+  tune a prompt. Issue #32 did exactly that for the rule-generation prompts (section 9).
 - **Personas** (`negsim/personas/`) give an agent an age, a gender and so on, from
   `configs/personas/personas.yaml`. The loader refuses anything that looks like a personal
-  name. An experiment decides which attributes the other agent may see.
+  name. An experiment decides which attributes the other agent may see. Since issue #32 a
+  persona may also belong to a fictional group (section 9).
 
-**Try it** (free, using the stand-in model described in section 9):
+**Try it** (free, using the stand-in model described in section 10):
 
 ```
 python run_experiment.py configs/experiments/c1_smoke.yaml --client mock
@@ -354,12 +361,15 @@ pair: encounter_class "head_on", min_corridor_width_m 1.75, age_difference_years
 
 It holds only what one person could see of another: never the other's goal, path, or
 errand. The `pair` part is the same whichever of the two computes it, which matters for rules
-(section 7).
+(section 7). Since issue #32 (record version 3) it also says, when the two are inside a
+passage only one can use, how far each has walked in and how far each end is; and, only if the
+experiment shows it, the other's fictional group (section 9).
 
-### Directives: five knobs on ORCA
+### Directives: six knobs on ORCA
 
 A **directive** (`avoidance/directives.py`) is an instruction one agent follows for one
-neighbour. It has five knobs. Leaving them all at their defaults is plain ORCA:
+neighbour. It has six knobs (the sixth came with issue #32). Leaving them all at their
+defaults is plain ORCA:
 
 | Knob | Default | What it does |
 |---|---|---|
@@ -368,6 +378,7 @@ neighbour. It has five knobs. Leaving them all at their defaults is plain ORCA:
 | `speed_scale` | 1.0 | multiply walking speed (0.5 = half speed) |
 | `clearance_margin` | 0 m | keep this much extra room between the two bodies |
 | `passage_order` | `none` | at a single-file stretch, go first (`leader`) or wait (`follower`) |
+| `back_up` | `false` | inside a single-file stretch the two have met in: back out, wait for the other, go on (section 9) |
 
 Where directives come from is swappable: written in a config (issue #26), or chosen by stored
 rules (issue #28). The two agents' directives are checked against each other
@@ -382,7 +393,9 @@ fail, so this is recorded as a **reciprocity violation** and repaired.
    a directive.
 2. **Resolve** each pair's two directives into one consistent pair.
 3. **Coordinate:** if the two are heading into a single-file stretch, hand them to the
-   **arbiter** from layer 1, which picks who goes first.
+   **arbiter** from layer 1, which picks who goes first. If they are already inside one and a
+   directive says `back_up`, start a **back-up manoeuvre** instead, and the arbiter lets go of
+   the pair (section 9).
 4. **Choose a velocity:** ORCA half-planes for every wall and neighbour, then the linear
    program.
 5. **Move** everyone at once.
@@ -404,7 +417,7 @@ are in `negsim/metrics/avoidance.py`.
 `bidirectional_flow` puts 50 people at each end of a 4 m by 50 m corridor and has them walk
 through each other. By default they start on a neat grid (1 m apart, nudged up to 10 cm). Set
 `spawn_pattern: random` and each group is scattered at random over the same area, no two closer
-than 0.6 m (added on 2026-10-16; not yet committed to git). Starting from random places, plain
+than 0.6 m (added on 2026-10-16, at the end of issue #30). Starting from random places, plain
 ORCA collides far more often than from the grid (354 collision episodes against 75, in one
 run each).
 
@@ -462,10 +475,11 @@ same way (`rules/fields.py`): the distance between them, their speeds, the corri
 ages and genders when those are visible. A rule that reads someone's errand ("whoever is going
 to the hospital") is **refused**: only that person knows it, so the other could not follow the
 rule without asking. The loader also refuses rules that would break ORCA: shares adding up to
-less than 1, or the two people told to pass on opposite sides.
+less than 1, or the two people told to pass on opposite sides. And since issue #32 a rule may
+never read a person's fictional group, even when both can see it (section 9).
 
-All five stored rules are **test seeds**: written by hand to exercise the machinery, not claims
-about how people really behave.
+All six stored rules are **test seeds**: written by hand to exercise the machinery, not claims
+about how people really behave. The sixth, `passage_shorter_backs_out`, came with issue #32.
 
 ### The rule database
 
@@ -476,6 +490,9 @@ about how people really behave.
 - `MANIFEST.json`: the fingerprint (SHA-256) of every file. If a file is edited, its
   fingerprint no longer matches and loading fails.
 - `rulesets/default.yaml`: a named set of rule versions to switch on together.
+- `schema/`: the rule format itself, in versions 1, 2 and 3, each frozen. Every rule says which
+  version it is written in. Version 3 (issue #32) added `back_up`, true-or-false values and the
+  passage fields; rules of versions 1 and 2 load exactly as before.
 
 ```
 python ruledb.py list
@@ -486,8 +503,12 @@ rule                               status     encounter            priority expi
 keep_left_head_on@1                test_seed  head_on                    10 passed       hand_written 2026-10-14 default
 keep_right_head_on@1               test_seed  head_on                    10 passed       hand_written 2026-10-14 -
 overtaker_keeps_clear@1            test_seed  overtaking                 10 passed       hand_written 2026-10-14 default
+passage_shorter_backs_out@1        test_seed  single_file_segment        30 out_of_range hand_written 2026-10-16 -
 single_file_first_arrival@1        test_seed  single_file_segment        10 out_of_range hand_written 2026-10-14 default
 younger_yields_head_on@1           test_seed  head_on                    20 passed       hand_written 2026-10-14 default
+
+rule set default: keep_left_head_on@1, overtaker_keeps_clear@1, single_file_first_arrival@1, younger_yields_head_on@1
+cannot be switched on together: keep_left_head_on@1 and keep_right_head_on@1 are both priority 10 and both match the situation (pair.encounter_class='head_on', pair.min_corridor_width_m=1) with different directives
 ```
 
 ### Matching: which rule does a pair follow?
@@ -570,7 +591,8 @@ The whole pipeline, which lives in `negsim/rulegen/`:
 
 A **case** (`rulegen/cases.py`, files in `cases/`) is one moment from a finished run of plain
 ORCA: two agents, at the instant they first saw each other, with everything each could
-perceive. There are 18, from five scenarios. Each case is graded by a **severity tier**:
+perceive. There are 18, from five scenarios; issue #32 gave each a second version and added 8
+more (section 9). Each case is graded by a **severity tier**:
 
 | Tier | Means |
 |---|---|
@@ -588,7 +610,8 @@ been generated from it.
 A **session** (`rulegen/design.py`) puts two people into a case. Their age (25 or 70),
 gender, and errand (urgent: "the emergency room"; routine: "the supermarket"; or none) are
 varied systematically, as is whether age and gender are shown at all (a control: does the
-LLM use them only because it was told them?). No names, ever.
+LLM use them only because it was told them?). No names, ever. Since issue #32 a session may
+also give each person a fictional group (section 9).
 
 ### What the LLM is told
 
@@ -617,7 +640,8 @@ THE OTHER PERSON
 
 After that comes the rule format and the list of fields a rule may use. In **condition B**
 one LLM is told both people's details, including both errands, as "Person 1" and
-"Person 2". The wording never hints at an answer (it never mentions keeping to a side).
+"Person 2". The wording never hints at an answer (it never mentions keeping to a side). This
+is prompt version 1; issue #32 froze a version 2 beside it (section 9).
 
 ### Condition A: two agents negotiate
 
@@ -675,9 +699,10 @@ exactly one category:
 |---|---|
 | `valid` | it loads, and both people can see everything it reads |
 | `needs_communication` | it reads private information (an errand), so it could only work if they talked |
-| `inconsistent` | it breaks ORCA's guarantee (shares adding to less than 1, opposite sides) |
+| `inconsistent` | it breaks ORCA's guarantee (shares adding to less than 1, opposite sides), or, since issue #32, has both people back out |
 | `schema_error` | it is malformed (unknown keys, wrong types, missing pieces) |
 | `format_limit` | it asks for something the format cannot say (a share that grows with age) |
+| `protected_attribute` | issue #32: it reads a person's fictional group, which no rule may (section 9) |
 
 **Example 5: four proposals, four categories.**
 
@@ -757,10 +782,260 @@ Accepted: 11c9d9f766c2, read as agreed.
 
 The mock is scripted, so its rules say nothing about real LLMs. It only proves the pipeline
 works. The paid pilot with the real model is on hold until your supervisor's approval is
-recorded, and because, as specified, its worst-case cost (USD 0.62) exceeds its USD 0.05 cap
-(`WORK_LOG-30.md`, question Q5).
+recorded, and because, as specified, its worst-case cost exceeds its USD 0.05 cap: USD 0.62,
+and USD 0.65 since issue #32 moved the pilot to prompt version 2 (`WORK_LOG-30.md`, question
+Q5; the options for it are in `docs/rule-generation.md`, section 10.1).
 
-## 9. Talking to DeepSeek safely: the LLM layer
+## 9. Across the layers: fictional groups and meetings inside a passage (issue #32)
+
+Issue #32 adds two things, each of which touches several layers at once. Both were built and
+tried out on the free mock; no model was called.
+
+### A fictional group that no rule may read
+
+A person may now belong to a **fictional group** (`ethnic_group`, in
+`negsim/personas/groups.py`): one of three invented labels, **Kestrop**, **Dremmik** and
+**Pellund**. Each was searched on the web to make sure it is not the name of a real people,
+place, language or word in English, Malay, Chinese or Tamil, and every search is written down
+in `docs/fictional-groups.md` (one first choice, *Zorvel*, was dropped because it ends like the
+Tamil word *vel*). A label is one word and nothing more: no history, looks or customs, and
+still no personal names.
+
+**Why invented groups?** Psychologists have found that people favour "their own group" even
+when the groups are made up on the spot (the *minimal group* experiments). Invented labels let
+the project ask whether an LLM does the same, without bringing in any real group's
+stereotypes. The price: they cannot show how a model treats real ethnic groups. That would be
+a different experiment.
+
+**Seeing is allowed, reading is not.** If an experiment shows the groups, each person is told
+both: "You belong to the Dremmik ethnic group." and "They belong to the Kestrop ethnic group."
+But **no rule may read a group**. A rule that tries is refused and put in a category of its own,
+`protected_attribute`. It is kept, never deleted, because an LLM trying to make a rule depend
+on someone's group is itself a finding.
+
+**Example 6: three proposals, three categories.**
+
+```python
+from negsim.avoidance.perception import default_visibility
+from negsim.rulegen.validate import validate_proposal
+
+base = {"encounter": "any", "when": {"all": []}, "roles": "symmetric", "priority": 100,
+        "directive": {"both": {"clearance_margin": 0.2}}}
+reads_group = {**base, "when": {"all": [{"field": "either.ethnic_group", "op": "==", "value": "Kestrop"}]}}
+both_back_up = {
+    "encounter": "single_file_segment",
+    "when": {"all": [{"field": "both.in_segment", "op": "==", "value": True}]},
+    "roles": {"by": {"field": "agent.segment_distance_travelled", "order": "ascending",
+                     "assign": ["backer", "goer"], "tie": "no_match", "tie_within": 0.1, "unit": "m"}},
+    "directive": {"backer": {"back_up": True}, "goer": {"back_up": True}},   # both back out
+    "priority": 100,
+}
+one_backs_up = {**both_back_up, "directive": {"backer": {"back_up": True}, "goer": {}}}
+for name, proposal in (("reads a group", reads_group), ("both back out", both_back_up), ("one backs out", one_backs_up)):
+    result = validate_proposal(proposal, default_visibility(), schema_version=3)
+    print(f"{name:14} -> {result.category}: {result.message}")
+```
+
+```
+reads a group  -> protected_attribute: when.all[0].field: 'either.ethnic_group' refers to a person's group ('ethnic'), which no rule may read
+both back out  -> inconsistent: [back_up] proposal.directive: 'backer' and 'goer' both back up. Inside a single-file passage exactly one backs out and the other goes on; with both backing out, neither gets through (docs/derivations.md, section 17).
+one backs out  -> valid: loads, and both people can see everything it reads
+```
+
+The first rule reads a group. The second has both people back out of a passage (more on that
+below), so neither would ever get through. The third is the same rule with only one backing
+out. `schema_version=3` says the rules are written in rule format 3, the one that has
+`back_up`.
+
+**In an experiment** the group is a design factor (`design.ethnicity` in a rule-generation
+config): the two people in the same group or in different ones; which label goes to whom
+(rotated, so that no result can be pinned on one label); and whether the groups are shown at
+all, separately from age and gender. It is **off unless a config says `enabled: true`**, and a
+paid run with it switched on is refused until the supervisor's ethics sign-off is written into
+`CLAUDE.md`. **That sign-off has not been given.** Every session also gets a line in
+`outcomes.jsonl` saying who proposed, who gave in, whose rule was accepted and who got the
+larger share of the avoiding, so that the results can later be compared group pair by group
+pair. The words that introduce the group ("ethnic group") are a setting too, waiting for the
+supervisor's review.
+
+### Two people who meet inside a passage
+
+Picture the narrow passage of section 5 (0.8 m wide, 4 m long), with two people *already
+inside* it, face to face. They cannot pass, so one has to back out. Before issue #32 nobody
+could be told to: the arbiter named a leader and held the follower to speed 0, and ORCA did
+the rest.
+
+**What each can see.** Perception record version 3 adds four values, worked out the same
+whichever of the two works them out: whether each is inside (`in_segment`), how far it has
+walked in (`segment_distance_travelled`), and how far each end of the passage is
+(`segment_distance_ahead`, `segment_distance_behind`). Outside a passage the three distances
+are empty (`null`), and a rule that compares an empty value does not apply.
+
+**Example 7: what two people inside a passage see.**
+
+```python
+from negsim.rulegen.cases import CaseStore
+
+case = CaseStore().get("passage_f89f5745")      # passage_meet_with_speeds_v1, the two at rest
+print(case["scenario"]["file"], case["scenario"]["variant"])
+for agent, record in case["observations"].items():
+    me = record["observer"]
+    print(f"agent {agent}: inside={me['in_segment']}, walked in {me['segment_distance_travelled']:.1f} m, "
+          f"end ahead {me['segment_distance_ahead']:.1f} m, end behind {me['segment_distance_behind']:.1f} m, "
+          f"the other walked in {record['neighbour_segment_distance_travelled']:.1f} m")
+```
+
+```
+configs/scenarios/passage_meet_with_speeds_v1.yaml {'travelled': 'asymmetric', 'start': 'rest'}
+agent 0: inside=True, walked in 2.0 m, end ahead 2.0 m, end behind 2.0 m, the other walked in 1.4 m
+agent 1: inside=True, walked in 1.4 m, end ahead 2.6 m, end behind 1.4 m, the other walked in 2.0 m
+```
+
+The two distances walked in (2.0 and 1.4 m) and the 0.6 m between the two people's centres add
+up to the 4 m passage. "Ahead" is the end on the other person's side, beyond them.
+
+**The new knob, `back_up`.** A person told to back up walks back out of the passage at its own
+**backing speed** (0.92 m/s, the normal pace of ten young adults walking backwards in one
+study; 0.43 m/s, their slow pace: Nakahara et al. 2005), to just beyond the end, far enough
+for the other to come out. It waits there until the other is out, and then goes on along its
+own path. While it backs out, the other follows at the same pace and does all of the
+avoiding, and the arbiter lets go of the pair until the manoeuvre is over. This backing is
+**intentional**, and is logged on its own. It is never counted as issue #26's "walking
+backwards" artefact, which is ORCA pushing someone backwards when nobody chose it.
+
+**A rule can now say who backs out.** Rule format version 3 allows `back_up` and true-or-false
+values, and the new seed rule `passage_shorter_backs_out` uses both:
+
+```yaml
+encounter: single_file_segment
+when:
+  all:
+    - {field: both.in_segment, op: "==", value: true}
+roles:
+  by: {field: agent.segment_distance_travelled, order: ascending, assign: [backs_out, goes_on], tie: no_match, tie_within: 0.1, unit: m}
+directive:
+  backs_out: {back_up: true}
+  goes_on: {}
+priority: 30
+```
+
+In words: *"When both are inside, the one who has walked less far in backs out. If they have
+walked in within 10 cm of each other, the rule does not say."* A rule that says who backs up
+must make exactly one person back up: one in which both do is refused as `inconsistent`
+(example 6, second line).
+
+**Example 8: the arbiter alone against the seed rule.**
+
+```python
+from negsim.avoidance.perception import default_visibility
+from negsim.avoidance.simulation import AvoidanceSimulation
+from negsim.experiment.avoidance import build_provider
+from negsim.scenarios import load_crowd_scenario
+
+# Agent 0 has walked 2.7 m into the 4 m passage, agent 1 only 0.7 m; they stand face to face.
+scenario = "configs/scenarios/passage_meet_middle_v1.yaml"
+overrides = {"geometry": {"travelled": [2.7, 0.7]}}
+seed_rule = {"provider": "rules", "enable": {"passage_shorter_backs_out": 1}}
+
+for name, directives in (("the arbiter alone", None), ("the seed rule", seed_rule)):
+    provider = None if directives is None else build_provider(directives, default_visibility(), "guide")
+    result = AvoidanceSimulation(load_crowd_scenario(scenario, overrides), provider).run()
+    print(f"{name}: {result.status} after {result.sim_time_s:.1f} s")
+    for m in result.back_ups:
+        print(f"  agent {m.backer} backed out {m.backing_distance_m:.2f} m at {m.speed_mps} m/s, "
+              f"waited {m.waiting_steps * 0.1:.1f} s, then went on ({m.end_reason})")
+    print(f"  walking backwards by accident (the artefact): {result.artefacts['totals']['backward_distance_m']:.2f} m")
+```
+
+```
+the arbiter alone: completed after 58.7 s
+  walking backwards by accident (the artefact): 0.00 m
+the seed rule: completed after 11.8 s
+  agent 1 backed out 1.38 m at 0.92 m/s, waited 0.7 s, then went on (other_cleared)
+  walking backwards by accident (the artefact): 0.00 m
+```
+
+Read it like this:
+
+- **The arbiter alone** gets them through only just inside the one-minute time limit. Its
+  leader, agent 0, creeps forward at 3 cm/s and pushes agent 1 back out of the passage, which
+  takes nearly 50 s. That is too slow to count as walking backwards, which starts at 0.1 m/s.
+  With the primary baseline's tiny random nudge (section 7), the same meeting does not even get
+  that far: of 40 runs from standing still, 28 ended stuck for good and 12 at the time limit.
+- **The seed rule** has agent 1, who had walked only 0.7 m in, back out 1.38 m: the 0.7 m back
+  to the end, 0.6 m beyond it (the two body radii and a 10 cm margin), and a few centimetres
+  more, because agent 0 was still coming on at the same pace when it got there. Both have
+  arrived after 11.8 s.
+
+**What the behaviour checks found** (560 runs, 20 seeds per setting; `docs/behaviour-checks.md`,
+section 6):
+
+- When the two meet **standing still**, the arbiter's fallback gets neither through in any of
+  its 80 runs, and nor does plain ORCA without the arbiter.
+- When they meet **walking**, the arbiter gets them through, but only by ORCA pushing the
+  follower backwards at about 1 m/s, more than twice the slow person's cited backing speed.
+- The seed rule gets them through in all 160 of its runs, at the cited backing speeds.
+- **Fewest metres is not fastest.** In the second scenario agent 0 has walked 2.0 m in and backs
+  at 0.92 m/s, while agent 1, a slower person, has walked 1.4 m and backs at 0.43 m/s. Backing
+  out agent 1, as the seed rule does, adds the least walking. Backing out agent 0 empties the
+  passage sooner (2.0 / 0.92 = 2.2 s, against 1.4 / 0.43 = 3.3 s), and everyone is through about
+  3 s sooner (13.68 s against 16.70 s, over 20 seeds). No rule can say that, because nobody can
+  see another person's backing speed (`docs/derivations.md`, section 18).
+
+### New prompts, new case versions, and the pilot
+
+- **Prompt version 2** (`negotiation/templates/rulegen_*_v2.yaml`) is version 1 with a few lines
+  added and nothing else changed: the rule format of version 3, a line for someone standing
+  still, lines for being inside a passage, and each person's group, only when the experiment
+  shows it. This is what agent 1 of example 7's case is told in condition A, with the groups
+  shown:
+
+  ```
+  ABOUT YOU
+  - You are 25 years old.
+  - You are a man.
+  - You belong to the Dremmik ethnic group.
+  - You are standing still. Your usual walking speed is 1.10 m/s.
+  - Your body is 0.50 m wide.
+
+  WHERE YOU ARE
+  - You are in a passage 0.80 m wide. The wall on your left is 0.40 m from you, the wall on your right 0.40 m.
+  - You are inside a stretch of the passage 0.80 m wide and 4.0 m long.
+  - You have walked 1.4 m into this stretch. Its end ahead of you is 2.6 m away, and the end behind you 1.4 m.
+
+  THE OTHER PERSON
+  - They are 0.6 m away, straight ahead of you.
+  - They are standing still, facing in the opposite direction to you.
+  - They are inside the stretch too, and have walked 2.0 m into it from its other end.
+  - Their body is 0.50 m wide.
+  - They look about 70 years old.
+  - They look like a woman.
+  - They belong to the Kestrop ethnic group.
+  ```
+
+  Nobody is told the other's backing speed: it cannot be seen. Version 1 is untouched, so issue
+  #30's experiments still mean what they meant.
+- **Cases are never edited**, so a case with the new values is its next version. Each of the 18
+  cases got a version 2 by **re-stepping**: running its source run again up to the same moment
+  and checking that every value of version 1 came out the same (all of them did). With 8 new
+  cases of people meeting inside a passage, that makes 26 new case files.
+- **The pilot** now uses prompt version 2. Its worst case is USD 0.65, against the same
+  USD 0.05 cap; the options are in `docs/rule-generation.md`, section 10.1, and the choice is
+  yours and your supervisor's.
+
+**Try it** (free; the first command writes its runs to `runs_mock/`):
+
+```
+python run_experiment.py configs/rule_following/si32_passage_meet_middle.yaml --out runs_mock
+python -m negsim.viz.viewer runs_mock\si32_passage_meet_middle
+python -m negsim.rules.report si32_passage_meet_middle
+python run_experiment.py configs/rule_generation/si32_mock_groups_on.yaml
+```
+
+The viewer marks who is backing out, who is waiting and who is coming through; the report
+prints the tables of `docs/behaviour-checks.md` from the committed runs.
+
+## 10. Talking to DeepSeek safely: the LLM layer
 
 **Files:** `negsim/llm/`.
 
@@ -787,7 +1062,7 @@ read, the agent is shown what it sent and asked once more (`request_with_retry`)
   cost (every token at the highest rate, the longest possible reply) and refuses the call if
   that could push the total over the cap.
 
-**Example 6: the budget guard refuses a call.**
+**Example 9: the budget guard refuses a call.**
 
 ```python
 import tempfile
@@ -821,7 +1096,7 @@ Rule-generation experiments add one more safety step: before any paid call they 
 **worst-case cost preview** for the whole experiment, and send nothing unless you add
 `--confirm`.
 
-## 10. Experiments, logs and watching a run
+## 11. Experiments, logs and watching a run
 
 ### One command for everything
 
@@ -854,8 +1129,10 @@ An avoidance run's folder holds:
 | `events.jsonl` | collisions, near misses, yields, in time order |
 | `outcome.json` | the summary: who arrived when, how many collisions, how deep |
 
-A negotiation run (layer 1) also has `conversation.jsonl` (every prompt and reply) and
-`transcript.md` (the same, for reading). `docs/log-schema.md` lists every field.
+Since issue #32 (log format version 5) `outcome.json` also says who backed out of a passage,
+how far and for how long, and who came out of a single-file stretch first. A negotiation run
+(layer 1) also has `conversation.jsonl` (every prompt and reply) and `transcript.md` (the same,
+for reading). `docs/log-schema.md` lists every field.
 
 ### Watching a run
 
@@ -871,9 +1148,9 @@ picture of everyone's path, for a report:
 python -m negsim.viz.trajectory_plot runs\si1_bottleneck_handoff\001_opposing_no_directive plot.png
 ```
 
-## 11. Tests: how you know it works
+## 12. Tests: how you know it works
 
-`llm_negotiation/tests/` holds about 1,230 small automatic checks. Each is a Python function
+`llm_negotiation/tests/` holds about 1,380 small automatic checks. Each is a Python function
 whose name says what it checks, for example
 `test_a_changed_rule_is_a_counter_proposal_not_an_acceptance`. Run them all with:
 
@@ -899,7 +1176,7 @@ def test_agreement_is_accepting_the_others_latest_proposal_by_its_id():
 `turn(...)` writes a scripted reply for the mock client; `assert` says what must be true. If
 any `assert` is false, pytest reports that test as failed and says why.
 
-## 12. Phase 1: the dataset pipeline (retired)
+## 13. Phase 1: the dataset pipeline (retired)
 
 Before the simulator, the project asked DeepSeek directly how people of different ages and
 genders in Singapore behave in everyday and conflict situations. That code is in `pipeline/`
@@ -931,7 +1208,7 @@ scenario, age group and gender. Part of one:
 
 The whole run cost USD 0.097.
 
-## 13. Follow one run from start to finish
+## 14. Follow one run from start to finish
 
 Here is what happens, function by function, when you type
 `python run_experiment.py runs_mock/demo_crowd_random.yaml --out runs_mock`:
@@ -956,20 +1233,24 @@ Here is what happens, function by function, when you type
 5. You open it with **`python -m negsim.viz.viewer runs_mock\demo_crowd_random`**, which reads
    those files and builds the page.
 
-## 14. Glossary
+## 15. Glossary
 
 | Word | Meaning |
 |---|---|
 | agent | one simulated person: a disc with a position, a velocity and a goal |
 | arbiter | the part from layer 1 that decides who goes first at a place only one fits |
+| back up, back-up manoeuvre | backing out of a passage for the other person, at one's own backing speed, waiting outside, then going on (issue #32) |
+| backing speed | how fast a person walks backwards: 0.92 m/s at a normal pace, 0.43 m/s slowly (from one study of ten young adults) |
 | baseline | a frozen definition of "plain ORCA", to compare rules against |
 | case | a conflict taken from a finished run and frozen, for LLMs to write rules from |
 | collision | two discs overlapping; its depth is how far they overlap |
 | condition A / B | rules negotiated by two LLM agents / stated by one LLM |
 | config | a YAML file describing a scenario or an experiment |
-| directive | an instruction one agent follows for one neighbour (five knobs) |
+| directive | an instruction one agent follows for one neighbour (six knobs) |
 | `dt` | the length of one time step, 0.1 s |
 | encounter class | the kind of meeting: head-on, crossing, overtaking, single-file |
+| fictional group | an invented label (Kestrop, Dremmik, Pellund) a person may belong to; agents may see it, no rule may read it |
+| framing word | the words that introduce the group in a prompt ("ethnic group"), a setting of each experiment |
 | hash (SHA-256) | a fingerprint of a piece of text: change one character and it changes completely |
 | holonomic | able to step in any direction, as a person can |
 | JSON, JSONL | a text format for data; JSONL is one JSON object per line |
@@ -977,13 +1258,18 @@ Here is what happens, function by function, when you type
 | manifest | a list of fingerprints of frozen files, so any edit is noticed |
 | mock client | a free stand-in for the LLM that replies from a script |
 | ORCA | the collision-avoidance method of the crowd: each agent does its share of the dodging |
+| passage fields | how far each person has walked into a single-file passage, and how far each end is (issue #32) |
 | persona | who an agent is: age, gender, and so on (never a name) |
 | perturbation | a tiny random nudge to an agent's wished velocity, to break exact ties |
 | priority | which rule wins when two match: the higher number |
 | promotion | moving a generated rule into the real rule database; only by a person, with a reason |
+| prompt version | a frozen set of prompt templates; new wording is a new version (rule generation has versions 1 and 2) |
 | proposal id | the first 12 characters of a rule's fingerprint, used to accept it |
+| protected attribute | something no rule may read: a person's group. A rule that tries is refused as `protected_attribute`, and kept as data |
 | provider | where directives come from: none, a config, or the rule database |
+| re-stepping | making a case's next version by running its source run again to the same moment, checking that every old value comes out the same |
 | replay | rerunning a case's own run with one rule switched on |
+| rule format version | 1, 2 or 3: what a rule may use; every rule says its version. Version 3 (issue #32) added `back_up` |
 | run / experiment | one simulation / many runs from one config |
 | scenario | a map plus where each agent starts and wants to go |
 | screening | testing a generated rule in a 100-person crowd |
@@ -994,20 +1280,23 @@ Here is what happens, function by function, when you type
 | Strategy 1 | the fallback "whoever would get there sooner goes first" |
 | token | a piece of text, about 3 characters; what LLM providers charge by |
 | velocity obstacle | the velocities that would lead to a bump within the next few seconds |
+| walking-backwards artefact | ORCA pushing someone backwards when nobody chose it; counted apart from intentional backing |
 
-## 15. Where to read more
+## 16. Where to read more
 
 The `llm_negotiation/docs/` folder has one detailed document per topic:
 
 | Document | Read it for |
 |---|---|
-| `architecture.md` | every module, one run step by step, and every design decision (DD1 to DD84) |
-| `orca.md`, `derivations.md` | the maths of ORCA and of the speed limits |
+| `architecture.md` | every module, one run step by step, and every design decision (DD1 to DD119) |
+| `orca.md`, `derivations.md` | the maths of ORCA, of the speed limits, and of backing out of a passage |
 | `perception.md` | every field of a perception record |
 | `metrics.md` | exact definitions of collisions, near misses, yields, tiers |
 | `rule-format.md`, `rule-matching.md` | rules in full, and how they are matched |
 | `baseline.md` | what "plain ORCA" means, and paired seeds |
+| `behaviour-checks.md` | the numbers of every behaviour check, read from the committed runs (issues #28 and #32) |
 | `cases.md`, `rule-generation.md` | layer 4 in full |
+| `fictional-groups.md` | the fictional group: its labels and every search that checked them, why no rule may read it, the sign-off |
 | `llm-backend.md`, `pricing-check.md` | DeepSeek, prices, the budget |
 | `log-schema.md` | every log file and field |
 | `parameters.md` | every physical number, with its source or the word "placeholder" |

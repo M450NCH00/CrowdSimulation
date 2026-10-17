@@ -13,6 +13,11 @@ guarantee depends on the two acting consistently, so the pair's directives are c
 other in a way that would break the guarantee, a :class:`ReciprocityViolation` is recorded
 and a fixed, documented policy decides what is used instead. Nothing fails silently.
 ``docs/derivations.md``, sections 9 to 11, has the reasoning.
+
+Issue #32 adds ``back_up``: an agent inside a single-file passage backs out of it, waits for
+the other to come through, and goes on (the manoeuvre is the run loop's,
+``negsim.avoidance.simulation``; ``docs/derivations.md``, section 17). The one that backs up
+lets the other go first, so ``back_up`` also names the pair's leader.
 """
 
 from __future__ import annotations
@@ -21,7 +26,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, fields
 from typing import Any, ClassVar, Mapping, Optional
 
-from ..configutil import ConfigError, as_choice, as_number, check_keys
+from ..configutil import ConfigError, as_bool, as_choice, as_number, check_keys
 from .perception import PerceptionRecord
 
 SIDE_LEFT, SIDE_RIGHT, SIDE_NONE = "left", "right", "none"
@@ -42,6 +47,7 @@ SHARE_POLICIES = (POLICY_PROPORTIONAL, POLICY_EQUAL_SPLIT)
 FIELD_SHARE = "responsibility_share"
 FIELD_SIDE = "side_preference"
 FIELD_ORDER = "passage_order"
+FIELD_BACK_UP = "back_up"
 
 
 @dataclass(frozen=True)
@@ -62,6 +68,10 @@ class AvoidanceDirective:
     ``passage_order``
         ``leader``: this agent goes first through a single-file segment the two both have
         to use; ``follower``: the neighbour does; ``none``: no instruction.
+    ``back_up``
+        Issue #32. ``true``: inside a single-file segment the two meet in, this agent backs out
+        of it at its backing speed, waits until the neighbour has come through, and goes on;
+        the neighbour goes first. ``false``: no instruction.
     """
 
     side_preference: str = SIDE_NONE
@@ -69,8 +79,11 @@ class AvoidanceDirective:
     speed_scale: float = 1.0
     clearance_margin: float = 0.0
     passage_order: str = ORDER_NONE
+    back_up: bool = False
 
     def __post_init__(self) -> None:
+        if not isinstance(self.back_up, bool):
+            raise ValueError(f"back_up must be true or false, got {self.back_up!r}")
         if self.side_preference not in SIDE_PREFERENCES:
             raise ValueError(f"side_preference must be one of {SIDE_PREFERENCES}, got {self.side_preference!r}")
         if self.passage_order not in PASSAGE_ORDERS:
@@ -94,6 +107,8 @@ class AvoidanceDirective:
         for name in ("responsibility_share", "speed_scale", "clearance_margin"):
             if name in raw:
                 values[name] = as_number(raw[name], f"{where}.{name}", minimum=0.0)
+        if "back_up" in raw:
+            values["back_up"] = as_bool(raw["back_up"], f"{where}.back_up")
         try:
             return cls(**values)
         except ValueError as exc:
@@ -106,11 +121,14 @@ class AvoidanceDirective:
             "speed_scale": self.speed_scale,
             "clearance_margin": self.clearance_margin,
             "passage_order": self.passage_order,
+            "back_up": self.back_up,
         }
 
 
 #: The exact field names, in order. The next sub-issue's rule format depends on them.
 DIRECTIVE_FIELDS = tuple(field.name for field in fields(AvoidanceDirective))
+#: The fields before issue #32 added ``back_up``: what a run folder of log schema 4 or earlier holds.
+DIRECTIVE_FIELDS_V4 = tuple(name for name in DIRECTIVE_FIELDS if name != FIELD_BACK_UP)
 PLAIN_ORCA = AvoidanceDirective()
 
 
@@ -143,7 +161,8 @@ class PairResolution:
 
     ``shares`` and ``agents`` are in the same order. ``side`` is the side both pass on,
     or ``None`` for the nearer side. ``leader`` is the agent that goes first through a
-    shared single-file segment, or ``None`` if the directives do not say.
+    shared single-file segment, or ``None`` if the directives do not say. ``backer`` is the
+    agent told to back up (issue #32), or ``None``.
     """
 
     agents: tuple[int, int]
@@ -152,6 +171,7 @@ class PairResolution:
     clearance_margin: float
     leader: Optional[int]
     violations: tuple[ReciprocityViolation, ...] = ()
+    backer: Optional[int] = None
 
     def share_of(self, agent_id: int) -> float:
         return self.shares[self.agents.index(agent_id)]
@@ -163,6 +183,7 @@ class PairResolution:
             "side": SIDE_NONE if self.side is None else self.side,
             "clearance_margin": self.clearance_margin,
             "leader": self.leader,
+            "backer": self.backer,
         }
 
 
@@ -205,6 +226,9 @@ def resolve_pair(
     * **Passage order.** ``leader`` with ``follower`` or ``none``, and ``none`` with
       ``follower``, name a leader. Two leaders or two followers are a violation and no
       leader is named, which leaves the decision to the arbiter's own rule.
+    * **Backing up** (issue #32). One that backs up names a ``backer``, and the other is the
+      leader: it goes first. Both backing up is a violation, and neither does. Passage orders
+      that name the backer as the leader are a violation, and the other leads.
     """
     pair = (agent_a, agent_b)
     violations = []
@@ -231,6 +255,18 @@ def resolve_pair(
     elif orders[1] == ORDER_LEADER or orders[0] == ORDER_FOLLOWER:
         leader = agent_b
 
+    backs = (directive_a.back_up, directive_b.back_up)
+    backer: Optional[int] = None
+    if all(backs):
+        violations.append(ReciprocityViolation(FIELD_BACK_UP, pair, backs, (False, False), "ignore_both"))
+    elif any(backs):
+        backer = agent_a if backs[0] else agent_b
+        proceeder = agent_b if backer == agent_a else agent_a
+        if leader == backer:
+            resolved = (ORDER_FOLLOWER, ORDER_LEADER) if backer == agent_a else (ORDER_LEADER, ORDER_FOLLOWER)
+            violations.append(ReciprocityViolation(FIELD_ORDER, pair, orders, resolved, "the_one_backing_up_follows"))
+        leader = proceeder
+
     return PairResolution(
         agents=pair,
         shares=shares,
@@ -238,6 +274,7 @@ def resolve_pair(
         clearance_margin=max(directive_a.clearance_margin, directive_b.clearance_margin),
         leader=leader,
         violations=tuple(violations),
+        backer=backer,
     )
 
 

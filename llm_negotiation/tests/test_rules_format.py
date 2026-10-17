@@ -17,7 +17,7 @@ from negsim.configutil import PACKAGE_ROOT
 from negsim.rules.conditions import OPERATORS, compare, parse_condition
 from negsim.rules.database import RULE_DB_ROOT, SCHEMA_PATH, load_validator, read_rule_file
 from negsim.rules.errors import CATEGORIES, RuleError
-from negsim.rules.fields import AGENT_FIELDS, PAIR_FIELDS, UNITS, UNOBSERVABLE, resolve
+from negsim.rules.fields import AGENT_FIELDS, PAIR_FIELDS, UNITS, UNOBSERVABLE, fields_of, resolve
 from negsim.rules.jsonschema_subset import Validator, json_equal, unsupported_keywords
 from negsim.rules.model import parse_rule
 from negsim.rules.snapshot import PairSnapshot
@@ -125,7 +125,13 @@ def test_the_field_list_is_what_both_agents_can_see():
         "encounter_class", "distance_m", "closing_speed_mps", "time_to_collision_s", "heading_difference_rad",
         "min_corridor_width_m", "age_difference_years",
     }
-    assert set(AGENT_FIELDS) == {"age", "gender", "speed_mps", "radius_m", "time_to_segment_s"}
+    assert set(fields_of(2)[1]) == {"age", "gender", "speed_mps", "radius_m", "time_to_segment_s"}
+    assert fields_of(2)[0] == PAIR_FIELDS  # version 3 (issue #32) added no pair-level field ...
+    # ... and four agent-level ones, where each is in a passage the two meet in.
+    assert set(AGENT_FIELDS) - set(fields_of(2)[1]) == {
+        "in_segment", "segment_distance_travelled", "segment_distance_ahead", "segment_distance_behind",
+    }
+    assert all(AGENT_FIELDS[name].since == 3 for name in set(AGENT_FIELDS) - set(fields_of(2)[1]))
     assert "task" in UNOBSERVABLE and not set(UNOBSERVABLE) & (set(PAIR_FIELDS) | set(AGENT_FIELDS))
 
 

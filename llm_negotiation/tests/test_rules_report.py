@@ -10,7 +10,7 @@ import math
 
 from negsim.configutil import PACKAGE_ROOT
 from negsim.rules import benchmark
-from negsim.rules.report import EXPERIMENTS, experiment_tables, main, report, side_passed, spread
+from negsim.rules.report import EXPERIMENTS, PASSAGE_EXPERIMENTS, experiment_tables, main, passage_tables, report, side_passed, spread
 from negsim.runlog.schema import AVOIDANCE_TRAJECTORY_COLUMNS
 
 DOCUMENT = PACKAGE_ROOT / "docs" / "behaviour-checks.md"
@@ -90,4 +90,25 @@ def test_the_behaviour_checks_document_quotes_every_table_exactly():
     document = set(DOCUMENT.read_text(encoding="utf-8").splitlines())
     lines = [line for line in report(EXPERIMENTS).splitlines() if line.strip()]
     missing = [line for line in lines if line not in document]  # whole lines, not parts of them
+    assert not missing, missing[:3]
+
+
+# --- issue #32: a meeting inside a single-file passage ------------------------------------------------
+
+
+def test_the_passage_tables_are_read_from_the_committed_logs(tmp_path):
+    lines = passage_tables("si32_passage_meet_middle")
+    assert lines[:3] == ["### si32_passage_meet_middle", "", "240 runs, from `d57e854` 240."]
+    row = next(line for line in lines if line.startswith("| asymmetric, rest, seed_rule | 20 |"))
+    assert "| completed 20 | agent 0 20 | agent 1 20 | 1.60 ± 0.00 |" in row  # agent 1, 0.7 m in, backs out
+    stalled = next(line for line in lines if line.startswith("| symmetric, rest, arbiter | 20 |"))
+    assert "| deadlock 14, timeout 6 | neither 20 | – | – | – |" in stalled  # the arbiter's way, from rest
+    assert passage_tables("si32_nothing", tmp_path) == ["### si32_nothing", "", "No runs found.", ""]
+    assert report(["si32_passage_meet_middle"]) == "\n".join(lines)  # the report picks the passage tables
+
+
+def test_the_behaviour_checks_document_quotes_the_passage_tables_exactly():
+    document = set(DOCUMENT.read_text(encoding="utf-8").splitlines())
+    lines = [line for line in report(PASSAGE_EXPERIMENTS).splitlines() if line.strip()]
+    missing = [line for line in lines if line not in document]
     assert not missing, missing[:3]

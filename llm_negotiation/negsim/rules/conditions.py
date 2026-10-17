@@ -16,10 +16,10 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Iterator, Mapping
+from typing import Any, Iterable, Iterator, Mapping, Optional
 
 from .errors import RuleError
-from .fields import CATEGORY, CONDITION_PREFIXES, FieldRef, resolve
+from .fields import BOOLEAN, CATEGORY, CONDITION_PREFIXES, FieldRef, resolve
 from .snapshot import PairSnapshot
 
 ORDERING = ("<", "<=", ">", ">=")
@@ -97,8 +97,12 @@ class Group(Condition):
             yield from item.comparisons()
 
 
-def parse_condition(raw: Any, where: str) -> Condition:
-    """A condition from its written form (already checked against the JSON Schema)."""
+def parse_condition(raw: Any, where: str, schema_version: Optional[int] = None, terms: Iterable[str] = ()) -> Condition:
+    """A condition from its written form (already checked against the JSON Schema).
+
+    ``schema_version`` is the rule's: it may read only the fields of its version.
+    ``terms`` are more words that name a person's group (``fields.protected_reference``).
+    """
     if not isinstance(raw, Mapping):
         raise RuleError("schema", f"{where}: a condition is a comparison, or a mapping with 'all' or 'any'")
     for kind in ("all", "any"):
@@ -106,17 +110,22 @@ def parse_condition(raw: Any, where: str) -> Condition:
             items = raw[kind]
             if kind == "any" and not items:
                 raise RuleError("schema", f"{where}.any: must have at least one item")
-            return Group(kind, tuple(parse_condition(item, f"{where}.{kind}[{index}]") for index, item in enumerate(items)))
-    return _comparison(raw, where)
+            return Group(
+                kind,
+                tuple(parse_condition(item, f"{where}.{kind}[{index}]", schema_version, terms) for index, item in enumerate(items)),
+            )
+    return _comparison(raw, where, schema_version, terms)
 
 
-def _comparison(raw: Mapping[str, Any], where: str) -> Comparison:
-    ref = resolve(raw.get("field"), f"{where}.field", CONDITION_PREFIXES)
+def _comparison(raw: Mapping[str, Any], where: str, schema_version: Optional[int] = None, terms: Iterable[str] = ()) -> Comparison:
+    ref = resolve(raw.get("field"), f"{where}.field", CONDITION_PREFIXES, schema_version, terms)
     op, unit, value = raw.get("op"), raw.get("unit"), raw.get("value")
     if op not in OPERATORS:
         raise RuleError("operator", f"{where}.op: expected one of {list(OPERATORS)}, got {op!r}")
     if ref.spec.kind == CATEGORY and op in ORDERING:
         raise RuleError("operator", f"{where}: '{ref.written}' is a category; only ==, != and in apply, got {op!r}")
+    if ref.spec.kind == BOOLEAN and op in ORDERING:
+        raise RuleError("operator", f"{where}: '{ref.written}' is true or false; only ==, != and in apply, got {op!r}")
     if op == "in":
         if not isinstance(value, list) or not value:
             raise RuleError("value", f"{where}.value: 'in' needs a non-empty list, got {value!r}")

@@ -36,6 +36,9 @@ experiment code until the literature review is complete and discussed.**
 > Issue #30 (2026-10-15) made it a hard stop for anything that spends money; none is
 > recorded, so the user chose to build everything on the free mock client and hold the paid
 > pilot: `WORK_LOG-30.md`, P1.
+> Issue #32 (2026-10-16) makes no paid call. It adds a fictional-group factor that no paid run
+> may switch on until the supervisor's **ethics sign-off** is recorded in `CLAUDE.md`; that
+> sign-off is pending: `WORK_LOG-32.md`, Q1.
 
 | # | Roadmap step | Status |
 |---|---|---|
@@ -45,6 +48,7 @@ experiment code until the literature review is complete and discussed.**
 | 3a | Avoidance layer, so that a rule can prescribe avoidance and not only priority (sub-issue 1 of 6) | **built** (issue #26) — `llm_negotiation/negsim/avoidance/`; 46 free runs, no rule and no LLM call yet |
 | 3b | Rule format, rule database and rule-following mode (sub-issue 2 of 6) | **built** (issue #28) — `llm_negotiation/negsim/rules/`, `llm_negotiation/rule_db/`; five hand-written test rules, 1,600 free runs, no LLM call |
 | 3c | Conflict cases, rule generation by two LLMs negotiating or one stating, the rule writer (sub-issue 3 of 6, first half) | **built and rehearsed on the mock** (issue #30) — `llm_negotiation/negsim/rulegen/`, `llm_negotiation/cases/`; 18 conflict cases; the paid pilot is **held** (no recorded approval; its worst case exceeds its cap, `WORK_LOG-30.md` Q5) |
+| 3c.2 | A fictional group no rule may read, and two people meeting inside a single-file passage (`back_up`, rule format 3, prompt version 2) | **built and rehearsed on the mock** (issue #32) — the group is **off by default**, and no paid run may switch it on until the supervisor's ethics sign-off is recorded (pending); 576 free behaviour-check runs; 26 new case versions; the pilot moved to prompt version 2 and still **held** (issue #30's Q5 re-previewed, `llm_negotiation/docs/rule-generation.md` section 10.1) |
 | 4 | Analyse exchanges for a reusable pattern | not started |
 | 5 | Validate the pattern against real data or sociology | **coding scheme drafted** (issue #12) — `literature/human-conflict-resolution/` |
 | 5a | Demographic personas: realism vs LLM bias | **delivered** (issue #16) — `literature/demographic-personas/` |
@@ -162,6 +166,32 @@ about LLMs or about people:
 - **The paid pilot is held, and as specified it cannot run**: its worst case is USD 0.62
   against its USD 0.05 cap. Whether to cut the negotiation, the design, or raise the cap is
   open (Q5).
+
+From issue #32 (the third sub-issue's second step, SI-3a.2) — see `llm_negotiation/README.md`,
+"Fictional groups and meetings inside a passage", and `WORK_LOG-32.md` for what needs sign-off.
+**No model was called**; nothing here is evidence about LLMs or about people:
+
+- **A person can now belong to a fictional group** (an invented label, searched so that it
+  means nothing, with no description), which agents may see and **no rule may read**: a rule
+  that tries is kept and counted as `protected_attribute`, since a model trying to is a
+  finding. The group is a design factor (the same group or different, which label goes to
+  whom, shown or hidden), off unless a config switches it on, and every session's outcome is
+  logged so that who conceded, whose rule was accepted and who got the larger share can be
+  stratified by it. Fictional groups can test in-group against out-group, not how a model
+  treats real ethnicities. **The supervisor's ethics sign-off is pending.**
+- **Two people who meet inside a single-file passage can now be told who backs out.** A
+  directive `back_up` (back out at one's own backing speed, wait, go on) and rule format 3,
+  which can say "the one who has walked less far in backs out". In 560 runs (20 seeds per
+  condition), the arbiter's fallback gets neither person through when they meet standing
+  still (80 of 80 runs stall), and when they meet walking it gets them through only by pushing
+  one backwards at about 1 m/s, the walking-backwards artefact; the seed rule gets them
+  through in all 160 of its runs at the cited backing speeds. With a slow backer, choosing by
+  distance walked backs 0.64 m less but takes about 3 s more than choosing by time
+  (`llm_negotiation/docs/behaviour-checks.md`, section 6).
+- **The prompts are a new frozen version** that describes both, and the pilot now uses it:
+  its worst case is USD 0.65 against the same USD 0.05 cap, and no cut of the reply cap, the
+  messages or the retries alone fits; a hard spend cap with the sessions in a stated priority
+  order would (issue #30's Q5, options re-previewed).
 
 Three findings from the simulation-rules review (issue #22), all drafts needing supervisor
 sign-off — see `literature/simulation-rules/`. The review is seed-led (27 sources, 5 papers
@@ -284,25 +314,26 @@ CrowdSimulation/
     crowdgym_mapping.md             record -> CrowdGym AgentType / journey / action handler
   llm_negotiation/                  issue #24: two-agent LLM negotiation simulator; issue #26: the
                                     avoidance layer (ORCA, perception, directives); issue #28: rules;
-                                    issue #30: rule generation. Has its own README
+                                    issue #30: rule generation; issue #32: fictional groups and
+                                    meetings inside a passage. Has its own README
     run_experiment.py               run an experiment config; --client mock (free) or deepseek (paid);
                                     an avoidance config needs no client and costs nothing; a
                                     rule-generation config with deepseek sends nothing without --confirm
     configs/                        scenarios, personas, experiment designs C0-C4, task strings, API prices;
-                                    avoidance/ (issue #26), rule_following/ (#28), cases/ and
-                                    rule_generation/ (#30)
+                                    avoidance/ (issue #26), rule_following/ (#28, #32), cases/ and
+                                    rule_generation/ (#30, #32)
     negsim/                         the package: core, scenarios, conflict, control, llm,
                                     negotiation, personas, runlog, metrics, viz, experiment,
                                     avoidance, rules, rulegen
-    cases/                          the frozen conflict cases of issue #30, with their manifest
+    cases/                          the frozen conflict cases of issues #30 and #32, with their manifest
     rule_db/                        the rule database (issue #28); generated rules never go here
-    tests/                          1,223 tests; none calls a model or the network, none spends
+    tests/                          1,381 tests; none calls a model or the network, none spends
     docs/                           architecture, gamechat-notes, derivations, llm-backend, log-schema;
                                     orca, perception, parameters, metrics (issue #26); rule-format,
                                     rule-matching, baseline, behaviour-checks (#28); cases,
-                                    rule-generation, pricing-check (#30)
-    runs/                           committed run logs: C0 (no LLM), the paid smoke runs, and
-                                    si1_* (the 46 avoidance runs and the benchmark)
+                                    rule-generation, pricing-check (#30); fictional-groups (#32)
+    runs/                           committed run logs: C0 (no LLM), the paid smoke runs,
+                                    si1_* (#26), si2_* (#28), si3_source_* (#30), si32_* (#32)
     views/                          the animated viewer's pages (git-ignored); see "Watch a run"
                                     in llm_negotiation/README.md
     spend_ledger.jsonl              one line per paid API call for this work (Phase 1 spend is
