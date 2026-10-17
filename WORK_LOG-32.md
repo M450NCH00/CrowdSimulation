@@ -787,6 +787,16 @@ written only when set, and the old versions keep working.
   to the base (37 lines, issue #24's calls): **zero spend**.
 - Next step: commit, push, and the pull request into `feat/30-conflict-cases-rule-generation`.
 
+### 2026-10-17 15:45 — Pushed; PR #33
+
+- Committed as `05490dd`; pushed `feat/32-fictional-ethnicity-passage-meetings` (16 commits on
+  `origin/feat/30-conflict-cases-rule-generation` at `2dad845`, an ancestor, checked).
+- Opened **PR #33** into `feat/30-conflict-cases-rule-generation`
+  (https://github.com/M450NCH00/CrowdSimulation/pull/33): the decisions, the behaviour checks,
+  the Q5 options table and what is pending for the supervisor. It says "Closes #32", and that a
+  merge into a stacked branch will not close the issue by itself. The issue is not closed.
+- Commented on the issue with the link.
+
 ## Open questions / risks
 
 - **Q1 (carried from #30). The supervisor's approval of simulation work, and now of the
