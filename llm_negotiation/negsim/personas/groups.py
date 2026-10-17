@@ -1,6 +1,6 @@
 """Fictional group labels for the ethnicity attribute (issue #32, Part 1).
 
-A person may belong to a **fictional** group, named by an invented label such as ``Zorvel``.
+A person may belong to a **fictional** group, named by an invented label such as ``Kestrop``.
 The labels carry nothing but a name: no description, history, appearance or customs. They let
 an experiment test in-group against out-group effects, which have a human baseline in the
 minimal group paradigm, without reproducing any real group's stereotypes; for the same reason
@@ -22,8 +22,8 @@ import re
 from typing import Any
 
 #: The default label set, in rotation order (``docs/fictional-groups.md``, section 2).
-DEFAULT_GROUP_LABELS = ("Zorvel", "Kestrop", "Dremmik")
-#: The words that introduce the attribute in a prompt ("a member of the Zorvel ethnic group").
+DEFAULT_GROUP_LABELS = ("Kestrop", "Dremmik", "Pellund")
+#: The words that introduce the attribute in a prompt ("a member of the Kestrop ethnic group").
 #: A setting of each experiment, recorded with every session; a decision pending the
 #: supervisor (DD86).
 DEFAULT_FRAMING = "ethnic group"

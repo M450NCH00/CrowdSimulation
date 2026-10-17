@@ -40,7 +40,7 @@ def rule(**body):
 @pytest.mark.parametrize(
     "reference",
     ["pair.ethnic_group", "either.ethnic_group", "both.ethnic_group", "agent.ethnic_group", "ethnic_group",
-     "pair.same_ethnic_group", "pair.ethnicity_difference", "either.ethnicity", "agent.Ethnic_Group", "either.zorvel"],
+     "pair.same_ethnic_group", "pair.ethnicity_difference", "either.ethnicity", "agent.Ethnic_Group", "either.pellund"],
 )
 def test_every_way_of_naming_the_group_is_protected_whatever_the_prefix(reference):
     for prefixes in (CONDITION_PREFIXES, ROLE_PREFIXES):
@@ -61,7 +61,7 @@ def test_the_words_of_a_session_are_protected_and_ordinary_words_are_not():
 @pytest.mark.parametrize(
     "body, where",
     [
-        ({"when": {"all": [{"field": "either.ethnic_group", "op": "==", "value": "Zorvel"}]}}, "when"),
+        ({"when": {"all": [{"field": "either.ethnic_group", "op": "==", "value": "Pellund"}]}}, "when"),
         ({"when": {"any": [{"field": "pair.distance_m", "op": "<", "value": 3, "unit": "m"}, {"field": "pair.same_ethnic_group", "op": "==", "value": True}]}}, "when"),
         ({"roles": {"by": {"field": "agent.ethnic_group", "order": "ascending", "assign": ["a", "b"], "tie": "no_match"}}, "directive": {"a": {}, "b": {}}}, "roles"),
         ({"roles": {"by": {"field": "agent.age", "order": "ascending", "assign": ["a", "b"], "tie": "agent.ethnic_group"}}, "directive": {"a": {}, "b": {}}}, "roles"),  # the tie policy

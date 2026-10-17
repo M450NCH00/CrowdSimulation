@@ -309,9 +309,9 @@ def test_passage_fields_are_null_outside_the_passage_and_without_one():
 
 
 def test_an_agent_knows_its_own_group_and_sees_the_others_only_when_switched_on():
-    groups = {0: {"age": 31, "gender": "female", "ethnic_group": "Zorvel"}, 1: {"age": 83, "gender": "male", "ethnic_group": "Kestrop"}}
+    groups = {0: {"age": 31, "gender": "female", "ethnic_group": "Pellund"}, 1: {"age": 83, "gender": "male", "ethnic_group": "Kestrop"}}
     hidden = record(attributes=groups)
-    assert hidden.observer.attributes == {"age": 31, "gender": "female", "ethnic_group": "Zorvel"}
+    assert hidden.observer.attributes == {"age": 31, "gender": "female", "ethnic_group": "Pellund"}
     assert "ethnic_group" not in hidden.neighbour_attributes and default_visibility()["ethnic_group"] is False
     shown = record(visibility={**default_visibility(), "ethnic_group": True}, attributes=groups)
     assert shown.neighbour_attributes == {"age": 83, "gender": "male", "ethnic_group": "Kestrop"}

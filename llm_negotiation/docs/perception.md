@@ -241,7 +241,7 @@ handling); `tests/test_rules_matching.py` (the shared snapshot equals each agent
 ## The group (version 3)
 
 `ethnic_group` is a persona attribute (`negsim/personas/schema.py`) holding a **fictional** label
-such as `Zorvel`, from a configurable set of invented names that carry no description
+such as `Kestrop`, from a configurable set of invented names that carry no description
 (`fictional-groups.md`). An agent knows its own (`observer.attributes`); it sees the neighbour's
 (`neighbour_attributes`) only when the run's `ethnic_group` switch is on, which it is not by
 default, independently of the `age` and `gender` switches. A persona that has no group has no

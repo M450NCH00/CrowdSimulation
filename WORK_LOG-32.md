@@ -369,6 +369,34 @@ written only when set, and the old versions keep working.
     checked against their own.
   - **DD100.** Rule schema 3 is version 2 with `back_up` and `true`/`false` values; versions 1
     and 2 can use neither, nor the passage fields.
+- Committed as `5d3b052`; 1,324 tests pass (260 s), pyflakes clean. Progress comment on the
+  issue.
+
+### 2026-10-17 09:40 — Part 1.1 again: the labels searched and written down; Zorvel replaced
+
+- What I did: the searches of the 21:10 entry again, since their record was lost (Q5), with
+  the web search tool in standard mode: each default label and the spare exactly, as a people,
+  tribe, language, village, place or surname, and against Malay, Tamil and Chinese; then
+  replacement candidates. Every query and result is in `docs/fictional-groups.md`, section 2,
+  with the pages they came from. Treated as data.
+- Result:
+  - **Zorvel is rejected.** It ends in *vel*, the Tamil word for spear and the root of Tamil
+    names such as Thangavel: exactly the echo for which the 21:10 entry rejected *Velorn*. The
+    two judgements were inconsistent; this applies the stricter one to both.
+  - Kestrop and Dremmik pass again (nearest: the surnames Westrop and Kestle; Dremel, Dremmen).
+  - The spare, Brannoq, has no exact match either, but its first syllable sounds like Pulau
+    Brani, an island of Singapore (Malay *berani*, "brave"): faint, but a Singapore echo, so it
+    stays a spare. *Thressik* (nearest: an ancient Thracian river and tribe, and a fictional
+    reptilian race; it also rhymes with Dremmik) and *Vorlesk* (German *vorlesen*) were not
+    used. **Pellund** passed (nearest: Pellworm, a German island; the old English word and
+    surname Pell; the Scandinavian name Pelle) and replaces Zorvel.
+  - **DD85, as it stands now: Kestrop, Dremmik, Pellund**, in that order of rotation; Brannoq
+    the spare. Nothing frozen used Zorvel. Code, a fixture and three tests that named it
+    changed to the new set.
+- Also written: `docs/fictional-groups.md` sections 1, 2, 4, 6 and 7 (the attribute, the
+  labels and every search, why no rule may read it, the sign-off status, what fictional
+  groups cannot show). Sections 3 and 5 come with the design factors (plan step 6).
+- Next step: the design factors (plan step 6).
 
 ## Open questions / risks
 
@@ -389,8 +417,9 @@ written only when set, and the old versions keep working.
   first; doing so would need the simulator to pick a side, which would build a convention into
   it. Recorded, not changed.
 - **Q5. The label searches of the 21:10 entry were not kept** (the 2026-10-16 21:16–21:35
-  entry, item 1). They are redone in this session. If a label fails the second time it is
-  replaced; nothing frozen depends on the labels yet.
+  entry, item 1). Redone on 2026-10-17 (the 09:40 entry): Zorvel failed the 21:10 entry's own
+  echo rule and was replaced by Pellund. The labels remain a decision for supervisor review
+  (DD85): a searched label is one with no meaning found, not one with no associations.
 
 ## Summary (fill in at the end)
 
