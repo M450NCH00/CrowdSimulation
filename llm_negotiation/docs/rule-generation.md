@@ -564,7 +564,8 @@ version 2 with `rulegen_paths_v2`: every new path, its category, rules written i
 recorded, and the user chose to build and rehearse everything on the mock and hold the pilot.
 The pricing check that must precede any paid call is not done either (`pricing-check.md`).
 
-**The design**, as the issue specifies it (`configs/rule_generation/si3_pilot.yaml`): two
+**The design**, as the issue specifies it (`configs/rule_generation/si3_pilot.yaml`; since
+issue #32 on prompt version 2, section 10.1, whose numbers replace the ones below): two
 cases, one `wide_corridor_head_on` (`head_on_de176842`) and one `overtaking`
 (`overtaking_2d08db11`); condition A with both speaking orders; condition B with both
 description orders at K = 2; demographics shown in the head-on case and hidden in the
@@ -605,13 +606,98 @@ stability (B); the tokens of every session against its preview; the total spend;
 failure modes; and the replay and screening of every valid rule. A rule's quality in so small
 a sample is not a finding: the point is that the loop runs end to end with the real model.
 
+### 10.1 Re-previewed for prompt version 2 (issue #32, Part 4)
+
+Issue #32 changed what a model is shown, and the pilot has to run on that, or its data would
+match no later run. So `si3_pilot.yaml` now uses prompt version 2 (section 3.1), the same two
+cases at their re-stepped version 2 (case set `si3_v2`, `cases.md` section 8) and the mock
+policy of version 2, and **nothing else: not the design, not the cap** (DD117 of
+`WORK_LOG-32.md`). Nothing was sent. Every number below is the code's own preview
+(`preview_cost`, section 9), priced at the table of 2026-10-13, which has not been checked
+again (`pricing-check.md`).
+
+**The parts of the bound**, as issued (M = 4, c = 600, 2 transport retries):
+
+| | Prompt version 1 | Prompt version 2 |
+|---|---|---|
+| S, condition A: a session's larger system prompt, the longest turn wrapper, c, and the retry instruction (tokens) | 4,082 to 4,232 | 4,487 to 4,638 |
+| S, condition B: the statement prompt, c, and the retry instruction | 3,577 to 3,766 | 3,983 to 4,172 |
+| m: a previous turn as it reappears, c + the wrapper | 763 | 763 |
+| c: the reply cap, `max_tokens` | 600 | 600 |
+| M: messages per agent | 4 | 4 |
+| Sends a turn can make: 2 attempts × (1 + 2 transport retries); so retries per turn | 6; 5 | 6; 5 |
+| Worst case, A / B / total | USD 0.532 / 0.087 / 0.619 | USD 0.555 / 0.093 / **0.648** |
+
+S grows by about 405 tokens (the guard's high estimate) in both conditions, all of it from the
+common template: the glossary of rule format 3 (the four passage fields, the true-or-false
+line), `back_up`, and the rule a rule using it must follow. The situation lines of version 2
+add nothing for these two cases: no one stands still, no one is inside a passage, no group.
+
+**A floor for m.** The largest valid reply the mock produces in the rule format is its
+in-passage back-up rule: **557 characters in condition A** (the turn's message and proposal),
+**168 tokens** by DeepSeek's rule of thumb of 0.3 tokens per character (`llm-backend.md`; the
+guard's high estimate, 259); in condition B, 504 characters and 152 tokens. Measured over the
+529 valid replies of the two mock rehearsals of issue #32 (section 9). **It is a lower bound**:
+the mock's message is 15 characters and its intent 78. A real model writes more; the same reply
+with an intent at the schema's limit of 500 characters and a 300-character message is about
+1,280 characters, 384 tokens.
+
+**The options for Q5.** Which to take is the user's and the supervisor's decision; the cap in
+the config stays USD 0.05.
+
+| Option | What changes | A, B sessions | Worst case | Fits USD 0.05 |
+|---|---|---|---|---|
+| (a) The current design | prompt version 2, nothing else | 4, 8 | USD 0.648 | no |
+| (b) A reply cap of **400 tokens**: 2.4 times the floor, room for the floor's reply with a 500-character intent and a 300-character message | c = 400 | 4, 8 | USD 0.536 | no |
+| (c) M = 3 | 3 messages per agent | 4, 8 | USD 0.477 | no |
+| (d) A hard spend cap, sessions in priority order | the guard stops the run at the cap; the preview is not a gate | 4, 8, as many as the cap allows | **USD 0.050**: the cap itself | yes, by construction |
+| (b) and (c) | c = 400, M = 3 | 4, 8 | USD 0.397 | no |
+| No transport retries | 0 retries (2 sends a turn) | 4, 8 | USD 0.216 | no |
+| (b) and no transport retries (issue #30's recommendation, with its cap raised to USD 0.17 then; now USD 0.18 would be needed) | c = 400, 0 retries | 4, 8 | USD 0.179 | no |
+| (b), (c) and no transport retries | c = 400, M = 3, 0 retries | 4, 8 | USD 0.132 | no |
+
+No change to c, M or the retries alone brings the worst case under USD 0.05: one negotiation's
+bound is USD 0.14 as issued, and its quadratic term dominates. Adding an in-passage case to the
+pilot (both conditions, the same factors) would add 2 negotiations and 4 statements and take
+(a) to USD 0.98; the pilot's design is not changed here.
+
+**(d) in detail.** The budget guard (`llm-backend.md`) refuses any send whose worst case, times
+1 + the transport retries, could take this experiment's recorded spend past its cap: the run
+stops there, and the session it was in is recorded as aborted, so the spend can never exceed
+the cap. The proposed order, so that the most important paths run first:
+
+1. **Tier 1, the minimum the issue names** (one condition A session and one condition B call
+   per scenario type): the head-on and the overtaking case's first statement (the first
+   description order, repeat 1), then their first negotiation (the first speaking order).
+   Statements first: one costs about a tenth of a negotiation and measures a prompt at once.
+2. **Tier 2, the order factor**: the other description order's statement and the other
+   speaking order's negotiation, of each case.
+3. **Tier 3, stability**: every statement's second repeat (K = 2).
+
+What it would buy, **estimated, not bounded**: the prompts as rendered, at 0.3 tokens per
+character; every negotiation running its full 8 turns; no retry; no cache hit; peak prices;
+each send checked by the guard as it would be:
+
+| Every reply | Sessions completed of 12 | Spent | Tiers completed |
+|---|---|---|---|
+| 168 tokens (the floor) | 12 | USD 0.045 | all three |
+| 336 tokens (twice the floor) | 7 | USD 0.045 | 1, and three of tier 2's four sessions |
+| 600 tokens (the cap) | 6 | USD 0.043 | 1, and tier 2's two statements |
+
+Tier 1 completes in every case. A run stops short of the cap because each send must fit at its
+worst case × 3 (about USD 0.006 for a statement, up to about USD 0.01 for a late negotiation
+turn). **What (d) needs that the code does not do**: a setting that lets a paid run start when
+its preview exceeds the cap, with the guard as the only stop, and the sessions in a stated order
+instead of the design's. Both are small; neither is built, because which option to take is the
+decision.
+
 ## 11. What is logged
 
 `log-schema.md`, "Rule-generation experiments", lists every file of an experiment folder:
 the config and every invocation, the cases and the session list, the preview, one file per
 session (every prompt, raw reply, parsed turn, proposal, acceptance, attempt, token count and
 cost), `validation.jsonl`, `written.jsonl`, `screening.jsonl`, the staging databases, the
-replay and screening runs (avoidance runs, log schema version 4), `cost.json`,
+replay and screening runs (avoidance runs, log schema version 4; version 5 since issue #32), `cost.json`,
 `summary.json` and `report.md`.
 
 ## 12. What is not here

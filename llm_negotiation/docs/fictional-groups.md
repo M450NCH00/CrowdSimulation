@@ -35,8 +35,9 @@ that sign-off is recorded in `CLAUDE.md` (section 6).
   version 3, `perception.md`, "The group"). It is **hidden by default**, and left out of a
   persona that does not give it, so every persona and log written before issue #32 is as it
   was.
-- **The framing word** introduces the attribute in a prompt ("a member of the Kestrop ethnic
-  group"). It is a setting of each experiment, recorded with every session; the default is
+- **The framing word** introduces the attribute in a prompt ("You belong to the Kestrop ethnic
+  group.", "They belong to the Dremmik ethnic group.": prompt version 2, `rule-generation.md`
+  section 3.1). It is a setting of each experiment, recorded with every session; the default is
   "ethnic group". **A decision pending supervisor review** (DD86): "community" or "group"
   would frame the same labels differently, and the issue leaves the choice open.
 

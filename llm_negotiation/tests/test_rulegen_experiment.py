@@ -114,7 +114,9 @@ def test_every_shipped_config_loads_names_the_mock_and_plans():
         assert rg.plan(cfg).preview["sessions"] > 0
     pilot = rg.plan(rg.RuleGenConfig.load(PACKAGE_ROOT / "configs" / "rule_generation" / "si3_pilot.yaml")).preview
     assert pilot["sessions_by_condition"] == {"negotiated": 4, "stated": 8}
-    assert pilot["usd_total"] == pytest.approx(0.6189372, abs=1e-6) and not pilot["fits_the_cap"]  # docs/rule-generation.md, section 10
+    # Prompt version 2 since issue #32 (USD 0.6189372 with version 1); docs/rule-generation.md, section 10.1
+    assert pilot["usd_total"] == pytest.approx(0.6481404, abs=1e-6) and not pilot["fits_the_cap"]
+    assert pilot["cap_usd"] == 0.05  # the issue's cap, unchanged (issue #32, Part 4)
 
 
 def test_cases_by_set_and_id():

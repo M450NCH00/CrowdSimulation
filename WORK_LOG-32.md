@@ -694,6 +694,75 @@ written only when set, and the old versions keep working.
   commit is a separate command, run only after the suite's exit status is read.
 - Next step: run both rehearsals from the clean tree.
 
+### 2026-10-17 15:11 — The end-to-end mock rehearsals; Part 4, the pilot re-previewed
+
+- **The rehearsals**, from the clean tree at `433de5e`, into `runs_mock/` (git-ignored, as
+  issue #30's rehearsal): `si32_mock_no_groups` (96 sessions, 58 s) and `si32_mock_groups_on`
+  (576 sessions), both completed, USD 0 spent. A scratchpad script checked them (not shipped;
+  its output is quoted here):
+  - all six validation categories in both conditions of both runs; `protected_attribute`
+    too in the run with no group, since a rule that names `ethnic_group` is protected whether
+    or not a design has groups;
+  - every session was shown rule format 3, and every rule written (28 and 36) is in it;
+  - every back-up rule replayed on its in-passage case completed with one manoeuvre, agent 1
+    backing out and waiting for the other (12 replays). One traced: on `passage_10e542c2` the
+    baseline deadlocks, and with the rule agent 1 (0.7 m in) backs out, both arrive at 11.8 s;
+  - **with the group shown (288 sessions), each person's label is in the prompt; hidden (288)
+    or absent (96), no group word is in any system prompt**, and in a turn only where it relays
+    the mock's own words (its protected-attribute path writes "ethnic_group" and "Kestrop" into
+    its rule; a model could not see a hidden label);
+  - one outcome row per session, by group pair and visibility (144 in each of the four
+    combinations); **each label is each person's equally often** (192 times); `summary.json`
+    stratifies by condition, group pair and visibility, and reports the group's factors. With
+    no group, no row has one.
+- **Part 4, the pilot's worst case under prompt version 2** (nothing sent; the code's own
+  `preview_cost`; the scratchpad scripts compute variants of the config in memory):
+  - As committed (prompt version 1): USD 0.6189, #30's number, reproduced. **Prompt version 2,
+    the design as issued: USD 0.6481** (A 0.5549, B 0.0933). S rises by about 405 tokens in
+    both conditions (A 4,487 to 4,638; B 3,983 to 4,172), all of it the common template: the
+    16 situation texts of the pilot's sessions are identical in both versions (checked). m 763
+    (c 600 + wrapper), M 4, 6 sends a turn (5 retries).
+  - **The floor for m**: the largest valid reply the mock produces is its in-passage back-up rule,
+    557 characters in condition A, **168 tokens** at DeepSeek's 0.3 tokens per character (259 by
+    the guard's estimate); 504 and 152 in B; over the 529 valid replies of both rehearsals. A
+    lower bound: with an intent at the schema's 500-character limit and a 300-character
+    message, the same reply is about 384 tokens.
+  - **The options for Q5** (`rule-generation.md`, section 10.1): (a) as issued, USD 0.648;
+    (b) a reply cap of 400 (2.4 times the floor; room for the maximal intent and a short
+    message), USD 0.536; (c) M = 3, USD 0.477; (d) a hard spend cap in priority order, worst
+    case the cap itself, USD 0.050. Combinations for comparison: (b)+(c) 0.397; no transport
+    retries 0.216; (b) and no retries 0.179 (issue #30's recommendation; its USD 0.17 cap would
+    now need 0.18); (b), (c) and no retries 0.132. **No change of c, M or retries alone fits
+    USD 0.05.** Adding an in-passage case to the pilot would take (a) to USD 0.98 (not done).
+  - **(d)**: the priority order proposed (tier 1, a statement then a negotiation per scenario
+    type; tier 2, the other order; tier 3, the second repeats), and a send-by-send simulation of
+    the guard over it (an estimate, not a bound: prompts at 0.3 tokens per character, full-length
+    negotiations, no retry, no cache hit, peak prices): with replies of 168 tokens all 12
+    sessions complete (USD 0.045); of 336, 7; of 600, 6. **Tier 1 completes in every case.**
+    A first version of the simulation called a mode "worst" that charged each send the guard's
+    estimate with replies of the floor's size: not the worst case, which is the cap. Dropped
+    before writing it up. (d) needs two small code changes that are not made (a paid run whose
+    preview exceeds the cap allowed to start, with the guard as the only stop; and a session
+    order); the decision is the user's.
+- **The pilot config now uses prompt version 2** (the change of plan of the 11:20 entry):
+  `cases.set: si3_v2`, the two v2 templates, the mock policy `rulegen_paths_v2`; **the cap stays
+  USD 0.05, and the design is unchanged**. Its header says why and points to the options. The
+  test pinning its preview moves from 0.6189372 to 0.6481404 and now also pins the cap (A4).
+  `pricing-check.md` quotes both previews. `fictional-groups.md` section 1 quoted the group's
+  prompt line before the templates existed ("a member of the Kestrop ethnic group"); corrected
+  to the frozen wording.
+- Decisions:
+  - **DD117.** The pilot runs on prompt version 2 with the re-stepped cases; its design and its
+    cap are not changed.
+  - **DD118.** The floor for m is the largest valid mock reply at DeepSeek's 0.3 tokens per
+    character, stated as a lower bound; option (b)'s cap, 400 tokens, is set by what a valid reply
+    with an intent at the schema's limit and a short message would need.
+  - **DD119.** The priority order proposed for option (d): statements, then negotiations, per
+    scenario type; then the other order; then the repeats.
+- Result: full suite **1,376 passed** (246 s).
+- Next step: a mock run of the pilot itself; the remaining documents
+  (`architecture.md`, the READMEs); the final checks.
+
 ## Open questions / risks
 
 - **Q1 (carried from #30). The supervisor's approval of simulation work, and now of the
