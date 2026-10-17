@@ -398,6 +398,49 @@ written only when set, and the old versions keep working.
   groups cannot show). Sections 3 and 5 come with the design factors (plan step 6).
 - Next step: the design factors (plan step 6).
 
+### 2026-10-17 10:20 — Parts 1.3 to 1.5: the group in the design, off by default, and logged by outcome
+
+- What I did:
+  - **The design** (`negsim/rulegen/design.py`): an optional `design.ethnicity` block, off
+    unless `enabled: true`, with the labels, the framing word and three factors, crossed with
+    the six of issue #30: `group_pair` (same, different), `label_rotation` (which label person 1
+    gets; person 2 the same one or the next round the set) and `ethnicity_visible`, a switch apart
+    from `demographics_visible`. Each person gets its label (`ethnic_group`), the session its
+    `framing`. A design without the block, or with it off, has exactly the cells and session ids
+    it had (a cell's code hashes the group's factors only when it has them; tested against the
+    old formula).
+  - **Off by default, and the sign-off**: no shipped config has the block. A paid run with it on
+    is refused before anything is sent unless `CLAUDE.md` holds the sentence "Ethics sign-off for
+    the fictional-group factor (issue #32): approved by the supervisor on YYYY-MM-DD"
+    (`refused_no_sign_off` in `invocations.jsonl`). A test checks that the repository records no
+    sign-off. **Ethics sign-off from the supervisor: pending unless recorded otherwise.**
+  - **The outcome rows** (`negsim/rulegen/outcomes.py`, `outcomes.jsonl`): one per session, group
+    on or off, with what to stratify by and what came of it: proposals per person, whose was
+    accepted (`proposed_by`), who accepted the other's (`conceded_by`), who said no rule is
+    possible, and for the agreed or stated rule its category and what it does to each person on
+    the case's own pair: role, directive, **who gets the larger responsibility share**, who goes
+    first, who backs up. `summary.json` gains `design` (the full factorial's size) and `groups`
+    (outcomes by condition, group pair and visibility); `--plan` prints the size.
+  - The rule-generation log is version 2; `log-schema.md`, `rule-generation.md` section 2 and
+    `fictional-groups.md` sections 3, 5 and 6 say what changed.
+- Result: 25 new tests (`tests/test_rulegen_groups.py`); the 185 tests of rule generation pass.
+  **The full factorial** with the group, every level: 288 × 12 = **3,456 cells per case and
+  condition**, so with K = 3 statements 13,824 sessions per case; with groups and demographics
+  hidden, many of these show a model the same words. SI-3b will need a fraction; none is chosen.
+- Decisions:
+  - **DD101.** The rotation is cyclic: person 2 of a `different` pair gets the next label round
+    the set, so `label_rotation` has one level per label and the factors stay crossed. It uses
+    three of the six ordered different pairs; each label is each person's equally often.
+  - **DD102.** `ethnicity_visible: false` hides the groups from both people, a person's own
+    included, so the control shows nothing of them (as `demographics_visible` does for age and
+    gender).
+  - **DD103.** The sign-off is one exact sentence in `CLAUDE.md`, with a date; only the user adds
+    it. A mock run needs none.
+  - **DD104.** What a rule does to each person is read on the case's own snapshot with the
+    session's people in it (ages and genders as far as the session shows them), not on a run.
+  - **DD105.** The rule-generation log is version 2 (`outcomes.jsonl` and the group).
+- Next step: the prompts, the cases, the mock and validation (plan step 7).
+
 ## Open questions / risks
 
 - **Q1 (carried from #30). The supervisor's approval of simulation work, and now of the

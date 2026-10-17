@@ -409,8 +409,8 @@ artefact's distance), empty for a run written before; and `git_commit`.
 A rule-generation experiment (`rule-generation.md`) is not a run: it holds sessions with a
 model, the rules they produced, and avoidance runs that replay and screen those rules. Its
 folder, `runs/<experiment_name>/` (`runs_mock/` with the mock client), is laid out as below.
-Its own files are **version 1** of the rule-generation log (`rulegen_log_version` in
-`config.json`); the run folders under `replay/` and `screening/` are avoidance runs of the log
+Its own files are **version 2** of the rule-generation log (`rulegen_log_version` in
+`config.json`; version 1 before issue #32, which added `outcomes.jsonl` and the fictional group); the run folders under `replay/` and `screening/` are avoidance runs of the log
 schema version of the code that ran them (4 before issue #32, 5 since), described above.
 
 ```
@@ -424,6 +424,7 @@ runs/<experiment_name>/
   sessions/<session_id>.md              the same session, for reading
   sessions/<session_id>.aborted<n>.json the log of a session that was aborted and run again (and .md)
   validation.jsonl       one line per proposed rule: its category
+  outcomes.jsonl         one line per session: what it came to, person by person (version 2)
   written.jsonl          one line per rule the writer stored
   rule_db_staging/<negotiated|stated>/  the staging databases (rule-format.md, section 12)
   replay/<rule_id>/baseline/, replay/<rule_id>/rule/   avoidance runs: the replay of a rule
@@ -444,13 +445,17 @@ written again with the new config.
 
 **`invocations.jsonl`**: `utc`, `git`, `client` (what the client says of itself, without
 credentials), `confirm`, `limit`, `status` (`completed`, `partial`, `aborted`,
-`awaiting_confirmation` or `refused_over_cap`), `executed` (the sessions run this time),
+`awaiting_confirmation`, `refused_over_cap` or, version 2, `refused_no_sign_off`: a paid run
+with the fictional group on and no ethics sign-off in `CLAUDE.md`), `executed` (the sessions run this time),
 `aborted` (why, if so), `preview_usd`.
 
 **`design.jsonl`**, one session per line: `session_id`, `index` (its place in the shuffled
 list), `condition`, `case_id`, `case_version`, `agents`, `cell` (the level of each of the
-six factors), `repeat`, `personas` (keyed by agent: `age`, `gender`, `task`, `urgency`),
-`visibility`, `first` (the first speaker in A, Person 1 in B).
+six factors, and with the fictional group on, version 2, of `group_pair`, `label_rotation` and
+`ethnicity_visible`), `repeat`, `personas` (keyed by agent: `age`, `gender`, `task`, `urgency`,
+and with the group on its label, `ethnic_group`), `visibility` (with `ethnic_group`, version 2),
+`first` (the first speaker in A, Person 1 in B), and with the group on `framing` (the words that
+introduce it, `fictional-groups.md`).
 
 **`preview.json`**: `model`, `prices` (the peak cache-miss input and peak output prices per
 million tokens, the price table's source and date), `reply_cap_tokens`,
@@ -498,6 +503,18 @@ rule): `session_id`, `condition`, `case_id`, `scenario`, `turn_index`, `proposer
 proposal reads), `ignored_metadata` (what the model wrote in the writer's keys),
 `review_flags`.
 
+**`outcomes.jsonl`** (version 2; `fictional-groups.md`, section 5): one line per session that
+has a record, with or without the fictional group: `session_id`, `condition`, `case_id`,
+`scenario`, `repeat`, `cell`, `agents`, `first`, `demographics_visible`, `groups_on`,
+`group_pair`, `label_rotation`, `ethnicity_visible` and `framing` (null without the group),
+`people` (keyed by agent: `age`, `gender`, `urgency`, `ethnic_group`), `outcome`; in condition A
+`proposals_by` (keyed by agent), `proposed_by` (whose proposal was agreed), `conceded_by` (who
+accepted the other's) and `said_no_rule_possible` (the agents that did), null in B; and for the
+agreed or stated rule `rule_hash`, `category` (its validation category) and `effect`: what it
+tells the two on the case's own pair (`loads`, and the loader's `reason` if not; `matches`;
+`roles` and `directives`, keyed by agent; `larger_share`, the agent with the larger
+responsibility share or `equal`; `goes_first`; `backs_up`). Null without such a rule.
+
 **`written.jsonl`**: the writer's step of the latest invocation: `rule_id`, `version` and
 `file` (the rule's newest version when the writer had finished, which on a resumed experiment
 can be one that replay and screening wrote earlier), `condition`, `case_id`,
@@ -515,7 +532,10 @@ screening add are in `screening.jsonl`.
 **`cost.json`**: `preview_usd`, `actual_usd`, `of_which_aborted_sessions_usd`, `cap_usd`,
 `client`, `sessions` (per session: the calls, prompt and completion tokens and cost, against
 its preview), and a `note` on what the figures are. **`summary.json`** is the report's
-numbers (`rule-generation.md`, section 9); **`report.md`** the same, for reading.
+numbers (`rule-generation.md`, section 9), with (version 2) `design`, the size of the full
+factorial (each factor's number of levels, the cells per case, the sessions), and `groups`, the
+sessions' outcomes by condition, group pair and whether the groups were shown; **`report.md`**
+the same, for reading.
 
 ## `spend_ledger.jsonl`
 
@@ -568,3 +588,7 @@ lines whose `experiment` is that experiment's name.
   records are version 3 (`perception.md`: the passage fields and the group). A negotiation run is
   as in version 4. Folders written under versions 1 to 4 stay valid and are checked against
   their own version.
+- (2026-10-17, issue #32; the rule-generation log, not a run format.) Version 2 of the
+  rule-generation log: `outcomes.jsonl`; the fictional group in `design.jsonl` and the session
+  records (`cell`, `personas`, `visibility`, `framing`); `refused_no_sign_off` in
+  `invocations.jsonl`; `design` and `groups` in `summary.json`.

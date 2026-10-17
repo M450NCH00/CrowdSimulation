@@ -81,6 +81,38 @@ on the order; the order is shuffled by a random stream seeded by the experiment'
 `design.seed`. **DD72 (decision)** sets the levels' meanings above.
 *Tested:* `tests/test_rulegen_design.py`.
 
+**A fictional group** (issue #32; `fictional-groups.md`). With `design.ethnicity` enabled each
+person also belongs to a fictional group, and three more factors are crossed with the six:
+
+| Factor | Levels | Meaning |
+|---|---|---|
+| `group_pair` | `same`, `different` | Both people in one group, or each in another |
+| `label_rotation` | `0`, `1`, `2` (one per label) | Which label person 1 gets; person 2 gets the same one, or in a `different` pair the next one round the label set, so that each label is each person's equally often |
+| `ethnicity_visible` | `true`, `false` | `false` is the control: the groups appear nowhere in what a model is shown. Apart from `demographics_visible`, so that the two can be told apart |
+
+```yaml
+design:
+  ethnicity:
+    enabled: true                         # off unless this says true
+    labels: [Kestrop, Dremmik, Pellund]   # the default, in rotation order (DD85)
+    framing: ethnic group                 # the words that introduce it (DD86, pending the supervisor)
+    factors: {group_pair: [same, different], label_rotation: [0, 1, 2], ethnicity_visible: [true, false]}
+```
+
+**It is off by default**, in every config shipped, and a design without the block, or with
+`enabled: false`, has exactly the cells and session ids it had before issue #32 (a cell's code
+hashes the group's factors only when the cell has them). **A paid run with it on is refused**
+unless `CLAUDE.md` records the supervisor's ethics sign-off (`fictional-groups.md`, section 6).
+
+**The full factorial is large.** Per case and condition, the six factors at every level make
+3 × 4 × 3 × 2 × 2 × 2 = 288 cells, and the group's three another 2 × 3 × 2 = 12 times as many:
+**3,456 cells**, so 3,456 negotiations and, with K = 3, 10,368 statements per case. Many of
+them show a model the same words: with demographics hidden the age and gender pairs do not
+change a prompt, and with the groups hidden neither do the group pair and the rotation. SI-3b
+will need a fraction of the design; which one is not chosen here (the issue says not to). Every
+experiment reports the size of its own design (`summary.json`, `design`; `--plan`).
+*Tested:* `tests/test_rulegen_groups.py`.
+
 ## 3. What a model is shown
 
 All the wording is in three prompt templates, frozen with issue #24's tool

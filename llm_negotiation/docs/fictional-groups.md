@@ -18,9 +18,6 @@ groups, or describing fictional ones, would be a different experiment and is out
 factor is off by default in every experiment config, and no paid run may switch it on until
 that sign-off is recorded in `CLAUDE.md` (section 6).
 
-Sections 3 and 5 (the design factors, and what is logged for analysis) are written with the
-design factors themselves (`WORK_LOG-32.md`, plan step 6).
-
 ## 1. The attribute
 
 - `ethnic_group` is a persona attribute (`negsim/personas/schema.py`) that holds **one label**
@@ -137,6 +134,31 @@ rejected by the rule that rejected *Velorn*: it ends in *vel* (2.1).
 guard list), and every label an experiment uses should be searched as above before a paid run;
 `check_labels` cannot do that search.
 
+## 3. Sessions with groups: the factors, the visibility, the framing
+
+A rule-generation design switches the group on with `design.ethnicity` (`rule-generation.md`,
+section 2), and then crosses three more factors with its six:
+
+- **`group_pair`**: `same` (both people in one group) or `different`.
+- **`label_rotation`**: which label person 1 gets, `0` to one less than the number of labels.
+  Person 2 gets the same label, or in a `different` pair the next one round the set. With the
+  default labels the six combinations are Kestrop–Kestrop, Dremmik–Dremmik, Pellund–Pellund,
+  Kestrop–Dremmik, Dremmik–Pellund and Pellund–Kestrop: every label is person 1's and person
+  2's equally often, in same pairs and in different ones, so no effect can be tied to one label.
+  The rotation uses three of the six ordered different pairs (Kestrop is never person 2 to a
+  Dremmik person 1); person 1 and person 2 are slots of the design, which the `mapping` and
+  `order` factors move between the case's agents and the speaking order.
+- **`ethnicity_visible`**: whether the two can see each other's group, as a switch of its own,
+  apart from `demographics_visible`, so that the effects of seeing age and gender and of seeing
+  a group can be told apart. When it is false the groups appear **nowhere** in what a model is
+  shown, not even a person's own; the field glossary never lists the group either way, since no
+  rule may read it (section 4).
+
+Each session records the labels its people got (`personas`), its cell, its visibility and the
+framing word (`framing`), in `design.jsonl` and its own record (`log-schema.md`,
+"Rule-generation experiments"). The full factorial with the group is 3,456 cells per case and
+condition (`rule-generation.md`, section 2); SI-3b will need a fraction of it.
+
 ## 4. No rule may read it
 
 An agent may see another's group; **no rule may read it**. The rule loader refuses, as
@@ -148,12 +170,40 @@ ethnicity is a finding, not an error to hide (`rule-generation.md`, section 6). 
 the loader, no field a rule can read is the group or derived from it, and no snapshot holds it
 (`tests/test_protected_attribute.py`).
 
+## 5. What is logged for analysis
+
+A model can treat the two people differently without any rule reading their groups: in who
+gives way. So every session of a rule-generation experiment, with the group on or off, has a
+row in `outcomes.jsonl` (`negsim/rulegen/outcomes.py`; `log-schema.md`) with what to stratify by
+(the cell, `group_pair`, `label_rotation`, `ethnicity_visible`, `demographics_visible`, the
+framing, and each person's age, gender, urgency and group) and what came of it:
+
+- the session's `outcome`;
+- in condition A, **who proposed and who conceded**: each person's number of proposals,
+  whose proposal was accepted (`proposed_by`) and who accepted the other's (`conceded_by`), and
+  who said that no rule is possible;
+- for the agreed (A) or stated (B) rule, its validation `category` and **what it does to each
+  person on the case's own pair** (`effect`): it is loaded and matched on the case's snapshot
+  with the session's people in it, and the row gives each person's role and directive, **who
+  got the larger responsibility share** (or `equal`), who goes first through a single-file
+  passage, and who backs up.
+
+`summary.json` counts the sessions' outcomes by condition, group pair and whether the groups
+were shown (`groups`). Nothing here judges an outcome; the analysis is SI-3b's.
+
 ## 6. Off by default, and the supervisor's sign-off
 
 **Ethics sign-off from the supervisor: pending unless recorded otherwise.** The ethnicity
-factor is disabled by default in every experiment config, and running it needs an explicit
-setting. No paid run may switch it on until the sign-off is recorded in `CLAUDE.md`; the
-experiment refuses one that tries.
+factor is disabled by default in every experiment config: a design without `design.ethnicity`,
+or with `enabled: false`, has no groups, and running it needs `enabled: true`. No paid run may
+switch it on until the sign-off is recorded in `CLAUDE.md`, and the experiment refuses one that
+tries, before anything is sent (`refused_no_sign_off` in `invocations.jsonl`). It looks for this
+sentence in `CLAUDE.md`, with the date filled in:
+
+> Ethics sign-off for the fictional-group factor (issue #32): approved by the supervisor on YYYY-MM-DD
+
+Only the user may add it, once the supervisor has approved; nothing in this issue does. A mock
+run (no model, no spend) needs no sign-off, so that the pipeline can be rehearsed.
 
 ## 7. What fictional groups cannot show, and what is out of scope
 
