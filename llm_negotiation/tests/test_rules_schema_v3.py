@@ -144,6 +144,29 @@ def test_rules_that_back_up_exactly_one_role_or_say_nothing_of_it_load(directive
     ]
 
 
+PASSAGE_FIELDS = ("in_segment", "segment_distance_travelled", "segment_distance_ahead", "segment_distance_behind")
+
+
+@pytest.mark.parametrize("name", PASSAGE_FIELDS)
+def test_the_loaders_observability_check_accepts_every_passage_field_under_every_prefix(name):
+    """Part 2.3: the passage fields are computed from what both agents see, so the loader, which
+    refuses a field that either cannot see (``unobservable_field``), accepts them: in a condition
+    as ``either.`` and ``both.``, and in a role assignment as ``agent.``."""
+    value, unit = (True, None) if name == "in_segment" else (1.0, "m")
+    for prefix in ("either", "both"):
+        raw = seed()
+        comparison = {"field": f"{prefix}.{name}", "op": "==" if unit is None else ">", "value": value}
+        if unit is not None:
+            comparison["unit"] = unit
+        raw["when"] = {"all": [comparison]}
+        rule = parse_rule(raw, SCHEMAS, "test")
+        assert name in {ref.spec.name for ref in rule.field_refs()}, prefix
+    if name != "in_segment":  # a true-or-false field cannot order the two
+        raw = seed()
+        raw["roles"]["by"]["field"] = f"agent.{name}"
+        assert parse_rule(raw, SCHEMAS, "test").roles.ref.spec.name == name
+
+
 def test_back_up_is_part_of_what_a_rule_is():
     """The canonical form (docs/rule-format.md, section 13) keeps it: a rule that backs one up is
     not the same rule as one that does not."""

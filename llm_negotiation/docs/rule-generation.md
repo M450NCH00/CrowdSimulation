@@ -642,7 +642,7 @@ the mock's message is 15 characters and its intent 78. A real model writes more;
 with an intent at the schema's limit of 500 characters and a 300-character message is about
 1,280 characters, 384 tokens.
 
-**The options for Q5.** Which to take is the user's and the supervisor's decision; the cap in
+**The options for Q5** (of `WORK_LOG-30.md`). Which to take is the user's and the supervisor's decision; the cap in
 the config stays USD 0.05.
 
 | Option | What changes | A, B sessions | Worst case | Fits USD 0.05 |

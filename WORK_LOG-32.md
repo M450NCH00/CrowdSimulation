@@ -763,6 +763,30 @@ written only when set, and the old versions keep working.
 - Next step: a mock run of the pilot itself; the remaining documents
   (`architecture.md`, the READMEs); the final checks.
 
+### 2026-10-17 15:35 — The pilot on the mock, the last documents, the final checks
+
+- **The pilot, on the mock** (`runs_mock/si3_pilot`, from the clean tree at `9382547`, 823 s,
+  USD 0): 12 sessions on the frozen version 2 templates, 4 rules written in rule format 3,
+  each replayed and screened. No session used more than 6.4% (negotiations) or 9.3%
+  (statements) of its worst-case bound, by the mock's own token count: the preview holds on
+  prompt version 2.
+- **Documents**: `architecture.md` section 9 (where each piece lives, a step with a manoeuvre,
+  what changed and what did not, every decision from DD85 to DD119); the READMEs (the roadmap
+  row, the findings, the approval note, the layout, the run commands, the documents list).
+  Every bare "Q5" in them now names issue #30's question.
+- **Tests added after checking the issue's verification list item by item:** a persona with a
+  bad label (malformed, or a real group's name) is refused, and one without a label is as it
+  was (there was no persona-level test); and the loader's observability check accepts each of
+  the four passage fields under every prefix it may take (Part 2.3 asks to confirm it; it was
+  covered only indirectly, by the field catalogue and the seed rule). A stale comment in
+  `groups.py` quoted the prompt line before the templates existed.
+- **Final checks**: full suite **1,381 passed** (212 s), exit status read; pyflakes 4.0.3 clean;
+  the DeepSeek key found nowhere (a script read it from `.env` without printing it and counted
+  it in every tracked file, every commit since `2dad845`, the uncommitted changes and the mock
+  logs: zero each); `.env` is git-ignored and untracked; `spend_ledger.jsonl` is byte-identical
+  to the base (37 lines, issue #24's calls): **zero spend**.
+- Next step: commit, push, and the pull request into `feat/30-conflict-cases-rule-generation`.
+
 ## Open questions / risks
 
 - **Q1 (carried from #30). The supervisor's approval of simulation work, and now of the
@@ -785,7 +809,82 @@ written only when set, and the old versions keep working.
   entry, item 1). Redone on 2026-10-17 (the 09:40 entry): Zorvel failed the 21:10 entry's own
   echo rule and was replaced by Pellund. The labels remain a decision for supervisor review
   (DD85): a searched label is one with no meaning found, not one with no associations.
+  (This log's Q5 is the label searches. Where this issue's documents say "Q5" of the pilot,
+  they mean issue #30's open question Q5, `WORK_LOG-30.md`, which Q6 below carries.)
+- **Q6 (issue #30's Q5, re-previewed). How should the pilot fit its cap?** On prompt version 2
+  its worst case is USD 0.648 against USD 0.05; no change of the reply cap, the messages or the
+  retries alone fits; option (d), a hard spend cap with the sessions in the proposed priority
+  order, fits by construction and, by the estimate, completes at least tier 1 (`rule-generation.md`,
+  section 10.1). The user's decision, with the supervisor. Also open: whether the pilot should
+  include an in-passage case, this issue's new content (option (a) would then be USD 0.98).
+  Option (d) needs two small code changes, not made until it is chosen.
+- **Q7 (DD116). `in_segment` outside the passage is `false`, not `null`.** The issue says the
+  passage fields are null outside the passage; the three distances are, `in_segment` is false
+  when the pair has a passage and null when it has none. Either reading keeps a rule about a
+  meeting inside from matching anyone outside. To change, if wanted: one line in
+  `segment_position` and the tests that pin it.
+- **Q8. Prompt version 2 drops one clause when exactly one person stands still.** Its
+  standing-still lines replace the motion line, so "the distance between you is shrinking"
+  is not said when the other stands and the observer walks toward them (or the reverse). None
+  of the 26 cases of this issue has that (all still or all moving), but SI-3b's crowd cases may.
+  The templates are frozen: a fix is prompt version 3.
+- **Q9. The walking-backwards threshold sits on a speed plain ORCA produces.** With the slow
+  backer, walking, plain ORCA pushes the pressed pair at 0.1002 m/s in the run traced, against
+  the artefact's 0.1 m/s threshold (`metrics.md`, section 10), so whether a run counts an episode
+  varies by seed (12 of 40 runs). Reported as such (`behaviour-checks.md`, section 6); the
+  threshold is issue #28's and is not changed here.
 
-## Summary (fill in at the end)
+## Summary
 
-<What changed, why, how it was verified.>
+**What changed.** Everything issue #32 asks for, on the mock client, with no paid call:
+
+- **A fictional group** (Part 1): `ethnic_group`, a persona attribute that holds one of three
+  web-checked invented labels (Kestrop, Dremmik, Pellund; Brannoq a spare; every search in
+  `docs/fictional-groups.md`), with no description and no names. Agents may see it; **no rule may
+  read it**: the loader refuses any reference to it, a label or a session's framing words, in a
+  condition, a role assignment or a tie policy, first, as `protected_attribute`, a validation
+  category of its own whose rules are kept as data. In rule generation it is a design factor
+  (group pair, label rotation, a visibility switch of its own), **off unless a config switches it
+  on**; a paid run with it on is refused until `CLAUDE.md` records the supervisor's ethics
+  sign-off, which is **pending**. Every session gets an outcome row (who proposed, who conceded,
+  who got the larger share, who went first or backed up) for stratification. The full factorial
+  with the group: 3,456 cells per case and condition. The docs say what fictional groups cannot
+  show.
+- **Meetings inside a single-file passage** (Part 2): what the arbiter did there documented
+  before any change (it has no backing; ORCA pushes the follower back, the artefact); scenario
+  type `passage_meeting` and two versioned configs, every number cited or tagged; perception
+  record 3 with the passage fields (pair-level, the same for both; the distances null when not
+  inside, `in_segment` false there, Q7); the
+  directive `back_up` and its manoeuvre (back out at one's own backing speed, a cited parameter,
+  wait, go on), which the arbiter lets go of and which ends by the arbiter's own measure;
+  intentional backing logged apart from the walking-backwards artefact; rule schema 3, with the
+  check that a rule which says who backs up backs up exactly one role; log schema 5; the seed
+  rule `passage_shorter_backs_out`; the distance and time criteria derived (`derivations.md`,
+  sections 17 and 18).
+- **Prompts, cases, mock** (Part 3): prompt version 2, frozen, every change documented; 26 new
+  case versions (the 18 cases re-stepped as version 2, every old field checked equal; 8
+  in-passage cases); a second mock policy that takes every new path; issue #30's mock, prompts,
+  cases and configs unchanged (the pilot's aside).
+- **The pilot re-previewed** (Part 4): moved to prompt version 2, design and cap unchanged; worst
+  case USD 0.648; the floor for m, 168 tokens, a lower bound; the options table for Q5 with the
+  priority order for (d). The decision is the user's.
+
+**Why.** The issue's two changes alter what a model is shown, so they had to land before #30's
+paid pilot, whose data would otherwise match no later run; and the rule format could not say
+"the one who has walked less far in backs out".
+
+**How it was verified.** The full suite, **1,381 tests** (1,230 at the start; 151 added), on the
+mock with the network blocked; pyflakes clean; the behaviour checks over 20 paired seeds (560
+runs, `behaviour-checks.md` section 6, quoted line for line from the generator under test); two
+end-to-end mock rehearsals of rule generation, the group on and absent (672 sessions), and the
+pilot on the mock, each checked; the key searched for and not found; zero spend. Mistakes on the
+way, recorded above: two commits made without the full suite's result (`377d395`, `a12f448`),
+each fixed by the next; a YAML description cut by a comment, undone before it was committed;
+four sentences of the behaviour-check report that the numbers did not support, corrected before
+commit; and the headings of two entries of the previous session, which do not match the clock.
+
+**For the supervisor** (none of it is settled here): the ethics sign-off for the group (Q1); the
+framing word "ethnic group" (DD86) and the default labels (DD85); which start SI-3b's passage
+cases should come from (Q2); the stricter consistency rule (Q3); the waiting backer on the
+centre line (Q4); the pilot (Q6); `in_segment` false outside the passage (Q7); and every
+decision from DD85 to DD119 (`architecture.md`, section 9.4).

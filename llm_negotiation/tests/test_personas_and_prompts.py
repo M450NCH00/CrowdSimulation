@@ -77,6 +77,19 @@ def test_required_fields(field):
         validate_persona(raw)
 
 
+def test_a_persona_may_belong_to_a_fictional_group_and_a_bad_label_is_refused():
+    """Issue #32: ``ethnic_group`` holds one fictional label and nothing else; a persona that
+    does not give one is exactly what it was before."""
+    assert validate_persona(VALID).as_dict() == {**VALID, "backstory": ""}
+    assert validate_persona({**VALID, "ethnic_group": "Kestrop"}).as_dict()["ethnic_group"] == "Kestrop"
+    for label, message in (
+        ("Malay", "real group"), ("Hokkien", "real group"), ("kestrop", "one capitalised word"),
+        ("the Kestrop people", "one capitalised word"), ("Kestrop2", "one capitalised word"), (7, "one capitalised word"),
+    ):
+        with pytest.raises(PersonaError, match=message):
+            validate_persona({**VALID, "ethnic_group": label})
+
+
 @pytest.mark.parametrize("field", ["name", "first_name", "surname", "nickname"])
 def test_personal_names_are_refused(field):
     with pytest.raises(PersonaError, match="must not have personal names"):

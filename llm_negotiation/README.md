@@ -22,8 +22,14 @@ by two LLM agents negotiating one, or one LLM stating one; every proposal is cat
 the rules are written to a staging database and tested alone. Built and rehearsed on the
 mock; the paid pilot is held. See "Rule generation" below.
 
-Built for issues #24, #26, #28 and #30. Nothing here uses the Phase 1 folders `pipeline/` and
-`dataset/`.
+Since issue #32 a person can belong to a **fictional group** that agents may see and no rule
+may read (off unless a config switches it on; a paid run with it needs the supervisor's ethics
+sign-off, which is pending), and two people who meet **inside a single-file passage** can be
+told who backs out (`back_up`, rule format 3, prompt version 2). See "Fictional groups and
+meetings inside a passage" below.
+
+Built for issues #24, #26, #28, #30 and #32. Nothing here uses the Phase 1 folders `pipeline/`
+and `dataset/`.
 
 ## How it works, in one list
 
@@ -63,9 +69,9 @@ python -m pytest
 ```
 
 All tests run on the mock client, with the network blocked and the real `.env` out of
-reach. They cost nothing. There are 1,223: the 984 of issues #24 to #28 (432 of issue #24,
-345 for the avoidance layer, 18 for the plot and the viewer, 189 for the rule layer), and 239
-added by issue #30.
+reach. They cost nothing. There are 1,381: the 984 of issues #24 to #28 (432 of issue #24,
+345 for the avoidance layer, 18 for the plot and the viewer, 189 for the rule layer), 246
+added by issue #30 (7 of them with the random crowd starts), and 151 by issue #32.
 
 ## Run an experiment
 
@@ -743,8 +749,9 @@ python -m negsim.rulegen.cases list --set si3_v1
 
 The paid pilot would be `--client deepseek --confirm`. **It is held**: the supervisor's
 approval is not recorded, the pricing check is not done (`docs/pricing-check.md`), and as the
-issue specifies it, its worst case (USD 0.62) is twelve times its cap (USD 0.05), so the code
-refuses it (`docs/rule-generation.md`, section 10; `WORK_LOG-30.md`, Q5).
+issue specifies it, its worst case (USD 0.62; USD 0.65 since issue #32 moved it to prompt
+version 2) is about thirteen times its cap (USD 0.05), so the code refuses it
+(`docs/rule-generation.md`, sections 10 and 10.1; Q5 of `WORK_LOG-30.md`).
 
 ### The mock rehearsal (2026-10-16)
 
@@ -774,6 +781,66 @@ and say nothing about any model or about people.**
   run).
 - **The worst-case preview held**: no session used more than 6.2% (negotiations) or 18.5%
   (statements) of its bound, by the mock's own token count.
+
+## Fictional groups and meetings inside a passage (issue #32)
+
+Two additions, both rehearsed on the mock; no model was called and nothing was spent.
+
+1. **A fictional group** (`ethnic_group`, `docs/fictional-groups.md`). A person may belong to
+   one of three invented groups (Kestrop, Dremmik, Pellund), each label searched so that it
+   names no people, place, language or word, and carrying no description at all. Agents may
+   see it; **no rule may read it**: a rule that names it, anything derived from it, a label or
+   the session's framing word is refused and counted as `protected_attribute`, a finding kept
+   as data. In rule generation it is a design factor (`design.ethnicity`: the same group or
+   different, which label goes to whom, shown or hidden), **off unless a config says
+   `enabled: true`**, and a paid run with it on is refused until `CLAUDE.md` records the
+   supervisor's ethics sign-off (**pending**). Every session gets an outcome row
+   (`outcomes.jsonl`): who proposed, who conceded, who got the larger share, by group pair and
+   visibility. Fictional groups can show in-group against out-group effects, not how a model
+   treats real ethnicities.
+2. **A meeting inside a single-file passage**. The scenario type `passage_meeting` starts two
+   people inside a passage only one can use, face to face (`configs/scenarios/
+   passage_meet_middle_v1.yaml`, `passage_meet_with_speeds_v1.yaml`, with each person's
+   `backing_speed`). Perception record version 3 tells each how far each has walked in and how
+   far each end is (`docs/perception.md`). The directive `back_up` makes one back out of the
+   passage at its own backing speed, wait for the other, and go on (`docs/derivations.md`,
+   section 17); rule format 3 can say who (`docs/rule-format.md`, section 14), and the seed rule
+   `passage_shorter_backs_out` backs out the one who has walked less far in. Intentional backing
+   is logged on its own and never counted as issue #26's walking-backwards artefact.
+3. **Prompt version 2** tells a model both (`docs/rule-generation.md`, section 3.1); version 1
+   is unchanged. **26 new case versions**: the 18 cases of `si3_v1` re-stepped as version 2
+   (`si3_v2`) and 8 in-passage cases (`si32_passage_v1`; `docs/cases.md`, sections 7 and 8).
+
+### Run it
+
+```
+python run_experiment.py configs/rule_following/si32_passage_meet_middle.yaml       # behaviour checks: free
+python run_experiment.py configs/rule_following/si32_passage_meet_with_speeds.yaml
+python -m negsim.rules.report si32_passage_meet_middle si32_passage_meet_with_speeds
+python run_experiment.py configs/rule_generation/si32_mock_groups_on.yaml          # the group on, on the mock
+python run_experiment.py configs/rule_generation/si32_mock_no_groups.yaml          # the same, no group
+python -m negsim.rulegen.cases list --set si32_passage_v1
+```
+
+### Results (2026-10-17)
+
+- **The behaviour checks** (560 runs, 20 paired seeds per condition, no collision;
+  `docs/behaviour-checks.md`, section 6). When the two meet standing still, the arbiter's
+  fallback gets neither through (80 of 80 runs deadlock or time out), and so does plain ORCA.
+  When they meet walking, the arbiter gets them through only by the artefact: ORCA pushes the
+  follower backwards at about 1 m/s, more than twice the slow backer's cited backing speed.
+  The seed rule gets them through in all 160 of its runs, at the cited backing speeds; walking
+  at equal speeds it is 0.7 and 0.8 s later than the artefact to the first one out, and 0.9 and
+  1.2 s later in makespan. With a slow backer, the seed rule's choice
+  (the one who has walked less far in) backs 0.64 m less than backing out the quicker backer,
+  and takes about 3 s more: the distance-optimal and the time-optimal choice differ, and no
+  rule can state the second, since nobody can see a backing speed.
+- **The mock rehearsals** (`runs_mock/si32_mock_*`, 672 sessions): every validation category
+  in both conditions, `protected_attribute` included; every rule written in rule format 3; each
+  back-up rule, replayed on its in-passage case, made agent 1 back out and both arrive; a hidden
+  or absent group in nothing the system tells a model; each label each person's equally often.
+- **The pilot** now uses prompt version 2: worst case USD 0.65 against its USD 0.05 cap; the
+  options are in `docs/rule-generation.md`, section 10.1. Still held.
 
 ## Changing things
 
@@ -811,30 +878,36 @@ and say nothing about any model or about people.**
 - `docs/derivations.md`: the follower's speed bound and the conflict zone; and, for the
   avoidance layer, the reciprocity condition on the shares, the side preference, walls in
   discrete time, how long a symmetric meeting takes to stall, and when an encounter has
-  passed (issue #28).
+  passed (issue #28); what the arbiter does in a meeting inside a passage, the back-up
+  manoeuvre, and which of the two to back out (issue #32, sections 17 and 18).
 - `docs/orca.md`: ORCA as implemented, section by section of the paper; what was checked
   against RVO2; every departure from either.
-- `docs/perception.md`: the perception record, version 2, field by field, with the
-  pair-level fields that rules read (issue #28).
-- `docs/rule-format.md`: the rule format, schema versions 1 and 2, in full: what a rule may
+- `docs/perception.md`: the perception record, versions 2 and 3, field by field, with the
+  pair-level fields that rules read (issue #28) and the passage fields and the group (issue
+  #32).
+- `docs/rule-format.md`: the rule format, schema versions 1 to 3, in full: what a rule may
   read, every check made when one is loaded, and the canonical form that says when two rules
-  are the same rule (issue #30).
+  are the same rule (issue #30); `back_up`, and the check that no rule reads a group (issue #32).
+- `docs/fictional-groups.md`: the fictional group of issue #32: the labels and every search
+  that checked them, why no rule may read it, what is logged, the sign-off, and what such
+  groups cannot show.
 - `docs/rule-matching.md`: which rule a pair follows, step by step, and why one shared
   snapshot stands for each agent deciding alone.
 - `docs/baseline.md`: the two frozen baselines that "plain ORCA" means, and paired seeds
   (issue #30).
-- `docs/behaviour-checks.md`: the behaviour checks of issue #28, every number from the
-  committed logs, and what they show.
+- `docs/behaviour-checks.md`: the behaviour checks of issues #28 and #32, every number from
+  the committed logs, and what they show.
 - `docs/parameters.md`: every physical parameter of the avoidance scenarios with its
   source and locator, or the word placeholder.
 - `docs/metrics.md`: the conflict metrics, defined operationally, with their thresholds;
   since issue #28 also the outcome of a pair interaction and the two artefact counts; since
   issue #30 pair exposure and the severity tiers.
 - `docs/cases.md`: the conflict cases of issue #30, what each holds, where they came from,
-  and how they were sampled.
+  and how they were sampled; case format 2, re-stepping and the in-passage cases (issue #32).
 - `docs/rule-generation.md`: rule generation (issue #30): the design matrix, what a model is
   shown, both protocols, the validation categories, the writer and promotion, replay and
-  screening, the cost preview, and the held pilot.
+  screening, the cost preview, and the held pilot; prompt version 2, the group in the design,
+  and the pilot re-previewed with the options for issue #30's Q5 (issue #32).
 - `docs/pricing-check.md`: how the price table is checked against DeepSeek's page before a
   paid call, and the record of each check.
 - `docs/llm-backend.md`: DeepSeek's API as documented on 2026-10-13, the client, the

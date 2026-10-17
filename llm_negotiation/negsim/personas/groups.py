@@ -23,7 +23,7 @@ from typing import Any
 
 #: The default label set, in rotation order (``docs/fictional-groups.md``, section 2).
 DEFAULT_GROUP_LABELS = ("Kestrop", "Dremmik", "Pellund")
-#: The words that introduce the attribute in a prompt ("a member of the Kestrop ethnic group").
+#: The words that introduce the attribute in a prompt ("You belong to the Kestrop ethnic group.").
 #: A setting of each experiment, recorded with every session; a decision pending the
 #: supervisor (DD86).
 DEFAULT_FRAMING = "ethnic group"
