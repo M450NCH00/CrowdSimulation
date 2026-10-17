@@ -104,12 +104,15 @@ def test_a_bad_config_is_refused(changes, message):
 
 def test_every_shipped_config_loads_names_the_mock_and_plans():
     shipped = sorted((PACKAGE_ROOT / "configs" / "rule_generation").glob("*.yaml"))
-    assert [path.name for path in shipped] == ["si3_mock_rehearsal.yaml", "si3_pilot.yaml"]
+    assert [path.name for path in shipped] == [
+        "si32_mock_groups_on.yaml", "si32_mock_no_groups.yaml",  # issue #32's mock rehearsals
+        "si3_mock_rehearsal.yaml", "si3_pilot.yaml",
+    ]
     for path in shipped:
         cfg = rg.RuleGenConfig.load(path)
         assert cfg.llm["client"] == "mock", path.name  # paying is always an explicit --client deepseek
         assert rg.plan(cfg).preview["sessions"] > 0
-    pilot = rg.plan(rg.RuleGenConfig.load(shipped[1])).preview
+    pilot = rg.plan(rg.RuleGenConfig.load(PACKAGE_ROOT / "configs" / "rule_generation" / "si3_pilot.yaml")).preview
     assert pilot["sessions_by_condition"] == {"negotiated": 4, "stated": 8}
     assert pilot["usd_total"] == pytest.approx(0.6189372, abs=1e-6) and not pilot["fits_the_cap"]  # docs/rule-generation.md, section 10
 

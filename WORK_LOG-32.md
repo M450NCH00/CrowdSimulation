@@ -675,6 +675,25 @@ written only when set, and the old versions keep working.
 - Result: full suite **1,376 passed** (251 s); pyflakes clean.
 - Next step: the end-to-end mock runs.
 
+### 2026-10-17 14:59 — The mock rehearsals' configs, and the same lapse again
+
+- What I did: two configs for the end-to-end mock runs, `configs/rule_generation/
+  si32_mock_groups_on.yaml` and `si32_mock_no_groups.yaml`: the same six cases (the pilot's
+  two at version 2, and four in-passage cases from both scenarios, at rest and walking), the
+  same people, prompt version 2, the mock `rulegen_paths_v2`, replay and screening (a small
+  crowd of 10 + 10: a rehearsal). The first switches the group on (`enabled: true`, every level
+  of its three factors: 48 cells per case and condition, 576 sessions); the second has no group
+  in the design (8 cells, 96 sessions). Both name the mock client, as every shipped config does.
+- **The lapse again, five minutes after recording the rule against it.** I committed the two
+  configs (`a12f448`) in one command after a run of the config tests, without checking that
+  run's result: the pipeline's status was `tail`'s, so the commit went ahead although one test
+  failed. `test_every_shipped_config_loads_names_the_mock_and_plans` pinned the list of shipped
+  rule-generation configs to issue #30's two and found the pilot by position, which the new
+  files shift. Updated (A4): it lists the four and finds the pilot by name. Full suite
+  **1,376 passed** (255 s), its exit status checked this time before the commit. From here on a
+  commit is a separate command, run only after the suite's exit status is read.
+- Next step: run both rehearsals from the clean tree.
+
 ## Open questions / risks
 
 - **Q1 (carried from #30). The supervisor's approval of simulation work, and now of the
