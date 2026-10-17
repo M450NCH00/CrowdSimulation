@@ -461,7 +461,14 @@ hold:
 and **from the arbiter back to ORCA** on the first step on which the conflict zone is no
 longer live, because one of the two has cleared it, or one of the two has arrived.
 
-Between those two steps:
+Since issue #32 there is a third way out: **from the arbiter to a back-up manoeuvre**, on
+the step on which one of the two starts to back out of the segment on a `back_up`
+directive (a handoff `to: back_up`). The directive has already said who goes first and how,
+so the arbiter does not hold the pair, or take it, while the manoeuvre lasts; when it ends
+the other has cleared the zone and there is nothing to take (`derivations.md`, section 17,
+DD93). The two agents' `control_mode` is then `back_up`.
+
+Between the first two steps:
 
 - **The arbiter decides the order**, by `decide_roles` as in issue #24: the directives'
   leader if there is one and it can still be honoured, otherwise the shorter time to the

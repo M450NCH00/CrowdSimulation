@@ -11,6 +11,9 @@ Section 15 was added by issue #28: when an encounter has passed, which is when a
 directive's `speed_scale`, and everything a rule told a pair, stops applying.
 Section 16 was added by issue #30: pair exposure, the conflict measure of a pair, and why
 it does not depend on the responsibility shares.
+Sections 17 and 18 were added by issue #32: what happens when two agents meet *inside* a
+single-file passage (the arbiter's own way, and the back-up manoeuvre that a `back_up`
+directive starts), and which of the two it is best to back out.
 There `orca:LINE` points into `refs/si1_orca_vandenberg2011.txt`, and the notation is that
 of `orca.md`, section 3.
 
@@ -697,3 +700,167 @@ which lies inside the obstacle and on its axis exactly; a random perturbation la
 with probability zero.) A depth of `ε` means that, had neither changed velocity, the two
 bodies would have overlapped: on the axis, by about `ε τ` = 3 mm.
 *Tested:* `::test_the_obstacle_depth_matches_hand_computed_cases`.
+
+## 17. Meeting inside a single-file passage: the arbiter's way, and backing up (issue #32)
+
+Two agents that meet *inside* a passage only one of them can use at a time cannot pass: one
+has to back out. The arbiter normally keeps such a meeting from happening (the follower waits
+at the mouth, section 13); this section is about a meeting it did not prevent, or that a
+scenario starts with (`passage_meeting`, `parameters.md`). Section 17.1 is what the code did
+before issue #32 added anything, as Part 2.1 of the issue asked; 17.2 and 17.3 are what
+issue #32 added.
+
+### 17.1 What the arbiter does
+
+From the code (`coordination.py`, `control/strategy1.py`, `conflict/roles.py`,
+`conflict/timing.py`), for two agents both inside a segment:
+
+1. **Trigger.** The arbiter takes the pair on the first step on which the two perceive each
+   other: a single-file segment lies on both paths, neither has cleared it, and their
+   occupancy intervals of the conflict zone overlap. Both being inside, both intervals start
+   at 0.
+2. **Who goes first** (`decide_roles`). A leader the directives name, if there is one
+   (`passage_order`, or since issue #32 `back_up`, which names the other); otherwise
+   Strategy 1. Its first measure, the time to reach the zone, ties at 0; its second decides:
+   the time to *clear* the zone going forward, `d_out / v`. At equal speeds the one that has
+   walked further in is out sooner, and leads. An exact tie goes to the lower index (or a
+   seeded draw).
+3. **The follower** gets a speed bound of 0 (it is past the zone's entry and the leader has
+   not cleared it): the speed it wants is 0. ORCA stays on, the follower taking all of the
+   avoidance and the leader none (shares 1 and 0, DD32, section 13).
+4. **Nobody decides to back up.** The arbiter has no backing of its own. What happens next
+   depends on how the two meet:
+   - **Walking into each other** (`start_speed: preferred`). The leader walks on at its full
+     speed. In a passage too narrow to step aside, the only velocities ORCA allows the
+     follower are backward ones, so it is pushed back at nearly the leader's speed until the
+     leader has cleared the zone: issue #26's walking-backwards artefact (`metrics.md`,
+     section 10), and counted as one. In `passage_meet_middle_v1` (1.7 m in each),
+     unperturbed, the follower walks backwards for 2.5 s and 2.96 m, and the two are through
+     at 12.3 s. A follower slower than the leader can push collides with it (the scratchpad
+     measurement of `WORK_LOG-32.md`, 2026-10-16 20:40: a follower of 0.5 m/s, maximum
+     0.8 m/s, hit at 0.3 s).
+   - **At rest, face to face** (the passage scenarios' default start). The arbiter does not
+     get them through. A leader with share 0 may not close in faster than its own velocity
+     already does (its half-plane passes through its current velocity, section 9), and a
+     follower standing in front of a standing leader is on no collision course, so nothing
+     pushes it back. Unperturbed, the leader pushes the touching follower back at
+     0.030 m/s for the whole 60 s of the run, which ends at its time limit with neither
+     through (above the deadlock threshold of 0.01 m/s, so not declared a deadlock); under
+     the primary baseline's perturbation the pair stalls, and the run ends in a deadlock
+     at about 4 s.
+
+So the arbiter's fallback gets the one that has walked less far in out of the way (at equal
+speeds) only by an ORCA artefact, at a speed nobody chose, only while the follower can be
+pushed faster than the leader advances, and only if the leader is already moving. There was
+nothing in the arbiter to expose as a directive: `back_up` is new. The 20-seed numbers of
+both starts are in `behaviour-checks.md`, section 6.
+*Tested:* `tests/test_passage.py::test_intentional_backing_is_never_the_artefact_and_the_artefact_is_still_counted`
+(the walking start).
+
+### 17.2 The back-up manoeuvre
+
+A `back_up` directive (`rule-format.md`, section 14) is carried out by the run loop
+(`simulation.py`), not by ORCA and not by the arbiter.
+
+**When it starts.** On the first step on which (a) the pair's combined directives name a
+backer (exactly one of the two says `back_up: true`; two that do are a reciprocity violation,
+and neither backs up, `directives.py`); (b) the backer is inside a single-file segment the
+two meet in: one the scenario declares, narrower than the two diameters together, that both
+their paths run through and that the other has not yet left, with the backer's centre inside
+it and the other ahead of it along its path; and (c) neither is in another manoeuvre, and the
+pair interaction has had none. (b) is read from the geometry alone, not from the perception
+records, so that what the agents may see cannot change what a directive makes one of them do
+(`_meeting_segment`). A `back_up` that does not meet (b) has no effect of its own, as a
+`passage_order` has none in open space; before a segment it still names the other as the one
+to go first, so the arbiter holds the one told to back up at the mouth.
+
+**Backing.** The backer moves along the segment's long axis, away from the other, to a point
+on the centre line beyond the end behind it by the run-out `c = r_i + r_j + margin` (the
+segment's safety margin): the edge of the conflict zone of section 13, the first place along
+the passage where its centre is out of the other's way. Its preferred velocity points at that
+point at its **backing speed** (its agent type's `backing_speed`, 0.92 m/s if the type sets
+none, never above its maximum speed; `parameters.md`), and never overshoots it. The backing
+ends when its centre has reached the point along the axis (to within 1 mm).
+
+**Waiting.** Its preferred velocity is 0 until the other has come out at that end and as far
+beyond it (`c`), has arrived, or the two have lost sight of each other; then the backer goes
+on along its own path, back into the segment.
+
+**What each does meanwhile, with ORCA** (DD95). ORCA stays on for both:
+
+| Phase | The backer | The other |
+|---|---|---|
+| backing | share 0: it is not pushed, and backs at its own backing speed | share 1: it does all of the avoiding, and its preferred speed is capped at the backer's backing speed, so that it comes on behind it at its pace |
+| waiting | share 1: it keeps out of the other's way, as a follower of the arbiter does | share 0, at its own speed again |
+
+The cap is part of the manoeuvre. Without it the other presses on at its own speed, and ORCA,
+with share 0, does not let the backer slow down below the backward speed it already has while
+the other closes in: a backer that was already being pushed back faster (the arbiter's way,
+17.1) kept that speed, 1.27 m/s instead of its 0.92 m/s, in a measured run. With the cap the
+backer backs at its backing speed and the two move as one. While it waits, the backer stands on
+the centre line just outside the passage, where the other comes out, and ORCA moves it aside;
+any backward motion that takes is ORCA's, not the directive's (17.3).
+
+**The arbiter** (DD93). A pair in a manoeuvre is not the arbiter's: on the step the manoeuvre
+starts, a pair the arbiter held is taken from it (a handoff `to: back_up`), and the arbiter
+does not take it while the manoeuvre lasts. When the manoeuvre ends the other has cleared the
+zone, so the conflict is no longer live and there is nothing for the arbiter to take.
+
+**One at a time.** An agent is in at most one manoeuvre, as the backer or as the other, and a
+pair interaction has at most one: a `back_up` that still holds after the other has cleared
+does not start another. Three or more agents in a passage, and agents queued behind a backing
+agent, are out of the scope of issue #32.
+
+### 17.3 Intentional backing is not the artefact
+
+Issue #26's diagnostic counts an agent that moves against the direction of its own path
+faster than 0.1 m/s for at least 1 s (`metrics.md`, section 10). A backer in its backing phase
+does exactly that, on purpose. The steps of the backing phase are therefore never counted
+toward the artefact (DD98); they are the manoeuvre's, logged as `backing_time_s` and
+`backing_distance_m` (how far it moved against the direction of its path while backing).
+Every other backward step is counted as before, a waiting backer's included. Both distances
+are reported, so that the total distance walked backwards can be read whole or apart.
+*Tested:* `tests/test_passage.py` (the manoeuvre, its phases and speeds, the arbiter, the
+visibility settings, the artefact, the logs) and `tests/test_directives.py` (the backer and
+the leader of a pair).
+
+## 18. Which of the two to back out (issue #32)
+
+**Setting.** A passage of length `L`. Agent A has walked `x_A` into it from its end and B has
+walked `x_B` from the other; they face each other. One of them backs out by the manoeuvre of
+section 17: to the run-out `c` beyond its end, waits, and goes on along its path.
+
+**Distance.** If B backs out, it walks `x_B + c` back and the same `x_B + c` forward again to
+where it was; A walks no further than it would have. The extra walking is `2 (x_B + c)`; if A
+backs out, `2 (x_A + c)`. `c` is the same for both (the two radii and the segment's margin),
+so **the extra distance is least when the one that has walked less far in backs out**. Equal
+distances are a tie, with nothing to choose between them. Backing out only to the end
+(`c = 0`), as the issue states it, gives `2 x_B` against `2 x_A`: the same choice.
+
+**Time.** The other cannot go on through until the backer is out, which takes
+`(x + c) / v_back`, with `v_back` the backer's backing speed. The passage is free soonest when
+the one with the smaller `(x + c) / v_back` backs out; with `c = 0`, the issue's criterion:
+`x_A / v_back,A` against `x_B / v_back,B`. The two criteria agree when the backing speeds are
+equal, and can differ when they are not: the one that has walked less far in may back out so
+slowly that backing out the other frees the passage sooner.
+
+In `passage_meet_with_speeds_v1`, A (agent 0) has walked `x_A = 2.0 m` and backs at 0.92 m/s,
+B (agent 1) `x_B = 1.4 m` at 0.43 m/s, and `c = 0.6 m`. By distance, back out B: 4.0 m extra
+against 5.2 m. By time, back out A: 2.6 / 0.92 = 2.8 s against 2.0 / 0.43 = 4.7 s (with
+`c = 0`, 2.2 s against 3.3 s). Measured, unperturbed: backing A out takes 2.9 s and the two
+are through at 13.6 s; backing B out takes 4.7 s and they are through at 16.7 s. The time to
+completion adds the backer's walk back in and through the passage at its walking speed, which
+here favours backing out the faster walker too.
+
+**What a rule can say.** The distance criterion orders the two on one field both can see,
+`agent.segment_distance_travelled`, and is the seed rule `passage_shorter_backs_out` (ties
+within 0.1 m: `no_match`). The time criterion cannot be written: it needs each person's backing
+speed, which nobody can see of another (a physical parameter, like the maximum speed;
+`rule-format.md`, section 5), and the ratio of two values, which the format has no way to
+state. The seed rule is a **test fixture, not a claim about how people choose** (its
+provenance says so); which criterion people use, if either, is for the validation sub-issue
+(SI-6).
+*Tested:* `tests/test_passage.py::test_each_backs_at_its_own_backing_speed`,
+`::test_backing_out_the_one_that_is_out_sooner_is_quicker_than_backing_out_the_one_that_walked_less`,
+`::test_the_seed_rule_backs_out_the_one_that_has_walked_less_far_in`;
+`tests/test_rules_schema_v3.py::test_the_seed_rule_matches_two_people_both_inside_and_no_one_else`.

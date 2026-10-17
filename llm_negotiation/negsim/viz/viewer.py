@@ -59,6 +59,10 @@ FLAG_LEADER = 8
 FLAG_FOLLOWER = 16
 FLAG_IN_CONFLICT = 32  # the arbiter found a live conflict for it on this step
 FLAG_DIALOGUE = 64  # a negotiation was going on (issue #24)
+# A back-up manoeuvre (issue #32): the one backing out, then waiting outside; and the other.
+FLAG_BACKING = 128
+FLAG_WAITING = 256
+FLAG_PROCEEDING = 512
 
 #: Above this many agents a run is drawn as a crowd: no arrival events, labels off.
 CROWD = 12
@@ -126,6 +130,14 @@ def _role_flags(row: dict[str, str]) -> int:
     return flags | (FLAG_IN_CONFLICT if _flag(row, "in_conflict") else 0)
 
 
+#: The trajectory's ``back_up`` column (log schema 5), as flags; a run of version 4 or earlier has none.
+_BACK_UP_FLAGS = {"backing": FLAG_BACKING, "waiting": FLAG_WAITING, "proceeding": FLAG_PROCEEDING}
+
+
+def _back_up_flags(row: dict[str, str]) -> int:
+    return _BACK_UP_FLAGS.get(row.get("back_up") or "", 0)
+
+
 def _fmt(value: Optional[float], unit: str = "", digits: int = 1) -> str:
     if value is None:
         return "–"
@@ -178,6 +190,7 @@ _PLAIN = {
     "speed_scale": 1.0,
     "clearance_margin": 0.0,
     "passage_order": "none",
+    "back_up": False,
 }
 
 
@@ -189,6 +202,7 @@ def _directive_fields(directive: dict) -> str:
         "speed_scale": lambda value: f"speed ×{value:g}",
         "clearance_margin": lambda value: f"clearance {value:g} m",
         "passage_order": lambda value: f"order {value}",
+        "back_up": lambda value: "backs up",
     }
     shown = [words[name](directive[name]) for name in _PLAIN if name in directive and directive[name] != _PLAIN[name]]
     return ", ".join(shown) or "plain ORCA"
@@ -221,6 +235,7 @@ def _directive_text(config: dict, agent_id: int, pairs: Optional[list[dict]] = N
         f"side {entry.get('side_preference', 'none')}, share {entry.get('responsibility_share', 0.5):g}, "
         f"speed ×{entry.get('speed_scale', 1.0):g}, clearance {entry.get('clearance_margin', 0.0):g} m, "
         f"order {entry.get('passage_order', 'none')}"
+        + (", backs up" if entry.get("back_up") else "")
     )
     pairs = [pair for pair in directives.get("pairs", []) if pair.get("observer") == agent_id]
     if pairs:
@@ -277,9 +292,20 @@ def _avoidance_events(events: list[dict], goal_times: dict, n_agents: int, pairs
             a, b = event["pair"]
             if event["to"] == "arbiter":
                 text = f"Agents {a} and {b} handed to the arbiter: agent {event['leader']} goes first ({event['role_source']})"
+            elif event["to"] == "back_up":
+                text = f"Agents {a} and {b} taken from the arbiter: {event['reason']}"
             else:
                 text = f"Agents {a} and {b} handed back to ORCA: {event['reason']}"
             item.update(agents=[a, b], text=text)
+        elif kind == "back_up":
+            backer, other = event["backer"], event["other"]
+            text = {
+                "started": f"Agent {backer} starts to back out of the {event['segment']} for agent {other}"
+                + (f", having walked {event['travelled_m']:.1f} m in" if event.get("travelled_m") is not None else ""),
+                "out": f"Agent {backer} is out of the {event['segment']} and waits for agent {other}",
+                "ended": f"Agent {backer} goes on ({str(event.get('reason', '')).replace('_', ' ')})",
+            }.get(event["phase"], f"Agent {backer}: back-up {event['phase']}")
+            item.update(agents=[backer, other], text=text)
         elif kind == "reciprocity_violation":
             a, b = event["agents"]
             item.update(
@@ -334,7 +360,8 @@ def _avoidance_run(run_dir: Path, config: dict, outcome: dict) -> dict[str, Any]
                 (FLAG_EXPOSED if _flag(row, "exposed") else 0)
                 | (FLAG_FALLBACK if _flag(row, "fallback") else 0)
                 | (FLAG_ARBITER if row["control_mode"] == "arbiter" else 0)
-                | _role_flags(row),
+                | _role_flags(row)
+                | _back_up_flags(row),
                 int(row["n_neighbours"]) if row["n_neighbours"] != "" else None,
             )
             for row in steps
@@ -408,6 +435,15 @@ def _avoidance_run(run_dir: Path, config: dict, outcome: dict) -> dict[str, Any]
     if rules is not None:
         fired = rules.get("matches_begun") or {}
         summary.append(["Rules fired", ", ".join(f"{key} ×{count}" for key, count in sorted(fired.items())) or "none"])
+    back_up = outcome.get("back_up")
+    run["back_ups"] = len((back_up or {}).get("manoeuvres") or [])
+    if back_up is not None:  # log schema 5 (issue #32)
+        totals_back = back_up["totals"]
+        summary.append([
+            "Backing out of a passage",
+            f"{totals_back['manoeuvres']} manoeuvre(s), {_fmt(totals_back['backing_distance_m'], 'm', 2)} backed"
+            if totals_back["manoeuvres"] else "none",
+        ])
     tiers = (outcome.get("interaction_outcomes") or {}).get("tiers")
     if tiers is not None:
         summary.append(["Pair interactions by tier", ", ".join(f"{tier} {count}" for tier, count in tiers.items())])
@@ -550,6 +586,7 @@ def render(runs: list[dict[str, Any]], title: str) -> str:
         "flags": {
             "exposed": FLAG_EXPOSED, "fallback": FLAG_FALLBACK, "arbiter": FLAG_ARBITER, "leader": FLAG_LEADER,
             "follower": FLAG_FOLLOWER, "in_conflict": FLAG_IN_CONFLICT, "dialogue": FLAG_DIALOGUE,
+            "backing": FLAG_BACKING, "waiting": FLAG_WAITING, "proceeding": FLAG_PROCEEDING,
         },
         "runs": runs,
     }

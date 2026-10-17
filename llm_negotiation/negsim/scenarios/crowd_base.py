@@ -236,13 +236,18 @@ DEFAULT_THRESHOLDS = MetricThresholds(
 
 @dataclass(frozen=True)
 class Placement:
-    """Where one agent starts, where it is going, and what kind of agent it is."""
+    """Where one agent starts, where it is going, and what kind of agent it is.
+
+    ``initial_speed`` is how fast it is walking along its path when the run starts; ``None``,
+    as in every scenario before issue #32, is its preferred speed: already walking.
+    """
 
     start: Vec
     goal: Vec
     path: Polyline
     group: str
     agent_type: str = "default"
+    initial_speed: Optional[float] = None
 
 
 @dataclass(frozen=True)
@@ -498,6 +503,9 @@ class CrowdScenario(ABC):
             if agent_id in overrides:
                 agent_type = agent_type.with_overrides(overrides[agent_id], f"{where}.overrides.{agent_id}")
             path = placement.path
+            initial_speed = agent_type.preferred_speed if placement.initial_speed is None else placement.initial_speed
+            if initial_speed > agent_type.max_speed:
+                raise ConfigError(f"{where}: agent {agent_id} would start at {initial_speed} m/s, above its max_speed {agent_type.max_speed}")
             agents.append(
                 CrowdAgentSpec(
                     agent_id=agent_id,
@@ -510,7 +518,7 @@ class CrowdScenario(ABC):
                     side=placement.group,
                     region_entry_s=path.length,
                     region_exit_s=path.length,
-                    initial_speed=agent_type.preferred_speed,
+                    initial_speed=initial_speed,
                     agent_type=type_name,
                     group=placement.group,
                     preferred_speed=agent_type.preferred_speed,

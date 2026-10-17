@@ -214,9 +214,183 @@ written only when set, and the old versions keep working.
   with Grasso, Bianchi and Lacquaniti (1998). One small sample of young adults: it is a cited
   value, not a population norm, and `parameters.md` will say so.
 
+### 2026-10-16 21:16–21:35 — Parts 1.1, 1.2 (the loader), 2.2 and 2.3: three commits (logged afterwards)
+
+- **How this entry was written.** The session that made `6948213`, `cb4a3d2` and `85ca01a`
+  ended before it logged them, and left the next step half-written in the working tree. This
+  entry was written on 2026-10-17, in the next session, from those commits, their messages and
+  the code, tests and documents they changed, not from a memory of the work. Nothing is
+  claimed here that those do not show.
+- What was done:
+  - `6948213` (21:16), **perception record version 3**. The passage fields `in_segment`,
+    `segment_distance_travelled`, `segment_distance_ahead` and `segment_distance_behind`,
+    computed once per pair from the two positions and the passage alone ("ahead" is the end on
+    the other's side), so both agents' records hold the same values (A2); null outside the
+    passage. `ethnic_group`, a persona attribute holding a fictional label
+    (`negsim/personas/groups.py`: the default labels, their validation, a guard list of real
+    group names, the framing word), hidden by default, left out of a persona that does not give
+    it, and flagged on its definition as not readable by rules (A1). Version 2 records still
+    read back. `perception.md`, "Passage fields (version 3)" and "The group (version 3)".
+  - `cb4a3d2` (21:25), **`protected_attribute`**. The loader refuses any rule whose condition
+    or role assignment (its field, role names and tie policy included) names the group or
+    anything derived from it, before every other check; tests that no field a rule can read
+    and no snapshot holds the group, and that matching never depends on it
+    (`tests/test_protected_attribute.py`, six invalid fixtures). The four passage fields in the
+    rule catalogue, each field now with the rule-format version that added it (`since`); the
+    first template version's glossary generated from the fields it describes, so that its
+    pinned hash still holds.
+  - `85ca01a` (21:35), **the in-passage scenarios**: scenario type `passage_meeting`,
+    `passage_meet_middle_v1.yaml` and `passage_meet_with_speeds_v1.yaml`; `backing_speed`, an
+    optional physical parameter (Nakahara et al. 2005, cached under `refs/`);
+    `parameters.md`.
+- What those commits left unrecorded or undone, found on resuming:
+  1. **`docs/fictional-groups.md` does not exist.** The 21:10 entry says the label searches
+     are "recorded in full" there, but no commit on any branch has the file, nor has the
+     working tree. The searches are to be done again in this session and recorded as the issue
+     asks. The 21:10 entry's results are a summary of searches whose queries were not kept.
+  2. Sections that the code and the documents cite but that were not written:
+     `rule-format.md` section 14, `derivations.md` sections 17 and 18.
+  3. Decision numbers: only DD86 (the framing word, in `groups.py`) was cited, and the 20:40
+     entry refers to a DD93 (releasing the pair from the arbiter) and a "21:30 entry", neither
+     of which was written. The numbering is set in the next entry, keeping both.
+  4. No test count was recorded after the three commits.
+
+### 2026-10-17 08:51 — Session resumed: Parts 2.4 and 2.5 finished, tested and documented
+
+- **What I found.** The branch at `85ca01a`, not pushed. In the working tree, uncommitted and
+  untested, plan step 4: rule schema 3 (`rule.v3.schema.json`, frozen in `MANIFEST.json`);
+  the directive field `back_up` and how a pair's two directives combine on it; the consistency
+  check; a cross-pair conflict on it in the matcher; the manoeuvre in the run loop (phases,
+  end reasons, the arbiter releasing the pair, intentional backing left out of the artefact);
+  log schema 5; the seed rule `passage_shorter_backs_out` (frozen in `MANIFEST.json`). No
+  tests and no documents for any of it.
+- **Baseline.** A fresh virtual environment in this session's scratchpad (Python 3.13.3,
+  PyYAML 6.0.3, pytest 9.1.1, matplotlib 3.10.8, pyflakes 4.0.3). The full suite on the working
+  tree as found: **14 failed**, every one pinning something the uncommitted work changes (log
+  schema version 4 in four tests, the five directive fields, a pair resolution's dict, five
+  seed rules and two schemas in six, the log document in two).
+- **Before writing any test, I ran the manoeuvre** (scratchpad scripts, not shipped) in both
+  scenarios and their variants, under the arbiter, plain ORCA, `back_up` given to either
+  agent, and the seed rule. Every back-up run got both through without a collision. Four
+  things were wrong or doubtful, and were changed:
+  1. **The two started walking into each other, 0.1 m apart**, so the first step was a
+     collision for ORCA to undo, in every condition: the agent ORCA gave the avoiding to was
+     pushed backwards at up to 1.27 m/s on step 0. Two people who *have met* are better started
+     at rest, face to face. Changed: `start_speed` (default 0; `preferred` starts each at its
+     own preferred speed, as before and as every other scenario does; a number starts both at
+     it). The two v1 configs were edited to say so: they were never pushed and nothing uses
+     them yet, and "never edit" is about configs something depends on. This is a decision
+     (DD91), and **it decides what the arbiter's way does** (item 5), so the behaviour checks
+     report both starts.
+  2. **A backer already moving back faster kept that speed.** With share 0, ORCA does not let
+     an agent reduce its velocity's component away from a neighbour that is closing in. In the
+     tied symmetric case, where the arbiter had pushed the follower back at 1.27 m/s before
+     the seed rule matched, the backer went on at 1.21 to 1.34 m/s, not its 0.92. Changed:
+     while one backs out, the other's preferred speed is capped at the backer's backing speed
+     (DD95). The backer then backs at exactly its backing speed, and the two move as one
+     (tested).
+  3. **The new artefact distance counted steps outside its episodes**: 0.5 to 0.7 m of
+     "artefact distance" in runs with no artefact episode at all. Changed: it is counted within
+     the episodes only (`EpisodeTracker.total_amount`).
+  4. **Whether a manoeuvre started depended on the visibility settings** (through the pair
+     features, which are null when speed or size is hidden), and nothing checked that the other
+     was ahead of the backer. Changed: the segment the two meet in is found from the geometry
+     (`_meeting_segment`): too narrow for the two, on both paths, not yet left by the other,
+     the backer's centre inside it, the other ahead of it along its path.
+  Also: the viewer called a pair passing to a manoeuvre "handed back to ORCA" and showed the
+  new event as a bare word; it now says what happened, and flags backing, waiting and the
+  other agent.
+- **What the arbiter does from rest** (new; `derivations.md`, section 17.1, which also holds
+  Part 2.1's account now, as plan step 1 said it would): it does not get the two through. A
+  leader with share 0 may not close in faster than its own velocity already does, and a
+  follower standing in front of a standing leader is on no collision course, so nothing pushes
+  it back. Unperturbed, in `passage_meet_middle_v1`: the leader pushes the touching follower
+  back at 0.030 m/s for the whole 60 s, a time-out with neither through (above the deadlock
+  threshold of 0.01 m/s); perturbed, a deadlock at about 4 s. From the walking start the
+  arbiter's way gets them through as the 20:40 entry measured (unperturbed: the follower
+  walks backwards 2.5 s, 2.96 m; through at 12.3 s).
+- **Tests added**: in `test_passage.py`, the start speeds and 14 tests of the manoeuvre and its
+  logs (who backs out, at what speed, the other's pace, the trajectory's phases, the
+  time-optimal against the distance-optimal choice, the artefact kept apart, the arbiter
+  releasing the pair, the seed rule end to end, no effect outside a passage, the other behind,
+  visibility, the schema check of a run and damage to it, the viewer); `test_rules_schema_v3.py`
+  (the schema, what versions 1 and 2 cannot do, true or false, the consistency check, the seed
+  rule); in `test_directives.py`, the backer and the leader of a pair. Updated because the
+  issue changes what they pin (#28's A2 reading): the log schema version (four tests), the
+  directive fields, a pair resolution's dict, the seed rules and schemas (six), the viewer's
+  flags.
+- **Documents**: `derivations.md` sections 17 (the arbiter's way, the manoeuvre, its interplay
+  with ORCA and the arbiter, intentional backing) and 18 (which of the two to back out);
+  `rule-format.md` section 14 (version 3, the consistency check, `protected_attribute`) and
+  sections 7 and 9; `log-schema.md` version 5; `metrics.md` section 10; `parameters.md`
+  (`start_speed`); `rule-matching.md` (the cross-pair conflict); `rule_db/README.md`.
+- **Decisions** (numbered on from #30's DD84; `architecture.md` will list them):
+  - **DD85.** The default labels Zorvel, Kestrop, Dremmik, in that rotation order, Brannoq a
+    spare (`fictional-groups.md`, to be redone and written in this session).
+  - **DD86.** The framing word defaults to "ethnic group"; it is a setting recorded with every
+    session. Pending supervisor review (the issue's words).
+  - **DD87.** `ethnic_group` is a persona attribute: hidden by default, left out of a persona
+    that does not give it, and flagged on its definition as not readable by rules (A1).
+  - **DD88.** `protected_attribute`: any reference containing "ethnic", the attribute's name,
+    a default label, or (in rule generation) a session's own words, anywhere in a condition or
+    a role assignment (field, role names, tie policy), refused before every other check.
+  - **DD89.** The passage fields are computed once per pair from the two positions and the
+    passage; "ahead" is the end on the other's side; null outside the passage, outside the
+    single-file class, or when the two are level (A2).
+  - **DD90.** Every rule field records the format version that added it; a rule reads only
+    its own version's fields; a case taken from a version 2 record keeps its snapshot; a
+    template's glossary is generated for the format version it describes.
+  - **DD91.** `passage_meeting` places the two at the meeting point, 0.1 m apart, each path
+    starting where its agent stands; **at rest by default** (item 1 above).
+  - **DD92.** `backing_speed` is an optional agent-type parameter, 0.92 m/s when not set
+    (Nakahara et al. 2005, the normal pace of ten young adults), never above the maximum
+    speed, written into a resolved scenario only when set.
+  - **DD93.** A pair in a back-up manoeuvre is taken from the arbiter (a handoff
+    `to: back_up`), and the arbiter does not take it while the manoeuvre lasts.
+  - **DD94.** The manoeuvre: back along the segment, away from the other, to the run-out
+    `r_i + r_j + margin` beyond the end on the centre line (the edge of the conflict zone),
+    at the backer's backing speed; wait until the other has come out by the same distance,
+    has arrived, or the two have lost sight of each other; then go on. It starts only inside a
+    segment the two meet in, read from the geometry (item 4); one per agent at a time, one
+    per pair interaction.
+  - **DD95.** While the backer backs out, the shares are 0 for it and 1 for the other, and the
+    other's preferred speed is capped at the backer's backing speed; while it waits, 1 and 0.
+  - **DD96.** `back_up` names the pair's leader (the other one). Two that back up are a
+    reciprocity violation, and neither does; a directive that backs up and leads is a
+    violation, and the backing stands.
+  - **DD97.** The consistency check reads A3: a rule that sets `back_up` for any role makes
+    exactly one of two roles back up, and not the one it makes go first; a symmetric rule
+    cannot set it; a rule that sets nothing of it is not checked for it. Refused as `back_up`,
+    counted as `inconsistent` in rule generation.
+  - **DD98.** The backing phase is never counted toward the walking-backwards artefact;
+    everything else is, a waiting backer's backward motion included. The artefact's distance is
+    counted within its episodes.
+  - **DD99.** Log schema 5 (`log-schema.md`, change log); folders of versions 1 to 4 are
+    checked against their own.
+  - **DD100.** Rule schema 3 is version 2 with `back_up` and `true`/`false` values; versions 1
+    and 2 can use neither, nor the passage fields.
+
 ## Open questions / risks
 
-<Filled in as they arise.>
+- **Q1 (carried from #30). The supervisor's approval of simulation work, and now of the
+  ethnicity factor, is not recorded in `CLAUDE.md`.** This issue makes no paid call. The
+  ethnicity factor is off by default and a paid run with it on is refused until the ethics
+  sign-off is recorded there (Part 1.4).
+- **Q2. How should an in-passage meeting start?** At rest (DD91, the default) the arbiter's
+  way does not get the two through; walking, it does, by issue #26's artefact
+  (`derivations.md`, section 17.1). The behaviour checks report both. Which one SI-3b's cases
+  should come from is the user's and the supervisor's call; `start_speed` is one setting.
+- **Q3. The consistency check reads A3**: only a rule that says who backs up must back up
+  exactly one role. A stricter reading (any single-file rule that can match two people both
+  inside must say who backs up) would refuse rules that leave the meeting to the arbiter,
+  as every rule before this issue does. Not adopted; easy to add if wanted.
+- **Q4. The backer waits on the passage's centre line**, where the other comes out, and ORCA
+  moves it aside (sometimes backwards: counted as the artefact). A person would step aside
+  first; doing so would need the simulator to pick a side, which would build a convention into
+  it. Recorded, not changed.
+- **Q5. The label searches of the 21:10 entry were not kept** (the 2026-10-16 21:16–21:35
+  entry, item 1). They are redone in this session. If a label fails the second time it is
+  replaced; nothing frozen depends on the labels yet.
 
 ## Summary (fill in at the end)
 

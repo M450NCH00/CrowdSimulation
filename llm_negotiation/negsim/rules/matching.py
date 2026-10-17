@@ -75,6 +75,10 @@ CONFLICT_RESOLUTIONS = {
         "each pair's order goes to the arbiter separately; ordering three or more agents is out of scope "
         "(architecture.md, section 4)"
     ),
+    "back_up": (
+        "an agent backs out for one pair at a time: the first back-up manoeuvre to start runs to its end, and no other "
+        "starts for it meanwhile; three or more agents in a passage are out of scope (issue #32)"
+    ),
 }
 
 DEFAULT_HYSTERESIS_STEPS = 3
@@ -350,6 +354,7 @@ class RuleMatcher:
             ("side_preference", lambda values: len(values - {SIDE_NONE}) > 1),  # both left and right
             ("speed_scale", lambda values: len(values) > 1),  # two different speeds asked for
             ("passage_order", lambda values: len(values - {ORDER_NONE}) > 1),  # leader in one, follower in another
+            ("back_up", lambda values: len(values) > 1),  # backs out for one pair and goes on for another (issue #32)
         ):
             entries = set()
             for pair, match in items:

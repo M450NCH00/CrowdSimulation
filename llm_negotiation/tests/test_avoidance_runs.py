@@ -226,7 +226,7 @@ def test_a_run_writes_its_five_files_and_they_pass_the_schema_check(side_run):
 
 def test_config_json_is_fully_resolved(side_run):
     saved = read_json(side_run[0] / CONFIG_FILE)
-    assert (saved["log_schema_version"], saved["run_kind"]) == (LOG_SCHEMA_VERSION, "avoidance") == (4, "avoidance")  # 2 before issue #28, 3 before #30
+    assert (saved["log_schema_version"], saved["run_kind"]) == (LOG_SCHEMA_VERSION, "avoidance") == (5, "avoidance")  # 2 before issue #28, 3 before #30, 4 before #32
     assert (saved["experiment_name"], saved["run_id"], saved["run_index"], saved["seed"], saved["repeat"]) == ("test_avoidance", "001_base", 1, 301, 1)
     assert saved["git"] == GIT and saved["variant"] == {} and saved["perception_schema_version"] == PERCEPTION_SCHEMA_VERSION
     scene = saved["scenario"]
@@ -501,7 +501,7 @@ def test_a_negotiation_run_now_says_its_kind_and_the_new_version(tmp_path):
     plan = experiment(c1_config()).plans()[0]
     execute_run(plan, MockClient(policy="task_priority"), tmp_path / "talk", git=GIT)
     saved = read_json(tmp_path / "talk" / CONFIG_FILE)
-    assert (saved["log_schema_version"], saved["run_kind"]) == (4, "negotiation")  # 2 before issue #28, 3 before #30
+    assert (saved["log_schema_version"], saved["run_kind"]) == (5, "negotiation")  # 2 before issue #28, 3 before #30, 4 before #32
     assert sorted(path.name for path in (tmp_path / "talk").iterdir()) == sorted(RUN_FILES)  # its files are unchanged
     assert validate_run_dir(tmp_path / "talk") == []
 

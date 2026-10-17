@@ -25,8 +25,12 @@ on to its own side of the corridor, as in ``corridor_to_bottleneck``; it ends ``
 beyond that end.
 
 The meeting has already happened when the run starts: what ORCA, the arbiter or a rule does next
-is the experiment. Whoever backs out does so without a path behind it to follow: it backs along
-the passage (``docs/derivations.md``, section 17).
+is the experiment. By default the two **start at rest**, having stopped face to face
+(``start_speed`` 0). ``start_speed: preferred`` starts each walking toward the other at its own
+preferred speed instead, as in every other scenario (and as the arbiter's behaviour was first
+measured, ``docs/derivations.md``, section 17.1); a number starts both at that speed. A walking
+start leaves ORCA a collision to undo on the first step. Whoever backs out does so without a path
+behind it to follow: it backs along the passage (``docs/derivations.md``, section 17).
 """
 
 from __future__ import annotations
@@ -37,6 +41,9 @@ from ..configutil import ConfigError, as_number, check_keys
 from ..core.geometry import Polyline, Rect
 from .crowd_base import CrowdLayout, CrowdScenario, CrowdScenarioSpec, Placement, SingleFileSegment, number_list
 
+#: ``start_speed: preferred``: each starts walking at its own preferred speed, as the agents of
+#: every other scenario do.
+START_PREFERRED = "preferred"
 _LENGTHS = (
     "approach_width",
     "approach_length",
@@ -52,7 +59,7 @@ class PassageMeetingScenario(CrowdScenario):
     type_name = "passage_meeting"
 
     def geometry(self, raw: Mapping[str, Any], where: str) -> dict[str, Any]:
-        check_keys(raw, where, (*_LENGTHS, "travelled"), ("wall_thickness",))
+        check_keys(raw, where, (*_LENGTHS, "travelled"), ("wall_thickness", "start_speed"))
         geometry: dict[str, Any] = {
             key: as_number(raw[key], f"{where}.{key}", minimum=0.0, strict_minimum=True) for key in _LENGTHS
         }
@@ -60,6 +67,8 @@ class PassageMeetingScenario(CrowdScenario):
         geometry["wall_thickness"] = as_number(
             raw.get("wall_thickness", 0.5), f"{where}.wall_thickness", minimum=0.0, strict_minimum=True
         )
+        start = raw.get("start_speed", 0.0)
+        geometry["start_speed"] = START_PREFERRED if start == START_PREFERRED else as_number(start, f"{where}.start_speed", minimum=0.0)
         length = geometry["passage_length"]
         if geometry["passage_width"] >= geometry["approach_width"]:
             raise ConfigError(f"{where}: passage_width must be less than approach_width")
@@ -91,10 +100,17 @@ class PassageMeetingScenario(CrowdScenario):
         x_merge, x_end = half + g["merge_distance"], half + g["exit_setback"]
         y_off = g["lateral_offset"]
         west_start, east_start = -half + g["travelled"][0], half - g["travelled"][1]
+        start_speed = None if g["start_speed"] == START_PREFERRED else g["start_speed"]
         # Each keeps to its own right once out: south of the centre line walking east, north walking west.
         placements = (
-            Placement((west_start, 0.0), (x_end, -y_off), Polyline([(west_start, 0.0), (x_merge, 0.0), (x_end, -y_off)]), "eastbound"),
-            Placement((east_start, 0.0), (-x_end, y_off), Polyline([(east_start, 0.0), (-x_merge, 0.0), (-x_end, y_off)]), "westbound"),
+            Placement(
+                (west_start, 0.0), (x_end, -y_off), Polyline([(west_start, 0.0), (x_merge, 0.0), (x_end, -y_off)]), "eastbound",
+                initial_speed=start_speed,
+            ),
+            Placement(
+                (east_start, 0.0), (-x_end, y_off), Polyline([(east_start, 0.0), (-x_merge, 0.0), (-x_end, y_off)]), "westbound",
+                initial_speed=start_speed,
+            ),
         )
         t = g["wall_thickness"]
         walls = (

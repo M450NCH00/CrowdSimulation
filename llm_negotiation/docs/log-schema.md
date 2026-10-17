@@ -1,4 +1,4 @@
-# Log schema, version 4
+# Log schema, version 5
 
 The logs are this platform's research output: rule extraction will be done from them. This
 file says what every file and field means. The machine-checkable part of the schema, the
@@ -20,7 +20,7 @@ describes, in `run_kind`:
 The sections from "Layout" to "`summary.csv`" describe a negotiation run; they are those of
 version 1, with the one new field. The section "Avoidance runs" describes the other kind.
 The two have files of the same name with different contents; `run_kind` says which is
-which. Versions 3 and 4 changed only the avoidance run. The folder of a rule-generation
+which. Versions 3 to 5 changed only the avoidance run. The folder of a rule-generation
 experiment (issue #30) is not a run of either kind; section "Rule-generation experiments"
 describes it.
 
@@ -58,7 +58,7 @@ The fully resolved configuration: defaults filled in, overrides applied.
 
 | Field | Meaning |
 |---|---|
-| `log_schema_version` | 4 (1 in a folder written before issue #26; 2 or 3 in one written by issues #26 and #28) |
+| `log_schema_version` | 5 (1 in a folder written before issue #26; 2, 3 or 4 in one written by issues #26, #28 and #30) |
 | `run_kind` | `negotiation`. Absent from a version 1 folder. |
 | `experiment_name`, `run_id`, `run_index` | Which experiment; this run's id (also its folder name); its position in the design, from 1 |
 | `condition` | `C0` to `C4` |
@@ -234,7 +234,7 @@ uses the number as a string.
 
 | Field | Meaning |
 |---|---|
-| `log_schema_version`, `run_kind` | 4 (2 in a folder of issue #26, 3 in one of issue #28), `avoidance` |
+| `log_schema_version`, `run_kind` | 5 (2 in a folder of issue #26, 3 in one of issue #28, 4 in one of issue #30), `avoidance` |
 | `experiment_name`, `run_id`, `run_index` | Which experiment; the id of this run (also its folder name); its position in the design, from 1 |
 | `seed`, `repeat` | The seed of the run, which seeds a random tie-break by the arbiter and, under a perturbed baseline, the perturbation; which repetition, from 1. How the seed was derived is `seeding` |
 | `seeding` | Version 4. `paired`: the design's base seed plus `repeat`, the same for every level of every factor, so that a baseline run and a rule run of one scenario instance share their seed (the default since issue #30, `baseline.md`, section 6). `per_run`: the base seed plus `run_index`, as every run of versions 2 and 3 was seeded |
@@ -242,13 +242,13 @@ uses the number as a string.
 | `scenario_file` | The scenario YAML used |
 | `variant` | The level of each factor of the design, e.g. `{"layout": "offset", "condition": "both_left"}` |
 | `scenario` | The resolved scenario: `schema_version` (2), `type`, `dt_s`, `max_time_s`, `goal_tolerance_m`, `arrival`, `dynamics`, `seed` (of the randomness in the scenario itself), `on_collision`, `geometry`, `agent_types`, `orca` (`tie_break`), `navigation` (`lookahead_m`), `neighbour_search` (`cell_size_m`), `single_file` (`safety_margin_m`, `segments`), `deadlock`, `metrics` (the thresholds), `n_agents`, `obstacles`, and `agents` |
-| `scenario.agents[]` | Per agent: `agent_id`, `agent_type`, `group`, `side`, `radius_m`, `preferred_speed_mps`, `max_speed_mps`, `initial_speed_mps`, `sensing_radius_m`, `max_neighbours`, `time_horizon_s`, `time_horizon_obst_s`, `start`, `goal`, desired `path`, `path_length_m`, and `single_file_stretches` (where its path enters and leaves each single-file segment) |
+| `scenario.agents[]` | Per agent: `agent_id`, `agent_type`, `group`, `side`, `radius_m`, `preferred_speed_mps`, `max_speed_mps`, `initial_speed_mps`, `sensing_radius_m`, `max_neighbours`, `time_horizon_s`, `time_horizon_obst_s`, `start`, `goal`, desired `path`, `path_length_m`, and `single_file_stretches` (where its path enters and leaves each single-file segment); and `backing_speed_mps` (issue #32) only if its agent type sets one (`parameters.md`), so that a scenario that does not resolves as before |
 | `population[]` | Per agent: `agent_id`, `group`, `persona_id` and `attributes` (`age`, `gender`, `backstory`), or nulls for an agent with no persona. The task of the persona is not written: it plays no part in an avoidance run |
 | `visibility` | For each attribute, whether an agent could see it of a neighbour |
 | `directives` | The provider (`provider`: `null`, `static`, or `rules`) and `share_policy` (`proportional` or `equal_split`). For `static`, what it was configured with (`default`, `agents`, `pairs`). For `rules` (version 3), **the active rule set**: `database` (the folder), `ruleset` (the name of the rule set the run started from, or null), `rules` (every rule switched on: `rule_id`, `version`, `schema_version` (version 4), `status`, `encounter`, `priority`, `expiry`, and the `sha256` of its frozen file), `hysteresis_steps`, and `unchecked_pairs` (pairs of rules the ambiguity check could not try; `rule-matching.md`) |
 | `arbitration` | `enabled`, `policy`, `tie_break`: how single-file segments were handled |
 | `logging` | `trajectory_stride` (every how-many-th step is in `trajectory.csv`) and `interactions` (whether the per-interaction records, `interactions.jsonl` and, in version 3, `pair_interactions.jsonl`, were filled; the outcome counts them either way) |
-| `perception_schema_version` | Version of the perception record (`perception.md`): 2 since issue #28, 1 in a folder of issue #26 |
+| `perception_schema_version` | Version of the perception record (`perception.md`): 3 since issue #32 (the passage fields and the group), 2 since issue #28, 1 in a folder of issue #26 |
 | `baseline` | Version 3. The frozen baseline the run followed (`baseline.md`), or null: `name`, `version`, `role` (`primary` or `secondary`), `file`, `sha256`, `perturbation`, `orca`, `agent_types` (the settings it laid on every agent type), `sign_off`. A level of the experiment may still have changed a setting after it; `scenario` holds what was used |
 | `perturbation` | Version 3. What was added to every preferred velocity on every step (`kind`: `rvo2_uniform`; `magnitude_mps`, 0 for none) |
 
@@ -268,7 +268,7 @@ always are.
 | `path_s_m` | Progress along the desired path |
 | `vx_mps`, `vy_mps`, `speed_mps` | The velocity the agent moved at during the step |
 | `pref_vx_mps`, `pref_vy_mps` | The velocity it wanted: along its path at its preferred speed, scaled by its directives and capped by the arbiter |
-| `control_mode` | `orca`, or `arbiter` if the agent was in a pair the arbiter held on this step (`architecture.md`, section 6.4) |
+| `control_mode` | `orca`; `arbiter` if the agent was in a pair the arbiter held on this step (`architecture.md`, section 6.4); `back_up` (version 5) if it was in a back-up manoeuvre, as the one backing out or as the other (`derivations.md`, section 17) |
 | `speed_bound_mps` | The bound the arbiter put on the speed the agent wants; empty unless `control_mode` is `arbiter` |
 | `role`, `role_source` | `leader` or `follower`, and where the order came from: `negotiated` (here: the `passage_order` of the directives), `strategy1` (the rule of the arbiter itself) or `physical_precedence`. Empty unless the arbiter held the agent and the conflict was live |
 | `in_conflict` | Whether the arbiter found a live single-file conflict for the agent on this step |
@@ -278,6 +278,7 @@ always are.
 | `exposed` | Whether its preferred velocity was outside a half-plane induced by another agent, so that ORCA had to change it (`metrics.md`, section 3) |
 | `fallback` | Whether no velocity satisfied all its half-planes, so that the fallback of ORCA chose (`orca.md`, section 7) |
 | `interactions` | The `interaction_id` of each of its interactions that was active on this step, separated by `;`. **This is how the active directive is recorded**: each id is a line of `interactions.jsonl`, which holds the directive |
+| `back_up` | Version 5. Its part in a back-up manoeuvre on this step: `backing` (backing out of the passage at its backing speed: **intentional backing**), `waiting` (out of the passage, waiting for the other to come through), or `proceeding` (the other, coming on no faster than the one backing out backs); empty otherwise |
 
 ### `interactions.jsonl`
 
@@ -293,8 +294,8 @@ became one of its perceived neighbours to the step it went out of range
 | `start_step`, `start_time_s` | When the neighbour came into range |
 | `end_step`, `end_time_s`, `end_reason` | When and why it ended: `out_of_range`, `observer_arrived`, `neighbour_arrived` or `run_ended` |
 | `perception` | **The perception record at the moment the neighbour came into range**, whole (`perception.md`) |
-| `directive` | The directive the provider returned for it when it began: `side_preference`, `responsibility_share`, `speed_scale`, `clearance_margin`, `passage_order`. With `null` and `static` providers it holds for the whole interaction, except that its `speed_scale` stops applying once the encounter has passed (version 3) |
-| `directive_changes` | Version 3. Each later change of the directive by a provider that follows pairs (the rule database), in order: `from_step`, `from_time_s`, and the five fields. Empty otherwise. A rule match that begins, is replaced or expires shows here; `pair_interactions.jsonl` says which rule and why |
+| `directive` | The directive the provider returned for it when it began: `side_preference`, `responsibility_share`, `speed_scale`, `clearance_margin`, `passage_order`, and (version 5) `back_up`. With `null` and `static` providers it holds for the whole interaction, except that its `speed_scale` stops applying once the encounter has passed (version 3) |
+| `directive_changes` | Version 3. Each later change of the directive by a provider that follows pairs (the rule database), in order: `from_step`, `from_time_s`, and the directive's fields (six from version 5). Empty otherwise. A rule match that begins, is replaced or expires shows here; `pair_interactions.jsonl` says which rule and why |
 | `speed_scale_expired_step`, `speed_scale_expired_time_s` | Version 3. When the directive's `speed_scale` stopped applying because the encounter had passed (`derivations.md`, section 15). Only with a provider that does not follow pairs, and only if the scale was not 1; null otherwise |
 | `effective` | What was actually used, as a list of entries, a new one each time it changed: `from_step`, `mutual` (whether the neighbour perceived the observer too), `responsibility_share`, `side_preference`, `clearance_margin`. It differs from `directive` when the two directives of the pair were combined, when a violation was repaired, and while the arbiter held the pair |
 | `perceived_time_s` | Time during which the neighbour was among the perceived neighbours of the observer |
@@ -351,13 +352,14 @@ and `time_s`.
 | `type` | Further fields | Meaning |
 |---|---|---|
 | `reciprocity_violation` | `step`, `field`, `agents`, `given`, `resolved`, `policy` | The two directives of a pair contradicted each other in `field` (`responsibility_share`, `side_preference` or `passage_order`). `given` is what the two asked for, `resolved` what was used, `policy` the rule that decided (`derivations.md`, sections 9 to 11). Logged once, when the pair first perceive each other |
-| `handoff` | `step`, `pair`, `to`, `leader`, `role_source`, `reason` | Control of a pair passed `to` the `arbiter` or back to `orca` |
+| `handoff` | `step`, `pair`, `to`, `leader`, `role_source`, `reason` | Control of a pair passed `to` the `arbiter`, back to `orca`, or (version 5) from the arbiter to a back-up manoeuvre (`back_up`) |
 | `yield` | `agent_id`, `start_time_s`, `end_time_s`, `duration_s`, `min_speed_mps` | A yield event (`metrics.md`, section 4). `time_s` is its start |
 | `near_miss` | `pair`, `start_time_s`, `end_time_s`, `min_separation_m` | A near miss (`metrics.md`, section 5) |
 | `collision` | `pair`, `start_time_s`, `end_time_s`, `max_overlap_m` | Two bodies overlapped |
 | `wall_collision` | `agent_id`, `start_time_s`, `end_time_s`, `max_overlap_m` | A body overlapped a wall |
 | `ambiguous_match` | `step`, `pair`, `applied`, `ambiguous_with` | Version 3. Two rules at the top priority matched the pair with different directives; `applied` is the one with the lower `rule_id` (`rule-matching.md`). One event per entry of the pair's evaluation log |
-| `cross_pair_conflict` | `step`, `agent_id`, `field`, `values`, `resolution` | Version 3. The rule matches of one agent's pairs contradict each other in `field` (`side_preference`, `speed_scale` or `passage_order`); `values` lists each pair, its rule and its value; `resolution` says how it is settled (`rule-matching.md`). Logged when the conflict appears |
+| `cross_pair_conflict` | `step`, `agent_id`, `field`, `values`, `resolution` | Version 3. The rule matches of one agent's pairs contradict each other in `field` (`side_preference`, `speed_scale`, `passage_order` or, version 5, `back_up`); `values` lists each pair, its rule and its value; `resolution` says how it is settled (`rule-matching.md`). Logged when the conflict appears |
+| `back_up` | `step`, `phase`, `backer`, `other`, `pair_id`, `segment`, and `travelled_m` (with `started`) or `reason` (with `ended`) | Version 5. A back-up manoeuvre (`derivations.md`, section 17): `started` (the `backer`, having walked `travelled_m` into the `segment`, begins to back out for the `other`), `out` (it is out and waits), `ended` (it goes on; `reason` as in `outcome.json`). One manoeuvre gives two or three events |
 
 ### `outcome.json` of an avoidance run
 
@@ -380,7 +382,8 @@ and `time_s`.
 | `interaction_outcomes` | Version 3. `pairs` (how many pair interactions), `avoided`, `resolved`, `failed`, and `pairs_with`: how many pairs were `exposed`, `pair_exposed` (version 4), `yielded`, `collided`, `deadlocked` and `open_at_timeout` (a pair can count under several). Version 4: `tiers`, the number of pairs in each of `T0` to `T4` |
 | `rules` | Version 3. Null unless the provider is the rule database; otherwise `evaluations` (how many evaluations ended in each outcome), `matches_begun` (by `rule_id@version`: **which rules fired, and how often**), `match_ends` (by reason), `cross_pair_conflicts` (how many were logged), `formation_checks` and `formation_mismatches` (the run-time check of the shared snapshot against each agent's own evaluation, `rule-matching.md`; the second should be 0) |
 | `baseline` | Version 3. The name of the baseline the run followed, or null |
-| `artefacts` | Version 3. Counts of the two ORCA artefacts of issue #26 (`metrics.md`, section 10): `thresholds`; per agent (`agents`) `backward_episodes`, `backward_time_s`, `hurried_episodes`, `hurried_time_s`; and `totals`, the same summed, with `agents_backward` and `agents_hurried` |
+| `artefacts` | Version 3. Counts of the two ORCA artefacts of issue #26 (`metrics.md`, section 10): `thresholds`; per agent (`agents`) `backward_episodes`, `backward_time_s`, `hurried_episodes`, `hurried_time_s`, and (version 5) `backward_distance_m`, how far it moved backwards within its backward episodes; and `totals`, the same summed, with `agents_backward` and `agents_hurried`. Intentional backing (below) is never counted here |
+| `back_up` | Version 5. The back-up manoeuvres (`derivations.md`, section 17). `manoeuvres`, in the order they started, each with `backer`, `other`, `pair_id`, `segment`, `travelled_m` (how far the backer had walked in), `speed_mps` (its backing speed), `runout_m` and `target_m` (how far beyond the end, and the point, it backed to), `start_step`, `start_time_s`, `out_step`, `out_time_s` (when it was out; null if never), `end_step`, `end_time_s` and `end_reason` (`other_cleared`: the other came out at that end and as far beyond it; `other_arrived`; `pair_ended`: the two lost sight of each other; `run_ended`), `backing_time_s`, `waiting_time_s`, and `backing_distance_m` (how far it moved backwards while backing out: the intentional backing). `agents`, per agent that backed up: `manoeuvres`, `backing_time_s`, `waiting_time_s`, `backing_distance_m`; and `totals`, the same summed |
 
 ### `summary.csv` of an avoidance experiment
 
@@ -397,8 +400,9 @@ version 3, the baseline and the rules (`baseline`, `ruleset`, `pairs`, `avoided`
 `resolved`, `failed`, `rules_fired` as `rule_id@version=count` separated by `;`,
 `ambiguous_matches`, `cross_pair_conflicts`, `backward_episodes`, `hurried_episodes`), empty for a run written before; from
 version 4, pair exposure and the tiers (`pair_exposure_time_s`, `pairs_t0`, `pairs_t1`, `pairs_t2`, `pairs_t3`,
-`pairs_t4`), empty for a run written before; and
-`git_commit`.
+`pairs_t4`), empty for a run written before; from version 5, backing up (`back_up_manoeuvres`,
+`backing_distance_m`: the intentional backing; `backward_distance_m`: the walking-backwards
+artefact's distance), empty for a run written before; and `git_commit`.
 
 ## Rule-generation experiments (issue #30)
 
@@ -406,8 +410,8 @@ A rule-generation experiment (`rule-generation.md`) is not a run: it holds sessi
 model, the rules they produced, and avoidance runs that replay and screen those rules. Its
 folder, `runs/<experiment_name>/` (`runs_mock/` with the mock client), is laid out as below.
 Its own files are **version 1** of the rule-generation log (`rulegen_log_version` in
-`config.json`); the run folders under `replay/` and `screening/` are avoidance runs of log
-schema version 4, described above.
+`config.json`); the run folders under `replay/` and `screening/` are avoidance runs of the log
+schema version of the code that ran them (4 before issue #32, 5 since), described above.
 
 ```
 runs/<experiment_name>/
@@ -554,3 +558,13 @@ lines whose `experiment` is that experiment's name.
 - (2026-10-16, issue #30; not a run format, the run schema stays at version 4.) The folder of a
   rule-generation experiment, version 1 of its own (`rulegen_log_version`), section
   "Rule-generation experiments"; and the spend ledger's labels for its calls.
+- **5** (2026-10-17, issue #32): backing up. An avoidance run gains the directive field `back_up`
+  (in `interactions.jsonl`, `directive` and `directive_changes`); in `trajectory.csv`, the
+  `control_mode` `back_up` and a `back_up` column (the agent's part in a back-up manoeuvre); a
+  `back_up` event, and `back_up` as a handoff's `to`; in `outcome.json`, a `back_up` block (every
+  manoeuvre, and per agent and in total its times and distances) and, among the `artefacts`,
+  `backward_distance_m`; `backing_speed_mps` of an agent whose type sets one; and three summary
+  columns. Intentional backing is never counted as the walking-backwards artefact. Perception
+  records are version 3 (`perception.md`: the passage fields and the group). A negotiation run is
+  as in version 4. Folders written under versions 1 to 4 stay valid and are checked against
+  their own version.

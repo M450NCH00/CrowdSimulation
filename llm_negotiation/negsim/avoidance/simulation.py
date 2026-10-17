@@ -17,7 +17,8 @@ Once per time step, for every agent that has not arrived:
    contradicts itself is logged as a reciprocity violation and repaired.
 3. **Coordinate.** A pair with a single-file segment ahead of both is handed to the
    arbiter (``negsim.avoidance.coordination``), which decides who goes first and returns
-   a speed bound for each.
+   a speed bound for each. A pair one of whose agents is backing out of a segment on a
+   ``back_up`` directive (issue #32) is not: the manoeuvre has it (below).
 4. **Choose a velocity.** The preferred velocity points along the agent's desired path at
    its preferred speed, scaled by its directives and capped by the arbiter; a baseline
    may add a tiny random perturbation to it (:class:`Perturbation`). ORCA builds a
@@ -34,6 +35,20 @@ gives each pair interaction its severity tier (``docs/metrics.md``, section 11).
 
 An agent that reaches the end of its path leaves the scene: it is no longer a neighbour
 of anyone and cannot be collided with.
+
+**Backing up** (issue #32; ``docs/derivations.md``, section 17). When a pair's directives tell
+one agent to ``back_up`` and that agent is inside a single-file segment the two meet in (one
+too narrow for them, on both their paths, with the other ahead of it), it starts a
+*manoeuvre*, which runs to its end whatever the directive does meanwhile: it backs along the
+segment, away from the other, at its own backing speed, to a point beyond the end behind it by
+the two radii and the segment's safety margin (outside the conflict zone); it waits there; and
+once the other has come out at that end and as far again, or has arrived, or the two have lost
+sight of each other, it goes on along its path. While it backs out, the other comes on no
+faster than the backer backs, and does all of the avoiding (shares 0 and 1); while it waits,
+it keeps out of the other's way (1 and 0, as a follower of the arbiter does). The arbiter does
+not hold the pair meanwhile. The backing is *intentional*, logged as such, and is never
+counted as issue #26's walking-backwards artefact; anything ORCA does to the waiting agent is
+ORCA's, and is. One manoeuvre per agent at a time, and one per pair interaction.
 """
 
 from __future__ import annotations
@@ -83,6 +98,7 @@ from .perception import (
     encounter_of,
     pair_features,
     perceive,
+    segment_position,
 )
 
 if TYPE_CHECKING:  # pragma: no cover - the scenario layer imports this package
@@ -95,7 +111,22 @@ STATUS_COLLISION = "collision"
 STATUS_DEADLOCK = "deadlock"
 STATUS_TIMEOUT = "timeout"
 
-MODE_ORCA, MODE_ARBITER = "orca", "arbiter"
+MODE_ORCA, MODE_ARBITER, MODE_BACK_UP = "orca", "arbiter", "back_up"
+
+# A back-up manoeuvre (issue #32): the phases of the one backing up, what the other is doing
+# meanwhile (the trajectory's ``back_up`` column), and why it ended.
+PHASE_BACKING, PHASE_WAITING = "backing", "waiting"
+PHASE_PROCEEDING = "proceeding"
+BACK_UP_CLEARED = "other_cleared"  # the other came out at the backer's end, and as far beyond it
+BACK_UP_OTHER_ARRIVED = "other_arrived"
+BACK_UP_PAIR_ENDED = "pair_ended"  # the two lost sight of each other
+BACK_UP_RUN_ENDED = "run_ended"
+BACK_UP_END_REASONS = (BACK_UP_CLEARED, BACK_UP_OTHER_ARRIVED, BACK_UP_PAIR_ENDED, BACK_UP_RUN_ENDED)
+#: How near the point it backs to (along the segment) an agent must be to be out (m).
+BACK_UP_REACHED_M = 1e-3
+#: The shares of a pair in a manoeuvre, (the one backing up, the other): while it backs out it is
+#: not pushed and the other follows at its pace; while it waits it keeps out of the other's way.
+BACKING_SHARES, WAITING_SHARES = (0.0, 1.0), (1.0, 0.0)
 
 END_OUT_OF_RANGE = "out_of_range"
 END_OBSERVER_ARRIVED = "observer_arrived"
@@ -191,6 +222,68 @@ class Interaction:
         self.directive = directive
         self.directive_changes.append({"from_step": step, "from_time_s": round(time_s, 6), **directive.as_dict()})
         return True
+
+
+@dataclass
+class BackUp:
+    """One agent backing out of a single-file segment for another (issue #32).
+
+    ``axis`` is the segment's long axis (0 for x, 1 for y) and ``direction`` the way along it
+    the agent backs, away from the other (+1 or -1). ``end_m`` is where along the axis the
+    segment's end behind the agent is, and ``target`` the point it backs to: ``runout_m``
+    beyond that end, on the segment's centre line.
+    """
+
+    backer: int
+    other: int
+    pair_id: int
+    segment: str
+    axis: int
+    direction: float
+    end_m: float
+    target: tuple[float, float]
+    runout_m: float
+    speed_mps: float
+    travelled_m: Optional[float]
+    start_step: int
+    start_time_s: float
+    phase: str = PHASE_BACKING
+    out_step: Optional[int] = None
+    out_time_s: Optional[float] = None
+    end_step: Optional[int] = None
+    end_time_s: Optional[float] = None
+    end_reason: Optional[str] = None
+    backing_steps: int = 0
+    waiting_steps: int = 0
+    #: How far it moved back, against the direction of its path, while backing out.
+    backing_distance_m: float = 0.0
+
+    def shares(self, agent_id: int) -> float:
+        """The responsibility share of ``agent_id`` toward the other agent of the manoeuvre."""
+        shares = BACKING_SHARES if self.phase == PHASE_BACKING else WAITING_SHARES
+        return shares[0] if agent_id == self.backer else shares[1]
+
+    def as_dict(self, dt: float) -> dict[str, Any]:
+        return {
+            "backer": self.backer,
+            "other": self.other,
+            "pair_id": self.pair_id,
+            "segment": self.segment,
+            "travelled_m": None if self.travelled_m is None else round(self.travelled_m, 6),
+            "speed_mps": round(self.speed_mps, 6),
+            "runout_m": round(self.runout_m, 6),
+            "target_m": [round(self.target[0], 6), round(self.target[1], 6)],
+            "start_step": self.start_step,
+            "start_time_s": round(self.start_time_s, 6),
+            "out_step": self.out_step,
+            "out_time_s": None if self.out_time_s is None else round(self.out_time_s, 6),
+            "end_step": self.end_step,
+            "end_time_s": None if self.end_time_s is None else round(self.end_time_s, 6),
+            "end_reason": self.end_reason,
+            "backing_time_s": round(self.backing_steps * dt, 6),
+            "waiting_time_s": round(self.waiting_steps * dt, 6),
+            "backing_distance_m": round(self.backing_distance_m, 6),
+        }
 
 
 PAIR_END_OUT_OF_RANGE = "out_of_range"
@@ -308,6 +401,8 @@ class SimulationResult:
     provider_summary: Optional[dict[str, Any]] = None
     #: The counts of issue #26's two ORCA artefacts (``docs/metrics.md``, section 10).
     artefacts: Optional[dict[str, Any]] = None
+    #: Every back-up manoeuvre, in the order they started (issue #32).
+    back_ups: list[BackUp] = field(default_factory=list)
 
     @property
     def min_separation_m(self) -> Optional[float]:
@@ -403,6 +498,11 @@ class AvoidanceSimulation:
         self.artefact_thresholds = ArtefactThresholds()
         self.backward = {a.agent_id: EpisodeTracker(self.artefact_thresholds.min_duration_s) for a in agents}
         self.hurried = {a.agent_id: EpisodeTracker(self.artefact_thresholds.min_duration_s) for a in agents}
+        # Back-up manoeuvres (issue #32): all of them, those running by the agent backing up,
+        # and the pair interactions that have had one.
+        self.back_ups: list[BackUp] = []
+        self.backing: dict[int, BackUp] = {}
+        self._backed_pairs: set[int] = set()
         self.near_misses = ProximityTracker(thresholds.near_miss_distance)
         self.overlaps = ProximityTracker(-_CONTACT_EPS)
         self.wall_overlaps: dict[int, dict[str, Any]] = {}
@@ -437,6 +537,8 @@ class AvoidanceSimulation:
                 self._end_interaction(interaction, END_RUN_ENDED)
         for key in sorted(self.open_pairs):
             self._close_pair(self.open_pairs.pop(key), PAIR_END_RUN_ENDED)
+        for backer in sorted(self.backing):
+            self._end_back_up(self.backing[backer], BACK_UP_RUN_ENDED)
         for tracker in [*self.yield_trackers.values(), *self.backward.values(), *self.hurried.values()]:
             tracker.close()
         self.near_misses.close()
@@ -482,6 +584,7 @@ class AvoidanceSimulation:
             pairs=self.pairs,
             provider_summary=self.provider.summary(),
             artefacts=self._artefacts(),
+            back_ups=list(self.back_ups),
         )
 
     def _artefacts(self) -> dict[str, Any]:
@@ -494,10 +597,11 @@ class AvoidanceSimulation:
                 "backward_time_s": round(backward.total_time_s, 6),
                 "hurried_episodes": len(hurried.episodes),
                 "hurried_time_s": round(hurried.total_time_s, 6),
+                "backward_distance_m": round(backward.total_amount, 6),
             }
         totals = {
-            name: (round(sum(entry[name] for entry in agents.values()), 6) if name.endswith("_s") else sum(entry[name] for entry in agents.values()))
-            for name in ("backward_episodes", "backward_time_s", "hurried_episodes", "hurried_time_s")
+            name: (round(sum(entry[name] for entry in agents.values()), 6) if name.endswith(("_s", "_m")) else sum(entry[name] for entry in agents.values()))
+            for name in ("backward_episodes", "backward_time_s", "hurried_episodes", "hurried_time_s", "backward_distance_m")
         }
         totals["agents_backward"] = sum(1 for entry in agents.values() if entry["backward_episodes"])
         totals["agents_hurried"] = sum(1 for entry in agents.values() if entry["hurried_episodes"])
@@ -533,6 +637,11 @@ class AvoidanceSimulation:
                 if i < j and i in perceived[j]:
                     resolutions[(i, j)] = self._resolution(i, j, step, now)
 
+        # 2b. Back-up manoeuvres (issue #32): end those that are over, start new ones.
+        self._update_back_ups(resolutions, step, now)
+        manoeuvres = {(min(m.backer, m.other), max(m.backer, m.other)): m for m in self.backing.values()}
+        proceeding = {m.other: m for m in self.backing.values()}
+
         # 3. Coordinate with the arbiter.
         travel_speed = {a.agent_id: self._travel_speed(a, perceived[a.agent_id]) for a in active}
         decisions: dict[int, AgentDecision] = {}
@@ -540,7 +649,7 @@ class AvoidanceSimulation:
         held: set[Pair] = set()
         if self.coordinator is not None:
             leaders = {pair: resolutions[pair].leader for pair in resolutions if resolutions[pair].leader is not None}
-            decisions, roles, handoffs = self.coordinator.step(world, travel_speed, resolutions, leaders)
+            decisions, roles, handoffs = self.coordinator.step(world, travel_speed, resolutions, leaders, released=manoeuvres)
             self.handoffs.extend(handoffs)
             held = self.coordinator.arbitrated
 
@@ -566,11 +675,23 @@ class AvoidanceSimulation:
                 # The arbiter's bound caps the speed the agent wants to walk at. Its
                 # maximum speed is untouched, so that it can still get out of the way.
                 speed = min(speed, decision.speed_bound)
+            manoeuvre = self.backing.get(i)
             along = a_spec.path.heading_at(a.path_s)
             cx, cy = math.cos(along), math.sin(along)
             behind = any((agents[j].pose.x - x) * cx + (agents[j].pose.y - y) * cy < 0.0 for _, j in neighbours[i])
+            phase = None
+            if manoeuvre is not None:
+                # Backing out, at its own backing speed, or waiting.
+                preferred = self._back_up_velocity(a, manoeuvre, dt)
+                speed, phase = math.hypot(*preferred), manoeuvre.phase
+            else:
+                if i in proceeding:
+                    # The other comes on no faster than the one backing out backs.
+                    phase = PHASE_PROCEEDING
+                    if proceeding[i].phase == PHASE_BACKING:
+                        speed = min(speed, proceeding[i].speed_mps)
+                preferred = self._preferred_velocity(a, speed)
             course[i] = (cx, cy, speed, behind)
-            preferred = self._preferred_velocity(a, speed)
             if self.perturbation.active:
                 angle = self._perturbation_rng.random() * 2.0 * math.pi
                 length = self._perturbation_rng.random() * self.perturbation.magnitude_mps
@@ -614,6 +735,8 @@ class AvoidanceSimulation:
                     if pair in roles:
                         # The one who waits keeps out of the way of the one who goes.
                         share = LEADER_SHARE if roles[pair][0] == i else FOLLOWER_SHARE
+                elif pair in manoeuvres:
+                    share = manoeuvres[pair].shares(i)
                 interaction.note_effective(step, resolution is not None, share, side, margin)
 
                 half_plane = agent_half_plane(
@@ -651,6 +774,7 @@ class AvoidanceSimulation:
                     step, now, a, preferred, decision, under_arbiter, len(neighbours[i]),
                     travel_speed[i] / a_spec.preferred_speed, exposed, not result.feasible,
                     sorted(mine[j].interaction_id for _, j in neighbours[i]),
+                    phase,
                 )
         self.fallback_agents = fallback_agents
         self.steps_with_fallback += bool(fallback_agents)
@@ -675,7 +799,18 @@ class AvoidanceSimulation:
             self.yield_trackers[i].update(now, end, speed)
             cx, cy, wanted, behind = course[i]
             limits = self.artefact_thresholds
-            self.backward[i].update(now, end, vx * cx + vy * cy < -limits.backward_speed_mps)
+            forward = vx * cx + vy * cy
+            manoeuvre = self.backing.get(i)
+            backing_out = manoeuvre is not None and manoeuvre.phase == PHASE_BACKING
+            if manoeuvre is not None:
+                # Intentional backing (issue #32) is the manoeuvre's, never the artefact's.
+                if backing_out:
+                    manoeuvre.backing_steps += 1
+                    manoeuvre.backing_distance_m += max(0.0, -forward) * dt
+                else:
+                    manoeuvre.waiting_steps += 1
+            walking_backwards = not backing_out and forward < -limits.backward_speed_mps
+            self.backward[i].update(now, end, walking_backwards, -forward * dt if walking_backwards else 0.0)
             self.hurried[i].update(now, end, behind and speed > (1.0 + limits.hurried_fraction) * wanted)
             for index, entry_s, _ in a.spec.single_file_stretches:
                 if index not in self.segment_entry_times[i] and a.path_s >= entry_s:
@@ -930,6 +1065,106 @@ class AvoidanceSimulation:
                 self.violations.append({"step": step, "time_s": round(now, 6), **item.as_dict()})
         return resolution
 
+    # --- back-up manoeuvres (issue #32) ---------------------------------------------------------
+
+    def _meeting_segment(self, backer: int, other: int) -> Optional[tuple[Any, float]]:
+        """The single-file segment ``backer`` would back out of for ``other``, and the way it would
+        back along the segment's long axis (+1 or -1, away from the other); ``None`` if none.
+
+        A segment the scenario declares that is too narrow for the two to pass in, that both their
+        paths run through and that the other has not yet left, with the backer's centre inside it
+        and the other ahead of the backer along the backer's path: the two meet in it. Read from
+        the geometry alone, so that what the agents may see (the run's visibility settings) cannot
+        change what a directive makes one of them do.
+        """
+        agents = self.world.agents
+        a, b = agents[backer], agents[other]
+        heading = a.spec.path.heading_at(a.path_s)
+        if (b.pose.x - a.pose.x) * math.cos(heading) + (b.pose.y - a.pose.y) * math.sin(heading) <= 0.0:
+            return None  # the other is not ahead of it: no end is behind it to back out by
+        diameters = 2.0 * (a.spec.radius + b.spec.radius)
+        leaves = {index: exit_s for index, _, exit_s in b.spec.single_file_stretches}
+        for index, _, _ in a.spec.single_file_stretches:
+            segment = self.spec.single_file_segments[index]
+            if index not in leaves or segment.width >= diameters or b.path_s >= leaves[index]:
+                continue
+            inside = segment_position(a.pose.xy, b.pose.xy, segment.rect)[0]
+            rect = segment.rect
+            axis = 0 if rect.xmax - rect.xmin >= rect.ymax - rect.ymin else 1
+            mine, theirs = a.pose.xy[axis], b.pose.xy[axis]
+            if inside and mine != theirs:
+                return segment, (1.0 if mine > theirs else -1.0)
+        return None
+
+    def _update_back_ups(self, resolutions: Mapping[Pair, PairResolution], step: int, now: float) -> None:
+        """End the manoeuvres that are over and move on those that are out; then start one for
+        every pair whose directives tell an agent inside a single-file segment the two meet in to
+        back up (:meth:`_meeting_segment`).
+
+        Read from the state at the start of the step, as everything else is.
+        """
+        agents = self.world.agents
+        for backer, manoeuvre in sorted(self.backing.items()):
+            other = agents[manoeuvre.other]
+            pair = (min(backer, manoeuvre.other), max(backer, manoeuvre.other))
+            beyond = manoeuvre.direction * (other.pose.xy[manoeuvre.axis] - manoeuvre.end_m)
+            if other.goal_time is not None:
+                self._end_back_up(manoeuvre, BACK_UP_OTHER_ARRIVED)
+            elif pair not in self.open_pairs:
+                self._end_back_up(manoeuvre, BACK_UP_PAIR_ENDED)
+            elif beyond >= manoeuvre.runout_m - BACK_UP_REACHED_M:
+                self._end_back_up(manoeuvre, BACK_UP_CLEARED)
+            elif manoeuvre.phase == PHASE_BACKING:
+                me = agents[backer].pose.xy[manoeuvre.axis]
+                if manoeuvre.direction * (me - manoeuvre.target[manoeuvre.axis]) >= -BACK_UP_REACHED_M:
+                    manoeuvre.phase, manoeuvre.out_step, manoeuvre.out_time_s = PHASE_WAITING, step, now
+        busy = set(self.backing) | {manoeuvre.other for manoeuvre in self.backing.values()}
+        for pair, resolution in sorted(resolutions.items()):
+            backer = resolution.backer
+            if backer is None:
+                continue
+            other = pair[1] if backer == pair[0] else pair[0]
+            record = self.open_pairs.get(pair)
+            if record is None or record.pair_id in self._backed_pairs or backer in busy or other in busy:
+                continue
+            found = self._meeting_segment(backer, other)
+            if found is None:
+                continue  # back_up acts only from inside a single-file segment the two meet in
+            segment, direction = found
+            rect = segment.rect
+            axis = 0 if rect.xmax - rect.xmin >= rect.ymax - rect.ymin else 1
+            low, high = (rect.xmin, rect.xmax) if axis == 0 else (rect.ymin, rect.ymax)
+            end_m = high if direction > 0.0 else low
+            runout = agents[backer].spec.radius + agents[other].spec.radius + self.spec.single_file_safety_margin
+            middle = (rect.ymin + rect.ymax) / 2.0 if axis == 0 else (rect.xmin + rect.xmax) / 2.0
+            reach = end_m + direction * runout
+            manoeuvre = BackUp(
+                backer=backer, other=other, pair_id=record.pair_id, segment=segment.name, axis=axis, direction=direction,
+                end_m=end_m, target=(reach, middle) if axis == 0 else (middle, reach), runout_m=runout,
+                speed_mps=agents[backer].spec.backing_speed_mps,
+                travelled_m=segment_position(agents[backer].pose.xy, agents[other].pose.xy, rect)[1],
+                start_step=step, start_time_s=now,
+            )
+            self.back_ups.append(manoeuvre)
+            self.backing[backer] = manoeuvre
+            self._backed_pairs.add(record.pair_id)
+            busy.update((backer, other))
+
+    def _end_back_up(self, manoeuvre: BackUp, reason: str) -> None:
+        manoeuvre.end_step, manoeuvre.end_time_s, manoeuvre.end_reason = self.world.step_index, self.world.time, reason
+        self.backing.pop(manoeuvre.backer, None)
+
+    def _back_up_velocity(self, agent, manoeuvre: BackUp, dt: float) -> tuple[float, float]:
+        """Toward the point it backs to, at its backing speed, not past it; nothing while it waits."""
+        if manoeuvre.phase != PHASE_BACKING:
+            return (0.0, 0.0)
+        dx, dy = manoeuvre.target[0] - agent.pose.x, manoeuvre.target[1] - agent.pose.y
+        distance = math.hypot(dx, dy)
+        if distance < 1e-9:
+            return (0.0, 0.0)
+        speed = min(manoeuvre.speed_mps, distance / dt)
+        return (speed * dx / distance, speed * dy / distance)
+
     # --- motion ---------------------------------------------------------------------------------
 
     def _travel_speed(self, agent, perceived: set[int]) -> float:
@@ -1004,7 +1239,7 @@ class AvoidanceSimulation:
     # --- trajectory rows ------------------------------------------------------------------------
 
     @staticmethod
-    def _row(step, now, agent, preferred, decision, under_arbiter, n_neighbours, speed_scale, exposed, fallback, ids):
+    def _row(step, now, agent, preferred, decision, under_arbiter, n_neighbours, speed_scale, exposed, fallback, ids, back_up=None):
         role = None if decision is None or decision.role is None else decision.role.value
         source = None if decision is None or decision.role_source is None else decision.role_source.value
         return {
@@ -1020,7 +1255,7 @@ class AvoidanceSimulation:
             "speed_mps": None,
             "pref_vx_mps": round(preferred[0], 6),
             "pref_vy_mps": round(preferred[1], 6),
-            "control_mode": MODE_ARBITER if under_arbiter else MODE_ORCA,
+            "control_mode": MODE_BACK_UP if back_up is not None else MODE_ARBITER if under_arbiter else MODE_ORCA,
             "speed_bound_mps": None if decision is None else round(decision.speed_bound, 6),
             "role": role,
             "role_source": source,
@@ -1032,6 +1267,7 @@ class AvoidanceSimulation:
             "exposed": exposed,
             "fallback": fallback,
             "interactions": ";".join(str(value) for value in ids),
+            "back_up": back_up,
         }
 
     def _final_row(self, agent) -> dict[str, Any]:
@@ -1039,7 +1275,7 @@ class AvoidanceSimulation:
             (
                 "vx_mps", "vy_mps", "speed_mps", "pref_vx_mps", "pref_vy_mps", "control_mode",
                 "speed_bound_mps", "role", "role_source", "in_conflict", "zone_d_in_m", "zone_d_out_m",
-                "n_neighbours", "speed_scale", "exposed", "fallback", "interactions",
+                "n_neighbours", "speed_scale", "exposed", "fallback", "interactions", "back_up",
             )
         )
         row.update(

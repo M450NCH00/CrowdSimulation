@@ -397,6 +397,7 @@
       list.append(legendItem(el("span", { class: "sw ring", style: "border-color:" + c["ring-exposed"] }), "ORCA is changing the velocity it wants (exposed)"));
       list.append(legendItem(el("span", { class: "sw ring", style: "border-color:" + c["ring-fallback"] + ";border-style:dashed" }), "no allowed velocity: ORCA's fallback chose"));
       list.append(legendItem(el("span", { class: "sw ring", style: "border-color:" + c["ring-arbiter"] }), "held by the arbiter (L leader, F follower)"));
+      if (run.back_ups) list.append(legendItem(el("span", { class: "sw" }), "B backing out of the passage, W waiting outside it"));
     } else {
       list.append(legendItem(el("span", { class: "sw ring", style: "border-color:" + c["ring-arbiter"] }), "in a conflict the arbiter is managing (L leader, F follower)"));
     }
@@ -500,6 +501,9 @@
     if (now.f & FLAG.leader) flags.push("leader");
     if (now.f & FLAG.follower) flags.push("follower");
     if (now.f & FLAG.dialogue) flags.push("negotiating");
+    if (now.f & FLAG.backing) flags.push("backing out of the passage");
+    if (now.f & FLAG.waiting) flags.push("out of the passage, waiting for the other");
+    if (now.f & FLAG.proceeding) flags.push("going on while the other backs out");
     live.push(["Now", now.arrived ? "arrived at " + fmt(agent.arrival, 1) + " s" : (flags.join("; ") || "walking freely")]);
     if (now.n != null && !now.arrived) live.push(["Neighbours perceived", String(now.n)]);
     const liveDl = el("dl");
@@ -735,6 +739,7 @@
         const r = Math.max(2.5, a.radius * scale);
         let text = String(a.id);
         if (now.f & FLAG.leader) text += " L"; else if (now.f & FLAG.follower) text += " F";
+        if (now.f & FLAG.backing) text += " B"; else if (now.f & FLAG.waiting) text += " W";
         // Inside the body when it is big enough to hold the text, otherwise just above it.
         const inside = r >= 4 + 3.2 * text.length;
         ctx.globalAlpha = now.arrived ? 0.5 : 1;

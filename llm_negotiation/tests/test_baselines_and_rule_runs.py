@@ -148,7 +148,7 @@ def test_a_rule_run_writes_six_files_that_pass_the_schema_check(rule_run):
     run_dir, outcome = rule_run
     assert sorted(path.name for path in run_dir.iterdir()) == sorted(AVOIDANCE_RUN_FILES)
     assert PAIR_INTERACTIONS_FILE in AVOIDANCE_RUN_FILES and validate_run_dir(run_dir) == []
-    assert outcome["log_schema_version"] == 4 and outcome["baseline"] == "orca_perturbed_v1"  # 3 before issue #30
+    assert outcome["log_schema_version"] == 5 and outcome["baseline"] == "orca_perturbed_v1"  # 3 before issue #30, 4 before #32
 
 
 def test_the_run_records_its_active_rule_set_and_baseline(rule_run):

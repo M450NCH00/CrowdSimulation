@@ -505,10 +505,19 @@ def build_events(result: SimulationResult) -> list[dict[str, Any]]:
             conflicts[id(event)] = event  # one event can be on several pairs' records
     for event in conflicts.values():
         events.append({"type": "cross_pair_conflict", **event})
+    for manoeuvre in result.back_ups:  # issue #32: when it started, when it was out, when it ended
+        who = {"backer": manoeuvre.backer, "other": manoeuvre.other, "pair_id": manoeuvre.pair_id, "segment": manoeuvre.segment}
+        events.append({"type": "back_up", "time_s": round(manoeuvre.start_time_s, 6), "step": manoeuvre.start_step, "phase": "started", **who,
+                       "travelled_m": None if manoeuvre.travelled_m is None else round(manoeuvre.travelled_m, 6)})
+        if manoeuvre.out_step is not None:
+            events.append({"type": "back_up", "time_s": round(manoeuvre.out_time_s, 6), "step": manoeuvre.out_step, "phase": "out", **who})
+        if manoeuvre.end_step is not None:
+            events.append({"type": "back_up", "time_s": round(manoeuvre.end_time_s, 6), "step": manoeuvre.end_step, "phase": "ended", **who,
+                           "reason": manoeuvre.end_reason})
     order = {
         name: rank
         for rank, name in enumerate(
-            ("reciprocity_violation", "handoff", "ambiguous_match", "cross_pair_conflict", "collision", "wall_collision", "near_miss", "yield")
+            ("reciprocity_violation", "handoff", "back_up", "ambiguous_match", "cross_pair_conflict", "collision", "wall_collision", "near_miss", "yield")
         )
     }
     events.sort(key=lambda event: (event["time_s"], order[event["type"]], json.dumps(event, sort_keys=True)))
@@ -599,6 +608,22 @@ def build_outcome(plan: AvoidanceRunPlan, spec: CrowdScenarioSpec, result: Simul
     outcomes["pairs_with"] = ingredients
     outcomes["tiers"] = tiers
 
+    back_up = {"manoeuvres": [manoeuvre.as_dict(dt) for manoeuvre in result.back_ups], "agents": {}, "totals": {}}
+    for agent_id in sorted({manoeuvre.backer for manoeuvre in result.back_ups}):
+        mine = [manoeuvre for manoeuvre in result.back_ups if manoeuvre.backer == agent_id]
+        back_up["agents"][str(agent_id)] = {
+            "manoeuvres": len(mine),
+            "backing_time_s": _rounded(sum(manoeuvre.backing_steps for manoeuvre in mine) * dt),
+            "waiting_time_s": _rounded(sum(manoeuvre.waiting_steps for manoeuvre in mine) * dt),
+            "backing_distance_m": _rounded(sum(manoeuvre.backing_distance_m for manoeuvre in mine), 6),
+        }
+    back_up["totals"] = {
+        "manoeuvres": len(result.back_ups),
+        "backing_time_s": _rounded(sum(manoeuvre.backing_steps for manoeuvre in result.back_ups) * dt),
+        "waiting_time_s": _rounded(sum(manoeuvre.waiting_steps for manoeuvre in result.back_ups) * dt),
+        "backing_distance_m": _rounded(sum(manoeuvre.backing_distance_m for manoeuvre in result.back_ups), 6),
+    }
+
     all_arrived = len(goal_times) == len(ids)
     return {
         "log_schema_version": LOG_SCHEMA_VERSION,
@@ -623,6 +648,7 @@ def build_outcome(plan: AvoidanceRunPlan, spec: CrowdScenarioSpec, result: Simul
         "rules": result.provider_summary,
         "baseline": None if plan.baseline is None else plan.baseline.name,
         "artefacts": result.artefacts,
+        "back_up": back_up,
     }
 
 
@@ -712,8 +738,9 @@ def avoidance_summary_row(config: Mapping[str, Any], outcome: Mapping[str, Any])
 
 
 def _rule_columns(config: Mapping[str, Any], outcome: Mapping[str, Any]) -> dict[str, Any]:
-    """The summary columns added by issue #28 (log schema version 3) and issue #30 (version
-    4: pair exposure and the severity tiers); empty for older runs."""
+    """The summary columns added by issue #28 (log schema version 3), issue #30 (version
+    4: pair exposure and the severity tiers) and issue #32 (version 5: backing up); empty for
+    older runs."""
     counts = outcome.get("interaction_outcomes") or {}
     rules = outcome.get("rules") or {}
     fired = rules.get("matches_begun") or {}
@@ -732,6 +759,10 @@ def _rule_columns(config: Mapping[str, Any], outcome: Mapping[str, Any]) -> dict
         "hurried_episodes": (outcome.get("artefacts") or {}).get("totals", {}).get("hurried_episodes"),
         "pair_exposure_time_s": (outcome.get("totals") or {}).get("pair_exposure_time_s"),
         **{f"pairs_{tier.lower()}": tiers.get(tier) for tier in TIERS},
+        # Issue #32 (log schema version 5): intentional backing, and the artefact's distance.
+        "back_up_manoeuvres": ((outcome.get("back_up") or {}).get("totals") or {}).get("manoeuvres"),
+        "backing_distance_m": ((outcome.get("back_up") or {}).get("totals") or {}).get("backing_distance_m"),
+        "backward_distance_m": (outcome.get("artefacts") or {}).get("totals", {}).get("backward_distance_m"),
     }
 
 

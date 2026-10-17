@@ -5,6 +5,8 @@ The rules the `RuleDatabaseProvider` follows (`negsim/rules/`). The format is in
 
 ```
 schema/rule.v1.schema.json       the rule format, version 1 (JSON Schema)
+schema/rule.v2.schema.json       version 2 (issue #30): rules a model generates
+schema/rule.v3.schema.json       version 3 (issue #32): backing out of a single-file passage
 rules/<rule_id>.v<n>.yaml        one file per version of each rule
 rulesets/<name>.yaml             named sets of rule versions an experiment can switch on
 MANIFEST.json                    SHA-256 of every file above: what is frozen
@@ -34,6 +36,9 @@ python ruledb.py history keep_left_head_on     every version of a rule and what 
 python ruledb.py show younger_yields_head_on   one version as written
 ```
 
-The five seed rules: `keep_left_head_on`, `keep_right_head_on` (its mirror image, not in the
+The six seed rules: `keep_left_head_on`, `keep_right_head_on` (its mirror image, not in the
 `default` rule set: the two cannot be switched on together), `overtaker_keeps_clear`,
-`single_file_first_arrival`, `younger_yields_head_on` (the issue's example rule).
+`single_file_first_arrival`, `younger_yields_head_on` (the issue's example rule), and, from
+issue #32, `passage_shorter_backs_out` (schema version 3, not in the `default` rule set: of
+two people who meet inside a single-file passage, the one who has walked less far in backs
+out; `docs/rule-format.md`, section 14).

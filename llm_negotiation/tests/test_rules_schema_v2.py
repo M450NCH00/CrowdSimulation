@@ -32,8 +32,9 @@ def fixture() -> dict:
 
 
 def test_both_schemas_are_in_the_database_and_frozen():
-    assert SCHEMA_VERSIONS == (1, 2) and LATEST_SCHEMA_VERSION == 2
-    assert isinstance(SCHEMAS, RuleSchemas) and SCHEMAS.versions == (1, 2)
+    """Version 3 (issue #32, ``test_rules_schema_v3.py``) is there too."""
+    assert SCHEMA_VERSIONS == (1, 2, 3) and LATEST_SCHEMA_VERSION == 3
+    assert isinstance(SCHEMAS, RuleSchemas) and SCHEMAS.versions == (1, 2, 3)
     manifest = json.loads((RULE_DB_ROOT / "MANIFEST.json").read_text(encoding="utf-8"))["files"]
     for version in (1, 2):
         assert schema_path(version) in manifest
@@ -43,8 +44,9 @@ def test_both_schemas_are_in_the_database_and_frozen():
 
 def test_every_version_1_rule_of_the_database_loads_as_before():
     database = RuleDatabase.load(RULE_DB_ROOT)
-    assert len(database.rules) == 5
-    for rule in database.rules:
+    version_1 = [rule for rule in database.rules if rule.schema_version == 1]
+    assert len(version_1) == 5  # issue #32's seed rule is of version 3
+    for rule in version_1:
         assert (rule.schema_version, rule.intent, rule.screening) == (1, "", ())
         assert rule.describe()["schema_version"] == 1
         # Read against the version 1 schema alone, it gives the same rule.
@@ -65,7 +67,7 @@ def test_a_version_2_rule_loads_with_its_intent_screening_and_generation_record(
     "change, message",
     [
         (lambda raw: raw.update(schema_version=1), "unknown property 'intent'"),  # version 1 has no intent
-        (lambda raw: raw.update(schema_version=3), "must be one of [1, 2]"),
+        (lambda raw: raw.update(schema_version=4), "must be one of [1, 2, 3]"),  # 3 since issue #32
         (lambda raw: raw.pop("schema_version"), "missing required property 'schema_version'"),
         (lambda raw: raw.update(intent="x" * 501), "at most 500 character"),
         (lambda raw: raw["provenance"].update(source_type="dreamed"), "must be one of"),
