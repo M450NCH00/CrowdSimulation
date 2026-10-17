@@ -855,7 +855,9 @@ against 5.2 m. By time, back out A: 2.6 / 0.92 = 2.8 s against 2.0 / 0.43 = 4.7 
 `c = 0`, 2.2 s against 3.3 s). Measured, unperturbed: backing A out takes 2.9 s and the two
 are through at 13.6 s; backing B out takes 4.7 s and they are through at 16.7 s. The time to
 completion adds the backer's walk back in and through the passage at its walking speed, which
-here favours backing out the faster walker too.
+here favours backing out the faster walker too. Over 20 perturbed seeds (`behaviour-checks.md`,
+section 6, `time_optimal` against `seed_rule`): makespan 13.68 ± 0.11 s backing out A against
+16.70 ± 0.11 s backing out B, from rest; 13.87 and 16.74 s when they meet walking.
 
 **What a rule can say.** The distance criterion orders the two on one field both can see,
 `agent.segment_distance_travelled`, and is the seed rule `passage_shorter_backs_out` (ties

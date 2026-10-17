@@ -511,9 +511,9 @@ def test_a_negotiation_run_now_says_its_kind_and_the_new_version(tmp_path):
 
 def test_every_committed_run_folder_still_passes_the_schema_check():
     """The 66 run folders of issue #24 were written under version 1 and must stay valid;
-    the folders of issue #26 are version 2, those of issue #28 version 3, and those of
-    issue #30 version 4."""
-    versions = {1: 0, 2: 0, 3: 0, 4: 0}
+    the folders of issue #26 are version 2, those of issue #28 version 3, those of
+    issue #30 version 4, and those of issue #32 version 5."""
+    versions = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
     kinds = {"negotiation": 0, "avoidance": 0}
     for config_path in sorted((PACKAGE_ROOT / "runs").glob("*/*/config.json")):
         config = read_json(config_path)
@@ -523,7 +523,8 @@ def test_every_committed_run_folder_still_passes_the_schema_check():
         if config_path.parent.parent.name.startswith(("c0_", "c1_", "c2_")):
             assert config["log_schema_version"] == 1 and "run_kind" not in config
     assert versions[1] == 66  # 54 no-LLM runs and 12 paid ones, as issue #24 left them
-    assert kinds["avoidance"] == versions[2] + versions[3] + versions[4]
+    assert versions[5] == 16 + 560  # issue #32: the in-passage case sources and behaviour checks
+    assert kinds["avoidance"] == versions[2] + versions[3] + versions[4] + versions[5]
 
 
 # --- a whole experiment, and the command line -----------------------------------------------------

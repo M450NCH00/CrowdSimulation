@@ -617,6 +617,64 @@ written only when set, and the old versions keep working.
 - Next step: the behaviour-check tables in `negsim.rules.report`, quoted in
   `behaviour-checks.md`; `cases.md`.
 
+### 2026-10-17 14:50 — The behaviour checks reported; `cases.md`
+
+- What I did:
+  - `negsim.rules.report` gained `passage_tables` for issue #32's two experiments: how each
+    run ended, who came out first and who backed out, **time to clear read two ways** (when the
+    first of the two came out of the passage at its far end, and when the second did), backing
+    distance of each kind and both together, makespan, the smallest gap; and a second table of
+    what decided it (rule matches, handoffs, when the manoeuvres began and how they ended,
+    their backing and waiting times, the artefacts' episodes and time). `behaviour-checks.md`
+    has a new section 6 and Appendix B, the tables as generated; a test checks that the
+    document quotes them line for line, as for issue #28's.
+  - **The results** (Appendix B; 560 runs, no collision in any):
+    - **Deadlocks.** From rest the arbiter's fallback gets neither through in any of its 80
+      runs (52 deadlocks, 28 timeouts); plain ORCA deadlocks there too (72 deadlocks, 8
+      timeouts), and walking at equal speeds (40 of 40). Walking with the slow backer, plain
+      ORCA gets through in all 40 runs, slowly (makespan 29.6 and 32.7 s): traced in one run,
+      agent 0 pushes agent 1 out at 0.10 m/s for about 16 s.
+    - **Walking, the arbiter's way works by the artefact**: in all 80 runs the follower has one
+      walking-backwards episode (1.21 to 2.18 m), at 0.95 to 1.09 m/s on average, more than
+      twice the slow backer's cited 0.43 m/s. It is the soonest to the first out in every
+      walking layout (1.08 to 1.80 s).
+    - **The seed rule gets the two through in all 160 of its runs**, at the cited backing speeds;
+      agent 1 backs out in every one. On a tie the arbiter holds the pair until its leader has
+      crept 0.1 m ahead: from rest the manoeuvre began after 1.87 s on average.
+    - **Distance against time** (with the slow backer): the seed rule's choice backs 0.64 m
+      less and takes about 3 s more (makespan 16.70 against 13.68 s from rest).
+    - **Backing distance of both kinds**: no artefact in the seed rule's runs at equal speeds;
+      with the slow backer one episode in each of its 80 runs, the waiting backer pushed by
+      ORCA (Q4), which DD98 counts as the artefact by design.
+  - **Checking the narrative against the tables** before committing it found four sentences
+    wrong and corrected them: (a) under the arbiter the follower takes *all* of the avoiding,
+    not half; (b) the arbiter's way does not have the shortest makespan in every walking layout
+    (`time_optimal` beats it once, 13.47 against 13.60 s); (c) the gap between the rule and
+    the artefact is not only the backing speed: in a manoeuvre the other also comes on no
+    faster than the backer (DD95); (d) the cost of a tie was confounded with the layouts'
+    different distances, so I added when each manoeuvre began to the second table and quote
+    that instead. Also checked and dropped before writing: a mechanism I had guessed for plain
+    ORCA's 0.10 m/s (the mean of the two preferred velocities; it is 0.088 m/s in that run,
+    with agent 1 against a wall). The doc reports only the measured speed.
+  - `cases.md`: case format 2 and `derived_from`; re-stepping (section 7); the `experiment`
+    stratum key; the two new sets with a table of the 8 passage cases (section 8); the YAML
+    description defect. `derivations.md` section 18 quotes the 20-seed makespans.
+- **A lapse in the previous commit, recorded:** `377d395` committed the runs after running
+  only the 82 tests of the case store and prompts, not the full suite. Its tree fails
+  `test_every_committed_run_folder_still_passes_the_schema_check`, which counted committed
+  runs by log version and had no slot for version 5 (`KeyError: 5`). The test now counts
+  version 5 too and pins its 576 runs (A4). From here on the full suite runs before every
+  commit, data commits included.
+- **Recorded, not changed (DD116):** outside the passage of a pair that has one, `in_segment` is
+  `false`, not `null`; the three distances are `null` unless the agent is inside, and all four
+  are `null` when the pair has no passage (`perception.md`, "Null handling"). The issue says
+  "when an agent is outside the passage, these fields are null", and DD89 above says the same.
+  For a true-or-false field, "outside" is known, and `null` would make it the same as "no
+  passage at all"; a condition `in_segment == true` fails on both, so a rule about a meeting
+  inside still matches only when both are inside, as the issue requires. Flagged for review.
+- Result: full suite **1,376 passed** (251 s); pyflakes clean.
+- Next step: the end-to-end mock runs.
+
 ## Open questions / risks
 
 - **Q1 (carried from #30). The supervisor's approval of simulation work, and now of the

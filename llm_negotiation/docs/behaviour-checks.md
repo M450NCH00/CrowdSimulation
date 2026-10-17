@@ -1,8 +1,10 @@
-# Behaviour checks of the rule layer (issue #28)
+# Behaviour checks of the rule layer (issues #28 and #32)
 
 Issue #28 asks for rule-following to be compared with "plain ORCA" in the five scenarios of
 issue #26, with at least 20 seeds per condition, "reported with numbers and not asserted in
-advance". This file reports those numbers and what they show.
+advance". This file reports those numbers and what they show (sections 1 to 5, Appendix A).
+Issue #32's checks, two people who meet inside a single-file passage, are section 6 and
+Appendix B (`runs/si32_passage_*`).
 
 They are statements about this algorithm, these five seed rules and these parameters.
 **None of them is evidence about how people walk.** The seed rules are test fixtures
@@ -472,6 +474,142 @@ question Q7.
   scope; the arbiter works pair by pair).
 - Paired comparisons: plain and rule runs do not share seeds (section 1).
 
+## 6. Issue #32: two people who meet inside a single-file passage
+
+Issue #32 asks for the arbiter's fallback, the seed rule `passage_shorter_backs_out` and plain
+ORCA to be compared in its two new scenarios, over at least 20 seeds, reporting deadlocks,
+time to clear, total backing distance and makespan, "whatever happens is a result". As in
+sections 1 to 5, these are statements about this simulator, one seed rule that is a test
+fixture (`rule_db/README.md`) and these parameters (`parameters.md`; the passage's width and
+length are placeholders, the backing speeds one small cited sample), **not evidence about
+people**. Every number below is in Appendix B, generated from the committed logs under
+`runs/si32_passage_*` by `python -m negsim.rules.report`.
+
+### 6.1 What was run
+
+| Experiment (`configs/rule_following/`) | Scenario | Factors | Runs |
+|---|---|---|---|
+| `si32_passage_meet_middle` | `passage_meet_middle_v1`: two pedestrians, a passage 0.8 m wide and 4 m long, the two placed 0.1 m apart inside it | travelled (symmetric: 1.7 m each; asymmetric: agent 0 2.7 m, agent 1 0.7 m) × start (rest; walking) × mode (`arbiter`, `seed_rule`, `orca_only`) | 240 |
+| `si32_passage_meet_with_speeds` | `passage_meet_with_speeds_v1`: as above, but agent 1 walks at 1.10 m/s (at most 1.4) and backs at 0.43 m/s, agent 0 backs at 0.92 m/s | travelled (asymmetric: agent 0 2.0 m, agent 1 1.4 m; symmetric: 1.7 m each) × start × mode (the three, and `time_optimal`) | 320 |
+
+- **Modes.** `arbiter`: the primary baseline as it is, plain ORCA with the arbiter's fallback
+  (`derivations.md`, section 17.1). `seed_rule`: the seed rule alone (`directives: {provider:
+  rules, enable: {passage_shorter_backs_out: 1}}`, no rule set), with the arbiter as its
+  fallback, which decides when the rule ties (distances walked in within 0.1 m of each other).
+  `orca_only`: plain ORCA with the arbiter switched off. `time_optimal`, a reference no rule
+  can state: agent 0 told to back up by a static directive. With these speeds, backing out
+  agent 0 is quicker (`derivations.md`, section 18: x / v_back is 2.0 / 0.92 = 2.2 s against
+  1.4 / 0.43 = 3.3 s, and 1.85 s against 3.95 s at equal distances), but a rule cannot read a
+  backing speed: nobody can see one.
+- **Start.** `rest`: the scenario's default, the two standing face to face (`start_speed: 0`);
+  `walking`: each walking toward the other at its preferred speed when the run starts
+  (`start_speed: preferred`). Open question Q2 of `WORK_LOG-32.md`.
+- **20 paired seeds per condition**, 560 runs, the primary baseline (`orca_perturbed_v1`), every
+  run written from a clean tree at commit `d57e854`. Unlike sections 1 to 5, the seeds are
+  **paired** (issue #30's default): the conditions of one repeat share a seed, so a condition's
+  20 runs and another's draw the same perturbations. The unperturbed baseline is not run: its
+  20 seeds would be 20 copies of one run. No model was called and nothing was spent.
+
+### 6.2 How to read the tables
+
+Each row of Appendix B is one condition over its 20 runs; a spread is mean ± standard
+deviation [min, max], as in section 2. "(in n)" after a spread means only n of the 20 runs had
+the value.
+
+| Column | What it is |
+|---|---|
+| Ended | How the runs ended: `completed` (both arrived), `deadlock` (`metrics.md`, section 7), `timeout` (60 s), `collision` |
+| Out first, Backed out | Who came out of the passage first at its far end (`first_out`, `log-schema.md`); who made a back-up manoeuvre (`derivations.md`, section 17) |
+| First out, Both out | **Time to clear**, read two ways: when the first of the two came out of the passage at its far end (the meeting is over), and when the second did (the passage is clear of both). A time is counted from the start of the run |
+| Backing, intentional / artefact / both | How far the back-up manoeuvres moved the backer backwards; how far issue #26's walking-backwards artefact moved anyone backwards, within its episodes (`metrics.md`, section 10); and their sum. Neither is ever counted as the other (DD98) |
+| Makespan | When the second of the two arrived; "–" if either did not |
+| Min separation | The smallest gap between the two bodies, in millimetres. "−0.0" is a gap that rounds to zero from below at the log's six decimals (an overlap under a micrometre, which is not a collision) |
+
+The second table says what decided each condition: the rule matches begun, the handoffs (to
+the arbiter, to a back-up manoeuvre, back to ORCA), when the manoeuvres began, how they ended,
+their backing and waiting times, and the artefacts' episodes.
+
+### 6.3 Results
+
+**From rest, the arbiter's fallback never gets the two through.** In all 80 runs that start at
+rest under `arbiter`, neither comes out: 28 deadlocks and 12 timeouts in the equal-speed
+scenario, 24 and 16 with the slow backer. The leader may not close in faster than it already
+does, and nothing pushes a follower that stands in front of a standing leader
+(`derivations.md`, section 17.1). Plain ORCA without the arbiter deadlocks too: all 40 runs at
+equal speeds, and 32 deadlocks and 8 timeouts with the slow backer.
+
+**Walking, the arbiter's fallback gets them through by the artefact.** In all 80 walking
+`arbiter` runs the one further in (or agent 0, on a tie) comes out first, and in every one of
+them agent 1, the follower, has exactly one walking-backwards episode: 2.18 m when the two have
+walked in equally far (in both scenarios), 1.21 m with agent 0 2.0 m further in, and 1.85 m in
+the slow backer's own layout. Averaged over its episode, the follower moves backwards at 0.95
+to 1.09 m/s (the mean distance over the mean backward time); for the slow backer that is more than twice
+its cited backing speed of 0.43 m/s, and close to its walking speed. Nobody chose that speed:
+it is what ORCA does to a follower that the arbiter holds to speed 0 and gives all of the
+avoiding (share 1), in a passage it cannot step aside in (`derivations.md`, section 17.1). In
+every walking layout it is the soonest to the first out (1.08 to 1.80 s), and it has the
+shortest makespan in all but one (with the slow backer at equal distances, `time_optimal`'s
+13.47 s beats its 13.60 s). It is not a decision anyone takes.
+
+**The seed rule gets the two through in all 160 of its runs, from rest and walking, with no
+collision**, by intentional backing at the cited speeds. Who backs out: agent 1 in every run,
+the one that has walked less far in. On a tie (equal distances) the arbiter takes the pair
+first, and the rule matches only once the arbiter's leader has crept far enough for the
+distances to differ by more than 0.1 m: from rest, the manoeuvre began after 1.87 s on average
+(1.20 to 2.30 s) in both scenarios; walking, after one step.
+
+**Time to clear and makespan, the seed rule against the arbiter's way (walking, equal
+speeds).** The rule is slower by 0.70 s to the first out (2.50 against 1.80 s) on the tie and
+by 0.82 s (1.90 against 1.08 s) with agent 0 further in; by 0.91 s and 1.15 s in makespan. Two
+things differ: how fast the follower backs (0.92 m/s in the manoeuvre; 0.95 to 1.09 m/s on
+average when the artefact moves it), and the other's pace (in a manoeuvre the other comes on no
+faster than the backer backs, DD95; under the arbiter the leader walks at its own speed). With
+the slow backer the gap is larger (first out 5.25 against 1.60 s; makespan 16.74 against
+13.20 s): the manoeuvre backs agent 1 out at 0.43 m/s, and agent 0 comes on at that pace.
+
+**The distance criterion against the time criterion** (with the slow backer, its own layout:
+agent 0 2.0 m in, agent 1 1.4 m in). The seed rule backs out agent 1, the one that has walked
+less far in: 2.02 m of intentional backing, makespan 16.70 s from rest and 16.74 s walking.
+Backing out agent 0 instead (`time_optimal`) takes 2.66 m of backing, 0.64 m more, and is
+through sooner: makespan 13.68 s and 13.87 s, about 3 s less. At equal distances
+(1.7 m each), backing out agent 0 gives 13.29 s and 13.47 s, against 19.11 s and 16.91 s under
+the seed rule, which ties there, waits for the arbiter's leader to creep ahead, and then backs
+out agent 1. This is section 18 of `derivations.md` in numbers: the criterion that adds the
+least walking is not the one that clears the passage soonest when the two back up at
+different speeds.
+
+**Plain ORCA with the slow backer, walking, does get through** (all 40 runs), slowly: first out
+at 18.80 and 21.79 s, makespan 29.64 and 32.65 s. In the run traced
+(`121_asymmetric_walking_orca_only_r1`, its trajectory), agent 0 pushes agent 1 back out of
+the passage, the two moving as one at 0.10 m/s for about 16 s with agent 1 pressed against a
+wall, until agent 1 is out and steps aside. That speed is at the artefact's
+threshold of 0.1 m/s (`metrics.md`, section 10), so whether a run counts an episode varies
+between seeds (12 of the 40 do); the count says nothing about the runs' differences. At equal
+speeds the same start deadlocks.
+
+**Backing distance, both kinds.** The seed rule's runs have no artefact at equal speeds. With
+the slow backer, every one of its 80 runs has one walking-backwards episode, of 0.26 to 0.33 m
+on average. In the run traced (`021_asymmetric_rest_seed_rule_r1`, run again with every step
+logged), the episode is exactly the backer's **waiting** phase, 4.7 to 5.9 s: outside the
+passage on its centre line, ORCA pushes it back 0.33 m and 0.15 m aside as the other comes out
+(open question Q4). The
+time-optimal runs have the same when walking (33 of 40 runs, agent 0, the backer). DD98
+counts this as the artefact, by design: only the backing out itself is intentional. At equal
+speeds the wait (0.60 to 0.90 s) is shorter than an episode's 1 s minimum.
+
+**No run collided**, and in every run the two came within 12 mm of each other.
+
+### 6.4 What these checks do not show
+
+- Anything about people: the rule is a test fixture, and how people settle such a meeting is
+  for the validation sub-issue (SI-6). The passage's width and length are placeholders; the
+  backing speeds come from ten young adults in one study (`parameters.md`).
+- Which start is the right one for SI-3b's cases: at rest the arbiter's fallback stalls,
+  walking it gets through by the artefact (Q2). Both are reported because they disagree.
+- A waiting backer that steps aside before the other comes out, as a person might (Q4); three
+  or more people in a passage, or people queued behind a backer (out of scope).
+- The unperturbed baseline: with it, the 20 seeds of a condition would be one run.
+
 ## Appendix A. The full tables
 
 Generated by `python -m negsim.rules.report` from the committed logs; checked against it by
@@ -744,3 +882,85 @@ Conditions whose seeds all gave the same trajectory: directly_behind, unperturbe
 |---|---|---|---|---|---|---|---|
 | without_overtaker_keeps_clear | 2000 of 2000 | 45.48 ± 13.86 [39.10, 83.00] | 52834 / 7489 / 3423 / 0 / 0 | kept 2807, no_rule_matched 17933967, rule_matched 49635 | agent_arrived 4, passed 49631 | 0 | 0 |
 | without_keep_left_head_on | 936 of 2000 | 78.24 ± 7.82 [67.40, 89.50] | 69004 / 86930 / 8914 / 0 / 32404 | kept 564890, no_rule_matched 38474839, rule_matched 453072 | agent_arrived 199, out_of_range 1, passed 449239, run_ended 3633 | 0 | 0 |
+
+## Appendix B. The tables of issue #32
+
+Generated by `python -m negsim.rules.report si32_passage_meet_middle si32_passage_meet_with_speeds`
+from the committed logs; checked against it by `tests/test_rules_report.py`.
+
+### si32_passage_meet_middle
+
+240 runs, from `d57e854` 240.
+
+| Condition | Runs | Ended | Out first | Backed out | First out (s) | Both out (s) | Backing, intentional (m) | Backing, artefact (m) | Backing, both (m) | Makespan (s) | Min separation (mm) |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| symmetric, rest, arbiter | 20 | deadlock 14, timeout 6 | neither 20 | – | – | – | 0.00 ± 0.00 | 0.00 ± 0.00 | 0.00 ± 0.00 | – | 7.0 ± 4.8 [0.0, 11.5] |
+| symmetric, rest, seed_rule | 20 | completed 20 | agent 0 20 | agent 1 20 | 4.47 ± 0.31 [3.80, 4.90] | 9.53 ± 0.36 [8.80, 10.10] | 2.30 ± 0.00 [2.30, 2.30] | 0.00 ± 0.00 | 2.30 ± 0.00 [2.30, 2.30] | 14.76 ± 0.39 [14.00, 15.40] | 0.2 ± 0.3 [0.0, 0.7] |
+| symmetric, rest, orca_only | 20 | deadlock 20 | neither 20 | – | – | – | 0.00 ± 0.00 | 0.00 ± 0.00 | 0.00 ± 0.00 | – | 0.0 ± 0.0 [0.0, 0.0] |
+| symmetric, walking, arbiter | 20 | completed 20 | agent 0 20 | – | 1.80 ± 0.00 | 6.67 ± 0.05 [6.60, 6.70] | 0.00 ± 0.00 | 2.18 ± 0.01 [2.17, 2.19] | 2.18 ± 0.01 [2.17, 2.19] | 11.89 ± 0.02 [11.80, 11.90] | 2.0 ± 0.6 [1.0, 2.8] |
+| symmetric, walking, seed_rule | 20 | completed 20 | agent 0 20 | agent 1 20 | 2.50 ± 0.00 | 7.60 ± 0.00 | 2.26 ± 0.00 [2.26, 2.26] | 0.00 ± 0.00 | 2.26 ± 0.00 [2.26, 2.26] | 12.80 ± 0.00 | 2.0 ± 1.2 [0.5, 4.9] |
+| symmetric, walking, orca_only | 20 | deadlock 20 | neither 20 | – | – | – | 0.00 ± 0.00 | 0.00 ± 0.00 | 0.00 ± 0.00 | – | 0.0 ± 0.0 [0.0, 0.0] |
+| asymmetric, rest, arbiter | 20 | deadlock 14, timeout 6 | neither 20 | – | – | – | 0.00 ± 0.00 | 0.00 ± 0.00 | 0.00 ± 0.00 | – | 7.0 ± 4.8 [0.0, 11.5] |
+| asymmetric, rest, seed_rule | 20 | completed 20 | agent 0 20 | agent 1 20 | 1.60 ± 0.00 | 6.59 ± 0.13 [6.50, 7.00] | 1.38 ± 0.00 [1.38, 1.38] | 0.00 ± 0.00 | 1.38 ± 0.00 [1.38, 1.38] | 11.85 ± 0.09 [11.80, 12.20] | 1.3 ± 1.5 [0.0, 4.3] |
+| asymmetric, rest, orca_only | 20 | deadlock 20 | neither 20 | – | – | – | 0.00 ± 0.00 | 0.00 ± 0.00 | 0.00 ± 0.00 | – | 0.0 ± 0.0 [0.0, 0.0] |
+| asymmetric, walking, arbiter | 20 | completed 20 | agent 0 20 | – | 1.08 ± 0.04 [1.00, 1.10] | 5.57 ± 0.05 [5.50, 5.60] | 0.00 ± 0.00 | 1.21 ± 0.04 [1.17, 1.33] | 1.21 ± 0.04 [1.17, 1.33] | 10.80 ± 0.00 | 2.2 ± 0.4 [1.3, 2.6] |
+| asymmetric, walking, seed_rule | 20 | completed 20 | agent 0 20 | agent 1 20 | 1.90 ± 0.00 | 6.71 ± 0.03 [6.70, 6.80] | 1.37 ± 0.00 [1.37, 1.37] | 0.00 ± 0.00 | 1.37 ± 0.00 [1.37, 1.37] | 11.95 ± 0.05 [11.90, 12.00] | 1.5 ± 2.4 [0.0, 7.4] |
+| asymmetric, walking, orca_only | 20 | deadlock 20 | neither 20 | – | – | – | 0.00 ± 0.00 | 0.00 ± 0.00 | 0.00 ± 0.00 | – | 0.0 ± 0.0 [0.0, 0.0] |
+
+| Condition | Rules fired (matches begun) | Handoffs: to the arbiter / to a manoeuvre / back to ORCA | Manoeuvre began (s) | Manoeuvres ended, by reason | Backing / waiting time (s) | Backward / hurried episodes | Backward time (s) |
+|---|---|---|---|---|---|---|---|
+| symmetric, rest, arbiter | – | 20 / 0 / 0 | – | – | – | 0 / 0 | 0.00 ± 0.00 |
+| symmetric, rest, seed_rule | passage_shorter_backs_out@1 ×20 | 20 / 20 / 0 | 1.87 ± 0.31 [1.20, 2.30] | other_cleared 20 | 2.50 ± 0.00 / 0.70 ± 0.00 | 0 / 0 | 0.00 ± 0.00 |
+| symmetric, rest, orca_only | – | 0 / 0 / 0 | – | – | – | 0 / 0 | 0.00 ± 0.00 |
+| symmetric, walking, arbiter | – | 20 / 0 / 20 | – | – | – | 20 / 0 | 2.00 ± 0.00 |
+| symmetric, walking, seed_rule | passage_shorter_backs_out@1 ×20 | 20 / 20 / 0 | 0.10 ± 0.00 | other_cleared 20 | 2.40 ± 0.00 / 0.60 ± 0.00 | 0 / 0 | 0.00 ± 0.00 |
+| symmetric, walking, orca_only | – | 0 / 0 / 0 | – | – | – | 0 / 0 | 0.00 ± 0.00 |
+| asymmetric, rest, arbiter | – | 20 / 0 / 0 | – | – | – | 0 / 0 | 0.00 ± 0.00 |
+| asymmetric, rest, seed_rule | passage_shorter_backs_out@1 ×20 | 0 / 0 / 0 | 0.00 ± 0.00 | other_cleared 20 | 1.50 ± 0.00 / 0.70 ± 0.02 | 0 / 0 | 0.00 ± 0.00 |
+| asymmetric, rest, orca_only | – | 0 / 0 / 0 | – | – | – | 0 / 0 | 0.00 ± 0.00 |
+| asymmetric, walking, arbiter | – | 20 / 0 / 20 | – | – | – | 20 / 0 | 1.27 ± 0.06 [1.20, 1.40] |
+| asymmetric, walking, seed_rule | passage_shorter_backs_out@1 ×20 | 0 / 0 / 0 | 0.00 ± 0.00 | other_cleared 20 | 1.50 ± 0.00 / 0.90 ± 0.00 | 0 / 0 | 0.00 ± 0.00 |
+| asymmetric, walking, orca_only | – | 0 / 0 / 0 | – | – | – | 0 / 0 | 0.00 ± 0.00 |
+
+### si32_passage_meet_with_speeds
+
+320 runs, from `d57e854` 320.
+
+| Condition | Runs | Ended | Out first | Backed out | First out (s) | Both out (s) | Backing, intentional (m) | Backing, artefact (m) | Backing, both (m) | Makespan (s) | Min separation (mm) |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| asymmetric, rest, arbiter | 20 | deadlock 12, timeout 8 | neither 20 | – | – | – | 0.00 ± 0.00 | 0.00 ± 0.00 | 0.00 ± 0.00 | – | 5.7 ± 4.9 [0.0, 11.2] |
+| asymmetric, rest, seed_rule | 20 | completed 20 | agent 0 20 | agent 1 20 | 4.90 ± 0.00 | 10.51 ± 0.11 [10.40, 10.70] | 2.02 ± 0.00 [2.02, 2.02] | 0.33 ± 0.03 [0.29, 0.36] | 2.35 ± 0.03 [2.31, 2.38] | 16.70 ± 0.11 [16.60, 16.90] | 0.3 ± 0.2 [0.0, 0.6] |
+| asymmetric, rest, orca_only | 20 | deadlock 16, timeout 4 | neither 20 | – | – | – | 0.00 ± 0.00 | 0.00 ± 0.00 | 0.00 ± 0.00 | – | 0.0 ± 0.0 [-0.0, 0.0] |
+| asymmetric, rest, time_optimal | 20 | completed 20 | agent 1 20 | agent 0 20 | 3.00 ± 0.00 | 8.39 ± 0.12 [8.30, 8.60] | 2.66 ± 0.00 [2.66, 2.66] | 0.00 ± 0.00 | 2.66 ± 0.00 [2.66, 2.66] | 13.68 ± 0.11 [13.60, 13.90] | 4.6 ± 2.1 [0.2, 7.1] |
+| asymmetric, walking, arbiter | 20 | completed 20 | agent 0 20 | – | 1.60 ± 0.00 | 7.00 ± 0.00 | 0.00 ± 0.00 | 1.85 ± 0.01 [1.84, 1.87] | 1.85 ± 0.01 [1.84, 1.87] | 13.20 ± 0.00 | 6.5 ± 1.0 [5.2, 7.8] |
+| asymmetric, walking, seed_rule | 20 | completed 20 | agent 0 20 | agent 1 20 | 5.25 ± 0.05 [5.20, 5.30] | 10.54 ± 0.08 [10.40, 10.70] | 2.02 ± 0.00 [2.01, 2.02] | 0.26 ± 0.02 [0.23, 0.31] | 2.27 ± 0.02 [2.24, 2.32] | 16.74 ± 0.08 [16.60, 16.90] | 0.4 ± 0.3 [0.0, 1.2] |
+| asymmetric, walking, orca_only | 20 | completed 20 | agent 0 20 | – | 18.80 ± 0.02 [18.70, 18.80] | 23.44 ± 0.05 [23.40, 23.50] | 0.00 ± 0.00 | 0.41 ± 0.64 [0.00, 1.37] | 0.41 ± 0.64 [0.00, 1.37] | 29.64 ± 0.05 [29.60, 29.70] | 0.0 ± 0.0 |
+| asymmetric, walking, time_optimal | 20 | completed 20 | agent 1 20 | agent 0 20 | 3.30 ± 0.00 | 8.62 ± 0.12 [8.50, 8.90] | 2.66 ± 0.00 [2.66, 2.66] | 0.35 ± 0.27 [0.00, 0.64] | 3.01 ± 0.27 [2.66, 3.30] | 13.87 ± 0.11 [13.70, 14.10] | 5.1 ± 3.2 [0.3, 9.7] |
+| symmetric, rest, arbiter | 20 | deadlock 12, timeout 8 | neither 20 | – | – | – | 0.00 ± 0.00 | 0.00 ± 0.00 | 0.00 ± 0.00 | – | 5.7 ± 4.9 [0.0, 11.2] |
+| symmetric, rest, seed_rule | 20 | completed 20 | agent 0 20 | agent 1 20 | 7.27 ± 0.39 [6.60, 7.70] | 12.93 ± 0.43 [12.20, 13.60] | 2.32 ± 0.00 [2.32, 2.32] | 0.31 ± 0.02 [0.30, 0.34] | 2.63 ± 0.02 [2.62, 2.66] | 19.11 ± 0.41 [18.40, 19.70] | 0.0 ± 0.0 [0.0, 0.0] |
+| symmetric, rest, orca_only | 20 | deadlock 16, timeout 4 | neither 20 | – | – | – | 0.00 ± 0.00 | 0.00 ± 0.00 | 0.00 ± 0.00 | – | 0.0 ± 0.0 [0.0, 0.0] |
+| symmetric, rest, time_optimal | 20 | completed 20 | agent 1 20 | agent 0 20 | 2.70 ± 0.00 | 8.05 ± 0.11 [7.90, 8.20] | 2.30 ± 0.00 [2.30, 2.30] | 0.00 ± 0.00 | 2.30 ± 0.00 [2.30, 2.30] | 13.29 ± 0.14 [13.10, 13.50] | 2.9 ± 1.9 [0.3, 6.4] |
+| symmetric, walking, arbiter | 20 | completed 20 | agent 0 20 | – | 1.80 ± 0.00 | 7.40 ± 0.00 | 0.00 ± 0.00 | 2.18 ± 0.01 [2.17, 2.20] | 2.18 ± 0.01 [2.17, 2.20] | 13.60 ± 0.00 | 1.8 ± 0.6 [1.0, 2.8] |
+| symmetric, walking, seed_rule | 20 | completed 20 | agent 0 20 | agent 1 20 | 5.20 ± 0.00 | 10.72 ± 0.06 [10.60, 10.90] | 2.20 ± 0.00 [2.20, 2.20] | 0.29 ± 0.02 [0.25, 0.35] | 2.49 ± 0.02 [2.46, 2.55] | 16.91 ± 0.07 [16.80, 17.10] | 0.2 ± 0.2 [0.0, 0.6] |
+| symmetric, walking, orca_only | 20 | completed 20 | agent 0 20 | – | 21.79 ± 0.05 [21.70, 21.90] | 26.45 ± 0.05 [26.40, 26.50] | 0.00 ± 0.00 | 0.50 ± 0.78 [0.00, 1.67] | 0.50 ± 0.78 [0.00, 1.67] | 32.65 ± 0.05 [32.60, 32.70] | 0.0 ± 0.0 |
+| symmetric, walking, time_optimal | 20 | completed 20 | agent 1 20 | agent 0 20 | 2.90 ± 0.00 | 8.27 ± 0.07 [8.20, 8.40] | 2.30 ± 0.00 [2.30, 2.30] | 0.59 ± 0.05 [0.55, 0.77] | 2.89 ± 0.05 [2.85, 3.07] | 13.47 ± 0.08 [13.40, 13.60] | 6.6 ± 2.4 [1.7, 10.0] |
+
+| Condition | Rules fired (matches begun) | Handoffs: to the arbiter / to a manoeuvre / back to ORCA | Manoeuvre began (s) | Manoeuvres ended, by reason | Backing / waiting time (s) | Backward / hurried episodes | Backward time (s) |
+|---|---|---|---|---|---|---|---|
+| asymmetric, rest, arbiter | – | 20 / 0 / 0 | – | – | – | 0 / 0 | 0.00 ± 0.00 |
+| asymmetric, rest, seed_rule | passage_shorter_backs_out@1 ×20 | 0 / 0 / 0 | 0.00 ± 0.00 | other_cleared 20 | 4.70 ± 0.00 / 1.16 ± 0.06 | 20 / 0 | 1.16 ± 0.06 [1.10, 1.30] |
+| asymmetric, rest, orca_only | – | 0 / 0 / 0 | – | – | – | 0 / 0 | 0.00 ± 0.00 |
+| asymmetric, rest, time_optimal | – | 0 / 0 / 0 | 0.00 ± 0.00 | other_cleared 20 | 2.90 ± 0.00 / 0.73 ± 0.05 | 0 / 0 | 0.00 ± 0.00 |
+| asymmetric, walking, arbiter | – | 20 / 0 / 20 | – | – | – | 20 / 0 | 1.80 ± 0.00 |
+| asymmetric, walking, seed_rule | passage_shorter_backs_out@1 ×20 | 0 / 0 / 0 | 0.00 ± 0.00 | other_cleared 20 | 4.70 ± 0.00 / 1.33 ± 0.07 | 20 / 0 | 1.27 ± 0.07 [1.20, 1.40] |
+| asymmetric, walking, orca_only | – | 0 / 0 / 0 | – | – | – | 6 / 0 | 4.08 ± 6.40 [0.00, 13.70] |
+| asymmetric, walking, time_optimal | – | 0 / 0 / 0 | 0.00 ± 0.00 | other_cleared 20 | 2.90 ± 0.00 / 0.97 ± 0.05 | 13 / 0 | 0.65 ± 0.49 [0.00, 1.00] |
+| symmetric, rest, arbiter | – | 20 / 0 / 0 | – | – | – | 0 / 0 | 0.00 ± 0.00 |
+| symmetric, rest, seed_rule | passage_shorter_backs_out@1 ×20 | 20 / 20 / 0 | 1.87 ± 0.39 [1.20, 2.30] | other_cleared 20 | 5.40 ± 0.00 / 1.02 ± 0.04 | 20 / 0 | 1.02 ± 0.04 [1.00, 1.10] |
+| symmetric, rest, orca_only | – | 0 / 0 / 0 | – | – | – | 0 / 0 | 0.00 ± 0.00 |
+| symmetric, rest, time_optimal | – | 0 / 0 / 0 | 0.00 ± 0.00 | other_cleared 20 | 2.50 ± 0.00 / 0.80 ± 0.00 | 0 / 0 | 0.00 ± 0.00 |
+| symmetric, walking, arbiter | – | 20 / 0 / 20 | – | – | – | 20 / 0 | 2.00 ± 0.00 |
+| symmetric, walking, seed_rule | passage_shorter_backs_out@1 ×20 | 20 / 20 / 0 | 0.10 ± 0.00 | other_cleared 20 | 4.80 ± 0.00 / 1.23 ± 0.04 | 20 / 0 | 1.21 ± 0.06 [1.10, 1.30] |
+| symmetric, walking, orca_only | – | 0 / 0 / 0 | – | – | – | 6 / 0 | 4.99 ± 7.81 [0.00, 16.70] |
+| symmetric, walking, time_optimal | – | 0 / 0 / 0 | 0.00 ± 0.00 | other_cleared 20 | 2.50 ± 0.00 / 1.00 ± 0.00 | 20 / 0 | 1.00 ± 0.00 |
+
