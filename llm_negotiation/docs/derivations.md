@@ -784,7 +784,12 @@ ends when its centre has reached the point along the axis (to within 1 mm).
 
 **Waiting.** Its preferred velocity is 0 until the other has come out at that end and as far
 beyond it (`c`), has arrived, or the two have lost sight of each other; then the backer goes
-on along its own path, back into the segment.
+on along its own path, back into the segment. "As far beyond it" is measured as the arbiter's
+conflict zone measures it (section 13): the other's progress along its own path past where its
+path leaves the segment, at least `c`. Measured along the segment's axis with a 1 mm tolerance,
+as at first, the manoeuvre could end a step before the zone was clear, and the arbiter then
+held the pair for that one step: in a trial of the behaviour checks before the change, in 11 of
+the 80 seed-rule runs with the slow backer, and in none of the 480 others.
 
 **What each does meanwhile, with ORCA** (DD95). ORCA stays on for both:
 

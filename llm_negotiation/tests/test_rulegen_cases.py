@@ -198,6 +198,25 @@ def test_the_committed_case_store_matches_its_manifest_and_its_source_runs():
     assert scenarios == {"wide_corridor_head_on", "open_crossing", "overtaking", "corridor_to_bottleneck", "bidirectional_flow"}
 
 
+def test_extracting_again_from_issue_30s_runs_gives_the_committed_files(tmp_path):
+    """Issue #32 raised the case format to 2 for what it adds; a case that holds none of it (its
+    records are of perception version 2) is written as version 1, as before."""
+    report = extract(ExtractionConfig.load(PACKAGE_ROOT / "configs" / "cases" / "si3_cases_v1.yaml"), CaseStore(tmp_path))
+    assert len(report.written) == 18
+    for name in report.written:
+        assert (tmp_path / name).read_text(encoding="utf-8") == (CASES_ROOT / name).read_text(encoding="utf-8"), name
+    assert CaseStore(tmp_path).manifest()["case_format_version"] == 1
+
+
+def test_a_case_from_a_run_of_log_schema_5_is_of_format_2_and_says_who_came_out_first(tmp_path, runs):
+    store = CaseStore(tmp_path / "cases")
+    (case_id,) = extract(config_for(tmp_path, runs, sources=("src_head_on",)), store).selected
+    case = store.get(case_id)
+    assert case["case_format_version"] == 2 and case["observations"]["0"]["schema_version"] == 3
+    assert case["baseline_outcome"]["first_out"] is None  # no single-file segment in a head-on corridor
+    assert "derived_from" not in case and store.manifest()["case_format_version"] == 2
+
+
 def test_a_case_gets_a_next_version_with_newer_records_by_re_stepping_its_source_run():
     """Issue #32: version 2 of a case holds perception records of version 3, made by running its
     source run again to the step its pair formed; every field of version 1 must come out equal."""

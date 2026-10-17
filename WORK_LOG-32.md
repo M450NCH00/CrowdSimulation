@@ -524,6 +524,73 @@ written only when set, and the old versions keep working.
 - Next step: the exit times (tests, `log-schema.md`, and `first_out` in a case's
   `baseline_outcome`); then the case-source runs, the passage cases and the re-stepped cases.
 
+### 2026-10-17 14:28 — Exit times, a case's format by its content, the configs, and a one-step mismatch fixed
+
+- What I did:
+  1. **The exit times** (the 14:02 entry's item 2), tested and documented. Each entry of an
+     outcome's `single_file` has `exit_time_s` per agent and `first_out`; the schema check
+     requires both in a version-5 outcome; `summary.csv` gains `first_out`; and a case's
+     `baseline_outcome` gains it. Log schema 5 is not pushed yet, so it stays version 5 and its
+     change log says so (`log-schema.md`).
+  2. **A case's format version now follows what it holds.** Part 3 set every new case to
+     format 2, so extracting `si3_cases_v1.yaml` again from issue #30's committed runs gave files
+     that differed from the frozen ones in that number alone, and the store would refuse them
+     ("frozen with other contents"). That breaks the module's own promise that the same runs
+     give the same files. Now a case whose records are of perception version 2 is format 1, as
+     before; format 2 is a case with version 3 records (which says `first_out`) or a re-stepped
+     one (`derived_from`). Tested: all 18 files of `si3_v1` come back byte for byte (2 s). The
+     manifest's `case_format_version` is the newest format it holds.
+  3. **A stratum key, `experiment`.** Both passage scenarios are of type `passage_meeting` and
+     their case-source configs name their levels alike, so strata by scenario and variant would
+     have pooled the two scenarios' layouts. The passage extraction
+     (`configs/cases/si32_passage_cases_v1.yaml`) is stratified by experiment and layout, one case
+     each: 8 cases. The tier is not a stratum there: from rest, the same layout deadlocks under
+     one seed and times out under the other, so the tier follows the seed, not the situation.
+  4. **The behaviour-check configs**, `configs/rule_following/si32_passage_meet_middle.yaml`
+     (240 runs) and `si32_passage_meet_with_speeds.yaml` (320): distances walked in × start
+     (rest, walking) × mode, 20 paired seeds, primary baseline, trajectory stride 10 as issue
+     #28's checks. Modes: `arbiter` (the baseline as it is), `seed_rule` (the seed rule alone, the
+     arbiter as its fallback), `orca_only` (the arbiter off); and in the with-speeds scenario
+     `time_optimal`, agent 0 told to back up by a static directive: the choice that
+     `derivations.md` section 18 says is quicker there, and that no rule can state (nobody can
+     see a backing speed).
+  5. **A trial of the behaviour checks in scratch** (all 560 runs, 88 s, the tables drafted)
+     found one thing wrong. In 11 of the 80 seed-rule runs with the slow backer, the arbiter took
+     the pair on the step its manoeuvre ended and gave it back on the next ("the conflict zone
+     was cleared"). The manoeuvre ended when the other's centre was 1 mm short of the run-out
+     beyond the end, measured along the passage's axis; the arbiter's zone counts the other clear
+     at the run-out along its own path. So the backer was held one step longer (0.1 s), and the
+     log showed an arbiter episode that was not one. Fixed: the manoeuvre ends by the arbiter's
+     own criterion. After the fix, none of the 560 runs has it. A regression test on the run
+     that showed it (`104_asymmetric_walking_seed_rule_r4`, which had two handoffs and now has
+     none).
+  6. Found and kept as a result: in the with-speeds scenario every seed-rule run, and most
+     time-optimal runs, have one walking-backwards episode. Traced in one run, it is the
+     backer's *waiting* phase (4.7 to 5.9 s): ORCA pushes the waiting backer back 0.33 m and
+     0.15 m aside as the other comes out (Q4). DD98 counts that as the artefact, as designed. In
+     the equal-speed scenario the wait is shorter than an episode's 1 s minimum, so no episode.
+- Tests updated because the issue changes what they pin (A4):
+  `test_the_committed_experiments_are_pinned_to_their_own_seeds` required every config under
+  `configs/avoidance/` and `configs/rule_following/` to seed `per_run`. Its intent (DD66) is the
+  15 configs of issues #26 and #28, whose runs predate paired seeding. It now names those 15,
+  and checks that the si32 configs are paired, so the modes of one repeat share a seed.
+- Result: full suite **1,372 passed** (196 s), plus the regression test run alone (passed);
+  pyflakes clean.
+- Decisions:
+  - **DD111.** Who came out of a single-file segment first (`first_out`, and each agent's
+    `exit_time_s`) is part of log schema 5, of a case's baseline outcome, and of `summary.csv`.
+  - **DD112.** A case's format version follows its content: format 1 for records of perception
+    version 2, so that issue #30's extraction stays reproducible file for file.
+  - **DD113.** A back-up manoeuvre ends when the other is out of the conflict zone by the
+    arbiter's own measure (its progress along its path past the segment's exit by the run-out).
+  - **DD114.** The behaviour checks: the three modes the issue names, plus a `time_optimal`
+    reference in the with-speeds scenario; 20 paired seeds; the primary baseline only (under
+    the unperturbed one, 20 seeds would be 20 copies of one run).
+  - **DD115.** The passage cases are stratified by source experiment and layout (one each), not
+    by tier.
+- Next step: commit; then, from the clean tree, the case-source runs, the behaviour-check runs,
+  the re-stepped set, and the passage cases.
+
 ## Open questions / risks
 
 - **Q1 (carried from #30). The supervisor's approval of simulation work, and now of the

@@ -46,8 +46,10 @@ from ..metrics.avoidance import TIERS, tier_rank
 from ..rules.snapshot import snapshot_of_record
 from ..runlog.schema import CONFIG_FILE, INTERACTIONS_FILE, OUTCOME_FILE, PAIR_INTERACTIONS_FILE
 
-#: 2 since issue #32: a case may say what it was made from (``derived_from``), and its records
-#: are of the perception version of the code that made it.
+#: 2 since issue #32: a case may say what it was made from (``derived_from``), its records may
+#: be of perception version 3, and its baseline outcome may say who came out of a single-file
+#: segment first (``first_out``). A case that holds none of these is written as version 1, as
+#: before, so that extracting again from issue #30's runs gives the same files.
 CASE_FORMAT_VERSION = 2
 CASES_ROOT = PACKAGE_ROOT / "cases"
 MANIFEST_FILE = "MANIFEST.json"
@@ -64,8 +66,9 @@ SCENARIO_SHORT = {
     "bidirectional_flow": "flow",
     "passage_meeting": "passage",  # issue #32
 }
-#: What a stratum may be made of.
-STRATUM_KEYS = ("scenario", "variant", "tier", "encounter_class")
+#: What a stratum may be made of. ``experiment``, the source experiment (issue #32), tells apart
+#: two scenarios of one type whose experiments name their levels alike.
+STRATUM_KEYS = ("scenario", "variant", "tier", "encounter_class", "experiment")
 
 # Why a pair or a run was not eligible.
 REASON_TIER = "tier_below_minimum"
@@ -148,8 +151,14 @@ def build_case(
     segments = scenario.get("single_file", {}).get("segments", [])
     goal = outcome.get("time_to_goal_s", {})
     first_through = [segment.get("first_through") for segment in outcome.get("single_file", [])]
+    # Issue #32: a run of log schema 5 logs perception records of version 3 and when each agent
+    # came out of a single-file segment; two who start inside one both "enter" it at once, so
+    # first_through cannot say who got through first there, and first_out can.
+    newer = records[a]["schema_version"] >= 3
+    first_out = [segment.get("first_out") for segment in outcome.get("single_file", [])]
+    later = {"first_out": first_out[0] if first_out else None} if newer else {}
     return {
-        "case_format_version": CASE_FORMAT_VERSION,
+        "case_format_version": CASE_FORMAT_VERSION if newer else 1,
         "case_id": case_id_for(scenario["type"], config["experiment_name"], config["run_id"], pair["pair_id"]),
         "version": 1,
         "scenario": {
@@ -219,6 +228,7 @@ def build_case(
             "run_status": outcome["status"],
             "time_to_goal_s": {str(agent): goal.get(str(agent)) for agent in (a, b)},
             "first_through": first_through[0] if first_through else None,
+            **later,
         },
     }
 
@@ -401,6 +411,7 @@ def candidates_of_run(
                     "variant": _variant_label(config.get("variant", {})),
                     "tier": pair["severity_tier"],
                     "encounter_class": pair["encounter_class_at_start"],
+                    "experiment": config["experiment_name"],
                 },
             )
         )
@@ -523,7 +534,7 @@ class CaseStore:
                     "is frozen once listed: a changed case is a new file with the next version, never an edit. "
                     "case_sets records which cases each extraction selected, with its configuration."
                 ),
-                "case_format_version": CASE_FORMAT_VERSION,
+                "case_format_version": 1,  # raised to the newest format of a case added (issue #32)
                 "files": {},
                 "case_sets": {},
             }
@@ -600,6 +611,8 @@ class CaseStore:
             raise CaseError(f"{name} is frozen with other contents; a changed case is the next version, never an edit")
         self.root.mkdir(parents=True, exist_ok=True)
         path.write_text(text, encoding="utf-8", newline="\n")
+        # the newest case format the store holds (issue #32); each case says its own
+        manifest["case_format_version"] = max(manifest.get("case_format_version", 1), case["case_format_version"])
         manifest["files"][name] = {
             "sha256": text_sha256(text),
             "frozen_on": date.today().isoformat(),

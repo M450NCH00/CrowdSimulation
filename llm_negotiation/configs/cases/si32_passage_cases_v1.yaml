@@ -1,0 +1,25 @@
+# Issue #32, Part 3: which conflict cases to take from the in-passage case-source runs.
+#
+#   python -m negsim.rulegen.cases extract configs/cases/si32_passage_cases_v1.yaml
+#
+# Eligible as in si3_cases_v1.yaml: pair interactions of the primary baseline, plain ORCA, at
+# tier T1 or above, whose two agents perceived each other when the pair formed, approaching each
+# other. In these runs every pair forms on the first step, inside the passage, and its tier
+# follows the seed (from rest, a deadlock in one repeat and a timeout in another), not the
+# layout: so the strata are the layouts alone, one case each. Both scenarios are of type
+# passage_meeting and their experiments name their levels alike, so a stratum is the source
+# experiment and its layout.
+schema_version: 1
+case_set: si32_passage_v1
+description: The in-passage cases of issue #32, one per layout of the two passage scenarios, from the primary baseline.
+sources:
+  - runs/si32_source_passage_meet_middle
+  - runs/si32_source_passage_meet_with_speeds
+eligibility:
+  baseline: orca_perturbed_v1
+  min_tier: T1
+  formation_classes: [head_on, crossing, overtaking, single_file_segment]
+strata:
+  by: [experiment, variant]
+  per_stratum: 1
+  seed: 32

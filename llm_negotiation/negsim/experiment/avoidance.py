@@ -584,11 +584,18 @@ def build_outcome(plan: AvoidanceRunPlan, spec: CrowdScenarioSpec, result: Simul
         }
         earliest = min(entries.values(), default=None)
         first = [agent_id for agent_id, time in entries.items() if time == earliest]
+        # Issue #32: when each left it at the far end. Two who start inside it both "enter" at
+        # once; the one out first is the one who got through first.
+        exits = {agent_id: times[index] for agent_id, times in sorted(result.segment_exit_times.items()) if index in times}
+        soonest = min(exits.values(), default=None)
+        out_first = [agent_id for agent_id, time in exits.items() if time == soonest]
         single_file.append(
             {
                 "segment": segment.name,
                 "entry_time_s": {str(agent_id): _rounded(time) for agent_id, time in entries.items()},
                 "first_through": first[0] if len(first) == 1 else None,
+                "exit_time_s": {str(agent_id): _rounded(time) for agent_id, time in exits.items()},
+                "first_out": out_first[0] if len(out_first) == 1 else None,
             }
         )
 
@@ -739,12 +746,13 @@ def avoidance_summary_row(config: Mapping[str, Any], outcome: Mapping[str, Any])
 
 def _rule_columns(config: Mapping[str, Any], outcome: Mapping[str, Any]) -> dict[str, Any]:
     """The summary columns added by issue #28 (log schema version 3), issue #30 (version
-    4: pair exposure and the severity tiers) and issue #32 (version 5: backing up); empty for
-    older runs."""
+    4: pair exposure and the severity tiers) and issue #32 (version 5: backing up, and who came
+    out of a single-file segment first); empty for older runs."""
     counts = outcome.get("interaction_outcomes") or {}
     rules = outcome.get("rules") or {}
     fired = rules.get("matches_begun") or {}
     tiers = counts.get("tiers") or {}
+    first_out = [segment.get("first_out") for segment in outcome.get("single_file") or []]
     return {
         "baseline": outcome.get("baseline"),
         "ruleset": config["directives"].get("ruleset"),
@@ -763,6 +771,7 @@ def _rule_columns(config: Mapping[str, Any], outcome: Mapping[str, Any]) -> dict
         "back_up_manoeuvres": ((outcome.get("back_up") or {}).get("totals") or {}).get("manoeuvres"),
         "backing_distance_m": ((outcome.get("back_up") or {}).get("totals") or {}).get("backing_distance_m"),
         "backward_distance_m": (outcome.get("artefacts") or {}).get("totals", {}).get("backward_distance_m"),
+        "first_out": first_out[0] if first_out else None,
     }
 
 

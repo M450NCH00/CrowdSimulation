@@ -208,6 +208,28 @@ def test_the_arbiter_does_not_hold_a_pair_in_a_manoeuvre():
     assert arbiter_rows and max(row["step"] for row in arbiter_rows) < 28
 
 
+def test_a_manoeuvre_ends_as_the_arbiters_zone_clears_so_the_arbiter_never_takes_the_pair_then():
+    """Measured along the passage's axis with a 1 mm tolerance, a manoeuvre could end a step before
+    the arbiter's conflict zone was clear, and the arbiter then held the pair for that step: this
+    run of the behaviour checks did (docs/derivations.md, section 17)."""
+    from negsim.configutil import PACKAGE_ROOT, load_yaml
+    from negsim.scenarios.registry import build_crowd_scenario
+
+    raw = load_yaml(PACKAGE_ROOT / "configs" / "rule_following" / "si32_passage_meet_with_speeds.yaml")
+    (plan,) = [plan for plan in AvoidanceExperiment(raw, source="<test>").plans() if plan.run_id == "104_asymmetric_walking_seed_rule_r4"]
+    simulation = AvoidanceSimulation(
+        build_crowd_scenario(plan.scenario_config), provider=plan.provider(), visibility=plan.visibility,
+        arbitration=plan.arbitration, share_policy=plan.share_policy, seed=plan.seed, perturbation=plan.perturbation,
+    )
+    result = simulation.run()
+    (manoeuvre,) = result.back_ups
+    assert (manoeuvre.backer, manoeuvre.end_reason) == (1, "other_cleared") and result.handoffs == []  # it had two
+    (exit_s,) = [exit_s for _, _, exit_s in simulation.world.agents[0].spec.single_file_stretches]
+    progress = {row["step"]: row["path_s_m"] for row in result.trajectory if row["agent_id"] == 0}
+    clear = exit_s + manoeuvre.runout_m
+    assert progress[manoeuvre.end_step - 1] < clear <= progress[manoeuvre.end_step]
+
+
 def test_the_seed_rule_backs_out_the_one_that_has_walked_less_far_in():
     result = AvoidanceSimulation(crowd("passage_meet_middle_v1", geometry={"travelled": [2.7, 0.7]}), seed_rule()).run()
     (manoeuvre,) = result.back_ups
@@ -296,14 +318,20 @@ def test_a_run_with_a_manoeuvre_logs_it_everywhere_and_passes_the_schema_check(b
     # Each agent's directive, from the rule as it evaluates it on its own record: the backer's backs up.
     directives = {entry["observer_id"]: entry["directive"]["back_up"] for entry in read_jsonl(run_dir / INTERACTIONS_FILE)}
     assert directives == {0: False, 1: True}
+    # Both start inside the passage, so both "enter" it on the first step and first_through
+    # cannot say who got through first; first_out, from when each came out at the far end, can.
+    (segment,) = outcome["single_file"]
+    assert segment["entry_time_s"] == {"0": 0.1, "1": 0.1} and segment["first_through"] is None
+    assert segment["first_out"] == 0 and segment["exit_time_s"]["0"] < segment["exit_time_s"]["1"]
     row = avoidance_summary_row(json.loads((run_dir / CONFIG_FILE).read_text(encoding="utf-8")), outcome)
     assert (row["back_up_manoeuvres"], row["backing_distance_m"]) == (1, block["totals"]["backing_distance_m"])
     assert row["backward_distance_m"] == outcome["artefacts"]["totals"]["backward_distance_m"]
+    assert (row["first_through"], row["first_out"]) == (None, 0)
 
 
 def test_the_schema_check_notices_a_manoeuvre_that_does_not_add_up(backed_run, tmp_path):
     run_dir = backed_run[0]
-    for damage in ("event", "block", "reason", "column"):
+    for damage in ("event", "block", "reason", "exit", "column"):
         copy = tmp_path / damage
         shutil.copytree(run_dir, copy)
         if damage == "event":
@@ -311,10 +339,12 @@ def test_the_schema_check_notices_a_manoeuvre_that_does_not_add_up(backed_run, t
             for index, event in enumerate(kept):
                 event["event_index"] = index
             (copy / EVENTS_FILE).write_text("".join(json.dumps(event) + "\n" for event in kept), encoding="utf-8")
-        elif damage in ("block", "reason"):
+        elif damage in ("block", "reason", "exit"):
             outcome = json.loads((copy / OUTCOME_FILE).read_text(encoding="utf-8"))
             if damage == "block":
                 del outcome["back_up"]["totals"]
+            elif damage == "exit":
+                del outcome["single_file"][0]["first_out"]
             else:
                 outcome["back_up"]["manoeuvres"][0]["end_reason"] = "gave_up"
             (copy / OUTCOME_FILE).write_text(json.dumps(outcome), encoding="utf-8")

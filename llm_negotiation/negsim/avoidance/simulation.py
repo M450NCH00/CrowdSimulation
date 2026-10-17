@@ -42,8 +42,9 @@ too narrow for them, on both their paths, with the other ahead of it), it starts
 *manoeuvre*, which runs to its end whatever the directive does meanwhile: it backs along the
 segment, away from the other, at its own backing speed, to a point beyond the end behind it by
 the two radii and the segment's safety margin (outside the conflict zone); it waits there; and
-once the other has come out at that end and as far again, or has arrived, or the two have lost
-sight of each other, it goes on along its path. While it backs out, the other comes on no
+once the other has come out at that end and as far again (along its own path, as the arbiter's
+conflict zone counts it), or has arrived, or the two have lost sight of each other, it goes on
+along its path. While it backs out, the other comes on no
 faster than the backer backs, and does all of the avoiding (shares 0 and 1); while it waits,
 it keeps out of the other's way (1 and 0, as a follower of the arbiter does). The arbiter does
 not hold the pair meanwhile. The backing is *intentional*, logged as such, and is never
@@ -117,7 +118,7 @@ MODE_ORCA, MODE_ARBITER, MODE_BACK_UP = "orca", "arbiter", "back_up"
 # meanwhile (the trajectory's ``back_up`` column), and why it ended.
 PHASE_BACKING, PHASE_WAITING = "backing", "waiting"
 PHASE_PROCEEDING = "proceeding"
-BACK_UP_CLEARED = "other_cleared"  # the other came out at the backer's end, and as far beyond it
+BACK_UP_CLEARED = "other_cleared"  # the other came out at the backer's end, and as far beyond it along its path
 BACK_UP_OTHER_ARRIVED = "other_arrived"
 BACK_UP_PAIR_ENDED = "pair_ended"  # the two lost sight of each other
 BACK_UP_RUN_ENDED = "run_ended"
@@ -403,6 +404,9 @@ class SimulationResult:
     artefacts: Optional[dict[str, Any]] = None
     #: Every back-up manoeuvre, in the order they started (issue #32).
     back_ups: list[BackUp] = field(default_factory=list)
+    #: When each agent's path left each single-file segment it runs through, at the far end
+    #: (issue #32): by agent, then by segment index.
+    segment_exit_times: dict[int, dict[int, float]] = field(default_factory=dict)
 
     @property
     def min_separation_m(self) -> Optional[float]:
@@ -517,6 +521,7 @@ class AvoidanceSimulation:
         #: Agents whose linear program was infeasible on the most recent step.
         self.fallback_agents: set[int] = set()
         self.segment_entry_times: dict[int, dict[int, float]] = {a.agent_id: {} for a in agents}
+        self.segment_exit_times: dict[int, dict[int, float]] = {a.agent_id: {} for a in agents}
         self.status: Optional[str] = None
         self.deadlock = False
 
@@ -581,6 +586,7 @@ class AvoidanceSimulation:
             trajectory=self.trajectory,
             steps_with_fallback=self.steps_with_fallback,
             segment_entry_times=self.segment_entry_times,
+            segment_exit_times=self.segment_exit_times,
             pairs=self.pairs,
             provider_summary=self.provider.summary(),
             artefacts=self._artefacts(),
@@ -812,9 +818,11 @@ class AvoidanceSimulation:
             walking_backwards = not backing_out and forward < -limits.backward_speed_mps
             self.backward[i].update(now, end, walking_backwards, -forward * dt if walking_backwards else 0.0)
             self.hurried[i].update(now, end, behind and speed > (1.0 + limits.hurried_fraction) * wanted)
-            for index, entry_s, _ in a.spec.single_file_stretches:
+            for index, entry_s, exit_s in a.spec.single_file_stretches:
                 if index not in self.segment_entry_times[i] and a.path_s >= entry_s:
                     self.segment_entry_times[i][index] = end
+                if index not in self.segment_exit_times[i] and a.path_s >= exit_s:
+                    self.segment_exit_times[i][index] = end
             if recording:
                 row = rows[i]
                 row["vx_mps"], row["vy_mps"], row["speed_mps"] = round(vx, 6), round(vy, 6), round(speed, 6)
@@ -1107,12 +1115,14 @@ class AvoidanceSimulation:
         for backer, manoeuvre in sorted(self.backing.items()):
             other = agents[manoeuvre.other]
             pair = (min(backer, manoeuvre.other), max(backer, manoeuvre.other))
-            beyond = manoeuvre.direction * (other.pose.xy[manoeuvre.axis] - manoeuvre.end_m)
             if other.goal_time is not None:
                 self._end_back_up(manoeuvre, BACK_UP_OTHER_ARRIVED)
             elif pair not in self.open_pairs:
                 self._end_back_up(manoeuvre, BACK_UP_PAIR_ENDED)
-            elif beyond >= manoeuvre.runout_m - BACK_UP_REACHED_M:
+            elif other.path_s >= self._exit_along_path(other, manoeuvre.segment) + manoeuvre.runout_m:
+                # Out of the conflict zone exactly as the arbiter counts it (SingleFileDetector:
+                # its progress along its own path past the segment's end by the run-out), so
+                # that the arbiter never finds the pair's conflict live as the manoeuvre ends.
                 self._end_back_up(manoeuvre, BACK_UP_CLEARED)
             elif manoeuvre.phase == PHASE_BACKING:
                 me = agents[backer].pose.xy[manoeuvre.axis]
@@ -1149,6 +1159,11 @@ class AvoidanceSimulation:
             self.backing[backer] = manoeuvre
             self._backed_pairs.add(record.pair_id)
             busy.update((backer, other))
+
+    def _exit_along_path(self, agent, segment: str) -> float:
+        """Where ``agent``'s path leaves the single-file segment named ``segment`` (arc length)."""
+        names = [item.name for item in self.spec.single_file_segments]
+        return next(exit_s for index, _, exit_s in agent.spec.single_file_stretches if names[index] == segment)
 
     def _end_back_up(self, manoeuvre: BackUp, reason: str) -> None:
         manoeuvre.end_step, manoeuvre.end_time_s, manoeuvre.end_reason = self.world.step_index, self.world.time, reason

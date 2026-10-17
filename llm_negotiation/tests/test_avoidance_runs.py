@@ -350,6 +350,9 @@ def test_the_handoff_is_logged_step_by_step_and_as_events(tmp_path):
     assert outcome["single_file"][0]["segment"] == "bottleneck" and outcome["single_file"][0]["first_through"] == 1
     entry = outcome["single_file"][0]["entry_time_s"]
     assert entry["1"] < entry["0"]
+    # Issue #32: when each came out at the far end; in a bottleneck, the one in first is out first.
+    exit_ = outcome["single_file"][0]["exit_time_s"]
+    assert outcome["single_file"][0]["first_out"] == 1 and entry["1"] < exit_["1"] < exit_["0"]
     rows = read_csv(run_dir / TRAJECTORY_FILE)
     held = [row for row in rows if row["control_mode"] == "arbiter"]
     assert {int(row["step"]) for row in held} == set(range(handoffs[0]["step"], handoffs[1]["step"]))

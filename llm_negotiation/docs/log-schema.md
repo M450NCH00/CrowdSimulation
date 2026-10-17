@@ -375,7 +375,7 @@ and `time_s`.
 | `time_to_goal_s` | Per agent; null if it did not arrive |
 | `agents` | Per agent, every metric: `time_to_goal_s`, `distance_m`, `path_deviation_mean_m`, `path_deviation_max_m`, `interactions`, `interaction_time_s`, `conflict_exposure_time_s`, `orca_altered_time_s`, `yield_events`, `yield_time_s`, `near_misses`, `min_separation_m`, `min_wall_gap_m`, `fallback_steps`, `one_sided_steps`, `arbiter_time_s` (`metrics.md`) |
 | `totals` | Over all agents: `interactions`, `conflict_exposure_time_s`, `pair_exposure_time_s` (version 4: summed over the pair interactions), `yield_events`, `yield_time_s`, `near_misses`, `min_separation_m`, `mean_time_to_goal_s`, `mean_path_deviation_m`, `max_path_deviation_m`, `steps_with_fallback`, `fallback_agent_steps`, `one_sided_agent_steps` |
-| `single_file` | Per single-file segment: `segment`, `entry_time_s` per agent, and `first_through` |
+| `single_file` | Per single-file segment: `segment`, `entry_time_s` per agent, and `first_through` (the agent that entered it first, null on a tie); and (version 5) `exit_time_s` per agent, when it came out at the far end, and `first_out`, the agent that came out first (null on a tie or if neither did). Two agents that start inside a segment (`passage_meeting`) both enter it on the first step, so there `first_through` is null and `first_out` says who got through first |
 | `reciprocity_violations` | Every violation, as in `events.jsonl` without `event_index` and `type` |
 | `handoffs` | Every handoff, likewise |
 | `thresholds` | The metric thresholds the run used (since version 4 also `pair_exposure_eps_mps` and `collision_course_min_s`), and the deadlock settings |
@@ -402,7 +402,8 @@ version 3, the baseline and the rules (`baseline`, `ruleset`, `pairs`, `avoided`
 version 4, pair exposure and the tiers (`pair_exposure_time_s`, `pairs_t0`, `pairs_t1`, `pairs_t2`, `pairs_t3`,
 `pairs_t4`), empty for a run written before; from version 5, backing up (`back_up_manoeuvres`,
 `backing_distance_m`: the intentional backing; `backward_distance_m`: the walking-backwards
-artefact's distance), empty for a run written before; and `git_commit`.
+artefact's distance) and `first_out` (of the first single-file segment), empty for a run
+written before; and `git_commit`.
 
 ## Rule-generation experiments (issue #30)
 
@@ -584,9 +585,9 @@ lines whose `experiment` is that experiment's name.
   (in `interactions.jsonl`, `directive` and `directive_changes`); in `trajectory.csv`, the
   `control_mode` `back_up` and a `back_up` column (the agent's part in a back-up manoeuvre); a
   `back_up` event, and `back_up` as a handoff's `to`; in `outcome.json`, a `back_up` block (every
-  manoeuvre, and per agent and in total its times and distances) and, among the `artefacts`,
-  `backward_distance_m`; `backing_speed_mps` of an agent whose type sets one; and three summary
-  columns. Intentional backing is never counted as the walking-backwards artefact. Perception
+  manoeuvre, and per agent and in total its times and distances), among the `artefacts`
+  `backward_distance_m`, and in each `single_file` entry `exit_time_s` and `first_out`;
+  `backing_speed_mps` of an agent whose type sets one; and four summary columns. Intentional backing is never counted as the walking-backwards artefact. Perception
   records are version 3 (`perception.md`: the passage fields and the group). A negotiation run is
   as in version 4. Folders written under versions 1 to 4 stay valid and are checked against
   their own version.

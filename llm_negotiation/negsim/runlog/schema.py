@@ -476,6 +476,8 @@ BACK_UP_MANOEUVRE_KEYS = (
 )
 BACK_UP_AGENT_KEYS = ("manoeuvres", "backing_time_s", "waiting_time_s", "backing_distance_m")
 BACK_UP_END_REASONS = ("other_cleared", "other_arrived", "pair_ended", "run_ended")
+#: An entry of an outcome's ``single_file`` (version 5 adds when each agent came out at the far end).
+SINGLE_FILE_KEYS = ("segment", "entry_time_s", "first_through", "exit_time_s", "first_out")
 INTERACTION_OUTCOME_KEYS = ("pairs", "avoided", "resolved", "failed", "pairs_with", "tiers")
 INTERACTION_OUTCOME_KEYS_V3 = INTERACTION_OUTCOME_KEYS[:-1]
 RULE_SUMMARY_KEYS = (
@@ -574,6 +576,7 @@ AVOIDANCE_SUMMARY_COLUMNS = (
     "back_up_manoeuvres",
     "backing_distance_m",
     "backward_distance_m",
+    "first_out",
     "git_commit",
 )
 
@@ -756,9 +759,13 @@ def _validate_avoidance(run_dir: Path, config: dict) -> list[str]:
 
 
 def _validate_back_up(outcome: dict, events: int) -> list[str]:
-    """The additions of version 5 (issue #32): the back-up manoeuvres and their counts."""
+    """The additions of version 5 (issue #32): the back-up manoeuvres and their counts, and when
+    each agent came out of each single-file segment."""
+    problems: list[str] = []
+    for number, entry in enumerate(outcome.get("single_file") or []):
+        problems += _missing(entry, SINGLE_FILE_KEYS, f"{OUTCOME_FILE}.single_file[{number}]")
     block = outcome.get("back_up") or {}
-    problems = _missing(block, BACK_UP_KEYS, f"{OUTCOME_FILE}.back_up")
+    problems += _missing(block, BACK_UP_KEYS, f"{OUTCOME_FILE}.back_up")
     manoeuvres = block.get("manoeuvres") or []
     for number, entry in enumerate(manoeuvres):
         where = f"{OUTCOME_FILE}.back_up.manoeuvres[{number}]"
