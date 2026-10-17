@@ -3,6 +3,10 @@
 Every rule a model proposes, in either condition, is run through the rule loader of issue #28
 and given exactly one category. Nothing is discarded: a refused rule is data.
 
+``protected_attribute``  It reads a person's group (issue #32): it names the group, anything
+                         derived from it, a label, or a word the session introduced the groups
+                         with, in its condition or its role assignment. No rule may read a
+                         group; a model trying to is a finding, counted on its own and kept.
 ``valid``                It loads, and the session's visibility settings let both agents see
                          everything it reads.
 ``needs_communication``  It reads private or unobservable information: a field the loader
@@ -12,8 +16,9 @@ and given exactly one category. Nothing is discarded: a refused rule is data.
                          when demographics are hidden). Such a rule could only be followed if
                          the two talked first. The format is not extended to read private
                          information (a decision of the issue, pending the supervisor).
-``inconsistent``         Refused for shares that sum to less than 1, opposite sides, or
-                         passage orders that are not one leader and one follower.
+``inconsistent``         Refused for shares that sum to less than 1, opposite sides, passage
+                         orders that are not one leader and one follower, or (issue #32) a rule
+                         that says who backs up but does not back up exactly one role.
 ``schema_error``         Refused for its structure: an unknown key or field, a wrong type or
                          unit, a missing tie policy, roles that do not fit the directive.
 ``format_limit``         It asks for something the format cannot express, as far as that can
@@ -25,11 +30,16 @@ and given exactly one category. Nothing is discarded: a refused rule is data.
                          (:func:`is_formula`): a field, a word such as "if" or "per", or
                          arithmetic on a named quantity. Arithmetic on numbers alone ("1/2") and
                          a number with its unit ("0.5 m") are constants written wrongly:
-                         ``schema_error``.
+                         ``schema_error``. Also (issue #32) a rule that uses what a later version
+                         of the rule format added than the one the session was shown (``back_up``,
+                         a passage field, true or false as a value): the format it had cannot say
+                         it.
 
-The categories are tried in that order of precedence: a rule that reads private information
-is ``needs_communication`` even if it is also malformed, and a rule written as a formula is
-``format_limit`` though the loader would call it a schema error. Whether what a
+The categories are tried in this order of precedence: ``protected_attribute`` first (whatever
+else is wrong with a rule that reads a group, that is what it is counted as), then
+``needs_communication``, ``format_limit``, and the loader's. So a rule that reads private
+information is ``needs_communication`` even if it is also malformed, and a rule written as a
+formula is ``format_limit`` though the loader would call it a schema error. Whether what a
 ``format_limit`` rule wanted could have been written another way is not judged here.
 
 What cannot be told mechanically is flagged for **manual review** (:data:`REVIEW_PATTERNS`):
@@ -48,14 +58,15 @@ from typing import Any, Iterator, Mapping, Optional, Sequence
 from ..rules.database import RULE_DB_ROOT, RuleSchemas, load_validator
 from ..rules.errors import RuleError
 from ..rules.fields import AGENT_FIELDS, CATEGORY, CONDITION_PREFIXES, PAIR_FIELDS, ROLE_PREFIXES, resolve
-from ..rules.model import parse_rule
+from ..rules.model import parse_rule, protected_part
 
 VALID = "valid"
+PROTECTED_ATTRIBUTE = "protected_attribute"
 NEEDS_COMMUNICATION = "needs_communication"
 INCONSISTENT = "inconsistent"
 SCHEMA_ERROR = "schema_error"
 FORMAT_LIMIT = "format_limit"
-CATEGORIES = (VALID, NEEDS_COMMUNICATION, INCONSISTENT, SCHEMA_ERROR, FORMAT_LIMIT)
+CATEGORIES = (VALID, NEEDS_COMMUNICATION, INCONSISTENT, SCHEMA_ERROR, FORMAT_LIMIT, PROTECTED_ATTRIBUTE)
 
 #: The loader's reasons for refusing a rule, and the category each falls in.
 LOADER_CATEGORIES = {
@@ -64,6 +75,8 @@ LOADER_CATEGORIES = {
     "reciprocity": INCONSISTENT,
     "side": INCONSISTENT,
     "passage_order": INCONSISTENT,
+    "back_up": INCONSISTENT,
+    "protected_attribute": PROTECTED_ATTRIBUTE,
     "schema": SCHEMA_ERROR,
     "unknown_field": SCHEMA_ERROR,
     "unit": SCHEMA_ERROR,
@@ -80,8 +93,8 @@ PRIVATE_WORDS = frozenset(
 #: The keys of a rule that the writer fills and a model may not: what a model writes there is
 #: ignored and logged (issue #30, Part 8).
 METADATA_KEYS = ("schema_version", "rule_id", "version", "status", "provenance", "screening")
-#: The directive fields, each of which takes a constant.
-DIRECTIVE_FIELDS = ("side_preference", "responsibility_share", "speed_scale", "clearance_margin", "passage_order")
+#: The directive fields, each of which takes a constant (``back_up`` since issue #32).
+DIRECTIVE_FIELDS = ("side_preference", "responsibility_share", "speed_scale", "clearance_margin", "passage_order", "back_up")
 #: Patterns that suggest something the format cannot express, each with the name its flag is
 #: recorded under. They read words, so they only flag, for a person to look at.
 REVIEW_PATTERNS = (
@@ -239,6 +252,42 @@ def _format_limit(proposal: Mapping[str, Any]) -> Optional[str]:
     return None
 
 
+def _later_format(proposal: Mapping[str, Any], schema_version: int) -> Optional[str]:
+    """What the proposal uses that a later version of the rule format added than ``schema_version``,
+    the version the session was shown (issue #32): a directive field, a field a rule reads, or
+    true or false as a value. ``None`` if nothing."""
+    directive_keys = set(_schemas().validators[schema_version].schema["$defs"]["directive"]["properties"])
+    directive = proposal.get("directive")
+    if isinstance(directive, Mapping):
+        for role, entry in directive.items():
+            if isinstance(entry, Mapping):
+                for name in entry:
+                    if name not in directive_keys and name in DIRECTIVE_FIELDS:
+                        return f"directive.{role}.{name}: the rule format this session was given (version {schema_version}) has no {name}"
+    for where, written, prefixes in field_references(proposal):
+        try:
+            resolve(written, where, prefixes, schema_version)
+        except RuleError as error:
+            if error.category == "unknown_field" and "was added in version" in str(error):
+                return f"{where}: '{written}' is not in the rule format this session was given (version {schema_version})"
+    if schema_version < 3:
+        for where, comparison in _comparisons(proposal.get("when"), "when"):
+            values = comparison.get("value") if isinstance(comparison.get("value"), list) else [comparison.get("value")]
+            if any(isinstance(value, bool) for value in values):
+                return f"{where}.value: true or false as a value is not in the rule format this session was given (version {schema_version})"
+    return None
+
+
+def session_terms(session: Mapping[str, Any]) -> tuple[str, ...]:
+    """The words a session introduced the fictional groups with, if it showed them (issue #32):
+    each person's label and the words of the framing. Beside the attribute's name and the default
+    labels (``negsim.rules.fields``), a rule that names one of them is ``protected_attribute``."""
+    if not session.get("visibility", {}).get("ethnic_group") or not session.get("framing"):
+        return ()
+    labels = {person.get("ethnic_group") for person in (session.get("personas") or {}).values()} - {None}
+    return tuple(sorted(labels)) + tuple(str(session["framing"]).split())
+
+
 def review_flags(texts: Sequence[str]) -> list[str]:
     """The names of the :data:`REVIEW_PATTERNS` found in any of ``texts``."""
     lowered = " ".join(" ".join(text.lower().split()) for text in texts if text)
@@ -270,10 +319,14 @@ def validate_proposal(
     visibility: Mapping[str, bool],
     texts: Sequence[str] = (),
     schemas: Optional[RuleSchemas] = None,
+    schema_version: int = 2,
+    terms: Sequence[str] = (),
 ) -> Validation:
     """Categorise one proposed rule. ``texts`` are the words around it (a reason, the
     conversation) that are read, with its ``intent`` and any value written as text, for the
-    manual-review flags."""
+    manual-review flags. ``schema_version`` is the version of the rule format the session's
+    prompt described (2 for the templates of issue #30, 3 for those of issue #32), and
+    ``terms`` the words its groups were introduced with (:func:`session_terms`)."""
     if not isinstance(proposal, Mapping):
         return Validation(SCHEMA_ERROR, "schema", f"a rule is a JSON object, got {type(proposal).__name__}", review_flags=review_flags(texts))
     ignored = {key: proposal[key] for key in METADATA_KEYS if key in proposal}
@@ -283,14 +336,18 @@ def validate_proposal(
     def result(category: str, loader: Optional[str], message: str) -> Validation:
         return Validation(category, loader, message, references, ignored, flags)
 
+    protected = protected_part(proposal, terms)
+    if protected is not None:
+        where, written, word = protected
+        return result(PROTECTED_ATTRIBUTE, "protected_attribute", f"{where}: {written!r} refers to a person's group ({word!r}), which no rule may read")
     private = _needs_communication(proposal, visibility)
     if private is not None:
         return result(NEEDS_COMMUNICATION, private[0], private[1])
-    limit = _format_limit(proposal)
+    limit = _format_limit(proposal) or _later_format(proposal, schema_version)
     if limit is not None:
         return result(FORMAT_LIMIT, None, limit)
     try:
-        rule = parse_rule(as_full_rule(proposal), schemas or _schemas(), "proposal")
+        rule = parse_rule(as_full_rule(proposal, schema_version), schemas or _schemas(), "proposal", terms)
     except RuleError as error:
         return result(LOADER_CATEGORIES.get(error.category, SCHEMA_ERROR), error.category, str(error))
     hidden = sorted(name for name in rule.needs() if not visibility.get(name, False))

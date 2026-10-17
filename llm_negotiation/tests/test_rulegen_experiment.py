@@ -19,7 +19,7 @@ from negsim.rules.database import RULE_DB_ROOT, RuleDatabase
 from negsim.rulegen import experiment as rg
 from negsim.rulegen.mock import NEGOTIATION_PATHS, STATEMENT_PATHS, rulegen_agree
 from negsim.rulegen.protocol import RuleNegotiation
-from negsim.rulegen.validate import CATEGORIES
+from negsim.rulegen.validate import CATEGORIES, PROTECTED_ATTRIBUTE
 from negsim.rulegen.writer import StagingDatabase
 
 GIT = {"commit": "test", "dirty": False}
@@ -203,8 +203,10 @@ def test_every_proposal_is_categorised_and_none_is_discarded(full_run):
     proposals = sum(len(r["proposals"]) for r in records.values() if r["condition"] == "negotiated")
     rules = sum(1 for r in records.values() if r["condition"] == "stated" and r.get("rule") is not None)
     assert len(validations) == proposals + rules
+    # rulegen_paths takes issue #30's paths, unchanged; issue #32's category, protected_attribute,
+    # is taken by rulegen_paths_v2 (tests/test_rulegen_groups.py)
     for condition in ("negotiated", "stated"):
-        assert {row["category"] for row in validations if row["condition"] == condition} == set(CATEGORIES), condition
+        assert {row["category"] for row in validations if row["condition"] == condition} == set(CATEGORIES) - {PROTECTED_ATTRIBUTE}, condition
     sneaky = [row for row in validations if row["ignored_metadata"]]
     assert sneaky and all(row["ignored_metadata"]["rule_id"] == "the_models_own_id" for row in sneaky)
     summary = full_run["result"].summary

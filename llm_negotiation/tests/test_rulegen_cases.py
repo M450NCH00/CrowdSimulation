@@ -26,6 +26,7 @@ from negsim.rulegen.cases import (
     case_json,
     extract,
     main,
+    restep_case,
 )
 from negsim.scenarios.registry import build_crowd_scenario
 
@@ -195,6 +196,32 @@ def test_the_committed_case_store_matches_its_manifest_and_its_source_runs():
         assert pairs[case["source"]["pair_id"]]["agents"] == case["agents"]
         assert pairs[case["source"]["pair_id"]]["severity_tier"] == case["severity_tier"]
     assert scenarios == {"wide_corridor_head_on", "open_crossing", "overtaking", "corridor_to_bottleneck", "bidirectional_flow"}
+
+
+def test_a_case_gets_a_next_version_with_newer_records_by_re_stepping_its_source_run():
+    """Issue #32: version 2 of a case holds perception records of version 3, made by running its
+    source run again to the step its pair formed; every field of version 1 must come out equal."""
+    case = CaseStore(CASES_ROOT).get("head_on_de176842", 1)
+    newer = restep_case(case, GIT)
+    assert (newer["case_id"], newer["version"], newer["case_format_version"]) == ("head_on_de176842", 2, 2)
+    assert newer["derived_from"]["case"] == "head_on_de176842@1" and newer["derived_from"]["method"] == "re-stepped"
+    assert (newer["derived_from"]["perception_schema_version"], newer["derived_from"]["git_commit"]) == (3, "test")
+    for agent in ("0", "1"):
+        old, new = case["observations"][agent], newer["observations"][agent]
+        assert (old["schema_version"], new["schema_version"]) == (2, 3)
+        for key, value in old.items():  # what version 1 held, version 2 holds the same; the rest it adds
+            if key != "schema_version":
+                assert ({name: new[key][name] for name in value} if isinstance(value, dict) else new[key]) == value, key
+        assert set(new["observer"]) - set(old["observer"]) == {"in_segment", "segment_distance_travelled", "segment_distance_ahead", "segment_distance_behind"}
+        assert new["observer"]["in_segment"] is None and new["neighbour_in_segment"] is None  # a head-on meeting has no passage
+    added = set(newer["snapshot"]["agent"]["0"]) - set(case["snapshot"]["agent"]["0"])
+    assert added == {"in_segment", "segment_distance_travelled", "segment_distance_ahead", "segment_distance_behind"}
+    for key in ("scenario", "source", "agents", "formation", "bodies", "private", "severity_tier", "baseline_outcome"):
+        assert newer[key] == case[key], key
+    tampered = json.loads(json.dumps(case))
+    tampered["observations"]["0"]["distance_m"] += 0.5
+    with pytest.raises(CaseError, match=r"observations\.0\.distance_m"):
+        restep_case(tampered, GIT)
 
 
 def test_the_command_line_lists_shows_and_checks(tmp_path):

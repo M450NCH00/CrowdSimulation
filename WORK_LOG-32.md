@@ -441,6 +441,89 @@ written only when set, and the old versions keep working.
   - **DD105.** The rule-generation log is version 2 (`outcomes.jsonl` and the group).
 - Next step: the prompts, the cases, the mock and validation (plan step 7).
 
+### 2026-10-17 11:20 — Part 3: prompt version 2, validation, the mock, and re-stepping cases
+
+- What I did:
+  - **Prompt version 2**, frozen with #24's tool (`rulegen_common_v2`, `rulegen_negotiate_v2`,
+    `rulegen_state_v2`; their hashes in `MANIFEST.json`, the glossary's pinned inside the
+    common template). The common template describes rule format 3 (its glossary, generated as
+    before, adds the four passage fields, a true-or-false line, `back_up` and what a rule using
+    it must say); the condition templates add lines for standing still, for being inside the
+    passage (how far in, how far to each end, and in A the other's distance in) and, only when
+    the session shows groups, each person's group. Before freezing I rendered them for a
+    meeting inside the passage, read them, and checked that a hidden group appears nowhere.
+    Version 1 is untouched and renders exactly as before (the renderer uses a line only if the
+    template has it).
+  - **Validation**: a category of its own, `protected_attribute`, first in precedence; the
+    session's own labels and framing words protected where it showed them; what a later rule
+    format added (`back_up`, a passage field, true or false) is `format_limit` for a session
+    shown an earlier one; the loader's `back_up` counts as `inconsistent`. Each session record
+    says the format its prompt described (`rule_schema_version`), and the writer writes rules in
+    it (format 3 for prompt version 2).
+  - **The mock**: a second policy, `rulegen_paths_v2`, with three more paths after the old ones
+    (a rule that reads a group, a valid in-passage rule, an inconsistent one); `rulegen_paths`
+    unchanged. The in-passage rule is valid with prompt version 2 and a format limit with
+    version 1.
+  - **Re-stepping cases** (`restep_case`, `python -m negsim.rulegen.cases restep`): a case's
+    next version, made by running its source run again to the step its pair formed and taking
+    the two records the run builds then; every field of the old version must come out equal.
+    **A dry run over all 18 cases of `si3_v1` gave every field back** (81 s), so the current
+    code reproduces the source runs exactly. Case format 2 adds `derived_from`.
+- Tests: 12 for prompt version 2 (`test_rulegen_prompts_v2.py`), 5 for validation, 1 for
+  re-stepping, 3 for the mock and a whole experiment on prompt version 2 with the group on
+  (every new path, its category, rules written in format 3). The validation table gains the new
+  category (the issue adds one; #28's A2 reading).
+- Decisions:
+  - **DD106.** Prompt version 2 is version 1 with exactly the four kinds of line and the rule
+    format 3 glossary; it also says the single-file kind of meeting covers a stretch the two are
+    in. Version 1 stays the default of a config, so that issue #30's configs mean what they
+    meant.
+  - **DD107.** `protected_attribute` is a validation category of its own, before every other.
+  - **DD108.** A rule that uses what a later rule format added is `format_limit` for a session
+    shown the earlier format.
+  - **DD109.** A new mock policy beside the old, whose paths are unchanged.
+  - **DD110.** Cases get new versions by re-stepping their source runs, checked field by field.
+- **A change of plan, ahead of Part 4.** The plan (step 10) said the pilot config would not be
+  changed. The issue says this work must land before the pilot "otherwise the pilot's data would
+  not match any later run", so the pilot should run on prompt version 2. I will point the pilot
+  at prompt version 2 and the re-stepped cases, and change nothing else (not its cap, not its
+  design): recorded as a decision there.
+- Next step: commit; then, from a clean tree, the passage case-source runs, the re-stepped
+  cases and the passage cases.
+
+### 2026-10-17 14:02 — Session resumed: Part 3 checked and committed
+
+- **What I found.** The branch at `328e32c`, never pushed (`origin/feat/30-…` is still at
+  `2dad845`, its base). In the working tree, uncommitted: the work of the 11:20 entry, and
+  three things that entry does not mention:
+  1. Two case-source configs, `configs/cases/source_passage_meet_middle.yaml` and
+     `source_passage_meet_with_speeds.yaml` (written 09:58, never run: no `runs/si32_*`).
+  2. A change to the run loop and the outcome (written 10:06, *after* the work log's last
+     write at 10:04, so not logged anywhere): each agent's time out of each single-file
+     segment at its far end (`segment_exit_times`), and in `outcome.json`'s `single_file`
+     entries `exit_time_s` and `first_out`. Two who start inside a passage both "enter" it on
+     step 0, so `first_through` is null for every passage run; `first_out` says who got
+     through first. Untested and undocumented; taken up in the next entry.
+  3. A correction to the record: **the headings of the last two entries do not match the
+     clock.** The "10:20" entry's commit, `328e32c`, is stamped 09:53, and the "11:20" entry's
+     files were written between 09:52 and 10:06. The work they describe is as stated; their
+     times are not. From here on, headings are read from the clock.
+- **Baseline.** A fresh virtual environment in this session's scratchpad (Python 3.13.3,
+  PyYAML 6.0.3, pytest 9.1.1, matplotlib 3.10.8, pyflakes 4.0.3). The full suite on the
+  working tree as found: **1 failed, 1,369 passed** (303 s). The failure,
+  `test_every_proposal_is_categorised_and_none_is_discarded`, pins that issue #30's mock
+  (`rulegen_paths`) yields every category in `CATEGORIES`; Part 3 added `protected_attribute`
+  to that tuple, and the old policy, unchanged by design (DD109), never yields it. Updated
+  under A4: the old policy is expected to yield issue #30's five categories, and the test of
+  `rulegen_paths_v2` now asserts that it yields **all six in both conditions** (it did). The
+  two files: 59 passed. pyflakes clean.
+- **Committed** the 11:20 entry's work without items 1 and 2 above, which belong to the
+  passage cases. Item 2 only adds keys that no test reads (`validate_run_dir` checks for
+  missing keys, not extra ones), so the suite's result on the working tree holds for the
+  commit without it.
+- Next step: the exit times (tests, `log-schema.md`, and `first_out` in a case's
+  `baseline_outcome`); then the case-source runs, the passage cases and the re-stepped cases.
+
 ## Open questions / risks
 
 - **Q1 (carried from #30). The supervisor's approval of simulation work, and now of the

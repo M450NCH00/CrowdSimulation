@@ -51,7 +51,7 @@ from ..llm.mock import MockClient
 from ..llm.pricing import PriceTable
 from ..negotiation.protocol import MAX_ATTEMPTS_PER_TURN
 from .cases import CaseStore
-from .describe import KIND_NEGOTIATE, KIND_STATE, Templates, load_templates, negotiation_prompt, statement_prompt
+from .describe import KIND_NEGOTIATE, KIND_STATE, Templates, load_templates, negotiation_prompt, rule_schema_version_of, statement_prompt
 from .design import CONDITION_NEGOTIATED, CONDITION_STATED, CONDITIONS, DesignSettings, Session, cell_code, sessions_for
 from .mock import POLICIES as MOCK_POLICIES
 from .outcomes import OUTCOMES_FILE, outcome_row
@@ -68,7 +68,7 @@ from .protocol import (
 )
 from .replay import KIND_CROWD, KIND_REPLAY, CrowdScreen, ScreeningSettings, crowd_size, mixed_population, replay
 from .transcript import render as render_transcript
-from .validate import CATEGORIES, VALID, validate_proposal
+from .validate import CATEGORIES, VALID, session_terms, validate_proposal
 from .writer import STAGING_DIR, StagingDatabase, Support, build_rule, with_screening
 
 LAYER_RULE_GENERATION = "rule_generation"
@@ -449,7 +449,11 @@ def run_session(
         "experiment": config.experiment_name, "session_id": session.session_id, "condition": session.condition,
         "case_id": session.case_id, "repeat": session.repeat, "path_index": path_index,
     }
-    record: dict[str, Any] = {"session": session.as_dict(), "started_utc": _utc_now(), "templates": templates.identity(), "llm": config.llm_settings().as_dict()}
+    record: dict[str, Any] = {
+        "session": session.as_dict(), "started_utc": _utc_now(), "templates": templates.identity(), "llm": config.llm_settings().as_dict(),
+        # issue #32: the version of the rule format the prompt described, which its rules are read in
+        "rule_schema_version": rule_schema_version_of(templates.common),
+    }
     stopped: Optional[Exception] = None
     if session.condition == CONDITION_NEGOTIATED:
         protocol: Any = RuleNegotiation(case, session, templates, client, config.llm_settings(), config.max_messages_per_agent, labels)
@@ -481,21 +485,29 @@ def _model_returned(record: Mapping[str, Any]) -> Optional[str]:
 # --- validation, the writer, replay and screening -------------------------------------------------
 
 
+def record_format(record: Mapping[str, Any]) -> int:
+    """The version of the rule format a session's prompt described: written in its record since
+    issue #32; a record written before is of version 2, the format of issue #30's templates."""
+    return int(record.get("rule_schema_version", 2))
+
+
 def validate_session(record: Mapping[str, Any], case: Mapping[str, Any]) -> list[dict[str, Any]]:
-    """One validation row per rule the session proposed (A: every proposal; B: the rule)."""
+    """One validation row per rule the session proposed (A: every proposal; B: the rule), read in
+    the rule format the session was shown, with the words its groups were introduced with."""
     session = record["session"]
+    version, terms = record_format(record), session_terms(session)
     rows = []
     base = {"session_id": session["session_id"], "condition": record["condition"], "case_id": session["case_id"], "scenario": case["scenario"]["type"]}
     if record["condition"] == CONDITION_NEGOTIATED:
         messages = [turn["message"] for turn in record["turns"] if turn.get("message")]
         for proposal in record["proposals"]:
-            result = validate_proposal(proposal["proposal"], session["visibility"], messages)
+            result = validate_proposal(proposal["proposal"], session["visibility"], messages, schema_version=version, terms=terms)
             rows.append({
                 **base, "turn_index": proposal["turn_index"], "proposer": proposal["proposer"],
                 "canonical_hash": proposal["canonical_hash"], "agreed": proposal["agreed"], **result.as_dict(),
             })
     elif record.get("rule") is not None:
-        result = validate_proposal(record["rule"], session["visibility"], [record.get("reason") or ""])
+        result = validate_proposal(record["rule"], session["visibility"], [record.get("reason") or ""], schema_version=version, terms=terms)
         rows.append({**base, "turn_index": 0, "proposer": None, "canonical_hash": record["canonical_hash"], "agreed": True, **result.as_dict()})
     return rows
 
@@ -507,6 +519,7 @@ def write_rules(
     canonical rule and case, with every session that produced it."""
     valid = {(row["session_id"], row["canonical_hash"]) for row in validations if row["category"] == VALID and row["agreed"]}
     groups: dict[tuple[str, str, str], list[Support]] = {}
+    formats: dict[tuple[str, str, str], int] = {}
     for record in records:
         session = record["session"]
         if record["condition"] == CONDITION_NEGOTIATED and record["outcome"] == OUTCOME_AGREED:
@@ -518,6 +531,7 @@ def write_rules(
             continue
         if (session["session_id"], digest) not in valid:
             continue
+        formats[(record["condition"], session["case_id"], digest)] = record_format(record)
         groups.setdefault((record["condition"], session["case_id"], digest), []).append(
             Support(
                 session_id=session["session_id"], design_cell=session["cell"], model=record["llm"]["model"],
@@ -530,7 +544,7 @@ def write_rules(
         supports = sorted(supports, key=lambda support: (support.created_utc, support.session_id))
         staging = StagingDatabase(experiment_dir / STAGING_DIR / condition)
         staging.create()
-        rule = build_rule(condition, case_id, digest, supports, config.experiment_name)
+        rule = build_rule(condition, case_id, digest, supports, config.experiment_name, formats[(condition, case_id, digest)])
         name, version, fresh = staging.stage(rule, f"generated by {config.experiment_name}, {len(supports)} session(s)")
         written.append({
             "rule_id": rule["rule_id"], "version": version, "condition": condition, "case_id": case_id,
@@ -936,7 +950,10 @@ def run_rule_generation(
     ordered = [records[session.session_id] for session in sessions if session.session_id in records]
     validations = [row for record in ordered for row in validate_session(record, cases[record["session"]["case_id"]])]
     _write_jsonl(experiment_dir / VALIDATION_FILE, validations)
-    outcomes = [outcome_row(record, cases[record["session"]["case_id"]], validations) for record in ordered]
+    outcomes = [
+        outcome_row(record, cases[record["session"]["case_id"]], validations, record_format(record), session_terms(record["session"]))
+        for record in ordered
+    ]
     _write_jsonl(experiment_dir / OUTCOMES_FILE, outcomes)
     written = write_rules(config, ordered, validations, experiment_dir)
     _write_jsonl(experiment_dir / WRITTEN_FILE, written)

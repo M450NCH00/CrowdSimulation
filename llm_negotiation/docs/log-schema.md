@@ -467,7 +467,8 @@ million tokens, the price table's source and date), `reply_cap_tokens`,
 
 **`sessions/<session_id>.json`, condition A**: `session` (as in `design.jsonl`),
 `started_utc`, `ended_utc`, `templates`, `llm` (`model`, `temperature`, `max_tokens`,
-`thinking`, `json_mode`), `condition` (`negotiated`), `outcome` (`agreed`,
+`thinking`, `json_mode`), `rule_schema_version` (version 2: the rule format its prompt
+described, in which its rules are validated and written; a record without it is of format 2), `condition` (`negotiated`), `outcome` (`agreed`,
 `no_rule_possible`, `no_agreement`, `parse_failure` or `aborted`), `error`, `first_speaker`,
 `second_speaker`, `max_messages_per_agent`, `max_attempts_per_turn`, `agreement` (null, or
 `rule` as the proposer wrote it, `canonical_hash`, `proposal_id`, `proposed_by`,
@@ -484,7 +485,7 @@ A turn: `turn_index`, `speaker`, `shown` (what it was told on its turn), `parse_
 `turn_index`, `proposer`, `proposal`, `canonical_hash`, and `agreed`.
 
 **`sessions/<session_id>.json`, condition B**: `session`, `started_utc`, `ended_utc`,
-`templates`, `llm`, `condition` (`stated`), `outcome` (`stated`, `no_rule`, `parse_failure`
+`templates`, `llm`, `rule_schema_version` (as in A), `condition` (`stated`), `outcome` (`stated`, `no_rule`, `parse_failure`
 or `aborted`), `error`, `person_1`, `person_2`, `max_attempts`, `system_prompt`,
 `parse_error`, `rule` (as written, or null), `reason`, `canonical_hash`, `attempts`,
 `totals` (`llm_calls`, `retries`, `tokens`, `cost_usd`), `model_returned`.
@@ -498,7 +499,8 @@ the outcome with its tokens and cost. The record is the `.json`; this adds nothi
 **`validation.jsonl`**, one line per proposal (A: every proposal of every turn; B: the stated
 rule): `session_id`, `condition`, `case_id`, `scenario`, `turn_index`, `proposer`,
 `canonical_hash`, `agreed` (the agreed or stated rule), `category` (`valid`,
-`needs_communication`, `inconsistent`, `schema_error` or `format_limit`),
+`needs_communication`, `inconsistent`, `schema_error`, `format_limit`, or, version 2,
+`protected_attribute`),
 `loader_category` (the loader's or the check's reason), `message`, `fields` (those the
 proposal reads), `ignored_metadata` (what the model wrote in the writer's keys),
 `review_flags`.

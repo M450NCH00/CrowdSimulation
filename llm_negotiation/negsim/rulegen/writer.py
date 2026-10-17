@@ -220,9 +220,12 @@ def build_rule(
     canonical_hash: str,
     supports: Sequence[Support],
     experiment: str,
+    schema_version: int = 2,
 ) -> dict[str, Any]:
     """The rule file the writer stores for a valid proposal: the model's body, from the
-    earliest supporting session, and the writer's metadata."""
+    earliest supporting session, and the writer's metadata. ``schema_version`` is the version of
+    the rule format the sessions were shown, which the rule was checked in: 2 for issue #30's
+    prompts, 3 for issue #32's."""
     if not supports:
         raise WriterError("a generated rule needs at least one session that produced it")
     supports = sorted(supports, key=lambda support: (support.created_utc, support.session_id))
@@ -232,7 +235,7 @@ def build_rule(
     models = sorted({support.model_returned or support.model for support in supports})
     template = first.prompt_template.get("key", "?")
     rule: dict[str, Any] = {
-        "schema_version": 2,
+        "schema_version": schema_version,
         "rule_id": rule_id_for(condition, case_id, canonical_hash),
         "version": 1,
         "status": "candidate",

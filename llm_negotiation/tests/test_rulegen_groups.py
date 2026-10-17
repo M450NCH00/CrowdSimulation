@@ -273,6 +273,64 @@ def test_the_summary_counts_outcomes_by_group_pair_and_visibility_and_reports_th
     assert design["factors"]["label_rotation"] == 1 and design["sessions"] == 16
 
 
+@pytest.fixture(scope="module")
+def version_2(tmp_path_factory):
+    """Prompt version 2 with the mock's paths of issue #32, the group on, two cases."""
+    cfg = config(
+        experiment_name="rg_prompt_v2",
+        cases={"set": "si3_v1", "ids": ["head_on_de176842", "overtaking_2d08db11"]},
+        negotiation={"template": "rulegen_negotiate_v2"},
+        statement={"template": "rulegen_state_v2", "repeats": 1},
+        llm={"client": "mock", "mock_policy": "rulegen_paths_v2"},
+    )
+    result = rg.run_rule_generation(cfg, out_root=tmp_path_factory.mktemp("v2"), report=quiet, git=GIT)
+    folder = result.experiment_dir
+    validations = [json.loads(line) for line in (folder / rg.VALIDATION_FILE).read_text(encoding="utf-8").splitlines()]
+    records = {path.stem: json.loads(path.read_text(encoding="utf-8")) for path in (folder / rg.SESSIONS_DIR).glob("*.json")}
+    return result, validations, records
+
+
+def test_the_mocks_new_paths_come_after_its_old_ones_which_are_unchanged():
+    from negsim.rulegen import mock
+
+    assert mock.NEGOTIATION_PATHS_V2[: len(mock.NEGOTIATION_PATHS)] == mock.NEGOTIATION_PATHS and len(mock.NEGOTIATION_PATHS) == 13
+    assert mock.NEGOTIATION_PATHS_V2[13:] == ("protected_attribute", "valid_back_up", "inconsistent_back_up")
+    assert mock.STATEMENT_PATHS_V2[len(mock.STATEMENT_PATHS):] == ("protected_attribute", "valid_back_up", "inconsistent_back_up")
+    assert {"rulegen_paths", "rulegen_paths_v2", "rulegen_agree"} == set(mock.POLICIES)
+
+
+def test_with_prompt_version_2_every_new_path_is_taken_and_categorised(version_2):
+    from negsim.rulegen.validate import CATEGORIES
+
+    result, validations, records = version_2
+    assert result.status == "completed" and len(records) == 32
+    assert all(record["rule_schema_version"] == 3 for record in records.values())
+    found = Counter((row["condition"], row["category"], row["loader_category"]) for row in validations)
+    for condition in ("negotiated", "stated"):
+        assert {row["category"] for row in validations if row["condition"] == condition} == set(CATEGORIES), condition
+        assert found[(condition, "protected_attribute", "protected_attribute")] >= 1
+        assert found[(condition, "inconsistent", "back_up")] >= 1
+    backing = [row for row in validations if "agent.segment_distance_travelled" in row["fields"]]
+    assert backing and {row["category"] for row in backing} <= {"valid", "inconsistent"}
+    assert any(row["category"] == "valid" for row in backing)
+
+
+def test_a_rule_written_from_prompt_version_2_is_of_rule_format_3(version_2):
+    result, _, _ = version_2
+    folder = result.experiment_dir
+    written = [json.loads(line) for line in (folder / rg.WRITTEN_FILE).read_text(encoding="utf-8").splitlines()]
+    from negsim.rulegen.writer import StagingDatabase
+
+    formats = set()
+    for entry in written:
+        rule = StagingDatabase(folder / "rule_db_staging" / entry["condition"]).latest(entry["rule_id"])
+        formats.add(rule.schema_version)
+        if "backer" in rule.directives:
+            assert rule.directives["backer"].back_up is True
+    assert formats == {3}
+    assert any("backer" in StagingDatabase(folder / "rule_db_staging" / entry["condition"]).latest(entry["rule_id"]).directives for entry in written)
+
+
 def test_a_rules_effect_is_read_on_the_cases_pair_with_the_sessions_people():
     case = {
         "snapshot": {

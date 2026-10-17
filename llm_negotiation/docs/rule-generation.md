@@ -177,6 +177,42 @@ is what is shown and how it is rounded.
 *Tested:* `tests/test_rulegen_describe.py` (every case in both conditions; nothing
 unobservable first-person; demographics hidden; no convention named; the glossary pinned).
 
+### 3.1 Prompt version 2 (issue #32)
+
+Issue #32 changed what a model is shown, so its prompts are a **new frozen version**, beside
+the first, which is kept and renders exactly as before: `rulegen_common_v2`,
+`rulegen_negotiate_v2` and `rulegen_state_v2`, frozen with the same tool on 2026-10-17. An
+experiment picks a version by its templates (`negotiation.template`, `statement.template`;
+version 1 stays the default, so that every config of issue #30 means what it meant). What
+changed from version 1, and nothing else:
+
+| Template | What version 2 adds |
+|---|---|
+| `rulegen_common_v2` | It describes **rule format 3** (`rule_schema_version: 3`): the glossary, generated as before, now lists the four passage fields (`in_segment`, `segment_distance_travelled`, `segment_distance_ahead`, `segment_distance_behind`), with a line for a field that is true or false; a comparison's value may be true or false; the directive field `back_up`; and the one thing a rule that uses it must say ("gives back_up true to exactly one of the two roles, and not to a role that goes first"). The single-file kind of meeting is "a stretch ahead of both, **or that they are in**". The glossary's hashes are pinned inside it. **A person's group is never in it**: no rule may read one |
+| `rulegen_negotiate_v2` (A), `rulegen_state_v2` (B) | Four kinds of line: a person standing still is said to be ("You are standing still"), not to walk at 0.00 m/s; a person inside the single-file stretch is told how far they have walked into it and how far each of its ends is; in A, the other's distance walked in from the other end when both are inside; and, **only when the session shows groups**, each person's group by its label and the framing word ("You belong to the Kestrop ethnic group"). Everything else is version 1's, word for word |
+
+For a meeting inside the passage (`passage_meet_with_speeds_v1`, at rest), agent 0 is told:
+
+```
+WHERE YOU ARE
+- You are in a passage 0.80 m wide. The wall on your left is 0.40 m from you, the wall on your right 0.40 m.
+- You are inside a stretch of the passage 0.80 m wide and 4.0 m long.
+- You have walked 2.0 m into this stretch. Its end ahead of you is 2.0 m away, and the end behind you 2.0 m.
+
+THE OTHER PERSON
+- They are 0.6 m away, straight ahead of you.
+- They are standing still, facing in the opposite direction to you.
+- They are inside the stretch too, and have walked 1.4 m into it from its other end.
+```
+
+Every number is one both can perceive (`perception.md`, "Passage fields"); neither is told the
+other's backing speed, which nobody can see. **When the groups are hidden** (`ethnicity_visible:
+false`) they appear nowhere in what a model is shown, a person's own included, nor does the
+framing word; with prompt version 1 they never appear (`fictional-groups.md`). A session
+records the rule format its prompt described (`rule_schema_version` in its record): its rules
+are validated, and written, in that format (sections 6 and 7).
+*Tested:* `tests/test_rulegen_prompts_v2.py`.
+
 ## 4. Condition A: negotiating a standing rule
 
 Two agents take turns, issue #24's dialogue loop (`negotiation/protocol.py`,
@@ -274,16 +310,18 @@ agreed or not; in condition B the stated rule. Each gets **exactly one category*
 in `validation.jsonl` with the session, the proposer, the canonical hash, whether it was the
 agreed (or stated) rule, the loader's reason, the fields it reads, and its review flags.
 **Nothing is discarded.** The proposal is read by issue #28's loader (`parse_rule`) under
-placeholder metadata, and by checks of its own. The order of precedence is: needs
-communication, then format limit, then whatever the loader refuses first, which checks a
-rule's structure before its consistency (so a malformed rule whose shares also sum below 1 is
-a schema error):
+placeholder metadata, in the rule format its session was shown (format 2 for prompt version
+1, format 3 for version 2), and by checks of its own. The order of precedence is: a person's
+group (issue #32), then needs communication, then format limit, then whatever the loader
+refuses first, which checks a rule's structure before its consistency (so a malformed rule
+whose shares also sum below 1 is a schema error):
 
 | Category | What puts a proposal in it |
 |---|---|
+| `protected_attribute` | Issue #32. It reads a person's group: its condition or its role assignment (the field, the role names, the tie policy) names the group or anything derived from it (anything containing "ethnic"), a default label, or, where the session showed groups, one of its labels or a word of its framing (`session_terms`). **No rule may read a group**; a model that tries is a finding, so the attempt is a category of its own, kept and counted, and comes first: whatever else is wrong with such a rule, this is what it is counted as (`fictional-groups.md`) |
 | `needs_communication` | It reads what the two could not both see: a field the loader refuses as `unobservable_field` (an errand, one person's own position or point of view, `self.` and the like), a field whose name speaks of private information (task, urgency, destination, appointment, ...), or a field the session hides (age or gender when demographics are hidden). Such a rule could be followed only if the two talked first. **Rejected, and the format is not extended** (a decision of the issue, pending the supervisor) |
-| `format_limit` | It asks for something the format cannot express, as far as can be told mechanically: more than two roles; roles given by a category (the format orders the two by a number, so "the woman goes first" cannot be written); a formula where a field or a constant belongs (a share that grows with the age gap, a threshold that scales with speed, a side "if older") |
-| `inconsistent` | Refused by the loader for responsibility shares summing below 1 (`reciprocity`), opposite sides (`side`) or passage orders that are not one leader and one follower (`passage_order`) |
+| `format_limit` | It asks for something the format cannot express, as far as can be told mechanically: more than two roles; roles given by a category (the format orders the two by a number, so "the woman goes first" cannot be written); a formula where a field or a constant belongs (a share that grows with the age gap, a threshold that scales with speed, a side "if older"); and (issue #32) what a later version of the format added than the one the session was shown: in a session of prompt version 1 (format 2), `back_up`, a passage field, or true or false as a value. "The one who has walked less far in backs out" is a format limit there, and valid in a session of prompt version 2 |
+| `inconsistent` | Refused by the loader for responsibility shares summing below 1 (`reciprocity`), opposite sides (`side`), passage orders that are not one leader and one follower (`passage_order`), or (issue #32) a rule that says who backs up but does not make exactly one of two roles back up, or backs up the role that goes first (`back_up`, `rule-format.md` section 14) |
 | `schema_error` | Refused by the loader for its structure: an unknown key, a wrong type or unit, a missing tie policy, roles that do not fit the directive, a field that does not exist, an intent over 500 characters |
 | `valid` | It loads, and both people of the session can see everything it reads |
 
@@ -305,14 +343,14 @@ Flags are counted on their own in the report, for a person to read.
 (`ignored_metadata`), and counted; it never reaches a rule file (section 7). **DD78
 (decision)** is the precedence, the formula test and the review patterns.
 *Tested:* `tests/test_rulegen_validate.py` (every category, the precedence, the formula
-test, the flags).
+test, the flags; issue #32: the group, a session's words, the earlier format, backing up).
 
 ## 7. The writer, the staging databases, and promotion
 
 **`rule_db/` stays read-only.** Generated rules are written into a **staging database** of
 their experiment and condition, `runs/<experiment>/rule_db_staging/<negotiated|stated>/`
-(`runs_mock/` for a mock run), laid out as the rule database is (`schema/` with both rule
-schemas copied in, `rules/`, `rulesets/`, `MANIFEST.json`), so that the same loader reads it
+(`runs_mock/` for a mock run), laid out as the rule database is (`schema/` with every rule
+schema copied in, `rules/`, `rulesets/`, `MANIFEST.json`), so that the same loader reads it
 and its rules can be switched on in a run. Only `negsim.rulegen.writer` writes there, and
 only ever adds: a rule version is frozen in the manifest when written.
 
@@ -323,7 +361,8 @@ proposal that was not agreed is a row of `validation.jsonl`, not a rule.
 
 - `rule_id`: `neg_` or `st_`, the case id, and the first ten characters of the canonical hash
   (`neg_head_on_de176842_11c9d9f766`): deterministic, never the model's;
-- `schema_version` 2, `version` 1, `status` `candidate`;
+- `schema_version`: the rule format the supporting sessions were shown, 2 for prompt version 1
+  and 3 for prompt version 2 (issue #32; section 3.1); `version` 1, `status` `candidate`;
 - `provenance`: `source_type` (`negotiated` or `stated`), a `source_ref` naming the
   experiment and the case, `created_at`, an `author` naming the writer, the model that
   replied and the prompt template, and `generation`: the experiment, condition, case,
@@ -503,10 +542,20 @@ stable valid rule, a rule that changes between repeats, no rule, the retry, a re
 unreadable twice, every category, the model's own metadata. `si3_mock_rehearsal.yaml` runs
 80 negotiations and 240 statements over one case of each SI-1 scenario type, with replay and
 screening; nothing it produces is a finding.
+
+**The mock of issue #32** is a second policy, `rulegen_paths_v2`: the paths above, in the same
+order, then three more in each condition: a rule that reads a person's group (to exercise
+`protected_attribute`), a valid rule for a meeting inside a single-file passage (the one who
+has walked less far in backs out), and an inconsistent one (both back out). The in-passage rule
+is `valid` in a session of prompt version 2 and `format_limit` in one of version 1, whose rule
+format had neither `back_up` nor the passage fields (section 6). It takes every path in a
+design with 16 or more cells per condition. `rulegen_paths` is left as it was, so that an
+experiment that names it takes the paths it took.
 *Tested:* `tests/test_rulegen_experiment.py` (the config, the preview's arithmetic, a paid
 client unconfirmed and over the cap, the budget guard stopping an experiment and a resume
 after it, a partial run, the whole experiment on the mock with every path and category,
-replay and screening, resuming, the command line).
+replay and screening, resuming, the command line); `tests/test_rulegen_groups.py` (prompt
+version 2 with `rulegen_paths_v2`: every new path, its category, rules written in format 3).
 
 ## 10. The paid pilot (Part 11): held
 

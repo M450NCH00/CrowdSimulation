@@ -1,4 +1,6 @@
-"""Issue #30, Part 7: every proposed rule gets exactly one category, and none is discarded."""
+"""Issue #30, Part 7: every proposed rule gets exactly one category, and none is discarded. Issue
+#32: a rule that reads a group is a category of its own, and what a later version of the rule
+format added is a format limit of the version a session was shown."""
 
 from __future__ import annotations
 
@@ -10,10 +12,12 @@ from negsim.rulegen.validate import (
     FORMAT_LIMIT,
     INCONSISTENT,
     NEEDS_COMMUNICATION,
+    PROTECTED_ATTRIBUTE,
     SCHEMA_ERROR,
     VALID,
     is_formula,
     review_flags,
+    session_terms,
     validate_proposal,
 )
 
@@ -45,6 +49,7 @@ VALID_RULES = {
 
 # category, the loader's or the check's reason, the rule, the session's visibility
 CASES = {
+    "a person's group, which no rule may read": (PROTECTED_ATTRIBUTE, "protected_attribute", rule(when=when({"field": "either.ethnic_group", "op": "==", "value": "Kestrop"})), SEE_ALL),
     "an errand, which no one can see": (NEEDS_COMMUNICATION, "unobservable_field", rule(when=when({"field": "either.task", "op": "==", "value": "the emergency room"})), SEE_ALL),
     "one person's own point of view": (NEEDS_COMMUNICATION, "unobservable_field", rule(when=when({"field": "self.speed_mps", "op": ">", "value": 1, "unit": "m/s"})), SEE_ALL),
     "a field named for private information": (NEEDS_COMMUNICATION, "private_information", rule(when=when({"field": "either.urgency", "op": "==", "value": "high"})), SEE_ALL),
@@ -137,3 +142,61 @@ def test_manual_review_flags_read_words_and_never_change_the_category():
     assert result.category == VALID and result.review_flags == ["scaling"]
     result = validate_proposal(rule(directive={"both": {"clearance_margin": "0.1 per year"}}), SEE_ALL)
     assert result.category == FORMAT_LIMIT and result.review_flags == ["rate"]
+
+
+# --- issue #32: a person's group, backing up, and a later version of the format ---------------------
+
+BACK_UP = {
+    "encounter": "single_file_segment",
+    "when": {"all": [{"field": "both.in_segment", "op": "==", "value": True}]},
+    "roles": {"by": {"field": "agent.segment_distance_travelled", "order": "ascending", "assign": ["backer", "goer"], "tie": "no_match", "tie_within": 0.1, "unit": "m"}},
+    "directive": {"backer": {"back_up": True}, "goer": {}},
+    "priority": 100,
+}
+
+
+def test_a_rule_that_reads_a_group_is_protected_whatever_else_is_wrong_with_it():
+    everything_wrong = rule(
+        when=when({"field": "either.ethnic_group", "op": "==", "value": "x"}, {"field": "either.task", "op": "==", "value": "y"}),
+        directive={"a": {}, "b": {}, "c": {}},
+    )
+    result = validate_proposal(everything_wrong, SEE_ALL)
+    assert (result.category, result.loader_category) == (PROTECTED_ATTRIBUTE, "protected_attribute") and result.message
+    by_label = rule(roles=by(assign=["kestrop", "other"]), directive={"kestrop": {}, "other": {}})
+    as_a_value = rule(when=when({"field": "either.gender", "op": "==", "value": "Pellund"}))
+    for proposal in (by_label, as_a_value):
+        assert validate_proposal(proposal, SEE_ALL, schema_version=3).category == PROTECTED_ATTRIBUTE
+
+
+def test_the_words_a_session_introduced_its_groups_with_are_protected_only_if_it_showed_them():
+    shown = {"visibility": {"ethnic_group": True}, "framing": "community", "personas": {"0": {"ethnic_group": "Brannoq"}, "1": {"ethnic_group": "Kestrop"}}}
+    assert session_terms(shown) == ("Brannoq", "Kestrop", "community")
+    assert session_terms({**shown, "visibility": {"ethnic_group": False}}) == () and session_terms({"visibility": {}, "personas": {}}) == ()
+    naming = rule(when=when({"field": "either.gender", "op": "==", "value": "Brannoq"}))
+    assert validate_proposal(naming, SEE_ALL, terms=session_terms(shown)).category == PROTECTED_ATTRIBUTE
+    assert validate_proposal(naming, SEE_ALL).category == SCHEMA_ERROR  # not a default label, and not shown: a wrong value
+    roles = rule(roles=by(assign=["community_first", "other"]), directive={"community_first": {}, "other": {}})
+    assert validate_proposal(roles, SEE_ALL, terms=session_terms(shown)).category == PROTECTED_ATTRIBUTE
+
+
+def test_what_a_later_version_of_the_format_added_is_a_format_limit_of_an_earlier_one():
+    """A session shown rule format 2 (issue #30's prompts) had no back_up and no passage fields: a
+    rule that needs them is one its format could not express. Shown format 3, it is valid."""
+    for version, category in ((2, FORMAT_LIMIT), (3, VALID)):
+        result = validate_proposal(BACK_UP, SEE_ALL, schema_version=version)
+        assert result.category == category, result.message
+    assert "has no back_up" in validate_proposal(BACK_UP, SEE_ALL, schema_version=2).message
+    ordering_only = {**BACK_UP, "when": {"all": []}, "directive": {"backer": {"passage_order": "follower"}, "goer": {"passage_order": "leader"}}}
+    result = validate_proposal(ordering_only, SEE_ALL, schema_version=2)
+    assert result.category == FORMAT_LIMIT and "segment_distance_travelled" in result.message
+    assert validate_proposal(ordering_only, SEE_ALL, schema_version=3).category == VALID
+
+
+def test_a_rule_that_backs_up_both_or_says_so_of_both_at_once_is_inconsistent():
+    both = {**BACK_UP, "directive": {"backer": {"back_up": True}, "goer": {"back_up": True}}}
+    result = validate_proposal(both, SEE_ALL, schema_version=3)
+    assert (result.category, result.loader_category) == (INCONSISTENT, "back_up")
+    symmetric = rule(encounter="single_file_segment", directive={"both": {"back_up": True}})
+    assert validate_proposal(symmetric, SEE_ALL, schema_version=3).category == INCONSISTENT
+    as_words = {**BACK_UP, "directive": {"backer": {"back_up": "if it has walked less far in"}, "goer": {}}}
+    assert validate_proposal(as_words, SEE_ALL, schema_version=3).category == FORMAT_LIMIT
