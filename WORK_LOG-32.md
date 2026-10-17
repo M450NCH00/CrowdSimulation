@@ -797,6 +797,27 @@ written only when set, and the old versions keep working.
   merge into a stacked branch will not close the issue by itself. The issue is not closed.
 - Commented on the issue with the link.
 
+### 2026-10-17 16:32 — `BEGINNERS_GUIDE.md` brought up to date (asked by the user)
+
+- What I did: the guide (written in issue #30's last commit) did not know issue #32, and had
+  gone stale in places: "18 frozen conflicts", "about 1,230 tests", directives as "five knobs",
+  "all five stored rules", no `protected_attribute`, the pilot at "USD 0.62", the random crowd
+  starts "not yet committed", "DD1 to DD84", and no `behaviour-checks.md` in its reading list.
+  Added section 9, "Across the layers: fictional groups and meetings inside a passage", with
+  three new examples (validation of a rule that reads a group and of one in which both back out;
+  the passage fields of a real case; the arbiter alone against the seed rule) and a prompt of
+  version 2. Corrected the stale lines, renumbered the later sections and the examples, and
+  added the new terms to the glossary.
+- **Every example re-run**: the six earlier ones print exactly what the guide showed, and the
+  three new ones print what is pasted under them (checked by a script that extracts each block
+  and compares). The `ruledb.py list` output is the new one, whole (the guide had trimmed its
+  last two lines). The 16 contents links resolve.
+- Found while writing example 8: without the baseline's random nudge, the arbiter alone does get
+  the asymmetric meeting through at rest, in 58.7 s: its leader creeps at 0.03 m/s and pushes
+  the follower out over nearly 50 s, under the artefact's 0.1 m/s threshold, so nothing is
+  counted as walking backwards. With the nudge (the behaviour checks) it never gets through.
+  The guide says both.
+
 ## Open questions / risks
 
 - **Q1 (carried from #30). The supervisor's approval of simulation work, and now of the
