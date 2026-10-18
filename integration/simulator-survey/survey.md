@@ -312,6 +312,11 @@ file would answer this in minutes (Open question Q1).
     - each `Agent` has `position`, `orientation`, `journey_id`, `stage_id`, `target`, and its
       model's state, e.g. `desired_speed` (API `Agent`, `Simulation`);
     - queue and waiting-set occupancy: `enqueued()`, `waiting()`, `count_targeting()`.
+    - **velocity is not exposed for every model.** `SocialForceModelState` has `velocity` and
+      `GeneralizedCentrifugalForceModelState` has `speed`. The collision-free speed model states
+      list `desired_speed`, `radius`, `time_gap` and the repulsion parameters, but no current
+      velocity (API, the `...ModelState` classes). With CFS, a perception adapter would have to
+      difference positions between iterations `[inference]`.
   - **setting targets:** `agent.target = (x, y)` "directly steer[s] an agent towards the given
     coordinate". But this works only for an agent in a journey whose only stage is a
     DirectSteering stage; otherwise "any change will be ignored" (API `Agent.target`;
@@ -455,7 +460,9 @@ file would answer this in minutes (Open question Q1).
 - **Fit for this FYP** `[inference]`:
   - the only candidate with **vehicles, stops and boarding** built in. The natural host for the
     bus and MRT boarding scenario cards;
-  - but SUMO's own boarding is a time cost per person (`boardingDuration`), not a crowd at a door;
+  - but SUMO's own boarding is a time cost per person (`boardingDuration`), not a crowd at a door.
+    Lindner et al. 2025 say the same from experience: "Traditional SUMO workflows teleport
+    passengers onto the bus" (§3.2; §8 below);
   - the coupling's waiting positions are static, and pedestrians ignore vehicles;
   - so a boarding *conflict* (who goes through the door first, alighting before boarding) would
     still be played out in JuPedSim's 2D area, with SUMO supplying the vehicle and its timing;
