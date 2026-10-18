@@ -166,6 +166,39 @@ the "generic simulator" requirement is a design goal, not a finding
       al. (COINE 2024).
 - Next step: read, and write the entries.
 
+### 2026-10-18 — Groups 1–3 read and written up (11 entries, 3 stubs)
+- What I did:
+  - Read in full: [Frantz-IG2], [Neumann-HomoSocionicus], [Hollander-NormativeABS],
+    [Mellema-Sanctions], [Blochwitz-FMI], [Bertsch-ReferenceFMUs], [Wang-LCIM].
+  - Read in sections: [Frantz-IG2Codebook], [FMI-3.0.2], [Gomes-CoSim].
+  - Wrote their entries and the three institutional-grammar stubs in `representations.md`.
+  - Also cached the IG Parser README `[documentation]`, and Galán and Izquierdo (2005). The latter
+    was found through [Neumann-HomoSocionicus] Note 7: a re-implementation of the very norms game
+    arXiv:2409.00993 builds on.
+  - Re-extracted every PDF text as UTF-8 (pdftotext's default Latin-1 garbled names; line numbers
+    unchanged).
+- Why: Q1 and Q4 rest on these groups.
+- Result / what I found (the threads that will carry the verdict):
+  1. **Nothing in groups 1–2 is both shared between systems and executable.** IG is a shared
+     coding specification for text; its IG Script is parseable into tables, not run
+     ([Frantz-IG2Codebook] §4.1; IG Parser README). Normative-MAS norms are executable only
+     inside the system that defines them ([Neumann-HomoSocionicus] Table 4;
+     [Hollander-NormativeABS] ¶2.19–¶2.23). How norms travel between systems was an open
+     question in 2011 ([Hollander-NormativeABS] ¶5.4, ¶5.10).
+  2. **FMI works because one executable implementation travels behind a small typed
+     interface**, and was deliberately "less powerful, but much simpler" ([Blochwitz-FMI] §1;
+     [FMI-3.0.2] §1.3). #34's standalone engine is that shape; its adapters are FMI's "tool
+     dependent wrapper".
+  3. **Even so, implementations drift:** 5 of 10 importing tools failed one reference test
+     ([Bertsch-ReferenceFMUs] §4.3). Wrappers absorb domain decisions, and results depend on the
+     coupling step ([Gomes-CoSim] §5.2, §4.3). A shared schema plus API reaches only LCIM's
+     syntactic level ([Wang-LCIM] §4.1).
+  4. Two parts that the idea lacks turned up in the norm literature: a **deactivation condition**
+     and a **deadline** ([Mellema-Sanctions] §1), and the violation-handling / meta-norm split
+     that queue cutting needs (§6). IG's **activation condition / execution constraint** split
+     gives the core and its binding separate places ([Frantz-IG2] §3.1).
+- Next step: groups 4–6, then the novelty sources.
+
 ## Open questions / risks
 <Anything uncertain, anything you're unsure is the right call, anything that should be double-checked by a human.>
 
