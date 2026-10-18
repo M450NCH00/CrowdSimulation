@@ -233,6 +233,10 @@ open), which holds the shortlist this issue needs.
   and `decision.md`; the earlier entry above keeps the original wording with a pointer here. No
   score changes.
 
+### 2026-10-18 — Push and PR
+- Ran the negsim suite (1,381 passed), pushed the branch, opened PR #48 against
+  `docs/39-simulator-desk-survey` (stacked on #47). Commented the PR link and Q2 on the issue.
+
 ## Open questions / risks
 
 - **Q1 (supervisor). The standing instruction is still unconfirmed.** The user allowed throwaway
