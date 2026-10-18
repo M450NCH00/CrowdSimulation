@@ -50,7 +50,7 @@ below](#crawford-adico-a-grammar-of-institutions)). Its five components are cite
 - Status: published at *Public Administration* (Crossref record). Read as the accepted
   manuscript, which "has not been through the copyediting, typesetting, pagination and
   proofreading process" (its first page). Section numbers are the manuscript's.
-- Read: full text, from `refs/pr_frantz2021_ig2_padm_accepted.txt`. ⚠ Figures 1–14 are images, and
+- Read: full text, from `refs/pr_frantz2021_ig2_padm_accepted.txt` (on disk only, not committed: no open licence). ⚠ Figures 1–14 are images, and
   only their captions survive in the extract. Nothing below rests on a figure's content.
 - What it represents: norms, rules and strategies as written in policies and regulations
   ("institutional statements"), and "constitutive" statements that define entities and roles.
@@ -603,7 +603,7 @@ IEEE, and obtaining it was not attempted (`missing-papers.md` S1). It is covered
   (its first page), from co-author Broman's KTH page. An earlier, longer preprint exists as
   arXiv:1702.00686 ("Co-simulation: State of the art", 2017); it was not read.
 - Read: these sections: 1, 2 (opening), 3.3, 4.3, 5.2, 6.5 (opening) and 7, from
-  `refs/pr_gomes2018_cosim_survey_accepted.txt`. Not read: the orchestration algorithms (§§3.1,
+  `refs/pr_gomes2018_cosim_survey_accepted.txt` (on disk only, not committed: no open licence). Not read: the orchestration algorithms (§§3.1,
   4.1–4.2, 5.1) and the classification tables (§6.2–§6.4).
 - What it represents: coupled **models and simulators**. Co-simulation is "the theory and
   techniques to enable global simulation of a coupled system via the composition of simulators.
@@ -1035,7 +1035,7 @@ and all four found differences.
   "Published in Computational and Mathematical Organization Theory, 1 (1996), pp. 123-141". Page
   numbers below are the preprint's.
 - Read: full text, with both appendices (the authors' work logs), from
-  `refs/pr_axtell1995_aligning_preprint.txt`.
+  `refs/pr_axtell1995_aligning_preprint.txt` (on disk only, not committed: no open licence).
 - What it represents: **models** and their rules. One behaviour rule, Axelrod's rule of cultural
   transmission, is run in two simulators.
 - Structure: "docking", "to determine whether two models can produce the same results"

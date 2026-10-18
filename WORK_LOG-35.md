@@ -280,6 +280,38 @@ the "generic simulator" requirement is a design goal, not a finding
        5 in `representations.md`, plus 1 and 3 in `novelty-check.md`.
 - Next step: push, open the PR against PR #33's branch, comment on the issue.
 
+### 2026-10-18 — New session: the three unlicensed extracts were already out of the history
+- What I did:
+  - Resumed from the entry above. Before pushing, checked that A1 still holds: PR #33 is open,
+    and this branch is stacked on its head `81d85f8`.
+  - Checked the commits that Q3 cited. `8c40ae9` and `fa46612` are no longer on any branch. The
+    reflog shows a `filter-branch: rewrite` straight after the last commit `df382d6`. It removed
+    the three text extracts that Q3 is about from every commit:
+    - `refs/pr_frantz2021_ig2_padm_accepted.txt`;
+    - `refs/pr_gomes2018_cosim_survey_accepted.txt`;
+    - `refs/pr_axtell1995_aligning_preprint.txt`.
+
+    The commits after it were renumbered (`8c40ae9` → `1a0bbbb`, `fa46612` → `6b65e56`, …,
+    `df382d6` → `2389d93`). Nothing else changed: `git diff 8c40ae9 1a0bbbb` lists only those
+    three files. This log has no entry for the rewrite. I cannot tell from the repository who
+    ran it. The reflog's time copies the last commit's date, so it is no clue.
+  - The extracts were also gone from disk, but `representations.md` and the `.bib` still cite
+    them as locators. I restored them **on disk only**, byte for byte, from the orphaned commit
+    `fa46612` (`git show`), so the locators can still be checked.
+  - Gitignored the three `.txt` files beside their PDFs, as the Tessier chapter is (A7), so they
+    cannot be committed again. The `.gitignore` comment now says how to rebuild an extract.
+  - Marked the six locators that name them (three in `representations.md`, three `.bib` notes)
+    "on disk only, not committed: no open licence".
+- Why: Q3 left this to the user, and the history shows the user's preferred option (gitignore,
+  and remove from history) was carried out. A7's "text extracts are committed for every source
+  read" no longer holds for these three. A7 is left as written, per the workflow, and this entry
+  supersedes it.
+- Result / what I found: 18 extracts `refs/pr_*.txt` are tracked, plus the IG Parser README.
+  4 are kept on disk only: the three above and the Tessier chapter. The pre-rewrite history still
+  exists locally, under `refs/original/` (from `filter-branch`) and in the reflog. It is not
+  pushed, since `git push` sends only the branch.
+- Next step: push, open the PR against PR #33's branch, comment on the issue.
+
 ## Open questions / risks
 
 **For the user or the supervisor to decide**
@@ -303,6 +335,14 @@ the "generic simulator" requirement is a design goal, not a finding
   local-only. **The user may prefer to gitignore those three text files too.** That would also
   need them removed from this branch's history before merge, since they are already in commits
   `8c40ae9` and `fa46612`.
+
+  **Update (new session): resolved.** The three texts have been taken out of the branch's history
+  (a `filter-branch` rewrite) and are now gitignored. They are kept on disk only, like the book
+  chapter. See the progress entry "the three unlicensed extracts were already out of the
+  history". One thing for the user: the old commits still exist locally under `refs/original/`
+  and in the reflog. They are never pushed. To delete them, run
+  `git update-ref -d refs/original/refs/heads/docs/35-simulator-independent-rule-representations`
+  and let the reflog expire.
 - **Q4. Closing the issue.** The PR targets `feat/32-fictional-ethnicity-passage-meetings` (A1), so
   `Closes #35` will not close the issue on merge, as with #30 and #32.
 
@@ -333,8 +373,10 @@ the "generic simulator" requirement is a design goal, not a finding
 
 ## Summary
 
-**What changed.** A new folder `literature/portable-rules/` (seven files), 21 cached text extracts
-`refs/pr_*.txt` plus the IG Parser README, three `.gitignore` entries with re-download links, and
+**What changed.** A new folder `literature/portable-rules/` (seven files), 18 committed text
+extracts `refs/pr_*.txt` plus the IG Parser README, and 4 extracts kept on disk only. Those 4
+have no open licence: 3 copies of papers and 1 book chapter. Also seven `.gitignore` entries: the
+3 unlicensed PDFs, their 3 extracts, and the chapter, with re-download links. And
 `README.md` (row 5e, three findings, layout). Nothing under `llm_negotiation/`, the Phase 1 dataset
 or the pipeline was touched. No paid call was made, and no code was written.
 
@@ -360,7 +402,8 @@ out faithfully by several simulators.
 - **Sourcing**: every entry was confirmed from its own page, arXiv record or Crossref, with OpenAlex
   for open access. Every download was first-page-checked; no wrong paper.
 - **Uncertainty stated**: "Open questions / risks" above is not empty (Q1–Q4, R1–R9).
-- **Caching**: every source read is in `refs/` (A2, A7).
+- **Caching**: every source read is in `refs/` (A2, A7). 18 extracts are committed; the 4 with no
+  open licence are on disk only and gitignored (see the last progress entry).
 
 **Acceptance criteria** (issue #35):
 - [x] `feasibility.md` restates the idea in my own words and flags what is unclear or inconsistent
