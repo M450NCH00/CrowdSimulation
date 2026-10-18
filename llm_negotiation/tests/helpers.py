@@ -106,11 +106,18 @@ CROWD_SCENARIOS = {
 }
 
 
+#: The versioned scenario configs of issue #32: two people meeting inside a single-file passage.
+PASSAGE_SCENARIOS = {
+    "passage_meet_middle_v1": "configs/scenarios/passage_meet_middle_v1.yaml",
+    "passage_meet_with_speeds_v1": "configs/scenarios/passage_meet_with_speeds_v1.yaml",
+}
+
+
 def crowd(name: str, **overrides: Any):
     """A shipped avoidance scenario, with overrides laid on top of its config."""
     from negsim.scenarios import load_crowd_scenario
 
-    return load_crowd_scenario(CROWD_SCENARIOS[name], overrides or None)
+    return load_crowd_scenario({**CROWD_SCENARIOS, **PASSAGE_SCENARIOS}[name], overrides or None)
 
 
 def static(agent_0: Optional[Mapping[str, Any]] = None, agent_1: Optional[Mapping[str, Any]] = None, **default: Any):

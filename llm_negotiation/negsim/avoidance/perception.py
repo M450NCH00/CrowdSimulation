@@ -13,8 +13,8 @@ those persona attributes that the run's visibility settings allow (the settings 
 #24: ``age``, ``gender``, ``backstory``, ``speed``, ``size``). The neighbour's **task is
 never in a record**, whatever the settings say, and neither are its preferred or maximum
 speed, its goal, its path, or any directive it holds. Of itself, an agent knows its own
-motion, size, preferred speed, age and gender. Of its surroundings, it perceives the
-nearest wall and the free width of the passage it is in.
+motion, size, preferred speed, age, gender and (version 3) group. Of its surroundings, it
+perceives the nearest wall and the free width of the passage it is in.
 
 Version 2 (issue #28) adds what the two agents of a pair can *both* tell about the two of
 them together (:class:`PairFeatures`): the kind of encounter, how far apart their
@@ -26,6 +26,14 @@ for each agent evaluating it on its own (``docs/rule-matching.md``).
 
 A field whose value is hidden, or does not exist, is ``None``; it is never left out and
 never replaced by a default.
+
+Version 3 (issue #32) adds two things. **A fictional group** (``ethnic_group``): an agent's own
+and, when the run's visibility settings show it, the neighbour's; an agent may see it, but it
+is flagged as not readable by rules (:data:`NOT_RULE_REFERENCEABLE`), and nothing a rule reads
+is derived from it. **Where each of the two is in a single-file passage** they meet in:
+``in_segment``, ``segment_distance_travelled``, ``segment_distance_ahead`` and
+``segment_distance_behind``, computed once per pair from the two positions and the passage's
+geometry, so that both agents get the same values (:func:`segment_position`).
 """
 
 from __future__ import annotations
@@ -38,7 +46,7 @@ from ..core.agent import AgentRuntime
 from ..core.geometry import Rect, Vec, wrap_angle
 from ..personas.schema import ATTRIBUTES
 
-PERCEPTION_SCHEMA_VERSION = 2
+PERCEPTION_SCHEMA_VERSION = 3
 
 # The kinds of encounter of a pair (``docs/perception.md``, "Pair-level fields").
 ENCOUNTER_HEAD_ON = "head_on"
@@ -66,9 +74,12 @@ CORRIDOR_SAMPLE_SPACING_M = 0.25
 #: Persona attributes that never appear in a record, whatever the visibility settings.
 NEVER_OBSERVABLE = frozenset({"task"})
 #: Persona attributes an agent knows about itself and that a record carries.
-OWN_ATTRIBUTES = ("age", "gender")
+OWN_ATTRIBUTES = ("age", "gender", "ethnic_group")
 #: Below this speed an agent's heading is taken from its pose, not from its velocity.
 STATIONARY_SPEED = 1e-6
+#: The per-agent passage fields of version 3, in order (``docs/perception.md``).
+SEGMENT_FIELDS = ("in_segment", "segment_distance_travelled", "segment_distance_ahead", "segment_distance_behind")
+_NO_POSITION: tuple[Optional[bool], Optional[float], Optional[float], Optional[float]] = (None, None, None, None)
 
 
 @dataclass(frozen=True)
@@ -81,6 +92,10 @@ class ObserverState:
     preferred_speed_mps: float
     attributes: Mapping[str, Any]
     time_to_segment_s: Optional[float] = None
+    in_segment: Optional[bool] = None
+    segment_distance_travelled: Optional[float] = None
+    segment_distance_ahead: Optional[float] = None
+    segment_distance_behind: Optional[float] = None
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -90,6 +105,10 @@ class ObserverState:
             "preferred_speed_mps": self.preferred_speed_mps,
             "attributes": dict(self.attributes),
             "time_to_segment_s": _r(self.time_to_segment_s),
+            "in_segment": self.in_segment,
+            "segment_distance_travelled": _r(self.segment_distance_travelled),
+            "segment_distance_ahead": _r(self.segment_distance_ahead),
+            "segment_distance_behind": _r(self.segment_distance_behind),
         }
 
 
@@ -98,8 +117,9 @@ class PairFeatures:
     """What both agents of a pair can tell about the two of them together.
 
     Built by :func:`pair_features` with the lower-numbered agent first, once per pair and
-    step, so that each of the two gets exactly the same values. ``time_to_segment_s`` is
-    in the order of ``agents``. ``docs/perception.md`` defines every field.
+    step, so that each of the two gets exactly the same values. ``time_to_segment_s`` and
+    ``segment`` (each agent's :func:`segment_position`, issue #32) are in the order of
+    ``agents``. ``docs/perception.md`` defines every field.
     """
 
     agents: tuple[int, int]
@@ -109,9 +129,14 @@ class PairFeatures:
     age_difference_years: Optional[float]
     single_file_segment: Optional[str]
     time_to_segment_s: tuple[Optional[float], Optional[float]]
+    segment: tuple[tuple, tuple] = (_NO_POSITION, _NO_POSITION)
 
     def time_to_segment_of(self, agent_id: int) -> Optional[float]:
         return self.time_to_segment_s[self.agents.index(agent_id)]
+
+    def segment_of(self, agent_id: int) -> dict[str, Any]:
+        """The agent's passage fields, by name (``SEGMENT_FIELDS``)."""
+        return dict(zip(SEGMENT_FIELDS, self.segment[self.agents.index(agent_id)]))
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -177,18 +202,27 @@ class PerceptionRecord:
     def neighbour_time_to_segment_s(self) -> Optional[float]:
         return self.pair.time_to_segment_of(self.neighbour_id)
 
+    @property
+    def neighbour_segment(self) -> dict[str, Any]:
+        """The neighbour's passage fields (version 3), by name."""
+        return self.pair.segment_of(self.neighbour_id)
+
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> "PerceptionRecord":
-        """A record of version 2 read back from a log (``as_dict``), as far as the log keeps it.
+        """A record of version 2 or 3 read back from a log (``as_dict``), as far as the log keeps it.
 
         The log rounds to six decimal places, so the record read back is the logged one, not
-        the one the run held. Used by issue #30 to take conflict cases from finished runs.
+        the one the run held. Used by issue #30 to take conflict cases from finished runs. A
+        version 2 record has no passage fields: they are read back as missing (``None``).
         """
-        if data.get("schema_version") != PERCEPTION_SCHEMA_VERSION:
-            raise ValueError(f"a perception record of version {PERCEPTION_SCHEMA_VERSION} is needed, got {data.get('schema_version')!r}")
+        version = data.get("schema_version")
+        if version not in (2, PERCEPTION_SCHEMA_VERSION):
+            raise ValueError(f"a perception record of version 2 or {PERCEPTION_SCHEMA_VERSION} is needed, got {version!r}")
         observer, environment, pair = data["observer"], data["environment"], data["pair"]
         first, second = sorted((data["observer_id"], data["neighbour_id"]))
         own, other = observer.get("time_to_segment_s"), data.get("neighbour_time_to_segment_s")
+        own_segment = tuple(observer.get(name) for name in SEGMENT_FIELDS)
+        other_segment = tuple(data.get(f"neighbour_{name}") for name in SEGMENT_FIELDS)
         velocity = data["relative_velocity_mps"]
         return cls(
             schema_version=data["schema_version"],
@@ -214,6 +248,7 @@ class PerceptionRecord:
                 preferred_speed_mps=observer["preferred_speed_mps"],
                 attributes=dict(observer["attributes"]),
                 time_to_segment_s=own,
+                **dict(zip(SEGMENT_FIELDS, own_segment)),
             ),
             environment=EnvironmentFeatures(**{name: environment[name] for name in ENVIRONMENT_FIELDS}),
             pair=PairFeatures(
@@ -224,11 +259,13 @@ class PerceptionRecord:
                 age_difference_years=pair["age_difference_years"],
                 single_file_segment=pair["single_file_segment"],
                 time_to_segment_s=(own, other) if data["observer_id"] == first else (other, own),
+                segment=(own_segment, other_segment) if data["observer_id"] == first else (other_segment, own_segment),
             ),
         )
 
     def as_dict(self) -> dict[str, Any]:
         velocity = self.relative_velocity_mps
+        other = self.neighbour_segment
         return {
             "schema_version": self.schema_version,
             "step": self.step,
@@ -246,6 +283,10 @@ class PerceptionRecord:
             "neighbour_heading_rad": _r(self.neighbour_heading_rad),
             "neighbour_heading_relative_rad": _r(self.neighbour_heading_relative_rad),
             "neighbour_time_to_segment_s": _r(self.neighbour_time_to_segment_s),
+            "neighbour_in_segment": other["in_segment"],
+            "neighbour_segment_distance_travelled": _r(other["segment_distance_travelled"]),
+            "neighbour_segment_distance_ahead": _r(other["segment_distance_ahead"]),
+            "neighbour_segment_distance_behind": _r(other["segment_distance_behind"]),
             "neighbour_attributes": dict(self.neighbour_attributes),
             "observer": self.observer.as_dict(),
             "environment": self.environment.as_dict(),
@@ -253,8 +294,8 @@ class PerceptionRecord:
         }
 
 
-#: Top-level keys of a serialised record, in order. ``docs/perception.md`` must name each.
-PERCEPTION_FIELDS = (
+#: Top-level keys of a serialised record of version 2, in order.
+_PERCEPTION_FIELDS_V2 = (
     "schema_version",
     "step",
     "time_s",
@@ -276,7 +317,14 @@ PERCEPTION_FIELDS = (
     "environment",
     "pair",
 )
-OBSERVER_FIELDS = ("radius_m", "speed_mps", "heading_rad", "preferred_speed_mps", "attributes", "time_to_segment_s")
+#: Top-level keys of a serialised record, in order. ``docs/perception.md`` must name each.
+PERCEPTION_FIELDS = (
+    *_PERCEPTION_FIELDS_V2[:16],
+    *(f"neighbour_{name}" for name in SEGMENT_FIELDS),
+    *_PERCEPTION_FIELDS_V2[16:],
+)
+_OBSERVER_FIELDS_V2 = ("radius_m", "speed_mps", "heading_rad", "preferred_speed_mps", "attributes", "time_to_segment_s")
+OBSERVER_FIELDS = (*_OBSERVER_FIELDS_V2, *SEGMENT_FIELDS)
 ENVIRONMENT_FIELDS = (
     "nearest_wall_distance_m",
     "free_width_m",
@@ -296,12 +344,13 @@ PAIR_FIELDS = (
 #: out against what it declares (``negsim.runlog.schema``).
 FIELDS_BY_VERSION = {
     1: {
-        "record": tuple(name for name in PERCEPTION_FIELDS if name not in ("neighbour_time_to_segment_s", "pair")),
-        "observer": OBSERVER_FIELDS[:-1],
+        "record": tuple(name for name in _PERCEPTION_FIELDS_V2 if name not in ("neighbour_time_to_segment_s", "pair")),
+        "observer": _OBSERVER_FIELDS_V2[:-1],
         "environment": ENVIRONMENT_FIELDS,
         "pair": (),
     },
-    2: {"record": PERCEPTION_FIELDS, "observer": OBSERVER_FIELDS, "environment": ENVIRONMENT_FIELDS, "pair": PAIR_FIELDS},
+    2: {"record": _PERCEPTION_FIELDS_V2, "observer": _OBSERVER_FIELDS_V2, "environment": ENVIRONMENT_FIELDS, "pair": PAIR_FIELDS},
+    3: {"record": PERCEPTION_FIELDS, "observer": OBSERVER_FIELDS, "environment": ENVIRONMENT_FIELDS, "pair": PAIR_FIELDS},
 }
 
 
@@ -456,6 +505,35 @@ def _time_to_reach(agent: AgentRuntime, rect: Rect) -> Optional[float]:
     return distance / speed if speed > STATIONARY_SPEED else None
 
 
+def segment_position(
+    position: Vec, other: Vec, rect: Rect
+) -> tuple[bool, Optional[float], Optional[float], Optional[float]]:
+    """Where an agent is in the single-file passage it meets another agent in (version 3).
+
+    Returns ``(in_segment, segment_distance_travelled, segment_distance_ahead,
+    segment_distance_behind)``. The passage is the free space ``rect``: its long side is its
+    axis, and its two short sides are its ends. **Inside** means the agent's centre is in the
+    rect. The end **ahead** of the agent is the one on the other agent's side along the axis,
+    and the end **behind** it the other one: in a meeting each faces the other, so nothing but
+    the two positions and the passage is needed, and both agents compute the same values.
+    **Travelled**, how far it has walked in, is its distance from the end behind it, by which
+    it came in; in a meeting it equals the distance behind. The three distances are ``None``
+    when the agent is outside, and when the two are level along the axis (two bodies in a
+    single-file passage cannot be).
+    """
+    x, y = position
+    if not (rect.xmin <= x <= rect.xmax and rect.ymin <= y <= rect.ymax):
+        return False, None, None, None
+    along_x = rect.xmax - rect.xmin >= rect.ymax - rect.ymin
+    axis = 0 if along_x else 1
+    low, high = (rect.xmin, rect.xmax) if along_x else (rect.ymin, rect.ymax)
+    mine, theirs = position[axis], other[axis]
+    if theirs == mine:
+        return True, None, None, None
+    ahead, behind = (high - mine, mine - low) if theirs > mine else (mine - low, high - mine)
+    return True, behind, ahead, behind
+
+
 def classify_encounter(
     a: AgentRuntime,
     b: AgentRuntime,
@@ -541,10 +619,12 @@ def pair_features(
     encounter, index, difference = encounter_of(a, b, visibility, segments)
     segment_name = None
     times: tuple[Optional[float], Optional[float]] = (None, None)
+    positions = (_NO_POSITION, _NO_POSITION)
     if index is not None:
         segment = segments[index]
         segment_name = segment.name
         times = (_time_to_reach(a, segment.rect), _time_to_reach(b, segment.rect))
+        positions = (segment_position(a.pose.xy, b.pose.xy, segment.rect), segment_position(b.pose.xy, a.pose.xy, segment.rect))
 
     age_difference = None
     if visibility.get("age", False):
@@ -561,6 +641,7 @@ def pair_features(
         age_difference_years=age_difference,
         single_file_segment=segment_name,
         time_to_segment_s=times,
+        segment=positions,
     )
 
 
@@ -626,6 +707,7 @@ def perceive(
             preferred_speed_mps=preferred_speed,
             attributes=own_attributes(attributes.get(observer.agent_id)),
             time_to_segment_s=pair.time_to_segment_of(observer.agent_id),
+            **pair.segment_of(observer.agent_id),
         ),
         environment=environment_features(observer, obstacles, single_file_intervals, environment_range),
         pair=pair,

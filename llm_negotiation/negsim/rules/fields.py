@@ -27,19 +27,28 @@ A rule names a field with a prefix that says how it is used:
                     compared with each other
 
 ``docs/rule-format.md`` has the same tables in prose.
+
+Since issue #32 every field says which version of the rule format added it (``since``): a
+rule can read only the fields of its own ``schema_version``, so a version 1 or 2 rule reads
+exactly what it always could. Version 3 adds the passage fields, the first field that is true
+or false (``in_segment``) among them. And a person's group (``ethnic_group``, issue #32) is
+**protected**: an agent may see it, but a rule that names it, or anything derived from it, is
+refused as ``protected_attribute`` (:func:`protected_reference`), before any other check.
 """
 
 from __future__ import annotations
 
 import math
+import re
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any, Iterable, Optional
 
 from ..avoidance.perception import ENCOUNTER_CLASSES
-from ..personas.schema import GENDERS
+from ..personas.groups import DEFAULT_GROUP_LABELS
+from ..personas.schema import GENDERS, NOT_RULE_REFERENCEABLE
 from .errors import RuleError
 
-NUMBER, CATEGORY = "number", "category"
+NUMBER, CATEGORY, BOOLEAN = "number", "category", "boolean"
 PAIR, AGENT = "pair", "agent"
 
 #: Where a field may be named, by prefix.
@@ -79,9 +88,17 @@ class FieldSpec:
     needs: tuple[str, ...]
     source: str
     meaning: str
+    #: The version of the rule format that added the field (issue #32).
+    since: int = 1
 
     def convert(self, value: Any, unit: Optional[str], where: str) -> Any:
         """A value from a rule, checked against this field and turned into its unit."""
+        if self.kind == BOOLEAN:
+            if unit is not None:
+                raise RuleError("unit", f"{where}: '{self.name}' is true or false and takes no unit, got {unit!r}")
+            if not isinstance(value, bool):
+                raise RuleError("value", f"{where}: '{self.name}' is true or false, got {value!r}")
+            return value
         if self.kind == CATEGORY:
             if unit is not None:
                 raise RuleError("unit", f"{where}: '{self.name}' is a category and takes no unit, got {unit!r}")
@@ -102,12 +119,12 @@ class FieldSpec:
         return float(value) * UNITS[unit][1]
 
 
-def _pair(name, kind, unit, needs, source, meaning, categories=()) -> FieldSpec:
-    return FieldSpec(name, PAIR, kind, unit, tuple(categories), tuple(needs), source, meaning)
+def _pair(name, kind, unit, needs, source, meaning, categories=(), since=1) -> FieldSpec:
+    return FieldSpec(name, PAIR, kind, unit, tuple(categories), tuple(needs), source, meaning, since)
 
 
-def _agent(name, kind, unit, needs, source, meaning, categories=()) -> FieldSpec:
-    return FieldSpec(name, AGENT, kind, unit, tuple(categories), tuple(needs), source, meaning)
+def _agent(name, kind, unit, needs, source, meaning, categories=(), since=1) -> FieldSpec:
+    return FieldSpec(name, AGENT, kind, unit, tuple(categories), tuple(needs), source, meaning, since)
 
 
 #: The encounter classes a pair can be in. ``none`` is a class of the pair, but a rule
@@ -160,8 +177,72 @@ AGENT_FIELDS: dict[str, FieldSpec] = {
             "observer.time_to_segment_s, neighbour_time_to_segment_s",
             "distance to the single-file segment over present speed; null outside that class",
         ),
+        # Version 3 (issue #32): where each is in the single-file passage the two meet in.
+        _agent(
+            "in_segment", BOOLEAN, None, ("speed", "size"), "observer.in_segment, neighbour_in_segment",
+            "whether this person is inside the single-file segment; null outside that class", since=3,
+        ),
+        _agent(
+            "segment_distance_travelled", NUMBER, "m", ("speed", "size"),
+            "observer.segment_distance_travelled, neighbour_segment_distance_travelled",
+            "how far this person has walked into the single-file segment; null unless inside it", since=3,
+        ),
+        _agent(
+            "segment_distance_ahead", NUMBER, "m", ("speed", "size"),
+            "observer.segment_distance_ahead, neighbour_segment_distance_ahead",
+            "distance to the end of the single-file segment in front of this person; null unless inside it", since=3,
+        ),
+        _agent(
+            "segment_distance_behind", NUMBER, "m", ("speed", "size"),
+            "observer.segment_distance_behind, neighbour_segment_distance_behind",
+            "distance to the end of the single-file segment behind this person; null unless inside it", since=3,
+        ),
     )
 }
+
+
+def fields_of(schema_version: int) -> tuple[dict[str, FieldSpec], dict[str, FieldSpec]]:
+    """The pair-level and agent-level fields a rule of ``schema_version`` may read, in order."""
+    return (
+        {name: spec for name, spec in PAIR_FIELDS.items() if spec.since <= schema_version},
+        {name: spec for name, spec in AGENT_FIELDS.items() if spec.since <= schema_version},
+    )
+
+
+# --- protected attributes (issue #32) ------------------------------------------------------------
+
+#: Attributes no rule may read, each with the reason. An agent may see them.
+PROTECTED: dict[str, str] = {
+    name: (
+        "a person's group is something an agent may see but no rule may read: a rule that conditions on it, "
+        "or on anything derived from it, is refused (docs/rule-format.md, section 14; docs/fictional-groups.md)"
+    )
+    for name in sorted(NOT_RULE_REFERENCEABLE)
+}
+#: The word that marks a field as about ethnicity, whatever else its name says: ``ethnic_group``,
+#: ``same_ethnic_group``, ``ethnicity``, ``ethnic_difference``.
+PROTECTED_STEM = "ethnic"
+_TOKEN = re.compile(r"[^a-z0-9]+")
+
+
+def protected_reference(text: Any, terms: Iterable[str] = ()) -> Optional[str]:
+    """The protected word ``text`` uses, or ``None``.
+
+    ``text`` uses one if it contains :data:`PROTECTED_STEM` anywhere, or if one of its words
+    (split at anything but letters and digits, ignoring case) is the name of a protected
+    attribute, one of the default group labels, or one of ``terms``: the words a session
+    introduced groups with, and its labels (``negsim.rulegen.validate``).
+    """
+    if not isinstance(text, str):
+        return None
+    lowered = text.lower()
+    if PROTECTED_STEM in lowered:
+        return PROTECTED_STEM
+    words = set(_TOKEN.split(lowered)) - {""}
+    for term in (*PROTECTED, *DEFAULT_GROUP_LABELS, *terms):
+        if term.lower() in words or term.lower() == lowered:
+            return term
+    return None
 
 #: Fields that exist, in the perception record or in an agent's own state, and that a
 #: rule may not read, each with the reason. Refused as ``unobservable_field``.
@@ -193,12 +274,23 @@ class FieldRef:
     spec: FieldSpec
 
 
-def resolve(reference: Any, where: str, prefixes: tuple[str, ...]) -> FieldRef:
+def resolve(
+    reference: Any, where: str, prefixes: tuple[str, ...], schema_version: Optional[int] = None, terms: Iterable[str] = ()
+) -> FieldRef:
     """The field a rule names, or a :class:`RuleError` saying why it cannot be read.
 
     ``prefixes`` are the prefixes allowed where the field appears: those of a condition, or
-    ``agent`` in a role assignment.
+    ``agent`` in a role assignment. ``schema_version``, if given, is the rule's: a field a
+    later version added is unknown to it. ``terms`` are more protected words
+    (:func:`protected_reference`). A protected reference is refused before anything else.
     """
+    word = protected_reference(reference, terms)
+    if word is not None:
+        raise RuleError(
+            "protected_attribute",
+            f"{where}: '{reference}' refers to a person's group ({word!r}), which no rule may read: "
+            f"{PROTECTED['ethnic_group']}. The attempt is kept, as data.",
+        )
     if not isinstance(reference, str) or "." not in reference:
         raise RuleError("unknown_field", f"{where}: {reference!r} is not a field; write it as <prefix>.<name>")
     prefix, name = reference.split(".", 1)
@@ -225,4 +317,11 @@ def resolve(reference: Any, where: str, prefixes: tuple[str, ...]) -> FieldRef:
             "unknown_field",
             f"{where}: '{reference}' cannot be used here; the prefix must be one of {list(prefixes)}",
         )
-    return FieldRef(reference, prefix, table[name])
+    spec = table[name]
+    if schema_version is not None and spec.since > schema_version:
+        raise RuleError(
+            "unknown_field",
+            f"{where}: '{reference}' was added in version {spec.since} of the rule format; a rule of schema_version "
+            f"{schema_version} cannot read it",
+        )
+    return FieldRef(reference, prefix, spec)

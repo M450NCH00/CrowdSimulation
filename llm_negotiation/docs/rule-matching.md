@@ -158,6 +158,7 @@ follows:
 | `side_preference` | `left` toward one neighbour, `right` toward another | Nothing to settle: a side preference acts only on its own pair's half-plane, so each pair keeps its own side. Logged because an agent told to keep left and keep right at once is a sign two rules disagree |
 | `speed_scale` | Two different scales | An agent has one preferred speed: the smallest scale applies (DD40, as for any several directives) |
 | `passage_order` | Leader toward one, follower toward another | Each pair's order goes to the arbiter on its own. Ordering three or more agents at one segment is out of scope (`architecture.md`, section 4) |
+| `back_up` (issue #32) | Back up for one neighbour, go on for another | An agent backs out for one pair at a time: the first back-up manoeuvre to start runs to its end, and no other starts for it meanwhile (`derivations.md`, section 17.2). Three or more agents in a passage are out of scope |
 
 Shares and clearance margins are per pair and cannot conflict.
 

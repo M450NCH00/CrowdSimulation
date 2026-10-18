@@ -8,6 +8,8 @@ import pytest
 from helpers import crowd
 from negsim.avoidance.directives import (
     DIRECTIVE_FIELDS,
+    DIRECTIVE_FIELDS_V4,
+    FIELD_BACK_UP,
     FIELD_ORDER,
     FIELD_SHARE,
     FIELD_SIDE,
@@ -37,13 +39,15 @@ def record(observer: int, neighbour: int):
 
 
 def test_the_fields_and_their_defaults_are_plain_orca():
-    """The exact field names: the rule format of the next sub-issue depends on them."""
+    """The exact field names: the rule format depends on them. Issue #32 added ``back_up``; the
+    fields before it are what a run folder of log schema 4 or earlier holds."""
     assert DIRECTIVE_FIELDS == (
-        "side_preference", "responsibility_share", "speed_scale", "clearance_margin", "passage_order",
+        "side_preference", "responsibility_share", "speed_scale", "clearance_margin", "passage_order", "back_up",
     )
+    assert DIRECTIVE_FIELDS_V4 == DIRECTIVE_FIELDS[:-1]
     assert PLAIN_ORCA.as_dict() == {
         "side_preference": "none", "responsibility_share": 0.5, "speed_scale": 1.0,
-        "clearance_margin": 0.0, "passage_order": "none",
+        "clearance_margin": 0.0, "passage_order": "none", "back_up": False,
     }
 
 
@@ -52,6 +56,7 @@ def test_the_fields_and_their_defaults_are_plain_orca():
     [
         {"side_preference": "up"}, {"passage_order": "first"}, {"responsibility_share": 1.01},
         {"responsibility_share": -0.1}, {"speed_scale": -1.0}, {"clearance_margin": -0.05},
+        {"back_up": "true"}, {"back_up": 1}, {"back_up": None},
     ],
 )
 def test_a_directive_with_a_value_out_of_range_is_rejected(bad):
@@ -183,7 +188,40 @@ def test_several_violations_in_one_pair_are_all_reported():
     resolution = resolve_pair(4, a, 9, b)
     assert sorted(v.field for v in resolution.violations) == sorted([FIELD_SHARE, FIELD_SIDE, FIELD_ORDER])
     assert resolution.shares == (0.5, 0.5) and resolution.side is None and resolution.leader is None
-    assert resolution.as_dict() == {"agents": [4, 9], "shares": [0.5, 0.5], "side": "none", "clearance_margin": 0.0, "leader": None}
+    assert resolution.as_dict() == {
+        "agents": [4, 9], "shares": [0.5, 0.5], "side": "none", "clearance_margin": 0.0, "leader": None, "backer": None,
+    }  # "backer" since issue #32
+
+
+def test_the_one_that_backs_up_lets_the_other_go_first():
+    """Issue #32: ``back_up`` names a backer, and the other is the pair's leader."""
+    for backer, other in ((3, 7), (7, 3)):
+        directives = {backer: D(back_up=True), other: D()}
+        resolution = resolve_pair(3, directives[3], 7, directives[7])
+        assert (resolution.backer, resolution.leader, resolution.violations) == (backer, other, ())
+    assert resolve_pair(3, D(), 7, D()).backer is None
+
+
+def test_two_that_back_up_are_a_violation_and_neither_does():
+    resolution = resolve_pair(3, D(back_up=True), 7, D(back_up=True))
+    assert (resolution.backer, resolution.leader) == (None, None)
+    (violation,) = resolution.violations
+    assert violation.as_dict() == {
+        "field": FIELD_BACK_UP, "agents": [3, 7], "given": [True, True], "resolved": [False, False], "policy": "ignore_both",
+    }
+
+
+@pytest.mark.parametrize("backer_first", [True, False])
+def test_a_passage_order_that_puts_the_one_backing_up_first_gives_way_to_the_backing(backer_first):
+    """A directive that backs up and also leads contradicts itself: the backing stands, and the
+    other leads."""
+    backing, other = D(back_up=True, passage_order="leader"), D()
+    resolution = resolve_pair(3, backing, 7, other) if backer_first else resolve_pair(3, other, 7, backing)
+    backer, leader = (3, 7) if backer_first else (7, 3)
+    assert (resolution.backer, resolution.leader) == (backer, leader)
+    (violation,) = resolution.violations
+    assert (violation.field, violation.policy) == (FIELD_ORDER, "the_one_backing_up_follows")
+    assert violation.resolved == (("follower", "leader") if backer_first else ("leader", "follower"))
 
 
 def test_resolution_does_not_depend_on_which_agent_is_named_first():

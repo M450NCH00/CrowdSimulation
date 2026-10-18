@@ -77,6 +77,19 @@ def test_required_fields(field):
         validate_persona(raw)
 
 
+def test_a_persona_may_belong_to_a_fictional_group_and_a_bad_label_is_refused():
+    """Issue #32: ``ethnic_group`` holds one fictional label and nothing else; a persona that
+    does not give one is exactly what it was before."""
+    assert validate_persona(VALID).as_dict() == {**VALID, "backstory": ""}
+    assert validate_persona({**VALID, "ethnic_group": "Kestrop"}).as_dict()["ethnic_group"] == "Kestrop"
+    for label, message in (
+        ("Malay", "real group"), ("Hokkien", "real group"), ("kestrop", "one capitalised word"),
+        ("the Kestrop people", "one capitalised word"), ("Kestrop2", "one capitalised word"), (7, "one capitalised word"),
+    ):
+        with pytest.raises(PersonaError, match=message):
+            validate_persona({**VALID, "ethnic_group": label})
+
+
 @pytest.mark.parametrize("field", ["name", "first_name", "surname", "nickname"])
 def test_personal_names_are_refused(field):
     with pytest.raises(PersonaError, match="must not have personal names"):
@@ -126,8 +139,8 @@ def test_the_schema_is_a_table_so_an_attribute_can_be_added_without_touching_the
 
 def test_default_visibility_shows_what_a_bystander_could_see():
     assert default_visibility() == {
-        "age": True, "gender": True, "backstory": False, "task": False, "speed": True, "size": True,
-    }
+        "age": True, "gender": True, "backstory": False, "task": False, "ethnic_group": False, "speed": True, "size": True,
+    }  # ethnic_group: issue #32, off unless a run switches it on
 
 
 def test_visibility_can_be_changed_per_attribute():

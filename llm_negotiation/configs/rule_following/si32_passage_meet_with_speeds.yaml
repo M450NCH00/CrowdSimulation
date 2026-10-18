@@ -1,0 +1,45 @@
+# Issue #32, behaviour checks: two people who meet inside a single-file passage, one of whom
+# walks and backs up slowly, compared under the arbiter's fallback, the seed rule
+# passage_shorter_backs_out, and plain ORCA without the arbiter; and, for reference, the
+# time-optimal choice given by hand. 20 seeds per condition, primary baseline. No model is
+# called.
+#
+#   python run_experiment.py configs/rule_following/si32_passage_meet_with_speeds.yaml
+#
+# The layouts: the scenario's own distances (agent 1, the slow backer, has walked less far in:
+# the seed rule backs it out, though backing out agent 0 is quicker, docs/derivations.md
+# section 18) and equal distances (the seed rule ties); each at rest and walking. time_optimal
+# tells agent 0 to back up throughout (a static directive): x / v_back is 2.0 / 0.92 = 2.2 s for
+# it against 1.4 / 0.43 = 3.3 s for agent 1, and 1.85 s against 3.95 s at equal distances. No
+# rule can say this: a backing speed cannot be seen. docs/behaviour-checks.md, section 6.
+schema_version: 1
+layer: avoidance
+experiment_name: si32_passage_meet_with_speeds
+description: Two people of different backing speeds meeting inside a single-file passage. The arbiter's fallback, the seed rule, plain ORCA, and the time-optimal choice by hand.
+scenario: configs/scenarios/passage_meet_with_speeds_v1.yaml
+baseline: orca_perturbed_v1
+
+logging:
+  trajectory_stride: 10
+
+design:
+  seed: 32400
+  seeding: paired
+  repeats: 20
+  factors:
+    travelled:
+      - name: asymmetric
+      - name: symmetric
+        scenario_overrides: {geometry: {travelled: [1.7, 1.7]}}
+    start:
+      - name: rest
+      - name: walking
+        scenario_overrides: {geometry: {start_speed: preferred}}
+    mode:
+      - name: arbiter          # the primary baseline as it is: plain ORCA, with the arbiter's fallback
+      - name: seed_rule        # the seed rule alone, the arbiter as its fallback
+        directives: {provider: rules, enable: {passage_shorter_backs_out: 1}}
+      - name: orca_only        # plain ORCA, the arbiter off
+        arbitration: {enabled: false}
+      - name: time_optimal     # reference: agent 0, who backs out faster, told to back up
+        directives: {provider: static, agents: {0: {back_up: true}}}

@@ -88,7 +88,9 @@ def test_the_smallest_experiment_is_one_plain_orca_run():
     assert (plan.index, plan.run_id, plan.seed, plan.repeat, plan.variant) == (1, "001_base", 301, 1, {})
     assert plan.directives == {} and plan.provider().name == "null" and plan.share_policy == "proportional"
     assert plan.arbitration.enabled and plan.population == {} and plan.attributes() == {}
-    assert plan.visibility == {"age": True, "gender": True, "backstory": False, "task": False, "speed": True, "size": True}
+    assert plan.visibility == {  # ethnic_group: issue #32, off by default
+        "age": True, "gender": True, "backstory": False, "task": False, "ethnic_group": False, "speed": True, "size": True,
+    }
     assert plan.logging == {"trajectory_stride": 1, "interactions": True}
 
 
@@ -224,7 +226,7 @@ def test_a_run_writes_its_five_files_and_they_pass_the_schema_check(side_run):
 
 def test_config_json_is_fully_resolved(side_run):
     saved = read_json(side_run[0] / CONFIG_FILE)
-    assert (saved["log_schema_version"], saved["run_kind"]) == (LOG_SCHEMA_VERSION, "avoidance") == (4, "avoidance")  # 2 before issue #28, 3 before #30
+    assert (saved["log_schema_version"], saved["run_kind"]) == (LOG_SCHEMA_VERSION, "avoidance") == (5, "avoidance")  # 2 before issue #28, 3 before #30, 4 before #32
     assert (saved["experiment_name"], saved["run_id"], saved["run_index"], saved["seed"], saved["repeat"]) == ("test_avoidance", "001_base", 1, 301, 1)
     assert saved["git"] == GIT and saved["variant"] == {} and saved["perception_schema_version"] == PERCEPTION_SCHEMA_VERSION
     scene = saved["scenario"]
@@ -348,6 +350,9 @@ def test_the_handoff_is_logged_step_by_step_and_as_events(tmp_path):
     assert outcome["single_file"][0]["segment"] == "bottleneck" and outcome["single_file"][0]["first_through"] == 1
     entry = outcome["single_file"][0]["entry_time_s"]
     assert entry["1"] < entry["0"]
+    # Issue #32: when each came out at the far end; in a bottleneck, the one in first is out first.
+    exit_ = outcome["single_file"][0]["exit_time_s"]
+    assert outcome["single_file"][0]["first_out"] == 1 and entry["1"] < exit_["1"] < exit_["0"]
     rows = read_csv(run_dir / TRAJECTORY_FILE)
     held = [row for row in rows if row["control_mode"] == "arbiter"]
     assert {int(row["step"]) for row in held} == set(range(handoffs[0]["step"], handoffs[1]["step"]))
@@ -499,16 +504,16 @@ def test_a_negotiation_run_now_says_its_kind_and_the_new_version(tmp_path):
     plan = experiment(c1_config()).plans()[0]
     execute_run(plan, MockClient(policy="task_priority"), tmp_path / "talk", git=GIT)
     saved = read_json(tmp_path / "talk" / CONFIG_FILE)
-    assert (saved["log_schema_version"], saved["run_kind"]) == (4, "negotiation")  # 2 before issue #28, 3 before #30
+    assert (saved["log_schema_version"], saved["run_kind"]) == (5, "negotiation")  # 2 before issue #28, 3 before #30, 4 before #32
     assert sorted(path.name for path in (tmp_path / "talk").iterdir()) == sorted(RUN_FILES)  # its files are unchanged
     assert validate_run_dir(tmp_path / "talk") == []
 
 
 def test_every_committed_run_folder_still_passes_the_schema_check():
     """The 66 run folders of issue #24 were written under version 1 and must stay valid;
-    the folders of issue #26 are version 2, those of issue #28 version 3, and those of
-    issue #30 version 4."""
-    versions = {1: 0, 2: 0, 3: 0, 4: 0}
+    the folders of issue #26 are version 2, those of issue #28 version 3, those of
+    issue #30 version 4, and those of issue #32 version 5."""
+    versions = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
     kinds = {"negotiation": 0, "avoidance": 0}
     for config_path in sorted((PACKAGE_ROOT / "runs").glob("*/*/config.json")):
         config = read_json(config_path)
@@ -518,7 +523,8 @@ def test_every_committed_run_folder_still_passes_the_schema_check():
         if config_path.parent.parent.name.startswith(("c0_", "c1_", "c2_")):
             assert config["log_schema_version"] == 1 and "run_kind" not in config
     assert versions[1] == 66  # 54 no-LLM runs and 12 paid ones, as issue #24 left them
-    assert kinds["avoidance"] == versions[2] + versions[3] + versions[4]
+    assert versions[5] == 16 + 560  # issue #32: the in-passage case sources and behaviour checks
+    assert kinds["avoidance"] == versions[2] + versions[3] + versions[4] + versions[5]
 
 
 # --- a whole experiment, and the command line -----------------------------------------------------

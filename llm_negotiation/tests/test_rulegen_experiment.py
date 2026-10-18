@@ -19,7 +19,7 @@ from negsim.rules.database import RULE_DB_ROOT, RuleDatabase
 from negsim.rulegen import experiment as rg
 from negsim.rulegen.mock import NEGOTIATION_PATHS, STATEMENT_PATHS, rulegen_agree
 from negsim.rulegen.protocol import RuleNegotiation
-from negsim.rulegen.validate import CATEGORIES
+from negsim.rulegen.validate import CATEGORIES, PROTECTED_ATTRIBUTE
 from negsim.rulegen.writer import StagingDatabase
 
 GIT = {"commit": "test", "dirty": False}
@@ -104,14 +104,19 @@ def test_a_bad_config_is_refused(changes, message):
 
 def test_every_shipped_config_loads_names_the_mock_and_plans():
     shipped = sorted((PACKAGE_ROOT / "configs" / "rule_generation").glob("*.yaml"))
-    assert [path.name for path in shipped] == ["si3_mock_rehearsal.yaml", "si3_pilot.yaml"]
+    assert [path.name for path in shipped] == [
+        "si32_mock_groups_on.yaml", "si32_mock_no_groups.yaml",  # issue #32's mock rehearsals
+        "si3_mock_rehearsal.yaml", "si3_pilot.yaml",
+    ]
     for path in shipped:
         cfg = rg.RuleGenConfig.load(path)
         assert cfg.llm["client"] == "mock", path.name  # paying is always an explicit --client deepseek
         assert rg.plan(cfg).preview["sessions"] > 0
-    pilot = rg.plan(rg.RuleGenConfig.load(shipped[1])).preview
+    pilot = rg.plan(rg.RuleGenConfig.load(PACKAGE_ROOT / "configs" / "rule_generation" / "si3_pilot.yaml")).preview
     assert pilot["sessions_by_condition"] == {"negotiated": 4, "stated": 8}
-    assert pilot["usd_total"] == pytest.approx(0.6189372, abs=1e-6) and not pilot["fits_the_cap"]  # docs/rule-generation.md, section 10
+    # Prompt version 2 since issue #32 (USD 0.6189372 with version 1); docs/rule-generation.md, section 10.1
+    assert pilot["usd_total"] == pytest.approx(0.6481404, abs=1e-6) and not pilot["fits_the_cap"]
+    assert pilot["cap_usd"] == 0.05  # the issue's cap, unchanged (issue #32, Part 4)
 
 
 def test_cases_by_set_and_id():
@@ -203,8 +208,10 @@ def test_every_proposal_is_categorised_and_none_is_discarded(full_run):
     proposals = sum(len(r["proposals"]) for r in records.values() if r["condition"] == "negotiated")
     rules = sum(1 for r in records.values() if r["condition"] == "stated" and r.get("rule") is not None)
     assert len(validations) == proposals + rules
+    # rulegen_paths takes issue #30's paths, unchanged; issue #32's category, protected_attribute,
+    # is taken by rulegen_paths_v2 (tests/test_rulegen_groups.py)
     for condition in ("negotiated", "stated"):
-        assert {row["category"] for row in validations if row["condition"] == condition} == set(CATEGORIES), condition
+        assert {row["category"] for row in validations if row["condition"] == condition} == set(CATEGORIES) - {PROTECTED_ATTRIBUTE}, condition
     sneaky = [row for row in validations if row["ignored_metadata"]]
     assert sneaky and all(row["ignored_metadata"]["rule_id"] == "the_models_own_id" for row in sneaky)
     summary = full_run["result"].summary

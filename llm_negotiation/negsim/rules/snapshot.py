@@ -14,6 +14,9 @@ pair-level fields are computed once, with the lower-numbered agent first, and sh
 (``perception.py``); and an agent's own attributes count only if the other agent can see
 them, under the run's visibility settings, which are the same for both. The property test
 checks the equality on random pairs (``tests/test_rules_matching.py``).
+
+**A person's group is never in a snapshot** (issue #32): only the fields of ``fields.py`` are,
+and none of them is the group or derived from it, so no rule can read it, whatever it says.
 """
 
 from __future__ import annotations
@@ -22,9 +25,9 @@ import math
 from dataclasses import dataclass
 from typing import Any, Mapping, Optional
 
-from ..avoidance.perception import PairFeatures, PerceptionRecord, time_to_collision
+from ..avoidance.perception import SEGMENT_FIELDS, PairFeatures, PerceptionRecord, time_to_collision
 from ..core.agent import AgentRuntime
-from .fields import AGENT_FIELDS, PAIR_FIELDS
+from .fields import AGENT_FIELDS, PAIR_FIELDS, fields_of
 
 
 @dataclass(frozen=True)
@@ -56,14 +59,17 @@ class PairSnapshot:
             other.agents, dict(other.pair), [dict(v) for v in other.agent_values]
         )
 
-    def as_dict(self) -> dict[str, Any]:
+    def as_dict(self, schema_version: Optional[int] = None) -> dict[str, Any]:
+        """Every field a rule may read, or, with ``schema_version``, every field a rule of
+        that version may read (so that a case taken from an older record is as it was)."""
+        pair_fields, agent_fields = (PAIR_FIELDS, AGENT_FIELDS) if schema_version is None else fields_of(schema_version)
         return {
             "step": self.step,
             "time_s": _r(self.time_s),
             "agents": list(self.agents),
-            "pair": {name: _r(self.pair.get(name)) for name in PAIR_FIELDS},
+            "pair": {name: _r(self.pair.get(name)) for name in pair_fields},
             "agent": {
-                str(agent_id): {name: _r(values.get(name)) for name in AGENT_FIELDS}
+                str(agent_id): {name: _r(values.get(name)) for name in agent_fields}
                 for agent_id, values in zip(self.agents, self.agent_values)
             },
         }
@@ -123,6 +129,7 @@ def snapshot_of_pair(
                 "speed_mps": agent.speed if see_speed else None,
                 "radius_m": agent.spec.radius if see_size else None,
                 "time_to_segment_s": features.time_to_segment_of(agent.agent_id),
+                **features.segment_of(agent.agent_id),
             }
         )
     return PairSnapshot(step, time_s, (a.agent_id, b.agent_id), pair, (values[0], values[1]))
@@ -143,6 +150,7 @@ def snapshot_of_record(record: PerceptionRecord, visibility: Mapping[str, bool])
         "speed_mps": observer.speed_mps if see_speed else None,
         "radius_m": observer.radius_m if see_size else None,
         "time_to_segment_s": observer.time_to_segment_s,
+        **{name: getattr(observer, name) for name in SEGMENT_FIELDS},
     }
     seen = record.neighbour_attributes
     other = {
@@ -151,6 +159,7 @@ def snapshot_of_record(record: PerceptionRecord, visibility: Mapping[str, bool])
         "speed_mps": record.neighbour_speed_mps,
         "radius_m": record.neighbour_radius_m,
         "time_to_segment_s": record.neighbour_time_to_segment_s,
+        **record.neighbour_segment,
     }
     pair = {
         "encounter_class": record.pair.encounter_class,

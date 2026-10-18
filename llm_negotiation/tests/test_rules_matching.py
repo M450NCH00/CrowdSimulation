@@ -410,6 +410,32 @@ def test_the_shared_snapshot_equals_what_each_agent_builds_from_its_own_record(h
             assert snapshot_of_record(record, visibility).same_values(shared), (trial, observer.agent_id)
 
 
+def test_the_passage_fields_are_mutually_observable():
+    """Issue #32: the passage fields pass the same test as every field a rule reads. On 300 random
+    states with both agents in or near the bottleneck's segment, facing each other, the shared
+    snapshot equals what each agent builds from its own record, and the fields were exercised."""
+    rng = random.Random(32)
+    spec = crowd("corridor_to_bottleneck")
+    world = spec.build_world()
+    a, b = world.agents
+    inside = 0
+    for trial in range(300):
+        x0, x1 = sorted((rng.uniform(-3, 3), rng.uniform(-3, 3)))
+        place(a, x0, rng.uniform(-0.1, 0.1), 0.0, rng.uniform(0, 1.5))
+        place(b, x1, rng.uniform(-0.1, 0.1), math.pi, rng.uniform(0, 1.5))
+        features = pair_features(a, b, world.obstacles, VISIBLE, {}, 12.5, spec.single_file_segments)
+        shared = snapshot_of_pair(trial, 0.0, a, b, features, VISIBLE, {})
+        for observer, neighbour in ((a, b), (b, a)):
+            record = perceive(trial, 0.0, observer, neighbour, world.obstacles, VISIBLE, {}, 1.3, environment_range=12.5, pair=features)
+            assert snapshot_of_record(record, VISIBLE).same_values(shared), (trial, observer.agent_id)
+        values = shared.agent_values
+        if values[0]["in_segment"] and values[1]["in_segment"] and values[0]["segment_distance_travelled"] is not None:
+            inside += 1
+            total = values[0]["segment_distance_travelled"] + values[1]["segment_distance_travelled"]
+            assert total + (x1 - x0) == pytest.approx(4.0)  # the two walked-in distances and the gap make the passage
+    assert inside > 50
+
+
 # --- the consistency property test --------------------------------------------------------------------
 
 

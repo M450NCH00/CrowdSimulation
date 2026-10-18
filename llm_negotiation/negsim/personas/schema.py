@@ -10,6 +10,10 @@ Personas have no personal names, on purpose: a name carries gender and ethnicity
 that would be confounded with the attributes under study. The loader rejects name-like
 fields. Agents are referred to as "you" and "the other person" in prompts, and by agent
 index and ``persona_id`` in logs.
+
+``ethnic_group`` (issue #32) is a **fictional** group label (``negsim.personas.groups``). It is
+hidden by default, it is left out of a persona that does not give it (so personas written
+before it existed are unchanged), and **no rule may read it** (``rule_referenceable``).
 """
 
 from __future__ import annotations
@@ -17,6 +21,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from typing import Any, Callable, Mapping
+
+from .groups import check_label
 
 SCHEMA_VERSION = 1
 GENDERS = ("female", "male", "nonbinary")
@@ -60,12 +66,23 @@ def _text(allow_empty: bool) -> Callable[[Any], str]:
     return validate
 
 
+def _group(value: Any) -> str:
+    try:
+        return check_label(value)
+    except ValueError as exc:
+        raise ValueError(str(exc)) from exc
+
+
 @dataclass(frozen=True)
 class AttributeSpec:
     """One persona attribute.
 
     ``observable`` says whether another person could plausibly tell it by looking. It is
     the default for the experiment's visibility settings and can be overridden there.
+    ``rule_referenceable`` (issue #32) is false for an attribute that an agent may see but no
+    rule may read: ``negsim.rules`` refuses any rule that names it (``protected_attribute``).
+    ``fill_default`` is false for an optional attribute that is left out of a persona that
+    does not give it, instead of being set to its default.
     """
 
     name: str
@@ -73,6 +90,8 @@ class AttributeSpec:
     required: bool
     default: Any
     observable: bool
+    rule_referenceable: bool = True
+    fill_default: bool = True
 
 
 ATTRIBUTES: dict[str, AttributeSpec] = {
@@ -82,8 +101,14 @@ ATTRIBUTES: dict[str, AttributeSpec] = {
         AttributeSpec("gender", _gender, required=True, default=None, observable=True),
         AttributeSpec("backstory", _text(allow_empty=True), required=False, default="", observable=False),
         AttributeSpec("task", _text(allow_empty=False), required=True, default=None, observable=False),
+        AttributeSpec(
+            "ethnic_group", _group, required=False, default=None, observable=False,
+            rule_referenceable=False, fill_default=False,
+        ),
     )
 }
+#: Attributes an agent may see but no rule may read (issue #32).
+NOT_RULE_REFERENCEABLE = frozenset(name for name, spec in ATTRIBUTES.items() if not spec.rule_referenceable)
 
 
 @dataclass(frozen=True)
@@ -122,7 +147,9 @@ class Persona:
             if key == "task":
                 continue
             value = changes[key]
-            parts.append(f"{key}*" if isinstance(value, str) and value not in GENDERS else f"{key}={value}")
+            # A group label is a name, spelled out like a gender (issue #32); only free text is not.
+            free_text = isinstance(value, str) and value not in GENDERS and key != "ethnic_group"
+            parts.append(f"{key}*" if free_text else f"{key}={value}")
         new_id = f"{self.persona_id}+{','.join(parts)}" if parts else self.persona_id
         return validate_persona({**self.attributes, **changes}, persona_id=new_id)
 
@@ -168,7 +195,8 @@ def validate_persona(raw: Any, persona_id: str | None = None) -> Persona:
         if name not in raw:
             if spec.required:
                 raise PersonaError(f"{label}: missing required field {name!r}")
-            attributes[name] = spec.default
+            if spec.fill_default:
+                attributes[name] = spec.default
             continue
         try:
             attributes[name] = spec.validate(raw[name])

@@ -234,10 +234,23 @@ dodge are not being hurried along. Every outcome repeats them.
 it is the one behind; in a crowd, a neighbour behind may not be the cause. It can therefore
 over-count in a crowd. The overtaking scenario is where it was found and where it is exact.
 
+**Intentional backing is not walking backwards** (issue #32). An agent told to `back_up`
+backs out of a single-file passage on purpose, at its own backing speed (`derivations.md`,
+section 17). The steps on which it is backing out are never counted as `backward`, though
+they meet the definition; they are counted as the manoeuvre's, in `outcome.json`'s `back_up`
+block (`backing_time_s`, `backing_distance_m`). Every other backward step counts as before:
+the follower that the arbiter's way pushes back at nearly the leader's speed (section 17.1
+there), and a backer that ORCA moves backwards while it waits outside the passage for the
+other. Since log schema 5 the artefact also has a distance, `backward_distance_m`: how far
+the agent moved against the direction of its path **within its backward episodes** (a run
+shorter than 1.0 s adds nothing, as it adds no episode). The total distance walked backwards
+is the two added: intentional and artefact, each reported on its own.
+
 *Reported:* `outcome.json`, `artefacts`: per agent `backward_episodes`, `backward_time_s`,
-`hurried_episodes`, `hurried_time_s`; in total the same and `agents_backward`,
-`agents_hurried` (how many agents had any); and the `thresholds`. The summary has
-`backward_episodes` and `hurried_episodes`.
+`hurried_episodes`, `hurried_time_s`, and (log schema 5) `backward_distance_m`; in total the
+same and `agents_backward`, `agents_hurried` (how many agents had any); and the `thresholds`.
+The summary has `backward_episodes` and `hurried_episodes`, and (log schema 5)
+`backward_distance_m` beside the intentional `backing_distance_m`.
 
 ## 11. Pair exposure and severity tiers (issue #30)
 

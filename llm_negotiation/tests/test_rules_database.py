@@ -21,6 +21,8 @@ from negsim.rules.database import MANIFEST_FILE, RULE_DB_ROOT, file_sha256, load
 
 FIXTURES = PACKAGE_ROOT / "tests" / "fixtures" / "rules"
 SEEDS = {"keep_left_head_on", "keep_right_head_on", "overtaker_keeps_clear", "single_file_first_arrival", "younger_yields_head_on"}
+#: Issue #32's seed rule, schema version 3, not in the default rule set.
+SEEDS_32 = {"passage_shorter_backs_out"}
 
 
 @pytest.fixture(scope="module")
@@ -56,10 +58,11 @@ def new_version(root, rule_id, version, **changes):
 # --- loading -----------------------------------------------------------------------------------------
 
 
-def test_the_database_loads_the_five_seed_rules_and_reports_them(database):
-    assert {rule.rule_id for rule in database.rules} == SEEDS and all(rule.version == 1 for rule in database.rules)
+def test_the_database_loads_the_six_seed_rules_and_reports_them(database):
+    """Five of issue #28 and one of issue #32 (five before it)."""
+    assert {rule.rule_id for rule in database.rules} == SEEDS | SEEDS_32 and all(rule.version == 1 for rule in database.rules)
     lines = database.report.lines()
-    assert lines[0] == "5 rule version(s) loaded, 0 refused"
+    assert lines[0] == "6 rule version(s) loaded, 0 refused"
     assert any(line.startswith("  head_on: ") for line in lines)
     assert all(rule.status == "test_seed" for rule in database.rules)
 
@@ -68,7 +71,8 @@ def test_every_rule_records_its_provenance_and_status(database):
     for rule in database.rules:
         provenance = rule.provenance
         assert provenance["source_type"] == "hand_written" and provenance["validation_evidence"] == []
-        assert provenance["created_at"] == "2026-10-14" and provenance["author"] and provenance["source_ref"]
+        assert provenance["created_at"] == ("2026-10-16" if rule.rule_id in SEEDS_32 else "2026-10-14")
+        assert provenance["author"] and provenance["source_ref"]
         assert rule.sha256 == file_sha256(RULE_DB_ROOT / rule.source)
 
 
@@ -85,7 +89,7 @@ def test_a_refused_rule_stops_the_load_unless_asked_to_report(copy):
         RuleDatabase.load(copy)
     report = RuleDatabase.load(copy, strict=False).report
     assert [(source, error.category) for source, error in report.refused] == [("rules/reads_the_task.v1.yaml", "unobservable_field")]
-    assert len(report.loaded) == 5
+    assert len(report.loaded) == 6
 
 
 # --- a version is never edited ------------------------------------------------------------------------

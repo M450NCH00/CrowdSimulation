@@ -155,25 +155,34 @@ class ArtefactThresholds:
 
 
 class EpisodeTracker:
-    """Runs of consecutive time steps on which a condition held, lasting at least ``min_duration``."""
+    """Runs of consecutive time steps on which a condition held, lasting at least ``min_duration``.
+
+    ``amount`` (issue #32) is something measured on each step, such as how far the agent moved
+    backwards; :attr:`total_amount` adds it up over the episodes only, so that it counts exactly
+    what the episodes count.
+    """
 
     def __init__(self, min_duration: float):
         self.min_duration = min_duration
         self.episodes: list[tuple[float, float]] = []
+        self.total_amount = 0.0
         self._start: Optional[float] = None
         self._end = 0.0
+        self._amount = 0.0
 
-    def update(self, step_start: float, step_end: float, holding: bool) -> None:
+    def update(self, step_start: float, step_end: float, holding: bool, amount: float = 0.0) -> None:
         if holding:
             if self._start is None:
-                self._start = step_start
+                self._start, self._amount = step_start, 0.0
             self._end = step_end
+            self._amount += amount
         else:
             self.close()
 
     def close(self) -> None:
         if self._start is not None and self._end - self._start >= self.min_duration - 1e-9:
             self.episodes.append((self._start, self._end))
+            self.total_amount += self._amount
         self._start = None
 
     @property

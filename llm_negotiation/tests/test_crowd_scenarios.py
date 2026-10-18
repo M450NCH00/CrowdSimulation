@@ -11,7 +11,7 @@ import re
 import pytest
 import yaml
 
-from helpers import CROWD_SCENARIOS, SCENARIOS, crowd, run_avoidance, scenario
+from helpers import CROWD_SCENARIOS, PASSAGE_SCENARIOS, SCENARIOS, crowd, run_avoidance, scenario
 from negsim.configutil import PACKAGE_ROOT, ConfigError
 from negsim.scenarios import (
     CROWD_SCENARIOS as REGISTERED,
@@ -24,6 +24,8 @@ from negsim.scenarios import (
 )
 
 NAMES = sorted(CROWD_SCENARIOS)
+#: Every shipped scenario config, issue #32's versioned ones included: each must tag its numbers.
+CONFIGS = sorted({**CROWD_SCENARIOS, **PASSAGE_SCENARIOS})
 SCENARIO_DIR = PACKAGE_ROOT / "configs" / "scenarios"
 
 
@@ -32,7 +34,8 @@ SCENARIO_DIR = PACKAGE_ROOT / "configs" / "scenarios"
 
 def test_the_five_scenarios_issue_26_asks_for_are_registered_and_shipped():
     expected = {"wide_corridor_head_on", "open_crossing", "overtaking", "corridor_to_bottleneck", "bidirectional_flow"}
-    assert set(REGISTERED) == expected == set(CROWD_SCENARIOS)
+    assert expected == set(CROWD_SCENARIOS)
+    assert set(REGISTERED) == expected | {"passage_meeting"}  # issue #32's sixth type
     for name in expected:
         assert (SCENARIO_DIR / f"{name}.yaml").is_file()
     assert CROWD_SCHEMA_VERSION == 2
@@ -334,7 +337,7 @@ def quantity_lines(name: str):
             yield match.group(1), line
 
 
-@pytest.mark.parametrize("name", NAMES)
+@pytest.mark.parametrize("name", CONFIGS)
 def test_every_quantity_in_a_shipped_scenario_is_tagged(name):
     lines = list(quantity_lines(name))
     assert len(lines) >= 20
@@ -355,7 +358,7 @@ def test_every_quantity_in_a_shipped_scenario_is_tagged(name):
 
 def placeholders():
     found = []
-    for name in NAMES:
+    for name in CONFIGS:
         for key, line in quantity_lines(name):
             if "[placeholder]" in line:
                 found.append((name, key))
@@ -371,20 +374,26 @@ def test_the_parameters_document_lists_every_placeholder_and_every_source():
         ("bidirectional_flow", "spawn_spacing"),
         ("corridor_to_bottleneck", "bottleneck_width"),
         ("corridor_to_bottleneck", "bottleneck_length"),
+        ("passage_meet_middle_v1", "passage_width"),
+        ("passage_meet_middle_v1", "passage_length"),
+        ("passage_meet_with_speeds_v1", "passage_width"),
+        ("passage_meet_with_speeds_v1", "passage_length"),
+        ("passage_meet_with_speeds_v1", "max_speed"),
     ]
     section = document.split("## 3. Placeholders", 1)[1].split("\n## ", 1)[0]
     for name, key in placeholders():
         assert f"`{key}`" in section and f"`{name}`" in section, (name, key)
         assert "[placeholder]" in section
     cited = set()
-    for name in NAMES:
+    for name in CONFIGS:
         for _, line in quantity_lines(name):
             for tag in TAG.findall(line):
                 if tag.startswith(("cited: ", "derived: ")):
                     cited.add(tag.split(": ", 1)[1].split(",")[0].split(" line")[0].split(";")[0].strip())
-    assert cited == {"Moussaid et al. 2009", "Yamamoto et al. 2019", "Karamouzas et al. 2014", "Menge 4squareS.xml", "ORCA paper"}
+    assert cited == {"Moussaid et al. 2009", "Yamamoto et al. 2019", "Karamouzas et al. 2014", "Menge 4squareS.xml", "ORCA paper", "Nakahara et al. 2005"}
     for source in cited:
         assert source in document, f"{source} is cited in a config but not listed in docs/parameters.md"
     for cached in ("si1_moussaid2009_pmc.txt", "b3_yamamoto_bodyrotation.txt", "si1_karamouzas2014_1412_1082.txt",
-                   "si1_menge_4squareS.xml", "si1_orca_vandenberg2011.txt", "si1_bohannon1997_pubmed_abstract.txt"):
+                   "si1_menge_4squareS.xml", "si1_orca_vandenberg2011.txt", "si1_bohannon1997_pubmed_abstract.txt",
+                   "si32_nakahara2005_backward_walking.txt"):
         assert cached in document and (PACKAGE_ROOT.parent / "refs" / cached).is_file(), cached

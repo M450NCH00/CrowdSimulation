@@ -34,6 +34,7 @@ import argparse
 import json
 import math
 import platform
+import re
 import sys
 from collections import Counter
 from dataclasses import dataclass, field
@@ -42,7 +43,7 @@ from pathlib import Path
 from typing import Any, Callable, Mapping, Optional, Sequence
 
 from .. import __version__
-from ..configutil import PACKAGE_ROOT, ConfigError, as_bool, as_choice, as_number, check_keys, load_yaml, resolve_path
+from ..configutil import PACKAGE_ROOT, REPO_ROOT, ConfigError, as_bool, as_choice, as_number, check_keys, load_yaml, resolve_path
 from ..llm.base import LLMClient, LLMFatalError
 from ..llm.budget import BudgetedClient, BudgetExceededError, BudgetGuard, SpendLedger, estimate_prompt_tokens
 from ..llm.deepseek import DeepSeekClient
@@ -50,9 +51,10 @@ from ..llm.mock import MockClient
 from ..llm.pricing import PriceTable
 from ..negotiation.protocol import MAX_ATTEMPTS_PER_TURN
 from .cases import CaseStore
-from .describe import KIND_NEGOTIATE, KIND_STATE, Templates, load_templates, negotiation_prompt, statement_prompt
+from .describe import KIND_NEGOTIATE, KIND_STATE, Templates, load_templates, negotiation_prompt, rule_schema_version_of, statement_prompt
 from .design import CONDITION_NEGOTIATED, CONDITION_STATED, CONDITIONS, DesignSettings, Session, cell_code, sessions_for
 from .mock import POLICIES as MOCK_POLICIES
+from .outcomes import OUTCOMES_FILE, outcome_row
 from .protocol import (
     DEFAULT_MAX_MESSAGES_PER_AGENT,
     OUTCOME_ABORTED,
@@ -66,14 +68,15 @@ from .protocol import (
 )
 from .replay import KIND_CROWD, KIND_REPLAY, CrowdScreen, ScreeningSettings, crowd_size, mixed_population, replay
 from .transcript import render as render_transcript
-from .validate import CATEGORIES, VALID, validate_proposal
+from .validate import CATEGORIES, VALID, session_terms, validate_proposal
 from .writer import STAGING_DIR, StagingDatabase, Support, build_rule, with_screening
 
 LAYER_RULE_GENERATION = "rule_generation"
 SCHEMA_VERSION = 1  # of the config
 #: The version of the files a rule-generation experiment writes (``docs/log-schema.md``,
-#: "Rule-generation experiments"); the run folders of its replays are avoidance runs.
-RULEGEN_LOG_VERSION = 1
+#: "Rule-generation experiments"); the run folders of its replays are avoidance runs. Version 2
+#: (issue #32) adds ``outcomes.jsonl`` and the fictional group of a session.
+RULEGEN_LOG_VERSION = 2
 CLIENTS = ("mock", "deepseek")
 RUNS_DIR, MOCK_RUNS_DIR = PACKAGE_ROOT / "runs", PACKAGE_ROOT / "runs_mock"
 
@@ -96,6 +99,21 @@ STATUS_COMPLETED = "completed"  # every session has a record
 STATUS_PARTIAL = "partial"  # some have none yet (``--limit``)
 STATUS_ABORTED = "aborted"  # a session was stopped: the budget guard refused, or the model could not be used
 STATUS_AWAITING = "awaiting_confirmation"  # a paid client, not confirmed: nothing was sent
+
+#: Where the supervisor's approvals are recorded, and the sentence that records the ethics
+#: sign-off for the fictional-group factor (issue #32, Part 1.4; ``docs/fictional-groups.md``,
+#: section 6). Without it, no paid run may switch the factor on.
+SIGN_OFF_FILE = REPO_ROOT / "CLAUDE.md"
+ETHNICITY_SIGN_OFF = re.compile(
+    r"Ethics sign-off for the fictional-group factor \(issue #32\): approved by the supervisor on \d{4}-\d{2}-\d{2}"
+)
+
+
+def ethnicity_signed_off(path: Optional[Path] = None) -> bool:
+    """Whether ``CLAUDE.md`` (or ``path``) records the supervisor's ethics sign-off for the
+    fictional-group factor."""
+    path = SIGN_OFF_FILE if path is None else path
+    return path.is_file() and ETHNICITY_SIGN_OFF.search(path.read_text(encoding="utf-8")) is not None
 
 
 def is_rule_generation_config(raw: Any) -> bool:
@@ -431,7 +449,11 @@ def run_session(
         "experiment": config.experiment_name, "session_id": session.session_id, "condition": session.condition,
         "case_id": session.case_id, "repeat": session.repeat, "path_index": path_index,
     }
-    record: dict[str, Any] = {"session": session.as_dict(), "started_utc": _utc_now(), "templates": templates.identity(), "llm": config.llm_settings().as_dict()}
+    record: dict[str, Any] = {
+        "session": session.as_dict(), "started_utc": _utc_now(), "templates": templates.identity(), "llm": config.llm_settings().as_dict(),
+        # issue #32: the version of the rule format the prompt described, which its rules are read in
+        "rule_schema_version": rule_schema_version_of(templates.common),
+    }
     stopped: Optional[Exception] = None
     if session.condition == CONDITION_NEGOTIATED:
         protocol: Any = RuleNegotiation(case, session, templates, client, config.llm_settings(), config.max_messages_per_agent, labels)
@@ -463,21 +485,29 @@ def _model_returned(record: Mapping[str, Any]) -> Optional[str]:
 # --- validation, the writer, replay and screening -------------------------------------------------
 
 
+def record_format(record: Mapping[str, Any]) -> int:
+    """The version of the rule format a session's prompt described: written in its record since
+    issue #32; a record written before is of version 2, the format of issue #30's templates."""
+    return int(record.get("rule_schema_version", 2))
+
+
 def validate_session(record: Mapping[str, Any], case: Mapping[str, Any]) -> list[dict[str, Any]]:
-    """One validation row per rule the session proposed (A: every proposal; B: the rule)."""
+    """One validation row per rule the session proposed (A: every proposal; B: the rule), read in
+    the rule format the session was shown, with the words its groups were introduced with."""
     session = record["session"]
+    version, terms = record_format(record), session_terms(session)
     rows = []
     base = {"session_id": session["session_id"], "condition": record["condition"], "case_id": session["case_id"], "scenario": case["scenario"]["type"]}
     if record["condition"] == CONDITION_NEGOTIATED:
         messages = [turn["message"] for turn in record["turns"] if turn.get("message")]
         for proposal in record["proposals"]:
-            result = validate_proposal(proposal["proposal"], session["visibility"], messages)
+            result = validate_proposal(proposal["proposal"], session["visibility"], messages, schema_version=version, terms=terms)
             rows.append({
                 **base, "turn_index": proposal["turn_index"], "proposer": proposal["proposer"],
                 "canonical_hash": proposal["canonical_hash"], "agreed": proposal["agreed"], **result.as_dict(),
             })
     elif record.get("rule") is not None:
-        result = validate_proposal(record["rule"], session["visibility"], [record.get("reason") or ""])
+        result = validate_proposal(record["rule"], session["visibility"], [record.get("reason") or ""], schema_version=version, terms=terms)
         rows.append({**base, "turn_index": 0, "proposer": None, "canonical_hash": record["canonical_hash"], "agreed": True, **result.as_dict()})
     return rows
 
@@ -489,6 +519,7 @@ def write_rules(
     canonical rule and case, with every session that produced it."""
     valid = {(row["session_id"], row["canonical_hash"]) for row in validations if row["category"] == VALID and row["agreed"]}
     groups: dict[tuple[str, str, str], list[Support]] = {}
+    formats: dict[tuple[str, str, str], int] = {}
     for record in records:
         session = record["session"]
         if record["condition"] == CONDITION_NEGOTIATED and record["outcome"] == OUTCOME_AGREED:
@@ -500,6 +531,7 @@ def write_rules(
             continue
         if (session["session_id"], digest) not in valid:
             continue
+        formats[(record["condition"], session["case_id"], digest)] = record_format(record)
         groups.setdefault((record["condition"], session["case_id"], digest), []).append(
             Support(
                 session_id=session["session_id"], design_cell=session["cell"], model=record["llm"]["model"],
@@ -512,7 +544,7 @@ def write_rules(
         supports = sorted(supports, key=lambda support: (support.created_utc, support.session_id))
         staging = StagingDatabase(experiment_dir / STAGING_DIR / condition)
         staging.create()
-        rule = build_rule(condition, case_id, digest, supports, config.experiment_name)
+        rule = build_rule(condition, case_id, digest, supports, config.experiment_name, formats[(condition, case_id, digest)])
         name, version, fresh = staging.stage(rule, f"generated by {config.experiment_name}, {len(supports)} session(s)")
         written.append({
             "rule_id": rule["rule_id"], "version": version, "condition": condition, "case_id": case_id,
@@ -594,6 +626,38 @@ def _aborted_costs(experiment_dir: Path) -> float:
     )
 
 
+def design_size(config: RuleGenConfig, cases: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
+    """The size of the full factorial (issue #32 asks for it with the fictional group's factors):
+    cells per case and condition, and the sessions they make. SI-3b will need a fraction of it."""
+    design = config.design
+    per_case = {case_id: design.cells_per_case(case_id) for case_id in sorted(cases)}
+    repeats = {condition: (config.statement_repeats if condition == CONDITION_STATED else 1) for condition in config.conditions}
+    return {
+        "factors": {name: len(design.levels_for("")[name]) for name in design.factors},
+        "groups_on": design.groups is not None,
+        "cells_per_case": per_case,
+        "sessions_by_condition": {condition: sum(per_case.values()) * repeat for condition, repeat in repeats.items()},
+        "sessions": sum(sum(per_case.values()) * repeat for repeat in repeats.values()),
+    }
+
+
+def groups_summary(outcomes: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    """How the sessions came out, by group pair and by whether the groups were shown: counts to
+    stratify by, not a judgement (``outcomes.jsonl`` has every session's row)."""
+    rows = [row for row in outcomes if row["groups_on"]]
+    strata: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        key = f"{row['condition']}/{row['group_pair']}/{'shown' if row['ethnicity_visible'] else 'hidden'}"
+        entry = strata.setdefault(key, {"sessions": 0, "outcomes": Counter(), "rules_that_apply": 0})
+        entry["sessions"] += 1
+        entry["outcomes"][row["outcome"]] += 1
+        entry["rules_that_apply"] += bool(row["effect"] and row["effect"]["matches"])
+    return {
+        "on": bool(rows),
+        "strata": {key: {**entry, "outcomes": dict(sorted(entry["outcomes"].items()))} for key, entry in sorted(strata.items())},
+    }
+
+
 def summarise(
     config: RuleGenConfig,
     status: str,
@@ -604,8 +668,10 @@ def summarise(
     cases: Mapping[str, Mapping[str, Any]],
     preview: Mapping[str, Any],
     aborted_usd: float = 0.0,
+    outcome_rows: Sequence[Mapping[str, Any]] = (),
 ) -> dict[str, Any]:
-    """The numbers the issue asks the pilot to report, from the logs."""
+    """The numbers the issue asks the pilot to report, from the logs; and, with the fictional
+    group on (issue #32), the sessions' outcomes by group pair and whether the groups were shown."""
     by_scenario = {case_id: case["scenario"]["type"] for case_id, case in cases.items()}
     categories: dict[str, dict[str, dict[str, int]]] = {}
     for row in validations:
@@ -707,6 +773,8 @@ def summarise(
         "rules_written": len(written),
         "screening": list(screening),
         "failure_modes": dict(sorted(failure_modes.items())),
+        "design": design_size(config, cases),
+        "groups": groups_summary(outcome_rows),
     }
 
 
@@ -831,6 +899,12 @@ def run_rule_generation(
         })
 
     if paid:
+        if config.design.groups is not None and not ethnicity_signed_off():
+            invocation("refused_no_sign_off", {"client": name})
+            raise ConfigError(
+                "the fictional-group factor (design.ethnicity) is on, and the supervisor's ethics sign-off is not "
+                "recorded in CLAUDE.md: no paid run may switch it on until it is (docs/fictional-groups.md, section 6)"
+            )
         if not preview["fits_the_cap"]:
             invocation("refused_over_cap", {"client": name})
             raise ConfigError(
@@ -876,6 +950,11 @@ def run_rule_generation(
     ordered = [records[session.session_id] for session in sessions if session.session_id in records]
     validations = [row for record in ordered for row in validate_session(record, cases[record["session"]["case_id"]])]
     _write_jsonl(experiment_dir / VALIDATION_FILE, validations)
+    outcomes = [
+        outcome_row(record, cases[record["session"]["case_id"]], validations, record_format(record), session_terms(record["session"]))
+        for record in ordered
+    ]
+    _write_jsonl(experiment_dir / OUTCOMES_FILE, outcomes)
     written = write_rules(config, ordered, validations, experiment_dir)
     _write_jsonl(experiment_dir / WRITTEN_FILE, written)
     if result.status != STATUS_ABORTED and (config.replay_enabled or config.screening is not None):
@@ -886,7 +965,7 @@ def run_rule_generation(
         {"rule_id": row["rule_id"], "version": row["version"], **{item["kind"]: item["verdict"] for item in row["entries"]}}
         for row in screened
     ]
-    summary = summarise(config, result.status, ordered, validations, written, verdicts, cases, preview, _aborted_costs(experiment_dir))
+    summary = summarise(config, result.status, ordered, validations, written, verdicts, cases, preview, _aborted_costs(experiment_dir), outcomes)
     _write_json(experiment_dir / COST_FILE, {
         **summary["cost"], "client": name, "sessions": summary["tokens_per_session"],
         "note": (
@@ -922,6 +1001,11 @@ def cli_run(args: argparse.Namespace) -> int:
             )
             if (args.client or config.llm["client"]) == "mock":
                 print("  (with the mock client nothing is charged: this is what the same sessions could cost with deepseek)")
+            size = design_size(config, plan_.cases)
+            factors = " x ".join(f"{name} {count}" for name, count in size["factors"].items())
+            print(f"  design: {factors} = {max(size['cells_per_case'].values(), default=0)} cell(s) per case and condition")
+            if config.design.groups is not None and not ethnicity_signed_off():
+                print("  the fictional-group factor is on: a paid run is refused until CLAUDE.md records the ethics sign-off")
             return 0
         result = run_rule_generation(config, client_name=args.client, out_root=args.out, confirm=args.confirm, limit=args.limit)
     except (ConfigError, LLMFatalError) as exc:

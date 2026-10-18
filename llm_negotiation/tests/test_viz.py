@@ -131,7 +131,7 @@ def test_a_thinned_log_is_marked_as_interpolated(tmp_path):
 def test_the_flags_follow_the_trajectory(tmp_path):
     _, data = build(tmp_path, BOTTLENECK)
     flags = data["flags"]
-    assert sorted(flags.values()) == [1, 2, 4, 8, 16, 32, 64]
+    assert sorted(flags.values()) == [1, 2, 4, 8, 16, 32, 64, 128, 256, 512]  # the last three since issue #32
     with (BOTTLENECK / "trajectory.csv").open(encoding="utf-8", newline="") as handle:
         rows = [row for row in csv.DictReader(handle) if row["speed_mps"] != ""]
     seen = set()

@@ -36,6 +36,7 @@ The check is valid for the paid run that follows it, not for a run days later.
 | 2026-10-13 | `https://api-docs.deepseek.com/quick_start/pricing` | issue #24 | the C1 and C2 smoke runs | The prices of `llm-backend.md`, section 1 | The table was written | (issue #24's branch) |
 | not done | — | — | issue #30's pilot | **Not done.** No paid call has been made in issue #30: the pilot is held until the supervisor's approval is recorded (`rule-generation.md`, section 10). The check is due immediately before the pilot | — | — |
 
-The pilot's worst-case preview (USD 0.619 as the issue specifies the design) is priced at
-the table of 2026-10-13. If the check finds other prices, the preview, and Q5 of
-`WORK_LOG-30.md` with it, must be worked out again.
+The pilot's worst-case preview (USD 0.619 as issue #30 specifies the design, USD 0.648 since
+issue #32 moved it to prompt version 2: `rule-generation.md`, section 10.1) is priced at the
+table of 2026-10-13. If the check finds other prices, the preview, and the options of Q5 with
+it, must be worked out again.

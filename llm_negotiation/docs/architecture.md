@@ -10,7 +10,9 @@ avoidance layer added by issue #26, which sits beside it: ORCA, perception, dire
 and the handoff to the arbiter. Section 7 describes the rule layer of issue #28: the rule
 format, the rule database, the matching policy, and the frozen baselines. Section 8
 describes rule generation of issue #30: conflict cases, the design matrix, the two
-protocols, validation, the writer and its staging databases, replay and screening.
+protocols, validation, the writer and its staging databases, replay and screening. Section 9
+describes issue #32: a fictional group that no rule may read, and two people who meet inside a
+single-file passage, with the `back_up` directive and rule format 3.
 
 ## 1. The pieces
 
@@ -461,7 +463,14 @@ hold:
 and **from the arbiter back to ORCA** on the first step on which the conflict zone is no
 longer live, because one of the two has cleared it, or one of the two has arrived.
 
-Between those two steps:
+Since issue #32 there is a third way out: **from the arbiter to a back-up manoeuvre**, on
+the step on which one of the two starts to back out of the segment on a `back_up`
+directive (a handoff `to: back_up`). The directive has already said who goes first and how,
+so the arbiter does not hold the pair, or take it, while the manoeuvre lasts; when it ends
+the other has cleared the zone and there is nothing to take (`derivations.md`, section 17,
+DD93). The two agents' `control_mode` is then `back_up`.
+
+Between the first two steps:
 
 - **The arbiter decides the order**, by `decide_roles` as in issue #24: the directives'
   leader if there is one and it can still be honoured, otherwise the shorter time to the
@@ -843,3 +852,151 @@ config needs a new name.
   from behaviour (SI-4).
 - Live negotiation during a run, unseen scenarios (SI-5); evidence about people (SI-6).
 - Matching cost (Q11), and a rule format that reads private information.
+
+## 9. Fictional groups and meetings inside a passage (issue #32)
+
+Two additions, each from the person to the log. **A fictional group** (`ethnic_group`): a
+label with nothing behind it, which agents may see and **no rule may read**, as a factor of
+rule generation that is off unless a config switches it on, and that no paid run may switch on
+until the supervisor's ethics sign-off is recorded (`fictional-groups.md`). **A meeting inside
+a single-file passage**: scenarios that start two people there, perception fields that say how
+far each has walked in, a directive `back_up` and a manoeuvre that carries it out, and rule
+format 3, which can say "the one who has walked less far in backs out" (`derivations.md`,
+sections 17 and 18). Prompt version 2 tells a model both.
+
+### 9.1 Where each piece lives
+
+| Piece | Where | What it is |
+|---|---|---|
+| The group's labels | `negsim/personas/groups.py`, `negsim/personas/schema.py` | The default labels, their check, a guard list of real group names, the framing word |
+| Perception record 3 | `negsim/avoidance/perception.py` | The passage fields (computed once per pair) and the group, hidden by default (`perception.md`) |
+| No rule may read a group | `negsim/rules/fields.py`, `negsim/rules/model.py` | `protected_reference`, `protected_part`: refused before every other check (`protected_attribute`) |
+| Rule format 3 | `rule_db/schema/rule.v3.schema.json`, `negsim/rules/fields.py`, `negsim/rules/model.py`, `negsim/rules/conditions.py` | `back_up`, true-or-false values, each field's `since` version; the check that exactly one role backs up (`rule-format.md`, section 14) |
+| The seed rule | `rule_db/rules/passage_shorter_backs_out.v1.yaml` | A test fixture, not in the `default` set |
+| The directive | `negsim/avoidance/directives.py` | `back_up`, and how a pair's two directives combine on it |
+| The manoeuvre | `negsim/avoidance/simulation.py` | Back out, wait, go on; its phases in the trajectory, events and outcome; who came out of a segment first |
+| The arbiter lets go | `negsim/avoidance/coordination.py` | A pair in a manoeuvre is `released`, with a handoff `to: back_up` |
+| Intentional backing apart from the artefact | `negsim/metrics/avoidance.py`, `negsim/avoidance/simulation.py` | The backing phase never counted as walking backwards; the artefact's distance within its episodes |
+| The scenarios | `negsim/scenarios/passage_meeting.py`, `configs/scenarios/passage_meet_*_v1.yaml`, `negsim/scenarios/crowd_base.py` | `passage_meeting`; `backing_speed`; `start_speed` |
+| The group in the design | `negsim/rulegen/design.py` | `design.ethnicity`: group pair, label rotation, visibility |
+| Outcomes for analysis | `negsim/rulegen/outcomes.py` | One row per session: who proposed, conceded, took the larger share, went first, backed up |
+| Prompt version 2 | `negsim/negotiation/templates/rulegen_*_v2.yaml`, `negsim/rulegen/describe.py` | Frozen; a line is used only by a template that has it (`rule-generation.md`, section 3.1) |
+| Validation | `negsim/rulegen/validate.py` | `protected_attribute`; what a later format added is a format limit of an earlier one |
+| The mock | `negsim/rulegen/mock.py` | `rulegen_paths_v2`: the old paths and three new ones |
+| Case format 2 | `negsim/rulegen/cases.py` | Re-stepping (`cases.md`, section 7), the `experiment` stratum key |
+| The behaviour checks' tables | `negsim/rules/report.py` | `passage_tables` (`behaviour-checks.md`, section 6) |
+
+### 9.2 One step with a manoeuvre
+
+```
+   perceive ──> pair features (the passage fields, once per pair) ──> provider: directives
+        │
+        ├── back_up for one of a pair, both inside a segment too narrow for them (read from
+        │   the geometry alone), the other ahead of it ──> a manoeuvre starts; the arbiter
+        │   lets go of the pair
+        │
+        ├── backing: the backer walks back along the segment at its backing speed to the
+        │   run-out beyond its end (shares 0 for it and 1 for the other, the other's speed
+        │   capped at the backer's) ──> waiting: preferred velocity 0 (shares 1 and 0)
+        │
+        ├── the other out of the conflict zone by the arbiter's own measure, or arrived, or
+        │   out of sight ──> the manoeuvre ends; the backer goes on along its path
+        │
+        └── ORCA for everyone, as before; the backing phase is logged as intentional
+            backing, never as the walking-backwards artefact
+```
+
+### 9.3 What changed outside the new pieces, and what did not
+
+**Unchanged**: ORCA (`orca.py`), the linear programs, the neighbour search, the arbiter's own
+decisions (who leads, the speed bounds), the matching policy's precedence and hysteresis, the
+two baselines, and every committed run, case and frozen template: rule formats 1 and 2 load as
+before, prompt version 1 renders as before, issue #30's case set and its configs read what
+they read (the pilot's excepted, below), and its extraction gives the same files. **Changed**,
+and why:
+
+- `avoidance/simulation.py`: the manoeuvre, `segment_exit_times`, log schema 5.
+- `avoidance/coordination.py`: `released` pairs (DD93).
+- `rules/matching.py`, `rules/ambiguity.py`: a cross-pair conflict on `back_up` (an agent backs
+  out for one pair at a time), and the values a true-or-false field can take.
+- `rules/snapshot.py`, `rules/fields.py`: the passage fields in the shared snapshot, and the
+  version each field was added in (DD90).
+- `metrics/avoidance.py`: `EpisodeTracker.total_amount`, so that the artefact's distance counts
+  what its episodes count (DD98).
+- `experiment/avoidance.py`, `runlog/schema.py`: `first_out` and the exit times, log schema 5
+  (DD99, DD111).
+- `viz/viewer.py`, `viz/viewer.html`: backing, waiting and the other, and the new event.
+- `rulegen/experiment.py`, `rulegen/writer.py`: a session records the rule format its prompt
+  described, and its rules are validated and written in it; the sign-off check for a paid run
+  with the group on.
+- `configs/rule_generation/si3_pilot.yaml`: prompt version 2 and the re-stepped cases, its
+  design and its cap unchanged (DD117).
+
+### 9.4 Design decisions
+
+Marked as decisions, as in sections 7.4 and 8.4: this project's choices where the issue left
+room, each needing the supervisor's sign-off. `WORK_LOG-32.md` gives the reasoning at the time.
+
+- **DD85.** The default labels: Kestrop, Dremmik, Pellund, in that order of rotation; Brannoq
+  a spare. Each searched, and every search recorded (`fictional-groups.md`, section 2).
+- **DD86.** The framing word defaults to "ethnic group", a setting recorded with every
+  session. **Pending supervisor review.**
+- **DD87.** `ethnic_group` is a persona attribute: hidden by default, absent from a persona that
+  does not give it, flagged on its definition as not readable by rules.
+- **DD88.** `protected_attribute`: any reference to the group, anything derived from it, a
+  label, or a session's own framing words, in a condition or a role assignment, refused first.
+- **DD89.** The passage fields are computed once per pair from the two positions and the
+  passage; "ahead" is the end on the other's side.
+- **DD90.** Every rule field records the format version that added it; a rule reads only its
+  own version's fields; a template's glossary is generated for the format it describes.
+- **DD91.** `passage_meeting` places the two at the meeting point, 0.1 m apart, **at rest by
+  default** (`start_speed`; open question Q2 of `WORK_LOG-32.md`).
+- **DD92.** `backing_speed`, an optional agent-type parameter, 0.92 m/s when not set
+  (Nakahara et al. 2005), never above the maximum speed.
+- **DD93.** A pair in a manoeuvre is taken from the arbiter, which does not take it meanwhile.
+- **DD94.** The manoeuvre: back to the run-out beyond the end at the backing speed, wait, go
+  on. It starts only inside a segment the two meet in, read from the geometry.
+- **DD95.** While backing, shares 0 and 1 and the other's speed capped at the backing speed;
+  while waiting, 1 and 0.
+- **DD96.** `back_up` names the other as leader; two who back up are a reciprocity violation.
+- **DD97.** A rule that sets `back_up` must back up exactly one of two roles, and not the one
+  that goes first; a rule that sets none of it is not checked for it (open question Q3).
+- **DD98.** The backing phase is never the walking-backwards artefact; everything else is, a
+  waiting backer pushed back included.
+- **DD99.** Log schema 5; folders of versions 1 to 4 are checked against their own.
+- **DD100.** Rule schema 3: version 2 with `back_up` and true-or-false values.
+- **DD101.** The label rotation is cyclic: person 2 of a `different` pair gets the next label.
+- **DD102.** `ethnicity_visible: false` hides the groups from both people, a person's own too.
+- **DD103.** The ethics sign-off is one exact sentence in `CLAUDE.md`, with a date; only the user
+  adds it; a mock run needs none.
+- **DD104.** What a rule does to each person is read on the case's own snapshot with the
+  session's people in it.
+- **DD105.** The rule-generation log is version 2 (`outcomes.jsonl`, the group).
+- **DD106.** Prompt version 2 is version 1 with four kinds of line and the format-3 glossary;
+  version 1 stays a config's default.
+- **DD107.** `protected_attribute` is a validation category of its own, before every other.
+- **DD108.** What a later rule format added is a format limit for a session shown an earlier one.
+- **DD109.** A new mock policy beside the old, whose paths are unchanged.
+- **DD110.** Cases get new versions by re-stepping their source runs, checked field by field.
+- **DD111.** Who came out of a single-file segment first, and when each did, are logged.
+- **DD112.** A case's format version follows its content.
+- **DD113.** A manoeuvre ends when the other is out of the conflict zone by the arbiter's own
+  measure.
+- **DD114.** The behaviour checks: the issue's three modes, a time-optimal reference, 20 paired
+  seeds, the primary baseline.
+- **DD115.** The passage cases are stratified by source experiment and layout.
+- **DD116.** Outside the passage of a pair that has one, `in_segment` is false, not null; the
+  distances are null. **Flagged**: the issue says the fields are null outside the passage.
+- **DD117.** The pilot runs on prompt version 2 with the re-stepped cases; its design and its
+  cap are unchanged.
+- **DD118.** The floor for m is the largest valid mock reply, stated as a lower bound; option
+  (b)'s reply cap is 400 tokens.
+- **DD119.** The priority order proposed for option (d) of issue #30's Q5.
+
+### 9.5 What is not here
+
+- Real ethnicities, or any description of the fictional groups; any paid run with the group on
+  (the sign-off is pending).
+- Three or more people in a passage, people queued behind a backer, and a backer that steps
+  aside before the other comes out (Q4).
+- The paid pilot and SI-3b; live decisions during a run (SI-5); evidence about people (SI-6).

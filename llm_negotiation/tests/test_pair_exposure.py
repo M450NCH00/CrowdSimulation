@@ -335,8 +335,13 @@ def test_a_rule_run_with_no_rule_writes_the_baseline_trajectory(tmp_path):
 
 
 def test_the_committed_experiments_are_pinned_to_their_own_seeds():
+    """DD66: the 15 configs of issues #26 and #28, whose runs were committed before paired seeding,
+    keep their seeds. Later experiments (issue #32's si32_*) are paired, the default."""
     from negsim.configutil import PACKAGE_ROOT, load_yaml
 
-    for folder in ("avoidance", "rule_following"):
-        for path in sorted((PACKAGE_ROOT / "configs" / folder).glob("*.yaml")):
-            assert load_yaml(path)["design"]["seeding"] == "per_run", path.name
+    pinned = sorted((PACKAGE_ROOT / "configs" / "avoidance").glob("si1_*.yaml")) + sorted((PACKAGE_ROOT / "configs" / "rule_following").glob("si2_*.yaml"))
+    assert len(pinned) == 15
+    for path in pinned:
+        assert load_yaml(path)["design"]["seeding"] == "per_run", path.name
+    for path in sorted((PACKAGE_ROOT / "configs" / "rule_following").glob("si32_*.yaml")):
+        assert load_yaml(path)["design"].get("seeding", "paired") == "paired", path.name

@@ -26,6 +26,7 @@ from negsim.rulegen.cases import (
     case_json,
     extract,
     main,
+    restep_case,
 )
 from negsim.scenarios.registry import build_crowd_scenario
 
@@ -195,6 +196,78 @@ def test_the_committed_case_store_matches_its_manifest_and_its_source_runs():
         assert pairs[case["source"]["pair_id"]]["agents"] == case["agents"]
         assert pairs[case["source"]["pair_id"]]["severity_tier"] == case["severity_tier"]
     assert scenarios == {"wide_corridor_head_on", "open_crossing", "overtaking", "corridor_to_bottleneck", "bidirectional_flow"}
+
+
+def test_the_committed_re_stepped_set_and_the_passage_set():
+    """Issue #32: si3_v2 is si3_v1 re-stepped, each case's version 2, made from a clean tree; and
+    si32_passage_v1 has one case per in-passage source experiment and layout."""
+    store = CaseStore(CASES_ROOT)
+    old, new = dict(store.case_set("si3_v1")), dict(store.case_set("si3_v2"))
+    assert set(old) == set(new) and set(old.values()) == {1} and set(new.values()) == {2}
+    for case_id in new:
+        case = store.get(case_id, 2)
+        assert case["case_format_version"] == 2 and case["derived_from"]["case"] == f"{case_id}@1"
+        assert case["derived_from"]["git_dirty"] is False
+        assert {record["schema_version"] for record in case["observations"].values()} == {3}
+        assert store.get(case_id, 1)["case_format_version"] == 1  # the old version is kept as it was
+    layouts = set()
+    for case_id, version in store.case_set("si32_passage_v1"):
+        case = store.get(case_id, version)
+        assert case["scenario"]["type"] == "passage_meeting" and case["case_format_version"] == 2
+        assert case["formation"] == {"step": 0, "time_s": 0.0, "encounter_class": "single_file_segment"}
+        assert case["source"]["git_dirty"] is False and case["source"]["log_schema_version"] == 5
+        assert all(record["observer"]["in_segment"] is True for record in case["observations"].values())
+        assert all(fields["in_segment"] is True for fields in case["snapshot"]["agent"].values())
+        # From rest the arbiter's way gets neither through; walking, the one further in goes first.
+        expected = None if case["scenario"]["variant"]["start"] == "rest" else 0
+        assert case["baseline_outcome"]["first_out"] == expected and case["baseline_outcome"]["first_through"] is None
+        layouts.add((case["source"]["experiment"], tuple(sorted(case["scenario"]["variant"].items()))))
+    assert len(layouts) == 8
+
+
+def test_extracting_again_from_issue_30s_runs_gives_the_committed_files(tmp_path):
+    """Issue #32 raised the case format to 2 for what it adds; a case that holds none of it (its
+    records are of perception version 2) is written as version 1, as before."""
+    report = extract(ExtractionConfig.load(PACKAGE_ROOT / "configs" / "cases" / "si3_cases_v1.yaml"), CaseStore(tmp_path))
+    assert len(report.written) == 18
+    for name in report.written:
+        assert (tmp_path / name).read_text(encoding="utf-8") == (CASES_ROOT / name).read_text(encoding="utf-8"), name
+    assert CaseStore(tmp_path).manifest()["case_format_version"] == 1
+
+
+def test_a_case_from_a_run_of_log_schema_5_is_of_format_2_and_says_who_came_out_first(tmp_path, runs):
+    store = CaseStore(tmp_path / "cases")
+    (case_id,) = extract(config_for(tmp_path, runs, sources=("src_head_on",)), store).selected
+    case = store.get(case_id)
+    assert case["case_format_version"] == 2 and case["observations"]["0"]["schema_version"] == 3
+    assert case["baseline_outcome"]["first_out"] is None  # no single-file segment in a head-on corridor
+    assert "derived_from" not in case and store.manifest()["case_format_version"] == 2
+
+
+def test_a_case_gets_a_next_version_with_newer_records_by_re_stepping_its_source_run():
+    """Issue #32: version 2 of a case holds perception records of version 3, made by running its
+    source run again to the step its pair formed; every field of version 1 must come out equal."""
+    case = CaseStore(CASES_ROOT).get("head_on_de176842", 1)
+    newer = restep_case(case, GIT)
+    assert (newer["case_id"], newer["version"], newer["case_format_version"]) == ("head_on_de176842", 2, 2)
+    assert newer["derived_from"]["case"] == "head_on_de176842@1" and newer["derived_from"]["method"] == "re-stepped"
+    assert (newer["derived_from"]["perception_schema_version"], newer["derived_from"]["git_commit"]) == (3, "test")
+    for agent in ("0", "1"):
+        old, new = case["observations"][agent], newer["observations"][agent]
+        assert (old["schema_version"], new["schema_version"]) == (2, 3)
+        for key, value in old.items():  # what version 1 held, version 2 holds the same; the rest it adds
+            if key != "schema_version":
+                assert ({name: new[key][name] for name in value} if isinstance(value, dict) else new[key]) == value, key
+        assert set(new["observer"]) - set(old["observer"]) == {"in_segment", "segment_distance_travelled", "segment_distance_ahead", "segment_distance_behind"}
+        assert new["observer"]["in_segment"] is None and new["neighbour_in_segment"] is None  # a head-on meeting has no passage
+    added = set(newer["snapshot"]["agent"]["0"]) - set(case["snapshot"]["agent"]["0"])
+    assert added == {"in_segment", "segment_distance_travelled", "segment_distance_ahead", "segment_distance_behind"}
+    for key in ("scenario", "source", "agents", "formation", "bodies", "private", "severity_tier", "baseline_outcome"):
+        assert newer[key] == case[key], key
+    tampered = json.loads(json.dumps(case))
+    tampered["observations"]["0"]["distance_m"] += 0.5
+    with pytest.raises(CaseError, match=r"observations\.0\.distance_m"):
+        restep_case(tampered, GIT)
 
 
 def test_the_command_line_lists_shows_and_checks(tmp_path):

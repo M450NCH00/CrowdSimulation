@@ -23,6 +23,15 @@ One agent type, `pedestrian`, is used by all five scenarios, with identical valu
 (tested: `test_every_shipped_scenario_uses_the_same_pedestrian`), so that a difference
 between scenarios is not a difference between the bodies walking through them.
 
+The two versioned configs of issue #32 (`passage_meet_middle_v1`,
+`passage_meet_with_speeds_v1`, scenario type `passage_meeting`) use the same `pedestrian`
+with one more physical parameter, `backing_speed`: how fast it backs out of a single-file
+passage. In `passage_meet_with_speeds_v1`, agent 1 is a second type, `slow_backer`, that walks,
+hurries and backs up more slowly. `backing_speed` is optional in every agent type and written
+into a resolved scenario only when set, so the five scenarios above resolve, and hash, as
+before; an agent whose type does not set it backs up at 0.92 m/s (`DEFAULT_BACKING_SPEED`,
+cited below), never faster than its maximum speed.
+
 ## 2. Cited and derived values
 
 | Parameter | Value | Status | Source and locator | What the source measured, and the caveat |
@@ -37,17 +46,25 @@ between scenarios is not a difference between the bodies walking through them.
 | `max_neighbours` | 10 | cited | Menge, same file, line 15 (`max_neighbors="10"`); `si1_menge_4squareS.xml:15` | A setting used in practice. RVO2's examples use 10 as well (`Blocks.cc:88` and `Circle.cc:69`, in `si1_rvo2_75822bb_excerpts.txt`). **It is the parameter the crowd result is most sensitive to**: see the README. |
 | `sensing_radius` (R) | 12.5 m | derived | ORCA paper, Sec 5.1; `si1_orca_vandenberg2011.txt:411` | "robots B that are farther away from robot A than (v_A^max + v_B^max) τ will never collide with robot A within τ time, so they can safely be left out". With τ = 3.0 s and both maximum speeds 2.0 m/s that is 12.0 m. The paper's sentence measures between centres and leaves out the two radii, which add 0.5 m: 12.5 m. Menge's example uses 5 m (`neighbor_dist="5"`), which is shorter than this bound. |
 | `width` of `wide_corridor_head_on`; `approach_width` of `corridor_to_bottleneck` | 1.75 m | cited | Moussaïd et al. 2009, Sec 2(a); `si1_moussaid2009_pmc.txt:100` | "The experimental corridor (length = 7.88 m, width = 1.75 m)", in which pairs of people walked toward each other and passed. The *length* is not used here: see `length` in section 4. |
+| `backing_speed` (and the default, `DEFAULT_BACKING_SPEED`) | 0.92 m/s | cited | Nakahara et al. 2005, "Results and Discussion", p. 824; `si32_nakahara2005_backward_walking.txt:156-159` | "The mean (SD) walking speeds calculated across all individuals in this study were 0.43 (0.111) m/s for slow speed condition, 0.92 (0.114) m/s for normal speed condition, and 1.68 (0.201) m/s for fast speed condition", walking *backwards*. The normal condition's instruction was "Walk at a normal, comfortable speed" (line 57). **Ten people, one woman and nine men, aged 21.8 years on average (lines 52-53)**, barefoot on a walkway, in Japan; the authors say the normal value is similar to Grasso et al. 1998 (line 160), which was not read. |
+| `backing_speed` of `slow_backer` | 0.43 m/s | cited | same, p. 824 | The study's *slow* condition ("Walk slowly as if you were waiting at a bus stop", line 57) for the same ten young adults. Used for a person who backs up slowly: the number is the study's, the person it is given to is this project's choice. |
+| `preferred_speed` of `slow_backer` | 1.10 m/s | derived | Moussaïd et al. 2009, Sec 4(a) | As the slower walker of `overtaking`: the measured mean minus one standard deviation. |
+| `approach_width` of `passage_meeting` | 1.75 m | cited | Moussaïd et al. 2009, Sec 2(a) | As `corridor_to_bottleneck`'s. |
 | `width` and `length` of `bidirectional_flow` | 4.0 m, 50.0 m | cited | Moussaïd et al. 2009, Sec 2(c); `si1_moussaid2009_pmc.txt:109` | "Simulations of bidirectional flows were conducted in a 6×50 m street with the pedestrians of each flow starting from the central, 4 m wide area". That is the authors' *simulation* of a street they had filmed, in which the outer metre on each side was taken up by people standing at shop fronts. Here the central 4 m is a corridor with walls. |
 
 ## 3. Placeholders
 
-Three quantities in the shipped scenarios are `[placeholder]`. Nothing else is.
+Eight quantities in the shipped scenarios are `[placeholder]`: three of issue #26 and five
+of issue #32. Nothing else is.
 
 | Scenario | Parameter | Value | Why it has no source, and what would replace it |
 |---|---|---|---|
 | `corridor_to_bottleneck` | `bottleneck_width` | 0.8 m `[placeholder]` | The scenario needs a width that only one agent can use at a time. For two discs 0.5 m across that is anything under 1.0 m, and 0.8 m is the hallway width of issue #24. **It is not a width at which real people cannot pass.** The one source read on this, Yamamoto et al. 2019, had pairs pass each other at widths down to 60 cm by turning their bodies (Sec 3, lines 344–345; "the males did not need to rotate for W = 100 cm in most cases", line 1282). Discs cannot turn sideways. A sourced value would need either a model of the body that can, or a segment narrow enough that people do not try. |
 | `corridor_to_bottleneck` | `bottleneck_length` | 4.0 m `[placeholder]` | The hallway length of issue #24, itself a placeholder. No source was looked for: any length makes the segment single-file. |
 | `bidirectional_flow` | `spawn_spacing` | 1.0 m `[placeholder]` | The spacing of the lattice the two crowds start on, which sets their starting density (about one person per square metre). Round, and not taken from the street observation the corridor's size comes from, whose density was not read. |
+| `passage_meet_middle_v1`, `passage_meet_with_speeds_v1` | `passage_width` | 0.8 m `[placeholder]` | The bottleneck's width, for the same reason, with the same caveat: not a width at which real people cannot pass. |
+| `passage_meet_middle_v1`, `passage_meet_with_speeds_v1` | `passage_length` | 4.0 m `[placeholder]` | The bottleneck's length. It sets how far in two people can be when they meet, and so how far one has to back out. |
+| `passage_meet_with_speeds_v1` | `max_speed` of `slow_backer` | 1.4 m/s `[placeholder]` | A person who cannot hurry much. Below the cited maximum gait speeds of every group in Bohannon 1997 (1.749 m/s and up), so it is not one of them. It matters under the arbiter, which has a follower pushed backwards at nearly the leader's speed (`derivations.md`, section 17): a follower that cannot retreat that fast is hit. |
 
 One more placeholder appears in an experiment, not in a scenario: `si1_bidirectional_flow`
 runs the flow a second time with `max_neighbours` 40 `[placeholder]`, to show what the
@@ -79,6 +96,11 @@ is a claim about people.
 | Metric thresholds: `near_miss_distance`, `yield_speed_fraction`, `yield_min_duration`, `exposure_eps` | 0.1 m, 0.5, 1.0 s, 1e-6 m/s | Definitions, not measurements. They decide what gets *counted*, so `metrics.md` records them and every outcome file repeats them. None has a source. |
 | Metric thresholds of issue #30: `pair_exposure_eps`, `collision_course_min_s` | 1e-3 m/s, 0 s | Definitions of pair exposure and of tier T1 (`metrics.md`, section 11). The first is five times the most that the primary baseline's perturbation can move a relative velocity (2 × 1e-4 m/s), so that the perturbation alone never makes a step count; the second counts any exposed step. Neither has a source. |
 | `seed` | 26 | Of the starting jitter. |
+| `approach_length`, `merge_distance`, `lateral_offset`, `exit_setback` of `passage_meeting` | 8, 0.6, 0.4, 7 m | The bottleneck's layout, with `exit_setback` in the place of `start_setback`: where a path ends beyond the far end. |
+| `travelled` of `passage_meeting` | `[1.7, 1.7]`; `[2.7, 0.7]`; `[2.0, 1.4]` | Where the two start: how far each has walked into the 4 m passage. Each pair leaves them 0.1 m apart (4.0 − 0.5 − 0.1 = 3.4 m between the two walked-in distances): placed at the meeting point. Symmetric; asymmetric, agent 0 2.0 m further in; and, with the slow backer, a meeting at which the distance-optimal and the time-optimal choice of who backs out differ (`derivations.md`, section 18). |
+| `start_speed` of `passage_meeting` | 0 m/s; `preferred` in the walking variant | Both start at rest, face to face: they have met. `preferred` starts each walking toward the other at its own preferred speed, as the agents of every other scenario start, and as the arbiter's way in a passage was first measured. **The choice decides what the arbiter's way does**: from rest it does not get the two through, walking it does, by an ORCA artefact (`derivations.md`, section 17.1), so the behaviour checks report both (`behaviour-checks.md`, section 6). |
+| `safety_margin` of `single_file` in `passage_meeting` | 0.1 m | As in issue #24, and also what a backing agent adds to the two radii to find how far out it must back (`derivations.md`, section 17). |
+| `groups.westbound` in `passage_meet_with_speeds_v1` | `slow_backer` | Which agent backs up slowly: agent 1, which has walked less far in. |
 
 ## 5. Physical parameters and demographic attributes are separate
 
@@ -124,6 +146,7 @@ dressed as a table, so it was left out.
 | Bohannon 1997 | R. W. Bohannon, "Comfortable and maximum walking speed of adults aged 20–79 years: reference values and determinants", *Age and Ageing* 26(1), 15–19, 1997. DOI 10.1093/ageing/26.1.15. **Abstract only**, through PubMed (PMID 9143432). | `si1_bohannon1997_pubmed_abstract.txt` |
 | Menge 4squareS.xml | The Menge crowd-simulation framework, `github.com/MengeCrowdSim/Menge`, file `examples/core/4square/4squareS.xml` on branch `master` at commit `00f97ea` (the file last changed in `577b517`). Apache-2.0. An example configuration of a pedestrian simulator; cited for what is used in practice, not as evidence about pedestrians. | `si1_menge_4squareS.xml` |
 | ORCA paper | van den Berg, Guy, Lin, Manocha, "Reciprocal n-body collision avoidance"; `orca.md`, section 1. | `si1_orca_vandenberg2011.txt`, `.pdf` |
+| Nakahara et al. 2005 | K. Nakahara, T. Ishii, H. Ida, K. Nakazawa, H. Yamamoto, "The influence of walking speed on symmetry for temporal-spatial and GRF parameters in backward walking", *Proceedings of the XXIII International Symposium on Biomechanics in Sports* (ISBS 2005), Beijing, 823–826. ISBS Conference Proceedings Archive, open access (`ojs.ub.uni-konstanz.de/cpa/article/view/1194`). Read in full (issue #32). | `si32_nakahara2005_backward_walking.txt` (text, pypdf), `.pdf` |
 
 ## 7. What is missing
 
@@ -134,7 +157,9 @@ dressed as a table, so it was left out.
   speed and the corridor are from France and the body widths from Japan. A Singaporean
   anthropometric or gait source was not looked for in this sub-issue.
 - **The samples are small.** The radius comes from four young men; the widths by gender
-  from nine people.
+  from nine people; the backing speeds from ten young adults, nine of them men (issue #32).
+  No backward walking speed of older people was read, so the slow backer's 0.43 m/s is young
+  adults walking slowly on purpose, not an older person's pace.
 - **The body is a disc.** Its radius is half a shoulder width, so it is as deep as it is
   wide, which a person is not, and it cannot turn sideways (section 3).
 - **The ORCA settings are borrowed from practice**, not fitted to data: `time_horizon_obst`

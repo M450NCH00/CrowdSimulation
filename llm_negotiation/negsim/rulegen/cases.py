@@ -13,7 +13,14 @@ from the run and the pair it came from, so extracting again from the same runs g
 same cases, file for file. A **case set** is the list of cases one extraction selected,
 recorded in the manifest with its configuration and a report of what was eligible.
 
+**A new version by re-stepping** (issue #32). When the perception record gains fields, a case
+gets a next version that has them: its source run is rebuilt from its config, run again up to
+the step its pair formed, and the two records the run builds then are taken, with the snapshot
+of the newer rule format; every field of the version it is made from must come out equal, or
+nothing is written. The new version says what it was made from (``derived_from``).
+
     python -m negsim.rulegen.cases extract configs/cases/si3_cases_v1.yaml [--dry-run]
+    python -m negsim.rulegen.cases restep --set si3_v1 --new-set si3_v2 [--dry-run]
     python -m negsim.rulegen.cases list [--set NAME]
     python -m negsim.rulegen.cases show CASE_ID [--version N]
     python -m negsim.rulegen.cases check
@@ -39,7 +46,11 @@ from ..metrics.avoidance import TIERS, tier_rank
 from ..rules.snapshot import snapshot_of_record
 from ..runlog.schema import CONFIG_FILE, INTERACTIONS_FILE, OUTCOME_FILE, PAIR_INTERACTIONS_FILE
 
-CASE_FORMAT_VERSION = 1
+#: 2 since issue #32: a case may say what it was made from (``derived_from``), its records may
+#: be of perception version 3, and its baseline outcome may say who came out of a single-file
+#: segment first (``first_out``). A case that holds none of these is written as version 1, as
+#: before, so that extracting again from issue #30's runs gives the same files.
+CASE_FORMAT_VERSION = 2
 CASES_ROOT = PACKAGE_ROOT / "cases"
 MANIFEST_FILE = "MANIFEST.json"
 EXTRACTIONS_DIR = "extractions"
@@ -53,9 +64,11 @@ SCENARIO_SHORT = {
     "overtaking": "overtaking",
     "corridor_to_bottleneck": "bottleneck",
     "bidirectional_flow": "flow",
+    "passage_meeting": "passage",  # issue #32
 }
-#: What a stratum may be made of.
-STRATUM_KEYS = ("scenario", "variant", "tier", "encounter_class")
+#: What a stratum may be made of. ``experiment``, the source experiment (issue #32), tells apart
+#: two scenarios of one type whose experiments name their levels alike.
+STRATUM_KEYS = ("scenario", "variant", "tier", "encounter_class", "experiment")
 
 # Why a pair or a run was not eligible.
 REASON_TIER = "tier_below_minimum"
@@ -105,13 +118,21 @@ def _variant_label(variant: Mapping[str, str]) -> str:
 # --- building one case ----------------------------------------------------------------------------
 
 
+#: The rule fields a snapshot taken from a perception record of each version holds: those of
+#: the rule format whose fields that record carries (issue #32). A record of version 2 gives
+#: the fields of rule schema 2, so a case taken from one is what it always was.
+SNAPSHOT_SCHEMA_OF_PERCEPTION = {2: 2, 3: 3}
+
+
 def shared_snapshot(record: Mapping[str, Any], visibility: Mapping[str, bool]) -> dict[str, Any]:
     """The values a rule could read for the pair, from one agent's logged perception record.
 
     The same as the shared snapshot the run loop evaluates rules on, up to the log's rounding
     (``rule-matching.md``, section 1); demographic fields are empty unless the run had personas.
+    It holds the fields the record's version carries (:data:`SNAPSHOT_SCHEMA_OF_PERCEPTION`).
     """
-    return snapshot_of_record(PerceptionRecord.from_dict(record), visibility).as_dict()
+    snapshot = snapshot_of_record(PerceptionRecord.from_dict(record), visibility)
+    return snapshot.as_dict(SNAPSHOT_SCHEMA_OF_PERCEPTION[record["schema_version"]])
 
 
 def build_case(
@@ -130,8 +151,14 @@ def build_case(
     segments = scenario.get("single_file", {}).get("segments", [])
     goal = outcome.get("time_to_goal_s", {})
     first_through = [segment.get("first_through") for segment in outcome.get("single_file", [])]
+    # Issue #32: a run of log schema 5 logs perception records of version 3 and when each agent
+    # came out of a single-file segment; two who start inside one both "enter" it at once, so
+    # first_through cannot say who got through first there, and first_out can.
+    newer = records[a]["schema_version"] >= 3
+    first_out = [segment.get("first_out") for segment in outcome.get("single_file", [])]
+    later = {"first_out": first_out[0] if first_out else None} if newer else {}
     return {
-        "case_format_version": CASE_FORMAT_VERSION,
+        "case_format_version": CASE_FORMAT_VERSION if newer else 1,
         "case_id": case_id_for(scenario["type"], config["experiment_name"], config["run_id"], pair["pair_id"]),
         "version": 1,
         "scenario": {
@@ -201,8 +228,104 @@ def build_case(
             "run_status": outcome["status"],
             "time_to_goal_s": {str(agent): goal.get(str(agent)) for agent in (a, b)},
             "first_through": first_through[0] if first_through else None,
+            **later,
         },
     }
+
+
+# --- a new version by re-stepping (issue #32) -----------------------------------------------------
+
+
+def _differences(old: Any, new: Any, where: str) -> list[str]:
+    """Every place where ``new`` does not hold what ``old`` holds: a key of ``old`` missing from
+    ``new``, or a value that differs. Keys only ``new`` has are what it adds, and are not counted."""
+    if isinstance(old, Mapping) and isinstance(new, Mapping):
+        found = []
+        for key, value in old.items():
+            if key not in new:
+                found.append(f"{where}.{key}: missing")
+            else:
+                found += _differences(value, new[key], f"{where}.{key}")
+        return found
+    return [] if old == new else [f"{where}: {old!r} became {new!r}"]
+
+
+def restep_case(case: Mapping[str, Any], git: Optional[Mapping[str, Any]] = None) -> dict[str, Any]:
+    """The next version of ``case``, with its source run's perception records as the code now
+    builds them: the run is rebuilt from its config, run again up to the step its pair formed,
+    and the two records it builds there are taken, with the snapshot of the rule format they
+    carry. Every field of ``case``'s records and snapshot must come out equal (the schema
+    version aside), or a :class:`CaseError` says where they differ; nothing else of the case
+    changes."""
+    from ..avoidance.simulation import AvoidanceSimulation
+    from ..scenarios.registry import build_crowd_scenario
+    from .replay import source_plan  # replay imports this module
+
+    plan = source_plan(case)  # checks the seed, and that the scenario resolves as the case says
+    simulation = AvoidanceSimulation(
+        build_crowd_scenario(plan.scenario_config), provider=plan.provider(), attributes=plan.attributes(),
+        visibility=plan.visibility, arbitration=plan.arbitration, share_policy=plan.share_policy, seed=plan.seed,
+        record_trajectory=False, perturbation=plan.perturbation,
+    )
+    step, (a, b) = case["formation"]["step"], case["agents"]
+    while simulation.world.step_index <= step and simulation.status is None:
+        simulation.step()
+    records = {
+        interaction.observer_id: interaction.record.as_dict()
+        for interaction in simulation.interactions
+        if interaction.start_step == step and {interaction.observer_id, interaction.neighbour_id} == {a, b}
+    }
+    name = f"{case['case_id']}@{case['version']}"
+    if set(records) != {a, b}:
+        raise CaseError(f"{name}: re-stepping its source run, the two did not perceive each other at step {step}")
+    snapshot = shared_snapshot(records[a], plan.visibility)
+    problems = _differences(case["snapshot"], snapshot, "snapshot")
+    for agent in (a, b):
+        old = {key: value for key, value in case["observations"][str(agent)].items() if key != "schema_version"}
+        problems += _differences(old, records[agent], f"observations.{agent}")
+    if problems:
+        raise CaseError(f"{name}: re-stepping its source run did not give the case back:\n  " + "\n  ".join(problems))
+    newer = dict(case)
+    newer.update(
+        case_format_version=CASE_FORMAT_VERSION,
+        version=case["version"] + 1,
+        snapshot=snapshot,
+        observations={str(agent): records[agent] for agent in (a, b)},
+        derived_from={
+            "case": name,
+            "method": "re-stepped",
+            "perception_schema_version": records[a]["schema_version"],
+            "git_commit": None if git is None else git.get("commit"),
+            "git_dirty": None if git is None else git.get("dirty"),
+            "checked": "every field of the records and the snapshot of the version it was made from came out equal",
+        },
+    )
+    return newer
+
+
+def restep_set(store: "CaseStore", case_set: str, new_set: str, git: Optional[Mapping[str, Any]] = None, write: bool = True) -> list[str]:
+    """A next version of every case of ``case_set`` (``restep_case``), frozen, and the new versions
+    recorded as the case set ``new_set``. Returns their references."""
+    references = []
+    for case_id, version in store.case_set(case_set):
+        newer = restep_case(store.get(case_id, version), git)
+        if write:
+            store.add(newer, note=f"case set {new_set}, re-stepped from {case_id}@{version} (issue #32)")
+        references.append(f"{case_id}@{newer['version']}")
+    if write:
+        entry = store.manifest()["case_sets"][case_set]
+        store.add_case_set(
+            new_set,
+            {
+                "cases": sorted(references),
+                "config": entry["config"],
+                "config_sha256": entry["config_sha256"],
+                "extraction": entry["extraction"],
+                "description": f"The cases of {case_set}, each re-stepped as its next version with perception records of version 3 (issue #32).",
+                "derived_from": case_set,
+            },
+        )
+    return references
 
 
 # --- what is eligible -----------------------------------------------------------------------------
@@ -288,6 +411,7 @@ def candidates_of_run(
                     "variant": _variant_label(config.get("variant", {})),
                     "tier": pair["severity_tier"],
                     "encounter_class": pair["encounter_class_at_start"],
+                    "experiment": config["experiment_name"],
                 },
             )
         )
@@ -410,7 +534,7 @@ class CaseStore:
                     "is frozen once listed: a changed case is a new file with the next version, never an edit. "
                     "case_sets records which cases each extraction selected, with its configuration."
                 ),
-                "case_format_version": CASE_FORMAT_VERSION,
+                "case_format_version": 1,  # raised to the newest format of a case added (issue #32)
                 "files": {},
                 "case_sets": {},
             }
@@ -487,6 +611,8 @@ class CaseStore:
             raise CaseError(f"{name} is frozen with other contents; a changed case is the next version, never an edit")
         self.root.mkdir(parents=True, exist_ok=True)
         path.write_text(text, encoding="utf-8", newline="\n")
+        # the newest case format the store holds (issue #32); each case says its own
+        manifest["case_format_version"] = max(manifest.get("case_format_version", 1), case["case_format_version"])
         manifest["files"][name] = {
             "sha256": text_sha256(text),
             "frozen_on": date.today().isoformat(),
@@ -621,6 +747,10 @@ def main(argv: Optional[list[str]] = None, out: Optional[TextIO] = None) -> int:
     run = commands.add_parser("extract", help="extract a case set from baseline runs")
     run.add_argument("config")
     run.add_argument("--dry-run", action="store_true", help="report what would be selected; write nothing")
+    restep = commands.add_parser("restep", help="a next version of every case of a set, re-stepped from its source run (issue #32)")
+    restep.add_argument("--set", dest="case_set", required=True)
+    restep.add_argument("--new-set", required=True)
+    restep.add_argument("--dry-run", action="store_true", help="re-step and check every case; write nothing")
     listing = commands.add_parser("list", help="the cases, or one case set")
     listing.add_argument("--set", dest="case_set")
     show = commands.add_parser("show", help="one case as frozen")
@@ -636,6 +766,13 @@ def main(argv: Optional[list[str]] = None, out: Optional[TextIO] = None) -> int:
                 print(line, file=out)
             if not args.dry_run:
                 print(f"  written: {len(report.written)} new case file(s); the rest were frozen already", file=out)
+        elif args.command == "restep":
+            from ..experiment.batch import git_state
+
+            references = restep_set(store, args.case_set, args.new_set, git_state(), write=not args.dry_run)
+            for reference in references:
+                print(f"  {reference}: every field of its previous version came out equal", file=out)
+            print(f"case set {args.new_set}: {len(references)} case(s)" + (" (dry run: nothing written)" if args.dry_run else ""), file=out)
         elif args.command == "list":
             manifest = store.manifest()
             names = sorted(manifest.get("files", {}))
