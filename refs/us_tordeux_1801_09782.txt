@@ -1,0 +1,333 @@
+arXiv:1801.09782v2 [physics.soc-ph] 31 Jan 2018
+
+Prediction of Pedestrian Speed with Artiﬁcial Neural Networks
+Antoine Tordeux, Mohcine Chraibi, Armin Seyfried and Andreas Schadschneider
+Abstract Pedestrian behaviours tend to depend on the type of facility. Therefore accurate predictions of pedestrians movements in complex geometries (including corridor, bottleneck or intersection) are difﬁcult to achieve for classical models with few parameters. Artiﬁcial neural networks have multiple parameters and are able to identify various types of patterns. They could be a suitable alternative for forecasts. We aim in this paper to present ﬁrst steps testing this approach. We compare estimations of pedestrian speed with a classical model and a neural network for combinations of corridor and bottleneck experiments. The results show that the neural network is able to differentiate the two geometries and to improve the estimation of pedestrian speeds when the geometries are mixed.
+1 Introduction
+Microscopic pedestrian models are frequently used in trafﬁc engineering to predict crowd dynamics. Classical operational approaches are in general decision-based, velocity-based or force-based models (see [24] and references therein). Such models consider physical as well as social or psychological factors. They are basic rules or generic functions depending locally on the environment. Few parameters having generally physical interpretations allow to adjust the model.
+Antoine Tordeux Forschungszentrum Ju¨lich and University of Wuppertal, e-mail: a.tordeux@fz-juelich.de Mohcine Chraibi Forschungszentrum Ju¨lich, e-mail: m.chraibi@fz-juelich.de Armin Seyfried Forschungszentrum Ju¨lich and University of Wuppertal, e-mail: a.seyfried@fz-juelich.de Andreas Schadschneider University of Cologne, e-mail: as@thp.uni-koeln.de
+1
+
+2
+
+Antoine Tordeux, Mohcine Chraibi, Armin Seyfried and Andreas Schadschneider
+
+Before applying simulations to make predictions, the model parameters have to be calibrated and the models have to be validated, experimentally or statistically by using real data. The validation can be carried out by checking whether the models are able to describe the dynamics accurately for conﬁgurations different from the ones used for the calibration (cross-validation) [28]. A good model should provide realistic dynamics in different conditions (i.e. different geometries, initial or boundary conditions) for the same setting of the parameters.
+The parameter for the convection part of the models (for instance desired speed or time gap) can be referred to the fundamental diagram (FD), a phenomenological relation between speed and surrounding distance spacing to the neighbours and obstacles [26]. This relation can be explicitly used to model the speed of the pedestrian and is then related to optimal velocity, a concept borrowed from trafﬁc modelling [2], see e.g. [19, 18, 15]. It is also used as an implicit relation (see e.g. [12, 4, 10]) that is determined by considering uni-dimensional ﬂows [3]. By neglecting anisotropic effects in the models (such as the vision based effect), microscopic models can be characterised at an aggregated level by fundamental diagrams determining a speed to a local density given by the mean distance spacing to the closest neighbours [6]. In the following we refer a model simply based on a fundamental diagram as FD-based model.
+Despite of their simplicity, microscopic models can describe realistic pedestrian ﬂows, as well as self-organization phenomena such as lane formation or alternation of ﬂow at a bottleneck in bi-directional streams [11, 24]. However, the prediction of pedestrian movement in complex spatial structures (e.g. buildings like stadia or stations) remains problematic. Observations show that pedestrians tend to adapt their behaviour according to the facilities [5]. For instance, the ﬂow tends to locally increase at bottlenecks [25, 30, 20]. This leads to geometry-dependent characteristics and makes aggregated models based on a single fundamental diagram unable to accurately describe transitions between different types of facilities (such as corridor, T-junction, crossing or bottleneck), as well as from platforms to stairs.
+An alternative data-driven approach for the prediction of pedestrian dynamics in complex geometries could be provided by using artiﬁcial neural networks (ANN). Neural networks have already proven their efﬁciency for motion planning in robotic or autonomous vehicles [23, 13], and start to be used for pedestrian dynamics as well [6, 8, 16, 1]. Such approach is data-based and, by opposition to classical models, has artiﬁcially a very large number of parameters with no explicit physical meaning (see Fig. 1). ANN can reproduce complex patterns that FD-based models, describing dynamics at an aggregated level, cannot.
+The aim of this work is to evaluate whether ANN could accurately describe pedestrian behaviour for different types of geometries. A feed-forward neural network is compared to a FD-based model with data gained by experiments at bottleneck and corridor with closed boundary conditions (in the following ‘bottleneck’ and ‘ring’ experiments) [27, 7]. The performances (i.e. the fundamental diagram) signiﬁcantly differ according to the spatial structure. Training and testing (crossvalidation) are carried out for different combinations of bottleneck and ring experiments. The results show that the neural network is able to identify the spatial
+
+Prediction of Pedestrian Speed with Artiﬁcial Neural Networks
+
+3
+
+structure of the facility and improve the prediction in case of mixed structures. The data and the models used are presented in Secs. 2 and 3. The ﬁtting of the neural network is proposed in Sec. 4 while the comparison to the FD-based model over combinations of bottleneck and ring experiments are given in Sec. 5. Conclusions are presented in Sec. 6.
+
+INPUT
+State of the system at t
+Positions/velocities of surroundding neighbors and obstacles
+
+Classical models
+Acc = f (xi, xj, ...) or Speed = g(xi, xj, ...) with parameters v0, d0, τ , ...
+Explicit nonlinear function
+Artiﬁcial neural networks
+
+OUTPUT
+State of the system at t + 1
+Position, velocity or acceleration rate of the pedestrians
+
+Non-explicit nonlinear function
+Fig. 1 Minimalistic illustrative scheme for the distinction between FD-based models, which are explicit non-linear functions calibrated by few meaningful parameters, and neural networks, for which the non-linear function is data-based and has deliberately a large number of parameters.
+
+2 Models
+
+The pedestrian modelling approaches are continuous speed models based on the
+
+K = 10 closest neighbours. We denote in the following (x, y) as the position of the
+
+considered agent, v as its speed and (xi, yi), i = 1, . . . , K as the positions of the K
+
+closest neighbours.
+
+The ﬁrst modelling approach is the Weidmann model for the fundamental di-
+
+agram [29] for which the speed is a function of the mean spacing (i.e. the local
+
+density)
+
+−s¯K
+
+v = FD(s¯K, v0, T, ) = v0 1 − e v0T .
+
+(1)
+
+Here
+
+s¯K
+
+=
+
+1 K
+
+∑iK=1
+
+(x − xi)2 + (y − yi)2 is the mean spacing with the K = 10 closest
+
+neighbours while the time gap T , the pedestrian size and the desired speed v0 are
+
+the parameters of the model.
+
+The second modelling approach is a feed-forward artiﬁcial neural network with
+
+hidden layers H
+
+v = NN H, s¯K, (xi − x, yi − y, 1 ≤ i ≤ K) .
+
+(2)
+
+The network has 2K + 1 inputs: The mean spacing and the K relative positions. The number of parameters in the network depends on the number of nodes in the hidden layers.
+
+4
+3 Data
+
+Antoine Tordeux, Mohcine Chraibi, Armin Seyfried and Andreas Schadschneider
+
+Two datasets obtained in laboratory conditions are used to compare the FD-based and ANN modelling approaches. The data are available on the internet (see [27]). They are part of the online database of pedestrian experiments [7]. The ﬁrst dataset, denoted R and called the ring experiment, comes from a experiment done on a closed geometry of length 30 m and width 1.8 m for different density levels (ranging from 0.25 to 2 ped/m2 — the participant number ranges from 15 to 230). The second dataset, denoted B, is an experiment for a bottleneck geometry. The width of the system in front of the bottleneck is 1.8 m while the width of the bottleneck varies (from 0.70, 0.95, 1.20 to 1.80 m — 150 participants by experiment). See [27] for details on the data. The ﬂow and density are measured every 10 s to deal with pseudoindependent measurements. Each sample contains around N = 2, 000 observations.
+The two data sets describe two different interaction behaviours (see Fig. 2). The speed for a given mean spacing tends to be higher in the bottleneck than on the ring when the system is congested. Consequently the estimation of the time gap signiﬁcantly differs according to the geometry (see Table 1).
+
+Speed, m/s
+0.0 0.5 1.0 1.5
+
+Fig. 2 Observations of the pedestrian speeds as function of the mean spacing with the 10 closest neighbours for the ring and bottleneck experiments. Two distinct relationships can be identiﬁed.
+
+Ring Bottleneck
+
+0.5
+
+1.0
+
+1.5
+
+2.0
+
+2.5
+
+3.0
+
+3.5
+
+Mean spacing, m
+
+Table 1 Fitting of the time gap T , the pedestrian size and the desired speed v0 parameters of the Weidmann model on the ring and bottleneck experiment. The time gap signiﬁcantly differs according to the geometry.
+
+Experiment R
+
+B
+
+(m)
+
+0.64
+
+0.61
+
+T (s)
+
+0.86
+
+0.48
+
+V0 (m/s)
+
+1.60
+
+1.58
+
+Prediction of Pedestrian Speed with Artiﬁcial Neural Networks
+
+5
+
+4 Fitting the neural network
+
+The neural network is ﬁtted with cross-validation and bootstrap [17, 14] over 50 sub-samples. The training is performed using half of the data while the network is tested on the remaining. The training is carried out with the back-propagation method [22] on the normalised data, by minimising from the top to the bottom of the network the mean square error
+
+MSE
+
+=
+
+1 N
+
+∑ i
+
+vi − v˜i
+
+2,
+
+(3)
+
+with vi the observed speed, v˜i the predicted speed and N the number of observations. The computation is done with the statistical software R [21] and the package neuralnet [9].
+The different hidden layers (1), (2), (3), (4,2), (5,2), (5,3), (6,3), (10,4) and (12,5) are tested (see Fig.3). As expected, the training error tends to decrease as the complexity of the network increases, while the testing error shows a minimum before overﬁtting. Such a minimum is reached for the single hidden layer H = (3) with 3 nodes. Note that here the calibration is done on a combination of the ring and bottleneck experiment datasets. Yet similar results are obtained when calibrating separately on the ring and on the bottleneck datasets.
+
+Fig. 3 Training and testing errors according to different hidden in the network. The curves correspond to the average of 50-bootstrap estimates while the bands describe the standard deviation. The training error systematically decreases as network complexity increases while the testing error admits a minimum for hidden H = (3).
+
+MSE
+0.03 0.04 0.05 0.06
+
+(2)
+
+(4,2)
+
+(5,3)
+
+(10,4)
+
+Test Training
+
+(1)
+
+(3)
+
+(5,2)
+
+(6,3)
+
+5 Model comparison
+The calibrated FD-model and the trained neural network with H = 3 are compared on different combinations of data of the ring R and bottleneck B experiments. Here the ﬁrst argument in the notation ‘. / .’ corresponds to the training phase, while the second argument corresponds to the testing phase. The testing errors are presented in Fig. 4. The modelling approaches are ﬁrstly analysed on the identical sets R/R and
+
+6
+
+Antoine Tordeux, Mohcine Chraibi, Armin Seyfried and Andreas Schadschneider
+
+B/B. Here the network is slightly better than the FD-model. For the ring experiment, the performances are relatively homogeneous and the MSE is only approximately 5% smaller by using the network. While for the bottleneck, the performances ﬂuctuate more and the improvement is more signiﬁcant (around 15%). The improvement is also signiﬁcant when the approaches deal with unobserved situations, i.e. for the datasets R/B and B/R (around 15%). The best results are obtained when training the models on the combination of ring and bottleneck experiments, i.e. the scenarios R/R+B, B/R+B and R+B/R+B. As shown in Fig. 5 and Table 2, the network is able in such situation to partially differentiate the two geometries and to improve the speed estimation by a factor of approximately 20%. The orders of improvement are similar to the ones obtained in [1] with the social LSTM neural network and the social force pedestrian model [12].
+
+Fig. 4 Testing error of the FD-model and the neural network according to combinations of the ring R and bottleneck B experiments. The curves correspond to the average of 50-bootstrap estimates while the bands describe the standard deviation. The improvement of the speed is signiﬁcant by using the network when the experiments are mixed (i.e. R+B).
+
+MSE
+0.040
+
+0.030
+
+0.050
+
+B/B
+
+B/R
+
+R+B/B
+
+FD ANN
+
+R/R
+
+R/B
+
+R+B/R
+
+R+B/R+B
+
+Fig. 5 Prediction by the neural network of the pedestrian speed for the R+B/R+B training and testing datasets. The network is able to, at least partially, identify the two geometries. As observed in the real data, the speed for a given mean spacing is in average in the bottleneck higher than the ﬂow in the corridor for congested situations.
+
+Speed, m/s
+0.0 0.5 1.0 1.5
+
+Ring Bottleneck
+
+0.5
+
+1.0
+
+1.5
+
+2.0
+
+2.5
+
+3.0
+
+3.5
+
+Mean spacing, m
+
+Prediction of Pedestrian Speed with Artiﬁcial Neural Networks
+
+7
+
+Table 2 Fitting of the time gap T , the pedestrian size and the desired speed v0 parameters for the data predicted by the neural network.
+
+Experiment R
+
+B
+
+(m)
+
+0.63
+
+0.66
+
+T (s)
+
+0.68
+
+0.50
+
+V0 (m/s)
+
+1.44
+
+1.51
+
+6 Conclusion
+The data-driven approach using an artiﬁcial neural network is able to distinguish pedestrian performances in ring and bottleneck experiments from the relative positions of the K = 10 closest neighbours and the mean spacing. Consequently, we observe that the speed prediction for mixed data can be improved by a factor up to 20% by using a network compared to an aggregated model based on fundamental diagrams.
+The results are ﬁrst steps suggesting that neural networks could be suitable tools for the prediction of pedestrian dynamics in complex geometries. Yet, the simulation of the networks remain to be carried out over full trajectories and compared to the performances obtained with existing models and notably anisotropic models. Furthermore, other inputs, hidden layers and training on different geometries have to be investigated. Especially, one remains to test the complexity necessary to the network for accurate precisions regarding to the size and heterogeneity of the datasets.
+Acknowledgements Financial supports by the German Science Foundation (DFG) under grants SCHA 636/9-1 and SE 1789/4-1 are gratefully acknowledged.
+
+References
+
+1. Alahi, A., Goel, K., Ramanathan, V., Robicquet, A., Fei-Fei, L., Savarese, S.: Social LSTM:
+
+Human Trajectory Prediction in Crowded Spaces. In: IEEE ICCV Conference, pp. 961–971
+
+(2016)
+
+2. Bando, M., Hasebe, K., Nakayama, A., Shibata, A., Sugiyama, Y.: Dynamical model of trafﬁc
+
+congestion and numerical simulation. Phys. Rev. E 51(2), 1035–1042 (1995)
+
+3. Chraibi, M., Ezaki, T., Tordeux, A., Nishinari, K., Schadschneider, A., Seyfried, A.: Jamming
+
+transitions in force-based models for pedestrian dynamics. Phys. Rev. E 92, 042,809 (2015)
+
+4. Chraibi, M., Seyfried, A., Schadschneider, A.: Generalized centrifugal-force model for pedes-
+
+trian dynamics. Phys. Rev. E 82(4), 046,111 (2010)
+
+5. Daamen, W.: Modelling passenger ﬂows in public transport facilities. Dissertation, TU Delft
+
+(2004)
+
+6. Das, P., Parida, M., Katiyar, V.K.: Analysis of interrelationship between pedestrian ﬂow pa-
+
+rameters using artiﬁcial neural network. J. Mod. Transport. 23(4), 298–309 (2015)
+
+7. Forschungszentrum Ju¨lich: Dataset of experiments with pedestrians.
+
+URL
+
+http://ped.fz-juelich.de/database
+
+8
+
+Antoine Tordeux, Mohcine Chraibi, Armin Seyfried and Andreas Schadschneider
+
+8. Fragkiadaki, K., Levine, S., Felsen, P., Malik, J.: Recurrent network models for human dynamics. In: IEEE ICCV Conference, pp. 4346–4354 (2015)
+9. Fritsch, S., Guenther, F., Suling, M.: neuralnet: Training of neural networks (2012). URL
+http://CRAN.R-project.org/package=neuralnet 10. Guo, R., Wong, S., Huang, H., Zhang, P., Lam, W.: A microscopic pedestrian-simulation
+model and its application to intersecting ﬂows. Physica A 389(3), 515 – 526 (2010) 11. Helbing, D., Buzna, L., Johansson, A., Werner, T.: Self-organized pedestrian crowd dynamics:
+Experiments, simulations, and design solutions. Transport. Sci. 39(1), 1–24 (2005) 12. Helbing, D., Molna´r, P.: Social force model for pedestrian dynamics. Phys. Rev. E 51(5),
+4282–4286 (1995) 13. Jackel, L., Hackett, D., Krotkov, E., Perschbacher, M., Pippine, J., Sullivan, C.: How DARPA
+structures its robotics programs to improve locomotion and navigation. Commun. ACM 50(11), 55–59 (2007) 14. Kohavi, R.: A study of cross-validation and bootstrap for accuracy estimation and model selection. In: IJCAI’95 Conference, pp. 1137–1143. Morgan Kaufmann (1995) 15. Lv, W., Song, W.g., Ma, J., Fang, Z.m.: A two-dimensional optimal velocity model for unidirectional pedestrian ﬂow based on pedestrian’s visual hindrance ﬁeld. IEEE Trans. Intell. Transp. Syst. 14(4), 1753–1763 (2013) 16. Ma, Y., Lee, E.W.M., Yuen, R.K.K.: An artiﬁcial intelligence-based approach for simulating pedestrian movement. IEEE Trans. Intell. Transp. Syst. 17(11), 3159–3170 (2016) 17. Mooney, C., Duval, R.: Bootstrapping: A Nonparametric Approach to Statistical Inference. 94-95. SAGE Publications (1993) 18. Moussa¨ıd, M., Guillot, E., Moreau, M., Fehrenbach, J., Chabiron, O., Lemercier, S., Pettre´, J., Appert-Rolland, C., Degond, P., Theraulaz, G.: Trafﬁc instabilities in self-organized pedestrian crowds. PLOS Comput. Biol. 8(3), 1–10 (2012) 19. Nakayama, A., Hasebe, K., Sugiyama, Y.: Instability of pedestrian ﬂow and phase structure in a two-dimensional optimal velocity model. Phys. Rev. E 71, 036,121 (2005) 20. Parisi, D., Patterson, G.: Inﬂuence of bottleneck lengths and position on simulated pedestrian egress. Papers in Physics 9 (2017) 21. R Core Team: R: A Language and Environment for Statistical Computing. R Foundation for Statistical Computing (2014). URL http://www.R-project.org/ 22. Rumelhart, D., Hinton, G., Williams, R.: Learning representations by back-propagating errors. Nature 323, 533–536 (1986) 23. Sadati, N., Taheri, J.: Solving robot motion planning problem using Hopﬁeld neural network in a fuzziﬁed environment. In: IEEE FS Conference, vol. 2, pp. 1144–1149 (2002) 24. Schadschneider, A., Klingsch, W., Klu¨pfel, H., Kretz, T., Rogsch, C., Seyfried, A.: Evacuation dynamics: Empirical results, modeling and applications. In: Encyclopedia of Complexity and Systems Science, pp. 3142–3176. Springer New York (2009) 25. Seyfried, A., Passon, O., Steffen, B., Boltes, M., Rupprecht, T., Klingsch, W.: New insights into pedestrian ﬂow through bottlenecks. Transport. Sci. 43(3), 395–406 (2009) 26. Seyfried, A., Steffen, B., Klingsch, W., Boltes, M.: The fundamental diagram of pedestrian movement revisited. JSTAT 2005(10), P10,002 (2005) 27. Tordeux, A., Chraibi, M., Seyfried, A., Schadschneider, A.: Data from: Prediction of Pedestrian Speed with Artiﬁcial Neural Networks (2017). DOI 10.5281/zenodo.1054017. URL
+https://doi.org/10.5281/zenodo.1054017 28. Treiber, M., Kesting, A.: Trafﬁc Flow Dynamics. Springer, Berlin (2013) 29. Weidmann, U.: Transporttechnik der Fußga¨nger. Technical Report, Schriftenreihe des IVT
+Nr. 90 (ETH Zu¨rich) (1994) 30. Zhang, J., Seyfried, A.: Experimental studies of pedestrian ﬂows under different boundary
+conditions. In: ITSC IEEE Conference, pp. 542–547 (2014)
+
+
