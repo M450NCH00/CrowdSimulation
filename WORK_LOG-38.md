@@ -105,6 +105,31 @@ Priority if short of budget: Q1, Q2, Q4, Q3, Q5. Aim for 8 to 12 entries.
   - Seed lead status: Amano & Yamaguchi confirmed (accepted at SIGSPATIAL 2026, DOI not yet live).
 - Next step: Q2 (Rudin, VIPER, Yang-S2AN cross-reference).
 
+### 2026-10-18 — Q2 and Q4 written
+- What I did: read [Rudin-StopExplaining] (full) and [Bastani-VIPER] (full); cross-referenced
+  [Yang-S2AN] from its S3 entry and Zhang's PySR / LLM-SR baselines. Then Q4 (ahead of Q3, as the
+  issue's priority order says): [Kusner-CF], [Garg-CFText], [Tamkin-Discrim], all full text.
+- A mistake caught on re-check: my first VIPER draft said the extraction has a guarantee on the
+  student's loss. Re-reading §2, that guarantee is for Q-DAgger; for trees the authors say the loss
+  is not convex and they use CART "as a heuristic". Corrected before committing.
+- An append via a bash heredoc failed on quoting (as the memory note on heredocs warns); I now
+  write each section to a scratch file and append it.
+- Result / what I found:
+  - **Q2**: no source in this set compares an interpretable model *learned from labels* with a
+    *hand-written* rule on the same task. Rudin is an argument (no trade-off on structured data,
+    with the CORELS example); VIPER compares a tree with its neural teacher; S2AN compares a
+    network, not an interpretable model, with hand-written rules. So the Q2 comparison the issue
+    asks for is only half answered. Recorded in "Open questions".
+  - **Q4**: the FYP's "no `ethnic_group` input" is fairness through unawareness, which Kusner et
+    al. show is not sufficient when other inputs carry the attribute. But in a simulator the causal
+    graph is ours, so the stronger condition (no feature descends from `ethnic_group`) can be
+    checked from the scenario generator. The remaining channel is the **labels** of an LLM
+    teacher. Garg's asymmetric counterfactuals fit the FYP's second rule: the test applies only
+    where a rule says the attribute must not matter.
+  - Tamkin et al. is by Anthropic about Anthropic's model; I flagged the conflict of interest in
+    the entry, since this review is written with an Anthropic model.
+- Next step: Q3 (reward machines, shielding, SA-CADRL).
+
 ## Open questions / risks
 
 ## Summary (fill in at the end)

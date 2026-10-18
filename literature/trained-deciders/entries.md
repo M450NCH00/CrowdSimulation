@@ -161,3 +161,222 @@ Companion files: [options](options.md) · [evaluation](evaluation.md) · [verdic
   (2) The authors name the missing check themselves: agreement with fresh teacher calls. That check
   belongs in [evaluation](evaluation.md).
 - BibTeX: `li2026genworld`
+
+---
+
+## Q2. Learning interpretable rules from labelled decisions
+
+### Cross-references (not summarised again)
+
+- **[Yang-S2AN]** (Yang et al. 2024, AAMAS; `literature/simulation-rules/s3-mapf-robotics.md`,
+  and `research-gap.md` §6). The one direct comparison in this repository of a **learned** order
+  against a **hand-written** one (PIBT, PBS). The learned network wins on success rate in
+  obstacle-dense maps and where PBS times out at 140–250 agents (§5.2). It loses on speed (PIBT
+  "less than 1 second"; S2AN "within seconds" up to 180 agents), scale (250 agents at most),
+  information needed (the whole instance, centrally) and readability ("cannot be written down as a
+  rule") (that entry, citing §1, §5.2, §5.3). This learned model is **not** interpretable: it is a
+  contrast case for Q2, not an example of it.
+- **[Zhang-DFD]**'s baselines: PySR (classical symbolic regression) and LLM-SR. Both produce
+  readable formulas from (perception, choice) pairs. PySR was the worst model in every column of
+  both tables (DTW 171.38 / 184.93 / 118.92 against DFD's 4.65 / 2.87 / 1.11; Table 4, p. 19 of the
+  paper). Not read separately; listed in the [search log](search-log.md) as leads.
+
+### [Rudin-StopExplaining]: Stop Explaining Black Box Machine Learning Models for High Stakes Decisions and Use Interpretable Models Instead
+- Authors / Year / Venue / Link: Cynthia Rudin / 2019 / *Nature Machine Intelligence* 1:206–215,
+  doi:10.1038/s42256-019-0048-x / https://arxiv.org/abs/1811.10154 (the author's pre-publication
+  version, per its arXiv comment)
+- Status: published in *Nature Machine Intelligence*; Read: full text of arXiv v3 (the author's
+  version), `refs/td_rudin2019_stop.txt`. Locators are to that version's section numbers. **It is a
+  perspective (argument) paper**, not an experiment: its claims are the author's, supported by
+  cited studies and one worked example.
+- Model type, and its teacher: argues for models that are interpretable by construction (sparse
+  logical models such as rule lists and decision trees; integer scoring systems), trained on the
+  data, rather than black boxes explained afterwards (§1; §5).
+- Inputs and outputs: structured features → a decision. Worked example: a three-rule list from
+  CORELS on age, priors and (optionally) gender predicts re-arrest about as well as the 130+ factor
+  COMPAS tool (Fig. 3; Table 1, "similar true and false positive rates").
+- Fidelity: the central claim is about accuracy, not fidelity. "When considering problems that
+  have structured data with meaningful features, there is often no significant difference in
+  performance between more complex classifiers ... and much simpler classifiers (logistic
+  regression, decision lists)" (§2 (i); Appendix B). Her reason: the **Rashomon set**. If many
+  models fit the data about equally well, some of them are likely to be simple (section "A
+  Technical Reason Why Accurate Interpretable Models Might Exist in Many Domains").
+- On explanations of a black box: an explanation model can match the black box's outputs while
+  using "completely different features", and "is thus not faithful to the computation" (§2 (ii)).
+- Behaviour outside the training data: not addressed.
+- Cost: interpretable models "can entail significant effort to construct, in terms of both
+  computation and domain expertise" (§3 (ii)); optimal sparse models are hard optimisation problems
+  (§5). Per decision, a rule list is a few comparisons. `[inference]`
+- Can a person read what it does?: that is the paper's definition of interpretable, with sparsity
+  as a measure because "humans can handle at most 7±2 cognitive entities at once" (§1).
+- Guarantees: none claimed. Instability: small changes in the data can give very different trees,
+  which the author ties to the Rashomon effect (Appendix E).
+- Bias or protected-attribute checks: argued, not run. A transparent model shows which features it
+  uses, so a reader can see whether it uses race (§2 (ii)). `[inference]`
+- What it means for "several models trained on the rules": `[inference]` (1) Situation features in
+  this FYP are structured and meaningful (arrival order, age, mobility aid): the case where Rudin
+  says simple models usually match complex ones. So a deep model must earn its place by beating a
+  shallow tree **on our data**, not by assumption. (2) Appendix E predicts that two trees trained on
+  slightly different rule or LLM samples may look very different while deciding alike. Compare
+  trained deciders by their **decisions**, not by their shapes. (3) Her claim is made for
+  high-stakes decisions on structured data; crowd decisions are not tested in the paper.
+- BibTeX: `rudin2019stop`
+
+### [Bastani-VIPER]: Verifiable Reinforcement Learning via Policy Extraction
+- Authors / Year / Venue / Link: Osbert Bastani, Yewen Pu, Armando Solar-Lezama / 2018 /
+  *Advances in Neural Information Processing Systems 31* (NeurIPS 2018) /
+  https://proceedings.neurips.cc/paper/2018/hash/e6d8545daa42d5ced125a4bf747b3688-Abstract.html ;
+  https://arxiv.org/abs/1805.08328
+- Status: published at NeurIPS 2018; Read: full text, arXiv v2 (proofs in the appendix not
+  followed), `refs/td_bastani2018_viper.txt`.
+- Model type, and its teacher: a **decision tree** extracted by imitation from a trained neural
+  policy (a deep Q-network or a policy-gradient network; iLQR for one task) (§2; §4). VIPER extends
+  DAgger: the student is trained on the states **it itself visits**, and each state is weighted by
+  how much the choice of action matters there, using the teacher's Q-function (§1; §2).
+- Inputs and outputs: low-dimensional state (7 numbers for Pong; the cart-pole state) → a
+  discrete action (§4).
+- Fidelity to the teacher, and how it was measured: by reward, not by decision agreement. Trees
+  match the teacher's perfect reward on Atari Pong (769 nodes; 21.0 against 21.0), toy Pong (31
+  nodes) and cart-pole (3 nodes suffice) (§1; §4; Fig. 4a). On half-cheetah a 9,757-node tree
+  reaches 4,014 against the network's 4,189 (§4). Against plain DAgger, VIPER's trees are an order
+  of magnitude smaller for the same reward (769 against 7,967 nodes at R = 21; Fig. 4c; §4).
+- Behaviour outside the training data: not tested as such. Instead, **verification found a
+  failure the reward did not show**: in toy Pong, Z3 found a start state "near the edge of the
+  screen" where the 31-node tree can miss the ball, although it "plays perfectly" over 50 rollouts
+  (§4). The authors repaired it by hand by adding one top-level node, then proved the property
+  (§4).
+- Cost: verifying the trees took seconds (robustness 2.9 s per point; correctness under 5 s; §4),
+  against 12 s to over an hour per point with Reluplex on the network (§4). Training cost is not
+  given as a single figure. Population: single-agent tasks.
+- Can a person read what it does?: `[inference]` a 3- or 31-node tree, yes; a 769- or 9,757-node
+  tree, not in practice. The paper's goal is verifiability, not readability (§1).
+- Guarantees: the general algorithm, Q-DAgger, has "theoretical guarantees improving on DAGGER's"
+  (§2). **For trees these do not carry over**: the tree loss is not convex, so VIPER fits each
+  iteration with CART as "a heuristic" (§2, "Extracting decision tree policies"). Properties of the
+  extracted tree
+  (correctness, stability, robustness) can be **proved** with standard solvers (§3; §4), with the
+  stated limit that the dynamics must be polynomial (Taylor approximations used; §3).
+- Bias or protected-attribute checks: none.
+- What it means for "several models trained on the rules": `[inference]` Three lessons. (1)
+  **Sample the student's own situations**, not only the teacher's: a tree trained only on the
+  situations a rule-following simulation produced may meet situations it never saw once it drives
+  the simulation itself (the DAgger point, §1–§2). (2) Weight situations by how much the decision
+  matters (for us, those close to deadlock). (3) A tree over Situation features can be **checked
+  exhaustively** for properties such as "the decision never depends on X"; a neural model cannot
+  be, at the same cost. The domain here is control, not crowds.
+- BibTeX: `bastani2018verifiable`
+
+---
+
+## Q4. Checking a trained decider for bias
+
+The template's fields are kept, but for these three sources the important ones are the definition
+of the test and its stated limits.
+
+### [Kusner-CF]: Counterfactual Fairness
+- Authors / Year / Venue / Link: Matt J. Kusner, Joshua R. Loftus, Chris Russell, Ricardo Silva /
+  2017 / *Advances in Neural Information Processing Systems 30* (NeurIPS 2017) /
+  https://proceedings.neurips.cc/paper/2017/hash/a486cd07e4ac3d270571622f4f316ec5-Abstract.html ;
+  https://arxiv.org/abs/1703.06856
+- Status: published at NeurIPS 2017; Read: full text, arXiv v3 (supplementary proofs skimmed),
+  `refs/td_kusner2017_cf.txt`.
+- Model type, and its teacher: a definition plus a method; demonstrated with logistic or linear
+  regression on real data (law-school first-year grades, 21,790 students; §5).
+- The definitions it sets side by side (§2.1): *fairness through unawareness* (the protected
+  attribute A is "not explicitly used", Definition 1); individual fairness; demographic parity;
+  equality of opportunity. Their criticism of unawareness: other inputs "can contain
+  discriminatory information analogous to A" (§2.1).
+- Its own definition (Definition 5, §3): a predictor is counterfactually fair if, for an
+  individual, the distribution of its prediction would be the same had A been different, **with the
+  individual's background factors U held fixed** in a causal model. Lemma 1 (§3.2): a predictor
+  that uses only **non-descendants** of A in the causal graph is counterfactually fair.
+- Fidelity / accuracy cost: on law-school data, RMSE 0.873 (uses race and sex), 0.894 (unaware),
+  0.929 and 0.918 (two counterfactually fair models) (Table 1). The unaware model **fails** the
+  counterfactual test, because grades it uses are themselves caused by race and sex in the assumed
+  model (§5; Fig. 2).
+- Behaviour outside the training data: not tested.
+- Cost: needs a causal model of how the attributes relate; "even if strong assumptions are
+  necessary" (§2.1). Three levels of assumption are offered (§4.2).
+- Guarantees: if the causal model is right, Lemma 1 holds by construction (§3.2). Everything
+  rests on the assumed graph (§4.2–§4.3).
+- What it means for "several models trained on the rules": `[inference]` This FYP's rule "no model
+  may take `ethnic_group` as an input" is **fairness through unawareness** (Definition 1), which
+  Kusner et al. show is not enough when other inputs carry the attribute. In this simulator, though,
+  the causal graph is **ours to write**: `ethnic_group` is assigned, and no feature is caused by it
+  unless the scenario generator makes it so (for example by spawning groups at different ends of a
+  corridor). So a stronger guarantee is cheap here: check, from the generator, that no Situation
+  feature is a descendant of `ethnic_group`; then Lemma 1 applies. The one channel left is the
+  **labels**: an LLM teacher that saw the group could pass its bias into labels even when the
+  student never sees the group. That needs the counterfactual test of
+  [evaluation](evaluation.md) on the teacher too.
+- BibTeX: `kusner2017counterfactual`
+
+### [Garg-CFText]: Counterfactual Fairness in Text Classification through Robustness
+- Authors / Year / Venue / Link: Sahaj Garg, Vincent Perot, Nicole Limtiaco, Ankur Taly, Ed H. Chi,
+  Alex Beutel / 2019 / *Proc. 2019 AAAI/ACM Conference on AI, Ethics, and Society (AIES '19)*,
+  pp. 219–226, doi:10.1145/3306618.3317950 / https://arxiv.org/abs/1809.10610
+- Status: published at AIES 2019; Read: full text, arXiv v2, `refs/td_garg2019_cftext.txt`. The
+  arXiv copy has unnumbered sections; locators name them.
+- Model type, and its teacher: CNN toxicity classifiers trained on 160K labelled Wikipedia comments
+  (Experiments, "Dataset").
+- The test: **counterfactual token fairness (CTF)**. Swap the identity term in an input for each
+  other identity term and measure the mean absolute change in the model's output, the "CTF gap"
+  (Definition 2; Experiments, "Metrics"). 50 identity terms; 35 used in training and 12 held out
+  (Experiments, "Setup").
+- Three ways to reduce the gap (Methods): **blindness** (replace every identity term with one
+  IDENTITY token), counterfactual augmentation, and counterfactual logit pairing (a penalty on
+  output differences between counterfactual pairs).
+- Fidelity: gaps on the training terms (Table 1, non-toxic evaluation examples): baseline 0.140,
+  blindness 0.000 "by design", augmentation 0.127, logit pairing λ = 5 0.002.
+- Behaviour outside the training data: on the 12 **held-out** terms (Table 2) every method is near
+  the baseline (0.091): blindness 0.090, logit pairing λ = 5 0.076 (best). "Blindness does not
+  appear to provide generalization benefits" (Results).
+- Limits stated: **asymmetric counterfactuals** — swaps for which the right output really should
+  differ, so forcing equality is wrong (section "Asymmetric Counterfactuals"). Blindness "may still
+  discriminate using other signals that are associated with the identity term" (Methods,
+  "Blindness").
+- Cost: one regularisation term in training (Methods). Per decision: unchanged.
+- Can a person read what it does?: no (CNN).
+- Guarantees: blindness guarantees a zero gap for the listed terms only (Methods, "Blindness").
+- What it means for "several models trained on the rules": `[inference]` (1) The CTF gap is
+  directly usable as **the counterfactual bias test**: same Situation, flip one attribute, measure
+  the change in the decider's output, averaged over Situations. (2) The asymmetric case is exactly
+  this FYP's second rule: the test applies **only where a rule says an attribute must not matter**.
+  Where a rule says age or a mobility aid *should* matter (giving way to the elderly), a gap is
+  expected and is not bias. (3) Removing an input (blindness, or our "no `ethnic_group`") passes the
+  test trivially for that input, and tells you nothing about proxies.
+- BibTeX: `garg2019counterfactual`
+
+### [Tamkin-Discrim]: Evaluating and Mitigating Discrimination in Language Model Decisions
+- Authors / Year / Venue / Link: Alex Tamkin, Amanda Askell, Liane Lovitt, Esin Durmus, Nicholas
+  Joseph, Shauna Kravec, Karina Nguyen, Jared Kaplan, Deep Ganguli (Anthropic) / 2023 /
+  arXiv:2312.03689 / https://arxiv.org/abs/2312.03689
+- Status: `[preprint]`. No published version found (Crossref title search, 2026-10-18).
+  **Conflict of interest to note:** the authors work at Anthropic and test Anthropic's Claude 2;
+  this review is written with an Anthropic model. Read: full text, arXiv v1,
+  `refs/td_tamkin2023_discrim.txt`.
+- Model type, and its teacher: no trained model; an LLM used as a decision-maker on 70 yes/no
+  decision questions (loans, visas, hiring), written by an LLM and checked by people (§2; Table 1).
+- The test: fill each question template with every combination of age (20–100 by tens), gender
+  (3) and race (5): 9 × 3 × 5 × 70 = 9,450 prompts (§2). **Explicit** (attributes stated) and
+  **implicit** (a name suggests race and gender) versions (§2). The effect of each attribute is
+  estimated by a **mixed-effects regression** on the logit of p(yes), with question template as a
+  random effect; the coefficient is the "discrimination score", 0 meaning none (§3.1, §3.2).
+- Results for Claude 2: positive discrimination for women, non-binary and non-white subjects, and
+  **negative discrimination for subjects over 60**; smaller when race and gender are implicit
+  (§3.3; Figs. 2–3). Robust to the question's style and format in direction (§4; Fig. 4).
+- Mitigation: appended prompt statements ("illegal to discriminate", "ignore demographics") bring
+  the score to about 0.15 while keeping about 92% correlation with the original decisions (§5.3,
+  §5.4; Fig. 6).
+- Behaviour outside the training data: n/a. Limits stated (§6.1): paragraph-long inputs only; no
+  intersectional effects; names as proxies are hard to choose; sensitivity to prompt wording
+  "remains possible".
+- Cost: 9,450 model calls per model tested (§2). `[inference]`
+- What it means for "several models trained on the rules": `[inference]` (1) It is the template for
+  testing an **LLM teacher** before its labels are used: full factorial over the attributes,
+  decision probability as the outcome, mixed-effects model with Situation as a random effect. (2)
+  The age finding matters here: this FYP's rules may *intend* age to matter (priority to the
+  elderly), so the regression must separate intended effects (written in a rule) from unintended
+  ones. (3) The 92% correlation figure is a way to report what a fairness fix costs: agreement with
+  the unfixed decisions.
+- BibTeX: `tamkin2023evaluating`
