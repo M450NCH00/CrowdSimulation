@@ -260,7 +260,62 @@ open), which holds the shortlist this issue needs.
 - **Q9. The perception-pass cost** (~32 ms at 10,000) was measured for a full Python read. Reading
   only agents near a conflict (`agents_in_range`, `agents_in_polygon`) may be far cheaper; not
   measured.
-- **Q10. The venv** (`spikes/.venv`, ~1 GB with PySide6 and VTK, pulled in by JuPedSim) is left in
+- **Q10. The venv** (`spikes/.venv`, 1.3 GB with PySide6 and VTK, pulled in by JuPedSim) is left in
   place for later issues; it is gitignored. Delete it if disk space matters.
 
 ## Summary (fill in at the end)
+
+**What changed.** New in `integration/simulator-survey/`:
+- `hands-on.md`: each trial on JuPedSim 1.4.2 and Mesa 3.5.1, with set-up, result, code size,
+  problems, determinism, timing and logging.
+- `decision.md`: options (a), (b) and (c); a matrix with **proposed** weights; a sensitivity table;
+  a recommendation marked as a proposal.
+- `spikes/`: throwaway trial code (nine scripts, 27–95 lines each) and a pinned
+  `requirements.txt`. Nothing imports it.
+
+`README.md` gains a status row, three findings and the layout lines. `llm_negotiation/` is
+untouched.
+
+**Why.** Issue #40 asks whether to use, adapt or build the testbeds that track #34's portable-rule
+idea needs, decided by hands-on evidence rather than the desk survey alone.
+
+**What it found.**
+- **JuPedSim:**
+  - its queue stage is FIFO only, with stale entries, so "admit" needs our own queue-order layer;
+  - the door, both adapter hooks and determinism work;
+  - 10,000 agents run 2.9–3.4× faster than negsim.
+- **Mesa:**
+  - expresses the queue and the door directly, and is seeded and deterministic;
+  - three API surprises (a missing dependency, a deprecated `seed=`, weakly held callbacks).
+- **SUMO:** not needed for the door.
+- **Proposed:** the hybrid (c). It leads unless the supervisor decides each conflict type need not
+  run in two testbeds (Q2).
+
+**How it was verified** (`github_issue_workflow.md` §5b):
+- **Install:** only pinned wheels (`--only-binary=:all:`) from PyPI, into a new venv outside
+  `llm_negotiation/`. The user's answer was recorded before any install (A1).
+- **Every number traced to a run:**
+  - every quantitative claim in `hands-on.md` and `decision.md` comes from a run logged in this
+    file;
+  - each claim was re-checked against the output;
+  - one figure was corrected (the negsim comparison, 3.4× → 2.9–3.4×);
+  - one wording error was corrected (the sensitivity row).
+- **Matrix arithmetic:** totals computed by script, not by hand.
+- **Timings:** a System log check for Kernel-Power 506/507/42/107 covered all timing runs (none);
+  on AC power.
+- **Each trial was run, or its omission explained:**
+  - SUMO was not tried (reason in trial 2);
+  - Vadere and Menge are outside the permission.
+- **`llm_negotiation/`:** no diff against the base branch. Its tests: **1,381 passed** in 617 s (`python -m pytest` in `llm_negotiation/`, a fresh venv in the session scratchpad: Python 3.13.3, PyYAML 6.0.3, pytest 9.1.1, matplotlib 3.10.8; run after all timings, so it overlapped none).
+- **Spend:** zero; no API call.
+- **Open questions:** Q1–Q10 above.
+
+| Acceptance criterion | Where |
+|---|---|
+| The user's answer on the standing instruction recorded before any install | entry "The user's answers", A1 |
+| Only pinned PyPI packages, in a separate virtual environment | entry "Install"; `spikes/requirements.txt` |
+| Each trial run, or its failure explained | `hands-on.md` trials 1–4; SUMO's omission in trial 2 |
+| Both adapter hooks shown to work, or impossible, for each simulator tried | `hands-on.md` trial 3 (JuPedSim, Mesa) |
+| `decision.md` compares (a), (b), (c), weights marked as a proposal | `decision.md`, "Status" and "Criteria" |
+| Nothing in `llm_negotiation/` changed, and its tests still pass | this summary |
+| Zero spend; "Open questions / risks" not empty | Q1–Q10 |
