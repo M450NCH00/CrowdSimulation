@@ -59,6 +59,7 @@ experiment code until the literature review is complete and discussed.**
 | 5f | Portable rules (track #34), PT-2: how to test rules on unseen scenarios, and how to write those scenarios down for several simulators | **delivered** (issue #36) — `literature/unseen-scenarios/`; a draft test protocol and scenario-card fields, both proposals awaiting the supervisor's sign-off |
 | 5g | Portable rules (track #34), PT-3: human evidence for the unseen scenarios (queue cutting, boarding, lifts, escalators), Singapore first | **delivered** (issue #37) — `literature/unseen-scenario-evidence/`; graded reference behaviours (grading scale a proposal awaiting the supervisor's sign-off); no Singapore observation found |
 | 5h | Portable rules (track #34), PT-4: models trained on extracted rules (distillation, learned deciders, rule-guided learning) | **delivered** (issue #38) — `literature/trained-deciders/`; options table, evaluation plan with the counterfactual bias test, and a one-page verdict, all proposals awaiting the supervisor's sign-off |
+| 5i | Portable rules (track #34), PT-5: simulators, part 1, a desk survey of crowd simulators and how they work | **delivered** (issue #39) — `integration/simulator-survey/`; one section per simulator, a sourced comparison matrix, and a shortlist (JuPedSim, Mesa, SUMO conditional) for the hands-on trial in #40; nothing installed or run. CrowdGym's engine left open |
 | 6 | Bridge into CrowdGym — `integration/crowdgym_mapping.md` | not started |
 
 From building the negotiation simulator (issue #24) — see `llm_negotiation/README.md` for
@@ -196,6 +197,25 @@ From issue #32 (the third sub-issue's second step, SI-3a.2) — see `llm_negotia
   its worst case is USD 0.65 against the same USD 0.05 cap, and no cut of the reply cap, the
   messages or the retries alone fits; a hard spend cap with the sessions in a stated priority
   order would (issue #30's Q5, options re-previewed).
+
+Three findings from the simulator desk survey (issue #39, PT-5 of track #34). They are
+descriptions plus a shortlist, not a decision (that is #40), and the idea they serve still needs
+supervisor sign-off. See `integration/simulator-survey/`; `shortlist.md` is the short read.
+Nothing was installed or run:
+
+- **Each candidate differs from negsim along a different axis.** JuPedSim: other motion models, a
+  0.01 s step, journeys with queues and waiting sets. Vadere: event-driven steps and a
+  perception → cognition → behaviour layer. Mesa: discrete space and event scheduling. Only SUMO
+  has vehicles, stops and boarding built in, and there boarding is a time per person. See
+  `comparison.md`.
+- **No open-source candidate gives a per-step callback.** Both adapters attach in a loop this
+  project writes around `iterate()` / `simulationStep` / `nextStep`. JuPedSim exposes no current
+  velocity for its collision-free speed models, and its direct target setting works only in a
+  direct-steering journey. See `survey.md` §3.
+- **Whether CrowdGym is built on JuPedSim is still open.** Its "journeys" and "CFS" point to it.
+  Its `Tau` / `Mass` / side and front radii, its RL action interface, and the 0.8 m/s "JuPedSim
+  default" (in JuPedSim 1.4.x the CFS default is 1.2 m/s) do not fit. CrowdGym's dependency list
+  would settle it. See `survey.md` §2.
 
 Three findings from the trained-deciders review (issue #38, PT-4 of track #34), all drafts needing
 supervisor sign-off. See `literature/trained-deciders/`; `verdict.md` is one page. The review read
@@ -422,6 +442,11 @@ CrowdSimulation/
     requirements.txt
   integration/
     crowdgym_mapping.md             record -> CrowdGym AgentType / journey / action handler
+    simulator-survey/               issue #39 (PT-5 of track #34): desk survey of crowd simulators
+      shortlist.md                       *** the candidates for #40's hands-on trial, and what each must test ***
+      survey.md                          one section per simulator (negsim, CrowdGym, JuPedSim, SUMO, Vadere, Menge, Mesa, ...)
+      comparison.md                      the matrix: a row per simulator, a column per template field, every cell sourced
+      search-log.md                      what was fetched, what could not be, leads not followed
   llm_negotiation/                  issue #24: two-agent LLM negotiation simulator; issue #26: the
                                     avoidance layer (ORCA, perception, directives); issue #28: rules;
                                     issue #30: rule generation; issue #32: fictional groups and
