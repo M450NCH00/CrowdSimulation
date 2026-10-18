@@ -77,6 +77,35 @@ Deliverables go in `literature/unseen-scenario-evidence/`, sources in `refs/`.
   models whose behaviour is an input are not human evidence.
 - Next step: Q1, starting with Milgram et al.
 
+### 2026-10-18 — Q1 queue cutting: seeds confirmed, two primary texts read, six stubs
+- What I did: confirmed every Q1 seed on Crossref; checked open copies with OpenAlex (not
+  Unpaywall, which refuses placeholder emails, and I will not send the user's address to it; a
+  past work log raised the same question); read Brintzenhofe (2023, open-access chapter), Langer et
+  al. (1978), Folkes (1985), and pp. 493-500 of Allon and Hanany (2012). Wrote `queue-cutting.md`.
+- Why: Q1 is the issue's first priority.
+- Result / what I found:
+  - **Milgram 1978 vs 1986 resolved**: data collected by graduate students in spring 1978,
+    published in 1986 after Milgram's death (Brintzenhofe p. 65). The 129 queues reported by
+    secondary summaries match the sum of the per-condition trial counts (Table 3.2, p. 70).
+  - **Schmitt et al. 1992 confirmed** (`[unverified lead]` resolved): JPSP 63(5):806-815.
+  - Milgram, Schmitt, Mann, Helweg-Larsen and LoMonaco (2008), Dold and Khadjavi (2017) and
+    Oberholzer-Gee (2006) are all closed. Stubbed. The last three are new leads found through a
+    review (Furnham et al. 2020), which I use only as a lead finder.
+  - **A6 (judgement call).** Brintzenhofe reproduces, with APA permission, Schmitt et al.'s Table 1
+    and Milgram et al.'s per-position reaction data together with raw archive data. I use these
+    numbers, attributed to the chapter and flagged `repro`, but I do not summarise the two papers
+    themselves. The supervisor may judge this too close to "secondary"; if so, drop QC-1 to QC-5
+    to grade C.
+  - **A mistake caught on re-reading**: my first draft said silent buffers suppress objection.
+    Table 3.2 does not show that (two-intruder comparisons go both ways), so I rewrote it as "no
+    consistent buffer effect in the table" and noted the claim is in the unread paper.
+  - Langer's "any reason works for a small favour" was **not replicated** by Folkes (1985), who
+    found the *type* of reason matters (uncontrollable > controllable).
+  - Rendering table images: the Brintzenhofe tables are images in the PDF, so I rendered pages
+    with PyMuPDF in a throwaway `uv run --with pymupdf` environment (nothing installed into the
+    project).
+- Next step: Q2 boarding and alighting.
+
 ## Open questions / risks
 
 (filled in as work proceeds)
