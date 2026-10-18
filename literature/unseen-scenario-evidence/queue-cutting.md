@@ -169,7 +169,7 @@ Companion files: [verdict](verdict.md) · [reference behaviours](reference-behav
   "generalizing to successfully nonthinking people" from thinking subjects (p. 642). **Old (1970s),
   one US university, small cells (15-25).** The headline small-favour result was not replicated
   by [Folkes-PartialReplication].
-- Reference behaviours it supports: QC-6, QC-7 [inference].
+- Reference behaviours it supports: QC-7, QC-8 [inference].
 - BibTeX: `langer1978mindlessness`.
 
 ### [Folkes-PartialReplication]: Mindlessness or mindfulness: A partial replication and extension of Langer, Blank, and Chanowitz
@@ -199,7 +199,7 @@ Companion files: [verdict](verdict.md) · [reference behaviours](reference-behav
 - Effects of age or gender reported: experimenters' genders are listed (p. 602, p. 603) but no
   gender effect is reported for the field experiments.
 - Limits; age and culture: small samples, student populations, US and UK, 1980s. **Old, Western.**
-- Reference behaviours it supports: QC-6, QC-7 [inference].
+- Reference behaviours it supports: QC-6, QC-8 [inference].
 - BibTeX: `folkes1985mindlessness`.
 
 ### [AllonHanany-CuttingInLine]: Cutting in Line: Social Norms in Queues

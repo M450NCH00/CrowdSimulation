@@ -125,7 +125,7 @@ supervisor, not a change made here.
   MRT stations such as Jurong East, Buona Vista and Bishan to reducing criss-crossing of commuters
   when they alight and board trains" (p. 2). Item A2: floor stickers for "priority queues at the
   entrance to lifts and escalators at MRT stations" (p. 1). No evaluation is reported.
-- Reference behaviours it supports: SG-2, SG-3 (as design intent).
+- Reference behaviours it supports: SG-2 (as design intent).
 - BibTeX: `smrt2018scet`.
 
 ### [BCA-Escalator2023]: 97% of escalator incidents reported to BCA linked to improper use of escalator
@@ -147,7 +147,7 @@ supervisor, not a change made here.
   steps"; people with trolleys, prams, luggage, or limited mobility "should use the lifts instead"
   (para. 6).
 - Limits: incidents, not everyday behaviour; the denominator (total rides) is unknown.
-- Reference behaviours it supports: LE-3 (age, bulky items) [inference].
+- Reference behaviours it supports: SG-3; Q5 in `reference-behaviours.md` §3 [inference].
 - BibTeX: `bca2023escalator`.
 
 ### [EMSD-2015] and [DEVB-2025]: Hong Kong government statements about Singapore's escalator advice

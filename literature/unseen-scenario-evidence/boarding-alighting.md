@@ -89,7 +89,7 @@ Companion files: [verdict](verdict.md) · [reference behaviours](reference-behav
   demand comes from a separate, coarse dataset (p. 7); the stations' boarder-alighter ratios
   differ by 63% (p. 9). **Western (London), 2014-2015, two
   platforms.**
-- Reference behaviours it supports: BA-2, BA-3, BA-5 [inference].
+- Reference behaviours it supports: BA-1 (supporting), BA-3, BA-4, BA-5 [inference].
 - BibTeX: `seriani2017combined`.
 
 ### [Seriani-BARatio]: Exploring the Effect of Boarding and Alighting Ratio on Passengers' Behaviour at Metro Stations by Laboratory Experiments
@@ -129,7 +129,7 @@ Companion files: [verdict](verdict.md) · [reference behaviours](reference-behav
   (§3.2); camera positions hid where alighters stood inside the train (§4.2); "More experiments
   are needed" (abstract). Lab participants act knowing they are observed [inference]. **Western
   (London), laboratory.**
-- Reference behaviours it supports: BA-1, BA-4, BA-6 [inference].
+- Reference behaviours it supports: BA-1, BA-2, BA-6 [inference].
 - BibTeX: `seriani2019exploring`.
 
 ### [Luangboriboon-Density]: The influence of the density inside a train carriage on passenger boarding rate

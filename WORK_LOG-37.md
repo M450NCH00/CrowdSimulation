@@ -138,8 +138,81 @@ Deliverables go in `literature/unseen-scenario-evidence/`, sources in `refs/`.
     supervisor; I have not edited the dataset file (out of scope, and it is agreed scope).
 - Next step: Q3 lifts and escalators (the remaining budget allows a short pass), then Q5/Q6.
 
+### 2026-10-18 — Q3 lifts and escalators (short pass)
+- What I did: three searches; read London Underground's Holborn pilot report (FOI release, 2016)
+  and a Taipei MRT field study of accessible-lift users (Huang and Chang 2022, in Chinese, read on
+  the journal's e-book site). Wrote `lifts-escalators.md` with the leads not followed.
+- Result / what I found: in Taipei, when a wheelchair, pram or walking-frame user needed priority,
+  everyone gave way in 24% of trips and nobody in 49%; at Holborn, standing on both sides lasted
+  only while staff asked. **No study of who takes the last place in a lift** was found. The Taipei
+  e-book's text layer interleaves the two columns, so I checked every number against Table 4,
+  which extracted cleanly; journal page = e-book page minus 10 (I first wrote p. 15 for the
+  abstract and corrected it to p. 16).
+
+### 2026-10-18 — Q5, Q6, verdict, and verification
+- What I did: wrote `reference-behaviours.md` (grading scale A-D plus flags, marked a proposal; 23
+  statements; Q5 table and cross-reference with `human-demographic-effects.md`), `verdict.md`,
+  `missing-papers.md`, `search-log.md`, `refs-unseen-evidence.bib` (36 records), and a README
+  row, findings paragraph and layout entry.
+- Verification (workflow §5b):
+  - Re-checked every page locator I was unsure of against the cached text (London manuscript,
+    Harris, Brintzenhofe, Taipei); corrected Harris §3.4 from p. 75 to p. 74.
+  - Cross-checked that each "Reference behaviours it supports" line matches the statement IDs;
+    six were wrong after renumbering and were fixed.
+  - **BibTeX given names**: several had come from memory, not from a page read. Replaced with
+    initials as Crossref gives them.
+  - Confirmed the Taipei DOI resolves (doi.org → the issue's e-book).
+  - A heredoc mangled a backslash in a Python edit (as my notes warn); nothing was written, and
+    the edit was redone from a script file.
+- Result: every issue question is answered (Q3 as a short pass, stated as such); see Summary.
+
 ## Open questions / risks
 
-(filled in as work proceeds)
+1. **Reproduced tables as evidence (A6).** QC-1 to QC-5 use Milgram's and Schmitt's numbers as
+   reproduced, with APA permission, in Brintzenhofe (2023). If the supervisor rejects this, they
+   drop to grade C until the 1986 and 1992 papers are obtained (M1, M2).
+2. **The grading scale is mine**, adapted from the issue's suggestion. In particular "independent
+   research groups" for grade A and the `old` cut-off (before 2001) are judgement calls.
+3. **BA-8 has no number**: how often MRT boarders start before alighting ends. The two studies
+   that measure it (M7, M8) are blocked only by a click-through form and bot protection; a human
+   can download both in minutes. This is the highest-value follow-up.
+4. **The `scenarios.yaml` escalator wording** (Singapore "stand on both sides" campaign) is not
+   supported by any source found. I did not edit the dataset, since its scope is agreed; this
+   needs a decision.
+5. **No Singapore observation exists in what I searched**, but the search was English-only and
+   did not cover DR-NTU, ScholarBank or Public Transport Council studies. "Nothing found" is
+   bounded by that.
+6. **Lab studies of boarding** (PAMELA) used instructed participants who knew they were observed;
+   BA-1 and BA-2 may overstate courtesy at real doors.
+7. **Q3 is a short pass** (two primary sources). Escalator step-on timing and merging (the actual
+   `escalator_entry_merge` behaviour) and lift "last place" have no evidence here.
+8. **Branch base (A1)**: this branch stacks on #36's (PR #44), so the PR targets that branch and
+   merging it will not close #37 automatically.
 
-## Summary (fill in at the end)
+## Summary
+
+**What changed.** New folder `literature/unseen-scenario-evidence/` with the nine deliverables the
+issue lists, 19 cached sources in `refs/he_*` (5 committed under open licences; 14 on disk only
+and listed in `.gitignore` with links), a README row, findings paragraph and layout entry, and
+this work log.
+
+**Answers.**
+- **Q1 queue cutting**: answered from Brintzenhofe's reproduction of Milgram et al. and Schmitt et
+  al., plus Langer 1978 and Folkes 1985. Objection concentrates directly behind the cut, grows
+  with two intruders, shrinks for a "friend"; the kind of reason and the size of the favour
+  matter; "any reason works" is contested. Milgram **1978 vs 1986 resolved** (run 1978, published
+  1986).
+- **Q2 boarding and alighting**: partly answered (alighting first, door-side waiting, overlap,
+  lanes, waiting for the next train); the non-compliance rate is a gap; bus boarding has no
+  evidence.
+- **Q3 lifts and escalators**: answered in a short pass (Taipei lift priority; Holborn escalator
+  pilot); explicitly not a full review.
+- **Q4 Singapore**: nothing observed; the searches are documented; official norms, a perception
+  survey, one platform study and escalator incident counts recorded.
+- **Q5 age and gender**: almost nothing measured; cross-referenced with the demographic file.
+- **Q6**: 23 graded statements (none grade A; 2 contested; 1 gap), grading scale marked a proposal.
+
+**How it was verified.** Every source confirmed on Crossref, OpenAlex, or its own page; every
+number re-read against the cached text or page image; locators spot-checked with scripts over the
+cached text; statement IDs and handles cross-checked; stubs carry exactly the six required lines.
+No code, no paid calls.
