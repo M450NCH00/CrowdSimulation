@@ -58,6 +58,13 @@ the "generic simulator" requirement is a design goal, not a finding
 - **A6. Extra entry group.** Q2 needs studies that are none of the five seed groups (model
   docking and replication; same controller in several robot simulators). They go in a sixth group
   in `representations.md`, "Precedent: the same rule in more than one simulator".
+- **A7. What is committed, now that I know the repository is public** (`gh repo view`:
+  `PUBLIC`). Text extracts are committed for every source read, as the issue asks. PDFs are
+  committed only when the copy is openly licensed or from arXiv (the practice of #16, #20 and
+  #22); the three PDFs that are author or repository copies without an open licence are
+  gitignored with a re-download link. Chapter 1 of *Conflicting Agents* (Kluwer, ©2002), read
+  from the user's own copy in the parent FYP folder, is cached on disk but **gitignored, text
+  included**: it is a copyrighted book, not an open source.
 
 ## Plan
 
@@ -99,6 +106,65 @@ the "generic simulator" requirement is a design goal, not a finding
     conformance question in miniature, and it is where Q4's "two implementations of the same term
     disagree" would bite.
 - Next step: the novelty paper, then the seed leads.
+
+### 2026-10-18 — The novelty paper, read in full
+- What I did: read arXiv:2409.00993 in full (about 2,700 words; 5 pages) from a reading-order
+  re-extraction of the cached PDF `refs/gt_arxiv_2409_00993.pdf` (the cached `-layout` text
+  interleaves the two columns). Checked for a published version: the arXiv record has no
+  journal reference or DOI, Crossref finds nothing by title, and a web search found only the
+  arXiv listing and blog reposts. It stays `[preprint]`.
+- Why: Q5; risk R4 of `WORK_LOG-20.md` ("until it is read in full, the FYP's novelty claim is
+  unverified").
+- Result / what I found: the paper's "norms" are **behaviour patterns the authors read off the
+  agents' punishment choices and natural-language judgements** (Results, the paragraphs on
+  Figure 4). Nothing is written down as a rule, nothing is stored, nothing is reused by another
+  system, and there is one game. Transfer to other games is named as future work (Conclusion).
+  So it overlaps the FYP in method (LLM agents, dialogue, norms) but not in what the FYP does with
+  the result. Full entry in `novelty-check.md`.
+- Next step: confirm the seed leads.
+
+### 2026-10-18 — Sourcing: seeds confirmed, unverified leads resolved, 20 sources cached
+- What I did: confirmed every seed from the arXiv API, Crossref or the source's own page, with
+  open-access status from OpenAlex; ran the targeted searches for Q2, Q3 and Q5 (queries in
+  `search-log.md`); downloaded each source into its own empty folder, checked its first page
+  against the expected title, and cached the reading-order text as `refs/pr_*.txt` (A2, A7).
+- Why: the issue's sourcing rules; no identifier guessed.
+- Result / what I found:
+  - **No wrong paper was downloaded.** Every first page matched.
+  - **The `[unverified lead]`s:**
+    - Crawford and Ostrom (1995) **exists** (*APSR* 89(3), 582–600, doi:10.2307/2082975) but is
+      closed. The only free copy found is a JSTOR printout on a third-party site, which I did not
+      use. → stub.
+    - "Modelling Institutions Using Dynamic Deontics" **exists**: Frantz, Purvis, Nowostawski and
+      Savarimuthu, COIN IX, LNCS, 211–233, 2014, doi:10.1007/978-3-319-07314-9_12. It is closed,
+      and Academia.edu returns 403. → stub. The same authors' "nADICO: A Nested Grammar of
+      Institutions" (PRIMA 2013, doi:10.1007/978-3-642-44927-7_31) was also found.
+    - "Linking sanctions to norms in practice" **exists**: arXiv:2205.10295 (2022). The authors are
+      **Mellema and Dignum** (two authors, not "et al."). No published version was found.
+    - Gomes et al. (2018) **exists**: *ACM Computing Surveys* 51(3), article 49,
+      doi:10.1145/3179993. I read the authors' accepted version, from co-author Broman's KTH page.
+    - Francis et al. (2023) **exists** and has been published: *ACM THRI* 14(2), 2025,
+      doi:10.1145/3700599 (CC BY). ACM and Aston blocked automated download, so I read arXiv v4,
+      which may differ from the 65-page published version.
+  - **Confirmed as the issue asked:** JASSS 14(2) 6 is Hollander and Wu (2011), "The Current
+    State of Normative Agent-Based Systems", doi:10.18564/jasss.1750. arXiv:2005.12712 is Kleinmeier,
+    Köster and Drury, published as *J. R. Soc. Interface* 17(171), 20200396 (2020). I read arXiv
+    v2, because the publisher blocked automated download.
+  - **Not obtained (stubs):** Crawford and Ostrom 1995; the COIN 2014 dynamic-deontics chapter;
+    the *Institutional Grammar* book (Palgrave 2022, doi:10.1007/978-3-030-86372-2, closed); and
+    Donkin et al. 2017. Donkin et al. is open access (CC BY), but ScienceDirect and Aberystwyth both
+    refused automated download. Frantz's 2015 Otago thesis (open access, covering nADICO) sits
+    behind a JavaScript portal; it is logged as an unread lead, not stubbed, because it is not a
+    seed.
+  - **Added from the searches:**
+    - Q2: docking and replication (Axtell et al. 1996; Edmonds and Hales 2003; Wilensky and
+      Rand 2007) and HuNavSim 2.0.
+    - Q1 and Q4: FMI (Blochwitz et al. 2011; the FMI 3.0.2 specification; Bertsch et al. 2017)
+      and the LCIM (Wang, Tolk and Wang 2009).
+    - Q3: Tessier et al.'s conflict typology (chapter 1).
+    - Q5: CRSEC (Ren et al., IJCAI 2024), TR2MTL (Manas et al., IEEE IV 2024) and Savarimuthu et
+      al. (COINE 2024).
+- Next step: read, and write the entries.
 
 ## Open questions / risks
 <Anything uncertain, anything you're unsure is the right call, anything that should be double-checked by a human.>
