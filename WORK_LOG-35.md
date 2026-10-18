@@ -312,6 +312,14 @@ the "generic simulator" requirement is a design goal, not a finding
   pushed, since `git push` sends only the branch.
 - Next step: push, open the PR against PR #33's branch, comment on the issue.
 
+### 2026-10-18 — Pushed; PR #43 opened
+- Before pushing, checked that no commit between PR #33's head and this branch touches the four
+  extracts with no open licence. None does.
+- Pushed `docs/35-simulator-independent-rule-representations` and opened
+  [PR #43](https://github.com/M450NCH00/CrowdSimulation/pull/43). Its base is
+  `feat/32-fictional-ethnicity-passage-meetings` (A1), so `Closes #35` will not fire on merge (Q4).
+- Commented the PR link on #35.
+
 ## Open questions / risks
 
 **For the user or the supervisor to decide**
