@@ -380,3 +380,205 @@ of the test and its stated limits.
   ones. (3) The 92% correlation figure is a way to report what a fairness fix costs: agreement with
   the unfixed decisions.
 - BibTeX: `tamkin2023evaluating`
+
+---
+
+## Q3. Rules as constraints or rewards for learned policies
+
+### [Icarte-RewardMachines]: Reward Machines: Exploiting Reward Function Structure in Reinforcement Learning
+- Authors / Year / Venue / Link: Rodrigo Toro Icarte, Toryn Q. Klassen, Richard Valenzano, Sheila A.
+  McIlraith / 2022 / *Journal of Artificial Intelligence Research* 73:173–208,
+  doi:10.1613/jair.1.12440 / https://arxiv.org/abs/2010.03950. It extends the conference paper:
+  Toro Icarte, Klassen, Valenzano & McIlraith (2018), "Using Reward Machines for High-Level Task
+  Specification and Decomposition in Reinforcement Learning", *Proc. ICML 2018*, PMLR 80:2107–2116,
+  https://proceedings.mlr.press/v80/icarte18a.html (confirmed from the PMLR page; **not read**:
+  the journal version "builds upon our previous work" and gives "a cleaner definition", §1).
+- Status: published in *JAIR*; Read: §1, §3, §4 (method descriptions and stated theorems, proofs
+  not followed), §5 (findings list and §5.4), §7, of arXiv v2, `refs/td_icarte2022_rm.txt`.
+- Model type, and its teacher: RL policies (tabular Q-learning, DQN, DDPG) whose **reward** is
+  written as a finite-state machine over high-level events, a "reward machine" (Definition 3.1).
+  A **labelling function** maps each environment transition to the events that are true (§3,
+  Definition 3.3). The rules are the reward; there are no labelled decisions.
+- Inputs and outputs: environment state plus the machine's current state → action (§4.1, the
+  cross-product).
+- Fidelity: n/a (no teacher to match). What the machine adds is sample efficiency: "CRM and HRM
+  outperform the cross-product baselines in all our experiments"; CRM "converges to the best
+  policies in all but one experiment"; HRM learns faster at first "but converges to suboptimal
+  policies" (§5, findings list).
+- Behaviour outside the training data: not tested for reward machines. The authors say that
+  generalising to unseen tasks is something they "do not know how to achieve ... using RMs" (§7).
+- Cost: the methods that exploit the machine cost more compute per step than the baseline (§5.4;
+  Table 4). Without them, one task was not solved by DDPG in "30 millions steps (over 3 days of
+  computation)" (§5.4). Domains: gridworlds, a continuous water world, half-cheetah (§5.1–§5.3).
+  Single agent.
+- Can a person read what it does?: the **reward** can be read (it is a small automaton; Fig. 1b);
+  the learned policy cannot. `[inference]`
+- Guarantees: CRM with tabular Q-learning "converges to an optimal policy" for the machine-defined
+  task, given infinite visits (Theorem 4.1); automated reward shaping keeps the set of optimal
+  policies (§4.4); HRM "might converge to sub-optimal solutions" (§4.3). Assumption: a **correct
+  labelling function**; noisy event detectors are an open problem (§7). Expressiveness: any reward
+  that depends on history only through regular-language patterns (§3, the three properties).
+- Bias or protected-attribute checks: none.
+- What it means for "several models trained on the rules": `[inference]` The **labelling function
+  plays the role of the proposed perception adapter**: it turns simulator state into the
+  propositions a rule talks about. So a rule core written over the vocabulary could be compiled into
+  a reward machine with no change, and an RL policy trained in one simulator would get its reward
+  from the same rules as the engine. But the guarantee is "optimal for the reward", not "obeys the
+  rule": a penalty can be outweighed. And the policy is learned per simulator, so it does not carry
+  over; only the reward does.
+- BibTeX: `toroicarte2022reward`; `toroicarte2018using` (the ICML version, cited only)
+
+### [Alshiekh-Shielding]: Safe Reinforcement Learning via Shielding
+- Authors / Year / Venue / Link: Mohammed Alshiekh, Roderick Bloem, Rüdiger Ehlers, Bettina
+  Könighofer, Scott Niekum, Ufuk Topcu / 2018 / *Proc. AAAI Conference on Artificial Intelligence*
+  32(1), doi:10.1609/aaai.v32i1.11797 / https://arxiv.org/abs/1708.08611
+- Status: published at AAAI 2018; Read: §1, §4–§9 of arXiv v2 (the long version), proofs in §6.1
+  not followed, `refs/td_alshiekh2018_shield.txt`. ⚠ Section numbers are those of the arXiv copy and
+  may differ from the AAAI version.
+- Model type, and its teacher: any RL learner, with a **shield** between it and the environment.
+  The shield is synthesised in advance from a temporal-logic safety specification and a coarse
+  finite-state **abstraction** of the environment (§1; §4; §6).
+  - *Preemptive*: the shield gives the learner the list of safe actions each step (§5.1).
+  - *Post-posed*: the shield watches the learner's action and replaces it "if and only if the chosen
+    action is unsafe" (§1; §5.2). This one "works even if the learning algorithm is already in the
+    execution phase", and "the learning agent does not even need to know that it is shielded"
+    (§5.2).
+- Inputs and outputs: the abstraction's labels of the state plus the proposed action → a safe
+  action (§5).
+- Fidelity: n/a. Effects: shielded agents never violate the specification and "tend to learn more
+  rapidly" in the grid worlds (§8.1; Fig. 11); in the car example the unshielded learner "still
+  experiences crashes at the end", the shielded one "never crashes" (§8.2; Fig. 12).
+- Behaviour outside the training data: the guarantee holds wherever the environment behaves as
+  the abstraction says (§6.1, §7). Not tested beyond that.
+- Cost: synthesis took 0.6–2 s for the grid-world and car shields (§8.1, §8.2). Shields "can be
+  relatively large" because their state space is the product of the abstraction's and the
+  specification's (§7). Single learning agent in each domain (§8).
+- Can a person read what it does?: the specification can; the shield is an automaton generated
+  from it. `[inference]`
+- Guarantees: **correctness** (the specification is never violated) and **minimal interference**
+  (an action is blocked only if it could lead to a violation), both proved (§6.1). Convergence:
+  learners that converge on standard MDPs still converge, via a product MDP (§7). Assumptions: the
+  environment can be modelled as an MDP, an abstraction has been built, and (preemptive case) the
+  learner sees the shield's state (§5, Assumption 1).
+- Bias or protected-attribute checks: none.
+- What it means for "several models trained on the rules": `[inference]` This is the strongest
+  pattern for a trained decider in this FYP: **a learned decider proposes, the rule engine
+  disposes.** Hard rules (no collision; never act on `ethnic_group`) become the shield; the learned
+  model chooses among what is left. A post-posed shield needs nothing from the learner, so it would
+  sit in the rule engine and serve every simulator, which suits point 3 of the idea. What does
+  **not** carry over is the abstraction: each simulator needs its own, the same work as the
+  proposed perception adapter. The guarantees are for safety properties ("something bad never
+  happens"), so a rule such as "the first to arrive goes first" fits; a soft preference does not.
+- BibTeX: `alshiekh2018safe`
+
+### [Chen-SACADRL]: Socially Aware Motion Planning with Deep Reinforcement Learning
+- Authors / Year / Venue / Link: Yu Fan Chen, Michael Everett, Miao Liu, Jonathan P. How / 2017 /
+  *Proc. 2017 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)*,
+  pp. 1343–1350, doi:10.1109/IROS.2017.8202312 / https://arxiv.org/abs/1703.08862
+- Status: published at IROS 2017; Read: full text, arXiv v2, `refs/td_chen2017_sacadrl.txt`.
+- Model type, and its teacher: a value network trained by deep RL in self-play, where a **social
+  norm enters only as a reward penalty**: configurations in which another agent is on the
+  "undesirable side" when passing, crossing or overtaking are penalised (§III-A; Eqs. 9–12; Fig. 4).
+  Left-handed and right-handed versions are trained from the same start (§III-A).
+- Inputs and outputs: the agent's state and up to three neighbours' observable states (four-agent
+  network) → a velocity (§III-B; Fig. 5).
+- Fidelity to the rule, and how it was measured: "norm preference", the share of trajectories that
+  violate the left- or right-handed rule for more than 0.5 s, on 200 random test cases reflected to
+  balance left and right (§IV-B; Table I). Trained policies reach an **85–15 split** for their
+  norm, not 100–0, which the authors explain as a trade-off with time efficiency (§IV-B). ORCA is
+  about 50–50 (§IV-B). On perfectly symmetric cases the norm is always followed (§IV-B).
+- A finding worth noting: trained **without** the norm penalty, the policy still develops a
+  convention, but a mixed one: it "prefers passing on the right but also overtaking on the right",
+  so emergent conventions "don't always correspond to human social norms" (§IV-B).
+- Behaviour outside the training data: one transfer, **simulation to a real robot**. Ten runs with
+  goals over 50 m apart among real pedestrians (about 10.2 people per minute within 2 m); the
+  vehicle "generally respected social norms" and the safety driver never intervened (§IV-C). No
+  norm-preference figure is given for the hardware runs.
+- Cost: training about nine hours for 3,000 episodes (four-agent network; §IV-A); 8.7 ms per
+  decision in Python on one CPU (§IV-A); 10 Hz on the robot (§IV-C). Largest group trained: four
+  agents (§IV-B).
+- Can a person read what it does?: no; the norm is readable only in the reward (Fig. 4).
+- Guarantees: none; the penalty set's size changes convergence speed, and too large a set "could
+  lead to instability or divergence" (§III-A).
+- Bias or protected-attribute checks: none. Agent attributes are radius and preferred speed only
+  (§IV-A).
+- What it means for "several models trained on the rules": `[inference]` (1) A rule given as a
+  reward is followed **mostly** (85%), not always; anyone using rules as rewards should expect to
+  measure compliance, not assume it. (2) Policies left alone invent conventions that differ from
+  human ones, a reason to supply the rule rather than hope it emerges. (3) At 8.7 ms per decision,
+  10,000 agents deciding every step is about 87 s per step on one core; this would need batching
+  on a GPU or deciding only at conflicts. (4) This is the only Q3 source with a transfer to a new
+  environment, and the evidence for it is qualitative.
+- BibTeX: `chen2017socially`
+
+---
+
+## Q5. Teachers
+
+The answer to Q5, teacher by teacher, is in [options](options.md) §1 (Q5). These two entries are
+the evidence beyond the Q1–Q4 entries.
+
+### [Hu-LogicRules]: Harnessing Deep Neural Networks with Logic Rules
+- Authors / Year / Venue / Link: Zhiting Hu, Xuezhe Ma, Zhengzhong Liu, Eduard Hovy, Eric P. Xing /
+  2016 / *Proc. 54th Annual Meeting of the Association for Computational Linguistics (ACL 2016)*,
+  pp. 2410–2420, doi:10.18653/v1/P16-1228 / https://arxiv.org/abs/1603.06318
+- Status: published at ACL 2016; Read: §1, §3 (method; the derivation of Eq. 4 not followed), §5,
+  §6 of arXiv v6, `refs/td_hu2016_logicrules.txt`.
+- Model type, and its teacher: a neural network (CNN for sentiment, BLSTM for named entities) as
+  **student**, trained to match both the human labels and the soft predictions of a **teacher**
+  built at each iteration by projecting the student onto the space allowed by a few first-order
+  logic rules (for example the "but" rule: the sentiment of "A but B" follows B) (§3.2, §3.3;
+  Fig. 1; Eq. 2). The teacher is rules **plus** the student, not rules alone.
+- Inputs and outputs: a sentence → a sentiment class; a token sequence → entity tags (§4).
+- Fidelity / accuracy: on SST2 sentiment, base CNN 87.2%, distilled student 88.8%, rule teacher
+  89.3% (Table 2, rows 1, 7, 8). The rule teacher q "performs better than" the student p in general
+  (§3.4), and the gap is larger where rules link several examples (§5.2).
+- Behaviour with less data (the nearest thing to "outside the training data"): with 5% of the
+  labels, 79.9% (base) against 81.5% (student) and 82.5% (rule teacher); with all labels, 87.2%
+  against 88.8% and 89.3% (Table 3). The rules help **more when labels are scarce** (§5.1).
+- Cost: one set of network parameters, no extra parameters for the rules (§5.1 on Table 2; §5.2);
+  the student is "more lightweight and efficient", and needed when "rule evaluation is expensive or
+  impossible at prediction time" (§3.4).
+- Can a person read what it does?: the rules can be read; the student cannot.
+- Guarantees: none. The rules are soft (weighted), and the student can break them (§3.3).
+- Bias or protected-attribute checks: none.
+- What it means for "several models trained on the rules": `[inference]` This is the closest
+  evidence to the issue's question "does a model trained on the rules help anyway?". The answer it
+  supports is narrow. **Rules help a student when combined with other labels**, most when labels
+  are few. That is evidence for rules plus LLM or human labels, not for a student trained on rule
+  labels alone. And the rule-based teacher beat its own student, which argues for keeping the rule
+  engine at run time wherever it is cheap enough; this FYP's rules are cheap (see
+  [options](options.md)).
+- BibTeX: `hu2016harnessing`
+
+### [Plaza-ModelCrowds]: Wisdom of Instruction-Tuned Language Model Crowds. Exploring Model Label Variation
+- Authors / Year / Venue / Link: Flor Miriam Plaza-del-Arco, Debora Nozza, Dirk Hovy / 2024 /
+  *Proc. 3rd Workshop on Perspectivist Approaches to NLP (NLPerspectives) @ LREC-COLING 2024*,
+  pp. 19–30, ELRA and ICCL / https://aclanthology.org/2024.nlperspectives-1.2/ ;
+  https://arxiv.org/abs/2307.12973
+- Status: published at a peer-reviewed workshop (ACL Anthology record); Read: full text, arXiv v2,
+  `refs/td_plaza2024_crowds.txt`.
+- Model type, and its teacher: no trained decider; four open instruction-tuned LLMs (T0, Flan-T5,
+  Flan-UL2, Tk-Instruct) used as **annotators** on five subjective classification tasks (sentiment,
+  age and gender of the author, hate speech) in four languages, then aggregated by majority vote or
+  by MACE, a Bayesian model that estimates each annotator's competence (§2, §3, §3.3).
+- Fidelity: against human gold labels. "In most cases, the aggregated labels ... outperform even
+  the best individual LLM"; on average, aggregated labels are "4.2 F1-points better than the
+  average LLM" (§1). MACE was the best method "in 6 out of 14 tasks" (§4). MACE's competence score
+  correlates with real performance (Spearman 0.93) (§4).
+- Behaviour across tasks: the models **specialise**. No single model is best everywhere, and on one
+  task in one language no method beats random choice (§4; Table 3).
+- Against human labels: even simple supervised models trained on human labels beat the best
+  zero-shot result in all but 4 cases, with an average gap of 10.5 F1 to the best supervised models
+  (§4, Table 4); "treating LLMs as annotators cannot rival using human annotators" (§1).
+- Cost: zero-shot prompting of open models; no training. Closed models were not tested (Limitations).
+- Bias or protected-attribute checks: two of the tasks *predict* the author's age and gender
+  (§2.1); no test of whether labels depend on such attributes.
+- What it means for "several models trained on the rules": `[inference]` The one direct piece of
+  evidence here **for using several LLMs as teachers**: aggregation is more robust than any one
+  model, and competence can be estimated without gold labels. Two cautions carry over. (1) It is
+  text classification, not behavioural decisions. (2) Aggregation assumes "there is a single correct
+  answer" (§4). Where models disagree about a demographic effect (the issue #16 finding that effects
+  reverse between models, `README.md`), a vote hides the disagreement; the disagreement itself
+  should be kept and reported.
+- BibTeX: `plazadelarco2024wisdom`

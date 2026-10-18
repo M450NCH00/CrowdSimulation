@@ -130,6 +130,31 @@ Priority if short of budget: Q1, Q2, Q4, Q3, Q5. Aim for 8 to 12 entries.
     the entry, since this review is written with an Anthropic model.
 - Next step: Q3 (reward machines, shielding, SA-CADRL).
 
+### 2026-10-18 — Q3 and Q5 written; 13 entries in all
+- What I did: Q3 — [Icarte-RewardMachines] (*JAIR* 2022; the ICML 2018 version confirmed on PMLR,
+  pp. 2107–2116, but not read, since the journal version builds on it), [Alshiekh-Shielding]
+  (arXiv long version; I flagged that its section numbers may differ from the AAAI paper),
+  [Chen-SACADRL] (full). Q5 — [Hu-LogicRules] and [Plaza-ModelCrowds]; the latter's venue was
+  confirmed from the ACL Anthology BibTeX (NLPerspectives @ LREC-COLING 2024, pp. 19–30). Checked
+  `README.md` for the issue #16 finding (effects flip between models) and
+  `llm_negotiation/docs/log-schema.md` for what `outcomes.jsonl` records: it includes each person's
+  `ethnic_group`, which matters for the teacher discussion.
+- Result / what I found:
+  - **Q3**: none of the three tests carry-over **between simulators**. SA-CADRL's sim-to-robot
+    transfer is the only transfer, and it is qualitative ("generally respected social norms", no
+    number). A norm given as reward was followed about 85% of the time, not always. Shielding's
+    guarantee is proved but relative to an abstraction that each simulator would need. Reward
+    machines need a correct labelling function, which is the same job as the proposed perception
+    adapter.
+  - **Q5**: [Hu-LogicRules] is the only evidence on "does a model trained on rules help anyway",
+    and it shows rules helping **alongside** human labels, most when labels are scarce, with the
+    rule teacher beating its student. No source tests a student trained on rule labels alone.
+    [Plaza-ModelCrowds] supports several LLM teachers (aggregate beats the best single model in
+    most tasks), but in text classification and still well below human-label training.
+  - **Count**: 13 full entries, one above the issue's 8–12 aim; every source in it was obtained, so
+    `missing-papers.md` will list only versions not read.
+- Next step: `options.md` (with the Q1–Q5 answers), `evaluation.md`, `verdict.md`.
+
 ## Open questions / risks
 
 ## Summary (fill in at the end)
