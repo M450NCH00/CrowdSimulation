@@ -424,9 +424,9 @@ below](#crawford-adico-a-grammar-of-institutions)). Its five components are cite
 
 The issue asks for one interoperability standard from simulation engineering. **FMI** is that
 standard here: the 2011 paper that introduced it, the current specification, and an empirical
-study of how well tools implement it. HLA could not be read as a standard (IEEE 1516 is
-paywalled). It is covered through [Wang-LCIM]'s analysis (§4 there) and [Gomes-CoSim]
-(§5.2 there).
+study of how well tools implement it. HLA was not read as a standard: IEEE 1516 is sold by
+IEEE, and obtaining it was not attempted (`missing-papers.md` S1). It is covered through
+[Wang-LCIM]'s analysis (§4 there) and [Gomes-CoSim] (§5.2 there).
 
 ### [Blochwitz-FMI]: The Functional Mockup Interface for Tool independent Exchange of Simulation Models
 
@@ -1028,7 +1028,7 @@ and all four found differences.
 ### [Axtell-Docking]: Aligning Simulation Models: A Case Study and Results
 
 - Authors / Year / Venue: Robert Axtell, Robert Axelrod, Joshua M. Epstein, Michael D. Cohen /
-  1996 / *Computational and Mathematical Organization Theory* 1, 123–141.
+  1996 / *Computational and Mathematical Organization Theory* 1(2), 123–141.
 - Link: https://doi.org/10.1007/BF01299065 | preprint:
   https://public.websites.umich.edu/~axe/research/Aligning_Sim.pdf
 - Status: published at CMOT. Read as the authors' preprint dated 1 September 1995, which states

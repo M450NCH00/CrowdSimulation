@@ -47,9 +47,14 @@ the "generic simulator" requirement is a design goal, not a finding
 - **A2. Cache prefix.** Sources for this issue are cached as `refs/pr_*` (portable rules),
   following `gt_*` (#20) and `sr_*` (#22). PDFs are tracked as before unless oversized; those
   go in `.gitignore` with a re-download link, as in #20 and #22.
-- **A3. One section read beyond "these, and only these".** I also read #34's "Constraints for
-  every issue in this track", because those constraints bind this issue (no paid calls; no change
-  to `llm_negotiation/`; mark decisions and assumptions; nothing may switch the group on).
+- **A3. Three reads beyond "these, and only these"**, each for a stated reason:
+  1. #34's "Constraints for every issue in this track", because they bind this issue (no paid calls;
+     no change to `llm_negotiation/`; mark decisions and assumptions; nothing may switch the group
+     on);
+  2. issue #20's risk R4 (`WORK_LOG-20.md`) and `g6-transfer-across-games.md` §3, which the issue
+     cites as the reason the novelty paper matters;
+  3. *(added later in the session)* the single rule file `single_file_first_arrival.v1.yaml`, to
+     check #34's worked example (flag F4).
 - **A4. Stubs** for sources I cannot open live in `representations.md` under their group, with
   exactly the issue's six lines, and are listed in `missing-papers.md` (#22's A2 reading).
 - **A5. "Read in full"** means the whole body text, read from the cached extract; reference
@@ -71,19 +76,20 @@ the "generic simulator" requirement is a design goal, not a finding
 1. Branch and work log. **(done)**
 2. Read what the issue lists, and only that (A3 aside). **(done)**
 3. Read arXiv:2409.00993 in full from `refs/gt_arxiv_2409_00993.txt`; check for a published
-   version.
+   version. **(done)**
 4. Confirm every seed lead from its own page (arXiv API, Crossref, publisher or journal page);
    resolve the `[unverified lead]`s; download what is open, check each first page against the
-   expected title, cache text as `refs/pr_*`.
+   expected title, cache text as `refs/pr_*`. **(done)**
 5. Targeted searches, each logged with its query and outcome: Q2 (same rule in two or more
    simulators), Q3 (taxonomies of pedestrian situations and conflicts), Q5 (LLM-derived norms
-   written down for reuse).
+   written down for reuse). **(done: 30 searches)**
 6. Write the entries (`representations.md`), grouped as the seed leads are, plus A6's group.
-7. `novelty-check.md`.
+   **(done)**
+7. `novelty-check.md`. **(done)**
 8. `feasibility.md`: the idea restated in my own words with what is unclear or inconsistent in
-   it, then Q1–Q6, every claim citing an entry.
-9. `verdict.md`, one page at most, written for PT-7.
-10. `search-log.md`, `missing-papers.md`, `refs-portable-rules.bib`.
+   it, then Q1–Q6, every claim citing an entry. **(done)**
+9. `verdict.md`, one page at most, written for PT-7. **(done)**
+10. `search-log.md`, `missing-papers.md`, `refs-portable-rules.bib`. **(done)**
 11. Check every acceptance criterion and workflow §5b; post progress comments at milestones;
     push; open the PR against PR #33's branch; comment on the issue.
 
@@ -237,8 +243,140 @@ the "generic simulator" requirement is a design goal, not a finding
      so the entry says so.
 - Next step: `novelty-check.md`, then `feasibility.md` and `verdict.md`.
 
-## Open questions / risks
-<Anything uncertain, anything you're unsure is the right call, anything that should be double-checked by a human.>
+### 2026-10-18 — Synthesis written; deliverables verified; corrections made on the way
+- What I did:
+  - Wrote `novelty-check.md`, `feasibility.md` (the idea restated, flags F1–F11, Q1–Q6),
+    `verdict.md`, `missing-papers.md`, `search-log.md` and `refs-portable-rules.bib`.
+  - Added #35 to `README.md` (roadmap row 5e, three findings, directory layout), as #16, #20
+    and #22 did.
+  - Opened one more file, outside "these, and only these": the rule file
+    `single_file_first_arrival.v1.yaml`, to check #34's worked example. It ranks by
+    `agent.time_to_segment_s`, a *predicted* arrival, which became flag F4.
+- Why: the deliverables list; workflow §5b.
+- Result / what I found:
+  - **Verdict: feasible with changes.** The claim must be decision conformance (same Situation →
+    same Decision), with behaviour across simulators measured against an equivalence standard
+    fixed in advance.
+  - Recommended representation: extend this repository's format, restructured around an adapted
+    IG 2.0, with Mellema's deactivation and deadline and IG profiles.
+  - **Verification run:**
+    - a script cross-checked every handle cited in every file against the entries defined (28),
+      every BibTeX key named in an entry against the `.bib` (27 records), and the `.bib`'s
+      braces. No undefined handle, no missing key, balanced;
+    - 51 of the numbers and quotations relied on in `feasibility.md` and `verdict.md` were grepped
+      against their cached texts. All were found except one, which is split by a hyphen across a
+      page in the extract ("dif-" / "ferences") and is correct;
+    - `verdict.md` is 490 words, one page.
+  - **Corrections made, so the record is honest:**
+    1. My first issue comment said "21 entries"; it is 19 plus 4 stubs. The comment was edited in
+       place and says so.
+    2. My first README line said "5 papers unobtained"; it is 4 (plus 2 read only as preprints).
+    3. In this log (entry "Groups 1–3") and in the issue comment I wrote that 5 of 10 FMI importers
+       "failed one reference test". [Bertsch-ReferenceFMUs] §4.3 says "five tools show errors in ME
+       due to violations of the calling sequence" on the Integer and Boolean reference FMUs.
+       `feasibility.md` uses the exact wording. The earlier log entry is left as written, per the
+       workflow.
+    4. `search-log.md`'s first tally of full and partial reads was wrong (12 and 7). It is 14 and
+       5 in `representations.md`, plus 1 and 3 in `novelty-check.md`.
+- Next step: push, open the PR against PR #33's branch, comment on the issue.
 
-## Summary (fill in at the end)
-<What changed, why, how it was verified.>
+## Open questions / risks
+
+**For the user or the supervisor to decide**
+
+- **Q1. The idea's own inconsistencies** (`feasibility.md` §2). F1 (where today's ORCA conditions go),
+  F4 (`arrival_order`: predicted against recorded) and F6 (time units and the engine's call rate)
+  must be settled before PT-8 writes vocabulary v0. They are design decisions, not findings.
+- **Q2. The recommended representation is my design proposal**: extend this repository's format
+  around an adapted IG 2.0 (`feasibility.md` §8.2). It is argued from the entries, but it is
+  `[inference]` and needs sign-off. So does the verdict's re-statement of the claim as *decision
+  conformance*.
+- **Q3. Copyright and the public repository.** As the issue asks, and as #16, #20 and #22 did,
+  `refs/` now holds full-text extracts of every source read. Three of the copies carry no open
+  licence:
+  - the IG 2.0 accepted manuscript ("This article is protected by copyright. All rights
+    reserved.");
+  - the ACM accepted version of Gomes et al.;
+  - Axtell et al.'s 1995 preprint.
+
+  Their PDFs are gitignored but their text is committed (work log A7). The book chapter is
+  local-only. **The user may prefer to gitignore those three text files too.** That would also
+  need them removed from this branch's history before merge, since they are already in commits
+  `8c40ae9` and `fa46612`.
+- **Q4. Closing the issue.** The PR targets `feat/32-fictional-ethnicity-passage-meetings` (A1), so
+  `Closes #35` will not close the issue on merge, as with #30 and #32.
+
+**Risks in the evidence**
+
+- **R1. Q2's "none found" is bounded by this search**: 30 web searches, English only, one session
+  (`search-log.md` §2). A study running one pedestrian rule in two simulators could exist under
+  terms not tried.
+- **R2. The docking evidence comes from social simulation, not crowd simulation.** Carrying its
+  lesson over (behaviour diverges on update order, ties, strictness) is an inference, supported
+  only indirectly by [Curtis-Menge] Figure 4 and [Kleinmeier-Cooperation] §II C.
+- **R3. Two figures were reconstructed by me**: Menge's Figure 4 time-step labels (decoded from
+  interleaved characters) and Francis et al.'s Table III columns (re-ordered from jumbled text).
+  Both are flagged in their entries. A human check of the PDFs would remove the doubt.
+- **R4. Eight entries were read in sections only** (codebook, FMI specification, Gomes, Francis,
+  Tessier, CRSEC, TR2MTL, Savarimuthu). Claims are limited to the sections listed.
+- **R5. ADICO is cited second-hand**, through [Frantz-IG2] §2. M1 was not obtained.
+- **R6. Versions.** Francis et al. were read as arXiv v4, which may differ from the 2025 journal
+  version. Kleinmeier et al. were read as arXiv v2. Savarimuthu et al.'s post-proceedings version
+  was not checked. If Horiguchi et al. is later published, its citation should be updated.
+- **R7. Not searched**: rule-interchange standards outside simulation engineering (W3C RIF, OASIS
+  LegalRuleML, W3C ODRL). They are the closest thing to a "portable rule core" outside
+  simulation and are listed as a lead (`search-log.md` §6).
+- **R8. The FMI and HLA analogies are mine.** Those standards move models and data, not norms
+  (`feasibility.md` §3.2, item 5). How far their lessons transfer to rules is `[inference]`.
+- **R9. The verdict precedes PT-2 to PT-6.** PT-5 and PT-6 (the simulators) may show that one of the
+  testbeds cannot host an adapter at all. PT-7 should re-check §8 against them.
+
+## Summary
+
+**What changed.** A new folder `literature/portable-rules/` (seven files), 21 cached text extracts
+`refs/pr_*.txt` plus the IG Parser README, three `.gitignore` entries with re-download links, and
+`README.md` (row 5e, three findings, layout). Nothing under `llm_negotiation/`, the Phase 1 dataset
+or the pipeline was touched. No paid call was made, and no code was written.
+
+**Why.** Issue #35 (PT-1 of track #34) asks whether a conflict rule can be written once and carried
+out faithfully by several simulators.
+
+**The answer, in short:**
+- Writing it once: yes, long established for norms.
+- Carried out faithfully: never shown for behaviour rules in the four fields. The docking evidence
+  says behaviour diverges on details outside the rule.
+- **Verdict: feasible with changes**, claimed as decision conformance, with behaviour measured per
+  simulator. Recommended representation: extend this repository's format around an adapted IG
+  2.0.
+- arXiv:2409.00993 (risk R4) shares the method only; the new part is the combination.
+
+**How it was verified** (workflow §5b, since there is no test suite for a review):
+- **Locators**: every claim in the entries carries a section, paragraph, table, figure, page or
+  equation locator, or is marked `[inference]` / `[unverified]`. Of the numbers and quotations
+  `feasibility.md` and `verdict.md` rely on, 51 were grepped against the cached texts. All were
+  found, one split by a hyphen.
+- **Consistency**: a script found no undefined handle in any file, no BibTeX key missing from the
+  `.bib`, and balanced braces.
+- **Sourcing**: every entry was confirmed from its own page, arXiv record or Crossref, with OpenAlex
+  for open access. Every download was first-page-checked; no wrong paper.
+- **Uncertainty stated**: "Open questions / risks" above is not empty (Q1–Q4, R1–R9).
+- **Caching**: every source read is in `refs/` (A2, A7).
+
+**Acceptance criteria** (issue #35):
+- [x] `feasibility.md` restates the idea in my own words and flags what is unclear or inconsistent
+  in it: §1, §2 (F1–F11).
+- [x] Every entry is confirmed from its own page, with its status recorded: each entry's
+  "Status"; `search-log.md` §§2–3.
+- [x] Every claim has a locator, or is marked `[inference]` or `[unverified]`.
+- [x] Q1 to Q6 are each answered: `feasibility.md` §§3–8. Q3 is answered for conflict types,
+  roles and rule structure and **only partly for features and actions**, stated as such in §5.
+- [x] arXiv:2409.00993 is read in full, with an entry and a plain statement on novelty:
+  `novelty-check.md` §§1, 2, 4.
+- [x] Q2 says plainly whether any study ran the same rule in two simulators: `feasibility.md` §4.1.
+- [x] `verdict.md` fits on one page (490 words).
+- [x] Unobtainable sources are stubbed and listed in `missing-papers.md` (M1–M4; plus V1–V2 and S1).
+- [x] Nothing is called feasible beyond what the entries support (`feasibility.md` §8.4), and
+  "Open questions / risks" is not empty.
+
+**Session note.** The issue was finished in one session; nothing is left half-done. The unread
+leads are listed in `search-log.md` §6 for whoever continues the track.

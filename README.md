@@ -55,6 +55,7 @@ experiment code until the literature review is complete and discussed.**
 | 5b | Game theory: communication-free conflict rules | **delivered** (issue #20) — `literature/game-theory/` |
 | 5c | Implemented rules in simulators, games, robots, traffic | **delivered** (issue #22) — `literature/simulation-rules/` |
 | 5d | LLMs resolving spatial conflict without conversation | **draft** (no issue; search of 2026-10-05) — `literature/llm-behavioural-conflict/` |
+| 5e | Portable rules (track #34), PT-1: can a rule be written once and carried out by several simulators? | **delivered** (issue #35) — `literature/portable-rules/`; verdict *feasible with changes*. #34's idea itself is a proposal awaiting the supervisor's sign-off |
 | 6 | Bridge into CrowdGym — `integration/crowdgym_mapping.md` | not started |
 
 From building the negotiation simulator (issue #24) — see `llm_negotiation/README.md` for
@@ -193,6 +194,23 @@ From issue #32 (the third sub-issue's second step, SI-3a.2) — see `llm_negotia
   messages or the retries alone fits; a hard spend cap with the sessions in a stated priority
   order would (issue #30's Q5, options re-previewed).
 
+Three findings from the portable-rules review (issue #35, PT-1 of track #34), all drafts needing
+supervisor sign-off. See `literature/portable-rules/`; `verdict.md` is one page. The review read
+19 entries and 4 novelty sources, with 4 sources unobtained, so read these as findings about what
+was read:
+
+- **No study in the fields that matter has carried one behaviour rule across two simulators and
+  compared the behaviour.** The only direct precedents are social-simulation "docking" studies.
+  Every one found behaviour changing on details outside the rule's text: update order,
+  tie-breaking, ≤ against <, run length. See `feasibility.md` §4.
+- **The one standard that achieves "write once, run in many tools", FMI, ships execution, not a
+  description.** #34's standalone engine has that shape. Its adapters are where the evidence says
+  implementations drift: 5 of 10 FMI importers failed reference tests. See `feasibility.md` §3.2
+  and §6.
+- **arXiv:2409.00993 (issue #20's risk R4) shares the FYP's method only.** It writes no rule down
+  and runs in one game. The new part is the combination, an LLM-elicited conflict rule checked in
+  more than one simulator. See `novelty-check.md`.
+
 Three findings from the simulation-rules review (issue #22), all drafts needing supervisor
 sign-off — see `literature/simulation-rules/`. The review is seed-led (27 sources, 5 papers
 unobtained), so read these as findings about what was read, not about the field:
@@ -295,6 +313,14 @@ CrowdSimulation/
       missing-papers.md                  5 papers + 1 doc that could not be obtained
       search-log.md                      searches run, mistakes caught, open risks
       refs-simulation-rules.bib          records for every source, with the copy read
+    portable-rules/                 issue #35 (PT-1 of track #34): simulator-independent rules
+      verdict.md                         *** one page: feasible with changes; representation; risks ***
+      feasibility.md                     the idea restated and flagged; Q1-Q6, every claim sourced
+      representations.md                 19 entries + 4 stubs, in six groups
+      novelty-check.md                   arXiv:2409.00993 read in full; what is and is not new
+      missing-papers.md                  4 sources not obtained; 2 read only as preprints
+      search-log.md                      searches run, how sources were read, open risks
+      refs-portable-rules.bib            records for every source, with the copy read
     (see also demographic-personas/, human-conflict-resolution/,
      llm-conflict-resolution/, paper-summaries/ from issues #8/#12/#14/#16/#18)
   pipeline/
