@@ -172,7 +172,7 @@ open), which holds the shortlist this issue needs.
   - Matching negsim's timed span (100 steps of 0.1 s = 10 simulated s): the two-way 10,000 scene,
     one run, took **46.9 s for 10 simulated s** (4.2–5.6 s per simulated second), i.e. **0.21
     simulated s per computing s**, against negsim's 0.062 (`llm_negotiation/README.md`, benchmark
-    table: 1,602 ms per 0.1 s step). About 3.4× faster `[inference: not the same scene, and no
+    table: 1,602 ms per 0.1 s step). About 3.4× faster (corrected below to 2.9–3.4×) `[inference: not the same scene, and no
     rule layer in either]`.
   - **The perception pass costs as much as an iteration** (~32 ms at 10,000): reading every agent
     from Python. So the perception adapter should run every 10th iteration (0.1 s, negsim's step),
@@ -180,6 +180,87 @@ open), which holds the shortlist this issue needs.
   - Sleep check: no Kernel-Power 506/507/42/107 events in the System log since 21:00, covering
     22:27:49–22:30:15.
 
+### 2026-10-18 — Mesa trials 1–4, and logging
+- **Trials 1 and 3** (`spikes/mesa_trial1_queue.py`): the line is a list; random service and
+  arrivals from the seeded rng; the newcomer is `schedule_event(at=30)`. Admit → position 3,
+  served at 61.95 s; refuse → position 12. Perception `situation()` → dict; action `apply()`.
+  The decision applied in a scheduled event takes effect at 30.0; applied in `step()`, at 31.0
+  (steps every 1.0 unit). Same seed → same log; seed 43 → different. Admit and refuse runs draw
+  the same random numbers (paired comparison for free).
+- **`seed=` is deprecated** in 3.5.1 (`FutureWarning`, seen with `-W default` in trial 2):
+  switched both scripts to `rng=`; outputs unchanged.
+- **Trial 2** (`spikes/mesa_trial2_door.py`): the door as a capacity-one resource with a priority
+  rule. Alight-first 17.8 s median, random side 26.7 s (30 seeds). **The gap is assumed**: the
+  1.5 s cost of a direction change is an input I chose. Recorded as such.
+- **Trial 4** (`spikes/mesa_trial4_scale.py`):
+  - First error: `ValueError: function must be alive at Event creation`. Mesa holds callbacks by
+    weak reference and `schedule_event` passes no arguments, so a lambda dies at once. Fixed with
+    a bound method of a live `Counter` object.
+  - **Dead end:** `run_until(1e9)` ran past the 10-minute tool timeout; Mesa's default `step()`
+    fires every time unit, so that is a billion no-op steps. Stopped the background task; now runs
+    `run_for(100)` until all are served.
+  - Result (median of 3, 22:43:24–22:43:33): 15.8 / 15.5 µs per event at 1,000 / 10,000; a step
+    pass 1.14 / 13.99 ms with a stored place, 2.12 / 104.49 ms with `list.index`.
+  - Sleep check: still no Kernel-Power 506/507/42/107 events since 21:00; on AC power.
+- **Logging** (`spikes/logging_probe.py`, output to the session scratchpad, not the repo):
+  - JuPedSim's SQLite writer stores frame, id, position and orientation, plus geometry and
+    metadata. The first run wrote **0 rows**: the writer commits every 100 writes and nothing
+    flushes at exit. With `writer.close()`: 105 rows (21 frames × 5 agents).
+  - Mesa's `DataCollector` gives model and agent reporters as DataFrames.
+- **Code size** of each spike: counted with a tokenizer script (scratchpad `sloc.py`), excluding
+  blanks, comments and docstrings. 27 to 95 lines each.
+
+### 2026-10-18 — hands-on.md and decision.md
+- What I did: wrote both deliverables. The matrix totals and the sensitivity table were computed
+  with a script (scratchpad `matrix.py`), not by hand. Scores: claim (2, 2, 5), effort (4, 1, 3),
+  risk (2, 2, 3), credibility (4, 2, 4), speed (4, 2, 4), CrowdGym (4, 2, 4), reproducibility
+  (4, 4, 4), for (a), (b), (c); proposed weights 25, 20, 15, 15, 10, 10, 5.
+- Result: (c) 3.90, (a) 3.20, (b) 1.90. (c) leads under equal weights and when any one criterion
+  is dropped, **except the claim criterion**: without it (a) 3.60 against (c) 3.53. So the answer
+  hinges on whether each conflict type must run in two testbeds.
+- **Correction while checking:** I first wrote that (a) ties (c) "at 90 of 165". The weights then
+  sum to 170, so I reworded it to "effort from 20 to 90, others unchanged".
+- **Design decision vs assumption** (CLAUDE.md asks for the distinction): the recommendation, the
+  weights and the scores are all **proposals for the supervisor**. The trial results are
+  measurements. The door-trial conclusion "alight-first is faster" is a model property in one scene
+  (JuPedSim) or an assumed input (Mesa), not a finding about people.
+
+### 2026-10-18 — Correction: the negsim speed comparison
+- While checking every number, I traced `comparison.md`'s "1.36–1.60 s/step" to `WORK_LOG-26.md`
+  (2026-10-14 benchmark table): **two runs** of negsim's benchmark on the same laptop model, 1,602
+  and 1,364 ms mean per 0.1 s step at 10,000. So negsim runs at 0.062–0.073 simulated s per
+  computing s, and JuPedSim's 0.213 is **2.9–3.4×** faster, not "3.4×". Corrected in `hands-on.md`
+  and `decision.md`; the earlier entry above keeps the original wording with a pointer here. No
+  score changes.
+
 ## Open questions / risks
+
+- **Q1 (supervisor). The standing instruction is still unconfirmed.** The user allowed throwaway
+  trial code for #40 (A1). Nothing records the supervisor lifting the instruction, as in #24–#32.
+- **Q2 (supervisor). Must each unseen conflict type run in at least two testbeds?** It is the one
+  weighting choice that changes the recommendation (`decision.md`, sensitivity). If yes, (c); if
+  one testbed per type is enough, (a) and (c) are within 0.1.
+- **Q3. CrowdGym on JuPedSim is unknown** (A2: repo left unopened). The CrowdGym criterion is
+  scored as if it is; if not, (a) and (c) each lose 0.2 and the order holds.
+- **Q4. The JuPedSim queue's stale entries** (trial 1) look like a defect, but I did not check
+  JuPedSim's issue tracker or source. If it is fixed upstream, option (a) becomes stronger. Worth a
+  look before #42 (read only).
+- **Q5. Every trial result is one scene, default parameters, small N** (8 + 8 at the door, 10 in
+  the queue). Nothing is calibrated. The door ordering (alight-first fastest) held under two motion
+  models, but is one run each.
+- **Q6. Timing is on one laptop**, 3 repetitions, and two batches of the same JuPedSim scene
+  differed by ~25 % at 10,000. negsim's own benchmark varied by 15 % at 10,000 (1,602 and 1,364 ms
+  per step, `WORK_LOG-26.md`). The comparison uses a similar, not identical, scene.
+- **Q7. Mesa's API is moving** (a deprecation and a packaging defect within 3.5.x; weakly held
+  callbacks). Pinning contains it; an upgrade later may cost rework. The recommendation keeps the
+  queue logic framework-light for this reason.
+- **Q8. SUMO, Vadere and Menge were not run.** SUMO by choice (trial 2 did not need it); Vadere
+  and Menge because #40's permission excludes Java and C++ builds. Their columns rest on #39's desk
+  evidence only.
+- **Q9. The perception-pass cost** (~32 ms at 10,000) was measured for a full Python read. Reading
+  only agents near a conflict (`agents_in_range`, `agents_in_polygon`) may be far cheaper; not
+  measured.
+- **Q10. The venv** (`spikes/.venv`, ~1 GB with PySide6 and VTK, pulled in by JuPedSim) is left in
+  place for later issues; it is gitignored. Delete it if disk space matters.
 
 ## Summary (fill in at the end)
