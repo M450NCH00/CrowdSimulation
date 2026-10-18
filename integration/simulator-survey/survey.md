@@ -773,6 +773,8 @@ One paragraph each, from public pages only.
     paid, and its engine is closed.
 - **AnyLogic Pedestrian Library:** **could not be read**. `anylogic.help` and `anylogic.com` both
   returned HTTP 403 to an automated request (search log G18). It is listed in the search log as a
-  *browser* lead: the pages open normally in a browser. Nothing is claimed here.
-- **Pathfinder** (Thunderhead Engineering): **could not be read**. The product page and the support
-  documentation timed out twice (search log G19). It is a *browser* lead. Nothing is claimed here.
+  *browser* lead: the pages are public, so they probably open in a browser, but that was not
+  checked. Nothing is claimed here.
+- **Pathfinder** (Thunderhead Engineering): **could not be read**. The support documentation timed
+  out, and the product page timed out on both download attempts after answering one probe (search
+  log G19). It is a *browser* lead. Nothing is claimed here.
