@@ -1,27 +1,27 @@
 arXiv:2205.10295v1 [cs.LO] 20 May 2022
 
 Linking sanctions to norms in practice
-Ren�e Mellema 1
-Ume�a University Department of Computing Science
+Ren´e Mellema 1
+Ume˚a University Department of Computing Science
 Frank Dignum
-Ume�a University Department of Computing Science
+Ume˚a University Department of Computing Science
 Abstract
-Within social simulation, we often want agents to interact both with larger systems of norms, as well as respond to their own and other agents norm violations. However, their are currently no norm specifications that allow us to interact with all of these components. To address this issue, this paper introduces the concept of violation modalities in CTL. These modalities do not only allow us to keep track of violations, but also allow us to define the usual deontic operators. On top of this, they give us a convenient way of linking together various different norms, and allow us to reason about norms with repeated violations and obligations. We will discuss various properties of the modalities and the deontic operators, and will also discuss some ways in which this formalization can guide an implementation of normative systems.
+Within social simulation, we often want agents to interact both with larger systems of norms, as well as respond to their own and other agents norm violations. However, their are currently no norm speciﬁcations that allow us to interact with all of these components. To address this issue, this paper introduces the concept of violation modalities in CTL∗. These modalities do not only allow us to keep track of violations, but also allow us to deﬁne the usual deontic operators. On top of this, they give us a convenient way of linking together various diﬀerent norms, and allow us to reason about norms with repeated violations and obligations. We will discuss various properties of the modalities and the deontic operators, and will also discuss some ways in which this formalization can guide an implementation of normative systems.
 Keywords: Norms, Sanctions, Norm violations, Deadlines, Repeated obligations.
 1 Introduction
-For a long time, deontic logics have been used as the basis for normative specification in Computer Science [8,17,15], which means that there are many different formalizations to pick from. However, due to the complex nature of norms, these formalizations are not always applicable in every subfield of computer science. For example, in social simulation, which deals with normative reasoning quite often, these formalizations are hardly used, because they do not give the right kind of handles for the designer of a simulation to work with. In social simulation agents often need to react to the behaviour of other agents, while most of the existing formalizations are more focused on how an agent can select the best action under the influence of a norm. This paper hopes to address this issue by introducing a logic that explicitly represents not only obligations and prohibitions generated from norms, but also represents the norm violations.
+For a long time, deontic logics have been used as the basis for normative speciﬁcation in Computer Science [8,17,15], which means that there are many diﬀerent formalizations to pick from. However, due to the complex nature of norms, these formalizations are not always applicable in every subﬁeld of computer science. For example, in social simulation, which deals with normative reasoning quite often, these formalizations are hardly used, because they do not give the right kind of handles for the designer of a simulation to work with. In social simulation agents often need to react to the behaviour of other agents, while most of the existing formalizations are more focused on how an agent can select the best action under the inﬂuence of a norm. This paper hopes to address this issue by introducing a logic that explicitly represents not only obligations and prohibitions generated from norms, but also represents the norm violations.
 1 This work was partially supported by the Wallenberg AI, Autonomous Systems and Software Program (WASP) funded by the Knut and Alice Wallenberg Foundation.
 
 2
 
 Linking sanctions to norms in practice
 
-We can also find this idea of tracking violations in Andersonian reductions [3], which define the deontic operators in terms of violations. It has been shown that this can be an effective approach in dynamic and temporal logics [8,7]. However, in earlier versions a world was either in violation or not, which made it impossible to have repeating norms or repeating violations. We hope to address this issue by introducing a violation modality that can be made unique, and be reasoned with over time as well.
-This allows us to not only reason about norms, but also link different norms together, to either install reparation norms [15], or to specify metanorms [4]. The former should allow us to make it easier to specify larger policies of interacting norms, making it easier for designers of social simulations to specify more complex policies for policy modelling [6]. The latter of these are common in the social simulation literature, but to our knowledge no system exists that allows us to easily specify them in a temporal logic.
-Earlier work on norm specification has already informed us on what the components of such norms should be [17,7,15]. These are: (i) Activation condition (ii) Deactivation condition (iii) Fulfilment/Violation condition (iv) Deadline (v) Repair (vi) Punishment What we hope to include with this paper is a way to combine these components into larger policies.
-An example of a situation where this would matter is a norm regulating littering at a plaza. The activation condition for an agent would then be entering the plaza, and the deactivation would be leaving the plaza. In this case, we would have a violation condition, which would be the agent throwing garbage on the ground. Since there is a violation condition, there is no deadline needed. The repair would be picking up the garbage, but having a punishment if the repair happens might not be necessary. This is where we can use a second norm to give a fine only if the repair does not happen within a certain amount of time.
-We can do this by setting up a second norm, that activates on a violation of the first norm. The deactivation would be the reparation of the first norm. Now we get a norm with a fullfilment condition, which would be picking up the trash again, which can have a deadline of several timesteps. Now the punishment would be a monetary fine.
-This paper is structured as follows. We will start with a discussion on earlier work, and why that is not sufficient for our purposes in Section 2. Then we will introduce the logic used in Section 3. In Section 4 we will introduce the violation modality, and use this to define the usual deontic operators in Section 5. Section 6 shows how this can then be put together to specify and reason with norms, by means of implementing the example mentioned before. We end with a conclusion.
+We can also ﬁnd this idea of tracking violations in Andersonian reductions [3], which deﬁne the deontic operators in terms of violations. It has been shown that this can be an eﬀective approach in dynamic and temporal logics [8,7]. However, in earlier versions a world was either in violation or not, which made it impossible to have repeating norms or repeating violations. We hope to address this issue by introducing a violation modality that can be made unique, and be reasoned with over time as well.
+This allows us to not only reason about norms, but also link diﬀerent norms together, to either install reparation norms [15], or to specify metanorms [4]. The former should allow us to make it easier to specify larger policies of interacting norms, making it easier for designers of social simulations to specify more complex policies for policy modelling [6]. The latter of these are common in the social simulation literature, but to our knowledge no system exists that allows us to easily specify them in a temporal logic.
+Earlier work on norm speciﬁcation has already informed us on what the components of such norms should be [17,7,15]. These are: (i) Activation condition (ii) Deactivation condition (iii) Fulﬁlment/Violation condition (iv) Deadline (v) Repair (vi) Punishment What we hope to include with this paper is a way to combine these components into larger policies.
+An example of a situation where this would matter is a norm regulating littering at a plaza. The activation condition for an agent would then be entering the plaza, and the deactivation would be leaving the plaza. In this case, we would have a violation condition, which would be the agent throwing garbage on the ground. Since there is a violation condition, there is no deadline needed. The repair would be picking up the garbage, but having a punishment if the repair happens might not be necessary. This is where we can use a second norm to give a ﬁne only if the repair does not happen within a certain amount of time.
+We can do this by setting up a second norm, that activates on a violation of the ﬁrst norm. The deactivation would be the reparation of the ﬁrst norm. Now we get a norm with a fullﬁlment condition, which would be picking up the trash again, which can have a deadline of several timesteps. Now the punishment would be a monetary ﬁne.
+This paper is structured as follows. We will start with a discussion on earlier work, and why that is not suﬃcient for our purposes in Section 2. Then we will introduce the logic used in Section 3. In Section 4 we will introduce the violation modality, and use this to deﬁne the usual deontic operators in Section 5. Section 6 shows how this can then be put together to specify and reason with norms, by means of implementing the example mentioned before. We end with a conclusion.
 2 Related work
 Using temporal and dynamic logics as deontic ones goes back to [14], where the reduction proposed by [3] was applied to dynamic logic. This meant that a violation proposition was introduced, and an action was seen as forbidden if it
 
@@ -30,8 +30,8 @@ Using temporal and dynamic logics as deontic ones goes back to [14], where the r
 3
 
 would lead to a violation. This idea was expanded in [18,19], where the violation predicate was expanded upon by including a label and the action. However, the exact semantics are not given, and the properties of these predicates are not investigated. Furthermore, in neither of these works was the violation directly tied to the norm itself.
-The first time where the violation are directly tied to the norms is in [8], where the violation predicates are labelled with a natural number, representing the norm that was being violated. The properties of this logic were then investigated, and it is shown that by only introducing this simple labelling, the framework can deal with certain paradoxes and contrary to duty obligations. The paper also discusses how we could potentially order these violations to select the best action when all possibilities lead to a violation. While this was a step in the right direction, this system still did not allow multiple violations of the same norm. This was due to the fact that the violation predicate was not specific enough.
-The idea of this reduction is again applied in [7], but here the reduction is to a temporal logic, in particular CTL. In this approach, the authors were interested in studying obligations with deadlines, since those are more representative of real world obligations. The authors had the problem that the violation predicates were yet again not specific enough for practical purposes. For example, this formalization could not work with repeated obligations, such as paying rent. This was due to the definition requiring that there was never a violation if the action that was required was executed.
+The ﬁrst time where the violation are directly tied to the norms is in [8], where the violation predicates are labelled with a natural number, representing the norm that was being violated. The properties of this logic were then investigated, and it is shown that by only introducing this simple labelling, the framework can deal with certain paradoxes and contrary to duty obligations. The paper also discusses how we could potentially order these violations to select the best action when all possibilities lead to a violation. While this was a step in the right direction, this system still did not allow multiple violations of the same norm. This was due to the fact that the violation predicate was not speciﬁc enough.
+The idea of this reduction is again applied in [7], but here the reduction is to a temporal logic, in particular CTL∗. In this approach, the authors were interested in studying obligations with deadlines, since those are more representative of real world obligations. The authors had the problem that the violation predicates were yet again not speciﬁc enough for practical purposes. For example, this formalization could not work with repeated obligations, such as paying rent. This was due to the deﬁnition requiring that there was never a violation if the action that was required was executed.
 In [17] the authors discuss how norms can be applied in e-Institutions. In particular they focus on how to monitor for norm violations and how to represent this in a way that makes it easy for a computer to check if there has been a violation. What is relevant for our purposes is that they identify a few components of norms that are necessary or helpful in enforcement. These are (i) the norm condition including deadlines and activation, (ii) the violation condition, (iii) a detection mechanism, (iv) the sanction, and (v) the repair. A lot of these components are very similar in nature, but they help the mechanisms in detecting norm violations. However, here the authors are only focused on applying norms within e-Institutions, which means that their notes for implementation are limited to that domain. Also, their focus lies solely on norms from the institutional perspective, which means that it cannot be used within an agents reasoning.
 This work of norm monitoring is also discussed in [2,10,15]. Like [17], these works are focused on the enforcement of norms in software. They have a particular interest in using Business Rule Management Systems such as Drools [16] for norm management. They do this through the use of norm instances, so that the parameters of the norm, the violation, and the sanctions can be linked in their logical framework. Their system can also deal with norm change [10], and be applied to planning [15].
 [15] also discusses the norm life cycle. However, their approach with norm instances has the downside that a violated norm cannot go back to an active
@@ -42,157 +42,157 @@ Linking sanctions to norms in practice
 
 state. This is a limitation of the logic used, LTL. They solve this by creating a new norm instance once a norm is violated. What is interesting about their planner is that is does not allow for plans that do not repair violations, but plans that violate norms are allowed. However, what is missing from their formalization is that it can only represent norms with obligations, in particular those with a maintenance condition.
 
-3 CTLlpwith extensions
-As discussed before, in order to have obligations repeat we need to be able to know which deadline goes with which violation and which action (or failure to act). To facilitate this, we will need to be able to reason about the past, as well as the future. In simulations, we can be certain about the history of the run. This means that we can constrain ourselves to logics with a linear past, but a branching future, such as CTLlp [12,5].
-We will also need to be able to count in order to make this work. For this, we will be borrowing some definitions from [13]. However, we will not need to bring in all of their machinery, since we will not have to express how often something happened in our formulas, only in the definitions of the modalities.
-Furthermore, we need to be able to distinguish between different violations. This is because we can now have multiple violations for the same norm by the same agent for the same action. One easy label that we can add is the time at which the violation occurred, which would make the violations unique. However, for this we would need some notion of a clock, or the current time. In order to incorporate this, we will be using the idea of temporal variables as used in Timed Propositional Temporal Logic (TPTL) [1]. This will both give us a notion of a clock and compare times, as well as testing whether a violation is new to this state.
-Finally, as in [7], we will want agents to only cause a violation if they were actually responsible for the action (not) taken. Because of this, we will also be incorporating their seeing to it that (STIT) operator. For this, we will be incorporating some of the elements from [9]. However, since we do not consider the capabilities of agents, our definitions will be a bit simpler.
-The new addition to this logic will be the addition of norm violation conditions, deadlines, and repair and punish conditions into the logic. This will allow us to define multiple violation modalities, for both acting and omitting to act, as well as modalities for repaired and punished violations. All of these modalities can occur multiple times on a run without causing problems, and will allow us to link norms to violations, and link norms to other norms.
+3 CTL∗lpwith extensions
+As discussed before, in order to have obligations repeat we need to be able to know which deadline goes with which violation and which action (or failure to act). To facilitate this, we will need to be able to reason about the past, as well as the future. In simulations, we can be certain about the history of the run. This means that we can constrain ourselves to logics with a linear past, but a branching future, such as CTL∗lp [12,5].
+We will also need to be able to count in order to make this work. For this, we will be borrowing some deﬁnitions from [13]. However, we will not need to bring in all of their machinery, since we will not have to express how often something happened in our formulas, only in the deﬁnitions of the modalities.
+Furthermore, we need to be able to distinguish between diﬀerent violations. This is because we can now have multiple violations for the same norm by the same agent for the same action. One easy label that we can add is the time at which the violation occurred, which would make the violations unique. However, for this we would need some notion of a clock, or the current time. In order to incorporate this, we will be using the idea of temporal variables as used in Timed Propositional Temporal Logic (TPTL) [1]. This will both give us a notion of a clock and compare times, as well as testing whether a violation is new to this state.
+Finally, as in [7], we will want agents to only cause a violation if they were actually responsible for the action (not) taken. Because of this, we will also be incorporating their seeing to it that (STIT) operator. For this, we will be incorporating some of the elements from [9]. However, since we do not consider the capabilities of agents, our deﬁnitions will be a bit simpler.
+The new addition to this logic will be the addition of norm violation conditions, deadlines, and repair and punish conditions into the logic. This will allow us to deﬁne multiple violation modalities, for both acting and omitting to act, as well as modalities for repaired and punished violations. All of these modalities can occur multiple times on a run without causing problems, and will allow us to link norms to violations, and link norms to other norms.
 For now, we will ignore the new violation modalities, which means that we end up with the following syntax for the language L.
-Definition 3.1 Given a set of propositional variables p  P, a set of agents a  A, and a set of temporal variables t  T , and d  {+, -} the language of
+Deﬁnition 3.1 Given a set of propositional variables p ∈ P, a set of agents a ∈ A, and a set of temporal variables t ∈ T , and d ∈ {+, −} the language of
 
 Mellema and Dignum
 
 5
 
-normative specification is defined as:
- := t | t + c | t - c  := p | 1 < 2 | 1 = 2 | � |    | Ea | E | A | t.(t)  :=  | � |    | Xd | Fd | Gd | Ud
+normative speciﬁcation is deﬁned as:
+π := t | t + c | t − c ϕ := p | π1 < π2 | π1 = π2 | ¬ϕ | ϕ ∧ ϕ | Eaϕ | Eα | Aα | t.ϕ(t) α := ϕ | ¬α | α ∧ α | Xdα | Fdα | Gdα | αUdα
 We will be using the usual abbreviations for disjunction and implication, as well as abbreviations for the other binary operators for comparing times.
-In this definition, the temporal operators are labelled with a direction, + for forwards, and - for backwards, but otherwise they have their traditional meaning. t.(t) is the temporal freeze operator from TPTL, which binds the time of the current time point to the variable t, and then evaluates the formula  using that assignment. Ea is the STIT operator.
+In this deﬁnition, the temporal operators are labelled with a direction, + for forwards, and − for backwards, but otherwise they have their traditional meaning. t.ϕ(t) is the temporal freeze operator from TPTL, which binds the time of the current time point to the variable t, and then evaluates the formula ϕ using that assignment. Eaϕ is the STIT operator.
 In order to interpret these formulas, we will now need a structure that explicitly incorporates time, and that shows what agents have control over which transitions. Furthermore, we need to make sure that time only branches forward, not backward. We will do this by making sure that the temporal relation over the worlds is a tree. This also allows us to use the depth of a given world in the tree as the time point for that world. Using the depth of tree to give the time point does mean that we assume that every time step takes the same amount of time, but is otherwise the same as in [1].
 Besides this, we will also have to encode some information about the norms into our models. This is because we will want to encode in which worlds an agent is in violation of a norm, similarly to [3,8,7]. However, instead of directly marking worlds as in violation of a norm, or as a deadline for an agent, we will assign a formula to each world-norm pair, that can also depend on the agent. This requires that we also have a set I of norm labels.
-Definition 3.2 A model is a tuple M = W, w, R, T, , V, D, R, P where:
-� W is a non-empty set of world states;
-� w  W is the root of the tree, the initial state of the simulation;
-� R : W � W is a set of transitions between world states, such that W, R is a tree;
-� T : R  2A is a set of agent labels on elements of R;
-�  : W � 2P is a valuation function over the world states;
-� V : I � W � A  2W indicates in which states an agent is in violation according to a norm;
-� D : I � W � A  2W indicates in which states an agent has a deadline for a norm;
-� R : I � W � A  2W indicates in which states an agent has repaired a norm;
-� P : I � W � A  2W indicates in which states an agent has been punished for a norm violation.
+Deﬁnition 3.2 A model is a tuple M = W, w, R, T, π, V, D, R, P where:
+• W is a non-empty set of world states;
+• w ∈ W is the root of the tree, the initial state of the simulation;
+• R : W × W is a set of transitions between world states, such that W, R is a tree;
+• T : R → 2A is a set of agent labels on elements of R;
+• π : W × 2P is a valuation function over the world states;
+• V : I × W × A → 2W indicates in which states an agent is in violation according to a norm;
+• D : I × W × A → 2W indicates in which states an agent has a deadline for a norm;
+• R : I × W × A → 2W indicates in which states an agent has repaired a norm;
+• P : I × W × A → 2W indicates in which states an agent has been punished for a norm violation.
 
 6
 
 Linking sanctions to norms in practice
 
 The depth of a state in the tree is denoted with depth(W, R, s). The depth of the root node w is 0.
-We will also need the transition labels for the different agents, in order to define the semantics for Ea. This is defined as follows:
+We will also need the transition labels for the diﬀerent agents, in order to deﬁne the semantics for Ea. This is deﬁned as follows:
 
-Tas = {(s, s) | sRs and a  T ((s, s))}
+Tas = {(s, s′) | sRs′ and a ∈ T ((s, s′))}
 
-As is usual in CTL path formula are evaluated on possibly infinite paths. However, unlike traditional CTL approaches, these paths are always coming from the root of the tree. We write paths(W, R) for all paths, and paths(W, R, s) for all paths going through the state s. if we have a path   paths(W, R), then the j-th state on that path is written as (j). In particular, this means that (0) = w for any , and that for all   paths(W, R, s), (depth(W, R, s)) = s, making it easy to find a particular world state in the past based on a temporal variable. Similarly, i is the finite path consisting of all elements up and to including i. This restriction operator will be used to make it possible to only reason over the past, and not the future.
-We will also need an assignment to assign the temporal variables to time points. We will do this with the function  : T  N.
-Over these structures, the interpretation of formulas is otherwise as standard, and the are given in Definition A.1.
-Now, the last thing we need is to be able to count occurrences of a formula on a path. However, since we are now not interested in the whole path, we will adapt the definition from [13] to also slice the path itself. This gives us the following definition:
-Definition 3.3 For every path , the number of states satisfying a path formula  between depth i and j is noted as ||i:j and defined as |{k | i  k  j and M, j, k |= }|.
+As is usual in CTL∗ path formula are evaluated on possibly inﬁnite paths. However, unlike traditional CTL∗ approaches, these paths are always coming from the root of the tree. We write paths(W, R) for all paths, and paths(W, R, s) for all paths going through the state s. if we have a path σ ∈ paths(W, R), then the j-th state on that path is written as σ(j). In particular, this means that σ(0) = w for any σ, and that for all σ ∈ paths(W, R, s), σ(depth(W, R, s)) = s, making it easy to ﬁnd a particular world state in the past based on a temporal variable. Similarly, σ↾i is the ﬁnite path consisting of all elements up and to including i. This restriction operator will be used to make it possible to only reason over the past, and not the future.
+We will also need an assignment to assign the temporal variables to time points. We will do this with the function τ : T → N.
+Over these structures, the interpretation of formulas is otherwise as standard, and the are given in Deﬁnition A.1.
+Now, the last thing we need is to be able to count occurrences of a formula on a path. However, since we are now not interested in the whole path, we will adapt the deﬁnition from [13] to also slice the path itself. This gives us the following deﬁnition:
+Deﬁnition 3.3 For every path σ, the number of states satisfying a path formula α between depth i and j is noted as |σ|iα:j and deﬁned as |{k | i ≤ k ≤ j and M, σ↾j, k |=τ α}|.
 
 4 Violation as a modality
 With all of this machinery in place, we can now extend our language L with the violation modalities. These modalities will be added as state formulas. First, we will need to add the information of when a world is in violation, passed a deadline, or had a repair or punishment happen. This is based on the V , D, R, and P parts of the model.
-Definition 4.1 The semantics of the special propositions Vi,a, Di,a, Ri,a, and Pi,a are:
+Deﬁnition 4.1 The semantics of the special propositions Vi,a, Di,a, Ri,a, and Pi,a are:
 
-M, s |= Vi,a  M, s |= Di,a  M, s |= Ri,a  M, s |= Pi,a 
+M, s |=τ Vi,a ⇐⇒ M, s |=τ Di,a ⇐⇒ M, s |=τ Ri,a ⇐⇒ M, s |=τ Pi,a ⇐⇒
 
-s  V (i, a) s  D(i, a) s  R(i, a) s  P (i, a)
+s ∈ V (i, a) s ∈ D(i, a) s ∈ R(i, a) s ∈ P (i, a)
 
 Mellema and Dignum
 
 7
 
-Using these, we can now introduce the violation predicates, written as Violia,a,tb,tv (). This modality is supposed to be read as "agent a has violated norm i at time tv by seeing to it that , which counts as a violation since tb". Because we are working with a STIT logic however, there is a difference between acting and failing to act, so we will need two of these operators, one for causing a violation by acting, and one for causing a violation by omitting to act. These are written as Viola and Violo respectively.
-The omission violation operator Violo also uses the parameter tb in a second way. This is because an agent might have some time before they need to see to it that . In this case, only checking the last world before t is not enough, and we need to check back until tb. Later on tb will be set to the time when an obligation activated.
-Definition 4.2
+Using these, we can now introduce the violation predicates, written as Violia,a,tb,tv (ϕ). This modality is supposed to be read as “agent a has violated norm i at time tv by seeing to it that ϕ, which counts as a violation since tb”. Because we are working with a STIT logic however, there is a diﬀerence between acting and failing to act, so we will need two of these operators, one for causing a violation by acting, and one for causing a violation by omitting to act. These are written as Viola and Violo respectively.
+The omission violation operator Violo also uses the parameter tb in a second way. This is because an agent might have some time before they need to see to it that ϕ. In this case, only checking the last world before t is not enough, and we need to check back until tb. Later on tb will be set to the time when an obligation activated.
+Deﬁnition 4.2
 
-M, s |= Violia,a,tb,tv ()  M, s |= (t.(tv = t  Vi,a  AX-(Ea)) AF-(t.(tv = t)  Vi,a  AX-(Ea)) and
-M, s |= AG-t.((t  tb  t  tv)  (  Vi,a)) M, s |= Violio,a,tb,tv ()  M, s |= (t.(tv = t  Vi,a  Di,a)
-AF-(t.(tv = t)  Vi,a  Di,a),
-M, s |= AG-t.((t  tb  t  tv)  (Vi,a  �)),
-M, s |= A(�Ea  �Di,a)U-(Di,a  t.(tb = t))
+M, s |=τ Violia,a,tb,tv (ϕ) ⇐⇒ M, s |=τ (t.(tv = t ∧ Vi,a ∧ AX−(Eaϕ))∨ AF−(t.(tv = t) ∧ Vi,a ∧ AX−(Eaϕ)) and
+M, s |=τ AG−t.((t ≥ tb ∧ t ≤ tv) → (ϕ → Vi,a)) M, s |=τ Violio,a,tb,tv (ϕ) ⇐⇒ M, s |=τ (t.(tv = t ∧ Vi,a ∧ Di,a)∨
+AF−(t.(tv = t) ∧ Vi,a ∧ Di,a),
+M, s |=τ AG−t.((t ≥ tb ∧ t ≤ tv) → (Vi,a → ¬ϕ)),
+M, s |=τ A(¬Eaϕ ∧ ¬Di,a)U−(Di,a ∨ t.(tb = t))
 
-and for all   paths(W, R, s),
+and for all σ ∈ paths(W, R, s),
 
-|
+|σ
 
 |tb:tv
 Di,a
 
 >
 
-| |tb :tv
-t.(Violio,a,tb ,t())Ea
+|σ |tb :tv
+t.(Violio,a,tb ,t(ϕ))∨Eaϕ
 
 To discuss how these operators work, we want to discuss some situations where the modalities are true, and some where they are false. First, we will look at the violation to act. The model for this can be see in Figure 1a. Here we see a small model, where each circle represents a state, and the arrows indicate state transitions.
-Here at the end the agent is in violation of acting , since two states before, the agent saw to it that . This fulfils the first condition, that there is a state, where the state before the agent saw to it that . For the second condition, even though it says something needs to hold globally into the past, we only need to look at the states connected by dashed arrows. This is because we only need to consider states at the interval between tb and tv, since only those make the antecedent of the implication true. The check to make for these worlds is that whenever  is true, Vi,a is also true.  is true in one world, and Vi,a is also true there, Putting this together, we get that the agent is indeed in violation here.
-For the second definition, we look at Figure 1b. We again have a violation at the end, this time from omission to act. This means that there must be a point in the past where both the deadline was met, and the agent was in
+Here at the end the agent is in violation of acting ϕ, since two states before, the agent saw to it that ϕ. This fulﬁls the ﬁrst condition, that there is a state, where the state before the agent saw to it that ϕ. For the second condition, even though it says something needs to hold globally into the past, we only need to look at the states connected by dashed arrows. This is because we only need to consider states at the interval between tb and tv, since only those make the antecedent of the implication true. The check to make for these worlds is that whenever ϕ is true, Vi,a is also true. ϕ is true in one world, and Vi,a is also true there, Putting this together, we get that the agent is indeed in violation here.
+For the second deﬁnition, we look at Figure 1b. We again have a violation at the end, this time from omission to act. This means that there must be a point in the past where both the deadline was met, and the agent was in
 
 8
 
 Linking sanctions to norms in practice
 
-Violia,a,tb,tv ()
+Violia,a,tb,tv (ϕ)
 
 w tb
 
-Ea Vi,a, , tv Violia,a,tb,tv ()
+Eaϕ Vi,a, ϕ, tv Violia,a,tb,tv (ϕ)
 
-Violai,a,tb,tv ()
+Violai,a,tb,tv (ϕ)
 
-(a) Example for the semantics of the violation to act modality. Violoi,a,tb,tv ()
+(a) Example for the semantics of the violation to act modality. Violoi,a,tb,tv (ϕ)
 
 w
 
 tb
 
-Ea Di,a, 
+Eaϕ Di,a, ϕ
 
-Di,a, Vi,a �, tv
-Violio,a,tb,tv ()
+Di,a, Vi,a ¬ϕ, tv
+Violio,a,tb,tv (ϕ)
 
-Violio,a,tb,tv ()
+Violio,a,tb,tv (ϕ)
 
 (b) Example for the semantics of the violation for failure of acting modality.
 
-Fig. 1. Examples with Definition 4.2. Formulas written beneath the states indicate those are true there, formulas not listed are assumed to be false. Temporal variables given are bound in that state.
+Fig. 1. Examples with Deﬁnition 4.2. Formulas written beneath the states indicate those are true there, formulas not listed are assumed to be false. Temporal variables given are bound in that state.
 
-violation of the norm. This is the time point before, where we can indeed see that both Di,a and Vi,a are true. As before, the second line again says that in all the worlds connected by the dotted arrows, Vi,a  �. The direction of the implication is now reversed, since the agent does not need to see to it that always , but only once per deadline. Vi,a is only true once, and there we get , so the implication holds.
-For the last two conditions, the first says that the agent must not have seen to it that  since the last deadline or tb, whichever came last. As can be seen in the figure, there was no point where Ea was true in between the deadlines. For the last condition, we need to count how often the deadline was reached along the dashed path, and compare this to how often the agent saw to it that Ea, or there already was a violation. There were two deadlines along the dashed path, no violations, and only one Ea, so the agent was in violation.
-This also prevented the agent from being in violation after the first deadline, since there the agent had seen to it that , so then the last two conditions were not true. If the agent had seen to it that Ea twice before the first deadline, there would also not have been a violation, even though the third condition would have been true.
-However, in order to give a full norm specification, we also need to know whether a norm violation is repaired/punished. This is required for the activation/deactivation condition for the reparation/punishment norms and for meta-norms. Luckily, now defining these is relatively simple, since we can check if there have been more repair/punishment actions than unpaired violations over a given path. For this it often does not matter whether the violation came from a violation to act or a violation from omission, so we will also introduce
+violation of the norm. This is the time point before, where we can indeed see that both Di,a and Vi,a are true. As before, the second line again says that in all the worlds connected by the dotted arrows, Vi,a → ¬ϕ. The direction of the implication is now reversed, since the agent does not need to see to it that always ϕ, but only once per deadline. Vi,a is only true once, and there we get ϕ, so the implication holds.
+For the last two conditions, the ﬁrst says that the agent must not have seen to it that ϕ since the last deadline or tb, whichever came last. As can be seen in the ﬁgure, there was no point where Eaϕ was true in between the deadlines. For the last condition, we need to count how often the deadline was reached along the dashed path, and compare this to how often the agent saw to it that Eaϕ, or there already was a violation. There were two deadlines along the dashed path, no violations, and only one Eaϕ, so the agent was in violation.
+This also prevented the agent from being in violation after the ﬁrst deadline, since there the agent had seen to it that ϕ, so then the last two conditions were not true. If the agent had seen to it that Eaϕ twice before the ﬁrst deadline, there would also not have been a violation, even though the third condition would have been true.
+However, in order to give a full norm speciﬁcation, we also need to know whether a norm violation is repaired/punished. This is required for the activation/deactivation condition for the reparation/punishment norms and for meta-norms. Luckily, now deﬁning these is relatively simple, since we can check if there have been more repair/punishment actions than unpaired violations over a given path. For this it often does not matter whether the violation came from a violation to act or a violation from omission, so we will also introduce
 
 Mellema and Dignum
 
 9
 
 an abbreviation for a violation in general.
-Definition 4.3
-Violi,a,tb,tv () := Violia,a,tb,tv ()  Violio,a,tb,tv () M, s |= RVioli,a,tb,tv,tr ()  M, s |= Violi,a,tb,tv ()
-and M, s |= AF-(t.(tr = t)  EaRi,a) and for all   paths(W, R, s), ||tEva:tRri,a  | |tb :tv
-t.(Violi,a,tb,t()�F+t.(RVioli,a,tb,t,t ())
-M, s |= PVioli,a,tb,tv,tr ()  M, s |= Violi,a,tb,tv () and M, s |= AF-(t.(tr = t)  EaPi,a) and for all   paths(W, R, s), ||tEva:tPri,a  | |tb :tv
-t.(Violi,a,tb,t()�F+t.(PVioli,a,tb,t,t ())
+Deﬁnition 4.3
+Violi,a,tb,tv (ϕ) := Violia,a,tb,tv (ϕ) ∨ Violio,a,tb,tv (ϕ) M, s |=τ RVioli,a,tb,tv,tr (ϕ) ⇐⇒ M, s |=τ Violi,a,tb,tv (ϕ)
+and M, s |=τ AF−(t.(tr = t) ∧ EaRi,a) and for all σ ∈ paths(W, R, s), |σ|tEva:tRri,a ≥ |σ |tb :tv
+t.(Violi,a,tb,t(ϕ)∧¬F+t′.(RVioli,a,tb,t,t′ (ϕ))
+M, s |=τ PVioli,a,tb,tv,tr (ϕ) ⇐⇒ M, s |=τ Violi,a,tb,tv (ϕ) and M, s |=τ AF−(t.(tr = t) ∧ EaPi,a) and for all σ ∈ paths(W, R, s), |σ|tEva:tPri,a ≥ |σ |tb :tv
+t.(Violi,a,tb,t(ϕ)∧¬F+t′.(PVioli,a,tb,t,t′ (ϕ))
 
-RVioli,a,tb,tv,tr ()
+RVioli,a,tb,tv,tr (ϕ)
 
 w tb
 
-tv Violi,a,tb,tv ()
+tv Violi,a,tb,tv (ϕ)
 
 tr EaRi,a
 
-RVioli,a,tb,tv,tr ()
+RVioli,a,tb,tv,tr (ϕ)
 
-Fig. 2. Examples for Definition 4.3. Formulas written beneath the states indicate those are true there, formulas not listed are assumed to be false. Temporal variables given are bound in that state.
-The example for this definition is in Figure 2. The example is only given for the repair, but the punishment is the same. Here we count how many repair actions have been taken along the dotted path, and compare that with the number of unrepaired violations before the violation. Here we also use the fact that the counting operator cuts off the path after the second world, so ||tb:tv only allows us to reason up to tv, and any states later than that are not accessible.
+Fig. 2. Examples for Deﬁnition 4.3. Formulas written beneath the states indicate those are true there, formulas not listed are assumed to be false. Temporal variables given are bound in that state.
+The example for this deﬁnition is in Figure 2. The example is only given for the repair, but the punishment is the same. Here we count how many repair actions have been taken along the dotted path, and compare that with the number of unrepaired violations before the violation. Here we also use the fact that the counting operator cuts oﬀ the path after the second world, so |σ|tb:tv only allows us to reason up to tv, and any states later than that are not accessible.
 4.1 Properties
-Since we now have violation as operators, one of the first questions that we can ask ourselves is whether or not these operators are normal. In our case, we do not want these operators to be normal since we do not want them to support necessitation. If they did, then every tautology would create a violation, that would be directly repaired/punished for. Luckily, since we incorporate what an agent has done into the definitions, this does not hold for any of the modalities.
+Since we now have violation as operators, one of the ﬁrst questions that we can ask ourselves is whether or not these operators are normal. In our case, we do not want these operators to be normal since we do not want them to support necessitation. If they did, then every tautology would create a violation, that would be directly repaired/punished for. Luckily, since we incorporate what an agent has done into the deﬁnitions, this does not hold for any of the modalities.
 
-Proposition 4.4 Violio,a,tb,tv (), M
+Proposition 4.4 Violio,a,tb,tv (ϕ), M
 
-M |=  does not imply that M |= Violai,a,tb,tv (), |= RVioli,a,tb,tv,tr (), or M |= PVioli,a,tb,tv,tp ().
+M |=τ ϕ does not imply that M |=τ Violai,a,tb,tv (ϕ), |=τ RVioli,a,tb,tv,tr (ϕ), or M |=τ PVioli,a,tb,tv,tp (ϕ).
 
 M
 
-|=
+|=τ
 
 10
 
@@ -200,72 +200,72 @@ Linking sanctions to norms in practice
 
 Proof. See appendix.
 
-
+✷
 
 One of the other properties that we do not want, is that an agent can be in violation of the same norm for the same action taken. This one is a bit hard to express if we take multiple deadlines into account, so we will focus on a short time interval. In particular, we will assume that only one deadline occurs on the interval, and that the agent can only take one action related to the norm.
 
-Proposition 4.5 M, s |= (Violai,a,tb,tv ()  Violoi,a,tb,tv ())  
+Proposition 4.5 M, s |=τ (Violai,a,tb,tv (ϕ) ∧ Violoi,a,tb,tv (ϕ)) → ⊥
 
-Proof. Since we have that Violai,a,tb,tv (), we know that there is at least one state where the agent saw to it that . However, this is in conflict with
+Proof. Since we have that Violai,a,tb,tv (ϕ), we know that there is at least one state where the agent saw to it that ϕ. However, this is in conﬂict with
 
-Violoi,a,tb,tv (), which specifies that the agent did not see to it that . There-
+Violoi,a,tb,tv (ϕ), which speciﬁes that the agent did not see to it that ϕ. There-
 
 fore, we get a contradiction.
 
-
+✷
 
 Another property that is good to check is if our operator allows us to replace
-the formula under the operator. In particular, we don't want that all logical
-consequences of that formula also cause a violation. Similarly, if    and Violai,a,tb,tv (), we do not directly want Violai,a,tb,tv (). For Violoi,a,tb,tv () this is a wanted property, since when  implies ,  would be another way to not
+the formula under the operator. In particular, we don’t want that all logical
+consequences of that formula also cause a violation. Similarly, if ψ → ϕ and Violai,a,tb,tv (ϕ), we do not directly want Violai,a,tb,tv (ψ). For Violoi,a,tb,tv (ϕ) this is a wanted property, since when ψ implies ϕ, ψ would be another way to not
 get a violation. However, since we are treating the formulas based on their meaning, we do want to have replacement of equivalents.
 
-Proposition 4.6    and Violi,a,tb,tv () does not imply Violi,a,tb,tv ().
+Proposition 4.6 ϕ → ψ and Violi,a,tb,tv (ϕ) does not imply Violi,a,tb,tv (ψ).
 
-ViPmiropolliooy,af,.tthbF,atovt(rV) itohlaiiV,sai,,tfabo,,ltlvwo(whsi)chftohrisistahfeorlelfoqawuctisretfmhroaemtntntofhoterseVfaeiciontlgia,taht,otabt,titv(th)attohddoooldee.ss
+ViPmiropolliooy,af,.tthbF,atovt(rϕψV) →itohlaiiV,sai,,tfabo,,ltlvwo(whϕsi)chftohrisistahfeorlelfoqawuctisretfmhroaemtntntofhoterseVfaeiciontlgia,taht,otabt,titvϕ(tψh→)attoψϕhddoooldee.ss
 
 not For not
 
-mean that the agent did not see to it that .
+mean that the agent did not see to it that ψ.
 
+✷
 
+Proposition 4.7 ψ → ϕ and Violai,a,tb,tv (ϕ) does not imply Violai,a,tb,tv (ψ).
 
-Proposition 4.7    and Violai,a,tb,tv () does not imply Violai,a,tb,tv ().
+Proof. This follows from the fact that ψ → ϕ does not imply that agent a saw
 
-Proof. This follows from the fact that    does not imply that agent a saw
+to it that ψ, which is a requirement for Violai,a,tb,tv (ψ) to hold.
 
-to it that , which is a requirement for Violai,a,tb,tv () to hold.
+✷
 
+Proposition 4.8 For any s ∈ W, M, s t ∧ t ≤ tv) → (ψ → ϕ)) → Violio,a,tb,tv (ψ).
 
+|=τ
 
-Proposition 4.8 For any s  W, M, s t  t  tv)  (  ))  Violio,a,tb,tv ().
+(Violio,a,tv,tv (ϕ) ∧ AG−(t.(tb
 
-|=
+≤
 
-(Violio,a,tv,tv ()  AG-(t.(tb
+Proof. By contraposition, we know that Vi,a → ¬ψ. Futhermore, we know that the agent did not see to Eaψ more often than to Eaϕ, since ψ → ϕ. ✷
 
+Proposition 4.9 For any t ∧ t ≤ tv) → (ϕ ↔ ψ)) → ψ) → Violio,a,tb,tv (ψ).
 
+s ∈ W, M, s Violai,a,tb,tv (ψ)
 
-Proof. By contraposition, we know that Vi,a  �. Futhermore, we know that the agent did not see to Ea more often than to Ea, since   . 
+|=τ and
 
-Proposition 4.9 For any t  t  tv)  (  ))  )  Violio,a,tb,tv ().
+M(V, isol|=ai,aτ,t(bV,tvi(oϕloi),a,∧tb
 
-s  W, M, s Violai,a,tb,tv ()
+AG−(t.(tb ,tv (ϕ) ∧ ϕ
 
-|= and
-
-M(V, isol|=ai,a,t(bV,tvi(oloi),a,tb
-
-AG-(t.(tb ,tv ()  
-
- 
+≤ ↔
 
 Proof. See appendix.
 
+✷
 
+Most of the interactions that the modalities have with time are fairly intuitive, and follow directly from the deﬁnitions. However, we still wanted to highlight a few. The ﬁrst is that violations persist through time.
 
-Most of the interactions that the modalities have with time are fairly intuitive, and follow directly from the definitions. However, we still wanted to highlight a few. The first is that violations persist through time.
-
-Proposition 4.10 For any model M and state s, M, s |= Violi,a,tb,tv ()  AG+Violi,a,tb,tv ()
+Proposition 4.10 For any model M and state s, M, s |=τ Violi,a,tb,tv (ϕ) → AG+Violi,a,tb,tv (ϕ)
 
 Mellema and Dignum
 
@@ -279,113 +279,113 @@ from s will also go through s, and thus has access in the past to the same state
 
 at depth tv.
 
+✷
 
-
-Now, this does mean that we need a way to check if a violation is new. Luckily, for this we can compare the current time (which we can bind with t.(t)) against the time the violation occurred, as such: t.Violi,a,tb,t(). This will only be true if the violation is introduced in the current state, since it binds the time of violation to the current time.
+Now, this does mean that we need a way to check if a violation is new. Luckily, for this we can compare the current time (which we can bind with t.ϕ(t)) against the time the violation occurred, as such: t.Violi,a,tb,t(ϕ). This will only be true if the violation is introduced in the current state, since it binds the time of violation to the current time.
 Since these violation modalities are modalities, it would also be interesting to see how they interact with connectives in their scope. In particular, it would be good to check under which conditions we can combine two violations, or split one into two.
 
-Proposition 4.11 (i) (Violia,a,tb,tv ()  Violai,a,tb,tv ())  Violia,a,tb,tv (  ) (ii) (Violia,a,tb,tv ()  Violia,a,tb,tv ())  Violia,a,tb,tv (  ) (iii) Violia,a,tb,tv (  )  (Violai,a,tb,tv ()  Violia,a,tb,tv ()) (iv) Violia,a,tb,tv (  )  (Violai,a,tb,tv ()  Violai,a,tb,tv ()) (v) Violoi,a,tb,tv ()  Violoi,a,tb,tv (  ) (vi) (Violio,a,tb,tv ()  Violoi,a,tb,tv ())  Violoi,a,tb,tv (  ) (vii) Violio,a,tb,tv (  )  (Violoi,a,tb,tv ()  Violio,a,tb,tv ()) (viii) Violoi,a,tb,tv (  )  Violio,a,tb,tv ()
+Proposition 4.11 (i) (Violia,a,tb,tv (ϕ) ∧ Violai,a,tb,tv (ψ)) → Violia,a,tb,tv (ϕ ∧ ψ) (ii) (Violia,a,tb,tv (ϕ) ∨ Violia,a,tb,tv (ψ)) → Violia,a,tb,tv (ϕ ∨ ψ) (iii) Violia,a,tb,tv (ϕ ∧ ψ) → (Violai,a,tb,tv (ϕ) ∧ Violia,a,tb,tv (ψ)) (iv) Violia,a,tb,tv (ϕ ∨ ψ) → (Violai,a,tb,tv (ϕ) ∨ Violai,a,tb,tv (ψ)) (v) Violoi,a,tb,tv (ϕ) → Violoi,a,tb,tv (ϕ ∧ ψ) (vi) (Violio,a,tb,tv (ϕ) ∨ Violoi,a,tb,tv (ψ)) → Violoi,a,tb,tv (ϕ ∨ ψ) (vii) Violio,a,tb,tv (ϕ ∧ ψ) → (Violoi,a,tb,tv (ϕ) ∧ Violio,a,tb,tv (ψ)) (viii) Violoi,a,tb,tv (ϕ ∨ ψ) → Violio,a,tb,tv (ϕ)
 
 Proof. See appendix.
 
-
+✷
 
 Based on the proofs, we can also get a conditions under which we can do this splitting, which can help us later when deriving obligations/prohibitions from other obligations/prohibitions.
 
-Proposition 4.12 For any model M and state s, M, s )  AF-(Ea  AX+(t.(tv = t))))  Violai,a,tb,tv ()
+Proposition 4.12 For any model M and state s, M, s ψ) ∧ AF−(Eaϕ ∧ AX+(t.(tv = t)))) → Violai,a,tb,tv (ϕ)
 
-|=
+|=τ
 
-(Violia,a,tb,tv ( 
+(Violia,a,tb,tv (ϕ ∨
 
-Proof. This follows from the fact that we know that Ea the state before the
+Proof. This follows from the fact that we know that Eaϕ the state before the
 
-timepoint tv, and the fact that   (  ) combined with (  )  Vi,a
+timepoint tv, and the fact that ϕ → (ϕ → ψ) combined with (ϕ → ψ) → Vi,a
 
-gives us   Vi,a.
+gives us ϕ → Vi,a.
 
+✷
 
-
-5 Defining obligation and prohibition
-Now we have our violation modalities, we can start to define the obligation and prohibition modalities. As before, the prohibition modality is easier than the obligation modality.
+5 Deﬁning obligation and prohibition
+Now we have our violation modalities, we can start to deﬁne the obligation and prohibition modalities. As before, the prohibition modality is easier than the obligation modality.
 
 12
 
 Linking sanctions to norms in practice
 
-Definition 5.1
+Deﬁnition 5.1
 
-M, s |= Fi,a,tb ()  M, s |= (Ea  AX+(tv.Violia,a,tb,tv ()))
-M, s |= Oi,a,tb ( < )  for all   paths (W, R, s), there exists
-j > depth(W, R, s), M, (j) |=  and for all depth(W, R, s)  k < j : M, (k) |= tv.�Violio,a,tb,tv ()  � and if for all depth(W, R, s)  k < j : M, k |= �Ea then M, j |= tv.Violoi,a,tb,tv ()
+M, s |=τ Fi,a,tb (ϕ) ⇐⇒ M, s |=τ (Eaϕ → AX+(tv.Violia,a,tb,tv (ϕ)))
+M, s |=τ Oi,a,tb (ϕ < δ) ⇐⇒ for all σ ∈ paths (W, R, s), there exists
+j > depth(W, R, s), M, σ(j) |=τ δ and for all depth(W, R, s) ≤ k < j : M, σ(k) |=τ tv.¬Violio,a,tb,tv (ϕ) ∧ ¬δ and if for all depth(W, R, s) ≤ k < j : M, σk |=τ ¬Eaϕ then M, σj |=τ tv.Violoi,a,tb,tv (ϕ)
 
-The first of these says that agent a is forbidden from seeing to it that  according to norm i when doing  will lead to a violation in all next steps. The second definition says that an agent a is obligated to do  before  according to norm i when  will eventually be reached, there will be no new violations for norm before  occurs, and if the agent does not see to it that  before , then there will be a violation when  occurs. Since all of these operators go over paths, we can also express this as a formula in the logic itself, just as prohibition.
+The ﬁrst of these says that agent a is forbidden from seeing to it that ϕ according to norm i when doing ϕ will lead to a violation in all next steps. The second deﬁnition says that an agent a is obligated to do ϕ before δ according to norm i when δ will eventually be reached, there will be no new violations for norm before δ occurs, and if the agent does not see to it that ϕ before δ, then there will be a violation when δ occurs. Since all of these operators go over paths, we can also express this as a formula in the logic itself, just as prohibition.
 Similarly as before, we can also study the properties that these operators have. As it turns out, the obligation and prohibition operators are fairly robust, and do not allow us to draw many conclusions from them.
 
-Proposition 5.2 (i) (Fi,a,tb ()  (  ))  Fi,a,tb () (ii) Fi,a,tb (  )  (Fi,a,tb ()  Fi,a,tb ()) Proof.
+Proposition 5.2 (i) (Fi,a,tb (ϕ) ∧ (ψ → ϕ)) → Fi,a,tb (ψ) (ii) Fi,a,tb (ϕ ∨ ψ) → (Fi,a,tb (ϕ) ∧ Fi,a,tb (ψ)) Proof.
 
-(i) Take some arbitrary M and s such that M, s |= Fi,a,tb ()  (  ),
+(i) Take some arbitrary M and s such that M, s |=τ Fi,a,tb (ϕ) ∧ (ψ → ϕ),
 
-and assume that M, s |= Ea. This in turn means that M, s |= Ea,
+and assume that M, s |=τ Eaψ. This in turn means that M, s |=τ Eaϕ,
 
-and thus that for all sRs, M, s |= t.Violia,a,tb,t(). Ea() and that M, s |=   , we also get M, s all sRs. This shows that M, s |= Fi,a,tb ().
+and thus that for all sRs′, M, s |=τ t.Violia,a,tb,t(ϕ). Ea(ψ) and that M, s′ |=τ ψ → ϕ, we also get M, s′ all sRs′. This shows that M, s |=τ Fi,a,tb (ψ).
 
-Since we had |= t.Violia,a,tb
+Since we had |=τ t.Violia,a,tb
 
-M, s ,t(),
+M, s ,t(ψ),
 
-|= for
+|=τ for
 
 (ii) This follows from Proposition 4.12.
 
+✷
 
-
-Sadly, we do not get similar behaviour for obligation. In particular Oi,a,tb (   < )  (Oi,a,tb ( < )  Oi,a,tb ( <)) would have been good to have, since this would allow us to split obligations into their component parts. However, this property does not hold due to the way in which we mark an action as causing a violation, which we also saw in Proposition 4.11(vii). If we would be allowed to split a conjunction in a violation when we know that the agent had not taken that action, then this property would hold.
-The obligation operator also has some weird behaviour in combination with the deadlines and repeating obligations. This is due to the fact that we do not say that something is obligatory unless there are no new violations for the new norm until the deadline. This means that we cannot have two obligations for different deadlines at the same time. In other words, if someone rents an apartment, they are not obligated to pay the rent for June until the deadline
+Sadly, we do not get similar behaviour for obligation. In particular Oi,a,tb (ϕ ∧ ψ < δ) → (Oi,a,tb (ϕ < δ) ∧ Oi,a,tb (ψ <)) would have been good to have, since this would allow us to split obligations into their component parts. However, this property does not hold due to the way in which we mark an action as causing a violation, which we also saw in Proposition 4.11(vii). If we would be allowed to split a conjunction in a violation when we know that the agent had not taken that action, then this property would hold.
+The obligation operator also has some weird behaviour in combination with the deadlines and repeating obligations. This is due to the fact that we do not say that something is obligatory unless there are no new violations for the new norm until the deadline. This means that we cannot have two obligations for diﬀerent deadlines at the same time. In other words, if someone rents an apartment, they are not obligated to pay the rent for June until the deadline
 
 Mellema and Dignum
 
 13
 
-for paying the rent for May has passed, or they have payed their rent for May. This means that the framework only allows us to reason about obligations that are currently "relevant".
-6 Defining norms
-Now we can use our formalization to specify norms. We need to define both norms for obligation and prohibition, but their general structure is the same.
-Similarly, the punishment can be both an obligation (paying a fine) and a prohibition (no longer allowed within a friend group/place). For the sake of simplicity, we will ignore the latter distinction and only define different norm types for the former. We can now see something as a norm, if after the activation condition and before the deactivation, when an agent does not see to it that the fulfilment condition is met before the deadline, they get a violation. Also, every time an agent gets a violation, they are obligated to do the repair action, and need to live with the punishment.
-If we want to formalize this into our logic for the obligations, we have to keep track of all the obligations that are created after the activation, but before the deactivation. Most of these obligations begin at the deadlines, with one exception, which is the first one. Therefore, we will need two conjuncts after the activation condition, one for the first obligation, and one that deals with every occurrence of the deadline until the deactivation condition. In order to check if the norm has been violated, we can use the violation operator. Furthermore, the obligation to do the repair and the punishment only need to hold until the repair or punishment has been done (if possible).
+for paying the rent for May has passed, or they have payed their rent for May. This means that the framework only allows us to reason about obligations that are currently “relevant”.
+6 Deﬁning norms
+Now we can use our formalization to specify norms. We need to deﬁne both norms for obligation and prohibition, but their general structure is the same.
+Similarly, the punishment can be both an obligation (paying a ﬁne) and a prohibition (no longer allowed within a friend group/place). For the sake of simplicity, we will ignore the latter distinction and only deﬁne diﬀerent norm types for the former. We can now see something as a norm, if after the activation condition and before the deactivation, when an agent does not see to it that the fulﬁlment condition is met before the deadline, they get a violation. Also, every time an agent gets a violation, they are obligated to do the repair action, and need to live with the punishment.
+If we want to formalize this into our logic for the obligations, we have to keep track of all the obligations that are created after the activation, but before the deactivation. Most of these obligations begin at the deadlines, with one exception, which is the ﬁrst one. Therefore, we will need two conjuncts after the activation condition, one for the ﬁrst obligation, and one that deals with every occurrence of the deadline until the deactivation condition. In order to check if the norm has been violated, we can use the violation operator. Furthermore, the obligation to do the repair and the punishment only need to hold until the repair or punishment has been done (if possible).
 The situation for the prohibition is easier, where we only have to see if there is a prohibition from when the norm activated until it deactivated. Handling the violations happens in a similar manner as for the norms with obligations.
-Definition 6.1 Norms of obligation and prohibition in a state are defined as:
-M, s |=  NORMO(i, a, , , , , , )  M, s |=   tb.(Oi,a,tb ( < )  A(  Oi,a,tb ())U+ AG+tv.(  Violio,a,tb,tv ()  (A(Oa()U+t.(RVioli,a,tb,tv,t())))) AG+tv.(  Violio,a,tb,tv ()  (A(Oa()U+t.(PVioli,a,tb,tv,t())))))
-M, s |= NORMF (i, a, , , , , )  M, s |=   tb.(A(Fi,a,tb () U+) AG+tv.(  Violai,a,tb,tv ()  (A(Oa()U+t.(RVioli,a,tb,tv,t())))) AG+tv.(  Violia,a,tb,tv ()  (A(Oa()U+t.(PVioli,a,tb,tv,t())))))
-Notable here is that the obligations for the repair and the punishment do not need to come from the same norm. This allows us to introduce both violation handling norms [10] and metanorms [4]. In our system, the only difference between the two is for who the norm is. A violation handling norm activates for all the agents that have caused a violation, whereas meta-norms activate for all agents that see a violation.
+Deﬁnition 6.1 Norms of obligation and prohibition in a state are deﬁned as:
+M, s |= τ NORMO(i, a, α, β, δ, ϕ, ρ, π) ⇐⇒ M, s |=τ α → tb.(Oi,a,tb (ϕ < δ) ∧ A(δ → Oiϕ,a,tb (δ))U+β∧ AG+tv.(δ ∧ Violio,a,tb,tv (ϕ) → (A(Oa(ρ)U+t.(RVioli,a,tb,tv,t(ϕ)))))∧ AG+tv.(δ ∧ Violio,a,tb,tv (ϕ) → (A(Oa(π)U+t.(PVioli,a,tb,tv,t(ϕ))))))
+M, s |=τ NORMF (i, a, α, β, ϕ, ρ, π) ⇐⇒ M, s |=τ α → tb.(A(Fi,a,tb (ϕ) U+β)∧ AG+tv.(δ ∧ Violai,a,tb,tv (ϕ) → (A(Oa(ρ)U+t.(RVioli,a,tb,tv,t(ϕ)))))∧ AG+tv.(δ ∧ Violia,a,tb,tv (ϕ) → (A(Oa(π)U+t.(PVioli,a,tb,tv,t(ϕ))))))
+Notable here is that the obligations for the repair and the punishment do not need to come from the same norm. This allows us to introduce both violation handling norms [10] and metanorms [4]. In our system, the only diﬀerence between the two is for who the norm is. A violation handling norm activates for all the agents that have caused a violation, whereas meta-norms activate for all agents that see a violation.
 
 14
 
 Linking sanctions to norms in practice
 
-Using this, we can revisit our example from the introduction, and formalize it using our notation. Here we will need to introduce some predicates to reason about where agents are and what effects their actions have. The first of these is in plaza(a), which states that agent a is in the plaza. Furthermore, we also need to be able to say that agent a's litter is on the ground, which we will write down as litter (a).
-NORMF (i, a, in plaza(a), �in plaza(a), litter (a), �litter (a), �litter (a))
-NORMO(j, a, t.Violai,a,tbi ,t(litter (a)), t.RVioli,a,tbi ,tb,t(litter (a)), �in plaza (a), �litter (a), �litter (a), pay fine(a))
+Using this, we can revisit our example from the introduction, and formalize it using our notation. Here we will need to introduce some predicates to reason about where agents are and what eﬀects their actions have. The ﬁrst of these is in plaza(a), which states that agent a is in the plaza. Furthermore, we also need to be able to say that agent a’s litter is on the ground, which we will write down as litter (a).
+NORMF (i, a, in plaza(a), ¬in plaza(a), litter (a), ¬litter (a), ¬litter (a))
+NORMO(j, a, t.Violai,a,tbi ,t(litter (a)), t.RVioli,a,tbi ,tb,t(litter (a)), ¬in plaza (a), ¬litter (a), ¬litter (a), pay ﬁne(a))
 On the reparation norm the activation and deactivation conditions can be very simple, since we can trust the logic to let us know when a norm is repaired. The only problem is that we need to somehow carry over a variable from the one norm to the other. Now we did this using the assignment function, but in an actual implementation this would be easier to manage.
-Now, lets assume that in the entire simulation, we get that throw can(a)  litter (a), and that the agent is in the plaza. From the norm i, we can then conclude that for the agent is is forbidden to litter (Fi,a,tb (litter (a))), which by Proposition 5.2 means that we also get Fi,a,tb (throw can(a)). Furthermore, if the agent now decides to throw a can, we not only get a violation for the throwing of the can, but also one for the littering. This will activate the second norm j, and generate an obligation for the agent. No matter how often the agents throws a can (or does something else that implies littering), a new unique violation will become true, which will in turn activate the norm again.
+Now, lets assume that in the entire simulation, we get that throw can(a) → litter (a), and that the agent is in the plaza. From the norm i, we can then conclude that for the agent is is forbidden to litter (Fi,a,tb (litter (a))), which by Proposition 5.2 means that we also get Fi,a,tb (throw can(a)). Furthermore, if the agent now decides to throw a can, we not only get a violation for the throwing of the can, but also one for the littering. This will activate the second norm j, and generate an obligation for the agent. No matter how often the agents throws a can (or does something else that implies littering), a new unique violation will become true, which will in turn activate the norm again.
 Now we can also set up a norm that requires other agents to do something in response to the littering, which is often called a meta-norm. Meta-norms require that other agents sanction not just the breakers of a norm, but also the agents who do not sanction norm breakers themselves.
-NORMO(k, b, t.Violi,a,tbi ,t(litter (a)), t.RVioli,a,tbi ,tb,t(litter (a)), �in plaza (b), call out(b, a), call out(b, a), call out(b, a))
-NORMO(l, c, t.Violk,b,tbk ,t(call out (b, a)), t.RVioli,a,tbk ,tb,t(call out(b, a)), �in plaza(c), call out(c, b), call out(c, b), call out(c, b))
-Unlike the previous norms, these norms activate and deactive when other agents break a norm. The first one, k, activates for agent b when agent a litters, and says that agent b should call out agent a for littering, before agent b leaves the plaza. If agent b fails to do that, agent c should in turn call them out, for letting the person littering get away scot free.
+NORMO(k, b, t.Violi,a,tbi ,t(litter (a)), t.RVioli,a,tbi ,tb,t(litter (a)), ¬in plaza (b), call out(b, a), call out(b, a), call out(b, a))
+NORMO(l, c, t.Violk,b,tbk ,t(call out (b, a)), t.RVioli,a,tbk ,tb,t(call out(b, a)), ¬in plaza(c), call out(c, b), call out(c, b), call out(c, b))
+Unlike the previous norms, these norms activate and deactive when other agents break a norm. The ﬁrst one, k, activates for agent b when agent a litters, and says that agent b should call out agent a for littering, before agent b leaves the plaza. If agent b fails to do that, agent c should in turn call them out, for letting the person littering get away scot free.
 These norms, in turn, also need reparation and punishment norms. However, since the action to take matches the reparation/punishment, these norms could be their own reparation/punishment norms. In order to do this, the norm should not just activate on a violation of the other norms, but also on one of the violations of the norm itself. This means that we will not need an ever
 
 Mellema and Dignum
 
 15
 
-escalating infinite number of norms to govern the norm following or punish behaviour of the other agents.
+escalating inﬁnite number of norms to govern the norm following or punish behaviour of the other agents.
 
 7 Conclusion
 In this paper, we presented a formal framework for specifying norms, and reasoning about norms, obligations, prohibitions, and violations. As an extension on earlier work, our system can also represent repeating obligations and violations, as well as keeping track of when a norm violation is repaired/punished.
-Thanks to the properties of these violations and obligations/prohibitions, we can also go from a general specification of a norm to a more specific instantiation of an obligation/prohibition.
-One of the problems in our current system, is that the way in which we mark a (lack of) action to cause a violation is still preliminary. This is due to two reasons. The first of this is that we want some notion of causality in our logic, but this is not very natural to express in temporal logics. A system where we could more directly talk about the actions an agent takes and their consequences might help us in this regard.
-The second reason is that we currently use implication over time to mark certain effects of actions as causing violations. However, this means we also bring in all the traditional problems of the material conditional into our system. An alternative approach, such as using counts-as rules [11] could help in this case. However, most of those are based on notions of context, and how the context should operate in a branching temporal logic is also not trivial and has to our knowledge not been investigated. We have some initial ideas on how to do this, but that requires careful investigation of the interaction between time and context.
-The question of decidability and complexity of the resulting logic is also still open. While there are results for the logics that we used as a basis [1,13,5], no work has gone into finding out how the interactions between these components influences the resulting complexity. Similarly, an axiomatization of the system could be interesting to investigate.
-Other future work that can be done based on this system is looking into how we can specify more complex normative systems using this framework. Currently, we do not link norms explicitly to one another, but we expect that this can be done. In that case, a normative system could be specified as a graph, where all the nodes are individual norms. One of the questions that are unanswered there is what kind of properties these graphs would need to get a fully enclosed normative system.
+Thanks to the properties of these violations and obligations/prohibitions, we can also go from a general speciﬁcation of a norm to a more speciﬁc instantiation of an obligation/prohibition.
+One of the problems in our current system, is that the way in which we mark a (lack of) action to cause a violation is still preliminary. This is due to two reasons. The ﬁrst of this is that we want some notion of causality in our logic, but this is not very natural to express in temporal logics. A system where we could more directly talk about the actions an agent takes and their consequences might help us in this regard.
+The second reason is that we currently use implication over time to mark certain eﬀects of actions as causing violations. However, this means we also bring in all the traditional problems of the material conditional into our system. An alternative approach, such as using counts-as rules [11] could help in this case. However, most of those are based on notions of context, and how the context should operate in a branching temporal logic is also not trivial and has to our knowledge not been investigated. We have some initial ideas on how to do this, but that requires careful investigation of the interaction between time and context.
+The question of decidability and complexity of the resulting logic is also still open. While there are results for the logics that we used as a basis [1,13,5], no work has gone into ﬁnding out how the interactions between these components inﬂuences the resulting complexity. Similarly, an axiomatization of the system could be interesting to investigate.
+Other future work that can be done based on this system is looking into how we can specify more complex normative systems using this framework. Currently, we do not link norms explicitly to one another, but we expect that this can be done. In that case, a normative system could be speciﬁed as a graph, where all the nodes are individual norms. One of the questions that are unanswered there is what kind of properties these graphs would need to get a fully enclosed normative system.
 We also want to use this system to synthesise rules that future modellers can then use to help guide them in implementing norms in social simulations. We have started this by building an agent architecture for reasoning about norms and violations in social simulations, based on the rules from this framework.
 
 16
@@ -393,92 +393,92 @@ We also want to use this system to synthesise rules that future modellers can th
 Linking sanctions to norms in practice
 
 Appendix A Semantics of the base logic
-Definition A.1 The semantics of the logic are as follows:
+Deﬁnition A.1 The semantics of the logic are as follows:
 
-M, s |= t1 < t2 + c   (t1) <  (t2) + c M, s |= t1 = t2 + c   (t1) =  (t2) + c
-M, s |= t1.(t1)  M, s |= [t1:=depth(W,R,s)]  M, s |= Ea  for all (s)R(s), M, s |= , (s, s)  Tas, and M, w |= �AG+ M, s |= E  there is a path   paths(W, R, s), and M, , depth(W, R, s) |=  M, s |= A  for all paths   paths(W, R, s), M, , depth(W, R, s) |=  M, , j |=   M, (j) |= 
-M, , j |= t.((t))  M, , j |=[t:=j]  M, , j |= X+  || > j, M, (j + 1) |=  M, , j |= X-  j > 0 and M, (j - 1) |=  M, , j |= F+  there is an i > j : M, (i) |=  M, , j |= F-  there is an i < j : M, (i) |=  M, , j |= G+  for all i  j : M, (i) |=  M, , j |= G-  for all i  j : M, (i) |= 
-M, , j |= U+  there is an i > j such that M, (i) |=  and for all j  k < i, M, (k) |= 
-M, , j |= U-  there is an i < j such that M, (i) |=  and for all j  k > i, M, (k) |= 
+M, s |=τ t1 < t2 + c ⇐⇒ τ (t1) < τ (t2) + c M, s |=τ t1 = t2 + c ⇐⇒ τ (t1) = τ (t2) + c
+M, s |=τ t1.ϕ(t1) ⇐⇒ M, s |=τ [t1:=depth(W,R,s)] ϕ M, s |=τ Eaϕ ⇐⇒ for all (s)R(s′′), M, s′′ |=τ ϕ, (s, s′) ∈ Tas, and M, w |=τ ¬AG+ϕ M, s |=τ Eα ⇐⇒ there is a path σ ∈ paths(W, R, s), and M, σ, depth(W, R, s) |=τ α M, s |=τ Aα ⇐⇒ for all paths σ ∈ paths(W, R, s), M, σ, depth(W, R, s) |=τ α M, σ, j |=τ ϕ ⇐⇒ M, σ(j) |=τ ϕ
+M, σ, j |=τ t.(α(t)) ⇐⇒ M, σ, j |=τ[t:=j] α M, σ, j |=τ X+ϕ ⇐⇒ |σ| > j, M, σ(j + 1) |=τ ϕ M, σ, j |=τ X−ϕ ⇐⇒ j > 0 and M, σ(j − 1) |=τ ϕ M, σ, j |=τ F+ϕ ⇐⇒ there is an i > j : M, σ(i) |=τ ϕ M, σ, j |=τ F−ϕ ⇐⇒ there is an i < j : M, σ(i) |=τ ϕ M, σ, j |=τ G+ϕ ⇐⇒ for all i ≥ j : M, σ(i) |=τ ϕ M, σ, j |=τ G−ϕ ⇐⇒ for all i ≤ j : M, σ(i) |=τ ϕ
+M, σ, j |=τ ϕU+ψ ⇐⇒ there is an i > j such that M, σ(i) |=τ ψ and for all j ≤ k < i, M, σ(k) |=τ ϕ
+M, σ, j |=τ ϕU−ψ ⇐⇒ there is an i < j such that M, σ(i) |=τ ψ and for all j ≥ k > i, M, σ(k) |=τ ϕ
 
-Conjunction and negation for both path and state formula, are defined as usual.
+Conjunction and negation for both path and state formula, are deﬁned as usual.
 
 B Proofs of properties
 
-Proof of Proposition 4.4 This follows directly from the definitions, in par-
+Proof of Proposition 4.4 This follows directly from the deﬁnitions, in par-
 
-ticular the fact that M, s |=  can only be true if there is a world s where
+ticular the fact that M, s |=τ ϕ can only be true if there is a world s′ where
 
 M, be
 
-s |= true,
+s′ |=τ true,
 
-�, and where s
+¬ϕ, and where s′′
 
 for M, come
 
-s |= t.(Violoi,a,tb,t()) to one step before s. The
+s |=τ t.(Violoi,a,tb,t(ϕ)) to one step before s. The
 
 be true, M, same holds
 
-s |= for all
+s′′ |=τ for all
 
-Ea the
+Eaϕ the
 
 must other
 
 modalities.
 
+✷
 
+Proof for Proposition 4.9 We will show the case for Violio,a,tb,tv (ϕ), but the other is a simpliﬁcation with some minor alterations. Assume that we
 
-Proof for Proposition 4.9 We will show the case for Violio,a,tb,tv (), but the other is a simplification with some minor alterations. Assume that we
+have some M to show that that M, s |=τ
 
-have some M to show that that M, s |=
-
-,MAsG,, s-sut|=c.(h(ttVhaiotltiobM,a,t,bst,tv|=(t)v.V)iToloia,as(,ht�bo,twv (th)isV,i,aw)e)oannldy.
+,MAsG,, s−sut|=c.(hτ(ttVh≥aiotltiobM,a∧,t,bst,tv|≤=(ψτt)v.V)iTo→loia,as(,ht¬bo,ψtwv (→ϕth)i∧sV,i,ϕaw)e)↔oannψldy.
 
 Now need that
 
-we need to show M, s |=
+we need to show M, s |=τ
 
 Mellema and Dignum
 
 17
 
-A(�Ea  �Di,a)U-Di,a, since in the other parts of the definition,  is not
+A(¬Eaψ ∧ ¬Di,a)U−Di,a, since in the other parts of the deﬁnition, ψ is not
 
 mentioned. Both of these follow from the fact that the same formulas hold for
 
-, and that M, s |= AG-t.(tb  t  t  tv)  (  ).
+ϕ, and that M, s |=τ AG−t.(tb ≤ t ∧ t ≤ tv) → (ϕ ↔ ψ).
 
-
+✷
 
 Proof sketches for Proposition 4.11
 
-(i) At the same time, so Ea(  ), and     , so also (  )  Vi,a
-(ii) Since only either of the two has to be true, we only get that (  Vi,a)  (  Vi,a), which is not enough to conclude (  )  Vi,a, as required for Violia,a,tb,tv (  )
-(iii) Here we also need   Vi,a, which we cannot conclude from ()  Vi,a.
-(iv) Ea(  ) does not imply that Ea  Ea, which would be required for this case.
+(i) At the same time, so Ea(ϕ ∧ ψ), and ϕ ∧ ψ → ϕ, so also (ϕ ∧ ψ) → Vi,a
+(ii) Since only either of the two has to be true, we only get that (ϕ → Vi,a) ∨ (ψ → Vi,a), which is not enough to conclude (ϕ ∨ ψ) → Vi,a, as required for Violia,a,tb,tv (ϕ ∨ ψ)
+(iii) Here we also need ϕ → Vi,a, which we cannot conclude from (ϕ∧ψ) → Vi,a.
+(iv) Ea(ϕ ∨ ψ) does not imply that Eaϕ ∨ Eaψ, which would be required for this case.
 
-(v) Follows from Proposition 4.8 and (  )  .
+(v) Follows from Proposition 4.8 and (ϕ ∧ ψ) → ϕ.
 
-(vi) The fact that the agent did not see to it that Ea or Ea, does not mean that the agent did not see to it that Ea(  ).
-(vii) We need that Vi,a  �, but we only know that Vi,a  �(  ), and we do not have that �(  )  �. Furthermore, the fact that the agent did not see to    does not mean that the agent did not see to them separately.
+(vi) The fact that the agent did not see to it that Eaϕ or Eaψ, does not mean that the agent did not see to it that Ea(ϕ ∨ ψ).
+(vii) We need that Vi,a → ¬ϕ, but we only know that Vi,a → ¬(ϕ ∧ ψ), and we do not have that ¬(ϕ ∧ ψ) → ¬ϕ. Furthermore, the fact that the agent did not see to ϕ ∧ ψ does not mean that the agent did not see to them separately.
 
-(viii) Follows from Proposition 4.8 and   (  ). 
+(viii) Follows from Proposition 4.8 and ϕ → (ϕ ∨ ψ). ✷
 
 References
-[1] Alur, R. and T. A. Henzinger, A really temporal logic, Journal of the ACM 41 (1994). [2] Alvarez-Napagao, S., H. Aldewereld, J. V�azquez-Salceda and F. Dignum, Normative
-Monitoring: Semantics and Implementation, in: M. De Vos, N. Fornara, J. V. Pitt and G. Vouros, editors, Coordination, Organizations, Institutions, and Norms in Agent Systems VI, LNCS 6541, Springer, Berlin, Heidelberg, 2011 pp. 321�336. [3] Anderson, A. R., Some Nasty Problems in the Formal Logic of Ethics, Nou^s 1 (1967). [4] Axelrod, R., An Evolutionary Approach to Norms, American Political Science Review 80 (1986). [5] Bozzelli, L., The Complexity of CTL* + Linear Past, in: R. Amadio, editor, Foundations of Software Science and Computational Structures, Lecture Notes in Computer Science 4962, Springer Berlin Heidelberg, Berlin, Heidelberg, 2008 pp. 186�200. [6] Dignum, F., editor, "Social Simulation for a Crisis: Results and Lessons from Simulating the COVID-19 Crisis," Computational Social Sciences, Springer International Publishing, Cham, 2021. [7] Dignum, F., J. Broersen, V. Dignum and J.-J. Meyer, Meeting the Deadline: Why, When and How, in: Formal Approaches to Agent-Based Systems, Lecture Notes in Computer Science 2699, Springer, Berlin, Heidelberg, Berlin, Heidelberg, 2004 pp. 30�40. [8] Dignum, F., J.-J. C. Meyer and R. J. Wieringa, A Dynamic Logic for Reasoning about Sub-ideal States, in: ECAI Workshop on Artificial Normative Reasoning, 1994, p. 12. [9] Dignum, V. and F. Dignum, A logic of agent organizations, Logic Journal of IGPL 20 (2012). [10] Gomez-Sebastia, I., S. A� . Napagao, J. V�azquez-Salceda and L. O. Felipe, Towards runtime support for norm change from a monitoring perspective, AT (2012).
+[1] Alur, R. and T. A. Henzinger, A really temporal logic, Journal of the ACM 41 (1994). [2] Alvarez-Napagao, S., H. Aldewereld, J. V´azquez-Salceda and F. Dignum, Normative
+Monitoring: Semantics and Implementation, in: M. De Vos, N. Fornara, J. V. Pitt and G. Vouros, editors, Coordination, Organizations, Institutions, and Norms in Agent Systems VI, LNCS 6541, Springer, Berlin, Heidelberg, 2011 pp. 321–336. [3] Anderson, A. R., Some Nasty Problems in the Formal Logic of Ethics, Nouˆs 1 (1967). [4] Axelrod, R., An Evolutionary Approach to Norms, American Political Science Review 80 (1986). [5] Bozzelli, L., The Complexity of CTL* + Linear Past, in: R. Amadio, editor, Foundations of Software Science and Computational Structures, Lecture Notes in Computer Science 4962, Springer Berlin Heidelberg, Berlin, Heidelberg, 2008 pp. 186–200. [6] Dignum, F., editor, “Social Simulation for a Crisis: Results and Lessons from Simulating the COVID-19 Crisis,” Computational Social Sciences, Springer International Publishing, Cham, 2021. [7] Dignum, F., J. Broersen, V. Dignum and J.-J. Meyer, Meeting the Deadline: Why, When and How, in: Formal Approaches to Agent-Based Systems, Lecture Notes in Computer Science 2699, Springer, Berlin, Heidelberg, Berlin, Heidelberg, 2004 pp. 30–40. [8] Dignum, F., J.-J. C. Meyer and R. J. Wieringa, A Dynamic Logic for Reasoning about Sub-ideal States, in: ECAI Workshop on Artiﬁcial Normative Reasoning, 1994, p. 12. [9] Dignum, V. and F. Dignum, A logic of agent organizations, Logic Journal of IGPL 20 (2012). [10] Gomez-Sebastia, I., S. A¨ . Napagao, J. V¨azquez-Salceda and L. O. Felipe, Towards runtime support for norm change from a monitoring perspective, AT (2012).
 
 18
 
 Linking sanctions to norms in practice
 
-[11] Grossi, D., J.-J. C. Meyer and F. Dignum, Classificatory Aspects of Counts-as: An Analysis in Modal Logic, Journal of Logic and Computation 16 (2006).
+[11] Grossi, D., J.-J. C. Meyer and F. Dignum, Classiﬁcatory Aspects of Counts-as: An Analysis in Modal Logic, Journal of Logic and Computation 16 (2006).
 [12] Kupferman, O., A. Pnueli and M. Y. Vardi, Once and for all, Journal of Computer and System Sciences 78 (2012).
-[13] Laroussinie, F., A. Meyer and E. Petonnet, Counting CTL, LMCS 9 (2013). [14] Meyer, J.-J. C., A different approach to deontic logic - deontic logic viewed as a variant
-of dynamic logic., Notre Dame Journal of Formal Logic 29 (1988). [15] Panagiotidi, S., S. Alvarez-Napagao and J. V�azquez-Salceda, Towards the Norm-Aware
-Agent: Bridging the Gap Between Deontic Specifications and Practical Mechanisms for Norm Monitoring and Norm-Aware Planning, in: T. Balke, F. Dignum, M. B. van Riemsdijk and A. K. Chopra, editors, COIN IX, LNCS 8386, Springer International Publishing, Cham, 2014 pp. 346�363. [16] Proctor, M., M. Neale, P. Lin and M. Frandsen, Drools documentation, JBoss 5 (2008). [17] V�azquez-Salceda, J., H. Aldewereld, D. Grossi and F. Dignum, From human regulations to regulated software agents' behavior: Connecting the abstract declarative norms with the concrete operational implementation. A position paper, AI and Law 16 (2008). [18] Wieringa, R., J.-J. Meyer and H. Weigand, Specifying dynamic and deontic integrity constraints, Data & Knowledge Engineering 4 (1989). [19] Wieringa, R. J., H. Weigand, J. J. C. Meyer and F. P. M. Dignum, The inheritance of dynamic and deontic integrity constraints or: Does the boss have more rights?, Annals of Mathematics and Artificial Intelligence 3 (1991).
+[13] Laroussinie, F., A. Meyer and E. Petonnet, Counting CTL, LMCS 9 (2013). [14] Meyer, J.-J. C., A diﬀerent approach to deontic logic - deontic logic viewed as a variant
+of dynamic logic., Notre Dame Journal of Formal Logic 29 (1988). [15] Panagiotidi, S., S. Alvarez-Napagao and J. V´azquez-Salceda, Towards the Norm-Aware
+Agent: Bridging the Gap Between Deontic Speciﬁcations and Practical Mechanisms for Norm Monitoring and Norm-Aware Planning, in: T. Balke, F. Dignum, M. B. van Riemsdijk and A. K. Chopra, editors, COIN IX, LNCS 8386, Springer International Publishing, Cham, 2014 pp. 346–363. [16] Proctor, M., M. Neale, P. Lin and M. Frandsen, Drools documentation, JBoss 5 (2008). [17] V´azquez-Salceda, J., H. Aldewereld, D. Grossi and F. Dignum, From human regulations to regulated software agents’ behavior: Connecting the abstract declarative norms with the concrete operational implementation. A position paper, AI and Law 16 (2008). [18] Wieringa, R., J.-J. Meyer and H. Weigand, Specifying dynamic and deontic integrity constraints, Data & Knowledge Engineering 4 (1989). [19] Wieringa, R. J., H. Weigand, J. J. C. Meyer and F. P. M. Dignum, The inheritance of dynamic and deontic integrity constraints or: Does the boss have more rights?, Annals of Mathematics and Artiﬁcial Intelligence 3 (1991).
 
 
