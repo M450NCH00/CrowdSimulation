@@ -1,0 +1,678 @@
+Veriﬁable Reinforcement Learning via Policy Extraction
+
+arXiv:1805.08328v2 [cs.LG] 24 Jan 2019
+
+Osbert Bastani MIT
+obastani@csail.mit.edu
+
+Yewen Pu MIT
+yewenpu@mit.edu
+
+Armando Solar-Lezama MIT
+asolar@csail.mit.edu
+
+Abstract
+While deep reinforcement learning has successfully solved many challenging control tasks, its real-world applicability has been limited by the inability to ensure the safety of learned policies. We propose an approach to veriﬁable reinforcement learning by training decision tree policies, which can represent complex policies (since they are nonparametric), yet can be efﬁciently veriﬁed using existing techniques (since they are highly structured). The challenge is that decision tree policies are difﬁcult to train. We propose VIPER, an algorithm that combines ideas from model compression and imitation learning to learn decision tree policies guided by a DNN policy (called the oracle) and its Q-function, and show that it substantially outperforms two baselines. We use VIPER to (i) learn a provably robust decision tree policy for a variant of Atari Pong with a symbolic state space, (ii) learn a decision tree policy for a toy game based on Pong that provably never loses, and (iii) learn a provably stable decision tree policy for cart-pole. In each case, the decision tree policy achieves performance equal to that of the original DNN policy.
+1 Introduction
+Deep reinforcement learning has proven to be a promising approach for automatically learning policies for control problems [11, 22, 29]. However, an important challenge limiting real-world applicability is the difﬁculty ensuring the safety of deep neural network (DNN) policies learned using reinforcement learning. For example, self-driving cars must robustly handle a variety of human behaviors [26], controllers for robotics typically need stability guarantees [2, 20, 8], and air trafﬁc control should provably satisfy safety properties including robustness [19]. Due to the complexity of DNNs, verifying these properties is typically very inefﬁcient if not infeasible [6].
+Our goal is to learn policies for which desirable properties such as safety, stability, and robustness can be efﬁciently veriﬁed. We focus on learning decision tree policies for two reasons: (i) they are nonparametric, so in principle they can represent very complex policies, and (ii) they are highly structured, making them easy to verify. However, decision trees are challenging to learn even in the supervised setting; there has been some work learning decision tree policies for reinforcement learning [13], but we ﬁnd that they do not even scale to simple problems like cart-pole [5].
+To learn decision tree policies, we build on the idea of model compression [10] (or distillation [17]), which uses high-performing DNNs to guide the training of shallower [4, 17] or more structured [34, 7] classiﬁers. Their key insight is that DNNs perform better not because they have better representative power, but because they are better regularized and therefore easier to train [4]. Our goal is to devise a policy extraction algorithm that distills a high-performing DNN policy into a decision tree policy.
+Our approach to policy extraction is based on imitation learning [27, 1], in particular, DAGGER [25]— the pretrained DNN policy (which we call the oracle) is used to generate labeled data, and then supervised learning is used to train a decision tree policy. However, we ﬁnd that DAGGER learns
+32nd Conference on Neural Information Processing Systems (NeurIPS 2018), Montréal, Canada.
+
+MDP
+
+neural network policy decision tree policy
+
+verification
+
+verified policy
+
+Figure 1: The high level approach VIPER uses to learn veriﬁable policies.
+much larger decision tree policies than necessary. In particular, DAGGER cannot leverage the fact that our oracle provides not just the optimal action to take in a given state, but also the cumulative reward of every state-action pair (either directly as a Q-function or indirectly as a distribution over possible actions). First, we propose Q-DAGGER, a novel imitation learning algorithm that extends DAGGER to use the Q-function for the oracle; we show that Q-DAGGER can use this extra information to achieve provably better performance than DAGGER. Then, we propose VIPER1, which modiﬁes Q-DAGGER to extract decision tree policies; we show that VIPER can learn decision tree policies that are an order of magnitude smaller than those learned by DAGGER (and are thus easier to verify).
+We show how existing veriﬁcation techniques can be adapted to efﬁciently verify desirable properties of extracted decision tree policies: (i) we learn a decision tree policy that plays Atari Pong (on a symbolic abstraction of the state space rather than from pixels2) [22] and verify its robustness [6, 19], (ii) we learn a decision tree policy to play a toy game based on Pong, and prove that it never loses (the difﬁculty doing so for Atari Pong is that the system dynamics are unavailable),3 and (iii) we learn a decision tree policy for cart-pole [5], and compute its region of stability around the goal state (with respect to the degree-5 Taylor approximation of the system dynamics). In each case, our decision tree policy also achieves perfect reward. Additionally, we discover a counterexample to the correctness of our decision tree policy for the toy game of pong, which we show can be ﬁxed by slightly extending the paddle length. In summary, our contributions are:
+• We propose an approach to learning veriﬁable policies (summarized in Figure 1).
+• We propose a novel imitation learning algorithm called VIPER, which is based on DAGGER but leverages a Q-function for the oracle. We show that VIPER learns relatively small decision trees (< 1000 nodes) that play perfectly on Atari Pong (with symbolic state space), a toy game based on Pong, and cart-pole.
+• We describe how to verify correctness (for the case of a toy game based on Pong), stability, and robustness of decision tree policies, and show that veriﬁcation is orders of magnitude more scalable than approaches compatible with DNN policies.
+Related work. There has been work on verifying machine learning systems [3, 30, 16, 6, 19, 18, 15]. Speciﬁc to reinforcement learning, there has been substantial interest in safe exploration [23, 36, 33]; see [14] for a survey. Veriﬁcation of learned controllers [24, 32, 3, 20, 19, 31] is a crucial component of many such systems [2, 8], but existing approaches do not scale to high dimensional state spaces.
+There has been work training decision tree policies for reinforcement learning [13], but we ﬁnd that their approach does not even scale to cart-pole. There has also been work using model compression to learn decision trees [34, 7], but the focus has been on supervised learning rather than reinforcement learning, and on interpretability rather than veriﬁcation. There has also been recent work using program synthesis to devise structured policies using imitation learning [35], but their focus is interpretability, and they are outperformed by DNNs even on cart-pole.
+1VIPER stands for Veriﬁability via Iterative Policy ExtRaction. 2We believe that this limitation is reasonable for safety-critical systems; furthermore, a model of the system dynamics deﬁned with respect to symbolic state space is anyway required for most veriﬁcation tasks. 3We believe that having the system dynamics are available is a reasonable assumption; they are available for most real-world robots, including sophisticated robots such as the walking robot ATLAS [20].
+2
+
+s−k
+
+left
+
+left
+
+left
+
+left
+
+left
+
+left
+
+s−(k−1)
+
+...
+
+s−1
+
+s0
+
+s1
+
+...
+
+sk (R = T − α)
+
+down
+
+right
+
+right
+
+right
+
+right
+
+right
+
+right
+
+s˜ (R = T )
+
+left
+
+send
+
+right left
+
+Figure 2: An MDP with initial state s0, deterministic transitions shown as arrows (the label is the action), actions A = {left, right, down} (taking an unavailable action transitions to send), rewards R(s˜) = T , R(sk) = T − α (where α ∈ (0, 1) is a constant), and R(s) = 0 otherwise, and time horizon T = 3(k + 1). Trajectories taken by π∗, πleft : s → left, and πright : s → right are shown as dashed edges, red edges, and green edges, respectively.
+
+2 Policy Extraction
+
+We describe Q-DAGGER, a general policy extraction algorithm with theoretical guarantees improving on DAGGER’s, and then describe how VIPER modiﬁes Q-DAGGER to extract decision tree policies.
+
+Problem formulation. Let (S, A, P, R) be a ﬁnite-horizon (T -step) MDP with states S, actions A, transition probabilities P : S × A × S → [0, 1] (i.e., P (s, a, s ) = p(s | s, a)), and rewards R : S → R. Given a policy π : S → A, for t ∈ {0, ..., T − 1}, let
+
+Vt(π)(s) = R(s) +
+
+P (s, π(s), s )Vt(+π1)(s )
+
+s ∈S
+
+Qt(π)(s, a) = R(s) +
+
+P (s, a, s )Vt(+π1)(s )
+
+s ∈S
+
+be its value function and Q-function for t ∈ {0, ..., T − 1}, where VT(π)(s) = 0. Without loss of generality, we assume that there is a single initial state s0 ∈ S. Then, let
+
+d(0π)(s) = I[s = s0]
+
+d(tπ)(s) =
+
+P (s , π(s ), s)d(t−π)1(s )
+
+s ∈S
+
+(for t > 0)
+
+be the distribution over states at time t, where I is the indicator function, and let d(π)(s) =
+
+T −1
+
+T −1 t=0
+
+dt(π)(s).
+
+Let
+
+J (π)
+
+=
+
+−V0(π)(s0)
+
+be
+
+the
+
+cost-to-go
+
+of
+
+π
+
+from
+
+s0.
+
+Our
+
+goal
+
+is
+
+to
+
+learn
+
+the
+
+best policy in a given class Π, leveraging an oracle π∗ : S → A and its Q-function Qt(π∗)(s, a).
+
+The Q-DAGGER algorithm. Consider the (in general nonconvex) loss function
+
+t(s, π) = Vt(π∗)(s) − Qt(π∗)(s, π(s)).
+Let g(s, π) = I[π(s) = π∗(s)] be the 0-1 loss and g˜(s, π) a convex upper bound (in the parameters of π), e.g., the hinge loss [25].4 Then, ˜t(s, π) = ˜t(s)g˜(s, π) convex upper bounds t(s, π), where
+
+˜t(s)
+
+=
+
+Vt(π∗)(s)
+
+−
+
+min
+a∈A
+
+Q(tπ∗)(s,
+
+a).
+
+Q-DAGGER runs DAGGER (Algorithm 3.1 from [25]) with the convex loss ˜t(s, π) and βi = I[i = 1].
+
+Theory. We bound the performance of Q-DAGGER and compare it to the bound in [25]; proofs are
+
+in Appendix A. First, we characterize the loss (π) = T −1
+
+T −1 t=0
+
+Es∼d(tπ)
+
+[
+
+t(s, π)].
+
+4Other choices of g˜ are possible; our theory holds as long as it is a convex upper bound on the 0-1 loss g.
+
+3
+
+Algorithm 1 Decision tree policy extraction.
+procedure VIPER((S, A, P, R), π∗, Q∗, M, N )
+Initialize dataset D ← ∅ Initialize policy πˆ0 ← π∗ for i = 1 to N do
+Sample M trajectories Di ← {(s, π∗(s)) ∼ d(πˆi−1)} Aggregate dataset D ← D ∪ Di Resample dataset D ← {(s, a) ∼ p((s, a)) ∝ ˜(s)I[(s, a) ∈ D]} Train decision tree πˆi ← TrainDecisionTree(D ) end for
+return Best policy πˆ ∈ {πˆ1, ..., πˆN } on cross validation end procedure
+
+Lemma 2.1. For any policy π, we have T (π) = J(π) − J(π∗).
+
+Next, let εN = minπ∈Π N −1
+
+N i=1
+
+T
+
+−1
+
+T −1 t=0
+
+Es∼d(tπˆi) [˜t(s, π)]
+
+be
+
+the
+
+training
+
+loss,
+
+where
+
+N
+
+is
+
+the number of iterations of Q-DAGGER and πˆi is the policy computed on iteration i. Let max be an
+
+upper
+
+bound
+
+on
+
+˜
+t
+
+(s,
+
+π),
+
+i.e.,
+
+˜
+t
+
+(s,
+
+π)
+
+≤
+
+max for all s ∈ S and π ∈ Π.
+
+Theorem 2.2. For any δ > 0, there exists a policy πˆ ∈ {πˆ1, ..., πˆN } such that
+
+J(πˆ) ≤ J(π∗) + T εN + O˜(1)
+
+with probability at least 1 − δ, as long as N = Θ˜ ( m2 axT 2 log(1/δ)).
+
+In contrast, the bound J(πˆ) ≤ J(π∗) + uT εN + O˜(1) in [25] includes the value u that upper bounds Q(tπ∗)(s, a) − Q(tπ∗)(s, π∗(s)) for all a ∈ A, s ∈ S, and t ∈ {0, ..., T − 1}. In general, u may be O(T ), e.g., if there are critical states s such that failing to take the action π∗(s) in s results in forfeiting all subsequent rewards. For example, in cart-pole [5], we may consider the system to have failed if the pole hit the ground; in this case, all future reward is forfeited, so u = O(T ).
+
+An analog of u appears implicitly in εN , since our loss ˜t(s, π) includes an extra multiplicative factor ˜t(s) = Vt(π∗)(s) − mina∈A Qt(π∗)(s, a). However, our bound is O(T ) as long as πˆ achieves high accuracy on critical states, whereas the bound in [25] is O(T 2) regardless of how well πˆ performs.
+
+We make the gap explicit. Consider the MDP in Figure 2 (with α ∈ (0, 1) constant and T = 3(k + 1)). Let Π = {πleft : s → left, πright : s → right}, and let g(π) = Es∼d(π) [g(s, π)] be the 0-1 loss.
+Theorem 2.3. g(πleft) = O(T −1), g(πright) = O(1), (πleft) = O(1), and (πright) = O(T −1).
+
+That is, according to the 0-1 loss g(π), the worse policy πleft (J(πleft) = 0) is better, whereas according to our loss (π), the better policy πright (J (πright) = −(T − α)) is better.
+
+Extracting decision tree policies. Our algorithm VIPER for extracting decision tree policies is shown in Algorithm 1. Because the loss function for decision trees is not convex, there do not exist online learning algorithms with the theoretical guarantees required by DAGGER. Nevertheless, we use a heuristic based on the follow-the-leader algorithm [25]—on each iteration, we use the CART algorithm [9] to train a decision tree on the aggregated dataset D. We also assume that π∗ and Q(π∗) are not time-varying, which is typically true in practice. Next, rather than modify the loss optimized by CART, it resamples points (s, a) ∈ D weighted by ˜(s), i.e., according to
+p((s, a)) ∝ ˜(s)I[(s, a) ∈ D].
+Then, we have E(s,a)∼p((s,a))[g˜(s, π)] = E(s,a)∼D[˜(s, π)], so using CART to train a decision tree on D is in expectation equivalent to training a decision tree with the loss ˜(s, π). Finally, when using neural network policies trained using policy gradients (so no Q-function is available), we use the maximum entropy formulation of reinforcement learning to obtain Q values, i.e., Q(s, a) = log π∗(s, a), where π∗(s, a) is the probability that the (stochastic) oracle takes action a in state s [37].
+
+4
+
+(a)
+
+(b)
+
+(c)
+
+Figure 3: (a) An example of an initial state of our toy pong model; the ball is the white dot, the paddle is the white rectangle at the bottom, and the red arrow denotes the initial velocity (vx, vy) of the ball. (b) An intuitive visualization of the ball positions (blue region) and velocities (red arrows) in Y0. (c) A counterexample to correctness discovered by our veriﬁcation algorithm.
+
+3 Veriﬁcation
+
+In this section, we describe three desirable control properties we can efﬁciently verify for decision tree policies but are difﬁcult to verify for DNN policies.
+
+Correctness for toy Pong. Correctness of a controller is system-dependent; we ﬁrst discuss proving correctness of controller for a toy model of the Pong Atari game [22]. This toy model consists of a ball bouncing on the screen, with a player-controlled paddle at the bottom. If the ball hits the top or the side of the screen, or if the ball hits the paddle at the bottom, then it is reﬂected; if the ball hits the bottom of the screen where the paddle is not present, then the game is over. The system is frictionless and all collisions are elastic. It can be thought of as Pong where the system paddle is replaced with a wall. The goal is to play for as long as possible before the game ends. The states are (x, y, vx, vy, xp) ∈ R5, where (x, y) is the position of the ball (with x ∈ [0, xmax] and y ∈ [0, ymax]), (vx, vy) is its velocity (with vx, vy ∈ [−vmax, vmax]), and xp is the position of the paddle (with xp ∈ [0, xmax]), and the actions are {left, right, stay}, indicating how to move the paddle.
+Our goal is to prove that the controller never loses, i.e., the ball never hits the bottom of the screen at a position where the paddle is not present. More precisely, assuming the system is initialized to a safe state (i.e., y ∈ Y0 = [ymax/2, ymax]), then it should avoid an unsafe region (i.e., y = 0 ∧ (x ≤ xp − L ∨ x ≥ xp + L), where L is half the paddle length).
+To do so, we assume that the speed of the ball in the y direction is lower bounded, i.e., |vy| > vmin; since velocity in each direction is conserved, this assumption is equivalent to assuming that the initial y velocity is in [−vmax, −vmin] ∪ [vmin, vmax]. Then, it sufﬁces to prove the following inductive invariant: as long as the ball starts in Y0, then it re-enters Y0 after at most tmax = 2ymax/vmin steps.
+Both the dynamics f : S × A → S and the controller π : S → A are piecewise-linear, so the joint dynamics fπ(s) = f (s, π(s)) are also piecewise linear; let S = S1 ∪ ... ∪ Sk be a partition of the state space so that fπ(s) = fi(s) = βiT s for all s ∈ Si. Then, let st be a variable denoting the state of the system at time t ∈ {0, ..., tmax}; then, the following constraints specify the system dynamics:
+
+k
+φt = (st−1 ∈ Si ⇒ st = βiT st−1)
+i=1
+
+∀t ∈ {1, ..., tmax}
+
+Furthermore letting ψt = (st ∈ Y0), we can express the correctness of the system as the formula 5
+
+ψ=
+
+tmax
+φt
+t=1
+
+tmax
+∧ ψ0 ⇒ ψt.
+t=1
+
+Note that σ ⇒ τ is equivalent to ¬σ ∨ τ . Then, since Y0 and all of the Si are polyhedron, the predicates st ∈ Y0 and st ∈ Si are conjunctions of linear (in)equalities; thus, the formulas ψt and φt are disjunctions of conjunctions of linear (in)equalities. As a consequence, ψ consists of conjunctions
+and disjunctions of linear (in)equalities; standard tools exist for checking whether such formulas
+
+5We are verifying correctness over a continuous state space, so enumerative approaches are not feasible.
+
+5
+
+are satisﬁable [12]. In particular, the controller is correct if and only if ¬ψ is unsatisﬁable, since a satisfying assignment to ¬ψ is a counterexample showing that ψ does not always hold.
+Finally, note that we can slightly simplify ψ: (i) we only have to show that the system enters a state where vy > 0 after tmax steps, not that it returns to Y0, and (ii) we can restrict Y0 to states where vy < 0. We use parameters (xmax, ymax, vmin, vmax, L) = (30, 20, 1, 2, 4); Figure 3 (a) shows an example of an initial state, and Figure 3 (b) depicts the set Y0 of initial states that we verify.
+
+Correctness for cart-pole. We also discuss proving correctness of a cart-pole control policy. The classical cart-pole control problem has a 4-dimensional state space (x, v, θ, ω) ∈ R4, where x is the cart position, v is the cart velocity, θ is the pole angle, and ω is the pole angular velocity, and a 1-dimensional action space a ∈ R, where a is the lateral force to apply to the cart. Consider a controller trained to move the cart to the right while keeping the pole in the upright position. The goal is to prove that the pole never falls below a certain height, which can be encoded as the formula6
+∞
+ψ ≡ s0 ∈ S0 ∧ |φ(st)| ≤ y0,
+t=0
+where S0 = [−0.05, 0.05]4 is the set of initial states, st = f (st−1, at−1) is the state on step t, f is the transition function, φ(s) is the deviation of the pole angle from upright in state s, and y0 is the maximum desirable deviation from the upright position. As with correctness for toy Pong, the controller is correct if ¬ψ is unsatisﬁable. The property ψ can be thought of as a toy example of a safety property we would like to verify for a controller for a walking robot—in particular, we might want the robot to run as fast as possible, but prove that it never falls over while doing so. There are two difﬁculties verifying ψ: (i) the inﬁnite time horizon, and (ii) the nonlinear transitions f . To address (i), we approximate the system using a ﬁnite time horizon Tmax = 10, i.e., we show that the system is safe for the ﬁrst ten time steps. To address (ii), we use a linear approximation f (s, a) ≈ As + Ba; for cart-pole, this approximation is good as long as φ(st) is small.
+
+Stability. Stability is a property from control theory saying that systems asymptotically reach their goal [31]. Consider a continuous-time dynamical system with states s ∈ S = Rn, actions a ∈ A = Rm, and dynamics s˙ = f (s, a). For a policy π : S → A, we say the system fπ(s) = f (s, π(s)) is stable if there is a region of attraction U ⊆ Rn containing 0 such that for any s0 ∈ U , we have
+limt→∞ s(t) = 0, where s(t) is a solution to s˙ = f (s, a) with initial condition s(0) = s0.
+
+When fπ is nonlinear, we can verify stability (and compute U ) by ﬁnding a Lyapunov function V : S → R which satisﬁes (i) V (s) > 0 for all s ∈ U \ {0}, (ii) V (0) = 0, and (iii) V˙ (s) =
+(∇V )(s) · f (s) < 0 for all s ∈ U \ {0} [31]. Given a candidate Lyapunov function, exhaustive
+search can be used to check whether the Lyapunov properties hold [8], but scales exponentially in n.
+
+When fπ is polynomial, we can use sum-of-squares (SOS) optimization to devise a candidate Lyapunov function, check the Lyapunov properites, and compute U [24, 32, 31]; we give a brief overview. First, suppose that V (s) = sT P s for some P ∈ Rn×n. To compuate a candidate Lyapunov
+function, we choose P so that the Lyapunov properties hold for the linear approximation fπ(s) ≈ As, which can be accomplished by solving the SOS program 7
+
+∃P ∈ Rn×n
+
+(1)
+
+subj. to sT P s − s 2 ≥ 0 and sT P As + s 2 ≤ 0 (∀s ∈ S).
+
+The ﬁrst equation ensures properties (i) and (ii)—in particular, the term s 2 ensures that sT P s > 0 except when s = 0. Similarly, the second equation ensures property (iii). Next, we can simultaneously check whether the Lyapunov properties hold for fπ and compute U using the SOS program
+
+arg max ρ
+
+(2)
+
+ρ∈R+ ,Λ∈Rn×n
+
+subj. to (sT Λs)(sT P fπ(s)) + (ρ − sT P s) s 2 ≤ 0 and sT Λs ≥ 0 (∀s ∈ S).
+
+The term λ(s) = sT Λs is a slack variable—when ρ > sT P s or s = 0 (so the second term is nonpositive), it can be made sufﬁciently large so that the ﬁrst constraint holds regardless of sT P fπ(s),
+
+6This property cannot be expressed as a stability property since the cart is always moving. 7Simpler approaches exist, but this one motivates our approach to checking whether the Lyapunov properties
+hold for V for the polynomial dynamics fπ.
+
+6
+
+but when ρ ≤ sT P s and s = 0 (so the second term is positive), we must have sT P fπ(s) < 0 since sT Λs ≥ 0 by the second constraint. Properites (i) and (ii) hold from (1), and (2) veriﬁes (iii) for all
+s ∈ U = {s ∈ S | V (s) ≤ ρ}.
+Thus, if a solution ρ > 0 is found, then V is a Lyapunov function with region of attraction U . This approach extends to higher-order polynomials V (s) by taking V (s) = m(s)T P m(s), where m(s) is a vector of monomials (and similarly for λ(s)).
+Now, let π be a decision tree whose leaf nodes are associated with linear functions of the state s (rather than restricted to constant functions). For ∈ leaves(π), let βT s be the associated linear function. Let 0 ∈ leaves(π) be the leaf node such that 0 ∈ routed( 0, π), where routed( ; π) ⊆ S is the set of states routed to (i.e., the computation of the decision tree maps s to leaf node ). Then, we can compute a Lyapunov function for the linear policy π˜(s) = βT s; letting U˜ be the region of
+0
+attraction for π˜, the region of attraction for π is U = U˜ ∩ routed( 0, π). To maximize U , we can bias the decision tree learning algorithm to prefer branching farther from s = 0.
+There are two limitations of our approach. First, we require that the dynamics be polynomial. For convenience, we use Taylor approximations of the dynamics, which approximates the true property but works well in practice [32]. This limitation can be addressed by reformulating the dynamics as a polynomial system or by handling approximation error in the dynamics [31]. Second, we focus on verifying stability locally around 0; there has been work extending the approach we use by “patching together” different regions of attraction [32].
+
+Robustness. Robustness has been studied for image classiﬁcation [30, 16, 6]. We study this property primarily since it can be checked when the dynamics are unknown, though it has been studied for air trafﬁc control as a safety consideration [19]. We say π is ε-robust at s0 ∈ S = Rd if8
+π(s) = π(s0) (∀s ∈ B∞(s0, ε)),
+where B∞(s0, ε) is the L∞-ball of radius ε around s0. If π is a decision tree, we can efﬁciently compute the largest ε such that π is ε-robust at s0, which we denote ε(s0; π). Consider a leaf node
+∈ leaves(π) labeled with action a = π(s0). The following linear program computes the distance from s0 to the closest point s ∈ S (in L∞ norm) such that s ∈ routed( ; π):
+ε(s0; , π) = max ε
+s∈S,ε∈R+
+
+subj. to
+
+δnsin ≤ tn ∧
+
+|si − (s0)i| ≤ ε ,
+
+n∈path( ;π)
+
+i∈[d]
+
+where path( ; π) is the set of internal nodes along the path from the root of π to , δn = 1 if n is a left-child and −1 otherwise, in is the feature index of n, and tn is the threshold of n. Then,
+
+ε(s0; π) = arg min
+∈leaves(π)
+
+∞ ε(s0; π, )
+
+if a = π(s0) otherwise.
+
+4 Evaluation
+
+Verifying robustness of an Atari Pong controller. For the Atari Pong environment, we use a 7dimensional state space (extracted from raw images), which includes the position (x, y) and velocity (vx, vy) of the ball, and the position yp, velocity vp, acceleration ap, and jerk jp of the player’s paddle. The actions are A = {up, down, stay}, corresponding to moving the paddle up, down, or unchanged. A reward of 1 is given if the player scores, and -1 if the opponent scores, for 21 rounds (so R ∈ {−21, ..., 21}). Our oracle is the deep Q-network [22], which achieves a perfect reward of 21.0 (averaged over 50 rollouts). 9 VIPER (with N = 80 iterations and M = 10 sampled traces per iteration) extracts a decision tree policy π with 769 nodes that also achieves perfect reward 21.0.
+We compute the robustness ε(s0; π) at 5 random states s0 ∈ S, which took just under 2.9 seconds for each point (on a 2.5 GHz Intel Core i7 CPU); the computed ε varies from 0.5 to 2.8. We compare to
+8This deﬁnition of robustness is different than the one in control theory. 9This policy operates on images, but we can still use it as an oracle.
+
+7
+
+Reluplex, a state-of-the-art tool for verifying DNNs. We use policy gradients to train a stochastic DNN policy π : R7 × A → [0, 1], and use Reluplex to compute the robustness of π on the same 5 points. We use line search on ε to ﬁnd the distance to the nearest adversarial example to within 0.1 (which requires 4 iterations of Reluplex); in contrast, our approach computes ε to within 10−5, and can easily be made more precise. The Reluplex running times varied substantially—they were 12, 136, 641, and 649 seconds; verifying the ﬁfth point timed out after running for one hour.
+Verifying correctness of a toy Pong controller. Because we do not have a model of the system dynamics for Atari Pong, we cannot verify correctness; we instead verify correctness for our toy model of Pong. We use policy gradients to train a DNN policy to play toy pong, which achieves a perfect reward of 250 (averaged over 50 rollouts), which is the maximum number of time steps. VIPER extracts a decision tree with 31 nodes, which also plays perfectly. We use Z3 to check satisﬁability of ¬ψ. In fact, we discover a counterexample—when the ball starts near the edge of the screen, the paddle oscillates and may miss it.10
+Furthermore, by manually examining this counterexample, we were able to devise two ﬁxes to repair the system. First, we discovered a region of the state space where the decision tree was taking a clearly suboptimal action that led to the counterexample. To ﬁx this issue, we added a top-level node to the decision tree so that it performs a safer action in this case. Second, we noticed that extending the paddle length by one (i.e., L = 9/2) was also sufﬁcient to remove the counterexample. For both ﬁxes, we reran the veriﬁcation algorithm and proved that the no additional counterexamples exist, i.e., the controller never loses the game. All veriﬁcation tasks ran in just under 5 seconds.
+Verifying correctness of a cart-pole controller. We restricted to discrete actions a ∈ A = {−1, 1}, and used policy gradients to train a stochastic oracle π∗ : S × A → [0, 1] (a neural network with a single hidden layer) to keep the pole upright while moving the cart to the right; the oracle achieved a perfect reward of 200.0 (averaged over 100 rollouts), i.e., the pole never falls down. We use VIPER as before to extract a decision tree policy. In Figure 4 (a), we show the reward achieved by extracted decision trees of varying sizes—a tree with just 3 nodes (one internal and two leaf) sufﬁces to achieve perfect reward. We used Z3 to check satisﬁability of ¬ψ; Z3 proves that the desired safety property holds, running in 1.5 seconds.
+Verifying stability of a cart-pole controller. Next, we tried to verify stability of the cart-pole controller, trained as before except without moving the cart to the right; as before, the decision tree achieves a perfect reward of 200.0. However, achieving a perfect reward only requires that the pole does not fall below a given height, not stability; thus, neither the extracted decision tree policy nor the original neural network policy are stable.
+Instead, we used an approach inspired by guided policy search [21]. We trained another decision tree using a different oracle, namely, an iterative linear quadratic regulator (iLQR), which comes with stability guarantees (at least with respect to the linear approximation of the dynamics, which are a very good near the origin). Note that we require a model to use an iLQR oracle, but we anyway need the true model to verify stability. We use iLQR with a time horizon of T = 50 steps and n = 3 iterations. To extract a policy, we use Q(s, a) = −JT (s), where JT (s) = sT PT s is the cost-to-go for the ﬁnal iLQR step. Because iLQR can be slow, we compute the LQR controller for the linear approximation of the dynamics around the origin, and use it when s ∞ ≤ 0.05. We now use continuous actions A = [−amax, amax], so we extract a (3 node) decision tree policy π with linear regressors at the leaves (internal branches are axis-aligned); π achieves a reward of 200.0.
+We verify stability of π with respect to the degree-5 Taylor approximation of the cart-pole dynamics. Solving the SOS program (2) takes 3.9 seconds. The optimal solution is ρ = 3.75, which sufﬁces to verify that the region of stability contains {s ∈ S | s ∞ ≤ 0.03}. We compare to an enumerative algorithm for verifying stability similar to the one used in [8]; after running for more than 10 minutes, it only veriﬁed a region U whose volume is 10−15 that of U . To the best of our knowledge, enumeration is the only approach that can be used to verify stability of neural network policies.
+Comparison to ﬁtted Q iteration. On the cart-pole benchmark, we compare VIPER to ﬁtted Q iteration [13], which is an actor-critic algorithm that uses a decision tree policy that is retrained on
+10While this counterexample was not present for the original neural network controller, we have no way of knowing if other counterexamples exist for that controller.
+8
+
+200
+
+200
+
+8000
+
+Reward Reward # Nodes
+
+190
+
+100
+
+4000
+
+180
+
+170 1
+
+3
+
+7 15 31
+
+# Nodes
+
+(a)
+
+0 0 2000 4000 6000 8000 # Rollouts
+(b)
+
+0
+
+0
+
+10
+
+20
+
+Reward
+
+(c)
+
+Figure 4: (a) Reward (maximum R = 200) as a function of the size (in number of nodes) of the decision tree extracted by VIPER, on the cart-pole benchmark. (b) Reward (maximum R = 200) as a function of the number of training rollouts, on the cart-pole benchmark, for VIPER (black, circle) and ﬁtted Q-iteration (red, triangle); for VIPER, we include rollouts used to train the oracle. (c) Decision tree size needed to achieve a given reward R ∈ {0, 5, 10, 15, 20, 21} (maximum R = 21), on the Atari Pong benchmark, for VIPER (black, circle) and DAGGER with the 0-1 loss (red, triangle).
+
+every step rather than using gradient updates; for the Q-function, we use a neural network with a single hidden layer. In Figure 4 (b), we compare the reward achieved by VIPER compared to ﬁtted Q iteration as a function of the number of rollouts (for VIPER, we include the initial rollouts used to train the oracle π∗). Even after 200K rollouts, ﬁtted Q iteration only achieves a reward of 104.3.
+Comparison to DAGGER. On the Atari Pong benchmark, we compare VIPER to using DAGGER with the 0-1 loss. We use each algorithm to learn decision trees with maximum depths from 4 to 16. In Figure 4 (c), we show the smallest size decision tree needed to achieve reward R ∈ {0, 5, 10, 15, 20, 21}. VIPER consistently produces trees an order of magnitude smaller than those produced by DAGGER—e.g., for R = 0 (31 nodes vs. 127 nodes), R = 20 (127 nodes vs. 3459 nodes), and R = 21 (769 nodes vs. 7967 nodes)—likely because VIPER prioritizes accuracy on critical states. Evaluating pointwise robustness for DAGGER trees is thus an order of magnitude slower: 36 to 40 seconds for the R = 21 tree (vs. under 3 seconds for the R = 21 VIPER tree).
+Controller for half-cheetah. We demonstrate that we can learn high quality decision trees for the half-cheetah problem instance in the MuJoCo benchmark. In particular, we used a neural network oracle trained using PPO [28] to extract a regression tree controller. The regression tree had 9757 nodes, and achieved cumulative reward R = 4014 (whereas the neural network achieved R = 4189).
+5 Conclusion
+We have proposed an approach to learning decision tree policies that can be veriﬁed efﬁciently. Much work remains to be done to fully realize the potential of our approach. For instance, we used a number of approximations to verify correctness for the cart-pole controller; it may be possible to avoid these approximations, e.g., by ﬁnding an invariant set (similar to our approach to verifying toy Pong), and by using upper and lower piecewise linear bounds on transition function. More generally, we considered a limited variety of veriﬁcation tasks; we expect that a wider range of properties may be veriﬁed for our policies. Another important direction is exploring whether we can automatically repair errors discovered in a decision tree policy. Finally, our decision tree policies may be useful for improving the efﬁciency of safe reinforcement learning algorithms that rely on veriﬁcation.
+Acknowledgments
+This work was funded by the Toyota Research Institute and NSF InTrans award 1665282.
+References
+[1] Pieter Abbeel and Andrew Y Ng. Apprenticeship learning via inverse reinforcement learning. In ICML, 2004.
+[2] Anayo K Akametalu, Jaime F Fisac, Jeremy H Gillula, Shahab Kaynama, Melanie N Zeilinger, and Claire J Tomlin. Reachability-based safe learning with gaussian processes. In CDC, 2014.
+[3] Anil Aswani, Humberto Gonzalez, S Shankar Sastry, and Claire Tomlin. Provably safe and robust learning-based model predictive control. Automatica, 2013.
+
+9
+
+[4] Jimmy Ba and Rich Caruana. Do deep nets really need to be deep? In NIPS, 2014.
+[5] A. Barto, R. Sutton, and C. Anderson. Neuronlike adaptive elements that can solve difﬁcult learning control problems. IEEE transactions on systems, man, and cybernetics, 1983.
+[6] Osbert Bastani, Yani Ioannou, Leonidas Lampropoulos, Dimitrios Vytiniotis, Aditya Nori, and Antonio Criminisi. Measuring neural net robustness with constraints. In NIPS, 2016.
+[7] Osbert Bastani, Carolyn Kim, and Hamsa Bastani. Interpretability via model extraction. In FAT/ML, 2017.
+[8] Felix Berkenkamp, Matteo Turchetta, Angela Schoellig, and Andreas Krause. Safe model-based reinforcement learning with stability guarantees. In NIPS, 2017.
+[9] Leo Breiman, Jerome Friedman, Richard Olshen, and Charles Stone. Classiﬁcation and Regression Trees. Wadsworth, 1984.
+[10] Cristian Buciluaˇ, Rich Caruana, and Alexandru Niculescu-Mizil. Model compression. In KDD, 2006.
+[11] Steve Collins, Andy Ruina, Russ Tedrake, and Martijn Wisse. Efﬁcient bipedal robots based on passivedynamic walkers. Science, 2005.
+[12] Leonardo De Moura and Nikolaj Bjørner. Z3: An efﬁcient smt solver. In TACAS, 2008.
+[13] Damien Ernst, Pierre Geurts, and Louis Wehenkel. Tree-based batch mode reinforcement learning. JMLR, 2005.
+[14] Javier Garcıa and Fernando Fernández. A comprehensive survey on safe reinforcement learning. JMLR, 2015.
+[15] Timon Gehr, Matthew Mirman, Dana Drachsler-Cohen, Petar Tsankov, Swarat Chaudhuri, and Martin Vechev. Ai 2: Safety and robustness certiﬁcation of neural networks with abstract interpretation. In IEEE Security & Privacy, 2018.
+[16] Ian J Goodfellow, Jonathon Shlens, and Christian Szegedy. Explaining and harnessing adversarial examples. In ICLR, 2015.
+[17] Geoffrey Hinton, Oriol Vinyals, and Jeff Dean. Distilling the knowledge in a neural network. In NIPS Deep Learning Workshop, 2014.
+[18] Xiaowei Huang, Marta Kwiatkowska, Sen Wang, and Min Wu. Safety veriﬁcation of deep neural networks. In CAV, 2017.
+[19] Guy Katz, Clark Barrett, David L Dill, Kyle Julian, and Mykel J Kochenderfer. Reluplex: An efﬁcient smt solver for verifying deep neural networks. In CAV, 2017.
+[20] Scott Kuindersma, Robin Deits, Maurice Fallon, Andrés Valenzuela, Hongkai Dai, Frank Permenter, Twan Koolen, Pat Marion, and Russ Tedrake. Optimization-based locomotion planning, estimation, and control design for the atlas humanoid robot. Autonomous Robots, 2016.
+[21] Sergey Levine and Vladlen Koltun. Guided policy search. In International Conference on Machine Learning, pages 1–9, 2013.
+[22] Volodymyr Mnih, Koray Kavukcuoglu, David Silver, Andrei A Rusu, Joel Veness, Marc G Bellemare, Alex Graves, Martin Riedmiller, Andreas K Fidjeland, Georg Ostrovski, et al. Human-level control through deep reinforcement learning. Nature, 2015.
+[23] Teodor Mihai Moldovan and Pieter Abbeel. Safe exploration in markov decision processes. In ICML, 2012.
+[24] Pablo A Parrilo. Structured semideﬁnite programs and semialgebraic geometry methods in robustness and optimization. PhD thesis, California Institute of Technology, 2000.
+[25] S. Ross, G. Gordon, and D. Bagnell. A reduction of imitation learning and structured prediction to no-regret online learning. In AISTATS, 2011.
+[26] Dorsa Sadigh, S Shankar Sastry, Sanjit A Seshia, and Anca Dragan. Information gathering actions over human internal state. In IROS, 2016.
+[27] Stefan Schaal. Is imitation learning the route to humanoid robots? Trends in cognitive sciences, 1999.
+[28] John Schulman, Filip Wolski, Prafulla Dhariwal, Alec Radford, and Oleg Klimov. Proximal policy optimization algorithms. arXiv preprint arXiv:1707.06347, 2017.
+[29] David Silver, Aja Huang, Chris J Maddison, Arthur Guez, Laurent Sifre, George Van Den Driessche, Julian Schrittwieser, Ioannis Antonoglou, Veda Panneershelvam, Marc Lanctot, et al. Mastering the game of go with deep neural networks and tree search. Nature, 2016.
+[30] Christian Szegedy, Wojciech Zaremba, Ilya Sutskever, Joan Bruna, Dumitru Erhan, Ian Goodfellow, and Rob Fergus. Intriguing properties of neural networks. In ICLR, 2014.
+[31] Russ Tedrake. Underactuated Robotics: Algorithms for Walking, Running, Swimming, Flying, and Manipulation. 2018.
+10
+
+[32] Russ Tedrake, Ian R Manchester, Mark Tobenkin, and John W Roberts. Lqr-trees: Feedback motion planning via sums-of-squares veriﬁcation. IJRR, 2010.
+[33] Matteo Turchetta, Felix Berkenkamp, and Andreas Krause. Safe exploration in ﬁnite markov decision processes with gaussian processes. In NIPS, 2016.
+[34] Gilles Vandewiele, Olivier Janssens, Femke Ongenae, Filip De Turck, and Soﬁe Van Hoecke. Genesim: genetic extraction of a single, interpretable model. In NIPS Workshop on Interpretable Machine Learning in Complex Systems, 2016.
+[35] Abhinav Verma, Vijayaraghavan Murali, Rishabh Singh, Pushmeet Kohli, and Swarat Chaudhuri. Programmatically interpretable reinforcement learning. arXiv preprint arXiv:1804.02477, 2018.
+[36] Yifan Wu, Roshan Shariff, Tor Lattimore, and Csaba Szepesvári. Conservative bandits. In ICML, 2016. [37] Brian D Ziebart, Andrew L Maas, J Andrew Bagnell, and Anind K Dey. Maximum entropy inverse
+reinforcement learning. In AAAI, 2008.
+11
+
+A Proofs
+
+A.1 Proof of Lemma 2.1
+
+Proof. Decomposing the term Qt(π∗)(s, π(s)), we have
+
+T −1
+
+T −1
+
+T −1
+
+T −1 (π) =
+
+Es∼dt(π) [Vt(π∗)(s)] −
+
+Es∼dt(π) [R(s)] −
+
+Es∼dt(π)
+
+P (s, π(s), s )Vt(+π1∗)(s ) .
+
+t=0
+
+t=0
+
+t=0
+
+s ∈S
+
+We can rewrite the summand of the third term as
+
+Es∼d(tπ)
+
+P (s, π(s), s )Vt(+π1∗)(s ) =
+
+d(tπ)(s)
+
+P (s, π(s), s )Vt(+π1∗)(s )
+
+s ∈S
+
+s∈S
+
+s ∈S
+
+where the last step follows since
+
+=
+
+d(tπ)(s)P (s, π(s), s )
+
+s ∈S s∈S
+
+= Es ∼d(tπ+)1 [Vt(+π1∗)(s )],
+
+Vt(+π1∗)(s )
+
+dt(+π)1(s ) = d(tπ)(s)P (s, π(s), s ).
+s∈S
+
+Thus, the third term can be rewritten as
+
+T −1
+
+T
+
+Es∼dt(π+)1 [Vt(+π1∗)(s)] =
+
+Es∼dt(π) [Vt(π∗)(s)]
+
+t=0
+
+t=1
+
+T −1
+
+=
+
+Es∼d(Tπ) [VT(π∗)(s)] − Es∼d(0π) [V0(π∗)(s)]
+
++
+
+Es∼dt(π) [Vt(π∗)(s)]
+
+t=0
+
+T −1
+
+= −V0(π∗)(s0) +
+
+Es∼d(tπ) [Vt(π∗)(s)],
+
+t=0
+
+where the last step follows since VT(π∗)(s) = 0 for all s ∈ S and by the deﬁnition of d0(π). Plugging back into (π), we have
+
+as claimed.
+
+T −1
+
+T −1 (π) = V0(π∗)(s0) −
+
+Es∼dt(π) [R(s)]
+
+t=0
+
+= V0(π∗)(s0) − V0(π)(s0)
+
+A.2 Proof of Theorem 2.2
+
+Proof. By Theorem 4.2 in [25], for any δ > 0, we have
+
+T −1
+
+(π) ≤
+
+εN
+
++ γN
+
++
+
+2
+
+max(1 + T ) N
+
++
+
+2
+
+2 max
+
+log(1/δ)
+
+mN
+
+with probability at least 1−δ, where γN = O˜(1/N ). Using our assumption on N , we have (π) ≤ T εN +O˜(1). The result follows by applying Lemma 2.1.
+
+A.3 Proof of Theorem 2.3
+
+Proof. First, note that both πleft and πright reach send in k + 1 steps. For these time steps, we claim that the optimal policy is (ignoring send, which has no actions)
+
+ down  π∗(s) = right
+left
+
+if s = s−(k−1) if s = sk otherwise,
+
+In particular, it is possible to reach state s˜ from any state si (where −(k − 1) ≤ i ≤ k − 1) in fewer than 2(k + 1) steps. Furthermore, the only states with nonzero rewards are s˜ and sk, and once either of these states
+
+12
+
+are reached, the system transitions to send. Note that s˜ yields higher reward than sk; thus, π∗ acts to move the system towards s˜ from any state except s−k, sk, and send, i.e., π∗(s) = left in all of these states except s−(k−1), and π∗(s−(k−1)) = down. In state s−k, the only available action is π∗(s−k) = left, and in sk, the only available action is π∗(sk) = right. Now, note that πleft(s) = π∗(s) except if s = s−(k−1), so g(πleft) = T −1; in contrast, πright(s) = π∗(s) except if s = sk, so g(πright) = 1 − T −1. Finally, by Lemma 2.1,
+(πleft) = T −1(J (πleft) − J (π∗)) = 1 since J (π∗) = −T and J (πleft) = 0, and
+(πright) = T −1(J (πright) − J (π∗)) = αT −1 since J (πright) = −(T − α).
+13
+
+

@@ -82,6 +82,29 @@ Priority if short of budget: Q1, Q2, Q4, Q3, Q5. Aim for 8 to 12 entries.
 - Result: branch created at `57f9148`, tree clean.
 - Next step: Q1.
 
+### 2026-10-18 — Sources confirmed and cached; Q1 written
+- What I did: confirmed 11 seed and own-choice leads on the arXiv API, then their published
+  versions on Crossref (ACL 2016, AAAI 2018, AIES 2019, IROS 2017, AAMAS 2025, *Nature MI* 2019,
+  *JAIR* 2022) and on the proceedings pages (NeurIPS 2017 and 2018, PMLR/ICML 2018). DBLP's API
+  returned non-JSON, so I did not use it. Three searches for further Q1 work surfaced GenWorld
+  (arXiv:2606.27650) and, for Q5, Plaza-del-Arco et al. (LREC-COLING 2024 workshop). Downloaded all
+  13 arXiv PDFs to `refs/td_*.pdf`. The first `-layout` extraction interleaved the two columns, so
+  I re-extracted all of them in reading order (no `-layout`).
+- Q1 read: [Amano-MobilityLM] (full), [Chopra-Archetypes] (full), [Li-GenWorld] (keyword-led).
+- Result / what I found:
+  - **No Q1 source distils LLM decisions into a fast trained model and measures fidelity to the
+    teacher on held-out situations**, except [Zhang-DFD] (already summarised). Amano's student is
+    still a 20B LLM; GenWorld says outright it did not compare the table with fresh teacher calls;
+    Chopra validates only against real aggregates.
+  - The approach that actually reached large populations is a **lookup table keyed by binned
+    context, filled by repeated LLM calls** (8.4 M agents in Chopra; about 200,000 in GenWorld at
+    0.54 µs per lookup). It is not on the issue's list of model options; I am adding it to
+    `options.md` as the baseline that trained models must beat. That is my call, not the issue's.
+  - Amano found that fine-tuning on skewed labels exaggerates the majority class (74% → above 94%).
+    That is a concrete risk for a decider trained on rule labels.
+  - Seed lead status: Amano & Yamaguchi confirmed (accepted at SIGSPATIAL 2026, DOI not yet live).
+- Next step: Q2 (Rudin, VIPER, Yang-S2AN cross-reference).
+
 ## Open questions / risks
 
 ## Summary (fill in at the end)
