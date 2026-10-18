@@ -46,6 +46,19 @@ open), which holds the shortlist this issue needs.
   do not open that repository. Python 3.12 and 3.13 are installed (Mesa 3.5.1 needs ≥3.12).
 - Next step: ask the user the standing-instruction question.
 
+### 2026-10-18 — The user's answers (before any install)
+- What I did: asked the user two questions with the question tool.
+- Result:
+  - **A1. Standing instruction.** Question: does the standing supervisor instruction (no
+    simulation or experiment code until the literature review is complete and discussed;
+    `README.md`, status unconfirmed) allow throwaway trial code for #40? **Answer: "Yes,
+    proceed".** The instruction's status with the supervisor stays unconfirmed, as in #24 to #32;
+    this answer is the user's, not a recorded supervisor approval.
+  - **A2. CrowdGym repository (#39 Q1).** Question: may I read `ntu-fyp-25/crowdgym`? **Answer:
+    "Leave it unopened".** So whether CrowdGym is built on JuPedSim stays open, and the "fit with
+    CrowdGym" criterion in `decision.md` is stated as conditional.
+- Next step: new venv, pinned wheels only.
+
 ## Open questions / risks
 
 ## Summary (fill in at the end)
