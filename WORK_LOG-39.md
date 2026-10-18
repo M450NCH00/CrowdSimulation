@@ -171,6 +171,10 @@ cached pages in `refs/`.
 - Also corrected: "Tau and Mass are parameters of the GCFM and social force models". JuPedSim's
   social force model calls it `reaction_time`, not `tau`.
 
+### 2026-10-18 — Push and PR
+- Pushed `docs/39-simulator-desk-survey` and opened PR #47 against `docs/38-trained-deciders-literature`
+  (A1). Commented the PR link and Q1 on the issue.
+
 ## Open questions / risks
 
 - **Q1 (for the user): is `ntu-fyp-25/crowdgym` the senior's CrowdGym, and may it be read?** A
