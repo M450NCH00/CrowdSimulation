@@ -180,6 +180,10 @@ Priority if short of budget: Q1, Q2, Q4, Q3, Q5. Aim for 8 to 12 entries.
     (issue: do not summarise from abstracts).
 - Next step: push, open the PR against the #37 branch, comment on the issue.
 
+### 2026-10-18 — Pushed; PR #46 opened
+- Pushed `docs/38-trained-deciders-literature`; opened PR #46 against
+  `docs/37-unseen-scenario-human-evidence` (A1), and commented the link on #38.
+
 ## Open questions / risks
 
 1. **Q2 is answered only in part.** No source compares an *interpretable model learned from
