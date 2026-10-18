@@ -60,6 +60,7 @@ experiment code until the literature review is complete and discussed.**
 | 5g | Portable rules (track #34), PT-3: human evidence for the unseen scenarios (queue cutting, boarding, lifts, escalators), Singapore first | **delivered** (issue #37) — `literature/unseen-scenario-evidence/`; graded reference behaviours (grading scale a proposal awaiting the supervisor's sign-off); no Singapore observation found |
 | 5h | Portable rules (track #34), PT-4: models trained on extracted rules (distillation, learned deciders, rule-guided learning) | **delivered** (issue #38) — `literature/trained-deciders/`; options table, evaluation plan with the counterfactual bias test, and a one-page verdict, all proposals awaiting the supervisor's sign-off |
 | 5i | Portable rules (track #34), PT-5: simulators, part 1, a desk survey of crowd simulators and how they work | **delivered** (issue #39) — `integration/simulator-survey/`; one section per simulator, a sourced comparison matrix, and a shortlist (JuPedSim, Mesa, SUMO conditional) for the hands-on trial in #40; nothing installed or run. CrowdGym's engine left open |
+| 5j | Portable rules (track #34), PT-6: simulators, part 2, a hands-on trial of the shortlist and the use-or-build decision | **delivered, decision a proposal** (issue #40) — `integration/simulator-survey/hands-on.md`, `decision.md`, `spikes/`; JuPedSim 1.4.2 and Mesa 3.5.1 run from pinned wheels in a separate venv (user allowed trial code; supervisor status of the standing instruction still unconfirmed). Proposed: hybrid, JuPedSim for motion and boarding with our own queue-order layer, Mesa as the discrete testbed; SUMO not needed. Weights need sign-off |
 | 6 | Bridge into CrowdGym — `integration/crowdgym_mapping.md` | not started |
 
 From building the negotiation simulator (issue #24) — see `llm_negotiation/README.md` for
@@ -197,6 +198,22 @@ From issue #32 (the third sub-issue's second step, SI-3a.2) — see `llm_negotia
   its worst case is USD 0.65 against the same USD 0.05 cap, and no cut of the reply cap, the
   messages or the retries alone fits; a hard spend cap with the sessions in a stated priority
   order would (issue #30's Q5, options re-previewed).
+
+Three findings from the hands-on simulator trial (issue #40, PT-6 of track #34). The
+recommendation and its weights are a proposal needing supervisor sign-off, and nothing here is
+evidence about people (default parameters, one scene each). See `integration/simulator-survey/`;
+`decision.md` is the short read:
+
+- **JuPedSim's built-in queue cannot admit anyone part-way.** Agents stay listed after they switch
+  journey or are removed, so "admit" cannot be built on it. Keeping the queue order in our own list
+  and steering each queuer to its slot works (47 lines). Its door, waiting set and two-way flow work
+  with no deadlock. Setting `agent.target` outside a direct-steering journey is silently ignored.
+- **Both simulators are deterministic and both adapter hooks work.** At 10,000 agents JuPedSim ran a
+  two-way flow at 0.21 simulated s per computing s, 2.9–3.4× negsim's figure on a similar scene; a
+  full Python perception pass costs as much as an iteration, so perception should sample every 0.1 s.
+- **The proposed split is a hybrid:** JuPedSim for motion and boarding, with our own queue-order
+  layer; Mesa for the discrete queue model. It leads under every weighting tried but one: if each
+  unseen conflict type need not run in two testbeds, using both simulators as shipped is as good.
 
 Three findings from the simulator desk survey (issue #39, PT-5 of track #34). They are
 descriptions plus a shortlist, not a decision (that is #40), and the idea they serve still needs
@@ -447,6 +464,9 @@ CrowdSimulation/
       survey.md                          one section per simulator (negsim, CrowdGym, JuPedSim, SUMO, Vadere, Menge, Mesa, ...)
       comparison.md                      the matrix: a row per simulator, a column per template field, every cell sourced
       search-log.md                      what was fetched, what could not be, leads not followed
+      hands-on.md                        issue #40: each trial (queue, door, adapters, scale) on JuPedSim and Mesa
+      decision.md                        *** issue #40: use / refer-and-build / hybrid, matrix, recommendation (a proposal) ***
+      spikes/                            issue #40: throwaway trial code + pinned requirements.txt; nothing imports it
   llm_negotiation/                  issue #24: two-agent LLM negotiation simulator; issue #26: the
                                     avoidance layer (ORCA, perception, directives); issue #28: rules;
                                     issue #30: rule generation; issue #32: fictional groups and
