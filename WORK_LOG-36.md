@@ -165,6 +165,11 @@ Deliverables go in `literature/unseen-scenarios/`, sources in `refs/`.
   article page (all 19 names matched; one spelling fixed).
 - Next step: verification per §5b, push, PR.
 
+### 2026-10-18 — Pushed; PR #44 opened
+- Pushed `docs/36-unseen-scenario-testing-literature` and opened
+  https://github.com/M450NCH00/CrowdSimulation/pull/44 against the #35 branch (A1, U8); linked it
+  on #36.
+
 ## Open questions / risks
 
 - **U1. L4 (abstain) has no literature behind it.** No source tests a rule that should *decline*
