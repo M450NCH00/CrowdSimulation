@@ -166,6 +166,11 @@ Deliverables go in `literature/unseen-scenario-evidence/`, sources in `refs/`.
     the edit was redone from a script file.
 - Result: every issue question is answered (Q3 as a short pass, stated as such); see Summary.
 
+### 2026-10-18 — Pushed; PR #45 opened
+- Pushed the branch and opened https://github.com/M450NCH00/CrowdSimulation/pull/45 against
+  `docs/36-unseen-scenario-testing-literature` (A1), and linked it on the issue. Checked that only
+  the five openly licensed sources under `refs/he_*` are tracked.
+
 ## Open questions / risks
 
 1. **Reproduced tables as evidence (A6).** QC-1 to QC-5 use Milgram's and Schmitt's numbers as
