@@ -107,6 +107,79 @@ open), which holds the shortlist this issue needs.
   queue logic. It is the route I take for trial 2 and the adapters.
 - Next step: trial 2 (door).
 
+### 2026-10-18 — JuPedSim trial 2 (door), and why SUMO is not tried
+- What I did: `spikes/jps_trial2_door.py`: a platform and a vehicle interior joined by one 1.0 m
+  opening; 8 boarders in a waiting set, 8 alighters spawned inside at "arrival" (2 s). Three
+  release policies × two models (CFS, social force). Stall detector: nobody moves 5 cm in 10 s.
+- First run crashed: my alighter spawn row reached the wall (`too close to geometry boundaries`);
+  narrowed the spacing from 1.0 to 0.8 m.
+- Result (one deterministic run each; seconds from arrival until everyone is through):
+
+  | Policy | CFS | Social force |
+  |---|---|---|
+  | alight first (released at 13.7 / 13.9 s) | 22.1 | 27.0 |
+  | simultaneous, boarders beside the door | 30.0 | 54.3 |
+  | simultaneous, boarders in front of the door | 35.2 | 56.0 |
+
+  No deadlock in any of the six. Waiting (waiting set), release (`state = INACTIVE`) and two-way
+  flow through one door are all expressible with built-in pieces. There is **no vehicle object**:
+  "arrival" is a scripted spawn, and capacity or dwell time would be counters in our loop.
+- Decision: **SUMO is not tried.** The shortlist made it conditional on trial 2 showing that a
+  stand-alone door lacks what a vehicle model gives (arrival times, capacity, dwell time). Those are
+  a timer and a counter in the loop; the door conflict itself works in JuPedSim. `[inference]`
+  SUMO would add value only for a network-level boarding scenario (routes, timetables).
+
+### 2026-10-18 — JuPedSim trial 3 (adapters) and determinism
+- What I did: `spikes/jps_trial3_adapters.py`: 40 agents in a corridor; a perception pass after
+  every iteration; four actions at 5 s; the same scene run twice, every position hashed.
+- **Dead end, logged:** the first run said "not deterministic" and "setting `agent.target` on an
+  exit-journey agent changes the run". Both were my errors. (1) Agent, journey and stage ids come
+  from a **process-wide counter** (a second `Simulation` in the same process starts at id 4, not 1;
+  checked directly), and I hashed ids. (2) I compared a run with all four actions against none, so
+  B to D's knock-on effects showed up in agent A. Fixed by hashing spawn indices and testing A alone.
+- Result:
+  - **Determinism:** identical trajectories, bit for bit, run twice in one process and in two
+    separate processes (digest `5e3a375fa04a` both times), for CFS and social force. No seed
+    exists or is needed for this scene (`Simulation` has no seed parameter); `distribute_*`
+    helpers take one.
+  - **Perception:** position from `agent.position`. CFS has no velocity in its state; the
+    difference of positions is the workaround. Social force's `model.velocity` matches the
+    difference of positions to 1.8e-13 m/s over 59,642 samples. Queue place: `enqueued()` for the
+    built-in queue (but see trial 1's stale entries) or our own list's index.
+  - **Action, effect delay** (CFS / social force): switch journey +1 iteration (0.01 s) / 0.33 s;
+    `desired_speed` 1.2 → 0.4: +0.01 s / 1.5 s; direct-steering target: +0.01 s / 0.16 s. The
+    force model's lag is its reaction time, not the API.
+  - **`agent.target` outside a direct-steering journey is silently ignored**: the run is
+    bit-identical to one with no action, and no error or warning is raised. An action adapter must
+    therefore know each agent's journey type, or it will drop decisions without noticing.
+
+### 2026-10-18 — JuPedSim trial 4 (scale)
+- Hardware: AMD Ryzen 5 7535HS (6 cores, 12 threads), 15.3 GB RAM, Windows 11 Home, on AC power
+  (battery status 2, 100 %). Python 3.13.3, jupedsim 1.4.2. CFS, dt 0.01 s, a fresh `Simulation`
+  per repetition, 10 warm-up iterations, then 100 timed iterations (= 1 simulated second).
+- Result (median of 3 repetitions):
+
+  | Scene | N | ms per iteration | s per simulated second | Perception pass in Python |
+  |---|---|---|---|---|
+  | plain, one-way, ~0.5 /m² (batch 1, 22:27) | 1,000 | 3.06 | 0.31 | 3.24 ms |
+  | | 10,000 | 38.58 (min 32.03) | 3.86 | 33.94 ms |
+  | plain, one-way (batch 2, 22:28) | 1,000 | 2.89 | 0.29 | 3.26 ms |
+  | | 10,000 | 29.58 | 2.96 | 32.01 ms |
+  | two-way, ~1 /m² (closer to negsim's benchmark) | 1,000 | 3.95 | 0.40 | 3.32 ms |
+  | | 10,000 | 40.77 | 4.08 | 31.88 ms |
+
+  The two plain batches differ by ~25 % at 10,000; I report both rather than pick one.
+  - Matching negsim's timed span (100 steps of 0.1 s = 10 simulated s): the two-way 10,000 scene,
+    one run, took **46.9 s for 10 simulated s** (4.2–5.6 s per simulated second), i.e. **0.21
+    simulated s per computing s**, against negsim's 0.062 (`llm_negotiation/README.md`, benchmark
+    table: 1,602 ms per 0.1 s step). About 3.4× faster `[inference: not the same scene, and no
+    rule layer in either]`.
+  - **The perception pass costs as much as an iteration** (~32 ms at 10,000): reading every agent
+    from Python. So the perception adapter should run every 10th iteration (0.1 s, negsim's step),
+    not every iteration, or the adapter doubles the run time.
+  - Sleep check: no Kernel-Power 506/507/42/107 events in the System log since 21:00, covering
+    22:27:49–22:30:15.
+
 ## Open questions / risks
 
 ## Summary (fill in at the end)
