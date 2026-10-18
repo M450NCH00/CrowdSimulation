@@ -106,6 +106,38 @@ Deliverables go in `literature/unseen-scenario-evidence/`, sources in `refs/`.
     project).
 - Next step: Q2 boarding and alighting.
 
+### 2026-10-18 — Q2 boarding and alighting, and Q4 Singapore
+- What I did: searched for field and laboratory studies of metro and bus doors; read four
+  (Seriani et al. 2017 London Underground field video; Seriani et al. 2019 and Luangboriboon et al.
+  2020 PAMELA experiments; Harris et al. 2022 field meta-analysis); checked the seed simulation
+  papers for field data. Ran ten Singapore searches (logged in `singapore.md` §4); read Cheung et
+  al. 2024 (Wi-Fi tracking at two Circle Line stations) and five official pages (MOT 2019, 2025,
+  2026; SMRT 2018; BCA 2023), plus two Hong Kong documents that describe Singapore's escalator
+  advice.
+- Result / what I found:
+  - **Biggest Q2 gap**: the two studies that measure boarders entering before alighting ends (Li
+    2020 CityU thesis, Hong Kong and mainland China; Baali et al. 2024, HAL) could not be opened.
+    The thesis is behind a copyright click-through form, **which I did not accept on the user's
+    behalf**; HAL is behind bot protection. Both stubbed.
+  - Many open-access publishers (Hindawi/Wiley, MDPI, Elsevier OA, EconStor, HAL, USF Digital
+    Commons, Universidad de Chile) refuse automated downloads. UCL Discovery, Springer, Collective
+    Dynamics and Taylor & Francis's OA API worked. Papers stubbed for this reason should open in a
+    normal browser.
+  - **The two lab studies disagree on crowding** (flow falls above ~4 pass/m² vs no clear fall up
+    to ~5); recorded, not resolved.
+  - **Seriani et al. 2019's manuscript abstract contradicts its own §4.2** on whether boarding or
+    alighting comes first; I follow the body and flag it.
+  - The seed simulations (Lindner 2025, Chen 2018) have **no field data** to use; Lindner's model
+    has no queue at all.
+  - **Q4 result: no Singapore observation of any target behaviour was found.** Singapore supplies
+    the promoted norms (give way to alighters; priority queues; hold the handrail; lifts for bulky
+    items) and one perception survey (52% to 56% "noticing gracious behaviour", 2016-2018, now
+    under methodology review), but no compliance rates.
+  - **A wording issue in `dataset/scenarios.yaml`** (`escalator_entry_merge.sg_variant` mentions a
+    Singapore "stand on both sides" campaign): no source found supports it. Flagged for the
+    supervisor; I have not edited the dataset file (out of scope, and it is agreed scope).
+- Next step: Q3 lifts and escalators (the remaining budget allows a short pass), then Q5/Q6.
+
 ## Open questions / risks
 
 (filled in as work proceeds)
