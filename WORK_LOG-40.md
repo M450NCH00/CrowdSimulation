@@ -59,6 +59,54 @@ open), which holds the shortlist this issue needs.
     CrowdGym" criterion in `decision.md` is stated as conditional.
 - Next step: new venv, pinned wheels only.
 
+### 2026-10-18 — Install
+- What I did: `py -3.13 -m venv integration/simulator-survey/spikes/.venv` (gitignored by the
+  existing `.venv/` rule), then `pip install --only-binary=:all: jupedsim==1.4.2 mesa==3.5.1`.
+  `--only-binary=:all:` refuses source distributions, so no setup or build script can run.
+  `pip freeze` → `spikes/requirements.txt`.
+- Result / what I found:
+  - **`import mesa` failed** with `ModuleNotFoundError: No module named 'networkx'`.
+    `mesa/__init__.py` imports `discrete_space.network`, which imports `networkx`, but Mesa 3.5.1's
+    metadata lists `networkx` only under extras (`network`, `all`, ...). Fixed by pinning
+    `networkx==3.7` (wheel). A packaging defect in Mesa 3.5.1, worth one line in `hands-on.md`.
+  - JuPedSim's wheel pulled in PySide6, VTK and matplotlib (its visualiser dependencies). Large,
+    but all wheels.
+  - **Shortlist API check passes:** Mesa 3.5.1 has `Model.run_for`, `run_until`, `schedule_event`
+    and `schedule_recurring`, and `Model(seed=..., rng=...)`. `Model.__init__` registers a default
+    recurring `step` every 1.0 time unit (`mesa/model.py:184-190`).
+- Next step: JuPedSim trial 1.
+
+### 2026-10-18 — JuPedSim trial 1 (queue with a newcomer)
+- What I did: `spikes/jps_trial1_queue.py`: 10 people on a `NotifiableQueueStage`, `pop(1)` every
+  10 s, a newcomer beside position 3 at 30 s. Tried four routes.
+- Result / what I found:
+  - **refuse** (newcomer switched into the queue journey): works; JuPedSim sends them to the back.
+  - **steer** (direct steering to the gap ahead of position 3): the newcomer wedges beside the
+    line at (3.19, 3.51), is never enqueued and never served. Physical cutting-in is invisible to
+    the queue.
+  - **admit by switching journeys** (positions ≥3 step out under direct steering, the newcomer
+    joins, they rejoin): **failed**; the newcomer still ended at the back. First I switched all of
+    them in one go; then one at a time, each after the previous was enqueued. Same result.
+  - **Root cause, by probe** (`spikes/jps_probe_queue_switch.py`): `switch_agent_journey` does
+    **not** remove an agent from the queue's `enqueued()` list. Agent 3 walked 2 m away and stayed
+    listed; the agents behind it did not move up. The entry went only when it was popped.
+  - **admit by remove and re-add** (`mark_agent_for_removal`, then `add_agent` in the new order):
+    **failed** too. Removed agents' ids also stay in `enqueued()` and keep their slots, and the
+    re-added agents were enqueued by arrival at the queue (nearest first: P10, P9, NEW, P8, ...),
+    not by add order.
+  - **So JuPedSim 1.4.2's queue stage is FIFO only: join at the back, leave at the front.** Neither
+    insertion (admit) nor leaving mid-queue (reneging, being sent away) can be expressed with it.
+    `[inference]` The stale entries look like a defect, not a design choice; I did not check
+    JuPedSim's issue tracker.
+  - **admit with our own queue** (`spikes/jps_trial1_ownqueue.py`): the queue order is a Python
+    list; every queuer is on a direct-steering journey and steered to the slot of its index each
+    iteration. Admit = `list.insert(2, ...)`, refuse = `list.append(...)`. **Works:** the newcomer
+    is in slot 3 at (3.6, 3.0) within 2 s, the people behind step back, the minimum spacing stays
+    ≥0.795 m, and the newcomer is served at 60 s (three pops after arriving third).
+- Decision point: this is route (b) "refer and build" in miniature: JuPedSim for motion, our own
+  queue logic. It is the route I take for trial 2 and the adapters.
+- Next step: trial 2 (door).
+
 ## Open questions / risks
 
 ## Summary (fill in at the end)
