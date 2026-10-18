@@ -84,6 +84,65 @@ Deliverables go in `literature/unseen-scenarios/`, sources in `refs/`.
   out-of-domain construction must be located in the cached paper text.
 - Next step: cache the scenario standards.
 
+### 2026-10-18 — Scenario standards cached and read (Q3, priority 1)
+- What I did: cached and read, in their relevant sections, RiMEA 4.1.1 (German/English, CC BY-ND),
+  IMO MSC.1/Circ.1533 and Circ.1238, ISO 20414's public page, NIST TN 1822 (Ronchi et al. 2013),
+  OpenSCENARIO XML 1.4.0 §§7.2 and 7.6, the ODD second update (JASSS 2020), SteerBench (CAVW 2009)
+  and JuPedSim 1.4.2's routing page.
+- Why: the issue's first priority.
+- Result / what I found:
+  - **The seed link for RiMEA/IMO is dead.** `ped.fandom.com/wiki/Test_Cases` returns HTTP 410:
+    the wiki has been closed. I went to the primary documents instead (RiMEA via rimea.de, the IMO
+    circulars via two hosting sites).
+  - **MSC.1/Circ.1238 is superseded.** Circ.1533 (2016) says "This circular supersedes
+    MSC.1/Circ.1238" (para. 11). The issue asks for standards at their current version, so the entry
+    cites Circ.1533 and notes the test list is unchanged in substance from what TN 1822 reviews.
+  - **ISO 20414 is paywalled** (CHF 204 per a reseller listing, not used as evidence). Only the
+    ISO page's abstract and status are used, plus NIST TN 1822 as an open precursor; the standard
+    is stubbed.
+  - **OpenSCENARIO's "latest" URL in the issue 404s**; versions 1.3.0, 1.3.1 and 1.4.0 are listed,
+    so 1.4.0 is cited.
+  - **SteerBench** (an `[unverified lead]`) is confirmed: CAVW 20(5-6):533-548, 2009,
+    doi:10.1002/cav.277 (Crossref). The copy read is the Wiley typeset PDF on a Utrecht course site.
+- Next step: Q1 methods (Melting Pot, Zhang's out-of-domain test, cross-scenario pedestrian studies).
+
+### 2026-10-18 — A slip while cleaning up, caught and undone
+- What I did: to delete my own intermediate `.html` downloads I ran `rm refs/*.html`, which also
+  deleted 46 tracked `.html` caches from earlier issues. `git status` showed them as unstaged
+  deletions; the commit I made right after (`4051e61`) contained only my own files. I restored
+  them with `git checkout -- refs/` and confirmed a clean tree.
+- Why it matters: nothing was lost, but it was a destructive glob over a shared folder. From here
+  on I delete only files I name explicitly.
+
+### 2026-10-18 — Methods, spillovers and leakage sources (Q1, Q2, Q4)
+- What I did: read Melting Pot 1.0 (ICML 2021, PMLR 139) and 2.0 (arXiv, no published version
+  found), the out-of-domain passage of Zhang et al. (cached `refs/zhang2026_dfd.txt`, §5.1),
+  Wolinski et al. 2014 (CGF) and Tordeux et al. (arXiv:1801.09782, published as a TGF'17 chapter).
+  For Q2, found open versions of five of the six g6 §3 leads and read them; Mengel & Sciubba (2014)
+  could not be obtained (Essex repository unreachable, AgEcon HTTP 403, Maastricht HTTP 403). For
+  Q4, read Wu et al. (NAACL 2024), Aher et al. (ICML 2023) and Binz & Schulz (arXiv v1 of the
+  PNAS 2023 paper).
+- Result / what I found:
+  - **Melting Pot does not test transfer across physical settings.** "Policies are not
+    transferable between substrates" (MP1 §4.1); MP2 says its generalisation is "mainly along
+    social dimensions, not physical dimensions" (MP2, Introduction, p. 4). Its "unseen" is new
+    co-players on a familiar map: the FYP's L0, not L2-L3.
+  - **Zhang et al.'s out-of-domain set is a different layout with 3 seeds** (§5.1, p. 13), but the
+    text I searched does not say how the layout differs, and its ground truth is still the LLM
+    simulation.
+  - **Cross-scenario pedestrian validation exists but is thin.** Tordeux et al. train on ring or
+    bottleneck data and test on the other; Wolinski et al. calibrate per scenario and leave
+    cross-scenario generalisation as future work (§5). RiMEA itself warns that a parameter calibrated
+    in one situation may not suit another (Annex A2, p. 26).
+  - **The spillover studies are more positive than g6 expected, with conditions.** Cooper & Van
+    Huyck find transfer from stag hunt to order-statistic games "even when games are not
+    structurally similar" (§4, p. 24), but all games share a payoff-dominant and a secure
+    equilibrium. Cason et al. find median→minimum transfer but not minimum→median (§7). Huck et
+    al. find spillover depends on how accessible game-specific feedback is (§7). Cooper & Kagel
+    report positive transfer with meaningful context and zero or negative transfer with generic
+    context (§VII, p. 21, citing their own 2006 work).
+- Next step: write `scenario-standards.md`, then `methods.md`.
+
 ## Open questions / risks
 
 (to be filled during the work)
