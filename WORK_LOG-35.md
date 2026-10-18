@@ -199,6 +199,44 @@ the "generic simulator" requirement is a design goal, not a finding
      gives the core and its binding separate places ([Frantz-IG2] §3.1).
 - Next step: groups 4–6, then the novelty sources.
 
+### 2026-10-18 — Groups 4–6 and the novelty sources read; all entries written
+- What I did:
+  - Read in full: [Curtis-Menge], [Kleinmeier-Cooperation], [EscuderoJimenez-HuNavSim2],
+    [Axtell-Docking], [Edmonds-Replication], [Wilensky-MakingModelsMatch],
+    [Galan-Reimplementing].
+  - Read in sections: [Francis-SocNavPrinciples]; [Tessier-ConflictingAgents] (chapter 1,
+    pp. 4–21); for the novelty check, CRSEC (§2, §3.1, §4), TR2MTL (§I, §IV–§VI) and Savarimuthu
+    et al. (§1, §4, §6).
+  - Term-searched arXiv:2409.00993's full text, as #16's novelty check did.
+  - Wrote groups 4–6 and the Donkin et al. stub.
+- Why: Q2 to Q5.
+- Result / what I found:
+  1. **Q2 has a plain answer.** No crowd, pedestrian, game or robot-navigation study read here ran
+     one behaviour rule in two simulators and compared the behaviour.
+     - Menge holds one behaviour layer fixed across three motion models inside one framework.
+       The trajectories differed, and each model needed its own time step (Figure 4, labels
+       decoded from interleaved text).
+     - HuNavSim 2.0 runs one behaviour engine in four host simulators but compares nothing across
+       them.
+     - The only direct precedents are social-simulation docking and replication studies. All four
+       found differences hidden in details nobody counted as part of the rule: agent activation
+       order, event order, tie-breaking, ≤ against <, run length.
+  2. **Every pedestrian-side "portable" behaviour layer is portable by design intent only**
+     ([Kleinmeier-Cooperation] §II A; [EscuderoJimenez-HuNavSim2] §III).
+  3. **Q3:** no source classifies pedestrian situations by *what is contested*.
+     [Tessier-ConflictingAgents] gives the top level (physical/resource against knowledge
+     conflicts) and a hardness distinction that separates a passage from a queue.
+     [Francis-SocNavPrinciples] gives established *geometric* scenario names, including "the one
+     leaving goes first" for rooms.
+  4. **Q5:** LLM-derived norms *are* written down in prior work, but only for LLM agents inside
+     one environment (CRSEC's quintuple with a natural-language core) or as LLM *translations* of
+     human-written law into temporal logic, monitored in one simulator (TR2MTL). Neither runs a
+     rule across simulators.
+  5. A decision for honesty in Q2: Menge's figure labels were decoded by me from interleaved
+     characters (`∆tO=RC0.A1 s` → "Δt ORCA = 0.1 s"). The decoding is unambiguous, but it is mine,
+     so the entry says so.
+- Next step: `novelty-check.md`, then `feasibility.md` and `verdict.md`.
+
 ## Open questions / risks
 <Anything uncertain, anything you're unsure is the right call, anything that should be double-checked by a human.>
 

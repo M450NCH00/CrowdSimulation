@@ -709,3 +709,528 @@ paywalled). It is covered through [Wang-LCIM]'s analysis (§4 there) and [Gomes-
 - BibTeX: `wang2009lcim`
 
 ---
+
+## 4. Behaviour layers in crowd and robot simulators
+
+How behaviour is represented, and how it is kept apart from the motion model. The simulators
+themselves are PT-5's job (#39), as the issue says. HuNavSim 2.0 is a robot-navigation tool, not a
+crowd simulator, but it is the only source found that runs one behaviour layer in several host
+simulators, so it belongs here.
+
+### [Curtis-Menge]: Menge: A Modular Framework for Simulating Crowd Movement
+
+- Authors / Year / Venue: Sean Curtis, Andrew Best, Dinesh Manocha / 2016 / *Collective Dynamics*
+  1, A1, 1–40.
+- Link: https://doi.org/10.17815/CD.2016.1
+- Status: published at Collective Dynamics (received 29 July 2015, accepted 31 October 2015; CC BY
+  4.0).
+- Read: full text and appendix, from `refs/pr_curtis2016_menge_cd.txt`.
+- What it represents: **behaviours** (a behavioural finite state machine) kept separate from
+  **motion models** (pedestrian models), inside one framework.
+- Structure:
+  - Crowd simulation is decomposed into goal selection, plan computation and plan adaptation,
+    composed as v_i(t) = A_i(P_i(G_i(t))) (§3.2, Eq. 2). Plan adaptation is "the pedestrian model",
+    which "transforms the ideal, preferred velocity into a feasible velocity" (§2.3).
+  - Behaviour is a **Behavioral Finite State Machine (BFSM)** (§3.5). A state sets the agent's goal
+    and how it seeks it. A transition is a **Condition**, "a boolean test which determines if a
+    pre-defined condition is satisfied", plus a **Target**. Transitions "are prioritized and the
+    condition of each transition is evaluated in priority order; the first transition whose
+    condition is met is taken". An **Action** changes the agent's state or parameters on entry.
+  - Conditions may hold "arbitrary logic". The paper's example is a passenger who waits "to leave
+    its seat until the aisle is empty", "realized with a custom Condition" (§3.5).
+  - Goals can have finite "capacity" (§3.6). The whole scenario, BFSM included, is an XML
+    specification (§3.11).
+- Executable or descriptive: executable, but only inside Menge. The XML is read by Menge's own
+  element implementations; custom Conditions are C++ plug-ins (§3.4, §3.11).
+- How it travels between systems: **within one framework, by swapping modules.** Using the same
+  goal selection and planning "but different path adaptation solutions is trivial; one simply
+  changes the reference to the path adaptation module in the Menge project file" (§3.2). Between
+  frameworks, scenarios were translated: SteerBench's scenarios are converted "from SteerBench XML
+  to Menge's XML specification" with "a conversion script" (§4.1). Binary plug-ins are possible,
+  but "due to compatibility issues in C++ runtime libraries, release of the source code is
+  preferred" (§5, note 8).
+- Evidence that it works in two or more systems: **one behaviour specification, three motion
+  models, inside one framework.** In the Cross Flow scenario "we vary the Pedestrian Model
+  implementation between a velocity-obstacle model, a simple social-force model, and a predictive
+  social-force model; all other aspects of the simulation are fixed". "The differences in behavior
+  due to the Pedestrian Model are clear" (§4.1, Figure 4).
+  ⚠ Figure 4's panel labels, decoded from text that the extraction interleaved character by
+  character, give each model its own time step: Δt = 0.01 s (social force), 0.1 s (ORCA) and
+  0.002 s (predictive). So "all other aspects ... fixed" did not include the step.
+- Failure modes and limits stated by the authors:
+  - "a reimplementation of a paper is unlikely to be the same as the author's original, rendering
+    the significance of the comparison uncertain" (§1);
+  - "while each approach will solve the subproblem, the solutions may not be the same; the choice
+    of how a subproblem is solved can have an impact on the resulting agent behavior" (§1);
+  - two groups extending one open-source simulator "may go about modifying the original system in
+    two different ways", and "Merging such results into a common framework may prove to be
+    problematic" (§5);
+  - "planning and personality are tightly coupled in the BFSM"; only one behaviour mechanism (no
+    behaviour trees); a fixed population; primitive parallelism (§6.2).
+- For the portable rule core: **adapt the separation; take Figure 4 as a warning** [inference].
+  - Menge is the strongest crowd-simulation precedent for the core's split. A behaviour layer of
+    prioritised conditions and actions talks to any motion model through one narrow quantity, the
+    preferred velocity. #34's Decision is the analogue of that quantity.
+  - It also shows the limit. With the behaviour held fixed, the trajectories differed by motion
+    model, and each model needed its own time step. A rule's *effect* has to be measured in each
+    simulator, not assumed equal.
+- BibTeX: `curtis2016menge`
+
+---
+
+### [Kleinmeier-Cooperation]: Agent-Based Simulation of Collective Cooperation: From Experiment to Model
+
+- Authors / Year / Venue: Benedikt Kleinmeier, Gerta Köster, John Drury / 2020 / *Journal of the
+  Royal Society Interface* 17(171), 20200396.
+- Link: https://doi.org/10.1098/rsif.2020.0396 | https://arxiv.org/abs/2005.12712
+- Status: published at J. R. Soc. Interface (arXiv record's journal reference and DOI). Read as
+  arXiv v2 (dated 8 October 2020), because the publisher blocked automated download.
+- Read: full text, with the supplement on limitations and trajectory error, from
+  `refs/pr_arxiv_2005_12712v2_kleinmeier.txt`.
+- What it represents: a **behaviour (psychology) layer** above a locomotion model, for "collective
+  cooperation" in a dense crowd.
+- Structure:
+  - The experiment (Munich, 12 October 2018): 13 people stood in 2.64 m² (5.30 persons/m²), and 27
+    walking participants crossed them in 30 runs. Speed fell from a mean of 1.33 m/s outside to
+    0.70 m/s inside (Table I, §I B). The walkers used "communication through eye contact or asking
+    verbally, but also shoving the waiting person aside" (§I B 3).
+  - The model: a psychology layer of three sub-layers, **perception → cognition → behaviour**,
+    above the locomotion layer (Figure 11, §II B), implemented as interfaces `IPerceptionModel`
+    and `ICognitionModel` (Figure 12).
+  - The rule itself (Listing 3): if an agent's speed over the last 4 steps is at most 0.05, its
+    self-category becomes COOPERATIVE, otherwise TARGET_ORIENTED. On the locomotion layer a
+    cooperative agent finds a swap candidate within a search radius and swaps places (Listing 4).
+    "It only requires 13 lines on cognition sub-layer and 24 lines on locomotion layer" (§II B).
+- Executable or descriptive: executable code in Vadere; the layering is described generically.
+- How it travels between systems: **by design intent, not shown.** "The new model shall represent
+  a generic architecture which can be easily integrated into different simulation tools,
+  independent of the choice of locomotion model" (§II A); the model "can be easily implemented in
+  different pedestrian simulation programs" (Introduction). It was implemented in **one**
+  simulator (Vadere, §II B), and the evaluation (100 runs, §II C) reports no second locomotion
+  model.
+- Evidence that it works in two or more systems: none reported. Figure 1 shows the opposite problem
+  for locomotion models alone: under the social force model the walker "walks on other agents",
+  and under the optimal steps model "the crowd blocks the walking agent completely".
+- Failure modes and limits stated by the authors:
+  - the simulated walker was much slower inside the crowd than real walkers (0.16 m/s against
+    0.70 m/s), because "it takes some simulation steps until a walking agent gets cooperative"
+    (§II C, Table IV);
+  - time inside the crowd was 9.90 ± 2.24 s simulated against 7.88 ± 2.31 s observed (§II C);
+  - "this is the very first version ... and it will require some sort of calibration in the
+    future" (§II C);
+  - the participants were first-year students, there were 30 runs, and the setting was a
+    controlled experiment whose "artificiality ... might have affected each participant's
+    behaviour" (Supplement D).
+- For the portable rule core: **adapt** [inference].
+  - The perception → cognition → behaviour layering is #34's perception adapter → rule engine →
+    action adapter, with cognition as the portable part. "Cooperative" is an intention; "swap
+    places" is the locomotion-layer realisation, the binding.
+  - But its own trigger is exactly what the core must avoid: "4 steps" and "0.05" are tied to the
+    step and to the motion model's speed. The authors trace their main quantitative mismatch to
+    step-counted detection (§II C).
+  - A portable version would state the trigger in the vocabulary (e.g. time waited) and leave
+    "how slow counts as stuck" to each adapter.
+- BibTeX: `kleinmeier2020cooperation`
+
+---
+
+### [EscuderoJimenez-HuNavSim2]: HuNavSim 2.0: An Enhanced Human Navigation Simulator for Human-Aware Robot Navigation
+
+- Authors / Year / Venue: Miguel Escudero-Jiménez, Noé Pérez-Higueras, Andrés Martínez-Silva,
+  Fernando Caballero, Luis Merino / 2025 / arXiv:2507.17317v2 [cs.RO].
+- Link: https://arxiv.org/abs/2507.17317
+- Status: `[preprint]`, "submitted to the 8th Iberian Robotics Conference (ROBOT 2025)" (arXiv
+  comment). No published version was checked. Its predecessor, HuNavSim 1.0, is published in
+  *IEEE Robotics and Automation Letters* 8(11), 2023, as cited in this paper's reference [1]; it
+  was not read.
+- Read: full text, from `refs/pr_arxiv_2507_17317v2_hunavsim2.txt`.
+- What it represents: **human navigation behaviours** for robot-navigation testing, written as
+  behaviour trees, run by one engine across several host simulators.
+- Structure: behaviour trees whose nodes are actions and conditions, for example "GoTo",
+  "LookingAtPoint", "StopAndWaitTimer", "isAtPosition", "ConversationFormation", "FollowAgent",
+  "IsLookingAtMe" and "SaySomething" (§IV B). Human motion is the Social Force Model, with optional
+  noise in its parameters (§IV A).
+- Executable or descriptive: executable, by HuNavSim itself.
+- How it travels between systems: **one engine plus a wrapper per host simulator.** HuNavSim
+  controls "the pose and behavior of human agents spawned within a base robotics simulator, such
+  as Gazebo, Isaac Sim, or Webots ... Then, a communication wrapper is required to interface
+  HuNavSim with the chosen simulator. In each simulation step, the wrapper sends the current state
+  of the agents to the HuNavSim manager, which computes their next state based on the behavior
+  trees and updates it in the base simulator" (§III, Figure 2). Four host simulators are supported:
+  Gazebo Classic, Gazebo Fortress, NVIDIA Isaac Sim and Webots (Table I, §V).
+- Evidence that it works in two or more systems: it **runs** in four, but **no comparison of
+  behaviour across them is reported.** The paper shows scenarios in each (Figure 4) and lists 32
+  metrics (§V B), but no metric is compared across hosts.
+- Failure modes and limits stated by the authors: "There is no common agreement in the community
+  about specific benchmark scenarios and a suitable set of metrics" (§V B). Common motion models
+  "generally apply the same behavior patterns to all agents, resulting in uniform responses across
+  similar scenarios" (§IV A).
+- For the portable rule core: **adopt the architecture as precedent; note the missing evidence**
+  [inference].
+  - This is #34's design in working software: one behaviour engine, a thin per-simulator wrapper,
+    state in and next state out each step.
+  - Note what makes it easy here. HuNavSim also computes the human *motion* itself, so the hosts
+    differ only in robot, sensing and environment. A portable rule core that hands Decisions to
+    each simulator's own motion model faces more variation than this.
+  - The paper does not show that the behaviour stayed the same across hosts, and that is exactly
+    Q2's question.
+- BibTeX: `escuderojimenez2025hunavsim2`
+
+---
+
+## 5. Taxonomies
+
+### [Francis-SocNavPrinciples]: Principles and Guidelines for Evaluating Social Robot Navigation Algorithms
+
+- Authors / Year / Venue: Anthony Francis, Claudia Pérez-D'Arpino, Chengshu Li, Fei Xia, and 27
+  co-authors / 2025 (published; arXiv 2023) / *ACM Transactions on Human-Robot Interaction* 14(2),
+  1–65.
+- Link: https://doi.org/10.1145/3700599 | https://arxiv.org/abs/2306.16740
+- Status: published at ACM THRI (Crossref; CC BY). Read as **arXiv v4 (September 2023)**, because
+  ACM and the Aston repository refused automated download. The published version is 65 pages
+  against 42 and may differ; locators are to arXiv v4.
+- Read: these sections: IV-4 (scenarios as a class of study), V (taxonomy), VII-B and VII-C
+  (scenario cards; example scenarios, Table III) and X-C to X-E (simulators; common API;
+  guidelines), from `refs/pr_arxiv_2306_16740v4_francis.txt`. Not read: the principles in detail
+  (III), metrics (VI), benchmarks (VIII), datasets (IX).
+- What it represents: **scenarios** of social robot navigation, plus a taxonomy of research
+  instruments.
+- Structure:
+  - The taxonomy (§V, Figure 5) classifies research *instruments* (metrics, scenarios,
+    benchmarks, datasets, simulators) by common factors: context, physical environment, human user
+    type, human behaviour, robot task, robot role, and so on. It is not a taxonomy of conflicts.
+  - A **Scenario Card** (§VII-B) has three parts: "Scenario Metadata that define the name,
+    description, and scientific purpose", "Scenario Definition which clearly describes the
+    environment, intended human behavior, and intended robot task", and a "Scenario Usage Guide"
+    (metrics, success and failure criteria, a human behaviour playbook).
+  - Scenario types "can be grouped into broad classes such as head-on approaches versus
+    intersections, doorways and elevators, crowd versus group, interactive and accompanying"
+    (§VII-B 1).
+  - Table III names example scenarios in five groups:
+    - hallway: FRONTAL APPROACH, PEDESTRIAN OVERTAKING, ROBOT OVERTAKING, INTERSECTION (with and
+      without a gesture to wait), BLIND CORNER;
+    - doorway: NARROW DOORWAY, ENTERING ROOM, EXITING ROOM, with related NARROW ARCH and
+      ENTERING / EXITING ELEVATOR;
+    - interpersonal: JOINING A GROUP, FOLLOWING, LEADING;
+    - crowd: CROWD NAVIGATION, PARALLEL TRAFFIC, PERPENDICULAR TRAFFIC;
+    - specialised: OBJECT HANDOVER, CRASH CART.
+
+    Each row gives a geometric layout, robot role ("Any", "Servant", "Leader"), robot task, human
+    behaviour and ideal outcome. ⚠ The table's columns were jumbled in extraction and I
+    reconstructed them by order. As reconstructed, the two room scenarios both give priority to
+    the one leaving: ENTERING ROOM's ideal outcome is "Robot allows human exit", and EXITING ROOM's
+    is "Robot exits first".
+  - "Dozens of social navigation scenarios have been proposed in the literature, and we cannot
+    list them comprehensively" (§VII-C).
+- Executable or descriptive: descriptive. Scenario cards are for people (§VII-B).
+- How it travels between systems: the paper's main proposal for portability is about **metrics**,
+  not behaviour. "Many simulators exist with diverse APIs which are largely not compatible" (§II).
+  It proposes a common API: a JSON Schema for input, reference metric implementations "packaged
+  as libraries so different groups can reuse the same implementation to get comparable results",
+  and per-system "bridge code that translates data from their robots, simulators, or datasets into
+  a format the API can consume" (§X-D 2). Guideline S1 is "Use Standardized APIs" (§X-E).
+- Evidence that it works in two or more systems: none yet in the version read. The API was "being
+  developed", with bridges planned for ROS and GymCollisionAvoidance and in progress with SEAN 2.0,
+  SocialGym and DynaBarn (§X-D 2).
+- Failure modes and limits stated by the authors: pedestrian reactivity "directly influence[s] both
+  the training and evaluation of social navigation policies"; replayed trajectories cannot react,
+  and models such as SFM and ORCA are imperfect (§X-C 3).
+- For the portable rule core: **adapt the scenario names; reject the taxonomy as a conflict
+  vocabulary** [inference].
+  - The hallway and doorway names (frontal approach, overtaking, intersection, blind corner,
+    narrow doorway, entering and exiting a room or a lift) are an established vocabulary for
+    *geometric situations*. It could label sub-cases of #34's `passing_room` and
+    `exclusive_access.passage` instead of new names.
+  - The room rows already encode "the one leaving goes first" as an ideal outcome, the convention
+    behind #34's `exclusive_access.vehicle_door`.
+  - But the classes are robot-centred and geometric. Nothing here classifies a situation by *what
+    is contested*. There is no queue, no boarding, and no role given by position in a line.
+  - The metrics API is a second precedent for the FMI pattern: one shared implementation plus
+    bridge code per simulator.
+- BibTeX: `francis2025socnav`
+
+---
+
+### [Tessier-ConflictingAgents]: Agents' conflicts: new issues (chapter 1 of *Conflicting Agents*)
+
+- Authors / Year / Venue: Catherine Tessier, Heinz-Jürgen Müller, Humbert Fiorino, Laurent
+  Chaudron / 2002 / chapter 1 (pp. 1–30) of C. Tessier, L. Chaudron, H.-J. Müller (eds.),
+  *Conflicting Agents: Conflict Management in Multi-Agent Systems*, Kluwer Academic Publishers
+  (Springer US), ISBN 978-0-7923-7210-3.
+- Link: https://doi.org/10.1007/b116057
+- Status: published (an edited book; Crossref record). Read from the user's own copy, which this
+  project already holds as a reference document in the parent FYP folder (`CLAUDE.md`). The
+  extract is cached on disk but **not committed** (work log A7).
+- Read: these sections of chapter 1: 1.2, 2 (2.1–2.3), 3, 4 and 5.1, pp. 4–21. The rest of the
+  book was not read.
+- What it represents: **conflicts** between agents (artificial and human), as concepts.
+- Structure:
+  - Five "conceptual postulates" (§2.1, pp. 7–8):
+    1. **difference against common elements**: "conflicts appear because several different (i.e.
+       distinct) agents want to use the same resource at the same time, or because agents have
+       different viewpoints (i.e. their knowledge is not the same) on one common situation";
+    2. at least two agents;
+    3. symmetry;
+    4. **a common reference**: "agents must have things in common at the same time: resources,
+       rules, processing level, decision level, involvement level";
+    5. consequences: "If there is no consequence, a conflict is not a conflict".
+  - **Two classes of conflict** (§3, pp. 13–15):
+    - **physical conflicts** "are resource conflicts". "A typical physical conflict is the
+      intention of using at the same time a resource which cannot be shared out or which is
+      scanty", and for robots "one of the most critical resource is space";
+    - **knowledge conflicts** "stem from the fact that the agents' information is not the same".
+  - A unified definition (§4, pp. 15–16): a set of propositional attitudes is a conflict "if and
+    only if C must be reduced". Every conflict rests on a "crucial propositional attitude" (a
+    constraint, law or norm), and these differ in hardness: "a PAc expressing a physical
+    constraint ... is generally a hard one, whereas a PAc expressing a knowledge constraint or a
+    norm might not be (a knowledge constraint might be relaxed, a norm might be infringed)" (p. 16).
+  - Strategies (§2.3, pp. 12–13): "avoiding them or solving them". Avoidance is by "common rules ...
+    i.e. conventions (e.g. drive on the right lane and pass on the left one)". Solving is by
+    "synchronization algorithms (i.e a centralized approach ...) or negotiation protocols (i.e. a
+    decentralized approach)".
+  - Handling patterns from human conflict management (§5.1, pp. 17–19): flight, destruction,
+    subservience, delegation to a third party, compromise and consensus.
+- Executable or descriptive: descriptive (conceptual).
+- How it travels between systems: not addressed.
+- Evidence that it works in two or more systems: not applicable.
+- Failure modes and limits stated by the authors: "trying to give one definition of conflict in
+  MAS does not make sense", because conflict handling "highly depend[s] on the kind of agents, and
+  on the epistemological level that is considered" (§1.1, p. 4). Only parts of the human conflict
+  types "have been modelled in MAS implementations" (§2.2, p. 10).
+- For the portable rule core: **adopt the top level; it exposes a gap** [inference].
+  - "Physical conflicts are resource conflicts" is an established top level for #34's hierarchy of
+    "what is contested". `passing_room`, `exclusive_access` and `capacity` are all physical
+    conflicts in this sense.
+  - Two consequences follow. First, **knowledge conflicts are absent from the idea's vocabulary.**
+    A queue-cutting dispute is partly one ("I was here first"). The vocabulary should mark it as
+    out of scope (#34's L4 "abstain") rather than force it into a physical type.
+  - Second, the **hardness of the crucial constraint** separates #34's own sub-types. In a passage
+    the constraint is physical and hard; in a queue it is a norm, and "a norm might be infringed".
+    The idea's worked example moves a rule from `.passage` to `.queue`, so it crosses that line.
+  - The handling patterns (flight, subservience, delegation, compromise, consensus) map onto #34's
+    actions and onto negsim's arbiter, which is a delegate.
+- BibTeX: `tessier2002agentsconflicts`
+
+---
+
+## 6. Precedent: the same rule in more than one simulator
+
+Q2 asks whether any crowd, pedestrian, game or robot-navigation study has run the *same
+behaviour rule* in two or more simulators. The nearest crowd and robot cases are in group 4:
+[Curtis-Menge] (one behaviour layer, three motion models, one framework) and
+[EscuderoJimenez-HuNavSim2] (one behaviour engine, four host simulators, no comparison).
+
+The studies that actually ran one rule in two implementations and measured whether the
+behaviour stayed the same come from **agent-based social simulation**, an adjacent field. They
+are called *docking*, *alignment* or *replication* there. All four below are that kind of study,
+and all four found differences.
+
+### [Axtell-Docking]: Aligning Simulation Models: A Case Study and Results
+
+- Authors / Year / Venue: Robert Axtell, Robert Axelrod, Joshua M. Epstein, Michael D. Cohen /
+  1996 / *Computational and Mathematical Organization Theory* 1, 123–141.
+- Link: https://doi.org/10.1007/BF01299065 | preprint:
+  https://public.websites.umich.edu/~axe/research/Aligning_Sim.pdf
+- Status: published at CMOT. Read as the authors' preprint dated 1 September 1995, which states
+  "Published in Computational and Mathematical Organization Theory, 1 (1996), pp. 123-141". Page
+  numbers below are the preprint's.
+- Read: full text, with both appendices (the authors' work logs), from
+  `refs/pr_axtell1995_aligning_preprint.txt`.
+- What it represents: **models** and their rules. One behaviour rule, Axelrod's rule of cultural
+  transmission, is run in two simulators.
+- Structure: "docking", "to determine whether two models can produce the same results"
+  (Abstract). Axelrod's Culture Model (about 1,500 lines of Pascal) was the target. Sugarscape
+  (about 20,000 lines) was modified to run "exactly his rules for determining cultural change"
+  (§2 note 3; §4.1).
+- Executable or descriptive: both are executable programs; the rule travelled as prose plus
+  conversation.
+- How it travels between systems: **manual re-implementation**, aided by a meeting: "a meeting
+  was held to resolve several ambiguities that remained on the basis of reading Axelrod's text"
+  (§5.1).
+- Evidence that it works in two or more systems: **yes, with a measured failure.**
+  - After aligning neighbourhood, movement, density and topology (§4.1), the two produced
+    statistically indistinguishable results in **11 of 12** comparisons.
+  - The 20×20 lattice failed: K-S statistic 0.5 against a critical 0.304; means 16.25 against
+    9.23 (§4.2).
+  - The cause was the **order in which agents are activated**: sampling without replacement in
+    Sugarscape, with replacement in Axelrod's model. That difference had been "deemed small and
+    not eliminated" (§4.1). With random activation, all cases matched (§4.2, note 12).
+  - A second hidden difference was found "two months later". One model changed the active agent
+    in a cultural exchange, the other its neighbour, which matters at the edges (§5.1).
+- Failure modes and limits stated by the authors:
+  - "under current standards of reporting a simulation model it will often not be possible to
+    resolve all questions for an alignment exercise", so one needs the author, the source code or
+    fuller documentation (§5.1);
+  - one sentence in the prose ("the chance of interaction is proportional to the cultural
+    similarity") was implemented literally by one team and differently by the other (Appendix 1,
+    item 5);
+  - three standards of equivalence: "numerical identity", "distributional" and "relational"
+    equivalence (§4.2, §6);
+  - testing equivalence by failing to reject a null hypothesis "creates an incentive for
+    investigators to test equivalence with small sample sizes" (§4.2, point 3);
+  - it was easy partly because of "the extreme simplicity of the Axelrod model" (§5.3). The work
+    took about 23 + 37 hours (§5.2).
+- For the portable rule core: **adopt the method and the equivalence standards** [inference].
+  - This is the closest thing in the literature to Q2's question, answered: a rule carried into a
+    second simulator gave the same behaviour only after aligning details nobody had thought were
+    part of the rule, and update order was one of them.
+  - #34's conformance tests should state in advance which equivalence they require, distributional
+    or relational. They should also treat update order and evaluation timing as part of what a
+    simulator must declare.
+- BibTeX: `axtell1996aligning`
+
+---
+
+### [Edmonds-Replication]: Replication, Replication and Replication: Some Hard Lessons from Model Alignment
+
+- Authors / Year / Venue: Bruce Edmonds, David Hales / 2003 / *Journal of Artificial Societies and
+  Social Simulation* 6(4), 11.
+- Link: https://www.jasss.org/6/4/11.html (no DOI shown on the article page)
+- Status: published at JASSS (published 31 October 2003; article page).
+- Read: full text and appendix, from `refs/pr_jasss_6_4_11_edmonds2003.txt`.
+- What it represents: a published model (Riolo et al. 2001, *Nature*: cooperation through tags)
+  re-implemented twice, independently.
+- Structure: the model's rules (¶2.2–¶2.7). The decisive one is the donation rule: donate "when
+  | tD − tR | ≤ TD" (¶2.4).
+- Executable or descriptive: implementation A in Java, B in SDML, a declarative language (¶4.1,
+  ¶4.2, Appendix).
+- How it travels between systems: manual re-implementation from the published description.
+- Evidence that it works in two or more systems: **two re-implementations agreed with each other
+  and disagreed with the original.**
+  - At 2 pairings the donation rate was 42.6% in both re-implementations against 4.3% published
+    (Tables 3 and 5). At cost 0.5 it was 45.9% against 24.7% (Table 4).
+  - The cause was **tie-breaking**: what happens in tournament selection "when an agent has an
+    identical score to a randomly chosen agent". The text left it unspecified, both
+    re-implementers chose a random choice, and the original evidently favoured the selected agent
+    (¶8.3, ¶8.6, Table 6). "It is far from obvious that such differences would have any
+    significant effect on the results" (¶8.5).
+  - **One comparison operator reversed the finding.** Changing "≤" to "<" in the donation rule
+    made donation vanish: 0.0% in every setting (¶9.2, Tables 9–10). The claimed effect rested on
+    forced donation between identical "tag clones" (¶9.4, ¶9.15).
+- Failure modes and limits stated by the authors:
+  - aligning models "revealed a host of minor bugs and ill-defined implementation issues in
+    simulations that otherwise appeared to be working well" (¶1.5);
+  - "One cannot prove that implementations are the same; one can only do simulation experiments
+    to try and disconfirm the hypothesis that they are the same". Settings may exist where "the
+    rounding method in the underlying arithmetic or the pseudo-random number algorithm" make a
+    measurable difference (¶6.3);
+  - their practical lessons (¶10.1): check the first few time cycles; use statistical tests over
+    long-run averages; switch features off until the models align; re-implement in a different
+    kind of language, by different people.
+- For the portable rule core: **adopt as the strongest single warning in this review**
+  [inference].
+  - Two of #34's own design points are exactly what broke here: **ties** and **thresholds at
+    their boundary**.
+  - Today's rule format already makes the tie policy compulsory (`tie: no_match`,
+    `rule-format.md` §6) and allows `tie_within`. A portable core must keep that, and must fix
+    whether each comparison is strict or not as part of the vocabulary's definition.
+- BibTeX: `edmonds2003replication`
+
+---
+
+### [Wilensky-MakingModelsMatch]: Making Models Match: Replicating an Agent-Based Model
+
+- Authors / Year / Venue: Uri Wilensky, William Rand / 2007 / *Journal of Artificial Societies and
+  Social Simulation* 10(4), 2.
+- Link: https://www.jasss.org/10/4/2.html (no DOI shown on the article page)
+- Status: published at JASSS (received 12 January 2007, accepted 6 May 2007; article page).
+- Read: full text (¶1.1–¶7.5 and tables), from `refs/pr_jasss_10_4_2_wilensky2007.txt`.
+- What it represents: a model (Axelrod and Hammond's ethnocentrism model) replicated in a
+  different toolkit.
+- Structure: the model's four stages per period, immigration, interaction, reproduction and death
+  (¶5.2). Replication can differ in six dimensions, "(1) time, (2) hardware, (3) languages, (4)
+  toolkits, (5) algorithms and (6) authors", ordered by how likely each is to change results
+  (¶2.7). Here every dimension was varied (¶2.14).
+- Executable or descriptive: Ascape (Java) for the original, NetLogo for the replication (¶5.3,
+  ¶5.6).
+- How it travels between systems: manual re-implementation, then rounds of comparison, email and
+  meetings (¶5.7–¶5.19).
+- Evidence that it works in two or more systems: **only after four rounds of hidden differences
+  were found, and not fully.**
+  - The first replication differed significantly: cooperative actions 74.15% against 79.65%
+    (t = −6.424), ethnocentric genotypes 76.31% against 69.14% (t = 4.127) (Table 1).
+  - The differences found, in turn:
+    - an ambiguity about *when* a value resets (¶5.7);
+    - comparison measures misread from variable names, "cc-count" taken for cooperation events
+      when it counted altruistic agents (¶5.15);
+    - a different **order of events** within a period, which changed population size and variance
+      (¶5.17);
+    - an **unshuffled agent list** that let some agents always reproduce first (¶5.19).
+  - Final result: two of three measures matched, and cooperative actions stayed distinguishable
+    (74.15% against 76.77%, t = −2.817; Table 3, ¶5.20).
+- Failure modes and limits stated by the authors:
+  - "Even apparently minor details in language and algorithmic specifications, like the details
+    of floating point arithmetic and differences between implementations of protocols can cause
+    differences in replicated models" (¶2.10);
+  - "running the same program on the same machine with the same parameters does not guarantee
+    'numerical identity'" (¶2.15, citing Belding 2000);
+  - "the measures themselves must also be reproduced in the replicated model" (¶2.18);
+  - replication "will help us define terms of art such as 'time-step', 'shuffled list' and 'vision
+    cone'" (¶3.6). In the longer run they expect "a common standard form or language for model
+    publication" (¶7.1).
+- For the portable rule core: **adopt the six dimensions as a checklist** [inference].
+  - Carrying a rule from negsim to another simulator varies all six at once, the case
+    Wilensky and Rand found hardest.
+  - Their four hidden differences were timing, measurement, event order and agent order. None is
+    in a rule's text, and all four would sit in the adapters or the host. Conformance tests must
+    reach them, and outcome measures must be defined once, outside every simulator.
+- BibTeX: `wilensky2007making`
+
+---
+
+### [Galan-Reimplementing]: Appearances Can Be Deceiving: Lessons Learned Re-Implementing Axelrod's 'Evolutionary Approach to Norms'
+
+- Authors / Year / Venue: José Manuel Galán, Luis R. Izquierdo / 2005 / *Journal of Artificial
+  Societies and Social Simulation* 8(3), 2.
+- Link: https://www.jasss.org/8/3/2.html (no DOI shown on the article page)
+- Status: published at JASSS (received 18 November 2004, accepted 30 March 2005; article page).
+  Found through [Neumann-HomoSocionicus] Note 7, not a seed.
+- Read: full text, from `refs/pr_jasss_8_3_2_galan2005.txt`. ⚠ Equations 1–7 did not survive the
+  HTML extraction. Nothing below depends on them.
+- What it represents: the **Norms and Metanorms games** of Axelrod (1986), re-implemented in Java
+  with RePast (¶4.1). This is the game arXiv:2409.00993 builds on (see `novelty-check.md`).
+- Structure: 20 agents, each with Boldness and Vengefulness. Payoffs T = 3, H = −1, E = −2,
+  P = −9, and for metanorms ME = −2, MP = −9 (¶3.1–¶3.6, Table 1).
+- Executable or descriptive: executable.
+- How it travels between systems: manual re-implementation from the 1986 paper.
+- Evidence that it works in two or more systems: **the re-implementation reproduced the short-run
+  result and reversed the long-run one.**
+  - Axelrod reported 5 runs of 100 generations. With 1,000 runs of up to 10⁶ generations the
+    metanorm-supported norm "usually collapses" (¶6.2, Figure 5).
+  - The conclusion also reverses with a lower mutation rate (¶6.6), with meta-payoffs divided by
+    10 (¶6.7–¶6.8: "Axelrod's conclusions are reversed"), and with three other selection
+    mechanisms that are "equally valid instantiations of the conceptual model" (¶6.11–¶6.12,
+    Figure 12).
+- Failure modes and limits stated by the authors:
+  - "Artefacts in the design of a model can appear when assumptions which are made arbitrarily
+    ... have an unanticipated and significant impact"; "Implementation artefacts appear in the
+    potentially ambiguous process of translating a model described in natural language into a
+    computer program" (¶1.3);
+  - the selection rule "is ambiguous when every agent in a generation happens to obtain the same
+    payoff ... Proceeding in a different way ... can alter the long-term results significantly"
+    (note 4), another unspecified tie;
+  - "The computer model is often only one of many possible instantiations of a more general
+    conceptual model. Therefore the conclusions obtained with the computer model do not
+    necessarily apply to the conceptual model" (¶7.2).
+- For the portable rule core: **adopt as evidence** [inference].
+  - A rule core *is* a conceptual model in this sense, and each simulator's adapters make one
+    instantiation of it. A result obtained in one simulator does not transfer to the core
+    automatically.
+  - Testing must also run long enough: short runs can show the opposite of the long-run outcome.
+- BibTeX: `galan2005appearances`
+
+---
+
+### [Donkin-Replicating]: Replicating complex agent based models, a formidable task
+
+- Title: Replicating complex agent based models, a formidable task
+- Authors, year and venue: Elizabeth Donkin, Peter Dennis, Andrey Ustalakov, John Warren, Amanda
+  Clare / 2017 / *Environmental Modelling & Software* 92, 142–151, doi:10.1016/j.envsoft.2017.01.020
+- Link tried: https://www.sciencedirect.com/science/article/pii/S1364815216310088/pdf (HTTP 403);
+  https://research.aber.ac.uk/files/11408745/1_s2.0_S1364815216310088_main.pdf (HTTP 403)
+- Reason unavailable: open access (CC BY 4.0, per Crossref), but both hosts refused automated
+  download
+- Date attempted: 2026-10-18
+- Status: awaiting PDF from user
+
+---
