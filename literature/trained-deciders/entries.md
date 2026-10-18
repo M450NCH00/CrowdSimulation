@@ -530,11 +530,11 @@ the evidence beyond the Q1–Q4 entries.
   logic rules (for example the "but" rule: the sentiment of "A but B" follows B) (§3.2, §3.3;
   Fig. 1; Eq. 2). The teacher is rules **plus** the student, not rules alone.
 - Inputs and outputs: a sentence → a sentiment class; a token sequence → entity tags (§4).
-- Fidelity / accuracy: on SST2 sentiment, base CNN 87.2%, distilled student 88.8%, rule teacher
-  89.3% (Table 2, rows 1, 7, 8). The rule teacher q "performs better than" the student p in general
+- Fidelity / accuracy: on SST2 sentiment, base CNN 87.2%, distilled student 88.8%, rule-regularised teacher
+  89.3% (Table 2, rows 1, 7, 8). The teacher q "performs better than" the student p in general
   (§3.4), and the gap is larger where rules link several examples (§5.2).
 - Behaviour with less data (the nearest thing to "outside the training data"): with 5% of the
-  labels, 79.9% (base) against 81.5% (student) and 82.5% (rule teacher); with all labels, 87.2%
+  labels, 79.9% (base) against 81.5% (student) and 82.5% (teacher); with all labels, 87.2%
   against 88.8% and 89.3% (Table 3). The rules help **more when labels are scarce** (§5.1).
 - Cost: one set of network parameters, no extra parameters for the rules (§5.1 on Table 2; §5.2);
   the student is "more lightweight and efficient", and needed when "rule evaluation is expensive or

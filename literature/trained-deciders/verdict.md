@@ -8,7 +8,7 @@
 **1. The rule engine stays the reference decider.** A trained model is worth adding only for a
 claim fixed in advance: closer to human evidence, the same decisions more cheaply, or decisions
 where no rule matches. The rules are already cheap (arbitration rules have run at 10,000 agents,
-`research-gap.md` §6), and a rule teacher beat its own distilled student ([Hu-LogicRules] Table 2).
+`research-gap.md` §6), and a rule-regularised teacher beat its own distilled student ([Hu-LogicRules] Table 2).
 
 **2. Worth training first: small decision trees or rule lists on Situation features**, against an
 **LLM-filled lookup table** as baseline. Both use the rules' inputs, so they are as portable as the

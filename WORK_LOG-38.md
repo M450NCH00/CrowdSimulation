@@ -155,6 +155,90 @@ Priority if short of budget: Q1, Q2, Q4, Q3, Q5. Aim for 8 to 12 entries.
     `missing-papers.md` will list only versions not read.
 - Next step: `options.md` (with the Q1–Q5 answers), `evaluation.md`, `verdict.md`.
 
+### 2026-10-18 — Synthesis files, verification, README
+- What I did: wrote `options.md` (§1 answers to Q1–Q5; §2 one table of seven options, every cell
+  citing an entry or marked `[inference]`; §3 what the table cannot carry), `evaluation.md` (checks
+  E1–E10 and bias checks B1–B7), `verdict.md` (Q6), `search-log.md`, `missing-papers.md`,
+  `refs-trained-deciders.bib`, and a README row, findings block and layout lines.
+- Decisions I made (flagged in the files as proposals):
+  - Added an **LLM-filled lookup table** as an option, although the issue does not list it, because
+    it is the only approach in the sources that reached large populations.
+  - Put the Q1–Q5 answers in `options.md` §1, since the deliverables list has no separate file for
+    them.
+  - The checks and pass criteria in `evaluation.md` are mine.
+- Verification (workflow §5b):
+  - The key numbers were grepped against the cached extracts: 60 quoted values across 12
+    extracts, plus Rudin's two (130+ factors, 7±2) and Zhang's DTW values against its summary.
+    All were found. This is a check of the main figures, not of every number in every entry.
+  - Every handle used in the three synthesis files resolves to an entry or a named
+    cross-reference.
+  - `verdict.md` cut from 666 to 563 words, to keep it to one page (#37's is 576).
+  - Two wording overreaches corrected on re-read: VIPER's guarantee (see the Q2/Q4 entry above);
+    and "a rule teacher beat its student", changed to "a rule-regularised teacher", because Hu et
+    al.'s teacher is the network projected onto the rules, not the rules alone.
+  - Two lead descriptions in the search log that came only from search snippets were removed
+    (issue: do not summarise from abstracts).
+- Next step: push, open the PR against the #37 branch, comment on the issue.
+
 ## Open questions / risks
 
-## Summary (fill in at the end)
+1. **Q2 is answered only in part.** No source compares an *interpretable model learned from
+   labels* with *hand-written rules* on the same task. Rudin argues there is usually no accuracy
+   loss; VIPER compares a tree with its neural teacher; [Yang-S2AN] compares a network, not an
+   interpretable model. The verdict's main recommendation (train small trees first) therefore rests
+   on argument and other domains, not on a direct test.
+2. **No source tests carry-over of a trained decider between simulators** (Q3). SA-CADRL's
+   sim-to-robot transfer is qualitative. The claim that trees and tables "are as portable as the
+   rules" is my inference from their inputs.
+3. **Only two sources are about pedestrian conflicts** ([Chen-SACADRL], [Fang-Etiquette]); the
+   rest are evacuation, mobility, epidemics, control or text. Nothing here shows what happens in a
+   queue.
+4. **The lookup-table option is my addition**, not on the issue's list. It is presented as a
+   baseline, and the supervisor may prefer to drop it.
+5. **Evaluation pass criteria are mine** and mostly not yet set (tolerances, margins). The list of
+   attributes that "must not matter" per conflict type does not exist yet; B3 cannot run without it.
+   That is a supervisor decision (verdict, item (c)).
+6. **B6 and B7 for `ethnic_group`** need the fictional group switched on in a teacher run, which
+   waits for the supervisor's ethics sign-off (`WORK_LOG-32.md`, Q1). I did not switch anything on.
+7. **Selection bias.** Only three web searches were run; ten of the 13 entries came from leads I
+   knew (five named in the issue, five from memory), confirmed afterwards. Recent or less-cited
+   work, especially on Q1 and Q3, is likely missed. Unread leads are in `search-log.md` §5.
+8. **Conflict of interest**: [Tamkin-Discrim] is by Anthropic about Anthropic's model; this review
+   was written with an Anthropic model. It is used only for its test design, not its findings
+   about Claude.
+9. **The 10,000-agent costs are my multiplication** of per-decision figures from different
+   hardware, not measurements.
+10. **13 entries**, one above the issue's 8–12 aim.
+11. **Git state the user should know about.** The first `git checkout main` half-failed with
+    "unable to write symref for HEAD: Permission denied" (probably a lock held by another program).
+    I recovered with `git stash`, which left `stash@{0}` holding only `main`'s tree. It is safe to
+    drop (`git stash drop stash@{0}`) and I have not dropped it.
+12. **Branch base (A1)**: this branch stacks on #37's (PR #45), so the PR targets that branch and
+    merging it will not close #38 automatically.
+
+## Summary
+
+**What changed.** A new folder, `literature/trained-deciders/`, answering issue #38's six
+questions:
+- `entries.md`: 13 entries plus cross-references to Zhang, Fang and Yang-S2AN;
+- `options.md`: the Q1–Q5 answers, and one table of seven decider options;
+- `evaluation.md`: fidelity, generalisation and cost checks E1–E10, and bias checks B1–B7,
+  including the counterfactual test and the "no `ethnic_group` input" rule;
+- `verdict.md`: one page, Q6;
+- `search-log.md`, `missing-papers.md` (0 not obtained), `refs-trained-deciders.bib`.
+
+Also: 13 arXiv copies and their text extracts in `refs/td_*`, and a README row, findings block and
+layout lines. No code, no training, no paid calls; nothing in `llm_negotiation/` changed.
+
+**Why.** Track #34, point 4, proposes trained models as alternative deciders behind the rules'
+Situation → Decision interface. This issue checks the literature before anything is trained.
+
+**Verdict, in one line.** Keep the rule engine as the reference. Train small trees on Situation
+features first, against an LLM-filled lookup table, with LLM decisions from several models
+(disagreement kept) plus the rules as teachers. Do not train RL policies now; use the rule engine
+as a shield. Evaluate by held-out and closed-loop agreement, class shares, abstention and the bias
+checks.
+
+**How it was verified.** See the last progress entry: main numbers grepped against the extracts,
+handles resolved, verdict length checked, two overreaches corrected. Every Q1–Q6 is answered;
+Q2 and Q3 are marked as answered only in part, with the reason.
