@@ -85,7 +85,9 @@ wording no longer exists.
 - **First fold (proposal).**
   - Today's rules come from negsim's encounter classes `head_on`, `crossing`, `overtaking` and
     `single_file_segment` (`llm_negotiation/docs/rule-format.md`, rule fields table).
-  - In #34's draft vocabulary these fall under `passing_room` and `exclusive_access.passage`.
+  - In #34's draft vocabulary these fall under `passing_room` (head-on, crossing, overtaking, as
+    #34 lists them) and `exclusive_access.passage` (`single_file_segment`, `[inference]`: #34 names
+    "narrow passage, doorway" but not this class).
   - Held out: `exclusive_access.queue` (queue cutting), `exclusive_access.vehicle_door` (bus and
     MRT boarding against alighting: `bus_queue_boarding`, `mrt_door_alight_board` in
     `dataset/scenarios.yaml`), and `capacity` (`lift_boarding_capacity`).

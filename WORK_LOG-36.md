@@ -143,8 +143,92 @@ Deliverables go in `literature/unseen-scenarios/`, sources in `refs/`.
     context (§VII, p. 21, citing their own 2006 work).
 - Next step: write `scenario-standards.md`, then `methods.md`.
 
+### 2026-10-18 — Deliverables written
+- What I did: wrote `scenario-standards.md` (8 entries + comparison table), `methods.md` (5 Q1
+  entries incl. the Zhang cross-reference, 5 Q2 entries + 1 stub, 3 Q4 entries),
+  `test-protocol-draft.md`, `verdict.md`, `search-log.md`, `missing-papers.md` and
+  `refs-unseen-scenarios.bib`; added a README row, tree entry and three findings. Posted a progress
+  comment on #36 after Q3.
+- Decisions made while writing (all marked in the files):
+  - **Kept L0-L4, with three changes** argued from the entries: split L0 (new seeds / new
+    co-players, Melting Pot's visitor and resident modes); run L3 in both directions (Cason et al.;
+    Tordeux et al.); add a wording axis W and a convention axis C for the LLM stage (Aher et al.;
+    Binz & Schulz; Wu et al.; Cooper & Kagel).
+  - **Marked as proposals with no source:** the whole-conflict-type hold-out (stricter than
+    Melting Pot), L4 abstention, the first fold, the L4 candidate (`signalised_crossing`), and the
+    `communication`, `service point` and "must say so" parts of the card.
+  - **Verdict trimmed** from 592 to 552 words to fit one page.
+- Checks made: every locator in the four main files was re-checked against the cached text
+  (corrections: SteerBench section names, IMO Annex 2 page, TN 1822 quotation, Zhang table pages,
+  Cooper & Van Huyck p. 24 not 25, Aher appendix F not F.2, a section number I had guessed for
+  Cooper & Kagel removed). The ODD author list, first typed from memory, was checked against the
+  article page (all 19 names matched; one spelling fixed).
+- Next step: verification per §5b, push, PR.
+
 ## Open questions / risks
 
-(to be filled during the work)
+- **U1. L4 (abstain) has no literature behind it.** No source tests a rule that should *decline*
+  to act outside its scope; I did not search the selective-prediction / abstention literature.
+  Whether "abstain" is the right L4 target may depend on what a simulator does when no rule
+  applies (PT-8).
+- **U2. The whole-conflict-type hold-out is my design, not a precedent.** Melting Pot never holds
+  out worlds; no pedestrian study holds out a conflict type. It is argued from the transfer
+  evidence and needs the supervisor's sign-off like the rest of #34.
+- **U3. g6's conclusion now needs a caveat, which I have not written into g6.** g6 says no evidence
+  was found of transfer between structurally different games. [CooperVanHuyck-Transfer] reports
+  transfer "even when games are not structurally similar", within coordination games. Editing g6
+  is outside this issue's deliverables; flagged here and in the verdict for PT-7.
+- **U4. Four spillover studies were read as working papers or manuscripts.** Huck et al.'s working
+  paper even has a different title; Grimm & Mengel's JET version is much longer. Conclusions drawn
+  from them could change against the published text (`missing-papers.md` V1-V5).
+- **U5. ISO 20414 was not read.** TN 1822 is a precursor, not the standard; the card's test fields
+  might change once Annex A/B are seen.
+- **U6. Q4's three studies were my choice**, named from memory and then confirmed, because the issue
+  gave no seeds beyond g5/g6. Other approaches (e.g. contamination-detection methods) are not
+  covered.
+- **U7. Zhang et al.'s out-of-domain layout is not described in the text searched.** It may be in a
+  figure; the rendered PDF was not checked.
+- **U8. Branch base (A1).** The PR targets the #35 branch, so merging it will not close #36
+  automatically.
+- **U9. What is committed (A3).** Eleven cached sources with no open licence are kept on disk only.
+  The user may prefer a different line, e.g. committing the JASSS or JuPedSim text.
+- **U10. The protocol's "simple convention" baseline examples** ("first-come-first-served",
+  "alighting before boarding") are my examples, not taken from the human-evidence reviews; PT-3
+  should supply the real ones.
 
-## Summary (fill in at the end)
+## Summary
+
+**What changed.** New folder `literature/unseen-scenarios/` with the seven deliverables the issue
+lists; 20 sources read (7 scenario formats, 13 studies) and 2 stubbed (ISO 20414; Mengel & Sciubba
+2014); text extracts under `refs/us_*` (arXiv, CC BY-ND and US-government copies tracked, the rest
+on disk only via `.gitignore`); README row, tree entry and three findings.
+
+**Why.** Issue #36 (PT-2 of #34) asks how extracted rules should be tested on scenarios they were
+not extracted from, and how such scenarios should be written down so several simulators can run
+them.
+
+**Answers, in one line each** (details in `verdict.md`):
+- **Q1:** "unseen" means new partners (Melting Pot), a new layout (Zhang; Tordeux) or a new test
+  situation (RiMEA). No field holds out a whole type of situation.
+- **Q2:** five of six leads read. Transfer happens within a class of games; it is directional,
+  sometimes harmful, and sensitive to discriminability and context.
+- **Q3:** no format states who goes first, models communication, or allows joining a queue
+  part-way; the card must be assembled from seven formats.
+- **Q4:** leakage can be graded (counterfactual, new-variant and perturbation tests), not excluded.
+- **Q5:** a draft protocol with three changes to L0-L4, freezing of cores *and* bindings, five
+  baselines, nine metrics and twenty card fields, each sourced or marked "(proposal)".
+
+**How it was verified (workflow §5b).**
+- Every quantitative claim and definition in `methods.md`, `scenario-standards.md`,
+  `test-protocol-draft.md` and `verdict.md` carries a locator, or is marked `[inference]`,
+  `[unverified]` or "(proposal)". Each locator was re-checked against the cached text; the
+  corrections are listed in the last progress entry. A scan for numbers without a nearby locator
+  found only headings, list numbers and the continuation lines of quotations.
+- Every entry was confirmed from its own page plus Crossref, the arXiv API or PMLR; statuses are
+  recorded.
+- Q1-Q5 are each answered; each of g6 §3's six spillover leads is read (five) or stubbed (one);
+  the verdict is 552 words.
+- "Open questions / risks" above is not empty.
+- Sources are cached in `refs/` (`refs/us_*`).
+- There is no test suite for a literature deliverable; no code was changed and no paid API call was
+  made.
