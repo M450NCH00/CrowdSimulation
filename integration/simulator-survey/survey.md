@@ -185,7 +185,9 @@ The answer (2026-10-18) was **"Can't share now"**. Everything else here is there
 3. *The speed.* The senior's verification speed of 0.8 m/s is recorded as "a JuPedSim default for
    model-to-model comparison" (`crowdgym_mapping.md:44-45`).
 4. *Scenario names.* JuPedSim's documentation has notebooks called "corner",
-   "double-bottleneck" and "model-comparison" (`refs/sim_jps_index.txt`, notebook list).
+   "double-bottleneck" and "model-comparison" (cached as `refs/sim_jps_notebooks_corner.txt`,
+   `..._double-bottleneck.txt`, `..._model-comparison.txt`). The corner and double-bottleneck
+   notebooks use `CollisionFreeSpeedModel`.
 
 **Pointing away, or not fitting:**
 
@@ -230,7 +232,8 @@ file would answer this in minutes (Open question Q1).
 - **Links:**
   - site: https://www.jupedsim.org/stable/
   - repository: https://github.com/PedestrianDynamics/jupedsim
-  - citation: Zenodo DOI 10.5281/zenodo.1293771 (docs index)
+  - citation: Zenodo DOI 10.5281/zenodo.1293771 (linked from the docs index page; the link is
+    not in the cached text, which keeps text only)
 - **Licence; last release; recent activity:**
   - licence: LGPL-3.0 "or any later version" (`LICENSE` at `6d559df`). GitHub reports
     `NOASSERTION` (`refs/sim_gh_pedestriandynamics_jupedsim.json`);
@@ -372,7 +375,7 @@ file would answer this in minutes (Open question Q1).
     (`refs/sim_gh_eclipse-sumo_sumo.json`).
 - **Language and API; Python bindings; Windows support:**
   - C++ simulator;
-  - control by **TraCI**, a TCP client/server protocol (TraCI page, "Introduction"), or by
+  - control by **TraCI**, a TCP client/server protocol (TraCI page, "SUMO startup"), or by
     **libsumo**, in-process and API-compatible (Libsumo page);
   - Python: `pip install eclipse-sumo`, or only `traci`, `libsumo` or `sumolib` (Downloads,
     "Python packages / Virtual environments");
