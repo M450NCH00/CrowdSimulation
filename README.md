@@ -62,6 +62,7 @@ experiment code until the literature review is complete and discussed.**
 | 5i | Portable rules (track #34), PT-5: simulators, part 1, a desk survey of crowd simulators and how they work | **delivered** (issue #39) — `integration/simulator-survey/`; one section per simulator, a sourced comparison matrix, and a shortlist (JuPedSim, Mesa, SUMO conditional) for the hands-on trial in #40; nothing installed or run. CrowdGym's engine left open |
 | 5j | Portable rules (track #34), PT-6: simulators, part 2, a hands-on trial of the shortlist and the use-or-build decision | **delivered, decision a proposal** (issue #40) — `integration/simulator-survey/hands-on.md`, `decision.md`, `spikes/`; JuPedSim 1.4.2 and Mesa 3.5.1 run from pinned wheels in a separate venv (user allowed trial code; supervisor status of the standing instruction still unconfirmed). Proposed: hybrid, JuPedSim for motion and boarding with our own queue-order layer, Mesa as the discrete testbed; SUMO not needed. Weights need sign-off |
 | 5k | Portable rules (track #34), PT-7: synthesis — a verdict on each part of the idea, the idea restated, novelty, a supervisor brief and an implementation sequence | **delivered, all proposals** (issue #41) — `portable_rules/docs/`; every part *feasible with changes*, five sub-claims not supported (identical behaviour across simulators; tests proving conformance; today's rules as an unchanged ORCA binding; human fidelity for bus boarding and escalators; RL deciders). No LLM-elicited rule exists yet. The brief lists ten decisions for the supervisor; PT-8 (#42) waits on them |
+| 5l | Describing environments to LLMs: how studies (crowd simulators first) turn a scene with several people into LLM input, and how well each method works | **delivered, recommendation a proposal** (issue #52, not part of track #34) — `literature/environment-description/`; five entries, a method table, the research gap, offline token counts. No format comparison for pedestrian conflicts was found; proposed for testing: a perceivability rule, the three nearest in full plus a one-line summary |
 | 6 | Bridge into CrowdGym — `integration/crowdgym_mapping.md` | not started |
 
 From building the negotiation simulator (issue #24) — see `llm_negotiation/README.md` for
@@ -199,6 +200,25 @@ From issue #32 (the third sub-issue's second step, SI-3a.2) — see `llm_negotia
   its worst case is USD 0.65 against the same USD 0.05 cap, and no cut of the reply cap, the
   messages or the retries alone fits; a hard spend cap with the sessions in a stated priority
   order would (issue #30's Q5, options re-previewed).
+
+Three findings from the environment-description review (issue #52), all drafts needing supervisor
+sign-off. See `literature/environment-description/`; `verdict.md` is one page. The review read five
+sources in full (two LLM crowd simulators, Generative Agents, an LLM pathfinding study, a grid-world
+format study) and screened about fifteen more:
+
+- **No study compares ways of describing a scene for pedestrian or crowd conflicts.** The two
+  measured comparisons are spatial puzzles: a text map beat a coordinate list and an image for
+  multi-agent pathfinding (on very few runs), and coordinates beat grid drawings and prose for grid
+  navigation, most for mid-sized models. See `findings.md` §2, §5.
+- **The one LLM crowd simulator with an explicit perception rule describes at most three people in
+  full** (8 m, 200° field of view, occlusion; the rest as counts), so its prompt stops growing with
+  the crowd. Without a cap, request counts grew roughly linearly with crowd size (2,000 at 50 agents,
+  over 6,000 at 250). See `findings.md` §3.
+- **Proposed for negsim, to be tested before any template is frozen:** keep the egocentric prose
+  lines, add a perceivability rule, describe the three nearest in full with a one-line summary of
+  the rest, and state capacities explicitly. Situation block: about 220 tokens today, 448 with the
+  proposal at 5 or 10 people, 940 for ten people all in full (DeepSeek-V3 tokenizer, offline). See
+  `verdict.md`, `token-estimates.md`.
 
 Three findings from the synthesis (issue #41, PT-7 of track #34). All are proposals needing
 supervisor sign-off. See `portable_rules/docs/`; `supervisor-brief.md` is the two-page read and
@@ -461,6 +481,14 @@ CrowdSimulation/
       missing-papers.md                  0 sources not obtained; versions not read
       search-log.md                      searches run, how sources were fetched, unread leads
       refs-trained-deciders.bib          records for every source, with the copy read
+    environment-description/        issue #52: describing multi-person scenes to LLMs, and how well each method works
+      verdict.md                         *** one page: proposed description method for negsim, tests, token cost ***
+      entries.md                         5 full entries (two crowd simulators, Generative Agents, MAPF, grid formats)
+      findings.md                        Q1-Q5: method table, measured results, many agents, attributes, research gap
+      token-estimates.md                 offline token counts for 2, 5, 10 people in four formats, with the script
+      missing-papers.md                  0 papers not obtained; a supplement and published versions not read
+      search-log.md                      every search, every paper screened, unread leads
+      refs-environment-description.bib   records for the five, with the copy read
     (see also demographic-personas/, human-conflict-resolution/,
      llm-conflict-resolution/, paper-summaries/ from issues #8/#12/#14/#16/#18)
   pipeline/
