@@ -1,0 +1,392 @@
+From: AAAI-92 Proceedings. Copyright ©1992, AAAI (www.aaai.org). All rights reserved.
+
+On the synthesis of useful social                                    r artificial agent societies
+
+(preliminary report)
+
+Yoav Shoham and Moshe Tennenholtz
+              Robotics Laboratory
+
+    Department of Computer Science
+               Stanford University
+               Stanford, CA 94305
+
+Abstract                                                             of the robots might interfere with one another: The
+                                                                     planned spacetime paths of robots might intersect, an
+We present a general model of social law in a compu-                 object needed by one robot might be removed by an-
+tational system, and investigate some of its proper-                 other, bottlenecks might occur, and so on. Similarly,
+ties. The contribution of this paper is twofold. First,              robots may require the assistance of other robots to
+we argue that the notion of social law is not epiphe-                carry out their task.
+nomenal, but rather should be built into the action
+representation; we then offer such a representation.                    How is one to deal with these phenomena? There
+Second, we investigate the complexity of automati-                   are two extreme answers, neither of which is in gen-
+cally deriving useful social laws in this model, given               eral acceptable. One is to assume a single program-
+descriptions of the agents' capabilities, and the goals              mer, whose job it is to program all the robots. As
+they might encounter. We show that in general the                    such, he will need to worry about all possible inter-
+ problem is NP-complete, and identify precise condi-                 actions among them, in exactly the same way as he
+ tions under which it becomes polynomial.                            worries about the interactions among the different ac-
+                                                                     tions of a single robot (see [2] or [5]). This answer is
+1 Introduction                                                       unsatisfactory for several reasons. First, it is unrea-
+                                                                     sonable to expect that a single individual will control
+ This paper is concerned with the utility of social laws             all agents. For example, in the Gofer project [3] 100
+ in a computational environment, laws which guaran-                  or so mobile robots are to be programmed individu-
+ tee successful coexistence of multiple programs and                 ally in much the same way as workstations are used.
+ programmers.We imagine an environment in which                      Second, the set of agents can be expected to change
+ multiple planners/actors are active; we will call these             over time, and one would hardly want to have to re-
+ `agents' here, without attaching precise technical                  program all agents upon each addition or deletion of
+ meaning to the term (but see the formal development                 an agent. Finally, even if a single programmer were
+ in the next section).l                                              given the task of programming all the agents, we have
+                                                                     given him no guidelines as to how to achieve the task.
+    To illustrate the issues that come up when design-               To the extent that he will proceed by programming
+ ing a society, consider the domain of mobile robots.                each agent individually, he will be forced to deal with
+ Although still relatively simple, state-of-the-art mo-              the interactions among the different programs.
+ bile robots are able to perform several sorts of tasks.
+ They can move from place to place, identify and grasp                   An alternative extreme answer is to admit that
+ simple objects, follow moving objects, and so on.                   agents will be programmed individually in an uncon-
+ Each of these tasks involves sophisticated techniques,              strained fashion, to acknowledge that as a result in-
+ but is, broadly speaking, achievable with existing                  teractions will occur, and to equip the agents with
+ planning and control technology. However, when we                   the means for handling these interactions during ex-
+ consider gathering several robots in a shared environ-              ecution. These means may take various forms. For
+ ment, a host of new problems arises. The activities                 example, one approach is to merely detect the interac-
+                                                                     tions as they occur, and appeal to a central supervisor
+      'As a special case, we are interested in extending the frame-  for resolution. An alternative method for handling in-
+ work of Agent Oriented Programming (AOP) [IO].                      teractions is to equip the agents with communication
+                                                                     capabilities, and program them to engage in series of
+276 Multi-Agent Coordination                                         communications to resolve interactions. Again, using
+the domain of mobile robots for illustration, when         to achieve a cooperative goal. These structures can
+two robots note that they are on a collision course        be considered as a type of social laws. III this paper
+with one another, they may either appeal to some           we tackle a different problem; we are interested in a
+central traffic controller for coordination advice, or     general model of social law in a computational sys-
+alternatively they might engage in a negotiation re-       tem, and in general properties that can be proved in
+sulting (say) in each robot moving slightly to its right.  that model. The contribution of this paper is twofold.
+The use of negotiation to resolve conflicts is com-        First, we argue that the notion of social law, or con-
+mon in the distributed AI literature (see [l] or [S]).     straints, is not epiphenomenal, but rather should be
+Nonetheless, there are limitations to this second ap-      built into the action representation; we then offer such
+proach as well. By placing no constraints in advance,      a representation. Second, we investigate the complex-
+the number of interactions may be prohibitive; either      ity of automatically deriving useful social laws in this
+the central arbiter may be deluged by pleas, or else       model, given descriptions of the agents' capabilities,
+agents will have to enter into negotiations at every       and the goals they might encounter over time. We
+step. While we certainly do not argue against the          show that in general the problem is NP-complete, and
+utility of either a central coordinator or a negotia-      identify precise conditions under which it becomes
+tion mechanism, we do argue that it is essential to        polynomial.
+add a mechanism that will minimize the need for ei-
+ther. Again, we draw on the domain of mobile robots           The remainder of this paper is structured as fol-
+for intuition. Suppose robots navigate along marked        lows. In the next section we set up the formal model
+paths, much like cars do along streets. Why not adopt      of multi-agent actions. In section 3 we state the com-
+a convention, or, as we'd like to think of it, a social    putational problem precisely, and show that in its full
+1a.w) according to which each robot keeps to the right     generality the problem is NP-complete. We also show
+of the path ? If each robot obeys the convention, we       a similar result for one natural restriction on the gen-
+will have avoided all head-on collisions without any       eral model. In section 4 we formulate additional nat-
+need for either a central arbiter or negotiation.          ural restrictions on the general model; we show that
+                                                           these conditions are both necessary and sufficient for
+    This then is the image, which is not original to us;   the problem to become polynomial. Finally, we look
+it is implicit in many places in AI, and was made ex-      at a special case in which the states of agents happen
+plicit already by Moses and Tennenholtz ([7],[$]). The     to be encodable concisely, and show that there too
+society will adopt a set of laws; each programmer will     the problem is polynomial. We conclude with a sum-
+obey these laws, and will be able to assume that all       mary, discussion of related work, and planned future
+others will as well. These laws will on the one hand       work.
+constrain the plans available to the programmer, but
+on the other hand will guarantee certain behaviors               The general framewsr
+on the part of other agents. The two approaches
+discussed above simply mark the endpoints of this          The term `agent' is common in AI, and used in di-
+tradeoff continuum. The first, "single programmer"         verse ways. Here we will take an agent to have state,
+approach stretches the notion of a social law so as to     and to engage in actions which move it among states.
+completely dictate the behavior of each agent, leaving     Although this basic definition is consistent with most
+no freedom to the individual programmer. The sec-          uses of the term in AI, it is perhaps somewhat too im-
+ond approach adopts an opposite, degenerate form of        poverished to be worthy of the lofty name. However,
+social law, the vacuous law. The goal of the intended      our goal here is not to contribute to the theory of in-
+theory of social laws will be to relax the restriction to  dividual agents but to the theory of social law, and
+these extreme solutions, and instead to strike a good      so it will be illuminating to initially adopt a model
+balance between allowing freedom to the individual         in which all the complexity arises from the existence
+programmers on the one hand and ensuring the co-           of multiple agents, and not from the behavior of in-
+operative behavior among them on the other.                 dividual agents.
+
+    How is one to decide on appropriate social laws?           We adopt a synchronous model: Agents repeatedly
+ One approach is to hand-craft laws for each domain         and simultaneously take action, which leads them
+ of application. This is the approach we take in a t       from their previous state to a new one. The actions
+ companion paper [9], where we present a number of          of an agent is taken from a given repertoire. The
+ traffic laws for a restricted domain of mobile robots.     problem in defining the transition functions of agents
+ Several systems built by DA1 researchers have used         is due to the fact that the state in which the agent
+ organization structures (see [4]) for enabling agents
+                                                                                        Shoham and Tennenholtz 277
+ends up after taking a particular action at a particu-      The formal model
+
+lar state, depends also on actions and states of other      Definition 2.1: Given a set of states S, a first order
+                                                            language C (with an entailment relation k), and a set
+agents. Thus, in principle, we could think of the tran-     of actions A, a constraint is a pair (a, cp) where a E A
+                                                            and cp E C is a sentence. A social law is a set of
+sition function of the entire system, a mapping from        constraints (ai, cpi), at most one for each ai E A.
+
+the states and actions of all agents to the new states of
+
+all agents. In this view, for example, in order to deter-
+
+mine the effect of one car turning left at an intersec-
+
+tion, we would have to specify the states and actions
+
+of all other cars. An alternative view would be to
+
+define the transition function of each agent indepen-       The language L will be used to describe what is true
+                                                            and false in different states. Given a state s E S
+dently, and account for the effects of other agents by      and a sentence `p E C:, s might satisfy or not satisfy
+                                                            `p. We denote the fact that s satisfies `p by s b `p.
+making the function nondeterministic.  In this view,        The intuitive meaning of (ai, cpi) will be that cpi is the
+                                                            most general condition about states which prohibits
+for example, the effect of turning left at an intersec-     taking action ai.
+
+tion would be either a new position and direction of           In the sequel, we will use the following notation.
+                                                            Given a pair of social laws, sir and s/a, we denote by
+the car, or a collision.                                    s/a < sir the fact that for every (ai, cpi) E sla there
+                                                            exists (ai, cpj) E sir such that `pj b `pi. Intuitively, it
+   These are two extreme approaches to modelling            will mean that sdr is more restrictive than s/g.
+concurrent actions. In the first approach, all infor-
+mation about other actions must be supplied, and the        Definition 2.2 :  A social agent is a tuple
+transition function produces the most specific predic-
+tion. In the second approach, nu information about          (S, L, A, SL, T) where S, ,C, A are as above, SL a
+other agents is supplied, and the transition function
+produces the most general prediction. Instead of            set of social laws, and 7' is a total transition function
+adopting either extreme view, we propose an inter-
+mediate approach. We propose adding the concept of          T : S x A x SL -+ 2s such that:
+social law, or constraints on the behavior of agents.
+The constraints specify which of the actions that are       e For every s E S, a E A, sl E SL, if s + cp holds
+in general available are in fact allowed in a given state;     and (a,~) E sl then T(s, a, sI) = a, the empty
+they do so by a predicate over that state. The transi-         set.
+tion function now'takes as an argument not only the
+initial state and the action taken by the agent, but        o For every s E S, a E A, s/l E SL, ~12 E SL, if
+also the constraints in force; it produces a prediction        sZ2 < sll then
+about the set of possible next states of the agent. For        T(s, a, sll) s T(s, a, sl2).
+example, it might predict that as a result of turning
+left at the intersection, given certain trafic rules, the
+car will successfully complete the turn.
+
+   We claim that this is a natural representation of           In practice, the transition function T will be only
+actions, and an advantageous one. Generally speak-          partially specified. If T(s, a, sZ) is not explicitly de-
+ing, the prediction based on constraints will be more       fined for a particular sl, then T(s, a, sI) is assumed to
+general than the prediction that is based on the pre-       be the conjunction of all explicitly defined T(s, a, s/i)
+cise states and actions of all other agents, and more
+specific than the prediction based on no information        satisfying that s/i < sl. If this conjunction is over an
+on the other agents.                                        empty set then T(s, a, ~1) = @, the empty set.
+
+   A final comment, before we present the formal            Definition 2.3: A social multi-agent system is a col-
+model. We make an assumption of homogeneity;                lection of social agents which share the set of states,
+specifically, we assume that the sets of states and the     the language for describing states, the set of poten-
+available actions are common to all agents. We do not       tial actions, the set of potential social laws, and the
+assume that the agents will necessarily be in the same      transition function.2
+state at any time, nor that they will take the same
+action when in the same state; only that they "have              2Recall again that this only means that the agents "have
+the same hardware." Similarly, we assume an egali-          the same hardware".
+tarian society, in which the same constraints apply to
+all agents. None of these assumptions are crucial to
+our approach, but they simplify the discussion.
+
+278 Multi-Agent Coordination
+The multi-agent system defined in the previous sec-           a useful law is a law for which, given any ~1, s2 E F,
+tion provides one degree of freedom in addition to            there exists a legal plan such that every execution of
+those present in standard multi-agent models: The             that plan in s1 includes ~2.
+social law in effect. Once we fix the social law, the
+social multi-agent system reduces to a standard one,          Note that, strictly speaking, we cannot speak of a
+since all transitions which are incompatible with this        plan `leading' to the goal, since the plan is by defini-
+law are now ignored. (Note, however, that the re-             tion infinite. Also note that this definition does not
+maining transitions may still be nondeterministic.)           mean that there necessarily exists one fixed sequence
+Thus, a social multi-agent system and a particular            of actions that will connect two focal states; an action
+social law together induce a standard multi-agent sys-        of the agent may have nondeterministic effects, and
+tem, which makes no reference to social laws. Loosely         the following action in the execution of the plan may
+speaking, the computational problem will be to select         depend on the state in which the agent landed.
+from among the candidate social laws one that, given
+the social multi-agent system, will induce a `good'              We are now in a position to phrase a precise com-
+standard system. But what makes for a `good' sys-             putational problem:
+tem?
+                                                              Definition 3.3 : [The Useful Social Law Problem
+   For this purpose we identify a subset of the set           (USLP)] Given a social multi-agent system and a set
+of states, which we call focal states. We will be in-         of focal states, find a useful law if one exists, or, if no
+terested in a social law which will ensure that each          such law exists, announce that this is the case.
+agent, given two focal states, is able to construct a
+plan guaranteed to move him from one state to the                The technical results in this paper concern the
+other - no matter what actions are taken by other             computational complexity of the USLP. In order to
+agents. Note the existence of a certain tradeoff: The         present quantitative results we have to be more pre-
+more restrictive the law, the more can the planner            cise about some of the details of our model. In the
+rely on the effects of his actions, but, on the other         following we will assume that the number of states
+hand, the more restrictive the law, the fewer actions         in the representation of an agent is finite and is de-
+are available to the planner in the first place. In se-       noted by n, and we will measure the computational
+lecting a social law we wish to strike a good balance,        complexity as a function of n. We assume that the
+allowing each agent enough freedom to achieve its             total size of an agent's representation is polynomial
+goals but not enough freedom to foil those of others.         in n. We also assume that each property of the form
+                                                              s /= (p, and of th e form sll < 2712can be efficiently
+   We now turn to the formal development. Intu-               verified.
+itively, an agent's legal plan is a decision on how to
+act in each state, in a way which is consistent with             The following theorem shows that the general
+the law in force:                                             USLP is intractable, although its complexity is lower
+                                                              than the complexity of many other problems dis-
+Definition 3.1 :    Given a social                            cussed in multi-agent activity (see [ll]):
+
+agent (S,L,A,SL,T)  and a social law sl E SL, a               Theorem 3.1: The USLP is NP-complete.
+
+legal plan is a total function DO : S ---f A such that           We point again that, since the USLP is computed
+                                                              off-line, this result is not entirely negative. Still, it
+if (a, cp) E sl and s /= cp holds, then DO(s) # a. An         would be satisfying to be able to achieve lower com-
+                                                              plexity by imposing various restrictions on the struc-
+execution of the plan from a state SO is a sequence of        ture of agents. This is what we do in the next two
+                                                              sections.
+states SO, s1, ~2, . . . such that si+l E T(sa, DO(si), sl).
+
+Note that a plan forces the agent to take action at           4 Several
+every step, but we certainly allow the user to include
+the null action, which might leave states unchanged.          eneral     el
+Also note that even if the null action is included, some
+social laws may prohibit it in certain states!
+
+Definition 3.2: Given a social multi-agent system             We start by imposing the following restriction: For
+and a subset F of the set of states (the focal states),       each state s, the number of transitions which might
+
+                                                                                          Shoham and Tennenholtz 279
+change s is bounded by O(Zog(n)).3 This is a straight-             These three restrictions may or may not be accept-
+forward generalization of the natural "bounded fan-             able; although we expect that they are reasonable
+out? restriction which is common for classical au-              in some interesting applications, we take no stance
+tomata. Intuitively, this restriction says that the             on this here. The significance of these restrictions is
+number of actions an agent might perform at a given             that they allow us to state precise conditions under
+state is small relative to the total number of states,          which the BUSLP becomes polynomial:
+while the quality of the information about constraints
+which might be relevant to the effects of a particular          Theorem 4.2: The B USL P is polynomial if restric-
+action in a particular state is relatively high. Our log-       tions 1, 2, and 3 hold, and NP-complete otherwise.
+arithmic bound enables us to treat the case in which
+the number of transitions which are applicable in any                 agents
+given state is small relative to the total number of
+states, while it is still a function of that number. No-        In the previous section we provided necessary and suf-
+tice that the total number of actions and social laws           ficient conditions under which the BUSLP becomes
+appearing in the representation might still be much             polynomial; note that this result does not provide
+more than logarithmic.                                          necessary conditions for the USLP to become polyno-
+                                                                mial (it provides only sufficient conditions for that).
+   The computational problem related to the above               Indeed, in this section we mention a different restric-
+restriction is defined as follows:                              tion of the USLP which guarantees polynomial time
+                                                                complexity.
+Definition 4. I. : [The Bounded Useful Social Law
+Problem (BUSLP)] G iven a social multi-agent system                The general framework imposes no structure on the
+where the number of transitions which might change              set of states, and places no restrictions on the num-
+a particular state is bounded by O(log(n)), and a set           ber of laws which affect the results of any particular
+of focal states, find a useful law if one exists, or, if no     action. In practice, there is much more structure in
+such law exists, announce that this is the case.                the makeup of agents. For example, while the set
+                                                                of states might be very large, it is usually possible
+On it own, this natural restriction does not buy us             identify components of the agent, such that the set
+                                                                of states of the agent consists of the Cartesian prod-
+a whole lot as far as the computational  complexity             uct of the sets of states of the individual components.
+goes:                                                           If we consider for example the representation of a
+                                                                robot, then one component may relate to its loca-
+Theorem 4.1: The BUSLP is NP-complete.                          tion, another to its orientation, and another to its
+                                                                arm position.
+   However, we have not presented this restriction as
+a. mere curiosity; we now present precise conditions                This rnodularity of states is the first restriction we
+under which the BUSLP become tractable. Consider                consider here; specifically, we assume that there exist
+the following three restrictions:                               O(log(lz)) components, each of which can be in one
+                                                                of a constant number of states. Thus the state of
+1. The number of focal states is bounded bya con-               an agent consists of the Cartesian product of these
+                                                                states. The total number of an agent's states is still
+    stant c.                                                    n; note that this is no contradiction.
+
+2. For any pair of focal states si, s2 E F , there                  The modularity of state gives rise to a modular-
+    exists a legal plan all of whose executions reach           ity of action; usually, only a small number of social
+    s2 starting at s1 while visiting the same sequence          laws will be relevant to determining the change in the
+    ofstates. Intuitively, this requirement states that         state of a particular component as a result of a par-
+    it is not enough that there be a plan, as required          ticular action. In the robotic setting, for example, a
+    in the definition of a useful law; the plan must            change in the particular location of the robot might
+    be deterministic.                                           depend on particular traffic laws, but not on laws
+                                                                requiring one to shut windows after opening them,
+3. For any pair of focal states ~1, sz E F , there              on laws prohibiting one from taking the last cookie
+    exists a legal plan all of whose executions reach
+
+s2 starting at s1 in no more than 0 ( a              >
+steps. Intuitively, this requirement states that it
+
+is not enough that there be a plan; the plan must
+
+be short.
+
+    31f qs, a, sl*) = T(s,a, sip) for s/2 < sll then we do not
+
+count T(s, a, ~11) as one of the transitions.
+
+280 Multi-Agent Coordination
+without announcing the fact, and perhaps not even         Sometimes this is infeasible, however, either because
+on many of the possible traffic laws. We capture this     the makeup of the agents is not known in advance,
+intuition by requiring that the change of a particular    or because it changes over time. In such cases, can
+state of a particular component can depend on only        we devise methods by which, through trial error, the
+a constant number of social laws.                         agents will over time converge on a social law? These
+                                                          are some of the questions in which we are currently
+   We will use the term modular social agent to de-       interested.
+note an social agent whose structure has these two
+properties of modularity, and modular social multi-       rences
+agent system to denote a collection of such agents.4
+Notice that these restrictions are separate from those    PI A. H. Bond and L. Gasser.            Readings in Dis-
+discussed in the previous section. Modular systems             tributed Artificial Intelligence.  Ablex Publishing
+have the following property:                                   Corporation, 1988.
+
+Theorem 5.1: Given a modular social multi-agent           PI S.J. Buckley. Fast motion planning for multi-
+system, the USLP is polynomial.
+                                                               ple moving robots. In Proceedings of the 1989
+6 Conclusions                                                   IEEE International Conference on Robotics and
+                                                               Automation, pages 322-326, 1989.
+
+A basic approach to coordinating multiple agents is to    PI P. Caloud, W. Choi, J.-C Latombe, C. Le Pape,
+
+restrict their activities in a way which enables them          and M. Yim. Indoor aut#omation with many
+
+to achieve their dynamically-acquired  goals while not         mobile robots. In Proceedings IEEE Interna-
+
+interfering with other agents. Although this is, we             tional Workshop on, Intelligent Robots and Sys-
+
+                                                               tems, Tsuchiura, Japan, 1990.
+
+believe, a commonsensical approach, it has not re-        Fl Edmund H. Durfee, Vicror R. Lesser, and
+
+ceived much attention so far within AI; exceptions             Daniel D. Corkill. Coherent Cooperation Among
+
+include [7] and [8], where the authors investigate sev-        Communicating Problem Solvers. IEEE Trans-
+                                                               actions on Computers, 36: 1275-1291, 1987.
+eral basic principles and formal aspects of this ap-
+
+proach. We have presented model of multi-agent ac-
+
+tion whose novel feature is the explicit mention of       PI M. Erdmann and T. Lozano-Perez. On multi-
+
+social laws in the definition of agents. We then inves-        ple moving robots. Algorithmica, 2(4):477-521,
+                                                               1987.
+tiga,ted the fundamental computational problem in-
+                                                          PI S. Kraus and J. Wilkenfeld. The Function of
+volved with finding useful social laws: We showed the
+                                                               Time in Cooperative Negotiations. In Proc. of
+general problem intractable, and then identified re-           AAAI-91, pages 179-184, 1991.
+
+strictions which achieve tractability. We believe that
+
+the formal model and complexity results both consti-
+
+tute an essential contribution to our understanding       PI Yoram Moses and M. Tennenholtz. Artificial So-
+
+of the role of social law in artificial intelligence.          cial Systems Part I: Basic Principles. Technical
+
+   Much remains to be done. For example, as was                Report CS90-12, Weizmann Institute, 1990.
+mentioned at the beginning, we have assumed a ho-
+mogeneous society, both in term of the makeup of          PI Yoram Moses and M. Tennenholtz. On Formal
+agents and in terms of the applicability of social laws.
+In future work we will relax this assumption, made             Aspects of Artificial Social Systems. Technical
+here only for convenience. Harder assumptions to re-
+lax include the assumption of law-abiding citizenship;         Report CS91-01, Weizmann Institute, 1991.
+here we have assumed that all agents obey the social
+laws, but what happens if some don't? How vulnera-        PI Y. Shoham and M. Tennenholtz. On Traffic Laws
+ble is the society to rogue agents? In fact, arguments
+had been made about that social laws will sometimes            for Mobile Robots. Submitted to AIPS-92.
+be break, and that the penalty for this should be con-
+sidered in the stage of design. Similarly, we have as-    WI Yoav Shoham. Agent Oriented Programming.
+sumed that the useful social law is computed off-line.
+                                                                 Technical Report STAN-CS-1335-90, Dept. of
+
+                                                                 Computer Science, Stanford University, 1990.
+
+*A full formal definition will appear in the full paper.  Pl3 M. Tennenholtz and Yoram Moses. On Coop-
+
+                                                                eration in a Multi-Entity Model. In Proc. 11th
+                                                                 International Joint Collference on Artificial In-
+                                                                 telligence, 1989.
+
+                                                                  Shoham and Tennenholta 281
+

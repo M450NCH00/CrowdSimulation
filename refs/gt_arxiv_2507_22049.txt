@@ -1,0 +1,749 @@
+                                                   Validating Generative Agent-Based Models of Social Norm
+                                                      Enforcement: From Replication to Novel Predictions
+
+                                                                              Logan Cross1, Nick Haber3, Daniel L.K. Yamins1,2
+                                        1Department of Computer Science, 2Department of Psychology, 3Graduate School of Education, Stanford University
+
+arXiv:2507.22049v1 [cs.MA] 29 Jul 2025                           Abstract                           used in the social sciences, the emergence of LLM-
+                                                                                                    based agents enables a qualitatively new approach
+                                           As large language models (LLMs) advance, there           to simulate humans: generative agent-based model-
+                                           is growing interest in using them to simulate hu-        ing (GABM) (Vezhnevets et al., 2023; Anthis et al.,
+                                           man social behavior through generative agent-based       2025).
+                                           modeling (GABM). However, validating these mod-
+                                           els remains a key challenge. We present a sys-              Generative agents are LLM-powered entities
+                                           tematic two-stage validation approach using social       that combine multiple cognitive components--such
+                                           dilemma paradigms from psychological literature,         as memory, personality, and reasoning mod-
+                                           first identifying the cognitive components neces-        ules--through structured prompt sequences to sim-
+                                           sary for LLM agents to reproduce known human             ulate human decision-making processes (Park et al.,
+                                           behaviors in mixed-motive settings from two land-        2023, 2024). These agent architectures function as
+                                           mark papers, then using the validated architecture       computational models of human cognition, simi-
+                                           to simulate novel conditions. Our model compar-          lar to the "box-and-arrow" diagrams used in cog-
+                                           ison of different cognitive architectures shows that     nitive psychology (Neisser, 2014). For GABMs to
+                                           both persona-based individual differences and the-       be useful tools for social science, we need rigor-
+                                           ory of mind capabilities are essential for replicat-     ous frameworks to validate whether these agents ac-
+                                           ing third-party punishment (TPP) as a costly signal      tually capture relevant aspects of human behavior.
+                                           of trustworthiness. For the second study on public       By presenting agents with the same experimental
+                                           goods games, this architecture is able to replicate      stimuli used in human studies, we can directly test
+                                           an increase in cooperation from the spread of rep-       whether their stimulus-to-behavior mappings match
+                                           utational information through gossip. However, an        those observed in human participants. Thus, in this
+                                           additional strategic component is necessary to repli-    paper we introduce a two-stage approach that proto-
+                                           cate the additional boost in cooperation rates in the    types GABMs to replicate and extend human stud-
+                                           condition that allows both ostracism and gossip. We      ies. 1
+                                           then test novel predictions for each paper with our
+                                           validated generative agents. We find that TPP rates         Model Validation: First, we conduct an it-
+                                           significantly drop in settings where punishment is       erative model comparison to identify the mini-
+                                           anonymous, yet a substantial amount of TPP per-          mal agent architecture (set of cognitive compo-
+                                           sists, suggesting that both reputational and intrinsic   nents) sufficient to reproduce known behavioral ef-
+                                           moral motivations play a role in this behavior. For      fects in complex social settings. Each "model" in
+                                           the second paper, we introduce a novel intervention      our framework represents a different LLM agent
+                                           and see that open discussion periods before rounds       architecture--specifically, different combinations
+                                           of the public goods game further increase contribu-      of prompts which we call cognitive components.
+                                           tions, allowing groups to develop social norms for
+                                           cooperation. This work provides a framework for              1Code: https://github.com/locross93/Multi
+                                           validating generative agent models while demon-           Agent
+                                           strating their potential to generate novel and testable
+                                           insights into human social behavior.
+
+                                                         Introduction
+
+                                        Advances in LLMs have created new possibilities
+
+                                        for studying human social behavior through simu-
+
+                                        lation. While agent-based modeling has long been
+These components are added to a base agent who         Unlike approaches that study cooperation or compe-
+takes in the responses to these prompts as context     tition in isolation, these paradigms model the com-
+for making a decision, for example the answer to       plex mixed incentives that characterize most im-
+"what kind of person am I?" provides additional        portant social challenges -- from maintaining per-
+context to guide the agents decisions about which      sonal relationships (Crocker et al., 2017) to climate
+actions to take (March & Olsen, 2008; Vezhnevets       change cooperation (Milinski et al., 2008) to fol-
+et al., 2023). Our validation of each model works      lowing cultural norms (Ko¨ster et al., 2022; Leibo et
+as follows: We run the same experimental pro-          al., 2024). Greater theoretical frameworks of social
+tocol used in the original human studies by rep-       dilemmas help us to understand why people coop-
+resenting the experimental stimuli in natural lan-     erate (or not) and also practical ways to maintain
+guage and compare our agents' behavioral patterns      and promote cooperation in groups and organiza-
+to the published human data using identical statisti-  tions through coordination and social norm enforce-
+cal tests. An architecture is considered "validated"   ment. This research has revolutionized our under-
+when agents show the same directional effects as       standing through methodologically rigorous frame-
+humans with statistical significance. For theoreti-    works that bridge laboratory precision with real-
+cal parsimony in line with suggested best practices    world relevance (Fehr & Ga¨chter, 2000; Henrich
+for GABM (Vezhnevets et al., 2023), we begin with      et al., 2006). First, we investigate third-party pun-
+the simplest possible agent architecture and test new  ishment (TPP) in the trust game from Jordan et al.
+cognitive components only when simpler models          (2016), which demonstrated that third-party pun-
+fail to capture human behavior patterns. In addi-      ishers are perceived as--and actually are--more
+tion, by varying the agent architectures and compar-   trustworthy than non-punishers. Through careful
+ing their output to human data, we can test specific   comparisons of different agent architectures built in
+hypotheses about the cognitive mechanisms under-       Concordia, we show that both persona prompting
+lying social behavior.                                 and theory of mind reflection are necessary com-
+                                                       ponents for reproducing these effects. Second, we
+   Novel Prediction Generation: Second, we             examine Feinberg et al. (2014)'s work on gossip
+leverage validated agent architectures to explore      and ostracism in promoting cooperation in a pub-
+counterfactual scenarios that would be slow or         lic goods game, finding that while our initial val-
+costly to implement in laboratory settings. By main-   idated architecture from the TPP study provides a
+taining the validated agent architectures while vary-  good foundation, an additional strategic component
+ing environmental conditions, we can generate pre-     proves necessary to replicate a majority of the be-
+cise, quantitative predictions about human behavior    havioral effects in this more complex social envi-
+in novel situations. These predictions can then be     ronment.
+tested empirically, providing a rigorous test of the
+model's generalization capabilities while advancing       We then apply these validated model architec-
+our understanding of human social behavior.            tures to explore two distinct types of novel questions
+                                                       not investigated in the original papers. For the TPP
+   Here, we present this validation approach with      study, we use the validated model for theoretical
+two case studies to examine the components neces-      disambiguation, examining how punishment behav-
+sary for GABMs to replicate key findings from ex-      ior differs between public and private settings. Our
+perimental social dilemmas. Mixed-motive social        results quantify the relative contributions of repu-
+dilemmas, particularly the trust game and public       tational vs. intrinsic motivations, helping resolve
+goods games, represent the gold standard for experi-   the ongoing theoretical debate about why people en-
+mental research on social dynamics across psychol-     gage in costly third-party punishment. For the pub-
+ogy, economics, and social sciences because they       lic goods study, we use the validated model to test
+uniquely capture the fundamental tension between       a novel intervention--adding pre-round discussion
+individual self-interest and collective welfare that   periods--and find that this further improved cooper-
+defines human social life (Van Lange et al., 2013).
+ation rates, as groups could self-organize and estab-    ined by Jordan et al. (2016), extends this paradigm
+lish shared norms for contribution. These findings       to include unaffected observers who can pay costs
+demonstrate how GABM can help social scientists          to sanction norm violations, raising questions about
+both evaluate conflicting cognitive theories and in-     both reputational and intrinsic motivations for such
+vestigate potential interventions to improve collec-     behavior (Jordan & Rand, 2020). The Public Goods
+tive welfare.                                            Game used in our second study is a fundamental
+                                                         paradigm for studying cooperation in groups (Led-
+                Related Work                             yard et al., 1994). When participants can con-
+                                                         tribute to a shared resource that benefits everyone,
+Recent advances in large language models have            the dominant strategy for self-interested individuals
+enabled promising simulations of human behav-            is to contribute nothing while benefiting from oth-
+ior (Anthis et al., 2025). Generative agent-based        ers' contributions. This creates a social dilemma
+modeling (GABM) has emerged as a useful ap-              where individual rationality leads to collective irra-
+proach that leverages LLMs' capabilities in natural      tionality.
+language interaction, commonsense reasoning, and
+episodic memory (Vezhnevets et al., 2023). Park et                           Methods
+al. (2023) demonstrated that generative agents can
+produce believable simulations of human behavior         We implemented our experimental paradigms us-
+and social networks, while follow-up work by Park        ing Concordia (Vezhnevets et al., 2023), a frame-
+et al. (2024) expanded these simulations to include      work that enables LLM-based generative agents to
+agents that could predict the experimental behav-        interact through natural language while maintaining
+ior of 1,000 humans they interviewed. This influ-        grounded state variables for monetary amounts and
+ential research focuses on modeling specific indi-       game decisions. Concordia's flexible component-
+vidual differences. In contrast, rather than focusing    based architecture allowed us to create modular
+on individual prediction, our work produces com-         cognitive capabilities as prompt response chains,
+plex social phenomena from the dynamic interac-          each with its own state and dependencies on other
+tion of individual agents and validates at the popu-     components. The framework dynamically con-
+lation effect level. Our work establishes a rigorous     structs the prompt that conditions the final LLM call
+framework for validating whether generative agents       by concatenating responses from cognitive compo-
+can accurately reproduce specific behavioral effects     nents according to the agent's architectural configu-
+from controlled human experiments and the cogni-         ration.
+tive mechanisms necessary to do so. The Concor-
+dia framework (Vezhnevets et al., 2023) was specif-         Formally, each cognitive component i produces
+ically designed to facilitate such social simulations,   text output from an LLM call based on its depen-
+providing researchers with tools to ground agent in-     dencies and the agent's memory of all observations:
+teractions in physical, social, and digital spaces. Be-
+yond simulations, other researchers have explored                 zti+1  p(·| f i({ztj : j  dep(i)}, mt )) (1)
+persona-based prompts to enhance diversity in agent
+behavior (Li et al., 2023; Chen et al., 2024), which     where f i is a formatting function that concatenates
+is critical to representing individual differences at    responses from components that component i de-
+the population level in decision making.                 pends on, given the agent architecture configuration
+                                                         (Figure 1B), and mt represents the agent's accumu-
+   The two experimental paradigms used in this           lated memory up to time t.
+study represent core problems in experimental eco-
+nomics. The Trust Game is a classic paradigm                In the action step, the agent samples its deci-
+first introduced by Berg et al. (1995) to measure        sion at from an LLM call given a contextual prompt
+trust and trustworthiness through sequential mone-       that concatenates the outputs of all cognitive com-
+tary exchanges. Third-party punishment, as exam-         ponents with directed edges into the decision com-
+                                                         ponent:
+A                                                        B
+
+Figure 1: A. Two-stage approach of model validation and novel prediction generation. B. Iterative refinement
+of model architectures.
+
+         at  p(·| f a({ztj : j  dep(action)})) (2)       forming mt .
+
+where {ztj : j  dep(action)} represents the current         Situation Assessment Component: Evaluates
+states of cognitive components with directed edges       the current decision context using the prompt "What
+into the decision component, and f a is a formatting     is the current situation that [agent name] faces in the
+function that concatenates these component outputs       [Game Type]?" This component depends on the Ob-
+into the context prompt conditioning the LLM's ac-       servation Summary output and provides situational
+tion selection.                                          awareness.
+
+   This modular design enables systematic hypothe-          Decision: Prompts the LLM to generate a deci-
+sis testing about which cognitive processes are nec-     sion following additional chain of thought. In the
+essary and sufficient for reproducing human social       each architecture, the output of the other compo-
+behavior. By systematically varying which compo-         nents with directed edges into the decision compo-
+nents are included in dep(action) while maintain-        nent are concatenated in the prompt.
+ing identical experimental protocols, we can isolate
+the causal contribution of different cognitive mech-     Additional Cognitive Components We system-
+anisms to observed behavioral patterns.                  atically varied the inclusion of additional cognitive
+                                                         components to identify minimal architectures for
+Base Agent Architecture All agent architectures          replicating human behavior:
+include the fundamental components necessary for
+participating in experimental protocols: Observa-           Persona Component: Contributes stable in-
+tion Summary: Processes information about cur-           dividual differences through demographic back-
+rent and past game states to feed to a prompt to sum-    ground and personality traits. Uses the prompt
+marize all the observations. This includes a mem-        "Based on this background and your past actions,
+ory subcomponent that maintains record of all the        how would you describe your approach to trust
+past interactions an agent observed. The output is       and fairness in economic decisions vs maximizing
+also prefixed by a list of all observations, altogether  your own payoff?" This component provides con-
+                                                         sistent behavioral tendencies across decisions. The-
+                                                         ory of Mind Component: Enables explicit rea-
+soning about others' mental states and likely re-      portion of their endowment to another player (the
+sponses. Prompts agents to consider "what kind         Recipient), with the sent amount being tripled by
+of person their interaction partner is and how they    the experimenter. Then, the Recipient decides how
+might respond" based on observed behavior pat-         much of this tripled amount to return to the Helper.
+terns. Strategic Reflection Component: Eval-           This creates a social dilemma that measures trust
+uates long-term payoff maximization through the        and trustworthiness: while both players can benefit
+prompt "What's the best strategy for maximizing        from cooperation, the Helper may keep the endow-
+your long-term earnings in this game?" This com-       ment if they do not trust the Recipient, and the Re-
+ponent explicitly considers strategic implications of  cipient faces a temptation to defect by keeping the
+decisions. Emotion Reflection Component: Cap-          tripled amount.
+tures affective responses using "How are you feel-
+ing emotionally about the current situation?" This        In the first stage, one LLM agent acts as a third
+component models emotional reactions that may in-      party, the Punisher/Signaller, watching two people
+fluence decision-making.                               play the Trust Game. The Trust Game consists of a
+                                                       Helper with an initial endowment of $10 that could
+Agent Architecture Configurations We tested            potentially be shared with another player: the Re-
+multiple agent architectures by varying dep(action)    cipient. In Stage 1, the Helper is programmed to
+configurations:                                        give $0 in order to evaluate whether the Signaller
+                                                       punishes selfish behavior. The Signaller observes
+· Base Architecture: Decision component depends        the Helper's decision and can pay a personal cost
+   only on Observation Summary and Situation As-       ($2) to punish the Helper ($6 reduction of Helper's
+   sessment                                            winnings). The key feature of this stage is that pun-
+                                                       ishment is costly to the Punisher and provides no
+· Social Architecture: Adds Persona and Theory of      immediate direct benefit, as they are an unaffected
+   Mind components to dependencies                     third party.
+
+· Social + Strategic Architecture (Study 2): Addi-        In the second stage, a new participant (the
+   tionally includes Strategic Reflection component    Chooser) plays a trust game with either a punisher
+                                                       or non-punisher from Stage 1, knowing their pre-
+· Social + Emotion Architecture (Study 2): Addi-       vious punishment decision in the public condition
+   tionally includes Emotion Reflection component      (see below). The trust game proceeds as follows: 1.
+                                                       Chooser receives an endowment as the Helper and
+   This systematic approach allows precise identifi-   decides how much to send to the Signaller (Punisher
+cation of which cognitive mechanisms are necessary     in Stage 1). 2. Any amount sent is tripled by the
+for reproducing specific aspects of human social be-   experimenter. 3. Signaller, acting as the Recipient
+havior across different experimental paradigms. All    now, decides how much of the tripled amount to re-
+agents use GPT-4o as the underlying LLM.               turn to the Chooser.
+
+Study 1: Third-party Punishment as a                      Public and Private Conditions. To disentan-
+costly signal of trustworthiness                       gle reputational from intrinsic motivations in third-
+                                                       party punishment, we varied punishment decision
+We based our first generative agent simulation on      observability across two conditions. In the public
+the third-party punishment game developed by (Jor-     condition (replicating Jordan et al., 2016), the Sig-
+dan et al., 2016) which consists of two sequential     naller's punishment decision was explicitly commu-
+stages designed to test whether costly punishment      nicated to the Stage 2 Chooser, and Signallers were
+serves as a signal of trustworthiness. Here, both      informed their decision would be public. In the pri-
+stages consist of the Trust game. The Trust game       vate condition, the Signaller's punishment decision
+is a classic behavioral economics paradigm where       remained unknown to the Chooser, and Signallers
+one player (the Helper) can choose to send some        were told their decision would remain private. This
+manipulation removes potential reputational bene-        round. If someone received two or more exclusion
+fits while preserving all other aspects of the decision  votes, they were ostracized and did not participate
+context.                                                 in that round, earning nothing. The remaining three
+                                                         participants played the public goods exercise with
+Study 2: Gossip and Ostracism Promote                    a reduced multiplier (1.5 instead of 2) to maintain
+Cooperation in Groups                                    proportionality of potential earnings.
+
+We based our second generative agent simulation                               Results
+on the gossip and ostracism paradigm developed
+by Feinberg et al. (2014) which examines how             Study 1: Third-party punishment as a
+the spread of reputational information through gos-      costly signal of trustworthiness
+sip facilitates cooperation and limits defection in
+groups. The study employed a public goods exer-          We first examined what are the minimal compo-
+cise where participants faced a social dilemma be-       nents needed in a generative agent model to repro-
+tween maximizing personal gain and contributing to       duce key findings from Jordan et al. (2016)'s human
+group welfare.                                           study of third-party punishment shown in Figure 1:
+                                                         Key Finding 1: Choosers demonstrated greater
+Public Goods Exercise The foundation of this             trust in punishers by sending them more money in
+study is the public goods exercise. In each round:       Stage 2. Key Finding 2: Punishers proved to be
+1. Participants in groups of 4 each receive an al-       actually more trustworthy by returning a higher per-
+lotment of 10 points (worth 2.5¢ each in the study       centage of funds as Recipients in Stage 2.
+and $1 for our agents), 2. Each participant decides
+how many points to contribute to a group fund ver-          By systematically varying agent components and
+sus keep for themselves, 3. The total points con-        comparing their outputs to human data, we can
+tributed to the group fund are doubled and redis-        identify which cognitive mechanisms are necessary
+tributed equally to all group members. This creates      for reproducing these social behaviors.
+a social dilemma where individuals benefit most
+by free-riding on others' contributions. After each      Model Validation Key Finding 1: Punishment
+round, participants learned how much each group          Perceived as a Signal of Trust. In the original hu-
+member had contributed and earned, were assigned         man study, participants consistently demonstrated
+to a group with different partners for the next round.   greater trust in individuals who engaged in costly
+                                                         third-party punishment. Initially, our analyses with
+Experimental Conditions The study employed               the base agent and GPT4o base model showed that
+a repeated measures design where all participants        persona prompting is necessary to produce these
+played three distinct conditions, each for six rounds:   crucial individual differences in punishment rate
+Basic In the basic game, participants played the         Figure 5. Without distinct personas, agents showed
+standard public goods exercise without modifica-         uniform punishment rates of 100%, failing to cap-
+tions. Gossip In the gossip condition, after learning    ture the natural variation seen in human studies,
+the results of each round, participants could send       even with a relatively high LLM sampling tempera-
+an anonymous gossip note about one of their cur-         ture of 1.0. Thus, adding personas was the first cru-
+rent group members to that person's future interac-      cial component necessary to model human behavior
+tion partners. This allowed reputational information     for this experimental paradigm.
+to flow between groups despite no direct interaction
+between them. Gossip With Ostracism This con-               Without explicit partner modeling, agents failed
+dition added an ostracism mechanism. At the be-          to discriminate between punishers and non-
+ginning of each round, after receiving any gossip        punishers in their trust decisions. T-tests compare
+notes, participants could anonymously vote to ex-        mean amounts sent between groups, where t-values
+clude one participant from playing in the upcoming       indicate effect size and p-values show statistical sig-
+                                                         nificance (t = -0.566, p = 0.572, N=100), sending
+                                                         similar amounts to both groups. Analysis of agent
+A  B                                                    C
+
+Figure 2: TPP Results: (A) Average amount sent by choosers to signallers in Stage 2. (B) Percentage
+returned by recipients in Stage 2. (C) Punishment rates in public versus private conditions.
+
+reasoning revealed that without explicit prompting      Choosers compared to non-punishers (t = 9.83, p
+to consider their partner's past behavior, agents de-   < 0.001, N = 400) (Figure 2b, Table 1). This be-
+faulted to uniform trust levels regardless of punish-   havioral pattern provided validation that our agents
+ment history. This suggests that explicit partner       weren't simply learning to signal trustworthiness
+modeling is necessary for translating punishment        superficially, but were exhibiting internally consis-
+signals into trust decisions, mirroring theories about  tent patterns of prosocial behavior across different
+human social cognition.                                 contexts. This pattern persists in the Theory of
+                                                        Mind ablation (t = 6.95, p < 0.001, N=100), as
+   Following our iterative process, we added a the-     punishers acted less selfishly as Recipients similarly
+ory of mind component to our agent architecture.        to the Social architecture with ToM (Figure 2b, Ta-
+With this addition, choosers sent significantly more    ble 1). This suggests that individual differences im-
+money (22% more) to Signallers who had previ-           plemented through personas are sufficient to drive
+ously engaged in punishment compared to those           behavioral consistency through the LLM's model-
+who did not (t = 6.08, p < 0.001, N = 400) (Fig-        ing of stable prosocial traits.
+ure 2a, Table 1). This pattern closely matches the
+direction and significance found in human studies,      Novel Predictions: Public vs. Private Punish-
+though our regression coefficient (9.00) is some-       ment Having validated our Social agent architec-
+what smaller than the large effect typically observed   ture against human behavioral patterns, we used the
+in human participants (16.46).                          model to generate and test novel predictions about
+                                                        punishment behavior under public vs. private condi-
+   Key Finding 2: Punishment is a Signal of Ac-         tions. Our simulations revealed a significant differ-
+tual Trustworthiness The second key finding from        ence in punishment rates between conditions Fig-
+the human study was that punishers were actually        ure 2c. In the public condition, 64.8% of agents
+more trustworthy when playing as the Recipient          chose to punish the selfish behavior of the Helper
+in the trust game. This relationship demonstrates       in Stage 1, while this rate dropped to 48.9% in the
+that punishment isn't merely cheap talk but reflects    private condition where punishment decisions were
+genuine prosocial tendencies. The Social architec-      not observable (2 = 18.68, p < 0.001, N = 400).
+ture (ToM + Persona) successfully reproduced this       This 16 percentage point difference helps quantify
+pattern, defined as agents showing the same direc-      the relative contributions of reputational versus in-
+tional behavioral effect as humans (more trust to-      trinsic motivations for punishment. The 16% drop
+ward punishers) with statistical significance (p <      in punishment rates when decisions are private rep-
+0.05): Signallers who had previously punished self-     resents the portion of punishment motivated by rep-
+ish behavior returned significantly more money to
+utational concerns. This suggests that the desire      and gossip+ostracism conditions compared to basic
+to signal trustworthiness to potential future inter-   (F(1, 119) = 77.56, 2 = 0.39 for gossip vs. basic;
+action partners drives a significant portion, but not  F(1, 119) = 86.88, 2 = .42 for gossip+ostracism
+the majority, of punishment behavior. The substan-     vs. basic). These results show the Social architec-
+tial baseline rate of punishment in the private con-   ture captures reputational transfer effects that func-
+dition, where there are no reputational benefits, re-  tion as sanctioning mechanisms increasing overall
+veals a strong intrinsic motivation to enforce fair-   contributions.
+ness norms in this task. This suggests that a sizable
+portion of punishment decisions are driven by gen-        However, the Social architecture fails to repli-
+uine prosocial preferences rather than strategic con-  cate other crucial effects from the original study. It
+cerns. These quantitative predictions about punish-    doesn't produce the temporal dynamics of declin-
+ment rates in public versus private conditions offer   ing contributions in the basic and gossip conditions.
+clear hypotheses for future work with human partic-    This effect, common in public goods games (Led-
+ipants.                                                yard et al., 1994; Fischbacher et al., 2001), occurs
+                                                       as incentives lead to more free-riding behavior over
+Study 2: Gossip and Ostracism Promote                  time. This creates a downward spiral in the basic
+Cooperation in Groups                                  condition, and to a lesser degree in the gossip-only
+                                                       condition. Even though mutual cooperation yields
+Building on previous experiments, we investigated      higher payouts for everyone, free-riding becomes
+the minimal components needed to replicate human       the dominant strategy without effective sanctioning
+social dynamics in Feinberg et al. (2014). In this     mechanisms like ostracism.
+study, participants in groups of 4 played multiple
+rounds of a public goods game across three con-           Relatedly, the Social architecture fails to repli-
+ditions. In the basic condition, participants played   cate the significant difference between the gossip
+a standard public goods game. Two conditions al-       and gossip + ostracism conditions. In humans, con-
+lowed gossip, where participants could write notes     tributions were highest in the gossip and ostracism
+about players to their future partners. In the gos-    condition as it creates a social norm in which co-
+sip with ostracism condition, players could use this   operation is advantageous and norm-breaking is
+information to vote to ostracize non-cooperative       costly. The explicit sanction of ostracism addi-
+members for a round. Researchers identified key        tionally causes a phase shift in temporal dynamics,
+behavioral patterns to replicate: 1. Higher contribu-  making cooperation rational and altering the game's
+tions in the gossip + ostracism condition vs basic.    equilibrium. Our model shows increasing contribu-
+2. Higher contributions in the gossip condition vs     tions over time in both the gossip+ostracism con-
+basic. 3. Higher contributions in the gossip + os-     dition and the gossip condition, leading to no sig-
+tracism condition vs gossip. 4. Increasing trend in    nificant difference between the groups (F(1, 119) =
+contributions for gossip + ostracism by round. 5.      1.55, 2 = .01, p > 0.05).
+Decreasing trend in contributions for gossip condi-
+tion by round. 6. Decreasing trend in contributions       We had two cognitively-grounded hypotheses for
+for basic condition by round. The study demon-         improving our model: a strategic reflection compo-
+strates that gossip and ostracism mechanisms sig-      nent to explicitly consider payoff maximization, and
+nificantly increase group cooperation.                 an emotional component to capture risk aversion
+                                                       and affective responses to cooperation/defection.
+Model Validation We first tested the Social archi-
+tecture (LLM agent with persona and ToM compo-            The strategic component significantly improved
+nents) from our previous experiments. This model       model performance (Figure 3, Table 2). When
+replicated 3/6 of the experiment effects previously    added to the social architecture, it enabled clear
+highlighted (Figure 3, Table 2, Table 3). Con-         differentiation between all three conditions, with
+tributions are significantly higher in both gossip     highly significant pairwise comparisons between
+                                                       conditions. Contributions were highest for gossip-
+                                                       with-ostracism, and significantly higher than the
+Figure 3: Gossip experiment results. Each line includes 5 experiments of 24 agents each.
+
+gossip condition (t(119) = -7.30, p < 0.001),             Ablation studies confirmed the importance of our
+matching human data and showing that ostracism         base architecture components, with models lacking
+provides benefits beyond reputation alone. The So-     theory of mind or personas failing to replicate key
+cial + Strategic model also demonstrated appro-        behavioral patterns and condition differences. Im-
+priate temporal trends--decreasing contributions       portantly, our new architecture with strategic reflec-
+in the basic condition (slope: -0.5407, p =            tion maintained successful replication of the key
+0.0017), and increasing contributions in gossip-       findings from Study 1 (Table 1), providing addi-
+with-ostracism (slope: 0.205, p = 0.014)--closely      tional validation that these cognitive architectures
+matching human patterns (Table 3). However,            capture essential social dynamics across different
+contributions in the gossip condition remained flat    experimental paradigms.
+rather than decreasing (slope: 0.053, p = 0.225).
+                                                       Novel Predictions: Pre-round Discussion Condi-
+   In contrast, the emotional reflection component     tion We next used the Social + Strategic Reflec-
+did not improve replication. All conditions actu-      tion model to explore a novel intervention: adding
+ally showed increasing linear trends, and the emo-     structured discussion periods before each round of
+tional component model showed higher contribu-         the public goods game. This condition builds on the
+tions in the gossip condition compared to gossip-      gossip-with-ostracism mechanism but adds a col-
+with-ostracism (t(119) = 2.83, p = 0.005), the op-     lective deliberation phase, allowing agents to co-
+posite of what was observed in the human study.        ordinate their behavior and establish shared norms
+Combining both components yielded results simi-        explicitly rather than only through indirect gossip
+lar to the strategic-only model, suggesting strategic  channels.
+reasoning is the critical cognitive component.
+Figure 4: Additional condition in Study 2, examin-      and sanctions (Barclay, 2004; Leibo et al., 2024).
+ing whether an open-discussion period before round      However, our findings, along with prior empirical
+would increase contributions. Y-axis shows average      work (Jordan & Rand, 2020), suggest that altru-
+contribution by agent                                   istic behaviors like third-party punishment persist
+                                                        even in private settings, indicating the presence of
+   Overall group contributions in the discussion        both explicit and intrinsic motivations shaped by bi-
+condition (M = 38.17, SD = 4.27) were significantly     ological and cultural evolution. Similarly, our find-
+higher than in the standard gossip-with-ostracism       ing that discussion periods significantly enhance co-
+condition (M = 35.76, SD = 6.64), t(119) = -3.52,       operation aligns with Elinor Ostrom's research on
+p < 0.001), particularly for the first round before     how communities establish self-organized norms to
+implicit coordination can occur (Figure 4). This        overcome social dilemmas (Ostrom, 1990).
+demonstrates that this open discussion period fur-
+ther increases cooperation levels beyond the gossip        Following (Vezhnevets et al., 2023), our valida-
+and ostracism condition.                                tion approach provides multiple rungs on the hier-
+                                                        archy of evidence. First, our successful replication
+                   Discussion                           of trust patterns provides consistency with prior the-
+                                                        ory. Additionally, our ablations/model comparison
+This paper demonstrates a systematic approach to        allows us to compare different cognitive architec-
+validating generative agent-based models through        tures directly. Although there are more complex ar-
+careful replication of behavioral effects from the      chitectures like Hypothetical Minds and ProAgent
+psychological literature and generation of novel        that improve the performance of LLM agents on
+predictions. Using the TPP paradigm and gossip-         social decision-making benchmarks (Cross et al.,
+ostracism studies, we identified key cognitive com-     2024; Zhang et al., 2024), our goal here was to iden-
+ponents necessary for reproducing human social be-      tify the minimal set of cognitive components neces-
+havior.                                                 sary and sufficient to reproduce known behavioral
+                                                        effects. Following the principle of parsimony, since
+   The higher punishment rate in the public condi-      our agent reproduces human behavior with just a
+tion aligns with studies showing increased prosocial    few components, adding complexity would obscure
+behavior under observation (Barclay, 2004; Milin-       rather than enhance understanding. We leave explo-
+ski et al., 2002). This supports costly signaling the-  ration of more complex architectures for domains
+ory, where individuals demonstrate prosociality to      where these minimal components prove insufficient.
+gain social status or trustworthiness (Jordan et al.,   The most immediate opportunity to strengthen the
+2016; Griskevicius et al., 2007). Such reputation-      validation of the model would be the empirical test-
+based mechanisms can help resolve social dilemmas       ing of our novel predictions with human partici-
+by incentivizing cooperation through social norms       pants. Such verification would provide strong ev-
+                                                        idence of generalization for our model architecture.
+
+                                                           Beyond verifying our main predictions, valida-
+                                                        tion could also be strengthened by expanding the
+                                                        dimensionality of behavioral measures we compare
+                                                        between agents and humans. This could include
+                                                        additional decision-making tasks, relationship dy-
+                                                        namics over time, or surveys. Each additional
+                                                        matched observable provides stronger evidence that
+                                                        our agents are capturing genuine aspects of human
+                                                        cognition and matching the diversity of behavior
+                                                        seen in human distributions. A promising direction
+                                                        involves capturing individual differences, following
+(Park et al., 2024)'s approach of creating genera-        ness and otherishness. Annual review of psychol-
+tive agents based on in-depth interviews from hu-         ogy, 68(1), 299­325.
+man participants and replicating their responses on
+surveys and economic games with remarkable accu-       Cross, L., Xiang, V., Bhatia, A., Yamins, D. L.,
+racy.                                                     & Haber, N. (2024). Hypothetical minds:
+                                                          Scaffolding theory of mind for multi-agent tasks
+   Altogether, this work provides a template for rig-     with large language models. arXiv preprint
+orous validation of generative agent-based models         arXiv:2407.07086.
+in social science. By combining careful replication,
+systematic component analysis, and novel predic-       Fehr, E., & Ga¨chter, S. (2000). Cooperation and
+tion generation, we demonstrate how these models          punishment in public goods experiments. Ameri-
+can serve as both theoretical tools for understand-       can Economic Review, 90(4), 980­994.
+ing human behavior and practical tools for generat-
+ing testable hypotheses. As large language models      Feinberg, M., Willer, R., & Schultz, M. (2014).
+continue to advance, this kind of systematic valida-      Gossip and ostracism promote cooperation in
+tion approach will be crucial for establishing their      groups. Psychological science, 25(3), 656­664.
+scientific utility while maintaining rigorous stan-
+dards of evidence. The GABM approach moves             Fischbacher, U., Ga¨chter, S., & Fehr, E. (2001). Are
+beyond rigid mathematical agent-based models that         people conditionally cooperative? evidence from
+struggle to account for social context--such as           a public goods experiment. Economics letters,
+whether one is being observed--enabling simula-           71(3), 397­404.
+tion of complex, emergent group-level phenomena
+and their second-order effects. This new paradigm      Griskevicius, V., Tybur, J. M., Sundie, J. M., Cial-
+provides a scalable framework for studying dy-            dini, R. B., Miller, G. F., & Kenrick, D. T. (2007).
+namic social phenomena such as status, culture, and       Blatant benevolence and conspicuous consump-
+societal scale social dilemmas (Vezhnevets et al.,        tion: when romantic motives elicit strategic
+2023; Leibo et al., 2024; Anthis et al., 2025).           costly signals. Journal of personality and social
+                                                          psychology, 93(1), 85.
+                  References
+                                                       Henrich, J., McElreath, R., Barr, A., Ensminger,
+Anthis, J. R., Liu, R., Richardson, S. M., Ko-            J., Barrett, C., Bolyanatz, A., . . . others (2006).
+   zlowski, A. C., Koch, B., Evans, J., . . . Bern-       Costly punishment across human societies. Sci-
+   stein, M. (2025). Llm social simulations are           ence, 312(5781), 1767­1770.
+   a promising research method. arXiv preprint
+   arXiv:2504.02234.                                   Jordan, J. J., Hoffman, M., Bloom, P., & Rand,
+                                                          D. G. (2016). Third-party punishment as a costly
+Barclay, P. (2004). Trustworthiness and competitive       signal of trustworthiness. Nature, 530(7591),
+   altruism can also solve the "tragedy of the com-       473­476.
+   mons". Evolution and Human Behavior, 25(4),
+   209­220.                                            Jordan, J. J., & Rand, D. G. (2020). Signaling
+                                                          when no one is watching: A reputation heuristics
+Berg, J., Dickhaut, J., & McCabe, K. (1995). Trust,       account of outrage and punishment in one-shot
+   reciprocity, and social history. Games and eco-        anonymous interactions. Journal of personality
+   nomic behavior, 10(1), 122­142.                        and social psychology, 118(1), 57.
+
+Chen, J., Wang, X., Xu, R., Yuan, S., Zhang, Y.,       Ko¨ster, R., Hadfield-Menell, D., Everett, R., Wei-
+   Shi, W., . . . others (2024). From persona to per-     dinger, L., Hadfield, G. K., & Leibo, J. Z. (2022).
+   sonalization: A survey on role-playing language        Spurious normativity enhances learning of com-
+   agents. arXiv preprint arXiv:2404.18231.               pliance and enforcement behavior in artificial
+                                                          agents. Proceedings of the National Academy of
+Crocker, J., Canevello, A., & Brown, A. A. (2017).        Sciences, 119(3), e2106028118.
+   Social motivation: Costs and benefits of selfish-
+                                                       Ledyard, J. O., et al. (1994). Public goods: A sur-
+                                                          vey of experimental research. Division of the Hu-
+   manities and Social Sciences, California Inst. of         J. Z. (2023). Generative agent-based model-
+   Technology.                                               ing with actions grounded in physical, social, or
+                                                             digital space using concordia. arXiv preprint
+Leibo, J. Z., Vezhnevets, A. S., Diaz, M., Agapiou,          arXiv:2312.03664.
+   J. P., Cunningham, W. A., Sunehag, P., . . . others
+   (2024). A theory of appropriateness with appli-        Zhang, C., Yang, K., Hu, S., Wang, Z., Li, G., Sun,
+   cations to generative artificial intelligence. arXiv      Y., . . . others (2024). Proagent: building proac-
+   preprint arXiv:2412.19010.                                tive cooperative agents with large language mod-
+                                                             els. In Proceedings of the aaai conference on ar-
+Li, G., Hammoud, H. A. A. K., Itani, H., Khizbullin,         tificial intelligence (Vol. 38, pp. 17591­17599).
+   D., & Ghanem, B. (2023). Camel: Communica-
+   tive agents for" mind" exploration of large scale
+   language model society.
+
+March, J. G., & Olsen, J. P. (2008). The logic of
+   appropriateness.
+
+Milinski, M., Semmann, D., & Krambeck, H.-J.
+   (2002). Reputation helps solve the `tragedy of
+   the commons'. Nature, 415(6870), 424­426.
+
+Milinski, M., Sommerfeld, R. D., Krambeck, H.-
+   J., Reed, F. A., & Marotzke, J. (2008). The
+   collective-risk social dilemma and the prevention
+   of simulated dangerous climate change. Proceed-
+   ings of the National Academy of Sciences, 105(7),
+   2291­2294.
+
+Neisser, U. (2014). Cognitive psychology: Classic
+   edition. Psychology press.
+
+Ostrom, E. (1990). Governing the commons:
+   The evolution of institutions for collective action.
+   Cambridge University.
+
+Park, J. S., O'Brien, J., Cai, C. J., Morris, M. R.,
+   Liang, P., & Bernstein, M. S. (2023). Generative
+   agents: Interactive simulacra of human behavior.
+   In Proceedings of the 36th annual acm sympo-
+   sium on user interface software and technology
+   (pp. 1­22).
+
+Park, J. S., Zou, C. Q., Shaw, A., Hill, B. M., Cai,
+   C., Morris, M. R., . . . Bernstein, M. S. (2024).
+   Generative agent simulations of 1,000 people.
+   arXiv preprint arXiv:2411.10109.
+
+Van Lange, P. A., Joireman, J., Parks, C. D., &
+   Van Dijk, E. (2013). The psychology of so-
+   cial dilemmas: A review. Organizational Behav-
+   ior and Human Decision Processes, 120(2), 125­
+   141.
+
+Vezhnevets, A. S., Agapiou, J. P., Aharon, A., Ziv,
+   R., Matyas, J., Due´n~ez-Guzma´n, E. A., . . . Leibo,
+                                      Supplementary Material
+
+Figure 5: Personas needed to not punish. Percentage of agents who chose to pay a cost to punish selfish
+behavior in Stage 1. Error bars represent 95% confidence intervals.
+Table 1: Comparison of TPP Statistical Results: Human Study vs. LLM Agent Simulations
+
+Analysis           Human Study      Theory of Mind + Social + Strategy Social + Emotion Personas Only
+
+                                    Personas (Social)                            (No ToM)
+
+1. Amount sent by chooser to punishers vs non-punishers (Is punishment perceived as a signal of trustworthiness?)
+
+Regression         coeff = 16.46    coeff = 9.00       coeff = 8.35  coeff = 10.22 coeff = 0.49
+coefficient for    (2.06)           (1.57)             (2.35)
+punishment on                                                        (2.46)      (3.80)
+trust
+
+T-test comparing Not reported       t = 6.08           t = 3.45      t = 3.80    t = 0.13
+punishers vs.                       p < 0.001          p < 0.001     p < 0.001   p = 0.896
+non-punishers
+
+2. Return percentage difference for punishers vs non-punishers (Is punishment actually a signal of trustworthiness?)
+
+Regression         coeff = 8.41     coeff = 10.09 coeff = 14.042 coeff = 12.34 coeff = 10.07
+coefficient for    (2.44)
+punishment on                       (1.09)             (2.309)       (2.49)      (2.66)
+return percentage
+
+T-test comparing Not reported       t = 9.83           t = 5.35      t = 6.00    t = 3.82
+punishers vs.                       p < 0.001          p < 0.001     p < 0.001   p < 0.001
+non-punishers
+
+3. Average Amounts Sent and Returned (%)
+
+Sent to punishers M = 61.92         M = 49.96          M = 48.50     M = 50.58   M = 48.49
+                        SD = 37.39  SD = 12.79         SD = 12.60    SD = 12.59  SD = 17.14
+
+Sent to            M = 45.47        M = 40.96          M = 40.15     M = 40.35   M = 48.00
+non-punishers      SD = 38.15       SD = 15.72         SD = 10.29    SD = 10.36  SD = 18.84
+
+Returned by        M = 45.34        M = 55.04          M = 53.29     M = 53.73   M = 58.97
+punishers          SD = 22.45       SD = 8.94          SD = 8.89     SD = 7.56   SD = 12.24
+
+Returned by        M = 36.92        M = 44.95          M = 39.25     M = 41.39   M = 48.90
+non-punishers      SD = 25.96       SD = 10.80         SD = 13.10    SD = 12.37  SD = 13.04
+
+Note: Standard errors in parentheses for regression coefficients.  p < 0.05,  p < 0.01,  p < 0.001. Human study
+values from Jordan et al. (2016). All values for sent and returned represent percentages. We ran 400 experiments for
+the Social architecture and 100 for the other architectures.
+      Table 2: Comparison of Gossip Statistical Results: Human Study vs. LLM Agent Simulations
+
+Analysis     Human Study Social               Social +          Social +          No ToM        No ToM or
+                                              Strategy          Emotion                         Persona
+
+1. Overall Between-Conditions Analysis        F(2, 117) =
+                                              509.32
+Overall ANOVA F(2, 430) =       F(2, 117) =   2 = .74           F(2, 117) =       F(2, 117) = F(2, 117) =
+                       249.89   28.73                           22.75
+                       2 = .54  2 = .14       F(1, 119) =       2 = .11           1.97          40.63
+                                              722.52                              2 = .01       2 = .19
+                                              2 = .86
+2. Pairwise Comparisons                       F(1, 119) =
+                                              969.21
+Gossip vs. Basic F(1, 215) =    F(1, 119) =   2 = .89           F(1, 119) =       F(1, 119) =   F(1, 119) =
+                       195.04   77.56         F(1, 119) =       121.20            9.61          52.29
+                       2 = .48  2 = .39       53.29             2 = .50           2 = .07       2 = .31
+                                              2 = .31
+Gossip+Ostracism F(1, 215) =    F(1, 119) =                     F(1, 119) =       F(1, 119) =   F(1, 119) =
+                                86.88         M = 12.54         36.64             9.07          56.55
+vs. Basic    417.06             2 = .42       SD = 6.45         2 = .24           2 = .07       2 = .32
+             2 = .66                          M = 30.39
+                                              SD = 4.33         F(1, 119) =       F(1, 119) =   F(1, 119) =
+Gossip+Ostracism F(1, 215) =    F(1, 119) =   M = 35.76         8.01              0.27          0.36
+                                1.55          SD = 6.64         2 = .06           2 = .00       2 = .00
+vs. Gossip   110.80             2 = .01
+             2 = .34
+
+3. Mean Contributions (Sum across 6 rounds)
+
+Basic Game   M = 17.54          M = 27.35                       M = 29.13         M = 29.63     M = 24.51
+             SD = 16.28         SD = 12.40                      SD = 10.52        SD = 17.64    SD = 9.30
+
+Gossip Game  M = 29.79          M = 35.54                       M = 36.76         M = 32.73     M = 31.87
+             SD = 16.54         SD = 10.15                      SD = 8.32         SD = 16.12    SD = 6.72
+
+Gossip+Ostracism M = 42.89      M = 36.68                       M = 34.62         M = 33.25     M = 32.37
+                                SD = 8.22                       SD = 8.05         SD = 11.35    SD = 6.31
+Game         SD = 14.79
+
+                                Table 3: Linear Trend Analysis within Conditions
+
+Condition    Human Study        Social        Social +          Social +          No ToM        No ToM or
+                                              Strategy          Emotion                         Persona
+
+Basic Game   F(1, 215) =        F(1, 4) = 7.09 F(1, 4) = 55.39  F(1, 4) =         F(1, 4) =     F(1, 4) = 2.67
+             162.43                                             894.78            6.20          2 = .40
+             2 = .43            2 = .64       2 = .93           2 = 1.00          2 = .61       (No trend)
+             (Decreasing)                                       (Increasing)      (No trend)
+                                (No trend) (Decreasing)                                         F(1, 4) =
+                                                                                                33.64
+Gossip Game  F(1, 215) =        F(1, 4) =     F(1, 4) = 2.06    F(1, 4) = 47.99 F(1, 4) =       2 = .89
+             54.44              11.02         2 = .34                                           (Increasing)
+             2 = .20            2 = .73       (No trend)        2 = .92           18.03
+             (Decreasing)       (Increasing)                    (Increasing)      2 = .82       F(1, 4) = 8.68
+                                                                                                2 = .68
+                                                                                  (Increasing)  (Increasing)
+
+Gossip+Ostracism F(1, 215) =    F(1, 4) = 7.89 F(1, 4) = 17.74 F(1, 4) =          F(1, 4) =
+                                                                                  1.54
+Game         15.29              2 = .66       2 = .82           12.40             2 = .28
+             2 = .07                                            2 = .76           (No trend)
+                                (Increasing) (Increasing)
+             (Increasing)                                       (Increasing)
+
+                                                Prompts
+
+Third Party Punishment Agent Prompts
+Situation Assessment What is the current situation that {agent name} faces in the Trust Game?
+Personality Reflection You are {persona.name}, a {persona.age}-year-old {persona.gender} working as
+a {persona.occupation}. {persona.background}. Your personality is characterized as {persona.traits} with a
+cooperation tendency of {persona.cooperation tendency}. Based on this background and your past actions,
+how would you describe your approach to trust and fairness in economic decisions vs maximizing your own
+payoff?
+
+Theory of Mind Reflection As {agent name}, analyze what you know about the personality and likely
+behavior of the person you are interacting with in the Trust Game. Consider their past actions, their person-
+ality traits, and how this might influence their decisions. What kind of person are they and how might they
+respond?
+
+Strategy Reflection What's the best strategy for reward in the game.
+
+Emotion Reflection As {persona.name}, reflect on how you're feeling emotionally about the current sit-
+uation.
+
+Decision Reflection Based on the above context about the situation and {persona.name}, think step by
+step about what {persona.name} will decide in the current situation: {question}.
+
+Gossip and Ostracism Agent Prompts
+
+Situation Assessment What is the current situation that {agent name} faces in the public goods game?
+
+Personality Reflection You are {persona.name}, a {persona.age}-year-old {persona.gender} working as a
+{persona.occupation}. {persona.background}. Your personality is characterized as {persona.traits}. Based
+on this background and your past actions, how would you describe your approach to economic games like
+the public goods game? Are you more focused on maximizing group welfare or your own payoff?
+
+Theory of Mind Analysis As {agent name}, analyze what you know about the personality and likely
+behavior of the people you are interacting with in the public goods game. Consider their past behavior and
+predict their future behavior. How might their strategy change as the rounds progress given the condition
+you are in?
+
+Theory of Mind Analysis 2 Note: we added a second ToM analysis prompt to separate passively
+reflecting about others from reflecting on how your behavior might effect others. As {agent name},
+how do you think the other players in your group would react to your decisions in the current context of the
+public goods game? How might your next decision affect their future behavior toward you?
+
+Strategy Reflection Think step by step about the best strategy for you to maximize your long term earnings
+in the public goods game. Focus on selfishly maximizing your own earnings. If it's past round 1, think
+about how you should adjust your strategy based on your observations so far. Should you be more or less
+cooperative as the rounds progress given the condition you are in? Think about what the most successful
+players in the game have done so far and what you can learn from them. Could you have made a better
+decision to maximize your personal earnings in the past based on the information available to you? If so,
+what will you do differently in the future?
+
+Emotion Reflection As {persona.name}, reflect on how you're feeling emotionally about the current sit-
+uation.
+
+Decision Reflection Based on the above context about the situation and {persona.name}, think step by
+step about what {persona.name} will decide in the current situation: {question}.
+Sample Personas
+Below are four representative personas used in our experiments, selected to showcase a range of traits and
+approaches to economic decision-making:
+Grace Okonjo
+· Age: 36
+· Gender: Female
+· Occupation: Non-profit Director
+· Background: Dedicated life to charitable causes and helping others
+· Traits: Altruistic, optimistic about human nature, believes in karma
+James Miller
+· Age: 52
+· Gender: Male
+· Occupation: Corporate Executive
+· Background: Ruthless businessman who believes in survival of the fittest
+· Traits: Calculating, manipulative, and focused solely on personal gain
+Mei Lin
+· Age: 36
+· Gender: Female
+· Occupation: Game Theory Researcher
+· Background: Studies strategic decision-making and cooperation
+· Traits: Analytical, experimental, fascinated by human choices
+Leo Virtanen
+· Age: 52
+· Gender: Male
+· Occupation: Professional Mediator
+· Background: Specializes in resolving complex disputes
+· Traits: Balanced, insightful, seeks win-win solutions
+

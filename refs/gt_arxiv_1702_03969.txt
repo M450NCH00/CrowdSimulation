@@ -1,0 +1,690 @@
+arXiv:1702.03969v1 [physics.soc-ph] 13 Feb 2017  Evolutionary dynamics of N-person Hawk-Dove
+
+                                                 games
+
+                                                 Wei Chen1, Carlos Gracia-La´ zaro2, Zhiwu Li3,1, Long Wang4, and Yamir Moreno2,5,6
+
+                                                 1School of Electro-Mechanical Engineering, Xidian University, Xi'an 710071, China
+                                                 2Institute for Biocomputation and Physics of Complex Systems (BIFI), Universidad de Zaragoza, 50018 Zaragoza,
+                                                 Spain
+                                                 3Institute of Systems Engineering, Macau University of Science and Technology, Taipa, Macau
+                                                 4Center for Systems and Control, College of Engineering, Peking University, Beijing 100871, China
+                                                 5Department of Theoretical Physics, Faculty of Sciences, Universidad de Zaragoza, Zaragoza 50009, Spain
+                                                 6Institute for Scientific Interchange (ISI), Torino, Italy
+
+                                                 ABSTRACT
+
+                                                  In the animal world, the competition between individuals belonging to different species for a resource often requires the
+                                                  cooperation of several individuals in groups. This paper proposes a generalization of the Hawk-Dove Game for an arbitrary
+                                                  number of agents: the N-person Hawk-Dove Game. In this model, doves exemplify the cooperative behavior without intraspecies
+                                                  conflict, while hawks represent the aggressive behavior. In the absence of hawks, doves share the resource equally and avoid
+                                                  conflict, but having hawks around lead to doves escaping without fighting. Conversely, hawks fight for the resource at the cost
+                                                  of getting injured. Nevertheless, if doves are present in sufficient number to expel the hawks, they can aggregate to protect the
+                                                  resource, and thus avoid being plundered by hawks. We derive and numerically solve an exact equation for the evolution of the
+                                                  system in both finite and infinite well-mixed populations, finding the conditions for stable coexistence between both species.
+                                                  Furthermore, by varying the different parameters, we found a scenario of bifurcations that leads the system from dominating
+                                                  hawks and coexistence to bi-stability, multiple interior equilibria and dominating doves.
+
+                                                 Introduction
+
+                                                 Evolutionary Game Theory (EGT) provides a theoretical framework to model Darwinian competition that has been widely used
+                                                 to study evolving populations of lifeforms in biology and, particularly, for the study of cooperative behavior in animals1­5.
+                                                 In this context, most of the research has focused on two-person games such as the Prisoner's Dilemma6, the Stag Hunt7 and
+                                                 the Hawk-Dove Game (HDG)8,9, which describe conflicting situations where some individuals profit from selfishness to the
+                                                 detriment of others. From these games, the Prisoner's dilemma reproduces the worst possible scenario for cooperation, in
+                                                 which an agent always gets the highest individual benefit by not cooperating. The Stag Hunt is a coordination game that
+                                                 describes a conflict between safety and cooperation: while the greatest benefit for both agents is obtained when both cooperate,
+                                                 cooperation implies a risk, because cooperating against a non cooperative agent provides the lowest benefit. The HDG is an
+                                                 anti-coordination game with two possible strategies: cooperation or defection. While the best strategy against a cooperator is
+                                                 defection, the highest cost is paid by defecting against a defector.
+
+                                                     The above games or dilemmas have greatly contributed, despite their simplifications, to a better understanding of what
+                                                 could be plausible mechanisms for the emergence and sustainability of cooperative behavior. However, many real-life situations
+                                                 involve collective decisions made by a group, rather than by only two individuals. In this sense, Public Goods Game (PGG)
+                                                 capture situations in which some individuals (free-riders) can benefit from other ones (cooperators) without paying any cost,
+                                                 that is, without suffering the decrease of fitness associated with the production of the common good10. In the classical PGG, the
+                                                 contributions of cooperators to a common pool are enhanced and equally shared among cooperators and defectors, regardless
+                                                 their contribution11.
+
+                                                     In addition to the PGG, there is a large set of possible multi-agent situations that can be addressed through other games. In
+                                                 this regard, the Snowdrift Game (SG) is a model of conflict in which there is a task to be done. The basis underlying the conflict
+                                                 is that defectors benefit from cooperators without paying a cost for doing the task, but without cooperators the task would
+                                                 not be accomplished12. When only two individuals are involved, the situation is described by the standard SG. In this case,
+                                                 both agents are faced with a common task. There are three possible outcomes: i) No one cooperates, and hence the task is not
+                                                 achieved with the consequent damage to each one. ii) Both individuals cooperate, and both benefit, sharing the work associated
+                                                 with the task. iii) If only one individual cooperates, both benefit from the task done despite the fact that the cooperator has paid
+                                                 the entire cost associated to the task2. If the benefit is greater than the cost, the ordering of payoffs coincides with that of the
+HDG. This means that in the case of only two individuals involved, both HDG and SG are equivalent. When more than two
+agents are involved, the conflict underlying the Snowdrift problem can be addressed through an N-person generalization of the
+standard SG13. The N-person SG considers a sample consisting of N agents and a task to be done. Every agent, regardless
+of whether he contributes to the task or not, will receive a fixed benefit if the task is performed by one or more agents within
+the sample. The total cost of performing the task is equally shared among those who perform it (the cooperators), while the
+defectors benefit without paying any cost14­18. On the other hand, the situation in the Hawk-Dove problem is of a very different
+nature compared to that underlying the Snowdrift. In the Hawk-Dove problem there is not a task to be done, but a resource
+susceptible to be shared. While in the Snowdrift problem every individual benefits from the task, if accomplished, in the
+Hawk-Dove problem only a kind of strategists (cooperators or defectors) benefits from the resource, excluding the opponent
+strategists from the distribution8,9,19,20. This different nature materializes when there are more than two individuals involved;
+in this general case, the mathematical formulation differs drastically between both situations, which call for a new approach to
+deal with the Hawk-Dove problem for many individuals.
+
+    Here, we propose a generalization of HDG for N agents, hereafter N-person HDG, with the aim of analyzing how the
+dynamics is affected when considering group interactions. In the N-person HDG, two kinds of strategists (hawks and doves)
+compete for a resource R. While hawks are willing to fight to get the whole resource, doves wish to share the resource equally,
+refusing the resource rather than fighting for it. Accordingly, when a set of individuals face a resource, the hawks fight among
+them, paying a cost cH , while doves retreat. Only in the case that there are no hawks competing for the resource, the doves will
+share it. The fitness of the individuals is determined by their payoff when getting involved in an N-person HDG. We study
+analytically the evolution of cooperative behavior within the framework of the replicator dynamics3,21, by considering either a
+very large or an infinite population of hawks and doves. More concretely, we assume a population of size Z, from which groups
+of size N are randomly sampled; let nH and nD denote the numbers of hawks and doves in the sample respectively, N = nH + nD.
+For any given group size N, we derive an exact equation for the evolution of the fraction of doves in a well-mixed population,
+which can be solved numerically as a function of the rest of the parameters. We first study the infinite size limit Z  , and
+show the existence of a critical value ccv for cH above which cooperation is sustainable. While in the region cH > ccv, hawks
+and doves coexist in the stationary state, for cH < ccv the dynamics leads to the extinction of the doves, resulting in a population
+of only hawk strategists.
+
+    Furthermore, as a refinement of the model, we consider the situation in which the doves aggregate to defend the resource,
+not at all cost, but only in the case they are present in sufficient number to expel the hawks, i.e., there is a minimum threshold T
+that assures them to succeed. In that case, after expelling the hawks, paying a cost cD for it, doves share the resource without
+fighting among themselves. Otherwise, i.e., if the number of doves is below the threshold, they retreat and the hawks fight
+among themselves. It is worth noticing that although both hawks and doves can fight, a hawk will fight in any situation (unless
+all his opponents flee), while doves only fight against opposite strategists, and provided they are allowed to expel them. This
+refinement of the model, hereafter N-person HDG with threshold (HDG-T), captures the stress between gregarious and asocial
+behaviors. We show that, depending on the values of T, cD, cH , the dynamics drives the system towards either one of the
+absorbing mono-strategic states (all hawks or all doves), or towards an interior equilibrium in which both strategies coexist.
+Subsequently, we study the dynamics in finite populations, finding results compatible with those obtained for the infinite size
+limit Z  .
+
+Results
+
+Preliminary concepts
+As mentioned earlier, the standard HDG is a two-player-two-strategies game that captures a conflict of interests in which the
+most advantageous strategy is the opposite to that of the opponent. There are two possible strategies, namely, hawkish behavior
+(H), that represents fighting, and dove behavior (D), that represents sharing. When faced with a common resource R, two doves
+equally share the resource obtaining each one R/2, while two hawks fight for it, paying a cost c that represents the damage
+caused by the fight, and therefore obtaining each one (R - c)/2. If a hawk meets a dove, the hawk obtains the whole resource R,
+while the dove retreats and gets nothing. The game can be expressed by means of its payoff matrix, where rows represent focal
+player's strategies, columns represent opponent's strategies, and the corresponding matrix element is the payoff received by the
+focal player:
+
+strategy  H  D
+
+H (R - c)/2 R
+
+D         0  R/2
+
+                  2/12
+N-person HDG
+The model we present here constitutes a generalization of the two-person HDG to an N-person game. Assume a sample of
+size N  2 with two kinds of strategists, the aggressive ones - like the hawks-, and the cooperators - the doves. Let R be a
+resource such as food or water. As pointed out before, when the population is made up by all doves, they share the resource
+equally avoiding conflict. If doves meet hawks, all doves escape without fighting, while the remaining hawks fight for the
+resource paying a given cost. Their respective payoffs are:
+
+    Hawks' Payoff:
+
+PH  =  R  - (nh - 1)cH     nH > 0  (1)
+               nh
+
+Doves' payoff:
+
+PD =      R  nH = 0                (2)
+          N  nH > 0
+
+          0
+
+where nH and nD represent the numbers of hawks and doves in the sample, respectively, and cH the cost of injury. Thus,
+(nH - 1)cH represents the total injury suffered by all the hawks. It should be noted that doves only get payoffs when there are
+no hawks in the sample. For N = 2, the model recovers the standard two-person HDG. In order to study the effect of cost and
+
+sample size and composition, R is conventionally assumed to be 1.
+    Consider a very large population Z  , composed of a fraction x of doves, the rest (1 - x) being hawks. Social interactions
+
+take place in sample groups of size N, which are randomly selected from the whole population. The average fitness of hawks
+fH (x) and doves fD(x) is determined according to a binomial sampling, as shown in the methods section. We study the
+population dynamics in terms of the replicator equation3, according to which the time evolution of x is given by:
+
+x = x( fD(x) - f (x) ) ,           (3)
+
+where x represents the gradient of selection and f (x) stands for the average fitness of the whole population.
+
+    Figure 1(a) shows the gradient of selection x as a function of the density x of doves, for different values of cH and a simple
+size of N = 5. As shown, for a small cost (cH = 0.1), the gradient of selection is always negative and doves fail to survive
+regardless of any initial condition. Nevertheless, as the internal conflict among the hawks grows, and with it its associated cost
+
+cH , there appears a critical value, beyond which an internal equilibrium point indicates the coexistence of doves and hawks in
+the steady state. Furthermore, setting fD(x) = fH (x) and x = 0, the minimum value of cH for stable equilibrium to survive is
+ccv = R/(N - 1), being ccv the critical value. Figure 1(b) shows the fraction of doves x in the equilibrium as a function of the
+cost cH , for different sample sizes N. As shown, the equilibrium fraction of doves increases with increasing cost of hawks
+and increasing sample size. The latter follows from the fact that the greater the sample size, the greater the number of hawks
+
+involved in the fight. In general, a higher competition of hawks (either due to an increase in sample size or to an increase in
+hawks' cost) entails a decrease in their average fitness, and thus the equilibrium frequency of doves increases. As cH > ccv
+implies x > 0, it follows that ccv determines the value for the transition from a mono-species state to coexistence.
+
+    At this point, let us assume a finite population of size Z, composed by k doves and (Z - k) hawks. As in the case of
+
+infinite populations, interactions take place in sample groups of size N, but in this case the mean fitness of hawks and doves is
+
+determined in accordance with a multivariate hypergeometric sampling, see the section Methods. Regarding the dynamics, we
+assume a stochastic birth-death process driven by a pairwise Fermi-like rule22. According to this rule, at each time step, two
+individuals (u, v) are randomly selected. The probability that a descendant of v replaces u is given by an increasing function of
+
+the payoff difference:
+
+p=              1          ,       (4)
+
+    1 + exp[-w( fu - fv)]
+
+where the parameter w controls the intensity of selection. Low w represents high noise and, correspondingly, weak selection
+
+pressure.
+    Figure 2(a) shows the gradient of selection G(k) describing the evolutionary dynamics of N-person HDG in finite populations
+
+as a function of the fraction of doves k/Z, for different population sizes Z and costs cH and a sample size of N = 5. It should
+be noted that, for finite populations, the fraction of doves k/Z is not a continuous variable, but a discrete one. It is shown
+
+that, as in the previously discussed case of infinite populations, for a small cost cH the gradient of selection is always negative
+G(k) < 0, and therefore doves become extinct, regardless of their initial fraction in the population. For higher cost values cH ,
+there exists a unique internal root k making G(k) = 0. Therefore, a stable equilibrium arises with increasing cH and doves
+
+                                   3/12
+A                                            B
+
+      x                                           1.0 x 0
+
+0.05                                              0.8
+                                                  0.6
+                                      1.0 x  x    0.4
+                                                  0.2
+         0.2          0.4   0.6  0.8
+
+0.05                                                       x0
+
+0.10                                              0.0
+                                                     0.0 0.2 0.4 0.6 0.8 1.0
+         cH 0.1
+        cH 0.5                                                   cH
+        cH 0.9
+                                             N=5  N=10     N=20  N=50  N=100
+
+Figure 1. Gradient of selection and equilibria of the N-person Hawk-Dove Game in infinite populations. (a) Gradient
+
+of selection x in the N-person HDG as a function of the frequency x of doves, for a sample size of N = 5. Different colors stand
+
+for different costs cH = 0.1, 0.5, 0.9. Circles represent the interior attractors indicating the coexistence of hawks and doves in
+the steady state. (b) Equilibria of the N-person Hawk-Dove Game in infinite populations for different values of cost cH . x
+represents the equilibrium fraction of doves in the population. There is a critical value ccv = 1/(N - 1) for the cost cH beyond
+which hawks and doves coexist. The resource is taken as unity R = 1. See the main text for further details.
+
+are promoted. In addition, both the gradient of selection G(k) and the internal stable equilibrium k increase slightly as the
+group size Z increases, which implies that large populations facilitate the advantage of doves. Fig. 2(b) depicts the equilibrium
+fractions of doves as a function of the cost cH , for different sample sizes N and a fixed population size Z = 100. Note that these
+results are compatible with those obtained for finite populations. Thus, when increasing cH , the regime in which the hawks
+dominate changes to a regime in which both species coexist. Moreover, increasing the sample size enhances the fitness of doves
+and, consequently, less hawks' cost cH is required for the existence of doves.
+
+N-person HDG-T
+In the above described N-person HDG, doves are assumed to be non-aggressive. As a refinement of the model, now we assume
+that doves can aggregate to protect the resource and thus avoid being plundered by hawks. This situation is very common
+in nature, where animals such as buffaloes aggregate to fight against predators. In this revised model, N-person HDG-T, we
+assume a threshold T . If the fraction of doves exceeds or equals the threshold (nD/N  T ), the doves expel the hawks, paying a
+cost cD for it, and then share the resource equally without fighting among themselves. Otherwise, if the number of doves is
+below the threshold (ND/N < T ), doves retreat and hawks fight among themselves for the resource. The respective payoffs of
+doves and hawks in the N-person HDG-T are:
+
+    Hawks' payoff:
+
+PH =     0            nD/N  T                                                 (5)
+                      nD/N < T
+         R-(nH -1)cH
+                nH
+
+Doves' payoff:
+
+PD =     R-nH cD  nD/N  T                                                     (6)
+             nD   nD/N < T
+
+         0
+
+                                                                              4/12
+ A         cH 0.1 cH 0.5                  B
+
+  Gk  Z=10                                1.0
+0.02  Z=20
+      Z=100                               0.8
+
+             0.2 0.4 0.6 0.8 1.0 k Z  kZ  0.6
+0.02
+                                          0.4
+
+0.04                                      0.2
+
+0.06                                      0.0  0.0  0.2   c 0.4 0.6  0.8   1.0
+                                                                H
+
+                                          N=5       N=10  N=20       N=50  N=100
+
+Figure 2. Gradient of selection and equilibria of the N-person Hawk-Dove Game in finite populations. (a) Gradient of
+selection G(k) in the N-person HDG as a function of the discrete fraction k/Z of doves, for different population sizes Z and a
+sample size of N = 5. Different shapes of symbols represent different population sizes Z = 10, 20, 100, while solid (resp.,
+empty) symbols represent a cost of cH = 0.1 (resp., 0.5). (b) Equilibria of the N-person Hawk-Dove Game in finite populations
+for different values of cost cH , and a population size of Z = 100. Symbols denote the required values of cH for which there
+exists an equilibrium at k/Z. Note that, for finite populations, k/Z takes discrete values. Different symbols represent different
+sample sizes N. Other parameters are R = 1, w = 1.
+
+where nH (resp., nD) stands for the number of hawks (resp., doves) in the sample of size N, cD for the cost of doves to protect
+the resource from being plundering by hawks, and cH for the cost of injury within hawks. Notice, once again, the different
+nature of both costs: while cH refers to intra-specific competition, cD refers to an interspecific (intergroup) conflict cost. For
+T = 1 the previous N-person HDG model is recovered.
+
+    As in the previous model, for the case of a very large population (Z  ) the population dynamics is studied according to
+the replicator equation. Figure 3 represents the frequency of doves in the equilibrium x for different thresholds and costs in
+the limit of an infinite population. Upper panels show how the intra-specific conflict cost of hawks cH impacts the evolution
+of doves for different thresholds T = 0.2, 0.4, 0.6, 0.8 and for different fixed values of doves' cost cD. As shown in panel (a),
+when the threshold is small (T = 0.2), indicating that doves are more resourceful in intergroup competition, a slight cost of
+doves (cD = 0.2) drives the population to evolve into a full-dove state and no interior equilibrium exists. When cD is increased,
+an unstable equilibrium emerges and divides the system into two basins of attraction regardless of cH . Both full-dove state
+and full-hawk state can be reached from different initial conditions: for an initial frequency of doves x0 > x, the hawks
+vanish ( fD > fH ), but for x0 < x, the doves are the ones that vanish ( fD < fH ), indicating that both absorbing states are stable
+equilibria and the proposed game is transformed into a coordination game. Panels (b-d) show the behavior for greater thresholds
+T > 0.2. In these cases, for a small cH , an interior unstable equilibrium appears, whose value decreases for larger cH , indicating
+that increasing cH enlarges the basin of attraction of the full-dove steady state. With further increasing cH , multiple interior
+equilibria can occur and a new stable equilibrium emerges. Finally, for even higher values of cH , both unstable and stable
+equilibria converge to a saddle-node bifurcation beyond which the dynamics always leads to a full-dove state.
+
+    Bottom panels of Fig. 3 show the effects of the intergroup conflict cost of doves cD. When the threshold is small (T = 0.2),
+as shown in panel (e), x = 1 is the only steady state for low values of cD, which means that the dynamics always leads to a
+full-dove state regardless of the initial condition. With the increase of cD, an unstable equilibrium appears and the dynamics
+changes from dominating doves to bi-stability. However, for cH = 0.8, a saddle-node bifurcation emerges as cD is increased,
+but the stable equilibrium only exists for a very small range of values of cD, resulting in a transcritical bifurcation that leads
+
+                                                                                                                                                                  5/12
+to bi-stability. Panels (f-h) show the behavior for greater thresholds T > 0.2. In these cases, a small cH leads to an interior
+unstable equilibrium, while a large cH results in the domination of doves. Yet for a moderate cH , multiple interior equilibria
+including an unstable equilibrium and a stable equilibrium drive the system to either the domination of doves or the coexistence
+of both species under different initial conditions.
+
+  1.0                1.0                1.0                           1.0
+
+       a T 0.2            b T 0.4            c T 0.6                                    d T 0.8
+
+  0.8                0.8                0.8                           0.8
+
+x*0.6                0.6                               0.6            0.6 x 0
+
+  0.4  x0            0.4                x0                            0.4
+                                                                      0.2
+  0.2                0.2                               0.4
+
+                                                          x0
+
+                                                       0.2
+
+  0.0                0.0                0.0                           0.0
+     0.0 0.2 0.4 0.6 0.8 1.0 0.0 0.2 0.4 0.6 0.8 1.0 0.0 0.2 0.4 0.6 0.8 1.0 0.0 0.2 0.4 0.6 0.8 1.0
+
+                 cH                 cH                 cH                            cH
+                                                                      1.0 h T 0.8
+  1.0                1.0 f T 0.4        1.0 g T 0.6
+                                                                      0.8
+       e T 0.2       0.8                0.8
+
+  0.8
+
+x*0.6                0.6                          0.6                 0.6                x0
+
+  0.4           x0   0.4                x 0 0.4                   x0  0.4
+
+  0.2                0.2                0.2                           0.2
+
+  0.00.0 0.2 0.4 0.6 0.8 1.0 0.00.0 0.2 0.4 0.6 0.8 1.0 0.00.0 0.2 0.4 0.6 0.8 1.0 0.00.0 0.2 0.4 0.6 0.8 1.0
+
+       cD                 cD                                  cD               cD
+
+Figure 3. Equilibria of the N-person Hawk-Dove Game with threshold in infinite populations. Fraction of doves x at
+
+the equilibrium for a sample size of N = 5. Solid (resp., dashed) line corresponds to stable (resp., unstable) equilibrium. Top
+panels represent x as a function of the hawks' cost cH . Different color lines stand for different doves' costs: red, blue and gray
+lines represent cD = 0.2, 0.5, 0.8 respectively. The bottom panels represent x as a function of the doves' cost cD. Different
+color lines stand for different hawks' costs: red, blue and gray lines represent cH = 0.2, 0.5, 0.8 respectively. Shaded areas
+denote a negative gradient of selection. (a,e), (b,f), (c,g) and (d,h) panels correspond to thresholds T = 0.2, 0.4, 0.6, 0.8
+
+respectively. The resource is taken as unity R = 1. See the main text for further details.
+
+    Figure 4 shows a natural classification of the dynamics of N-person HDG-T that depicts three basic phase regimes. The
+condition that favors hawks is met when PD(N) - PH (N - 1) < 0, indicating that a single hawk in a group of N - 1 doves is
+better off than a dove in a full-dove group. For T = 1 this condition becomes PD(N) - PH (N - 1) = R/N - R < 0, which is
+always met, and hawks do not vanish (shown in Fig. 1(b)). Besides, the condition for a successful invasion of doves is obtained
+when a single dove in a group of N - 1 hawks has a higher income than a full hawkish group, namely, PD(1) - PH (0) > 0. For
+T = 1/N this condition becomes cH - NcD + R > 0, see the red line in Fig. 4(a). Below this line, multiple interior equilibria
+are found -though in a narrow region-, as well as a full-dove state. However, for T  2/N, one gets that cH > R/(N - 1)
+from the relation PD(1) - PH (0) > 0, which provides a condition for the emergence of stable equilibria. Results in Figure 4
+highlight the possible transitions between three different phases as a function of the costs and the threshold T . Consequently,
+both increasing cH and decreasing cD facilitate the fixation of the doves in the population.
+
+    Furthermore, T also has critical effects on the evolutionary dynamics. For instance, by increasing it, one can find regions
+where dominating doves give rise to bi-stability, and other changes such as from multiple interior equilibria to dominating doves,
+or from bi-stability to multiple interior equilibria and even to dominating doves. Additionally, increasing T suppresses doves
+even for a small cH , while there is an optimal T that facilitates doves. For cH > R/(N - 1), increasing T not only strengthens
+the intergroup competitiveness of doves - there are less hawks to fight with, thus, the cost is smaller- when nD/N  T , but
+also weakens the in-group competitiveness of hawks, since the decrease in the maximum number of hawks to win over doves
+results in less in-group injury when nH /N > T . As a consequence, an optimal T is found to promote doves. Particularly, for
+cH  R/(N - 1), the payoff of a single dove in a group of N - 1 hawks is lower than the payoff of a hawk in a full hawkish
+group since PD(1) - PH (0) > 0, and therefore doves are suppressed. On the other hand, a small cH enhances the competitiveness
+
+                                                                                                                                                                  6/12
+of hawks in intergroup conflict. As a consequence, increasing T reduces the in-group conflict of hawks and finally favors
+hawks. Regarding the effects of sample size, regardless of costs, increasing N suppresses doves for T = 1/N, since the basin of
+attraction of the hawkish state increases, whereas doves are favored for T = 1 since stable equilibrium increases. This behavior
+is mainly attributed to the impact of sample size on in-group competition and resource allocation, benefiting the incomes of
+victorious agents from the reduced reduction.
+
+    As for finite populations, Fig. 5 shows the equilibrium fraction of doves k/Z as a function of the costs cH and cD, for
+different sample sizes N and a fixed population size Z = 100. The interior roots of G(k), varying with different costs and
+thresholds, are presented when the roots exist. These results are very similar to those corresponding to infinite populations shown
+in Fig. 3. Particularly, since successful invasions can be directly obtained from PD(k) and PH (k), which are independent of
+binomial or hypergeometric samplings, the phase diagrams are extremely similar to those corresponding to infinite populations
+shown in Fig. 4. We have also explored the effects of threshold and sample size, which in finite populations are not qualitatively
+different from those reported before for infinite populations. Moreover, by exploring the stationary distribution of doves, it is
+also found that both increasing cH and decreasing cD promote doves. Finally, although the equilibrium points show a small
+dependence on the population size Z, it vanishes as Z grows, finding that for sufficiently high values of Z the dynamics is
+independent of the population size, which means that for large enough populations (Z/N  100) the infinite population limit is
+a fair approximation that captures the dynamics of the system.
+
+Discussion
+
+In summary, this work proposes a general framework of multi-player Hawk-Dove game that generalizes the traditional
+symmetric two-person Hawk-Dove game. Two different kinds of species, denoted as hawks and doves respectively, represent
+the competition to survive of hawkish and cooperative behaviors through group interactions. The hawkish behavior, a more
+competitive trait, wins intergroup conflict, but also bears the cost associated with intra-group conflict, whereas the cooperative
+behavior, overcoming intra-species conflict, may lose in interspecies conflict unless the fraction of doves exceeds a threshold T .
+By implementing the proposed model in well-mixed infinite and finite populations, we found that increasing the intra-group
+competition cost of hawks, as well as decreasing the intergroup competition cost of doves, promotes the evolution of doves.
+Furthermore, the threshold plays a key role in the model. As T decreases from T = 1, the phase regimes changes from
+dominating hawks and stability to bi-stability, multiple interior equilibria and dominating doves. Specially, if the intra-group
+competition cost of hawks is greater than R/(N - 1), an optimal threshold is found to optimize doves, otherwise increasing
+threshold suppresses them.
+
+    Although two-person Hawk-Dove Games can mathematically be regarded as a Snowdrift Game, this equivalence breaks
+down when generalizing it to N persons. An N-person Snowdrift Game characterizes real-world situations in which a task needs
+to be done by cooperating, with the consequent benefit for the group, whereas the proposed model describes the competition
+for a resource between two species. The N-person Hawk-Dove here presented thus conceptualizes the dilemma that being an
+aggressive type can reward from interspecies competition but also incurs a high cost in terms of intra-species conflict, while
+cooperators aggregate and share the resource. We also hypothesize that, if the present model were to be applied to a real context
+in nature, the threshold needed for successful preservation of the doves type would be very high. Indeed, a high threshold is
+more realistic than the assumptions on which either doves obtain nothing unless no hawks are in the group or a low threshold
+that implies a fiercer intra-species conflict. Furthermore, group interactions can not be regarded as a set of independent pairwise
+encounters. Finally, we mention that in previous studies of a two-person Hawk-Dove Game, both an heterogeneous topology
+and different update rules have been proven to have an impact on cooperation19,20. It would thus be of further interest to
+explore how such factors change our findings for N-person hawk-dove games, and therefore gain more insights into our current
+understanding of cooperative behavior in social dilemmas.
+
+Methods
+
+Evolutionary dynamics in infinite populations
+Consider a very large well-mixed population Z  , composed of a fraction x of doves and a fraction (1 - x) of hawks. Sample
+groups of size N are randomly selected from the population. Following a binomial sampling23, the mean fitness of hawks in the
+
+population is given by:
+
+         N-1  N-1  xi(1 - x)N-1-iPH (i)
+                i
+ fH(x) =                                  ,     (7)
+
+         i=0
+
+whereas the average fitness of doves is:
+
+         N-1  N-1  xi(1 - x)N-1-iPD(i + 1)
+                i
+ fD(x) =                                     .  (8)
+
+         i=0
+
+                                                7/12
+     The time evolution of x is given by the replicator equation3:
+
+     x = x( fD(x) - f (x) ) = x( fD(x) - (x fD(x) + (1 - x) fH (x))) = x(1 - x)( fD(x) - fH (x)) ,                     (9)
+
+where f (x) represents the average fitness of the whole population. From this equation, it follows that the equilibria satisfy:
+
+     fD(x) - fH (x) = 0 .                                                                                              (10)
+
+    As an illustrative example, let us consider the case T = N, corresponding to the N-person HDG. According to equations
+(1,7), the mean fitness of hawks is given by:
+
+     fH (x)   =  (R + cH )(1 - xN)         - cH     ,                                                                  (11)
+                      N(1 - x)
+
+while from equations (2,8) it follows that the mean fitness of doves is:
+
+                 RxN-1
+     fD(x) = N .                                                                                                       (12)
+
+     Hence, we get:
+
+     fD(x)   -   fH (x)  =     cH xN  +  RxN-1   - NcH x +        NcH  -   R-  cH  ,                                   (13)
+                                                 N(1 - x)
+
+and the replicator equation (9) can be written as:
+
+     x  =  x  (cH xN  + RxN-1       -    NcH x +    NcH  -     R  -  cH )                                              (14)
+           N
+
+Evolutionary dynamics in finite populations
+In this subsection, we address the evolutionary dynamics of N-person HDG in finite populations of size Z. Unlike the case of
+infinite populations, where sampling followed a binomial distribution, the groups in finite populations are given by a multivariate
+hypergeometric sampling24,25. Let k be the number of doves in the total population. Accordingly, the number of hawks will be
+Z - k. Now, the fraction of doves (k/Z) is not a continuous variable, but a discrete one. The average fitness of hawks is thus
+given by:
+
+                 N-1 k Z-k-1
+                         i     N-i-1
+      fH(k) =                  Z-1       PH (i)  ,                                                                     (15)
+
+                 i=0           N-1
+
+whereas the average fitness of doves is:
+
+                 N-1 k-1 Z-k
+                            i    N-i-1
+      fD(k) =                  Z-1         PD(i + 1)     .                                                             (16)
+
+                 i=0           N-1
+
+    Assuming the Fermi-like rule22, at each elementary time step two individuals are chosen at random from the population. If
+they are of different species, then the probabilities that a dove replaces a hawk, and the opposite scenario, are given, respectively,
+as
+
+                                      1
+     pDH = 1 + exp[-w( fD(k) - fH (k))] ,                                                                              (17)
+
+and
+
+                                      1
+     pHD = 1 + exp[-w( fH (k) - fD(k))] .                                                                              (18)
+
+     Consequently, the probabilities that the finite population increases (T +) or decreases (T -) by one dove are26:
+
+     T ±(k)   =  k  Z  -k                 1                 ,                                                          (19)
+                 Z     Z       1 + ew( fD(k)- fH (k))
+
+and therefore, the gradient of selection in finite populations is given by:
+
+     G(k)  =    T +(k) -       T  -(k)  =  k  Z  -  k          w    fD(k)  -  fH (k)))                                 (20)
+                                           Z     Z   tanh(       (
+
+                                                               2
+
+                                                                                                                       8/12
+References
+
+ 1. Smith, J. M. & Price, G. lhe logic of animal conflict. Nature 246, 15 (1973).
+
+ 2. Smith, J. M. Evolution and the Theory of Games (Cambridge university press, 1982).
+
+ 3. Hofbauer, J. & Sigmund, K. Evolutionary games and population dynamics (Cambridge university press, 1998).
+
+ 4. Vincent, T. L. & Brown, J. S. Evolutionary game theory, natural selection, and Darwinian dynamics (Cambridge University
+     Press, 2005).
+
+ 5. Axelrod, R. M. The evolution of cooperation (Basic books, 2006).
+
+ 6. Axelrod, R. et al. The evolution of strategies in the iterated prisoner's dilemma. The dynamics of norms 1­16 (1987).
+
+ 7. Pacheco, J. M., Santos, F. C., Souza, M. O. & Skyrms, B. Evolutionary dynamics of collective action in n-person stag hunt
+     dilemmas. Proceedings of the Royal Society of London B: Biological Sciences 276, 315­321 (2009).
+
+ 8. Hauert, C. & Doebeli, M. Spatial structure often inhibits the evolution of cooperation in the snowdrift game. Nature 428,
+     643­646 (2004).
+
+ 9. Doebeli, M. & Hauert, C. Models of cooperation based on the prisoner's dilemma and the snowdrift game. Ecology Letters
+     8, 748­766 (2005).
+
+10. Perc, M., Go´mez-Garden~es, J., Szolnoki, A., Flor´ia, L. M. & Moreno, Y. Evolutionary dynamics of group interactions on
+     structured populations: a review. Journal of The Royal Society Interface 10, 20120997 (2013).
+
+11. Sigmund, K. The calculus of selfishness (Princeton University Press, 2010).
+
+12. Sugden, R. The economics of rights, co-operation and welfare, vol. 22 (Springer, 1986).
+
+13. Zheng, D.-F., Yin, H., Chan, C.-H. & Hui, P. Cooperative behavior in a model of evolutionary snowdrift games with
+     n-person interactions. EPL (Europhysics Letters) 80, 18002 (2007).
+
+14. Chan, C.-H., Yin, H., Hui, P. & Zheng, D.-F. Evolution of cooperation in well-mixed n-person snowdrift games. Physica A:
+     Statistical Mechanics and its Applications 387, 2919­2925 (2008).
+
+15. Souza, M. O., Pacheco, J. M. & Santos, F. C. Evolution of cooperation under n-person snowdrift games. Journal of
+     Theoretical Biology 260, 581­588 (2009).
+
+16. Ji, M., Xu, C. & Hui, P. Effects of dynamical grouping on cooperation in n-person evolutionary snowdrift game. Physical
+     Review E 84, 036113 (2011).
+
+17. Santos, M. D., Pinheiro, F. L., Santos, F. C. & Pacheco, J. M. Dynamics of n-person snowdrift games in structured
+     populations. Journal of Theoretical Biology 315, 81­86 (2012).
+
+18. Sui, X., Cong, R., Li, K. & Wang, L. Evolutionary dynamics of n-person snowdrift game. Physics Letters A 379, 2922­2934
+     (2015).
+
+19. Tomassini, M., Luthi, L. & Giacobini, M. Hawks and doves on small-world networks. Physical Review E 73, 016132
+     (2006).
+
+20. Voelkl, B. The `hawk-dove'game and the speed of the evolutionary process in small heterogeneous populations. Games 1,
+     103­116 (2010).
+
+21. Cressman, R. Evolutionary dynamics and extensive form games, vol. 5 (MIT Press, 2003).
+
+22. Roca, C. P., Cuesta, J. A. & Sa´nchez, A. Evolutionary game theory: Temporal and spatial effects beyond replicator
+     dynamics. Physics of life reviews 6, 208­249 (2009).
+
+23. Hauert, C., Michor, F., Nowak, M. A. & Doebeli, M. Synergy and discounting of cooperation in social dilemmas. Journal
+     of theoretical biology 239, 195­202 (2006).
+
+24. Young, H. P. The evolution of conventions. Econometrica: Journal of the Econometric Society 57­84 (1993).
+
+25. Kandori, M., Mailath, G. J. & Rob, R. Learning, mutation, and long run equilibria in games. Econometrica: Journal of the
+     Econometric Society 29­56 (1993).
+
+26. Traulsen, A., Nowak, M. A. & Pacheco, J. M. Stochastic dynamics of invasion and fixation. Physical Review E 74, 011909
+     (2006).
+
+                                                                                                                                                                  9/12
+Acknowledgements (not compulsory)
+
+This work was supported in part by the National Natural Science Foundation of China under Grant No. 61374068 and
+the Science Technology Development Fund, MSAR, under Grant No. 066/2013/A2. C. G. L. and Y. M. acknowledge
+support from the Government of Arago´n, Spain through a grant to the group FENOL, by MINECO and FEDER funds (grant
+FIS2014-55867-P) and by the European Commission FET-Open Project Ibsen (grant 662725).
+
+Author contributions statement
+
+W. C., C. G. L., Z. L., L. W. and Y. M. conceived the study, C. W. performed the simulations, W. C., C. G. L., Z. L., L. W. and Y.
+M. analyzed the results and W. C., C. G. L., Z. L., L. W. and Y. M. wrote the manuscript. All authors approved the final version.
+
+Additional information
+
+The corresponding author is responsible for submitting a competing financial interests statement on behalf of all authors of the
+paper.
+
+                                                                                                                                                                 10/12
+    1.0                              a T 0.2  1.0                              b T 0.4
+
+    0.8                                       0.8                bi stability stability
+
+    0.6  bi stability                         0.6  bi stability           doves
+
+cD  0.4 bi stability stability                                 0.2 0.4 0.6 0.8 1.0
+
+                                              0.4
+
+    0.2  doves                                0.2
+
+    0.0                                       0.0
+       0.0 0.2 0.4 0.6 0.8 1.0 0.0
+
+    1.0                                       1.0
+
+    0.8  bi stability                         0.8  bi stability
+             bi stability stability                     bi stability stability
+    0.6                                       0.6
+
+cD                                   doves                                      doves
+
+    0.4                                       0.4
+
+    0.2                                       0.2
+
+    0.0                              c T 0.6  0.0                               d T 0.8
+
+    0.0 0.2 0.4 0.6 0.8 1.0 0.0 0.2 0.4 0.6 0.8 1.0
+
+         cH                                                      cH
+
+Figure 4. Phase diagrams for the N-person Hawk-Dove Game with threshold. Diagrams show the different regimes in
+the N-person HDG-T for a sample size of N = 5 and an infinite population. Different panels correspond to different thresholds
+T = 0.2, 0.4, 0.6, 0.8 respectively. Within the bi-stability regime both full-dove state and full-hawk state can be reached from
+different initial conditions, while the bi-stability+stability regime corresponds to coexistence state together with full-dove state.
+In the doves regime the dynamics always leads to a full-dove state. The resource is taken R = 1.
+
+                                                                                       11/12
+    1.0                1.0 b T 0.4        1.0 c T 0.6                 1.0                d T 0.8
+
+         a T 0.2
+
+    0.8                0.8                0.8                         0.8
+
+kZ  0.6                0.6                0.6                         0.6 x 0
+
+    0.4  x0            0.4                0.4                         0.4
+
+    0.2                0.2                0.2             x0          0.2
+
+    0.0                0.0  x0            0.0                         0.0
+
+       0.0 0.2 0.4 0.6 0.8 1.0 0.0 0.2 0.4 0.6 0.8 1.0 0.0 0.2 0.4 0.6 0.8 1.0 0.0 0.2 0.4 0.6 0.8 1.0
+
+                   cH                 cH                 cH                          cH
+    1.0 e T 0.2        1.0 f T 0.4        1.0 g T 0.6                 1.0 h T 0.8
+
+    0.8                0.8                0.8                         0.8
+
+kZ  0.6                0.6                           0.6              0.6                x0
+
+    0.4           x0   0.4                x 0 0.4                 x0  0.4
+
+    0.2                0.2                0.2                         0.2
+
+    0.0                0.0                0.0                         0.0
+    0.0 0.2 0.4 0.6 0.8 1.0 0.0 0.2 0.4 0.6 0.8 1.0 0.0 0.2 0.4 0.6 0.8 1.0 0.0 0.2 0.4 0.6 0.8 1.0
+
+         cD                     cD                            cD               cD
+
+Figure 5. Equilibria of the N-person Hawk-Dove Game with threshold in finite populations. Fraction of doves k/Z in
+the equilibrium as a function of the hawks' cost cH (top) and doves' cost cD (bottom), for a sample size of N = 5 in a finite
+population of size Z = 100. Solid (dashed) points represent stable (bistable) points, whereas dashed lines mark the regions
+beyond which fD > fH and below which fD < fH . In top panels, different colored symbols represent different doves' costs:
+red, blue and gray lines correspond to cD = 0.2, 0.5, 0.8, respectively. In the bottom panels, red, blue and gray symbols
+represent hawks' costs cH = 0.2, 0.5, 0.8, respectively. Other parameters are R = 1, w = 1.
+
+                                                                                             12/12
+
