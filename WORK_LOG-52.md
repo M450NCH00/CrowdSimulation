@@ -103,9 +103,91 @@ Literature only: no code, no change to `llm_negotiation/`, no LLM calls of any k
   comparison negsim needs; Talk like a Graph encodes abstract graphs, not space.
 - Next step: write the five entries from the cached extracts.
 
+### 2026-10-19 — Entries written and checked
+- What I did: read the needed passages of each extract (methods, prompts, results, limits) by
+  keyword search; rendered Chen et al.'s Table 1, Table 3 and Figure 9 with PyMuPDF to confirm cells
+  the extract scrambled. Wrote `entries.md`. Wrote a checker that pulls every quoted fragment, looks
+  for it in the named extract (whitespace, curly quotes and line-break hyphens normalised) and
+  reports the page from the extract's form feeds.
+- Result: 106 fragments, all found except quotations of negsim's own templates and of titles. **21
+  page locators were wrong** (Ntarouis and Park, off by one or two pages from my hand count of page
+  numbers) and were fixed by an exact-match replacement script. One unquoted claim ("100 human
+  evaluators") was then backed with a quotation. The Park extract garbles μ, σ and d; quotations
+  exclude the glyphs.
+- Also found: Chen's Table 1 caption says ROOM-32-32-4 and the text ROOM-32-32-1; Martorell reports
+  positive β for the classes that did worse, without a sign convention. Both are flagged in the
+  entries rather than resolved.
+
+### 2026-10-19 — Findings, verdict, token counts
+- What I did: wrote `findings.md` (Q1 method table, Q2 results, Q3 table, Q4, Q5 gaps G1-G7 each with
+  its searches), `verdict.md`, `token-estimates.md`, `search-log.md`, `missing-papers.md`, the BibTeX,
+  a README row (5l), a findings paragraph and the layout-tree block.
+- **Token counts (Q6):** downloaded DeepSeek-V3's `tokenizer.json` from Hugging Face (a file, not an
+  LLM call) and counted locally with `tokenizers` 0.23.3. Situation block: today 220 tokens whatever
+  N; everyone in prose 301 / 545 / 940 for 2 / 5 / 10 people; hybrid (3 nearest in full + summary)
+  333 / 448 / 448; one JSON line per person 282 / 479 / 805. The script is embedded in
+  `token-estimates.md`; I re-ran the embedded copy and it reproduced the table exactly.
+- Extra reading beyond the prescribed list, for specific needs (assumption A3 widened): the pricing
+  block of `pipeline/config.py` (cost line), the headings of `literature/demographic-personas/` (Q4
+  cross-reference), `refs/td_amano2026_mobility.txt` (screening).
+- Q4 outcome: none of the five describes others' age, gender or disability, so Q4's attribute half
+  is answered by cross-reference to [Yoldas-YieldBias] and issue #16, as the issue asked, plus gap G6.
+
 ## Open questions / risks
 
-(filled in as the work goes)
+1. **Selection rule (my decision, needs a look).** Read strictly, the issue's tier order would fill
+   all five slots from tier 1 and leave no measured format comparison. I took two tier 1 papers and
+   three measured or foundational ones. If the supervisor prefers more crowd papers, SenseWalk and
+   Liu et al. are the next tier 1 candidates (search log §4, §5).
+2. **Chen et al.'s numbers are from arXiv v2.** The TMLR 2025 version is revised and retitled and
+   could not be downloaded (OpenReview 403). Table 3 is the main Q2 evidence, so it should be
+   checked against the published version before it is cited in the report (missing-papers V1).
+3. **Ntarouis & Geraerts' prompts are unseen** (Zenodo supplement, 403). Their Q1 "numbers and
+   directions" is "not reported" until the user fetches it in a browser.
+4. **Thin evidence behind the proposal.** The two measured comparisons are puzzles (pathfinding,
+   grid navigation), one with 5 scenarios a cell; the crowd paper's prompt variants never touch the
+   perception text. The proposal is a design to test, and says so; its parameters (8 m, 200°, three
+   in full) come from one preprint and are **design decisions for the supervisor**, not findings.
+5. **Peer-review status of Ntarouis & Geraerts is inferred** from its place in the PED 2025 section
+   of a proceedings journal; the PDF itself does not describe the review process.
+6. **Token counts are estimates**: DeepSeek does not state that `deepseek-chat` uses exactly the
+   published V3 tokenizer; only the situation block is counted; the example people are random and
+   not filtered by a field of view.
+7. **Gap claims are bounded by 13 web searches and 3 Crossref queries.** G4 (egocentric vs
+   coordinates) may be partly answered by unread leads (Sidhu & Hockenmaier 2026; a TU Delft thesis).
+8. **Durupinar is a single-author preprint** and prints no rendered perception description, so the
+   form of its "distance and direction" is unknown.
+9. Martorell's β signs and Chen's map-name inconsistency are flagged, not resolved.
 
 ## Summary (fill in at the end)
+
+**What changed.** New folder `literature/environment-description/` with `entries.md` (five full
+entries), `findings.md` (Q1-Q5), `verdict.md` (Q6, one page, a proposal), `token-estimates.md`
+(offline counts and the script), `search-log.md`, `missing-papers.md` and
+`refs-environment-description.bib`; cached sources `refs/ed_*` (the 12 MB Park PDF is git-ignored;
+its extract is tracked); README row 5l, a findings paragraph and the layout tree. Nothing in
+`llm_negotiation/` changed; no LLM was called.
+
+**Why.** negsim describes one other person in detail and everyone else in one generic line; before
+any prompt is redesigned, the issue asked what the literature says about describing multi-person
+scenes to an LLM and how well each method works.
+
+**What it found.** No comparison of description formats for pedestrian or crowd conflicts was found
+(G1), nor a measure of decision quality against the number of nearby people described (G2). The
+measured comparisons are spatial puzzles: a text map beat a coordinate list and an image for
+multi-agent pathfinding at 4 and 8 agents ([Chen-MAPFLLM], Table 3); Cartesian encodings beat grid
+drawings and prose for grid navigation ([Martorell-TextToSpace]). The one crowd simulator with an
+explicit perception rule caps full descriptions at three people ([Durupinar-AffectCrowd]). Proposed
+(to test, not adopt): a perceivability rule, the three nearest in full plus a summary line, motion for
+each, capacities stated explicitly; four tests T1-T4 first.
+
+**How it was verified (§5b).**
+- Every quotation in `entries.md` and `findings.md` checked by script against the cached extracts;
+  page locators taken from the extracts' form feeds (21 corrected). Table values checked on rendered
+  pages where the extract scrambled them; every table value names its table.
+- "Open questions / risks" above is not empty.
+- Each of Q1-Q6 is answered in `findings.md` / `verdict.md`; Q4's attribute half is answered by
+  cross-reference, as the issue asked, since none of the five covers it.
+- Sources cached in `refs/ed_*`; every record confirmed from its own page.
+- The token-count script was re-run from its embedded copy and reproduced the table.
 
