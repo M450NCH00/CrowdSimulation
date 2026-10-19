@@ -57,6 +57,7 @@ experiment code until the literature review is complete and discussed.**
 | 5d | LLMs resolving spatial conflict without conversation | **draft** (no issue; search of 2026-10-05) — `literature/llm-behavioural-conflict/` |
 | 5e | Portable rules (track #34), PT-1: can a rule be written once and carried out by several simulators? | **delivered** (issue #35) — `literature/portable-rules/`; verdict *feasible with changes*. #34's idea itself is a proposal awaiting the supervisor's sign-off |
 | 5f | Portable rules (track #34), PT-2: how to test rules on unseen scenarios, and how to write those scenarios down for several simulators | **delivered** (issue #36) — `literature/unseen-scenarios/`; a draft test protocol and scenario-card fields, both proposals awaiting the supervisor's sign-off |
+| 5g | Portable rules (track #34), PT-3: human evidence for the unseen scenarios (queue cutting, boarding, lifts, escalators), Singapore first | **delivered** (issue #37) — `literature/unseen-scenario-evidence/`; graded reference behaviours (grading scale a proposal awaiting the supervisor's sign-off); no Singapore observation found |
 | 6 | Bridge into CrowdGym — `integration/crowdgym_mapping.md` | not started |
 
 From building the negotiation simulator (issue #24) — see `llm_negotiation/README.md` for
@@ -194,6 +195,25 @@ From issue #32 (the third sub-issue's second step, SI-3a.2) — see `llm_negotia
   its worst case is USD 0.65 against the same USD 0.05 cap, and no cut of the reply cap, the
   messages or the retries alone fits; a hard spend cap with the sessions in a stated priority
   order would (issue #30's Q5, options re-previewed).
+
+Three findings from the human-evidence review (issue #37, PT-3 of track #34), all drafts needing
+supervisor sign-off. See `literature/unseen-scenario-evidence/`; `verdict.md` is one page. The
+review read 10 research sources and 8 official documents, and stubbed 14 sources that could not be opened:
+
+- **Queue cutting is the best-evidenced unseen scenario, but the evidence is old, Western, and
+  partly second-hand.** Objection to a cutter comes mostly from the person directly behind (36%,
+  falling to 0% three places back; New York, 1978), roughly doubles with two cutters, and drops for
+  a cutter who seems to join a friend. Milgram et al.'s "1978 or 1986" is resolved: run in 1978,
+  published in 1986. See `queue-cutting.md`.
+- **No Singapore study observes any of the five target behaviours.** Singapore supplies the norms
+  it promotes (give way to alighting passengers; priority queues; hold the handrail) but no
+  compliance rates, so every Singapore test must borrow its reference from London, New York or
+  Taipei. No source supports the "stand on both sides" escalator campaign mentioned in
+  `scenarios.yaml`. See `singapore.md`.
+- **Where priority is observed, it is given less than half the time.** At Taipei MRT lifts (2018),
+  wheelchair, pram and walking-frame users were fully let in first in 24% of the trips that called
+  for it, and not at all in 49%. How often MRT boarders push in before alighting ends has no number:
+  the two studies that measure it could not be opened. See `reference-behaviours.md`.
 
 Three findings from the unseen-scenarios review (issue #36, PT-2 of track #34), all drafts
 needing supervisor sign-off. See `literature/unseen-scenarios/`; `verdict.md` is one page. The
@@ -347,6 +367,16 @@ CrowdSimulation/
       missing-papers.md                  2 sources not obtained; 8 read in an earlier version
       search-log.md                      searches run, what went wrong, leads not followed
       refs-unseen-scenarios.bib          records for every source, with the copy read
+    unseen-scenario-evidence/       issue #37 (PT-3 of track #34): human evidence for the unseen scenarios
+      verdict.md                         *** one page: which scenarios have evidence to test against ***
+      reference-behaviours.md            Q6: 23 graded, testable statements; Q5 age and gender; grading scale (proposal)
+      queue-cutting.md                   Q1: Milgram (1978/1986), Schmitt, Langer, Folkes, Allon & Hanany; 6 stubs
+      boarding-alighting.md              Q2: London field and lab studies; 6 stubs
+      lifts-escalators.md                Q3 (short pass): Taipei lifts, TfL Holborn escalator pilot
+      singapore.md                       Q4: what exists (and does not) for Singapore, with the searches run
+      missing-papers.md                  14 sources not obtained; 4 read in an earlier or partial version
+      search-log.md                      searches run, how sources were fetched, what went wrong
+      refs-unseen-evidence.bib           records for every source, with the copy read
     (see also demographic-personas/, human-conflict-resolution/,
      llm-conflict-resolution/, paper-summaries/ from issues #8/#12/#14/#16/#18)
   pipeline/
