@@ -1,0 +1,1460 @@
+Agent-Based Simulation of Collective Cooperation: From Experiment to Model∗
+Benedikt Kleinmeier† Munich University of Applied Sciences, Department of Computer Science and Mathematics, 80335 Munich, Germany and
+Technical University of Munich, Department of Informatics, 85748 Garching, Germany
+Gerta Köster‡ Munich University of Applied Sciences, Department of Computer Science and Mathematics, 80335 Munich, Germany
+John Drury§ University of Sussex, School of Psychology, BN1 9RH, Brighton, United Kingdom
+(Dated: October 8, 2020)
+Simulation models of pedestrian dynamics have become an invaluable tool for evacuation planning. Typically crowds are assumed to stream unidirectionally towards a safe area. Simulated agents avoid collisions through mechanisms that belong to each individual, such as being repelled from each other by imaginary forces. But classic locomotion models fail when collective cooperation is called for, notably when an agent, say a ﬁrst-aid attendant, needs to forge a path through a densely packed group. We present a controlled experiment to observe what happens when humans pass through a dense static crowd. We formulate and test hypothesis on salient phenomena. We discuss our observations in a psychological framework. We derive a model that incorporates: agents’ perception and cognitive processing of a situation that needs cooperation; selection from a portfolio of behaviours, such as being cooperative; and a suitable action, such as swapping places. Agents’ ability to successfully get through a dense crowd emerges as an eﬀect of the psychological model.
+Keywords: experiment, high-density, stationary, crowd, model, psychology, collective cooperation, behavioural changes
+
+arXiv:2005.12712v2 [cs.MA] 7 Oct 2020
+
+INTRODUCTION
+
+Related Work
+
+Simulation models of pedestrian dynamics are widely used today especially for evacuation planning [1–4]. Such models usually consist of unidirectional ﬂows of agents (simulated pedestrians) and are used to estimate the evacuation time in emergency situations or to test safety concepts [5]. Simulations of such models are a useful tool in the planning phase to detect critical high densities for example to avoid casualties like reported at the Hajj several times [6, p. 164] or at the Love Parade music festival 2010 in Germany [7].
+Locomotion models [8–10] work well for unidirectional ﬂows because they are mostly validated against empirical data [11]. They can provide helpful insights and make crowd gatherings safer. But often locomotion models fail for setups that seem only slightly diﬀerent. For instance, when a ﬁrst aid-attendant needs to forge a path through a dense crowd to reach an injured person. When reenacting such a real-world situation in current simulation tools, agents often get stuck and end up in a deadlock situation because there is no real interaction between agents, compare Fig. 1.
+∗ A footnote to the article title † benedikt.kleinmeier@hm.edu ‡ gerta.koester@hm.edu § j.drury@sussex.ac.uk
+
+Several authors extended existing locomotion models to manoeuvre agents through virtual environments and to mitigate shortcomings of these models. For instance, [12, 13] let agents evade tangentially or sideways. Using such collision avoidance strategies on a microscopic level often leads to lane formation on a macroscopic level. But, pure physically inspired locomotion strategies like collision avoidance do not work for very dense crowds as seen by the simulations in Fig. 1. In the real world, humans adapt their behaviour [14, p. 11–12]. For instance, humans just ask to be let through. Humans use perception, cognition and a repertoire of diﬀerent behaviours. [15], made ﬁrst steps to integrate psychological ﬁndings into pedestrian dynamic simulations to control the Social Force Model [9]. [15] integrated diﬀerent agent states like queuing or pushing behaviour. [16, 17] extended cellular automata to overcome deadlock situations in bidirectional pedestrian ﬂows based on a more cooperative behaviour of agents. [16] integrated ideas from game theory and swerving preferences which are based on previous successful swerving behavior. [17] conducted an own experiment [18] and integrated a sort of “give way to counterﬂowing agents” into a cellular automaton. However, both approaches were limited to cellular automata models, [16] even to one-dimensional scenarios. Also other simulator developers, both researchers and commercial ones [19, 20], extended existing locomotion models to better cover also waiting behaviour and other real-world situations. But all these extensions were integrated without providing empirical data or evidence. In contrast,
+
+2
+
+(a) Social Force (b) Optimal Steps
+
+Model
+
+Model
+
+Figure 1: A walking agent (red) starts walking at the bottom area and tries to reach the rectangular target area on top while confronted with a dense, stationary
+crowd. In simulations, we cannot identify real interaction between agents when using diﬀerent physically-inspired locomotion models. Either the walking agent “ignores” the dense, stationary crowd and walks on other agents which could not happen in real life (a). Or the crowd blocks the walking agent completely because of the high density (b). The open source simulator Vadere was used for the simulations.
+
+[21] provided empirical evidence and developed a model to simulate crowd behaviour with social-cognitive agents with a focus on music festivals. They captured the motivation of individuals by including various physiological parameters like memory, bladder, stomach and arousal and goal-oriented agents. But adding a plethora of parameters on the individual level makes the model diﬃcult to understand. [22] extended a cellular automaton to allow greater densities and enabled swapping strategies for agents to maintain ﬂow in counterﬂow scenarios. Nevertheless, to our knowledge there is no systematic operationalisation of psychological processes to let agents pass through a stationary crowd. We argue that the classic locomotion models don’t capture collective cooperation of real humans.
+For us, the classic modelling process consists of making real-world observations and then ﬁnding mathematical and algorithmic formulations to describe the observed phenomena well. After implementing this as computer programs, we are able to carry out simulations to get
+
+further insights. In fact, another reason why models for high-density situations are still missing is the lack of empirical data. Numerous authors conducted experiments with a strong focus on unidirectional ﬂow of pedestrians with moderate density [23–26] and counterﬂow scenarios [27, 28] or bottlenecks [29, 30]. Other authors focused more on collective phenomena in crowds. For instance, [31] investigated the inﬂuence of barriers on the behaviour of participants. They included the social psychology perspective by using questionnaires to get insights into participants’ perception. And other authors focused more on egress and queuing behaviour like [32]. To our knowledge, [33] are the ﬁrst authors who conducted an experiment with a stationary crowd and who tested the eﬀects on walking participants. Even the exhaustive two-volume literature review [34, 35] for empirical methods and experiments in pedestrian dynamics did not explicitly mention stationary crowds and their effects. So far, often an experiment was conducted but no model derived, or the model stopped at a verbal description while a mapping to a clean and reusable software architecture is missing. In fact, until recently, simulation frameworks for pedestrian dynamics completely lacked evidence-based models of cooperative actions, such as group actions [36]. Since then, ﬁrst proofs of concept of speciﬁc situations have emerged, where empirical ﬁndings from social psychology, not analogy from physics, inspire the model. See [37, 38]. Yet, to our knowledge, nobody has operationalised psychological ﬁndings into computer models of crowds where an agents’ ability to pass through a dense crowd emerges as an eﬀect. We would like to close this gap.
+But what should be the corner stone of such a psychological model? Prima facie, it seems that individuals manage to ﬂow through dense crowds, and that this is achieved via cooperation from the crowd, who adjust themselves and move to give the individual a little space, rather than via force (since the latter would breach social norms around peaceful behaviour and politeness). For example, [26] show that when individuals approach a crowd in counterﬂow they do not simply walk into it nor do they simply stop but rather there is some negotiation of space among individuals to allow one to ﬂow through the other. Thus, we argue that we need a model of crowd cooperation.
+Goals of our Work and Article Structure
+In this contribution, we aim to model collective behaviour in a crowd so that the ability of agents to pass through dense static crowds emerges. Our goal is to directly base the model on empirical evidence and also to ﬁrmly put it into the frame of current social psychology. Finally, we strive for a reusable software structure and free and open-source implementation of the model that can be generalized to a large number of instances of cooperative collective behaviour.
+
+3
+
+The paper is structured as follows: In Sec. I, we present a controlled experiment which we conducted in 2018 with students. We list our observations and formulate hypothesis which we test statistically. The most important, albeit almost trivial observation is, that the participants were indeed able to get through the crowd. In Sec. II, we then describe the psychological processes in such a situation and operationalise it into a parsimonious model. That is, we restrict the model to elements that we deem absolutely necessary: the perception and subsequent cognition of a situation that calls for behavioural changes, the selection of a behaviour from a portfolio, notably being cooperative, and the selection of a suitable action, such as swapping positions. This operationalisation represents a simple, generic and reusable model allowing more interactions between agents which can be easily implemented in diﬀerent pedestrian simulation programs. We implement our model in a parsimonious computer program for which we run computer experiments in which the desired phenomenon emerges: Agents are able to pass through a crowd. Finally, in Sec. II C, we evaluate our results. We present ideas how to add detail for a better quantitative match of second order eﬀects and we discuss how to generalize the model to encompass other collective phenomena.
+
+We took two measures to avoid training eﬀects for the waiting crowd: (1) After each run, a staﬀ member shufﬂed the waiting crowd. To this end, the waiting crowd were asked to leave and re-enter the waiting area, so that the positions of the participants were shuﬄed. (2) After ﬁve runs, seven random participants of the waiting crowd were replaced by seven participants from the waiting room, who were also chosen randomly. We also took several measures to avoid observer biases like using a standardized experiment procedure with consistent instructions for all participants. The walking participants were instructed with the sentence “Go to the tree by crossing the crowd”. The waiting crowd was instructed with “Wait in the delimited area”. See [39] for a description of all measures. Tables on the left- and right-hand side of the waiting area prevented the participants from leaving the waiting area accidentally.
+The experiment set-up is depicted in Fig. 2 and described in more detail in [39].
+Target
+
+9.40 m
+
+1.70 m
+
+1.55 m
+
+Wating area of ~2.6 m² for 13 persons
+
+10.30 m
+
+I. EXPERIMENT
+A. Experiment Set-Up
+In order to study the eﬀects of high densities on a walking person, we performed a controlled experiment in the foyer of the Munich University of Applied Sciences on Oct 12, 2018 (11:45 – 13:00).
+In the experiment, we observed how a participant walks through a dense, waiting crowd. To this end, we kept 58 participants in a separate waiting room. The participants were entertained by experiment assistants with quizzes and discussions to keep the atmosphere as normal as possible. To avoid any priming, the participants received minimal information. The participants signed an informed consent form with the title “Study on movements of pedestrians”. The form stated that no physical risks were involved and that the experiment was recorded on camera. We chose ﬁrst-year students in their second week as participants to ensure that they did not know anything about the experiment’s intentions.
+During the experiment, 13 participants stood in a delimited area of 2.64 m2 (1.55 m × 1.70 m) as a waiting crowd. In each experiment run, the walking participant successfully crossed the crowd along what would be the y-axis in Fig. 2a. The density while crossing was ρ = 5.30 ped/m2. For each experiment run, we randomly chose one person from the waiting room and assigned this person as walking participant. For the very ﬁrst run, we also chose 13 persons from the waiting room and assigned them as waiting crowd.
+
+Starting point
+(a) Schematic setup
+
+(b) Real setup
+
+Figure 2: The experiment setup: A waiting crowd of 13 participants in a delimited area of 2.64 m2 is
+successively crossed by a participant (ﬁgure from [39]).
+
+In total 58 students participated in the experiment. 27 of them, (men and women), aged 19–66, were assigned as walking participants and performed 30 runs (compare Fig. 3). We collected gender, age, height and shoulder width for each walking participant.
+
+20
+female 15 29.63% (8)
+10
+
+SMteda:n1:02.242.6y3eyaersars
+
+Total
+
+70.37% (19) male
+(a) Gender
+
+5 0 20 30 Age40[years5]0 60
+(b) Age
+
+Figure 3: Gender and age distribution of the 27 walking experiment participants.
+
+The experiment was ﬁlmed from above at an angle of around 60° (compare Fig. 2b). We recorded the experiment with a camcorder Sony Handycam HDR-
+
+4
+
+PJ780VE using a resolution of 1280 pixel×720 pixel and 25 frames per second. The raw video material had a length of 73 minutes. We used the free video analysis and modelling tool Tracker [40] to correct the optical distortion and to track the trajectories of the walking participant and the waiting crowd. For this purpose, we applied Tracker’s “Auto-Tracker” feature. See section II E 1 for more information about trajectory extraction. After trajectory extraction, we used self-written Python scripts, more precisely Jupyter notebooks, to analyse the data.
+
+B. Experiment Results
+We began by watching the experiment’s video footage. This step helped us to verbalize the human behaviour we observed and to formulate the following hypotheses:
+• Pedestrians walking through a crowd are slowed down.
+• The pedestrians in a waiting crowd return to their initial positions after giving way to the “intruder”.
+• Real humans can pass a crowd at high densities.
+The last hypothesis, while seemingly trivial, is the most important one, because this is where simulated agents have failed so far. In a second step we will test these hypotheses and quantify eﬀects.
+
+1. Experiment Result: Speed Distributions
+Firstly, we measured the instantaneous speed of the walking participant inside and outside the waiting crowd. Outside the crowd this gives an estimate of the “free-ﬂow” speed, which is the walking speed of a pedestrian if no external eﬀects force the pedestrian to slow down or to speed up. We measured the “free-ﬂow” speed in front of the waiting crowd instead of behind because the area in front is closer to the camera and we expect a lower measurement error from optical distortion. The instantaneous speed vi(t) for walking participant i at time step t is deﬁned as:
+
+∆xi(t)2 + ∆yi(t)2
+
+vi(t) =
+
+∆T
+
+(1)
+
+where ∆T = 1/25 s = 0.04 s (that is, in the Tracker software we evaluated 25 camera frames per second) and ∆xi(t) = xi(t) − xi(t − 1).
+Then we averaged the instantaneous speed values vi(t) over all time steps N when the participant was inside the measurement area:
+
+Speed [m/s]
+
+1N
+
+v¯i = N
+
+vi(t)
+
+(2)
+
+t=1
+
+Fig. 4 and Tab. I provide an overview of the averaged instantaneous speeds of all walking participants.
+
+2.25
+
+Median: 0.63 [m/s]
+
+2.00
+
+Median: 1.36 [m/s]
+
+1.75
+
+1.50
+
+1.25
+
+1.00
+
+0.75
+
+0.50
+
+Inside
+
+Outside
+
+Figure 4: Box plot for speed distribution (averaged instantaneous speeds) of the walking participants inside
+and outside the waiting crowd
+
+Speed [m/s] Inside Outside
+
+sample size mean std min 25% 50% 75% max
+
+30.00 0.70 0.19 0.44 0.55 0.63 0.77 1.21
+
+30.00 1.33 0.25 0.93 1.16 1.36 1.40 2.20
+
+Table I: Detailed statistics for the measured speed distributions of the walking participants inside and
+outside the waiting crowd.
+
+Comparing the mean instantaneous speed of 0.70 m/s
+
+(inside) and 1.33 m/s supports our hypothesis that the
+
+walking participants are slowed down by the waiting
+
+crowd. At a density ρ of 14 persons per 2.64 m2, that
+
+is, ρ = 5.30 persons/m2, we measure a “slow-down” fac-
+
+tor
+
+of
+
+1.33 m/s 0.70 m/s
+
+= 1.9 ≈ 2.
+
+We also performed Student’s t test to check if the wait-
+
+ing crowd has an eﬀect on a walking participant’s speed.
+
+For this, we calculated for each walking participant i:
+
+∆vi = vi,in − vi,out. Then, we applied a one-sided t-test with following mathematical hypotheses:
+
+• H0 : mean(∆vi) ≥ 0
+
+5
+
+• H1 : mean(∆vi) < 0
+
+• Signiﬁcance level: 0.05
+
+The
+
+test
+
+statistic
+
+T
+
+=
+
+√ N
+
+×
+
+mean(∆vi )−0 std(∆vi )
+
+revealed
+
+a
+
+value of T = −10.75 for all N = 30 participants. We
+
+drop the H0 hypothesis of no inﬂuence since our tests statistic T is far below the signiﬁcance limit of 0.05 of
+
+the corresponding t distribution, which is −1.70 at a p-
+
+value 0.01.
+
+When watching the video footage, we identiﬁed some
+
+potential outliers in the data. For instance, we observed
+
+a particular fast participant outside and inside the wait-
+
+ing crowd. The participant stretched out the hands like a
+
+swimmer to “dive” through the crowd. We also observed
+
+a very slow participant inside the waiting crowd whom
+
+some members of the waiting crowd blocked intention-
+
+ally. We decided to keep these outliers for our statistical
+
+analysis to stay close to the real world where one can
+
+also observe diﬀerent techniques to cross a dense crowd.
+
+Some of these techniques are faster or slower than others.
+
+The measured mean free-ﬂow velocity of 1.33 m/s out-
+
+side the waiting crowd is very close to previous empirical
+
+measurements like [41] with 1.34 m/s. This strengthens
+
+our belief that we gathered realistic data.
+
+Frequency
+
+6 5 4 3 2 1 0 0.0
+
+invgauss, p: 0.9021 kappa3, p: 0.9023 norminvgauss, p: 0.9158 fatiguelife, p: 0.9178 genexpon, p: 0.9278
+0.2 D0is.4tance0[.m6 ] 0.8 1.0
+
+Figure 5: The data in blue visualizes the Euclidean distances between a participant’s initial position — before the walking participant entered the waiting crowd — and the end position. The Euclidean distance is deﬁned as ||pinitial − pend||2 with p ∈ R2. The plot includes the best-ﬁtting continuous distributions with a
+p-value ≥ 0.90.
+
+2. Experiment Result: Distribution of Waiting Crowd
+We want to shed light on the question if participants of the waiting crowd return to their initial positions after giving way to an intruder. To analyse the movement of each participant of the waiting crowd, we looked at two metrics: First, we measured the Euclidean distance between the initial and the end position of each participant. Second, we looked at the maximum Euclidean distance a waiting participant walked. For this, we compared each position of a participant’s trajectory[42] with the trajectory’s initial position.
+Then, we investigated if the extracted distances follow a continuous probability distribution. We tested the data against 94 distributions[43] and used the Kolmogorov-Smirnov test to verify the goodness of ﬁt. The Kolmogorov-Smirnov test assumes as null hypothesis H0 that the sampled data and the tested distribution follow the same probability distribution. In our survey, we keep only distributions with a p-value greater 0.90. Fig. 5 and Tab. II summarize the data for the ﬁrst metric (the Euclidean distance between initial and end position). Fig. 6 and Tab. III summarize the data for the second metric (the maximum Euclidean distance).
+We cannot identify one single and best-ﬁtting distribution for each of the two metrics. However, we observe that the best ﬁtting distributions are not of the same type for the two metrics. We also observe that the distribution of the maximum distance is broader, with a heavy tail towards a larger value.
+We hypothesized that participants in the waiting crowd return to their initial positions. But, it would
+
+Distances [m] (Metric 1)
+
+sample size mean std min 25% 50% 75% max
+
+400.00 0.14 0.11 0.00 0.06 0.11 0.19 0.76
+
+Table II: Detailed statistics for the participants of the waiting crowd and the Euclidean distance between participant’s initial and end position.
+
+Distances [m] (Metric 2)
+
+sample size mean std min 25% 50% 75% max
+
+400.00 0.25 0.16 0.00 0.13 0.22 0.33 0.93
+
+Table III: Detailed statistics for the participants of the waiting crowd and the maximum Euclidean distance
+
+be unrealistic to expect them to hit the exact same spot. Also, people shift from one foot to the other which causes
+
+Frequency
+
+burr, p: 0.9046
+
+4
+
+mielke, p: 0.9046 invweibull, p: 0.9071
+
+genextreme, p: 0.9074
+
+3
+
+invgamma, p: 0.9108 nct, p: 0.9223
+
+gumbel_r, p: 0.9244
+
+2
+
+weibull_max, p: 0.9247 genlogistic, p: 0.9284
+
+powerlognorm, p: 0.9315
+
+1
+
+kstwobign, p: 0.9393
+
+0 0.0 0.2 D0is.4tance0[.m6 ] 0.8 1.0
+Figure 6: The data in red visualizes the maximum Euclidean distance a participant of the waiting crowd
+moved while the crowd was crossed by the walking participant. The plot includes the best-ﬁtting continuous distributions with a p-value ≥ 0.90.
+
+the head to sway for at least several centimetres which is also reported by [44, Fig. 3, p. 4]. Thus, within an error margin, we would expect a distribution for the ﬁrst metric, which is centreed around a value, a little oﬀ from zero, by which waiting individuals, on average, miss their original position. This, in principle, is what we see. In any case, the participants do not stay at the position of maximum diﬀerence.
+We argue that the data supports a tendency to return, where the mean distance from the initial position is only 0.14 m with a standard deviation of 0.1 m.
+
+3. Experiment Result: Trajectories and Walking Participant and Duration in Waiting Area
+With a third set of measurements, we took a closer look on how walking participants manoeuvre through the waiting crowd. For this, we ﬁrst plotted the trajectories of the walking participants, see Fig. 7 and Fig. 8.
+Then we measured the time the walking participants spent in the rectangular waiting area of 1.55 m × 1.7 m (width × height), see Fig. 9.
+The trajectory plots show that all walking participants were able to cross the waiting crowd. Instead of straight lines, we observe curvy trajectories where walking participants move around a waiting person or both seem to swap places. Our measurements of the waiting participants’ maximum displacement in Fig. 6, and Fig. 7 show that the waiting participants also move. We argue, that this indicates interaction. In fact, during the experiment we saw diﬀerent techniques: communication through eye contact or asking verbally, but also shoving the waiting person aside. Recent virtual reality ex-
+
+y [m]
+
+y [m]
+
+4.5
+
+Walking Participant
+
+4.0
+
+Waiting Participant
+
+3.5
+
+3.0
+
+2.5
+
+2.0
+
+1.5 0.0
+
+0.5x [m] 1.0
+
+6
+1.5
+
+Figure 7: The trajectory of a single walking participant inside the waiting area at a time resolution of 1/25 s.
+
+4.0
+
+3.5
+
+3.0
+
+2.5
+
+2.0
+
+1.5
+
+1.0
+
+0.5
+
+0.0
+
+0.5
+
+1.0
+
+1.5
+
+x [m]
+
+Figure 8: The trajectories of ten walking participants inside the waiting area (red rectangle) at a time resolution of 1/25 s.
+
+periments that track eye-gaze in dense crowds underline pedestrians’ focus on the closest vicinity for interactions [45]. This supports our hypothesis that collaboration with the next neighbors enables pedestrians to navigate through a dense crowd. We will use this ﬁnding to choose a suitable action in our model of cooperative behaviour.
+
+Fig. 9 visualizes the duration a walking participant
+
+spends inside the waiting area. It indicates that the inter-
+
+action process between the participants takes time. The
+
+mean duration of a walking participant’s stay inside the
+
+waiting area is 7.88 s. Note, that if a walking participant
+
+walked through the waiting area, on a straight line, with
+
+an instantaneous speed of 0.70 m/s (measurement from
+
+Tab. I),
+
+it
+
+would
+
+only
+
+take
+
+height speed
+
+=
+
+1.70 m 0.70 m/s
+
+= 2.43 s.
+
+Total
+
+6
+
+SMteda:n2:.371.8s8 s
+
+5
+
+4
+
+3
+
+2
+
+1
+
+04
+
+6 Time8in Area10[s] 12
+
+Figure 9: The duration of the walking participants inside the waiting area as histogram.
+
+7
+(a) Modeling only locomotion: A walking agent (blue) is repelled (black arrows) by other agents (green) and obstacles (grey) and attracted by its target (orange). The repulsion is
+visualized by arrows.
+Interaction
+
+II. MODEL
+
+A. The Need for a Psychology Model Complementing Pure Locomotion
+In the experiment, all walking participants were able to cross the waiting crowd by interacting with the other participants. From this, we derived our hypothesis that real humans can pass a crowd at high densities. This simple hypothesis is essential since it is where pedestrian stream simulators often fail, see Fig. 1. We will focus on this challenge with our new model proposal. Attempts to solve the problem solely on the locomotion layer, through collision avoidance as depicted in Fig. 10 do not work for very dense crowds which is shown by the simulations in Fig. 1. In the real world, however, humans adapt their behaviour [14, p. 11–12] to the situation. Humans use perception, cognition and a repertoire of diﬀerent behaviours. They also interact.
+We strive for a model that fulﬁls two important requirements: (1) Firstly, the new model shall represent a generic architecture which can be easily integrated into diﬀerent simulation tools, independent of the choice of locomotion model, and that can be generalized to other instances of collective cooperation. Thus, the new model will be beneﬁcial for the whole research community.(2) Secondly, the new model shall be a faithful operationalisation of psychological processes which aﬀect the behaviour of agents. That is, it must be correct from a psychological perspective and it must be suﬃciently simple to be understood by diﬀerent research communities like computer scientists, physicists, sociologists or psychologists.
+
+(b) Modeling locomotion and psychology: A psychology layer allows agents to interact with each other.
+Figure 10: Current pedestrian stream models focus on a pure locomotion of agents and neglect scientiﬁc ﬁndings
+from psychology like interaction between people and collective actions in crowds exempliﬁed by [36].
+B. Model of a Psychology Layer for Collective Cooperation
+Like for any other simulation software, a pedestrian stream simulator’s core is a simulation loop in which time is incremented. In this loop, a locomotion model is responsible for ﬁnding the next position for each agent in each simulated time step (compare List. 1).
+1 while (simulationIsRunning) { 2 ... 3 // A locomotion model searches the next 4 // position for an agent which is closer 5 // to a target than currently. 6 locomotionModel.update(agents , time); 7 ... 8 time++; 9}
+Listing 1: A typical simulation loop of a pedestrian stream simulator.
+Most of the current locomotion models [9, 10, 46, 47] only include physical aspects to navigate an agent through an environment. For instance, obstacles repel an agent while targets attract agents.
+But, the key is to include also the psychological status
+
+8
+
+of an agent in each simulation step. This layer represents the mental processes of perception and cognition of real humans [14, p. 206ﬀ.] and eﬀects the behaviour of an agent. Additionally that means, instead of having just one behaviour — that is, moving towards a target — an agent must have a behavioural repertoire from which the agent can choose from to react to its environment. In the case of our experiment, that means that agents (both walking and waiting)
+
+1 Psychology Layer 2
+3
+
+Perception Cognition Behaviour
+
+• on perception sub-layer, perceive other agents in a sight / search radius r.
+
+Locomotion Layer
+
+• on cognition sub-layer, realise that an agent cannot move anymore (that is, the speed over the last n
+
+makeStep wait swapAgents escape ...
+
+steps is below a certain threshold) and they change their self-category [48] from target-oriented to cooperative to follow new social norms. We chose the term self-category here because [49, p. 20] states that “self-categorisation [...] becomes the psychological basis for crowd behaviour” which is in our case collective cooperation.
+
+Figure 11: The three sequential phases of the new psychology layer: Firstly, agents perceive environmental stimuli. Secondly, agents process these information in a
+cognition phase and enrich it with further (context-relevant) information. Thirdly, agents react to the processed information by selecting a behaviour from
+a behavioural repertoire on locomotion layer. The
+
+• on locomotion layer, being cooperative means that agents swap places to reach their target.
+
+behaviour repertoire on locomotion layer should cover diﬀerent real-world situations. For instance, make a step towards a target (e. g., a train station), wait at a
+
+Fig. 11 visualizes the sequential processing of informa- platform (that is, do not move) or escape from a bang
+
+tion inside the introduced psychology layer. The lower stimulus (which consists of several locomotion patterns).
+
+layers, e.g. Cognition, process only the information from
+
+the direct upper layer. That means, an agent ﬁrstly per-
+
+ceives environmental stimuli, then an agent processes this 3 // Perception information in the cognition layer and enriches it with 4 perceptionModel . update ( agents , stimuli );
+
+further information (in case of the experiment this would 5 ...
+
+be an agent’s speed). This simple architecture reﬂects 6 what real humans do: Perceive, process and react to this 7
+8
+information with a speciﬁc behaviour. Look up ﬁgures 9
+
+// Cognition cognitionModel.update(agents); ... // Locomotion
+
+in Sec. II C to see the model in action and how target- 10 locomotionModel . update ( agents , time );
+
+oriented agents get cooperative and swap places to reach 11
+
+their target.
+
+12
+
+The main advantage of this clearly separated psychol-
+
+13 14
+
+ogy layers is that experts in psychology or other ﬁelds can 15
+
+| +-> if (agent.selfCategory == COOPERATIVE) {
+Agent candidate = findSwapCandidate(); swapAgents(agent , candidate); }
+
+implement the perception and cognition sub-layer with- 16 ...
+
+out knowing implementation details of the pedestrian 17 time ++; stream simulator. A locomotion expert can implement 18 }
+
+the speciﬁc locomotion strategies. For instance, if cooperative behaviour does not mean swapping two agents, another locomotion strategy can be implemented on locomotion layer. This clean software architecture makes it
+
+Listing 2: The new simulation loop which contains the added psychology layer with sub-layers perception, cognition and behaviour.
+
+possible to work interdisciplinary on a pedestrian stream simulator combining knowledge from diﬀerent research domains like proposed by [49, p. 46].
+Introducing this psychology layer (with sub-layers perception, cognition and locomotion) modiﬁes the existing simulation loop List. 1 only very slightly and keeps the overall software architecture simple and easy to implement according to the KISS principle [50, p. 18] [51, p. 10], compare List. 2.
+
+perceptionModel and cognitionModel are implementations of interfaces. Using this design decision — the strategy pattern — allows to extend a pedestrian stream simulator to a tool to test also psychological hypothesis. That means that it is possible to change the perception and cognition model for each simulation run and allows to cover diﬀerent real-world situations. For instance, an experiment situation diﬀers from a daily commuting situation which aﬀects humans’ perception
+
+1 while (simulationIsRunning) { 2 ...
+
+and cognition. This reﬂects also the fact that a simulation tool cannot provide a “one-ﬁts-all-situations” model.
+
+9
+
+Therefore, we facilitate interfaces with only two methods here, see UML diagram in Fig. 12.
+List. 3 and List. 4 shows that it only requires 13 lines on cognition sub-layer and 24 lines on locomotion layer to get collective cooperative agents and to reenact the experiment. E.g., if an agent (walking and waiting) cannot move anymore, it gets cooperative. Cooperative behaviour results in swapping positions.
+
+1 int lastSteps = 4;
+
+2 double threshold = 0.05;
+
+3
+
+4 for (Agent agent : agents) {
+
+5 boolean cannotMove =
+
+6
+
+agent.getSpeed(lastSteps) <= threshold
+
+7
+
+8 if (cannotMove) {
+
+9
+
+agent.setSelfCategory(COOPERATIVE);
+
+10 } else {
+
+11
+
+agent.setSelfCategory(TARGET_ORIENTED);
+
+12
+
+}
+
+13 }
+
+Listing 3: The update() method of class CooperativeCognitionModel which toggles an agent’s self category from target-orientied to cooperative based
+on agent’s speed to reenact the experiment.
+
+1 public void update(Agents agents , double time) {
+
+2 for (Agent agent : agents) {
+
+3
+
+updateAgent(agent , time)
+
+4}
+
+5}
+
+6
+
+7 void updateAgent(Agent agent , double time) {
+
+8 selfCategory = agent.getSelfCategory ();
+
+9
+
+10 if ( s e l f C a t e g o r y == T A R G E T _ O R I E N T E D ) {
+
+11
+
+makeStepToTarget(agent);
+
+12 } else if ( s e l f C a t e g o r y == C OO PER AT IVE ) {
+
+13
+
+// Search for other cooperative agents
+
+14
+
+// in a search radius r.
+
+15
+
+Agent candidate = findSwapCandidate(agent)
+
+;
+
+16
+
+17
+
+if (candidate != null) {
+
+18
+
+swapPedestrians(agent , candidate);
+
+19
+
+} else {
+
+20
+
+makeStepToTarget(agent);
+
+21
+
+}
+
+22
+
+}
+
+23 ...
+
+24 }
+
+Listing 4: The update() and updateAgent() method of the locomotion model which reacts to agent’s psychology status reﬂected by agent.getSelfCategory().
+
+The proposed psychology layer was implemented in Vadere [52, 53] because it is open source and has already a well-validated locomotion layer [54, 55]. Vadere is an open source framework for the simulation of microscopic pedestrian dynamics.
+The following steps were carried out:
+
+1. Add interfaces IPerceptionModel and ICognitionModel (see UML diagrams in Fig. 12).
+
+2. To reenact the experiment setup from
+
+Sec. I A, implement SimplePerceptionModel
+
+and
+
+CooperativeCognitionModel.
+
+SimplePerceptionModel is empty because
+
+there were no external stimuli present in the ex-
+
+periment. CooperativeCognitionModel changes
+
+an agent’s self category from target-oriented to
+
+cooperative if an agent cannot move anymore
+
+(that is, its speed is below a certain thresh-
+
+old by storing an agent’s psychology status
+
+with agent.setSelfCategory(SelfCategory
+
+newSelfCategory), see List. 3.
+
+3. Extend the existing simulation loop: In each simulation loop, invoke perceptionModel.update() and cognitionModel.update(), see List. 2.
+
+4. On
+
+locomotion
+
+layer,
+
+evaluate
+
+agent.getSelfCategory() and react to it,
+
+see List. 4.
+
+IPerceptionModel
+// No member variables
+void initialize(Topography topography) void update(Collection<Agent> agents, List<Stimulus> stimuli)
+
+SimplePerceptionModel
+Topography topography
+void initialize(Topography topography) void update(Collection<Agent> agents, List<Stimulus> stimuli) Stimulus rankStimuli(List<Stimulus> stimuli, Agent agent)
+
+OtherPerceptionModel // Variables... // Methods...
+
+... ... ...
+
+The Topography represents the environment. I.e., it contains obstacles etc.. It is stored by a model so that agents can retrieve these information. The update() method iterates over all agents, ranks the current environmental stimuli at a specific time step (i.e., multiple stimuli can occur at a specific time step) and stores the most important one inside the agent.
+(a) Interfaces and classes of the perception sub-layer.
+ICognitionModel
+// No member variables void initialize(Topography topography) update(Collection<Agent> agents)
+
+CooperativeCognitionModel
+Topography topography void initialize(Topography topography) void update(Collection<Agent> agents)
+
+OtherCognitionModel // Variables... // Methods...
+
+... ... ...
+
+The CooperativeCognitionModel uses the ranked stimuli from the perception sub-layer and uses additional information (e.g., the average speed of the last n time steps) to decide which behavior to use next. Later on, the locomotion layer can retrieve the information from the cognition sub-layer.
+(b) Interfaces and classes of the cognition sub-layer.
+Figure 12: An UML diagram of the interfaces and classes of the perception and cognition sub-layer. Public methods are denoted with green circles, private methods
+are denoted with ﬁlled, red squares and member variables are denoted with unﬁlled, red squares.
+
+10
+C. Re-enacting the Experiment with the Collective Cooperation Model
+The psychology layer was implemented in the pedestrian stream simulator Vadere. We reenacted the experiment setup from Sec. I A as closely as possible by using the same dimensioning. We carried out 100 simulation runs with slightly varying initial position of the walking agent but consistent positions for the agents of the waiting crowd. Fig. 13 and Fig. 14 show one of these simulation runs and visualize how the walking agent (redencircled) changes its target-oriented behaviour to a cooperative one when the agent is blocked by the waiting crowd.
+
+(a) Time (b) Time (c) Time
+
+step 1
+
+step 4
+
+step 29
+
+Figure 13: A walking agent (red-encircled) starts walking in the green source area and tries to reach the
+brown target area while the agent is blocked by a waiting crowd consisting of 13 agents. The colours represent the current behaviour of an agent: Blue is target-oriented behaviour and green is cooperative behaviour. (Time step 1) When the simulation starts, all agents are target-oriented. While the walking agent is attracted by the brown target, the waiting crowd does not have a target and waits. (Time step 4) The agents of the waiting crowd get cooperative because their speed falls below a certain threshold. (Time step 29) The walking agents reaches the waiting crowd and cannot move anymore. Thus, the walking agent also gets cooperative. The walking agent searches for a swap candidate (orange-encircled) and both swap positions.
+
+To validate the simulations, we compare the simula-
+
+(a) Time (b) Time (c) Time step 31 step 36 step 51
+Figure 14: Cooperative behaviour of agents inside the waiting crowd. The colours represent the current
+behaviour of an agent: Blue is target-oriented behaviour and green is cooperative behaviour. (Time step 31) After swapping positions, the walking agent (red-encircled) and the swap candidate (orange-encircled ) get target-oriented again because their speed is above a certain threshold. (Time step 36) The walking agents gets cooperative again and swaps position with another cooperative agent which is closer to the target. (Time step 51) The walking
+agent found its way through the dense crowd by using a cooperative behaviour.
+tion results to the experiment results. In Sec. I B, we measured the speed of the walking participant, the spatial distribution of the waiting crowd and the trajectories of walking participant. In our comparison, we omit the spatial distribution of the crowd because, in the implemented model the agents of the waiting crowd just wait in the waiting area and do not move at all. This is what we assumed as — very simpliﬁed — waiting behaviour. That is, the traveled distance of the agents of the waiting crowd is zero. Therefore, it makes no sense to compare it with the experiment participants which moved continuously at least a bit.
+The 100 simulations reproduce the measured instantaneous “free-ﬂow” speeds at least qualitatively: The walking agents are slowed down inside the waiting area from 1.31 m/s (outside) to 0.16 m/s (inside) on average compared to 1.33 m/s and 0.70 m/s in the experiment, see Fig. 15 and Tab. IV.
+
+Speed [m/s]
+
+1.75
+
+Median: 0.15 [m/s]
+
+1.50
+
+Median: 1.32 [m/s]
+
+1.25
+
+1.00
+
+0.75
+
+0.50
+
+0.25
+
+Inside
+
+Outside
+
+Figure 15: Box plot for speed distribution of the walking agent inside and outside the waiting crowd
+
+Speed [m/s] Inside Outside
+
+sample size 100.00
+
+mean
+
+0.16
+
+std
+
+0.03
+
+min
+
+0.12
+
+25%
+
+0.14
+
+50%
+
+0.15
+
+75%
+
+0.17
+
+max
+
+0.24
+
+100.00 1.31 0.15 0.90 1.20 1.32 1.41 1.68
+
+Table IV: Detailed statistics for the measured speed distributions of the walking participants inside and
+outside the waiting crowd.
+
+The speed of the walking agent inside the waiting crowd is much lower than what we have observed in the experiment. In the experiment, even if the walking participant is blocked by the waiting crowd for some moments, the walking participant constantly moves its body a tiny bit. That means the speed of the walking participant is constantly greater than zero. But in the simulation, it takes some simulation steps until a walking agent gets cooperative when the agent is blocked by the waiting crowd. That is, the agent’s speed is zero for a lot of simulation steps which lowers the average speed of the walking agents. Please keep in mind that this is the very ﬁrst version of such a psychological model of collective cooperation and it will require some sort of calibration in the future.
+Nevertheless, in our simulations we see that all walking agents were able to cross the waiting crowd like in the experiment with real humans, see Fig. 16. Also the mean time of the walking agent inside the waiting area is very close to the experiment observations: (9.90 ± 2.24) s in simulation compared to (7.88 ± 2.31) s in the experiment,
+
+Total
+
+y [m]
+
+11
+see Fig. 17.
+14.0 13.5 13.0 12.5 12.0 11.5 11.0 10.5
+10.01.75 2.00 2.25 x2.[5m0] 2.75 3.00 3.25
+Figure 16: The trajectories of 25 walking agents inside the waiting area (red rectangle). Inside the waiting area, the walking agents follow zig-zag trajectories
+because they swap positions with agents of the waiting crowd. By changing to a cooperative behaviour, all walking agents were able to reach the target region.
+The agents of the waiting crowd are placed at the same positions for all 100 simulation runs. Therefore, we did not see a greater variety of the trajectories inside the
+waiting area.
+
+50
+
+SMteda:n2:.294.9s0 s
+
+40
+
+30
+
+20
+
+10
+
+0 7.5 1T0i.m0 e 1in2.W5 ai1ti5n.g0 Ar1e7a.5[s]20.0
+
+Figure 17: The duration of the walking agents inside the waiting area as histogram.
+
+CONCLUSION
+We identiﬁed a major shortcoming in current pedestrian simulation models: The lack of collective cooperation which means that agents fail at seemingly simple
+
+12
+
+tasks, such as forging a path through a dense crowd. Since empirical evidence is extremely scarce we also presented a controlled experiment to observe what really happens when participants pass a waiting crowd: We placed students in a delimited area of 2.64 m2 and let other participants walk through this waiting crowd. We took measures to avoid observer biases and to obtain reliable data from the experiment. We derived three hypotheses, namely: (1) Real humans succeed in passing through a crowd at high density. (2) Pedestrians walking through a crowd are slowed down. (3) The pedestrians in the waiting crowd mostly return to their initial positions after giving way to the individual they allow through. While seemingly trivial, the ﬁrst hypothesis is vital, because this is where classic locomotion models fail.
+We presented a model where agents interact with each other to allow collective cooperation. Agents are able to perceive their environment, process this information and enrich it with additional information (within the simulation) in a cognition process. Then, agents select from a portfolio of possible behaviours, notably being targetoriented, or being cooperative. Actions on the locomotion layer follow, such as making a step towards a target or swapping place with a cooperation partner. The model is independent of the choice of locomotion model. It’s implementation within the Vadere simulation framework is free and open-source.
+In a reenactment of the experiment situation, our simulations qualitatively reproduce the empirical observations. Most importantly, agents’ ability to pass through a dense crowd emerges as an eﬀect of the psychological model.
+In the future we hope that new experiments and ﬁeld observations will bring more qualitative and quantitative information on behaviours in dense crowds so that we — or other modellers — may add to the portfolio of behaviours, and calibrate parameters for a better quantitative ﬁt. Further, our generic approach allows to cover a wide range of real-world situations with collective behaviours. As a next step, we would like to mold people’s collective reaction to perceived threats within the same framework.
+SUPPLEMENT
+D. Experiment: Limitations
+While running the two experiments we were faced with several problems, on which we would like to comment. (1) Filming from above: Filming the scene with an angle relative to the vertical axis, as we had to do it in our setting, causes problems when tracking the people. They can disappear behind each other. Also there is more noise, than with ﬁlming the experiment from above. (2) Automated trajectory extraction: The trajectory of the walking participants is extracted in a semi-automatic procedure using Tracker’s
+
+Auto-Tracking feature. To facilitate automatic trajectory extraction [44, 56], the walking participants could have worn coloured hats. Then, tracker software like PeTrack could be used to extract trajectories automatically. Additionally, it would be useful to print the participants id on the hat to be able to match the corresponding participant data like size and age. (3) Use more diverse participants: All participants were ﬁrst semester students in their second study week. It would be useful to have more diverse participants to generalize ﬁndings to a broader population. (4) More data: The experiment yielded 30 runs in total. Therefore, it would be useful to have more experiment runs to get results which are statistically more signiﬁcant. (4) Controlled experiment: We conducted a controlled experiment instead of a ﬁeld experiment because it was easier to carry out in regard of legal concerns. The artiﬁciality of the situation might have aﬀected each participant’s behaviour. Therefore, we would like to encourage the scientiﬁc community to replicate the experiment to support our ﬁndings or make new ones.
+E. Experiment: Trajectory extraction and error
+In this section, we describe how we extract participants’ trajectories from the video footage and quantify the corresponding measurement error.
+1. Trajectory Extraction
+For the trajectory extraction we used mainly two software tools: ffmpeg and Tracker.
+The open-source software ffmpeg was used to cut the videos into short sequences of around 15 seconds to show only a single experiment run. For this, we watched the video material manually and noted down the times when a walking participant entered and left the camera cutout. This list of start and end times was fed to a self-written Python script which invokes ffmpeg in turn.
+The video analysis and modelling tool Tracker oﬀers two possibilities to track objects in a video, either manually or automatically. With the manual approach, a user has to manually mark the position of the person of interest in each single video frame. The video material contains 25 frames per second. Tracker’s “Auto-Tracker” feature allows to track an object automatically. For this, the walking participant and the participants of the waiting crowd are marked as distinct features of interest in the video footage and then “Auto-Tracker” searches each following video frame for the best match to that template and stores the position and other information of the tracked object. Regardless of manual or automatic tracking, Tracker stores position, velocity and acceleration for each tracked object for each frame (that is, every 1/25 s).
+
+13
+
+... ... ... ...
+y [m]
+
+We applied the automatic trajectory extraction since it yielded a smaller measurement error (see next section)
+
+2. Trajectory Extraction: Measurement Error
+
+To reveal the measurement error which is introduced by the trajectory extraction, four experiment assistants tracked the same person several times, both manually and automatically. Then, we cross-checked the automatically tracked trajectories against each other and in another comparison we cross-checked the manually tracked trajectories, see Fig. 18 as simpliﬁed example.
+
+Frame 1 Frame 2
+
+t⃗1
+
+t⃗2
+
+⃗t 3
+
+t
+
+1 1
+
+‖t 11−t 12‖2
+
+t
+
+1 2
+
+‖t 21−t 13‖2
+
+t
+
+1 3
+
+t
+
+2 1
+
+t
+
+2 2
+
+t
+
+2 3
+
+Frame K
+
+t
+
+K 1
+
+t
+
+K 2
+
+t
+
+K 3
+
+∑ 1
+K
+
+K
+‖t 1k−t k2‖2
+k= 1
+
+∑ 1
+K
+
+K
+‖t
+k= 1
+
+k2−t
+
+k3‖2
+
+∑ 1
+K
+
+K
+‖t k1−t k3‖2
+k= 1
+
+Figure 18: Simpliﬁed example to calculate the Euclidean distance between trajectory pairs. The actual
+measurement error is the mean Euclidean distance between all trajectory pairs.
+
+A trajectory i contains for each frame k the x and y coordinate as vector tik. As ﬁrst step, we calculate the mean Euclidean distance for all K frames between two
+trajectories i and j. As second step, we calculate the
+mean for all these trajectory pairs N:
+
+1 N
+
+N
+
+1 K
+
+K
+
+||tik − tjk||2
+
+(3)
+
+i=1,j=i+1 k=1
+
+A
+
+A
+
+8
+
+F P
+
+8
+
+F J
+
+P
+
+6
+
+6
+
+y [m]
+
+4
+
+4
+
+2
+
+2
+
+00.0 0.5x [m1].0 1.500.0 0.5x [m1].0 1.5
+
+(a) Left: 7 auto-tracked trajectories; Right: 12
+
+manually tracked trajectories
+
+2.6 A
+
+2.6 A
+
+2.4
+
+F P
+
+2.4
+
+F J
+
+2.2
+
+2.2
+
+P
+
+2.0
+
+2.0
+
+1.8
+
+1.8
+
+1.6
+
+1.6
+
+1.41.0 x1[.m2 ] 1.14.41.0 x1[.m2 ] 1.4
+
+(b) The same trajectories but zoomed in. The zoomed version shows a greater variance in the
+manually tracked trajectories than in the automatically tracked ones.
+
+Figure 19: An excerpt of trajectories which were used to derive the measurement error from.
+
+Auto Manual
+
+Tracking Tracking
+
+Error Error
+
+[cm]
+
+[cm]
+
+Mean Std
+
+3.88
+
+4.83
+
+3.32
+
+3.43
+
+Sample size
+
+5628 17688
+
+Table V: The measurement error for the trajectory extraction is smaller when using Tracker’s
+auto-tracking feature instead of manually tracking a participant’s trajectory.
+
+ACKNOWLEDGEMENT
+
+The detailed graphical analysis in Fig. 19 and statistical analysis in Tab. V revealed that Tracker’s autotracking feature results in a smaller measurement error than manually tracking.
+
+We thank all participants for taking part in the experiment. Additionally, we thank the student team consisting of Karim Belkhiria, Fabian Flach, Jonas Goltz, André Heinrich, Alexandra Mayer, Maximilian Nieder-
+
+14
+maier, Amir Schnell, Philipp Schuegraf for assisting with the experiment and pre-analysing the video material. We thank Dr. Mohcine Chraibi (Forschungszentrum Jülich) for simulating the experiment setup with JuPedSim. Last but not least, we thank the research oﬃce (FORWIN) of the Munich University of Applied Sciences and the Faculty Graduate Center CeDoSIA of TUM Graduate School at Technical University of Munich for their support. The experiment was approved by the ethical review committee of Technical University Munich (https: //ek-med-muenchen.de/) and we carefully obtained an informed consent of all participants. The participants were not exposed to any danger throughout the experiment.
+a. Authors’ contributions B. K. designed and conducted the experiment, analysed the experiment data and drafted the article. G. K. gave feedback, assisted with the experiment, critically revised the article, gave ﬁnal approval for publication and took care of the funding acquisition. J. D. hosted B. K. at the School of Psychology (University of Sussex) for three months which allowed B. K. to get familiar with psychology of crowds and collective actions. J. D. also critically reviewed the article from a psychological perspective.
+b. Funding B. K. is supported by the German Federal Ministry of Education and Research through the project OPMoPS to study organised pedestrian movement in public spaces (grant no. 13N14562). This work is ﬁnancially supported through the Open Access Publication fund of the Munich University of Applied Sciences.
+c. Data accessibility We analysed the video material and extracted trajectories of all participants. These trajectories and scripts for analysis are placed in the “Pedestrian Dynamics Data Archive” for public access: http://ped.fz-juelich.de/da/doku.php?id= motion_through_crowd (https://doi.org/10.34735/ ped.2019.1)
+
+15
+
+[1] D. Helbing, P. Molnár, I. J. Farkas, and K. Bolay. Self-
+
+organizing pedestrian movement. Environment and Plan-
+
+ning B: Planning and Design, 28:361–383, 2001. doi:
+
+10.1068/b2697.
+
+[2] A. Schadschneider, W. Klingsch, H. Klüpfel, T. Kretz,
+
+C. Rogsch, and A. Seyfried. Evacuation dynamics: Em-
+
+pirical results, modeling and applications. In R. A.
+
+Meyers, editor, Encyclopedia of Complexity and Systems
+
+Science, pages 3142–3176. Springer, New York, 2009.
+
+ISBN 978-0-387-75888-6. doi:10.1007/978-0-387-30440-
+
+3\_187.
+
+[3] M. Moussaïd, D. Helbing, and G. Theraulaz. How sim-
+
+ple rules determine pedestrian behavior and crowd dis-
+
+asters. Proceedings of the National Academy of Sciences,
+
+108(17):6884–6888, 2011. doi:10.1073/pnas.1016507108.
+
+[4] V. Viswanathan, C. E. Lee, M. H. Lees, S. A. Cheong,
+
+and P. M. A. Sloot. Quantitative comparison between
+
+crowd models for evacuation planning and evaluation.
+
+doi:10.1140/epjb/e2014-40699-x.
+
+[5] J. J. Fruin. The causes and prevention of crowd disas-
+
+ters. In International conference: Engineering for crowd
+
+safety, pages 99–108. Elsevier.
+
+[6] R. Challenger, C. W. Clegg, M. A. Robinson, and
+
+M. Leigh. Understanding crowd behaviours: Supporting
+
+evidence. Technical report, University of Leeds, 2009.
+
+[7] D. Helbing and P. Mukerji. Crowd disasters as systemic
+
+failures: analysis of the love parade disaster. EPJ Data
+
+Science, 1(7):1–40, 2012. doi:10.1140/epjds7.
+
+[8] P. G. Gipps and B. S. Marksjö. A micro-simulation
+
+model for pedestrian ﬂows. Mathematics and Computers
+
+in Simulation, 27(2–3):95–105, 1985. doi:10.1016/0378-
+
+4754(85)90027-8.
+
+[9] D. Helbing and P. Molnár. Social Force Model for pedes-
+
+trian dynamics. Physical Review E, 51(5):4282–4286,
+
+1995. doi:10.1103/PhysRevE.51.4282.
+
+[10] M. J. Seitz and G. Köster. Natural discretiza-
+
+tion of pedestrian movement in continuous space.
+
+Physical Review E, 86(4):046108, 2012.
+
+doi:
+
+10.1103/PhysRevE.86.046108.
+
+[11] M. Haghani and M. Sarvi. Crowd behaviour and mo-
+
+tion: Empirical methods. Transportation Research Part
+
+B: Methodological, 107:253–294, 2018. ISSN 0191-2615.
+
+doi:10.1016/j.trb.2017.06.017.
+
+[12] M. Moussaïd, S. Garnier, G. Theraulaz, and D. Hel-
+
+bing. Collective information processing and pattern for-
+
+mation in swarms, ﬂocks, and crowds. Topics in Cog-
+
+nitive Science, 1(3):469–497, 2009. doi:10.1111/j.1756-
+
+8765.2009.01028.x.
+
+[13] A. Smith, C. James, R. Jones, P. Langston, E. Lester,
+
+and J. Drury. Modelling contra-ﬂow in crowd dynamics
+
+DEM simulation. Safety Science, 47(3):395–404, 2009.
+
+doi:10.1016/j.ssci.2008.05.006.
+
+[14] R. J. Gerrig. Psychology and Life, 20th Edition. Pearson,
+
+2013. ISBN 9780205859139.
+
+[15] N. Pelechano, J. Allbeck, and N. Badler. Control-
+
+ling individual agents in high-density crowd simula-
+
+tion. In D. Metaxas and J. Popovic, editors, Pro-
+
+ceedings of the 2007 ACM SIGGRAPH/Eurographics
+
+Symposium on Computer Animation, SCA ’07, pages
+
+99–108, Goslar, DEU, 2007. Eurographics Association.
+
+ISBN 9781595936240. URL https://dl.acm.org/doi/
+
+10.5555/1272690.1272705.
+
+[16] D. Yanagisawa. Coordination game in bidirectional ﬂow.
+
+1:1–14. ISSN 2366-8539. doi:10.17815/CD.2016.8.
+
+[17] S. Xue, C. Feliciani, X. Shi, and T. Li. Revealing the
+
+hidden rules of bidirectional pedestrian ﬂow based on an
+
+improved ﬂoor ﬁeld cellular automata model. 100:102044,
+
+. ISSN 1569-190X. doi:10.1016/j.simpat.2019.102044.
+
+URL
+
+http://www.sciencedirect.com/science/
+
+article/pii/S1569190X19301753.
+
+[18] S. Xue, R. Jiang, B. Jia, Z. Wang, and X. Zhang. Pedes-
+
+trian counter ﬂow in discrete space and time: experiment
+
+and its implication for ca modelling. 7(1):169–184, . doi:
+
+10.1080/21680566.2017.1365662.
+
+[19] JuPedSim Contributors. Jupedsim, 2020. URL https:
+
+//www.jupedsim.org/. Accessed 26. May 2020.
+
+[20] accu:rate GmbH. Our simulation model: What is be-
+
+hind it?, 2020. URL https://www.accu-rate.de/en/
+
+the-optimal-steps-model/. Accessed 25. May 2012.
+
+[21] N. Wijermans, R. Jorna, W. Jager, T. van Vliet, and
+
+O. Adang. Cross: Modelling crowd behaviour with social-
+
+cognitive agents. Journal of Artiﬁcial Societies and So-
+
+cial Simulation, 16(4):1, 2013. ISSN 1460-7425. doi:
+
+10.18564/jasss.2114.
+
+[22] C. Feliciani and K. Nishinari. An improved cellular au-
+
+tomata model to simulate the behavior of high density
+
+crowd and validation by experimental data. Physica A:
+
+Statistical Mechanics and its Applications, 451:135–148,
+
+2016. doi:10.1016/j.physa.2016.01.057.
+
+[23] D. Helbing, L. Buzna, A. Johansson, and T. Werner. Self-
+
+organized pedestrian crowd dynamics: Experiments, sim-
+
+ulations, and design solutions. Transportation Science, 39
+
+(1):1–24, 2005. doi:10.1287/trsc.1040.0108.
+
+[24] J. Zhang, W. Klingsch, A. Schadschneider, and
+
+A. Seyfried. Transitions in pedestrian fundamental di-
+
+agrams of straight corridors and t-junctions. Journal of
+
+Statistical Mechanics: Theory and Experiment, 2011(06):
+
+P06004, 2011. doi:10.1088/1742-5468/2011/06/P06004.
+
+[25] J. Zhang and A. Seyfried. Comparison of intersecting
+
+pedestrian ﬂows based on experiments. Physica A: Statis-
+
+tical Mechanics and its Applications, 405:316–325, 2014.
+
+doi:10.1016/j.physa.2014.03.004.
+
+[26] A. Templeton, J. Drury, and A. Philippides. Walk-
+
+ing together: behavioural signatures of psycholog-
+
+ical crowds. R. Soc. open sci, 2018. doi:
+
+dx.doi.org/10.1098/rsos.180172.
+
+[27] J. Zhang, W. Klingsch, A. Schadschneider, and
+
+A. Seyfried. Ordering in bidirectional pedestrian ﬂows
+
+and its inﬂuence on the fundamental diagram. Journal of
+
+Statistical Mechanics: Theory and Experiment, 2012(02):
+
+P02002, 2012. doi:10.1088/1742-5468/2012/02/P02002.
+
+[28] A. Templeton, J. Drury, and A. Phillipides. Placing large
+
+group relations into pedestrian dynamics: Psychologi-
+
+cal crowds in counterﬂow. Collective Dynamics, 4:1–22,
+
+2019. doi:10.17815/CD.2019.23.
+
+[29] W. Daamen and S. P. Hoogendoorn. Experimental re-
+
+search of pedestrian walking behavior. Transportation
+
+Research Record, 1828:20–30, 2003. doi:10.3141/1828-03.
+
+[30] A. Seyfried, O. Passon, B. Steﬀen, M. Boltes, T. Rup-
+
+precht, and W. Klingsch. New insights into pedestrian
+
+ﬂow through bottlenecks. Transportation Science, 43:
+
+395–406, 2009. doi:10.1287/trsc.1090.0263.
+
+16
+
+[31] A. Sieben, J. Schumann, and A. Seyfried. Collective phe-
+
+nomena in crowds — where pedestrian dynamics need
+
+social psychology. PLOS ONE, 12(6):1–19, 06 2017. doi:
+
+10.1371/journal.pone.0177328. URL https://doi.org/
+
+10.1371/journal.pone.0177328.
+
+[32] A. U. K. Wagoum, A. Tordeux, and W. Liao.
+
+Understanding human queuing behaviour at exits:
+
+an empirical study. Royal Society Open Sci-
+
+ence, 4(1):160896, 2017. doi:10.1098/rsos.160896.
+
+URL https://royalsocietypublishing.org/doi/abs/
+
+10.1098/rsos.160896.
+
+[33] A. Nicolas, M. Kuperman, S. B. Santiago Ibañez, and
+
+C. Appert-Rolland. Mechanical response of dense pedes-
+
+trian crowds to the crossing of intruders. Nature Scien-
+
+tiﬁc Reports, 9:105, 2019. doi:10.1038/s41598-018-36711-
+
+7.
+
+[34] M. Haghani. Empirical methods in pedestrian, crowd
+
+and evacuation dynamics: Part i, experimental methods
+
+and emerging topics. Safety Science, 129:104743, 2020.
+
+doi:10.1016/j.ssci.2020.104743.
+
+[35] M. Haghani. Empirical methods in pedestrian, crowd and
+
+evacuation dynamics: Part ii. ﬁeld methods and contro-
+
+versial topics. Safety Science, 129:104760, 2020. doi:
+
+10.1016/j.ssci.2020.104760.
+
+[36] A. Templeton, J. Drury, and A. Philippides. From mind-
+
+less masses to small groups: Conceptualizing collective
+
+behavior in crowd modeling. Review of General Psychol-
+
+ogy, 19(3):215–229, 2015. doi:10.1037/gpr0000032.
+
+[37] I. von Sivers and G. Köster. How stride adaptation in
+
+pedestrian models improves navigation. arXiv, 1401.7838
+
+(v1), 2014. URL http://arxiv.org/abs/1401.7838v1.
+
+[38] I. K. M. von Sivers, A. Templeton, F. Künzner,
+
+G. Köster, J. Drury, T. Philippides, Andrew and-
+
+Neckel, and H.-J. Bungartz. Modelling social identi-
+
+ﬁcation and helping in evacuation simulation. Safety
+
+Science, 89:288–300, 2016. ISSN 0925-7535. doi:
+
+10.1016/j.ssci.2016.07.001.
+
+[39] B. Kleinmeier and G. Köster. Evasion manoeuvers: One
+
+behaviour ﬁts all? In Traﬃc and Granular Flow ’19,
+
+2019.
+
+[40] Tracker Contributors. Tracker: Video Analysis and Mod-
+
+eling Tool. Online: https://physlets.org/tracker/,
+
+2019. Accessed 18. June 2019.
+
+[41] U. Weidmann. Transporttechnik der Fussgänger, vol-
+
+ume 90 of Schriftenreihe des IVT. Institut für Verkehrs-
+
+planung, Transporttechnik, Strassen- und Eisenbahnbau
+
+(IVT) ETH, Zürich, 2nd edition, 1992. doi:10.3929/ethz-
+
+a-000687810.
+
+[42] Note1. A trajectory encapsulates the positions of a par-
+
+ticipant over time.
+
+[43] Note2.
+
+https://docs.scipy.org/doc/scipy/
+
+reference/stats.html#continuous-distributions.
+
+[44] M. Boltes, S. Holl, A. Tordeux, A. Seyfried, A. Schad-
+
+schneider, and U. Lang. Infuences of extraction tech-
+
+niques on the quality of measured quantities of pedes-
+
+trian characteristics. In Proceedings of the 8th International Conference on Pedestrian and Evacuation Dynamics, 2016. [45] F. Berton, L. Hoyet, A.-H. Olivier, J. Bruneau, O. Le Meur, and J. Pettré. Eye-gaze activity in crowds: Impact of virtual reality and density. In 2020 IEEE Conference on Virtual Reality and 3D User Interfaces (VR), pages 322–331, 03 . doi:10.1109/VR46266.2020.00052. [46] G. Antonini, M. Bierlaire, and M. Weber. Discrete choice models of pedestrian walking behavior. Transportation Research Part B: Methodological, 40(8):667–687, 2006. doi:10.1016/j.trb.2005.09.006. [47] F. Dietrich and G. Köster. Gradient navigation model for pedestrian dynamics. Physical Review E, 89(6):062801, 2014. doi:10.1103/PhysRevE.89.062801. [48] S. Reicher, R. Spears, and S. A. Haslam. The social identity approach in social psychology. In C. T. M. Margaret Wetherell, editor, The SAGE Handbook of Identities, pages 45–63. SAGE Publications Ltd, 2010. doi: 10.4135/9781446200889. [49] A. Templeton, G. Selin Tekin, C. Hoerst, S. Vestergren, L. Davidson, H. Ballentyne, Susie Madsen, and S. Choudhury. Inequalities and identity processes in crises: Recommendations for facilitating safe response to the covid19 pandemic. British Journal of Social Psychology, 59: 674–685, 2020. doi:doi.org/10.1111/bjso.12400. [50] R. Axelrod. Advancing the art of simulation in the social sciences. In R. Conte, R. Hegselmann, and P. Terna, editors, Simulating Social Phenomena, pages 21–40, Berlin, Heidelberg, 1997. Springer Berlin Heidelberg. ISBN 9783-662-03366-1. [51] R. C. Martin. Clean Code: A Handbook of Agile Software Craftsmanship. Prentice Hall, 1 edition, 2008. ISBN 0132350882. [52] B. Kleinmeier, B. Zönnchen, M. Gödel, and G. Köster. Vadere: An open-source simulation framework to promote interdisciplinary understanding. Collective Dynamics, 4, 2019. doi:10.17815/CD.2019.21. [53] Vadere team. Vadere: Open source framework for pedestrian simulation, 2020. URL http://www.vadere.org/. Accessed 26. May 2020. [54] M. J. Seitz. Simulating pedestrian dynamics: Towards natural locomotion and psychological decision making. PhD thesis, Technische Universität München, Munich, Germany, 2016. URL https://mediatum.ub.tum.de/ ?id=1293050. [55] F. Dietrich. Data-Driven Surrogate Models for Dynamical Systems. PhD thesis, Technische Universität München, 2017. URL https://mediatum.ub.tum.de/ doc/1356533/1356533.pdf. [56] M. Boltes and A. Seyfried. Collecting pedestrian trajectories. Neurocomputing, 100:127–133, 2013. doi: 10.1016/j.neucom.2012.01.036. Special issue: Behaviours in video.
+
+
