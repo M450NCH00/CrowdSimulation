@@ -142,6 +142,10 @@ Documents only: no code, no paid calls, no change to `llm_negotiation/`, no new 
   reportlab), so the length is an **estimate**: 983 words of mostly prose ≈ 2 A4 pages at 11 pt.
   Not measured.
 
+### 2026-10-19 — Pushed; PR #50 opened
+- Pushed `docs/41-portable-rules-synthesis-brief`; opened PR #50 against
+  `docs/40-simulator-hands-on-trial` (A1), with `Closes #41`; commented the link on #41.
+
 ## Open questions / risks
 
 1. **Q1. Brief length is estimated, not measured** (no renderer). If it runs over when pasted into
