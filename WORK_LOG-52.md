@@ -70,6 +70,39 @@ Literature only: no code, no change to `llm_negotiation/`, no LLM calls of any k
   one neighbour: one generic line.
 - Next step: searches and screening.
 
+### 2026-10-19 — Searches, screening, and the five chosen
+- What I did: confirmed the seven new seed leads from their arXiv abs pages (the arXiv API
+  returned HTTP 429 every time, so the abs pages were used, as in earlier issues). Ran 10 web
+  searches across the three tiers and for the gap (listed in `search-log.md` §3). Downloaded 15
+  full texts into a scratch folder and screened each by searching its extract for the
+  perception-to-text step, any cap or radius on who is described, and any measured comparison.
+- Why: the issue asks for the five *most relevant*, by tier, preferring measured results and
+  peer review, with at least one measured comparison of formats.
+- Result / what I found: **the five**:
+  1. [Durupinar-AffectCrowd] (tier 1, `[preprint]` 2026): Unity crowd simulator; perception by an
+     8 m range, 200° field of view and occlusion; the three nearest visible people described in
+     full, the rest as counts; prompt printed (Appendix A); seven prompt variants tested.
+  2. [Ntarouis-CrowdGenAgents] (tier 1, PED 2025 in *Acta Polytechnica CTU Proceedings* 57, 2026,
+     CC BY 4.0): radius-based perception with absolute positions and relative distances; runs at
+     10 to 250 agents with request counts and latency. Its prompts are in a Zenodo supplement that
+     refused automated download (HTTP 403): logged in `missing-papers.md` for the user to fetch.
+  3. [Park-GenerativeAgents] (tier 2, UIST 2023): the sandbox world as a tree, each agent knowing
+     only the subgraph it has seen; a perception radius; the architecture tier 1 papers build on.
+  4. [Chen-MAPFLLM] (tier 2 with a measured format comparison): MAPF; image, obstacle-coordinate
+     list and ASCII map compared (Table 3), and success by number of agents (Table 1). Published
+     in TMLR 2025 under a new title; the OpenReview PDF refused download (403), so arXiv v2 is read.
+  5. [Martorell-TextToSpace] (tier 2/3, measured): six text encodings of a grid world in three
+     classes (Cartesian, topographic, prose), LLaMA 1B to 90B, with GLM statistics. Published in
+     *Explainable Artificial Intelligence* (CCIS, Springer, 2025, pp. 268-291); arXiv v1 read.
+- **Decision (mine, logged):** the issue's tiers, read strictly, would fill all five slots from
+  tier 1 (at least six tier 1 candidates exist), which would leave no measured format comparison.
+  I took the two tier 1 papers that specify the perception-to-text step most completely, then the
+  three best measured or foundational ones. Talk like a Graph (tier 3, ICLR 2024) and BALROG
+  (tier 2, ICLR 2025) were the closest misses: Chen already covers text against image in a
+  multi-agent setting, and Martorell covers text against text in a spatial task, which is the
+  comparison negsim needs; Talk like a Graph encodes abstract graphs, not space.
+- Next step: write the five entries from the cached extracts.
+
 ## Open questions / risks
 
 (filled in as the work goes)
