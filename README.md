@@ -56,6 +56,7 @@ experiment code until the literature review is complete and discussed.**
 | 5c | Implemented rules in simulators, games, robots, traffic | **delivered** (issue #22) — `literature/simulation-rules/` |
 | 5d | LLMs resolving spatial conflict without conversation | **draft** (no issue; search of 2026-10-05) — `literature/llm-behavioural-conflict/` |
 | 5e | Portable rules (track #34), PT-1: can a rule be written once and carried out by several simulators? | **delivered** (issue #35) — `literature/portable-rules/`; verdict *feasible with changes*. #34's idea itself is a proposal awaiting the supervisor's sign-off |
+| 5f | Portable rules (track #34), PT-2: how to test rules on unseen scenarios, and how to write those scenarios down for several simulators | **delivered** (issue #36) — `literature/unseen-scenarios/`; a draft test protocol and scenario-card fields, both proposals awaiting the supervisor's sign-off |
 | 6 | Bridge into CrowdGym — `integration/crowdgym_mapping.md` | not started |
 
 From building the negotiation simulator (issue #24) — see `llm_negotiation/README.md` for
@@ -194,6 +195,23 @@ From issue #32 (the third sub-issue's second step, SI-3a.2) — see `llm_negotia
   messages or the retries alone fits; a hard spend cap with the sessions in a stated priority
   order would (issue #30's Q5, options re-previewed).
 
+Three findings from the unseen-scenarios review (issue #36, PT-2 of track #34), all drafts
+needing supervisor sign-off. See `literature/unseen-scenarios/`; `verdict.md` is one page. The
+review read 20 sources (7 scenario formats, 13 studies) and stubbed 2 (ISO 20414, one spillover
+paper):
+
+- **No field read holds out a whole type of situation when testing a behaviour rule.** Melting Pot
+  holds out co-players, never worlds; pedestrian modelling has one small cross-geometry study. The
+  protocol's whole-conflict-type hold-out is the FYP's own design. See `methods.md` Q1.
+- **Humans do carry a convention to a differently structured game, but within one class of games,
+  in one direction more than the other, and not always for the better.** This qualifies the
+  game-theory review's "no evidence" and backs #34's "same kind of conflict" claim. See
+  `methods.md` Q2.
+- **No existing scenario format says who should go first in a contested resource, or lets someone
+  join a queue part-way.** The scenario card has to be assembled from RiMEA, IMO, TN 1822,
+  OpenSCENARIO, JuPedSim, SteerBench and ODD. See `scenario-standards.md` and
+  `test-protocol-draft.md` §6.
+
 Three findings from the portable-rules review (issue #35, PT-1 of track #34), all drafts needing
 supervisor sign-off. See `literature/portable-rules/`; `verdict.md` is one page. The review read
 19 entries and 4 novelty sources, with 4 sources unobtained, so read these as findings about what
@@ -321,6 +339,14 @@ CrowdSimulation/
       missing-papers.md                  4 sources not obtained; 2 read only as preprints
       search-log.md                      searches run, how sources were read, open risks
       refs-portable-rules.bib            records for every source, with the copy read
+    unseen-scenarios/               issue #36 (PT-2 of track #34): testing rules on unseen scenarios
+      verdict.md                         *** one page: what the literature supplies, protocol changes, risks ***
+      test-protocol-draft.md             Q5: levels L0-L4, hold-out, freezing, baselines, metrics, card fields
+      scenario-standards.md              Q3: 8 scenario formats (RiMEA, IMO, ISO, OpenSCENARIO, ODD, ...) + table
+      methods.md                         Q1 generalisation, Q2 the six spillover leads, Q4 leakage
+      missing-papers.md                  2 sources not obtained; 8 read in an earlier version
+      search-log.md                      searches run, what went wrong, leads not followed
+      refs-unseen-scenarios.bib          records for every source, with the copy read
     (see also demographic-personas/, human-conflict-resolution/,
      llm-conflict-resolution/, paper-summaries/ from issues #8/#12/#14/#16/#18)
   pipeline/
