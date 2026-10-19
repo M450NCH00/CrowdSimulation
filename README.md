@@ -58,6 +58,7 @@ experiment code until the literature review is complete and discussed.**
 | 5e | Portable rules (track #34), PT-1: can a rule be written once and carried out by several simulators? | **delivered** (issue #35) — `literature/portable-rules/`; verdict *feasible with changes*. #34's idea itself is a proposal awaiting the supervisor's sign-off |
 | 5f | Portable rules (track #34), PT-2: how to test rules on unseen scenarios, and how to write those scenarios down for several simulators | **delivered** (issue #36) — `literature/unseen-scenarios/`; a draft test protocol and scenario-card fields, both proposals awaiting the supervisor's sign-off |
 | 5g | Portable rules (track #34), PT-3: human evidence for the unseen scenarios (queue cutting, boarding, lifts, escalators), Singapore first | **delivered** (issue #37) — `literature/unseen-scenario-evidence/`; graded reference behaviours (grading scale a proposal awaiting the supervisor's sign-off); no Singapore observation found |
+| 5h | Portable rules (track #34), PT-4: models trained on extracted rules (distillation, learned deciders, rule-guided learning) | **delivered** (issue #38) — `literature/trained-deciders/`; options table, evaluation plan with the counterfactual bias test, and a one-page verdict, all proposals awaiting the supervisor's sign-off |
 | 6 | Bridge into CrowdGym — `integration/crowdgym_mapping.md` | not started |
 
 From building the negotiation simulator (issue #24) — see `llm_negotiation/README.md` for
@@ -195,6 +196,25 @@ From issue #32 (the third sub-issue's second step, SI-3a.2) — see `llm_negotia
   its worst case is USD 0.65 against the same USD 0.05 cap, and no cut of the reply cap, the
   messages or the retries alone fits; a hard spend cap with the sessions in a stated priority
   order would (issue #30's Q5, options re-previewed).
+
+Three findings from the trained-deciders review (issue #38, PT-4 of track #34), all drafts needing
+supervisor sign-off. See `literature/trained-deciders/`; `verdict.md` is one page. The review read
+13 sources in full or by keyword-led passes (all open arXiv copies) and cross-referenced 3 already
+in the repository:
+
+- **The cheapest trained decider that reached large populations is a lookup table filled by
+  repeated LLM calls** (8.4 million agents with 400 queries, AAMAS 2025), not a trained model. No
+  source measured a distilled crowd decider's agreement with its teacher on unseen situations
+  except Zhang et al. (2026). Small decision trees on Situation features, with that table as
+  baseline, are recommended as the first thing to train. See `verdict.md`, `options.md`.
+- **The "no `ethnic_group` input" rule is fairness through unawareness, which is not enough on its
+  own.** The simulator lets a stronger check be made by construction (no Situation feature caused
+  by the group), and an LLM teacher's labels need their own counterfactual test. That test, for
+  `ethnic_group`, waits for the ethics sign-off on fictional groups. See `evaluation.md` §3.
+- **No source compares a learned interpretable model with hand-written rules, or tests a trained
+  decider across simulators.** RL policies with rule rewards are not recommended now (one per
+  simulator; a reward-given norm followed about 85% of the time); the shield pattern (the rule
+  engine blocks what a trained decider proposes against a hard rule) is. See `entries.md` Q2, Q3.
 
 Three findings from the human-evidence review (issue #37, PT-3 of track #34), all drafts needing
 supervisor sign-off. See `literature/unseen-scenario-evidence/`; `verdict.md` is one page. The
@@ -377,6 +397,14 @@ CrowdSimulation/
       missing-papers.md                  14 sources not obtained; 4 read in an earlier or partial version
       search-log.md                      searches run, how sources were fetched, what went wrong
       refs-unseen-evidence.bib           records for every source, with the copy read
+    trained-deciders/               issue #38 (PT-4 of track #34): models trained on extracted rules
+      verdict.md                         *** one page: which deciders to train, with which teachers, evaluated how ***
+      entries.md                         13 entries for Q1-Q5 (distillation, interpretable models, rule-guided RL, bias, teachers)
+      options.md                         Q1-Q5 answers; one table of model options, every cell citing entries
+      evaluation.md                      checks E1-E10 and bias checks B1-B7, incl. the counterfactual test (proposal)
+      missing-papers.md                  0 sources not obtained; versions not read
+      search-log.md                      searches run, how sources were fetched, unread leads
+      refs-trained-deciders.bib          records for every source, with the copy read
     (see also demographic-personas/, human-conflict-resolution/,
      llm-conflict-resolution/, paper-summaries/ from issues #8/#12/#14/#16/#18)
   pipeline/
