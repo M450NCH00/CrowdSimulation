@@ -61,6 +61,7 @@ experiment code until the literature review is complete and discussed.**
 | 5h | Portable rules (track #34), PT-4: models trained on extracted rules (distillation, learned deciders, rule-guided learning) | **delivered** (issue #38) — `literature/trained-deciders/`; options table, evaluation plan with the counterfactual bias test, and a one-page verdict, all proposals awaiting the supervisor's sign-off |
 | 5i | Portable rules (track #34), PT-5: simulators, part 1, a desk survey of crowd simulators and how they work | **delivered** (issue #39) — `integration/simulator-survey/`; one section per simulator, a sourced comparison matrix, and a shortlist (JuPedSim, Mesa, SUMO conditional) for the hands-on trial in #40; nothing installed or run. CrowdGym's engine left open |
 | 5j | Portable rules (track #34), PT-6: simulators, part 2, a hands-on trial of the shortlist and the use-or-build decision | **delivered, decision a proposal** (issue #40) — `integration/simulator-survey/hands-on.md`, `decision.md`, `spikes/`; JuPedSim 1.4.2 and Mesa 3.5.1 run from pinned wheels in a separate venv (user allowed trial code; supervisor status of the standing instruction still unconfirmed). Proposed: hybrid, JuPedSim for motion and boarding with our own queue-order layer, Mesa as the discrete testbed; SUMO not needed. Weights need sign-off |
+| 5k | Portable rules (track #34), PT-7: synthesis — a verdict on each part of the idea, the idea restated, novelty, a supervisor brief and an implementation sequence | **delivered, all proposals** (issue #41) — `portable_rules/docs/`; every part *feasible with changes*, five sub-claims not supported (identical behaviour across simulators; tests proving conformance; today's rules as an unchanged ORCA binding; human fidelity for bus boarding and escalators; RL deciders). No LLM-elicited rule exists yet. The brief lists ten decisions for the supervisor; PT-8 (#42) waits on them |
 | 6 | Bridge into CrowdGym — `integration/crowdgym_mapping.md` | not started |
 
 From building the negotiation simulator (issue #24) — see `llm_negotiation/README.md` for
@@ -198,6 +199,24 @@ From issue #32 (the third sub-issue's second step, SI-3a.2) — see `llm_negotia
   its worst case is USD 0.65 against the same USD 0.05 cap, and no cut of the reply cap, the
   messages or the retries alone fits; a hard spend cap with the sessions in a stated priority
   order would (issue #30's Q5, options re-previewed).
+
+Three findings from the synthesis (issue #41, PT-7 of track #34). All are proposals needing
+supervisor sign-off. See `portable_rules/docs/`; `supervisor-brief.md` is the two-page read and
+`feasibility.md` the evidence:
+
+- **Every part of the idea is feasible with changes, under a narrower claim:** the same *decision*
+  in the same kind of conflict, with behaviour across simulators *measured*, not promised. Five
+  sub-claims are dropped or narrowed, among them "today's rules become the ORCA binding unchanged"
+  (their when-conditions are negsim measurements) and human fidelity for bus boarding and escalators
+  (no evidence). The restated idea marks ten changes from #34 (`idea.md`).
+- **No LLM-elicited rule exists yet.** The six rules in `llm_negotiation/rule_db/` are hand-written
+  test seeds and the paid pilot is held, so the proposed sequence builds and checks everything free
+  on the seeds first, and runs the pilot only after the vocabulary, bindings and pass criteria are
+  frozen (`implementation-plan.md`).
+- **The best held-out evidence needs vocabulary the draft lacks.** Most queue-cutting evidence is
+  about bystanders objecting and about asking with a reason; the train-door evidence needs roles by
+  category. What the unseen tests can check against people therefore depends on #34's decisions 3
+  and 4 and on PT-8 adding breach handling.
 
 Three findings from the hands-on simulator trial (issue #40, PT-6 of track #34). The
 recommendation and its weights are a proposal needing supervisor sign-off, and nothing here is
@@ -467,6 +486,12 @@ CrowdSimulation/
       hands-on.md                        issue #40: each trial (queue, door, adapters, scale) on JuPedSim and Mesa
       decision.md                        *** issue #40: use / refer-and-build / hybrid, matrix, recommendation (a proposal) ***
       spikes/                            issue #40: throwaway trial code + pinned requirements.txt; nothing imports it
+  portable_rules/                   track #34 (portable conflict rules)
+    docs/                           issue #41 (PT-7): the synthesis; all proposals awaiting sign-off
+      feasibility.md                     a verdict per part of the idea, with evidence and risk; what is new
+      idea.md                            the idea restated, ten changes from #34 marked
+      supervisor-brief.md                *** two pages, no jargon: ten decisions with options and recommendations ***
+      implementation-plan.md             proposed future issues, one paragraph each (none created)
   llm_negotiation/                  issue #24: two-agent LLM negotiation simulator; issue #26: the
                                     avoidance layer (ORCA, perception, directives); issue #28: rules;
                                     issue #30: rule generation; issue #32: fictional groups and
