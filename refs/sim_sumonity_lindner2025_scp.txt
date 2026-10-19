@@ -1,0 +1,494 @@
+SUMO User Conference 2025
+Conference paper
+https://doi.org/10.52825/scp.v6i.2618
+© Authors. This work is licensed under a Creative Commons Attribution 3.0 DE License
+Published: 15 Jul. 2025
+
+Modeling Passenger Boarding Times Using Sumonity’s
+           Sub-Microscopic Pedestrian Simulation
+
+                             Johannes Lindner1,* , Mathias Pechinger1 , and
+                                               Klaus Bogenberger1
+
+            1Technical University of Munich, Chair of Traffic Engineering and Control, Munich, DE
+                          *Correspondence: Johannes Lindner, johannes.lindner@tum.de
+
+Abstract. Short dwell times at bus stops are crucial for efficient public transport op-
+erations, yet existing traffic simulation tools commonly simplify passenger boarding.
+In this paper, we extend the SUMO-based co-simulation framework, Sumonity, to in-
+corporate a sub-microscopic pedestrian model for city bus boarding. Our approach
+simulates real-time passenger flow, pathfinding, and door congestion in a Unity-based
+environment. We conduct a full-factorial simulation experiment with four bus door con-
+figurations, ranging from fully open double doors to partially closed options. We also
+consider different passenger loads between 1 and 50, yielding 200 unique scenar-
+ios. Detailed spatiotemporal data on passenger movements and boarding times are
+generated for each scenario. Analysis of crowding behaviors and door usage reveals
+significant sensitivity of boarding times to both passenger volume and door availability.
+These findings demonstrate the importance of accurately modeling pedestrian interac-
+tions for reliable dwell-time forecasts and underscore the potential of sub-microscopic
+pedestrian simulations.
+
+Keywords: Sub-Microscopic Traffic Simulation, Pedestrian Modelling, Dwell Time,
+Microscopic Traffic Simulation
+
+1. Introduction
+
+Public transport efficiency plays a pivotal role in urban mobility, where growing ridership
+and sustainability goals emphasize the need to optimize bus operations [1]. Among
+the critical factors affecting bus service reliability and overall passenger experience
+is the dwell time—the interval a bus spends at stops to accommodate boarding and
+alighting passengers. Longer dwell times can accumulate in a transit network, reducing
+schedule adherence and passenger satisfaction.
+
+     Existing traffic simulation tools, such as SUMO, provide robust frameworks for
+modeling vehicular movement at a microscopic level. However, passenger processes
+are often simplified: individuals are typically lined up in fixed positions at bus stops
+and are teleported onto the bus. This approach disregards the dynamic interactions
+among passengers, variations in bus interior layouts, and real-world phenomena such
+as queue formation and congestion at doors. To address these limitations, we extend
+
+                                                            79
+                                    Lindner et al. | SUMO Conf Proc 6 (2025) ”SUMO User Conference 2025”
+
+the capabilities of the SUMO-based co-simulation framework, Sumonity [2], by inte-
+grating sub-microscopic, three-dimensional pedestrian models for passenger board-
+ing. Our approach aims to capture realistic movement behaviors at the doors, enabling
+more accurate dwell-time estimations. In this paper however, we focus on boarding
+time and exclude the alighting process. Specifically, we investigate how different door
+configurations (e.g., fully open or partially closed double doors) and varying passenger
+loads (from 1 to 50) influence boarding times.
+
+     The remainder of this paper is structured as follows. Section 2 provides a literature
+review that summarizes key findings on dwell times and related passenger-flow mod-
+els. Section 3 details our methodology, including the simulation scenario setup and the
+enhancements made to the pedestrian simulation model. Sections 4 and 5 present and
+discuss the results, with a focus on how door configurations and passenger volumes in-
+fluence boarding times and movement patterns. Finally, Section 6 concludes the paper
+by highlighting our key contributions, addressing limitations, and outlining directions for
+future research.
+
+2. Literature Review
+
+Bus dwell time is commonly defined as the interval between a vehicle’s arrival at a
+station and its departure, encompassing passenger boarding, alighting, and related
+door operations [1], [3], [4]. While numerous variables affect dwell time, the volume of
+boardings and alightings is frequently highlighted as a principal factor: larger passen-
+ger counts often lead to congestion at vehicle entrances and increased friction among
+riders, thereby prolonging service intervals [5], [6], [7]. Beyond passenger loads, bus
+design characteristics, including door width, the number of doors, and low-floor con-
+figurations, also streamline boarding and alighting [8], [9]. Notably, low-floor buses
+improve boarding speeds for older adults and individuals with mobility impairments,
+further enhancing operational efficiency [10]. Fare collection methods likewise shape
+dwell time dynamics; for instance, cash payments at a front door slow boarding pro-
+cesses, whereas electronic payment systems and pre-paid fares can reduce passenger
+queues [11], [12].
+
+     In addition to vehicle and passenger attributes, contextual and route-related vari-
+ables are equally important. Locating bus stops directly after intersections can min-
+imize delays from congested turning lanes and crossing pedestrians [13], whereas
+stops placed before intersections or in areas with limited visibility risk increased dwell
+durations due to pedestrian conflicts and blocked exit paths [14]. Peak-hour conditions
+exacerbate these challenges because limited interior space constrains passenger flow
+and intensifies crowding [15]. Methodologically, linear or multiple regression models
+have traditionally been employed to estimate and predict dwell time [11], [16]. How-
+ever, advanced approaches such as hazard-based models [17] and machine learning
+techniques [18], [19] are gaining traction, offering more detailed insights by capturing
+nonlinearities and complex variable interactions. Despite extensive research on con-
+ventional bus operations, gaps remain around automated shuttle services, where the
+absence of a human driver, novel sensor configurations, and distinct interior layouts
+could alter boarding and alighting patterns [20]. As public transit systems increas-
+ingly adopt automation, future studies must examine how sensor-based infrastructure,
+remote supervision, and user-interface innovations influence dwell times and overall
+service effectiveness.
+
+                                                            80
+                                    Lindner et al. | SUMO Conf Proc 6 (2025) ”SUMO User Conference 2025”
+
+3. Methodology
+
+3.1 Study Design
+
+Figure 1. Simulation Scenarios: (1) all double doors opened, (2) all doors opened but only one side, (3)
+                        only front double door open, (4) front and rear double door opened.
+
+     In this study, we model the boarding process of a city bus, aiming to address limi-
+tations in standard SUMO simulations that assume fixed passenger positions and tele-
+portation onto the vehicle. By contrast, our approach enables passengers to queue,
+navigate, and interact realistically.
+
+     Multiple bus configurations (see Figure 1) are examined to explore how door ac-
+cess—such as fully open or partially closed double doors—impacts boarding efficiency.
+In each scenario, the bus is empty, and passengers range from 1 to 50, allowing us to
+assess the effect of passenger load on boarding time. The door configuration, together
+with the passenger volume, constitute the independent variables, while the principal
+dependent variable is boarding time, measured from the moment passengers arrive at
+the bus stop area to the time the last individual finishes boarding.
+
+     To reduce complexity, we do not simulate seat selection or movement within the
+vehicle beyond a certain point. Each passenger starts from a randomly assigned po-
+sition in the bus stop area and proceeds to their nearest available door. The scenario
+ends once the passenger reaches a designated area inside the bus, ensuring minimal
+obstruction for subsequent boarders.
+3.2 SUMO Integration
+Our simulations build on the Sumonity framework [2], an open-source solution that
+combines SUMO with the Unity game engine for sub-microscopic traffic simulation.
+The Sumonity codebase is publicly available on GitHub1.
+
+ 1https://github.com/TUM-VT/Sumonity
+
+                                                            81
+                                    Lindner et al. | SUMO Conf Proc 6 (2025) ”SUMO User Conference 2025”
+
+     Using SUMO’s TraCI API, we retrieve real-time pedestrian states—positions at
+each timestep (see Figure 2). Traditional SUMO workflows teleport passengers onto
+the bus, but in Sumonity, passengers continuously walk from the platform into the ve-
+hicle. As soon as a pedestrian enters the defined bus stop area, a waiting position is
+assigned; once the bus arrives, the system attaches a bus identifier to the passenger,
+signaling the start of the boarding process and defines a goal point near the closest
+door. Detailed position data are then recorded for subsequent dwell-time analysis or
+human-in-the-loop research.
+
+            Figure 2. Data flow of the Sumonity pedestrian simulation system used in this study.
+
+3.3 Simulation Model
+
+3.3.1 Pedestrian Simulation Model
+
+The simulation model encompasses four key areas: Physical Agent Space, Path
+Search, Speed Choice, and Animation. We further describe thresholds and model
+assumptions.
+Physical Agent Space
+Each passenger is represented by a circular agent with a radius of 0.45 m, based on
+standard pedestrian-flow and transportation literature [22], [23]. This simplified model
+omits individual variability in body size but provides a baseline for crowd interactions;
+future extensions could incorporate heterogeneous agent sizes.
+Path Search
+The environment is preprocessed into a navigation mesh (navmesh), which partitions
+the walkable area into convex polygons. We employ an A* pathfinding algorithm within
+Unity to guide passengers around obstacles, including bus doors, walls, and other
+agents. The input geometry specifies the 3D layout, while real-time collision checks
+ensure agents avoid overlap.
+
+                                                            82
+Lindner et al. | SUMO Conf Proc 6 (2025) ”SUMO User Conference 2025”
+
+(a) Physical Agent Space and Interaction      (b) Speed-density correlation [22].
+             Space based on [21].
+
+Figure 3. Key concepts in the pedestrian simulation model.
+
+Speed Choice
+
+Agent speed adapts to crowd density in a predefined interaction space. We approxi-
+mate this space with a rectangular bounding box, inspired by the agent space model
+and the NOMAD model [21], [24]. At each timestep, the local density is computed, and
+speeds are updated according to the empirical relationship from Weidmann [22]. This
+allows agents to slow down in dense areas, capturing typical pedestrian-congestion
+behavior.
+
+Animation
+
+Although root-motion animations can enhance realism, especially for human-in-the-
+loop applications, we use only visual (non-root-motion) animation. The agent’s motion
+is determined by explicit velocity and heading updates, while the animation layer serves
+mainly for visual plausibility.
+
+Door-Balancing and Deadlock Avoidance
+
+Passengers may reroute to a less crowded door if their velocity remains under 0.75 m/s
+for 2 seconds (see Figure 4). Should any agent’s average speed drop below 0.1 m/s
+for 1.5 seconds, the system interprets this as a deadlock and repositions one agent
+slightly to clear the blockage. If a deadlock persists beyond 180 seconds, the run is
+terminated and the data excluded from the final dataset.
+
+                                          83
+                                    Lindner et al. | SUMO Conf Proc 6 (2025) ”SUMO User Conference 2025”
+
+Summary of Model Parameters:
+    • Physical Agent Space: ragent = 0.45 m
+    • Path Search: Navigation mesh, A* algorithm
+    • Speed Choice: Density-based according to Weidmann [22]
+    • Agent Interaction Space: Ls = 0.84 m, Lf = 5.95 m (adapted from [21])
+    • Animation: Non-root-motion humanoid avatar
+
+3.3.2 Simulation Runs
+
+We adopt a full factorial design featuring four door configurations (Fig. 1) and pas-
+senger counts ranging from 1 to 50, leading to 200 unique scenarios. Each sce-
+nario is repeated 100 times to capture variability and ensure reliable statistics, totaling
+20,000 runs. Key outputs include boarding times, agent trajectories, and crowd den-
+sity heatmaps, which are aggregated and analyzed in subsequent sections to evaluate
+boarding efficiency and crowding behaviors.
+
+                                     Figure 4. Pedestrian agents boarding the bus.
+
+4. Results
+
+4.1 Passenger Occupation Analysis
+Figure 5 shows the spatial distribution of passenger positions represented as a
+heatmap generated from a 2D histogram. In this figure, green points indicate door
+centers while purple points mark the goal locations inside the bus. A black rectangle
+outlines the bus, with its position and dimensions based on predefined parameters.
+
+     To analyze pedestrian occupation in the 2D space, we use a bin size that cor-
+responds to the physical agent space (radius 0.45 m), resulting in grid cells of size
+64 × 64 cm. The heatmap clearly reveals the trajectories taken by passengers from
+their randomly assigned starting positions in the bus stop area. Depending on the sce-
+nario, one or two distinct streams of boarding are observed as passengers converge
+toward the open door(s). Notably, in scenario 3—where only the front door is open—a
+significant backlog of passengers is apparent, indicating congestion at that door.
+
+                                                            84
+Lindner et al. | SUMO Conf Proc 6 (2025) ”SUMO User Conference 2025”
+
+(a) Scenario 1: all doors open            (b) Scenario 2: all doors half open
+
+(c) Scenario 3: only front door open      (d) Scenario 4: front & rear door open
+
+Figure 5. Heatmap for passenger occupancy analysis for 40 agents. The points green points highlight
+                         the door positions. The purple points the goal points in the bus.
+
+                                      85
+                                    Lindner et al. | SUMO Conf Proc 6 (2025) ”SUMO User Conference 2025”
+
+4.2 Boarding Times
+
+We apply a linear regression model to estimate boarding times, with boarding time as
+the dependent variable and the number of boarding passengers as the independent
+variable. Each scenario is evaluated separately. Figure 6 displays the scatter plots,
+density plots, and corresponding linear regression lines for all scenarios, while Table 1
+provides detailed statistics and regression model parameters. For the analysis, we
+removed outliers exceeding the 75th percentile by more than 1.5 times the interquartile
+distance.
+
+     The key parameters in our regression analysis are the intercept and the β co-
+efficient. The intercept varies across scenarios, which is plausible since it depends
+heavily on the starting positions and also serves as an indicator of the average agent
+backlog at the doors. Notably, scenario 3 (only the front door open) exhibits a neg-
+ative intercept. The β coefficient represents the boarding time change per additional
+passenger. Among the scenarios, scenario 1 (all doors open) has the smallest change
+rate (β = 0.500), followed by scenario 2 (all doors half open, β = 0.557) and scenario 4
+(front and rear door open, β = 0.790). In contrast, scenario 3 (only the front door open)
+shows by far the highest change rate with β = 2.275.
+
+(a) Scenario 1: all doors open            (b) Scenario 2: all doors half open
+
+(c) Scenario 3: only front door open      (d) Scenario 4: front & rear door open
+
+Figure 6. Scatter plots including density plots and linear regression line for all scenarios.
+
+                                      86
+            Lindner et al. | SUMO Conf Proc 6 (2025) ”SUMO User Conference 2025”
+
+   Table 1. Descriptive statistics and regression model parameters for each scenario.
+
+Scenario N  Mean  SD          SE       R2     Intercept β
+
+1  4925     16.243 8.158      0.116    0.779  3.587*** 0.500***
+
+2  4898     20.484 9.083      0.130    0.781  6.406*** 0.557***
+
+3  4793     52.582 36.215 0.523        0.830  -6.430*** 2.275***
+
+4  4750     22.761 12.907 0.187        0.784  2.896*** 0.790***
+
+            Included Data: npass = [1, 50], time < 75-Quartile +1.5× Inter-Quartile-Distance
+   Note: N = Number of included simulation runs; SD = Standard deviation; SE = Standard error;
+
+                  ***p-value < 0.001;
+
+5. Discussion
+
+The regression model parameters yield several insights. Analysis of the β coefficient
+shows that scenarios with all doors open (scenarios 1 and 2) exhibit the lowest board-
+ing time change rates—even when the doors in scenario 2 are only half open. In
+contrast, scenario 4 (front and rear doors open) shows a change rate approximately
+40% higher than that of scenario 2, despite having a larger combined door width (four
+single-door widths versus three single-door widths). This finding suggests that increas-
+ing the number of accessible doors helps distribute passengers more evenly, thereby
+reducing boarding times at higher passenger volumes.
+
+     Notably, the regression model for scenario 3 (only the front door open) stands
+out. Its negative intercept, which lacks a meaningful real-world interpretation, may
+indicate that an alternative modeling approach could better capture the underlying dy-
+namics. Nonetheless, the significantly higher boarding time change rate in this sce-
+nario—approximately three times or more than that of the other scenarios—reflects the
+severe congestion caused by having a single open door.
+
+     Since real-world validation of our simulation scenarios is not feasible, we compare
+our results with findings from the literature. For example, [8] analyzed the influence of
+door width (double versus single), bus-door distance, and payment method on board-
+ing times. Their study reported values of 1.50 seconds for double doors and 1.67 sec-
+onds for single doors, which are about one second higher than our simulated values of
+0.500 and 0.557 seconds, respectively. This discrepancy is plausible, as their analysis
+includes the time required for passenger movement inside the vehicle, which our sim-
+ulation deliberately omits. Importantly, the ratio between single-door and double-door
+scenarios remains consistent, with the double-door configuration requiring roughly 90%
+of the duration of the single-door scenario. Furthermore, comparison with the Highway
+Capacity Manual (HCM) [3] reveals similar per-passenger boarding times; for instance,
+the HCM estimates approximately 0.5 seconds per passenger for a scenario featuring
+three double doors and a prepaid fare system.
+
+6. Conclusion and Outlook
+
+In this paper, we presented a sub-microscopic traffic simulation framework for modeling
+bus boarding processes. Our novel approach integrates microscopic traffic simulation
+with a pedestrian model based on navigation meshes and 3D simulation techniques.
+By simulating boarding scenarios with passenger counts ranging from 1 to 50 and var-
+ious door configurations, we developed linear regression models to estimate boarding
+times. Our results indicate that both the number of doors and their configuration (dou-
+ble versus single) significantly affect boarding times due to congestion at the doors. In
+
+                          87
+                                    Lindner et al. | SUMO Conf Proc 6 (2025) ”SUMO User Conference 2025”
+
+particular, the scenario with only one open door led to congestion, resulting in much
+higher boarding time change rates per additional passenger.
+
+     Future work should include a sensitivity analysis of key model parameters. For
+example, the speed adjustments based on local pedestrian density may differ in these
+specific boarding scenarios compared to previous model settings. Similarly, refining
+the agent interaction space and incorporating variability in physical agent dimensions,
+reflecting differences in passenger body sizes, could further enhance model realism.
+Moreover, while this study focused solely on the boarding process, future simulation
+models should also address the alighting process and the interactions between board-
+ing and alighting passengers.
+
+Data availability statement
+
+The data can be obtained by contacting the corresponding author or the Chair of Traffic
+Engineering and Control (https://www.mos.ed.tum.de/vt/startseite/) at Technical Uni-
+versity of Munich via info.vtk@ed.tum.de.
+
+Underlying and related material
+
+The implementation of the given framework is published on the GitHub page of
+the Chair of Traffic Engineering and Control of the Technical University of Munich:
+https://github.com/TUM-VT/Sumonity
+
+Author contributions
+
+Johannes Lindner: Conceptualization, Data Curation, Formal Analysis, Funding Acqui-
+sition, Investigation, Methodology, Resources, Supervision, Validation, Visualization,
+Writing – Original Draft, Writing – Review & Editing.
+Mathias Pechinger: Conceptualization, Data Curation, Project Administration, Re-
+sources, Software, Validation, Visualization, Writing – Original Draft, Writing – Review
+& Editing.
+Klaus Bogenberger: Conceptualization, Funding Acquisition, Supervision, Writing –
+Review & Editing.
+
+Competing interests
+
+The authors declare that they have no competing interests
+
+Funding
+
+This work was funded by the Stadt:up project (grant number FKZ 19A22006T), a col-
+laborative research initiative supported by the German Federal Ministry for Economic
+Affairs and Climate Action.
+
+References
+
+ [1] J. Lindner, M. Margreiter, and K. Bogenberger, “Public transport goes autonomous: Defin-
+        ing functional requirements for automated bus transit systems based on human driver
+        tasks,” en, 2024. DOI: 10.13140/RG.2.2.19339.91687.
+
+                                                            88
+                                    Lindner et al. | SUMO Conf Proc 6 (2025) ”SUMO User Conference 2025”
+
+ [2] M. Pechinger and J. Lindner, “Sumonity: Bridging sumo and unity for enhanced traffic
+        simulation experiences,” in SUMO Conference Proceedings, vol. 5, 2024, pp. 163–177.
+
+ [3] Transportation Research Board, Highway capacity manual. Transportation Research
+        Board, National Research Council, 2000.
+
+ [4] J. D. Fricker, Bus dwell time analysis using on-board video, Transportation Research
+        Board 90th Annual Meeting, Washington DC, United States, https://engineering.pur
+        due.edu/~ce560/HW/Bus_Dwell_Time_jdf.pdf, 2011.
+
+ [5] M. N. Milkovits, “Modeling the Factors Affecting Bus Stop Dwell Time: Use of Auto-
+        matic Passenger Counting, Automatic Fare Counting, and Automatic Vehicle Location
+        Data,” Transportation Research Record: Journal of the Transportation Research Board,
+        vol. 2072, no. 1, pp. 125–130, 2008. DOI: 10.3141/2072-13.
+
+ [6] R. Rajbhandari, S. I.-J. Chien, and J. R. Daniel, “Estimation of Bus Dwell Times with
+        Automatic Passenger Counter Information,” Transportation Research Record: Journal of
+        the Transportation Research Board, vol. 1841, no. 1, pp. 120–127, 2003. DOI: 10.3141/1
+        841-13.
+
+ [7] G. Chen, L. Huang, H. Liu, and X. Yang, “Effects of bunching at stops on bus dwell time,”
+        in 16th International IEEE Conference on Intelligent Transportation Systems (ITSC), The
+        Hague, Netherlands, 2013, pp. 1499–1502. DOI: 10.1109/ITSC.2013.6728442.
+
+ [8] R. Ferna´ ndez, P. Zegers, G. Weber, and N. Tyler, “Influence of Platform Height, Door
+        Width, and Fare Collection on Bus Dwell Time: Laboratory Evidence for Santiago de
+        Chile,” Transportation Research Record: Journal of the Transportation Research Board,
+        vol. 2143, no. 1, pp. 59–66, 2010. DOI: 10.3141/2143-08.
+
+ [9] K. J. Dueker, T. J. Kimpel, J. G. Strathman, and S. Callas, “Determinants of Bus Dwell
+        Time,” Journal of Public Transportation, vol. 7, no. 1, pp. 21–40, 2004. DOI: 10.5038/237
+        5-0901.7.1.2.
+
+[10] L. P. Kostyniuk and C. R. D’Souza, “Effect of passenger encumbrance and mobility aid
+        use on dwell time variability in low-floor transit vehicles,” Transportation Research Part A:
+        Policy and Practice, vol. 132, pp. 872–881, 2020. DOI: 10.1016/j.tra.2020.01.002.
+
+[11] A. Tirachini, “Bus dwell time: The effect of different fare collection systems, bus floor level
+        and age of passengers,” Transportmetrica A: Transport Science, vol. 9, no. 1, pp. 28–49,
+        2013. DOI: 10.1080/18128602.2010.520277.
+
+[12] V. R. Vuchic, Urban Transit: Operations, Planning, and Economics. John Wiley & Sons,
+        Inc., 2005.
+
+[13] E. I. Diab and A. M. El-Geneidy, “The Farside Story: Measuring the Benefits of Bus Stop
+        Location on Transit Performance,” Transportation Research Record: Journal of the Trans-
+        portation Research Board, vol. 2538, no. 1, pp. 1–10, 2015. DOI: 10.3141/2538-01.
+
+[14] H. L. Khoo, “Statistical Modeling of Bus Dwell Time at Stops,” Journal of the Eastern Asia
+        Society for Transportation Studies, vol. 10, pp. 1489–1500, 2013. DOI: 10.11175/easts
+        .10.1489.
+
+[15] L. Sun, A. Tirachini, K. W. Axhausen, A. Erath, and D.-H. Lee, “Models of bus boarding
+        and alighting dynamics,” Transportation Research Part A: Policy and Practice, vol. 69,
+        pp. 447–460, 2014. DOI: 10.1016/j.tra.2014.09.007.
+
+[16] A. El-Geneidy and N. Vijayakumar, “The Effects of Articulated Buses on Dwell and Run-
+        ning Times,” Journal of Public Transportation, vol. 14, no. 3, pp. 63–86, 2011. DOI: 10.50
+        38/2375-0901.14.3.4.
+
+[17] J. L. Machado-Leo´ n, D. MacKenzie, and A. Goodchild, “An empirical analysis of passen-
+        ger vehicle dwell time and curb management strategies for ride-hailing pick-up/drop-off
+        operations,” Transportation, 2023. DOI: 10.1007/s11116-023-10380-6.
+
+                                                            89
+                                    Lindner et al. | SUMO Conf Proc 6 (2025) ”SUMO User Conference 2025”
+
+[18] J. Xin and S. Chen, “Bus Dwell Time Prediction Based on KNN,” Procedia Engineering,
+        vol. 137, pp. 283–288, 2016. DOI: 10.1016/j.proeng.2016.01.260.
+
+[19] S. Rashidi, S. Ataeian, and P. Ranjitkar, “Estimating bus dwell time: A review of the liter-
+        ature,” Transport Reviews, vol. 43, no. 1, pp. 32–61, 2023. DOI: 10.1080/01441647.2021
+        .2023692.
+
+[20] C. Iclodean, N. Cordos, and B. O. Varga, “Autonomous Shuttle Bus for Public Transporta-
+        tion: A Review,” Energies, vol. 13, no. 11, p. 2917, 2020. DOI: 10.3390/en13112917.
+
+[21] M. Liu, T. Chen, C. Matunaga, Y. Oeda, and T. Sumi, “Simulation of dispersion effects
+        by considering interactions of pedestrians and bicyclists using an agent space model,”
+        Computers, Environment and Urban Systems, vol. 91, p. 101 725, Jan. 2022, ISSN: 0198-
+        9715. DOI: 10.1016/j.compenvurbsys.2021.101725.
+
+[22] Weidmann, Ulrich, “Transporttechnik der fussga¨ nger: Transporttechnische eigenschaften
+        des fussga¨ ngerverkehrs, literaturauswertung,” de, Tech. Rep., 1992. DOI: 10.3929/ETHZ-
+        A-000687810.
+
+[23] Handbuch fu¨ r die Bemessung von Straßenverkehrsanlagen, HBS (FGSV W1 - Wissens-
+        dokumente), Ausg. 2015, Stand: 18.9.2015. Ko¨ ln: FGSV-Verl., 2015, vol. Teil B, ISBN:
+        9783864461033.
+
+[24] M. Campanella, S. Hoogendoorn, and W. Daamen, “Improving the nomad microscopic
+        walker model,” IFAC Proceedings Volumes, vol. 42, no. 15, pp. 12–18, 2009, ISSN: 1474-
+        6670. DOI: 10.3182/20090902-3-us-2007.0076.
+
+                                                            90
+
