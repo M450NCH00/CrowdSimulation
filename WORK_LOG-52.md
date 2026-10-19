@@ -133,6 +133,11 @@ Literature only: no code, no change to `llm_negotiation/`, no LLM calls of any k
 - Q4 outcome: none of the five describes others' age, gender or disability, so Q4's attribute half
   is answered by cross-reference to [Yoldas-YieldBias] and issue #16, as the issue asked, plus gap G6.
 
+### 2026-10-19 — Pushed and PR opened
+- Pushed `docs/52-environment-description-llm-review`; opened PR #53 against
+  `docs/beginners-guide-issues-35-41` (stacked on #51), and linked it on the issue. The issue is left
+  open for the PR's `Closes #52`.
+
 ## Open questions / risks
 
 1. **Selection rule (my decision, needs a look).** Read strictly, the issue's tier order would fill
