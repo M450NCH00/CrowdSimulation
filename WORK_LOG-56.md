@@ -108,6 +108,16 @@ changes.
   and `CLAUDE.md` (the sign-off check), nothing in the READMEs' text.
 - Next step: `architecture.md` section 8.
 
+### 2026-10-22 — `architecture.md` (task 6)
+- What I did: added section 8.6, "The supervisor's direction of 2026-10-20", with six points
+  SV1 to SV6 in the bold-lead style of 8.4, each pointing at the pending decision it depends on.
+  The file's opening paragraph now mentions 8.6 and the SV prefix.
+- Why: task 6, and A5 (SV, not DD, because the file defines DD as this project's own choices).
+- Result / what I found: no document in the repository already uses `SV<n>` (grep over every
+  `.md` outside `refs/`). SV1 names DD74 to DD79 as the decisions it supersedes as the way rules
+  are made, without changing them.
+- Next step: verify and run the tests.
+
 ## Open questions / risks
 
 ## Summary (fill in at the end)

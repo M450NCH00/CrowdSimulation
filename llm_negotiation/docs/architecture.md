@@ -10,7 +10,9 @@ avoidance layer added by issue #26, which sits beside it: ORCA, perception, dire
 and the handoff to the arbiter. Section 7 describes the rule layer of issue #28: the rule
 format, the rule database, the matching policy, and the frozen baselines. Section 8
 describes rule generation of issue #30: conflict cases, the design matrix, the two
-protocols, validation, the writer and its staging databases, replay and screening. Section 9
+protocols, validation, the writer and its staging databases, replay and screening; its
+subsection 8.6 records the supervisor's direction of 2026-10-20 (numbered **SV**), under which
+those protocols no longer generate rules. Section 9
 describes issue #32: a fictional group that no rule may read, and two people who meet inside a
 single-file passage, with the `back_up` directive and rule format 3.
 
@@ -852,6 +854,38 @@ config needs a new name.
   from behaviour (SI-4).
 - Live negotiation during a run, unseen scenarios (SI-5); evidence about people (SI-6).
 - Matching cost (Q11), and a rule format that reads private information.
+
+### 8.6 The supervisor's direction of 2026-10-20
+
+From the supervisor meeting of Tuesday 2026-10-20 (track issue #55). These are the
+supervisor's points, not this project's choices, so they are numbered **SV**, not DD. The
+user's notes are recorded word for word in the root `CLAUDE.md`, "Supervisor decisions"; each
+point here summarises one or more of them. What is still undecided is listed in `CLAUDE.md`,
+"Pending sign-offs". `WORK_LOG-56.md` records how they were written down.
+
+**SV1. Resolve first, rule after.** The first step is to ask whether LLM agents can resolve a
+conflict, without asking them for a rule; only after that is a rule extracted. Conditions A and
+B (section 8.2, DD74 to DD79), which ask for a rule directly, are therefore **no longer the way
+rules are generated**. They stay built and unchanged, and their configs behave as before.
+
+**SV2. Find the hidden rule or pattern** in how the agents resolved the conflict, and **ask the
+LLM for the reference** the rule comes from. Which LLM gives the reference, the extractor or the
+agents in a debrief, is pending (#55, decision 7).
+
+**SV3. Verify the extracted rule with real human behaviour.** Whether that means published
+studies or observed data is pending (#55, decision 6).
+
+**SV4. Include as many factors as possible, and find which ones drive the decision**, with a
+mapping from factors to decision. More factors may be added, for example the agent's
+attractiveness, represented as a matrix. Its ethics sign-off is pending (#55, decision 3); no
+paid run may switch it on until `CLAUDE.md` records it.
+
+**SV5. The rule format no longer matters much**, since an LLM can translate a rule for each
+simulator. Rule format 3 (section 9) stays as it is, and translating extracted rules into it
+(#67) is low priority. The portable-rules track (#34) is on hold; how far the pause reaches is
+pending (#55, decision 5).
+
+**SV6. A rule may be more specific**, for example "keep left".
 
 ## 9. Fictional groups and meetings inside a passage (issue #32)
 
