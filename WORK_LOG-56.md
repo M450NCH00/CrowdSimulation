@@ -118,6 +118,61 @@ changes.
   are made, without changing them.
 - Next step: verify and run the tests.
 
+### 2026-10-22 — Verification
+- What I did: ran negsim's whole suite (`python -m pytest -p no:cacheprovider` in
+  `llm_negotiation/`, a fresh venv in the session scratchpad from `requirements.txt`: Python
+  3.13, PyYAML 6.0.3, matplotlib 3.10.8, pytest 9.1.1). Re-checked each acceptance criterion.
+- Why: no code changed, but `CLAUDE.md` is read by `ethnicity_signed_off()` and
+  `architecture.md` by a test, so both had to be checked.
+- Result / what I found: **1,381 tests collected, exit code 0, every result a pass.** A slip:
+  `pytest.ini` already sets `-q`, so my extra `-q` suppressed the summary line; the count comes
+  from `--collect-only`, and the three sign-off tests were re-run with the summary shown
+  (`3 passed`, including `test_the_repository_records_no_sign_off_yet`). The verbatim check:
+  11 of 11 lines identical. `2026-10-20` appears in all four files; 8 items read **PENDING**; no
+  item reads as approved.
+- Next step: push and open the PR.
+
 ## Open questions / risks
 
+- Q1. **The record is the user's notes, not the supervisor's own words.** `CLAUDE.md` says so
+  ("The user's notes from the meeting"). If the supervisor sends minutes or an email, they should
+  be added beside the notes, not used to rewrite them.
+- Q2. **One pending item more than task 3 lists** (A3): the "no new simulation code" instruction,
+  decision 2 of #55. The user may prefer it removed if the supervisor has already answered it at
+  the meeting; the notes do not say.
+- Q3. **"On hold" for the portable-rules track is stated as fact** in both READMEs and SV5, as
+  the issue asks, with only its extent pending. The notes themselves say the format no longer
+  matters; they do not say "pause #34". If the supervisor meant something narrower, the wording
+  in three places needs to change.
+- Q4. **`CLAUDE.md` is read by code.** The ethics sign-off is a regex match on `CLAUDE.md`
+  (`negsim/rulegen/experiment.py`, `ETHNICITY_SIGN_OFF`). Anyone editing "Pending sign-offs" later
+  must not write that sentence with a date until the supervisor has approved. The perceived-
+  attractiveness sign-off and the paid-run approval have no such check in code yet; RF issues that
+  add them should define the exact sentence, as DD103 did.
+- Q5. **Not updated, as out of scope:** `BEGINNERS_GUIDE.md` (it describes conditions A and B as
+  the way rules are made, and cites DD1 to DD119), `literature/paper-summaries/` talking points,
+  `portable_rules/docs/`, and the root `README.md`'s "Status of that instruction" box (left as it
+  was; its question is now pending item 8 in `CLAUDE.md`). A later issue may want to bring the
+  beginner's guide up to date.
+
 ## Summary (fill in at the end)
+
+**What changed.** Documentation only; no code, config or template.
+- `CLAUDE.md`: "Current task" is now the RF track (four steps, the order of work, #55's six
+  constraints), with the budget note kept as it was; Phase 1 kept as "on hold". New sections:
+  "Supervisor decisions" (the user's notes of Tuesday 2026-10-20, word for word, and a summary
+  marked as not the supervisor's words) and "Pending sign-offs" (8 items, all **PENDING**).
+- `README.md`: roadmap step 4 superseded by RF; six RF rows in the order of work; a note at the
+  top of "Current focus".
+- `llm_negotiation/README.md`: "Direction since October 2026" (conditions A and B of #30 no
+  longer generate rules; the portable-rules track on hold, its extent pending #55 decision 5),
+  and a pointer to it from the #30 section.
+- `llm_negotiation/docs/architecture.md`: section 8.6, SV1 to SV6, and a mention in the opening.
+
+**Why.** A new session reading `CLAUDE.md` would have worked towards the Phase 1 dataset, and the
+supervisor's points had to be on record before the RF issues build on them.
+
+**How it was verified.** The quoted notes were compared with the issue body by a script (11 of
+11 identical). negsim's suite: 1,381 tests, all passed; `ethnicity_signed_off()` is still
+`False` on the edited `CLAUDE.md`. Each acceptance criterion re-checked by grep and by reading.
+Open questions Q1 to Q5 above need the user's eye, Q2 and Q3 most.
