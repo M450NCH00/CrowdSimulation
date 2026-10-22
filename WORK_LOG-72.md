@@ -245,3 +245,7 @@ code, config or template. The full test suite passes.
 **Not done / for the user:** Q1 to Q7 above, in particular the caveat on the 75° (Q1) and that
 #56 and #72 will need closing by hand (Q4).
 
+
+### 2026-10-22 — Pushed, PR opened
+- Pushed `docs/72-record-resolution-design` and opened PR #82 against
+  `docs/56-record-resolve-first-direction`; commented on #72 with the link.
