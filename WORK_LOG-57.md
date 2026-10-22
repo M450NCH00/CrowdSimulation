@@ -127,6 +127,12 @@ sessions (RF-3), new persona factors (RF-5, RF-6). Paid calls: none.
   line), `docs/resolution.md` (what is built), `docs/parameters.md` (turn limit placeholder,
   time-to-meet definition).
 
+### 2026-10-22 — Pushed, PR #83
+- Pushed `feat/57-resolve-templates-view-parser`; opened PR #83 against
+  `docs/72-record-resolution-design` (the stacked base, as PR #82 targeted `docs/56-...`).
+  `Closes #57` does not fire on a merge into a non-default branch, so #57 may need closing by
+  hand. Commented on #57 with the PR link and Q1.
+
 ## Open questions / risks
 
 - **Q1. The frozen cases' snapshots are mostly not decision points.** Head-on and bottleneck
