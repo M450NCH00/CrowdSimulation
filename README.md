@@ -16,6 +16,14 @@ See `integration/crowdgym_mapping.md` for exactly how records feed CrowdGym.
 
 ## Current focus (second supervisor meeting onward)
 
+> **Since the supervisor meeting of 2026-10-20: resolve first, then extract rules (track #55).**
+> First test whether LLM agents can resolve a conflict at all, without asking for a rule; then
+> extract the hidden rule, with the LLM's reference for it; find which factors drive the decision;
+> and verify against real human behaviour. The rule format no longer matters much, so asking a
+> model to negotiate or state a rule (#30, roadmap step 3c) is no longer how rules are made, and
+> step 4 is superseded. `CLAUDE.md` holds the meeting notes word for word and the decisions still
+> pending; the roadmap table below has the RF rows.
+
 The dataset work below is **Phase 1**. It was put on hold after the second supervisor
 meeting ("on hold, not abandoned"); issue #24 (2026-10-13) describes it as retired, and
 nothing in `llm_negotiation/` uses it.
@@ -49,7 +57,13 @@ experiment code until the literature review is complete and discussed.**
 | 3b | Rule format, rule database and rule-following mode (sub-issue 2 of 6) | **built** (issue #28) — `llm_negotiation/negsim/rules/`, `llm_negotiation/rule_db/`; five hand-written test rules, 1,600 free runs, no LLM call |
 | 3c | Conflict cases, rule generation by two LLMs negotiating or one stating, the rule writer (sub-issue 3 of 6, first half) | **built and rehearsed on the mock** (issue #30) — `llm_negotiation/negsim/rulegen/`, `llm_negotiation/cases/`; 18 conflict cases; the paid pilot is **held** (no recorded approval; its worst case exceeds its cap, `WORK_LOG-30.md` Q5) |
 | 3c.2 | A fictional group no rule may read, and two people meeting inside a single-file passage (`back_up`, rule format 3, prompt version 2) | **built and rehearsed on the mock** (issue #32) — the group is **off by default**, and no paid run may switch it on until the supervisor's ethics sign-off is recorded (pending); 576 free behaviour-check runs; 26 new case versions; the pilot moved to prompt version 2 and still **held** (issue #30's Q5 re-previewed, `llm_negotiation/docs/rule-generation.md` section 10.1) |
-| 4 | Analyse exchanges for a reusable pattern | not started |
+| 4 | Analyse exchanges for a reusable pattern | **superseded by RF** (supervisor meeting of 2026-10-20); never started |
+| RF | Resolve first, then extract rules (track #55). The rows below are in the order of work, not of step number | **direction recorded** (issue #56) in `CLAUDE.md`, with the supervisor's notes word for word; every decision the track needs from the supervisor is **pending** |
+| RF S1 | Step 1: can LLM agents resolve a conflict, without being asked for a rule? Prompts, the protocol (talk and silent), the agreed actions run in the simulator, a paid pilot | not started — #57, #58, #59; the pilot #64 is paid and waits for a recorded approval |
+| RF S4 | Step 4: which factors drive the decision? Persona, situational and pairwise factors, screening designs, the analysis package, Phase A screening, Phase B factorial | not started — #60 to #63; #65 and #68 are paid and wait for a recorded approval |
+| RF S2 | Step 2: extract the hidden rule or pattern, with the LLM's reference for it; translate rules to rule format 3 (low priority) | not started — #66, #67 |
+| RF S3 | Step 3: verify extracted rules and factor effects against human behaviour | not started — #69; whether this means published studies or observed data is pending |
+| RF end | Results summary and the final factor-to-decision mapping | not started — #70 |
 | 5 | Validate the pattern against real data or sociology | **coding scheme drafted** (issue #12) — `literature/human-conflict-resolution/` |
 | 5a | Demographic personas: realism vs LLM bias | **delivered** (issue #16) — `literature/demographic-personas/` |
 | 5b | Game theory: communication-free conflict rules | **delivered** (issue #20) — `literature/game-theory/` |

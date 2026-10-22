@@ -93,6 +93,21 @@ changes.
   approved".
 - Next step: root `README.md`.
 
+### 2026-10-22 — Both READMEs (tasks 4 and 5)
+- What I did: root `README.md`: step 4 marked "superseded by RF"; six RF rows added below it (a
+  track row, then Step 1, Step 4, Step 2, Step 3 and the write-up, in the order of work #55 gives,
+  each naming its issues and, for the paid ones, that they wait for a recorded approval); a short
+  boxed note at the top of "Current focus". `llm_negotiation/README.md`: a section "Direction
+  since October 2026" after the opening paragraphs, and a one-line pointer to it at the top of
+  "Rule generation (issue #30)".
+- Why: tasks 4 and 5. The pointer in the #30 section is my addition, so that a reader who jumps
+  straight to that section does not take conditions A and B as current.
+- Result / what I found: the RF rows are labelled "RF S1", "RF S4", ... rather than numbered on
+  from step 6, because #55 says the step numbers are labels and the order of work is 1, 4, 2, 3;
+  numbering them in sequence would have hidden that. The tests read `architecture.md` (by keyword)
+  and `CLAUDE.md` (the sign-off check), nothing in the READMEs' text.
+- Next step: `architecture.md` section 8.
+
 ## Open questions / risks
 
 ## Summary (fill in at the end)
