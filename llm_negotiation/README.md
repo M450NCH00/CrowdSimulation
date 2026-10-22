@@ -67,7 +67,8 @@ From track #55. **Part 1, the pipeline, built once** (all on the mock client, no
 1. RF-1 (#56): record the resolve-first direction. *Delivered.*
 2. RF-16 (#72): record the resolution design, `docs/resolution.md`. *Delivered.*
 3. RF-2 (#57): Step 1 templates (three conditions and a debrief), the `View` structure, the
-   scenario interface, the reply parser.
+   scenario interface, the reply parser. *Built on the mock* (`negsim/resolution/`, section
+   "Step 1 prompts (issue #57)").
 4. RF-17 (#73): what an LLM agent perceives: view cone, occlusion, hearing, changes since it
    last looked.
 5. RF-4 (#59): carry out plans in the simulator, in `plan_only` and `plan_orca`, with physical
@@ -918,6 +919,35 @@ python -m negsim.rulegen.cases list --set si32_passage_v1
 - **The pilot** now uses prompt version 2: worst case USD 0.65 against its USD 0.05 cap; the
   options are in `docs/rule-generation.md`, section 10.1. Still held.
 
+## Step 1 prompts (issue #57)
+
+Track #55's Step 1 asks LLM agents to resolve a conflict without asking them for a rule
+(`docs/resolution.md`). Issue #57 (RF-2) built what an agent is shown and how its reply is
+read, in `negsim/resolution/`, all on the mock client:
+
+- `view.py`: the `View`, everything one agent is told at one decision point, block by block
+  (D2): ABOUT YOU, YOUR NOTES, WHERE YOU ARE, the scenario's own blocks, WHO YOU CAN SEE (each
+  person "Person 1", "Person 2", in full or short detail), WHAT YOU CAN HEAR, WHAT YOU HAVE DONE
+  SO FAR, and the time to meet.
+- `prompt.py`: renders a view with the frozen core template `resolve_v1` (one section per
+  condition: `independent`, `non_verbal`, `talk`). The system message is the fixed text and is
+  byte for byte the same for every agent and decision point; the user message is the
+  description, then "What do you do now?". The debrief (`resolve_debrief_v1`, D8) follows the
+  agent's last decision point.
+- `scenario.py` and `scenarios/`: the scenario interface (D16). `scenario_passing_v1` holds the
+  place lines of issue #32 and the events `other_passes`, `other_stops` and
+  `i_am_out_of_the_stretch`; the core template names no scenario.
+- `adapter.py`: the opening view of a frozen two-person case, with D2's 75° cone, 10 m seeing
+  range and 5 m detail range. At their snapshots the head-on cases are 12.4 m apart and the
+  person being overtaken has the other behind them, so those agents are told they see nobody:
+  the real decision points come from RF-3's trigger. The crowd cases are refused (RF-17).
+- `reply.py`: reads the reply of D1 (`message`, `signal`, `intent`, `steps`, `reason`; no
+  priority field) and the debrief of D8, with issue #24's tolerances and one retry. A message or
+  a signal in a condition that does not allow it is ignored and flagged.
+- `mock.py`: the policies `resolve_paths_v1` (every reply path) and `debrief_paths_v1`.
+
+Nothing runs a session yet: that is RF-3 (#58), after RF-17 (#73) and RF-4 (#59).
+
 ## Changing things
 
 | To | Edit |
@@ -941,6 +971,7 @@ python -m negsim.rulegen.cases list --set si32_passage_v1
 | choose what an agent is told about the situation | `negotiation.info_fields` (`all`, `none`, or a list of field names) |
 | choose what an agent can see of the other | `negotiation.visibility` (age, gender, task, backstory, speed, size) |
 | let the agents move while they talk | `negotiation.timing.mode: concurrent` |
+| add a scenario to Step 1 (track #55) | a subclass of `Scenario` in a new module under `negsim/resolution/scenarios/`, a line in that package's `PLUGINS`, and a frozen template `scenario_<name>_v1.yaml` of kind `resolution_scenario` (its place lines, its `until` events, any block of its own). Never an edit of `resolve_v1` or the parser (`docs/resolution.md`, D16) |
 | change any wording an agent sees | **a new template version.** Copy `negsim/negotiation/templates/<name>_v1.yaml` to `_v2`, edit it, run `python -m negsim.negotiation.freeze <name>_v2 "<why>"`, and record the reason in the work log. A frozen template that has been edited will not load. |
 | add a persona attribute | one entry in `negsim/personas/schema.py`, one line in a new template version |
 | add a controller | a class with `compute(agent, speed_bound, world)`, registered with `@register_controller("name")` |
@@ -952,7 +983,9 @@ python -m negsim.rulegen.cases list --set si32_passage_v1
 - `docs/resolution.md`: the resolution design of track #55's Step 1 (issue #72), decisions D1
   to D17: the reply, the description, the conditions, when an agent is prompted, who moves the
   agents, the debrief, storage, variation, rounds, the scenario interface and the scenario
-  order. Not built yet; RF-2 onward build it.
+  order. RF-2 (#57) built the reply parser, the description templates, the conditions, the
+  debrief and the scenario interface's description side (`negsim/resolution/`); RF-17 onward
+  build the rest.
 - `docs/gamechat-notes.md`: what the paper and its repository say, where they disagree,
   and where this platform departs from both.
 - `docs/derivations.md`: the follower's speed bound and the conflict zone; and, for the

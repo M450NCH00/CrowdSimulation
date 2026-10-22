@@ -199,6 +199,7 @@ data.**
 | Hearing range | `[placeholder]`, no value yet | How far speech carries. It should depend on RF-5's `surroundings` factor (a quiet corridor against a busy station). RF-17 (#73) sets a value; a source on speech audibility against background noise would replace it. |
 | Eye-contact and nod range | `[placeholder]`, no value yet | How far away a signal (`eye_contact`, `nod`, and the rest of D1's list) can be seen. Within the seeing range by definition; nothing read gives a distance for eye contact. |
 | Change thresholds of D5 ("noticeably") | 0.2 m sideways, 0.2 m/s, 5° `[placeholder]` | What counts as the other having changed speed or direction noticeably, which can prompt an agent again. Round values. A source on the smallest change in another walker's speed or heading that people react to would replace them. |
+| Largest turn in a reply (`turn.degrees`) | 0° to 90° `[placeholder]` | Issue #57 (RF-2): the reply parser refuses a turn beyond it (`negsim/resolution/reply.py`, `MAX_TURN_DEGREES`), and the step format tells the agent the range. 90° is walking straight sideways, the most a heading offset can mean; nothing read says how far people turn to pass. A source on avoidance heading changes would replace it. |
 
 ### 8.3 Design values
 
@@ -209,6 +210,7 @@ Tagged `[design]`: choices about cost and prompting, not claims about people.
 | Gap between two prompts of one agent | at least 1 s | `resolution.md`, D5: keeps an agent from being asked again for every small change. |
 | Decision points per agent per encounter | at most 3 (1 in the independent condition) | D3 and D5: a cost limit. |
 | Cap on people prompted in one encounter | only if needed | D11 and D12: a cost limit for scenes with more than two people (rounds 4 and 6), not a human number; the report says how often it is reached. |
+| What "you would meet Person 1 in about t s" means | the time of closest approach at the current velocities, `-(r·v)/(v·v)` | Issue #57 (RF-2), `negsim/resolution/adapter.py`: defined even when the two would pass each other without touching, unlike a time to collision; stated only for a person in view who is getting closer. |
 
 **Not read:** the published PNAS version of Moussaïd et al. 2011 (its PMC full text is not
 available for download, and Europe PMC's PDF route refused the request, 403); the full texts of
