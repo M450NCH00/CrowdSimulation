@@ -115,9 +115,100 @@ No code, config or template changes.
     line number in the full extract. Abstracts are tracked, as Bohannon 1997's is.
 - Next step: `docs/resolution.md`.
 
+### 2026-10-22 — `docs/resolution.md` (task 1)
+- What I did: wrote D1 to D17 from the issue's "Specification" section. Added a short opening
+  (status: the user's decisions, needing no sign-off; what the design replaces; where the
+  values' sources are), pointers to the issue that builds each part ("RF-2, #57"), and, at the
+  end, the track's constraints repeated from #55.
+- Why: the issue says to write it "in the docs' usual style" and not to add or drop a decision.
+  The pointers and the constraints are not decisions: the first are #55's issue list, the second
+  #55's own constraint list.
+- Result / what I found: two layout changes only. D3's three conditions are a table, and D13's
+  trace from a rule to its raw replies is drawn as a small diagram; their words are the same.
+  D2's left/right and "never in a description" paragraph is split into bullets. D15 adds one
+  status sentence: no round cap is recorded yet. Every placeholder is marked
+  **`[placeholder]`** (hearing range, signal range, change thresholds), in D2, D5 and D12.
+- Next step: `parameters.md`.
+
+### 2026-10-22 — `parameters.md` section 8 (task 5)
+- What I did: a new section 8 rather than rows in sections 2 and 3, because those two list the
+  quantities of shipped configs, and a test (`test_the_parameters_document_lists_every_placeholder_and_every_source`)
+  checks section 3 against the configs. These values are in no config yet. 8.1 lists the
+  sourced values with locators and caveats, 8.2 the placeholders, 8.3 the prompt guards
+  (1 s, 3 decision points, the per-encounter cap) as `[design]`. The three sources were added
+  to section 6.
+- Why: task 5. The guards are not asked for, but `parameters.md` gives every number a tag,
+  and these are numbers.
+- Result: `tests/test_crowd_scenarios.py` passes (pytest is not installed globally here, so I ran
+  it in a throwaway `uv run --no-project --with pytest==9.1.1 --with PyYAML==6.0.3 --with
+  matplotlib==3.10.8` environment, the pins of `requirements.txt`).
+- Next step: the decision record.
+
+### 2026-10-22 — Decision record, `CLAUDE.md`, both READMEs (tasks 2 to 4)
+- What I did:
+  - `architecture.md`: subsection 8.7, one bold-lead entry per D1 to D17, each "(the user,
+    2026-10-22)", and a note that D is not DD (A2). The opening paragraph names 8.7. SV2 said
+    "which LLM gives the reference ... is pending (#55, decision 7)"; I added that the user
+    decided it on 2026-10-22 (both, D8), so the record does not contradict itself.
+  - `CLAUDE.md`: the paragraph under "Current task"; the new constraint; items 4 and 7
+    "Decided by the user, 2026-10-22" and item 8 "Lifted by the user, 2026-10-22", each with
+    the answer; the list's opening sentence, which said "None of these has been given", now
+    says which items are pending and which are decided. Two small factual updates beside them:
+    the issue range is #56 to #81 (RF-1 to RF-25), and the paid-run constraint says "phase or
+    round", as #55 now does. Items 1, 2, 3, 5 and 6 are byte-for-byte unchanged (checked in the
+    diff).
+  - `README.md`: one row per RF issue in #55's order, Part 1 then Part 2 by round; a line in
+    "Current focus"; the "Status of that instruction" box now ends with the user lifting it.
+  - `llm_negotiation/README.md`: a paragraph on the design and the RF list in order, under
+    "Direction since October 2026"; `resolution.md` added to "Documents".
+- Result / what I found: `gh issue list` shows **#56 still open**, although PR #71 is merged:
+  `Closes #56` fires only on a merge into the default branch, and PR #71 went into the stacked
+  branch. So the README says RF-1 is "delivered ... merged into the stacked branch, not yet
+  into `main`". The same will happen to #72 (Q4).
+- Next step: verification.
+
+### 2026-10-22 — Verification
+- What I did:
+  1. A script compared `resolution.md` with the issue body: all 17 headings present; every code
+     span and every number with a unit present; all 27 table rows present (after ignoring the
+     bold I added to `[placeholder]` and the issue numbers I added); D1's JSON and D2's block
+     identical character for character; every sentence of the specification present, except
+     the D3 conditions and the D13 trace, which are the two layout changes above (checked by
+     eye: same content).
+  2. `git diff --stat` against the base: only docs, `refs/` and `.gitignore` changed; no code,
+     config or template.
+  3. Every number in `parameters.md` section 8 re-read in the cached files, and the line
+     locators corrected where my first draft was off by a line or two.
+  4. The full test suite, on the same throwaway environment.
+
 ## Open questions / risks
 
-(filled in as the work goes)
+- **Q1. The 75° rests on a model's parameter, and a second source cuts against the cone.**
+  Moussaïd et al. 2011 chose φ=75° and dmax=10 m for their simulation of a 1.75 m corridor, and
+  used φ=45°, dmax=8 m for their dense street. Rio et al. 2018 found influence did not depend
+  on lateral position, in "a circularly symmetric region". Neither undoes D2 or D12 (the user's
+  decisions; the issue says not to change them), and the 75° is a reasonable choice for the
+  head-on round. But a report should call it "the vision field of a pedestrian model fitted to
+  corridor data", not a measured field of view. Raised here for the user; RF-17 may want a
+  sentence on it.
+- **Q2. The detail range comes from following, not avoiding.** Rio et al. measured a walker
+  matching a virtual crowd's speed and heading. The specification already says so ("measured
+  while walking *with* a crowd"). Using it for how much is *said* about a person is this
+  design's choice.
+- **Q3. Published PNAS version of Moussaïd 2011 not read.** Only the accepted manuscript
+  (arXiv v1). PMC's full text is not downloadable for this publisher and Europe PMC's PDF route
+  gave 403. A browser can fetch it in minutes, if the user wants the final wording checked.
+- **Q4. Issues #56 and #72 will not close themselves.** Their PRs merge into stacked branches, so
+  `Closes #N` does not fire. Close them by hand, or when the stack reaches `main`.
+- **Q5. Licence route for the arXiv copy.** I kept the full PDF and text out of git and tracked
+  verbatim excerpts. Issue #52 tracked full arXiv copies instead. If the user prefers that, it
+  is two lines of `.gitignore`.
+- **Q6. Edits slightly beyond the task list**, each to keep the files consistent: SV2's note in
+  `architecture.md`, the issue range and "phase or round" in `CLAUDE.md`, the "Status of that
+  instruction" box in `README.md`, the design values in `parameters.md` 8.3. Easy to revert if
+  unwanted.
+- **Q7. The hearing and signal ranges have no value at all**, not even a round one. The
+  specification gives none, so none was invented; RF-17 (#73) has to choose them.
 
 ## Summary (fill in at the end)
 
