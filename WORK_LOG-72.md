@@ -179,7 +179,10 @@ No code, config or template changes.
      config or template.
   3. Every number in `parameters.md` section 8 re-read in the cached files, and the line
      locators corrected where my first draft was off by a line or two.
-  4. The full test suite, on the same throwaway environment.
+  4. The full test suite, on the same throwaway environment: **exit code 0, no failure**. (The
+     count line was not printed: `pytest.ini` already adds `-q`, and my extra `-q` made it
+     `-qq`.) Expected, since no code changed; it confirms the `parameters.md` test still reads
+     section 3 correctly with section 8 added.
 
 ## Open questions / risks
 
@@ -211,4 +214,34 @@ No code, config or template changes.
   specification gives none, so none was invented; RF-17 (#73) has to choose them.
 
 ## Summary (fill in at the end)
+
+**What changed.** The user's resolution design of 2026-10-22 is written down once, in one
+place, before any code:
+
+- `llm_negotiation/docs/resolution.md` (new): D1 to D17, the specification every later RF
+  issue points to, with every placeholder marked.
+- `llm_negotiation/docs/architecture.md`: subsection 8.7, one decision-record entry per D1 to
+  D17, each "the user, 2026-10-22", numbered D (not DD: no sign-off needed).
+- `CLAUDE.md`: Step 1 follows `resolution.md`; pending items 4, 7 and 8 recorded as the user's
+  decisions of 2026-10-22; items 1, 2, 3, 5 and 6 unchanged and still PENDING; the constraint
+  that no reply format may ask who goes first.
+- `README.md` and `llm_negotiation/README.md`: the RF issues in #55's order of work, Part 1
+  then Part 2 by round, with RF-16 to RF-25.
+- `llm_negotiation/docs/parameters.md`: section 8, the view half-angle (75°) and seeing range
+  (10 m) from Moussaïd et al. 2011, the detail range (5 m) from Rio et al. 2018, "no fixed
+  count" from Wirth et al. 2023, each with locator and caveat; hearing range, signal range and
+  change thresholds as placeholders.
+- `refs/`: the Moussaïd 2011 excerpts (the full copy is local only, by licence) and the two
+  abstracts.
+
+**Why.** Every later RF issue builds on this design, and `CLAUDE.md` still listed three of the
+user's decisions as pending.
+
+**How it was verified.** A script checked `resolution.md` against the issue's specification
+(all headings, code spans, numbers, table rows and blocks present; two layout changes, checked
+by eye). Every number in `parameters.md` was re-read in the cached sources. The diff touches no
+code, config or template. The full test suite passes.
+
+**Not done / for the user:** Q1 to Q7 above, in particular the caveat on the 75° (Q1) and that
+#56 and #72 will need closing by hand (Q4).
 
