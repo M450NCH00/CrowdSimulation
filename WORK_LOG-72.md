@@ -79,6 +79,42 @@ No code, config or template changes.
   `git checkout -B`. The working tree is clean.
 - Next step: the work log's first commit, then the sources.
 
+### 2026-10-22 — The three sources, fetched and checked
+- What I did: downloaded Moussaïd, Helbing & Theraulaz 2011 from `arxiv.org/pdf/1105.2152`
+  and extracted its text with pypdf 6.16.2. Got the Rio et al. 2018 and Wirth et al. 2023
+  abstracts from the Europe PMC REST API (PubMed's web pages now answer scripts with a cookie
+  wall). Checked the PNAS citation (108(17), 6884–6888) in Europe PMC too, since I had first
+  typed it from memory.
+- Why: task 5 asks for the sourced values with cached excerpts, and every number must be read
+  in the cached copy, not recalled (`parameters.md`'s rule).
+- Result / what I found:
+  - **Moussaïd 2011:** the line the issue quotes is there, word for word: Fig. 2's caption,
+    "The model parameters are τ=0.5s, φ=75°, dmax=10m, k=5.103, vi0=1.3 m/s" (extract lines
+    555-562). φ is the half-angle: "the vision field of pedestrian i ranges to the left and to
+    the right by φ degrees" (134-140). dmax is "the 'horizon distance'" (163). Occlusion is part
+    of the model: "Pedestrian p4 is hidden by pedestrian p2 and, therefore, not visible" (542-543).
+    **Caveat:** these are a model's parameters, set so that simulations match corridor
+    experiments, not measured limits of vision; and the same paper uses **φ=45°, dmax=8m** for
+    its high-density street simulations (599-601). The published PNAS version could not be
+    read: its PMC full text is not available for download ("the publisher of this article does
+    not allow"), and Europe PMC's PDF route answered 403. The arXiv copy says "Article accepted
+    for publication in PNAS".
+  - **Rio 2018 abstract:** "weights that decay exponentially to zero by 5 m". **Caveat:** the
+    same sentence models the neighbourhood as "a circularly symmetric region", and influence
+    did not decrease "with lateral position (eccentricity)". So this source supports the 5 m but
+    not a cone. And it measured following a virtual crowd's speed and heading, not avoiding
+    someone.
+  - **Wirth 2023 abstract:** "Our results rule out a topological neighborhood", best explained
+    by "a visual neighborhood", "the optical motions of all visible neighbors". This supports
+    both "no fixed count" and describing only those who are visible (occlusion).
+  - **Licence.** The arXiv copy has arXiv's non-exclusive distribution licence, not an open
+    one. The repository is mixed here (issue #52 tracked arXiv copies; issues #35 to #37 kept
+    unlicensed copies out of git). I took the cautious route of issues #35 to #37: the full PDF
+    and text are local and listed in `.gitignore`, and a tracked excerpt file
+    (`refs/rf16_moussaid2011_excerpts.txt`) holds every cited passage verbatim, each with its
+    line number in the full extract. Abstracts are tracked, as Bohannon 1997's is.
+- Next step: `docs/resolution.md`.
+
 ## Open questions / risks
 
 (filled in as the work goes)
