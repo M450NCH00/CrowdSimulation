@@ -75,6 +75,24 @@ changes.
   as unconfirmed. Architecture decisions run to DD119 (section 9.4).
 - Next step: edit `CLAUDE.md`.
 
+### 2026-10-22 — `CLAUDE.md` (tasks 1 to 3)
+- What I did: replaced "Current task" with the four RF steps, the track's six constraints (from
+  #55) and the budget bullet unchanged, plus one new bullet pointing at
+  `llm_negotiation/spend_ledger.jsonl`. Phase 1's text is kept below as "Phase 1 (on hold)" rather
+  than deleted. "Roadmap" now points at #55 and `README.md`. Added "Supervisor decisions" (the
+  2026-10-20 notes, then a summary marked as not the supervisor's words) and "Pending sign-offs"
+  (eight items, each **PENDING**; A3). The `.env`, layout and workflow notes are untouched.
+- Why: the issue's tasks 1 to 3.
+- Result / what I found: **`CLAUDE.md` is read by code.** `negsim/rulegen/experiment.py`
+  (`ETHNICITY_SIGN_OFF`, lines 106-117) searches it for "Ethics sign-off for the fictional-group
+  factor (issue #32): approved by the supervisor on <date>" and allows a paid run with the group on
+  if it finds it. So the pending list must not quote that sentence; it points at
+  `fictional-groups.md` section 6 instead. Checks: a script compared the quoted lines with the
+  `> ` lines of the issue body: 11 of 11 identical. `ethnicity_signed_off()` returns `False` on the
+  edited file. The word "approved" appears once in `CLAUDE.md`, in "Do not treat any of them as
+  approved".
+- Next step: root `README.md`.
+
 ## Open questions / risks
 
 ## Summary (fill in at the end)
