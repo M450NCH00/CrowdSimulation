@@ -211,6 +211,10 @@ TEMPLATE_KINDS: dict[str, tuple[str, ...]] = {
     "rule_generation_common": ("template_id", "version", "kind", "description", "glossary", "format_example", "glossary_sha256"),
     "rule_generation_negotiate": ("template_id", "version", "kind", "description", "uses", "system", "reply_format", "turns", "situation"),
     "rule_generation_state": ("template_id", "version", "kind", "description", "uses", "system", "reply_format", "retry", "situation"),
+    # Track #55, Step 1 (issue #57): rendered by ``negsim.resolution``.
+    "resolution": ("template_id", "version", "kind", "description", "system", "role", "conditions", "step_format", "event_item", "view", "decision_point"),
+    "resolution_debrief": ("template_id", "version", "kind", "description", "text", "decision", "steps", "no_steps", "said", "signal", "reply_format", "retry"),
+    "resolution_scenario": ("template_id", "version", "kind", "description", "place", "events", "extra_blocks", "factor_lines"),
 }
 
 

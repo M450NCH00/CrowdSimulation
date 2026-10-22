@@ -22,8 +22,10 @@ agent physically does, and who went first is *measured*, not asked.
 or marked **`[placeholder]`**. A result that depends on a placeholder must not be reported as
 if it rested on data.
 
-Nothing in this file is built yet: the issues that build each part are named in brackets, and
-track #55 gives their order. Configs and templates from before this track behave exactly as
+The issues that build each part are named in brackets, and track #55 gives their order.
+**Built so far:** RF-2 (#57), on the mock: D1's reply parser, D2's description templates and
+the `View`, D3's conditions, D8's debrief and D16's description side (`negsim/resolution/`;
+templates `resolve_v1`, `resolve_debrief_v1`, `scenario_passing_v1`). Nothing else yet. Configs and templates from before this track behave exactly as
 before.
 
 ## D1. The reply
