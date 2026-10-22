@@ -31,6 +31,23 @@ meetings inside a passage" below.
 Built for issues #24, #26, #28, #30 and #32. Nothing here uses the Phase 1 folders `pipeline/`
 and `dataset/`.
 
+## Direction since October 2026
+
+At the supervisor meeting of 2026-10-20 the method changed (track #55; the user's notes are in
+the root `CLAUDE.md`, word for word, under "Supervisor decisions"). **Conditions A and B of
+issue #30, two agents negotiating a rule or one model stating one, are no longer the way rules
+are generated.** Instead: first test whether agents can resolve a conflict at all, without
+being asked for a rule (Step 1); then extract the rule or pattern from how they resolved it,
+with the LLM's reference for it (Step 2); find which factors drive the decision (Step 4); and
+verify against real human behaviour (Step 3). What issue #30 built stays, and its configs
+behave as before; it is no longer where rules come from.
+
+**The portable-rules track (#34) is on hold**, because the supervisor said the rule format no
+longer matters: an LLM can translate a rule for each simulator. How far the pause reaches, the
+build from #42 onward only or also the literature issues #35 to #41, is pending the
+supervisor's confirmation (#55, decision 5). The other decisions still pending are listed in
+`CLAUDE.md`, "Pending sign-offs".
+
 ## How it works, in one list
 
 1. **A scenario** (`configs/scenarios/`) places two agents: a doorway and an intersection
@@ -701,6 +718,9 @@ people.** A spread is the mean ± standard deviation over 20 seeds.
 | The outcome categories (DD57) | no exposure but a yield counts as `resolved` | A decision: the issue's definitions leave that case out |
 
 ## Rule generation (issue #30)
+
+> Since 2026-10-20 conditions A and B are no longer the way rules are generated; see
+> "Direction since October 2026" above.
 
 The rule layer follows stored rules; this section **produces new ones**. A conflict is taken
 from a finished run of the primary baseline as a **case** (`docs/cases.md`). A **session**
