@@ -12,7 +12,8 @@ format, the rule database, the matching policy, and the frozen baselines. Sectio
 describes rule generation of issue #30: conflict cases, the design matrix, the two
 protocols, validation, the writer and its staging databases, replay and screening; its
 subsection 8.6 records the supervisor's direction of 2026-10-20 (numbered **SV**), under which
-those protocols no longer generate rules. Section 9
+those protocols no longer generate rules, and its subsection 8.7 the user's resolution design of
+2026-10-22 (numbered **D**, as in `resolution.md`), which needs no sign-off. Section 9
 describes issue #32: a fictional group that no rule may read, and two people who meet inside a
 single-file passage, with the `back_up` directive and rule format 3.
 
@@ -870,7 +871,7 @@ rules are generated**. They stay built and unchanged, and their configs behave a
 
 **SV2. Find the hidden rule or pattern** in how the agents resolved the conflict, and **ask the
 LLM for the reference** the rule comes from. Which LLM gives the reference, the extractor or the
-agents in a debrief, is pending (#55, decision 7).
+agents in a debrief, was pending (#55, decision 7); the user decided on 2026-10-22: both (D8).
 
 **SV3. Verify the extracted rule with real human behaviour.** Whether that means published
 studies or observed data is pending (#55, decision 6).
@@ -886,6 +887,101 @@ simulator. Rule format 3 (section 9) stays as it is, and translating extracted r
 pending (#55, decision 5).
 
 **SV6. A rule may be more specific**, for example "keep left".
+
+### 8.7 The resolution design of 2026-10-22
+
+On 2026-10-22 the user replaced the first version of Step 1 (#57), whose reply was a fixed menu
+(`priority`, `side`, `speed`, `back_up`) that framed every meeting as "who goes first". The new
+design is specified in full in `resolution.md`; this subsection is its decision record.
+
+These are **the user's decisions**, made on their own authority. They need no sign-off from the
+supervisor, so they are numbered **D**, as in `resolution.md` and the RF issues, not **DD**
+(this project's proposals, each needing the supervisor's sign-off) and not **SV** (the
+supervisor's points). D1 is not DD1. Every entry below is **the user, 2026-10-22**.
+`WORK_LOG-72.md` records how they were written down.
+
+They also settle three items that `CLAUDE.md` listed as pending: the silent condition (#55,
+decision 4: three conditions, D3), who gives a rule's reference (decision 7: both, D8), and the
+"no new simulation code" instruction (decision 8: lifted; RF-4 and RF-17 add simulation code).
+The other pending items are unchanged.
+
+**D1. The reply says what the agent physically does** (the user, 2026-10-22): an optional
+`message` (talk only) and `signal` (non-verbal and talk), then `intent`, then `steps` (each with
+a start, a speed, a turn, a backing distance and an `until`), then a private `reason`. **There is
+no `priority` field**: who went first is measured in the replay. Agents stay discs of a fixed
+size: no turning sideways, no change of body size.
+
+**D2. The description follows what a person would perceive** (the user, 2026-10-22): fixed text
+first for the prompt cache; then ABOUT YOU, YOUR NOTES, WHERE YOU ARE, WHO YOU CAN SEE (75°,
+10 m, not hidden, full detail within 5 m), WHAT YOU CAN HEAR (any direction), WHAT YOU HAVE DONE
+and TIME TO MEET. Left and right are the agent's own. Never another's errand or private factors,
+the fictional group, a walking convention, "usually", "one of you has to go first", or
+`persona_v1`'s scene text.
+
+**D3. Three conditions, first person only** (the user, 2026-10-22): independent (one decision
+point, no message, no signal), non-verbal (signals and movement, up to 3 decision points) and
+talk (non-verbal plus `message`, up to 3). No third-person condition: #30's condition B is not
+used.
+
+**D4. An agent is prompted only when a conflict is predicted** (the user, 2026-10-22): it sees
+or hears the other, the distance is shrinking, the conflict detector predicts both in the same
+zone at the same time, and it is not already in an encounter with them. Seeing someone is not
+enough.
+
+**D5. It is prompted again only when something new happens** (the user, 2026-10-22), and the
+conflict still matters. Only the agent who noticed; at least 1 s apart; at most 3 decision
+points per encounter; every decision point logs why it fired. The thresholds of "noticeably" are
+placeholders.
+
+**D6. Plans are measured in `plan_only`, with `plan_orca` as a second replay** (the user,
+2026-10-22): in the live loop ORCA does not steer the encounter's agents apart, because plain
+ORCA already passes a head-on pair. An encounter unresolved after its last decision point is
+recorded as **not resolved by the LLM**, and what ORCA does next is recorded separately.
+
+**D7. Memory** (the user, 2026-10-22): within an encounter, the WHAT YOU HAVE DONE lines; across
+encounters, only as designed notes (RF-5's `memory_note`), so that sessions stay independent.
+
+**D8. References come from a debrief and from the extractor** (the user, 2026-10-22): after the
+encounter, never during it, each prompted agent is asked outside its role what its decision was
+based on, with "none" a good answer; every source is stored as `unchecked`; RF-11's extractor
+also gives references; RF-14 checks both.
+
+**D9. The LLM is used only in encounters set up on purpose or mined from crowd runs** (the user,
+2026-10-22). The full simulation (RF-18) runs ORCA and the extracted rules with no LLM call. A
+resolution that relied on a signal or a word becomes a rule tagged `needs_communication`, and
+the report counts them.
+
+**D10. The view cone, occlusion and hearing are for the LLM only** (the user, 2026-10-22). ORCA's
+neighbour search and the perception record that rules read are unchanged.
+
+**D11. Two-person cases in rounds 1 to 3** (the user, 2026-10-22); rounds 4 and 6 add more than
+two prompted people, with a cap per encounter as a cost limit.
+
+**D12. The values** (the user, 2026-10-22): 75°, 10 m (Moussaïd et al. 2011), 5 m (Rio et al.
+2018), no fixed count (Wirth et al. 2023); the hearing range, the signal range and the change
+thresholds are placeholders (`parameters.md`, section 8).
+
+**D13. Every prompt and raw reply is kept and committed** (the user, 2026-10-22); a paid
+session's record is never deleted or overwritten. Replays can be rebuilt from their seed and the
+recorded plans. Every rule traces back to the raw replies.
+
+**D14. Variation comes from geometry, not blanket repeats** (the user, 2026-10-22): 2 or 3 case
+geometries per factor cell, a small exact-repeat set for the noise floor, and the total size set
+from RF-9's measured variability.
+
+**D15. One scenario at a time** (the user, 2026-10-22): the pipeline is built once (Part 1),
+then each scenario is a round (build, pilot, screen, extract, test with earlier rounds' rules,
+verify). Round 1 is full depth, later rounds lean by default. Every round keeps RF-5's core
+factors and gets its own cap in `CLAUDE.md` before its paid runs.
+
+**D16. A scenario is a plug-in** (the user, 2026-10-22): it supplies its geometry and cases, its
+encounter definition, its description lines in a frozen `scenario_<name>_v1.yaml`, its events,
+its factors and its outcome measure. The pipeline never names a scenario; adding one never edits
+the core templates or another scenario's code.
+
+**D17. The scenario order** (the user, 2026-10-22): head-on in a corridor, meeting in a narrow
+passage, "excuse me" from behind, boarding a train, the escalator, queue cutting. Scenarios with
+cars are dropped for now.
 
 ## 9. Fictional groups and meetings inside a passage (issue #32)
 

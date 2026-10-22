@@ -48,6 +48,62 @@ build from #42 onward only or also the literature issues #35 to #41, is pending 
 supervisor's confirmation (#55, decision 5). The other decisions still pending are listed in
 `CLAUDE.md`, "Pending sign-offs".
 
+**Since 2026-10-22, Step 1 follows `docs/resolution.md`** (the user's design, decisions D1 to
+D17, recorded in `docs/architecture.md`, section 8.7). It replaces the first version of RF-2,
+whose reply was a fixed menu (`priority`, `side`, `speed`, `back_up`) that framed every meeting
+as "who goes first". Now an agent says what it is trying to do (`intent`) and what it physically
+does (`steps`: speed, turn, backing up, start, until), may signal, and in the talk condition
+speak; who went first is measured in the replay. It is told what a person would perceive: everyone
+in front of it within 75° and 10 m and not hidden, in full detail within 5 m, and what it hears
+from any direction (`docs/parameters.md`, section 8). It is prompted only when a conflict is
+predicted and again only when something new happens. Plans are measured in a `plan_only`
+replay, where ORCA does not steer the pair apart. A debrief afterwards asks each agent what its
+decision was based on.
+
+### The RF issues, in order of work
+
+From track #55. **Part 1, the pipeline, built once** (all on the mock client, no paid call):
+
+1. RF-1 (#56): record the resolve-first direction. *Delivered.*
+2. RF-16 (#72): record the resolution design, `docs/resolution.md`. *Delivered.*
+3. RF-2 (#57): Step 1 templates (three conditions and a debrief), the `View` structure, the
+   scenario interface, the reply parser.
+4. RF-17 (#73): what an LLM agent perceives: view cone, occlusion, hearing, changes since it
+   last looked.
+5. RF-4 (#59): carry out plans in the simulator, in `plan_only` and `plan_orca`, with physical
+   outcomes.
+6. RF-3 (#58): the encounter protocol: trigger, event-driven decision points, the three
+   conditions, debrief, storage, one outcome row per session.
+7. RF-5 (#60): the core factors (seven, including a memory note) with visibility switches, and
+   up to four situational factors.
+8. RF-6 (#61): pairwise perception factors (perceived attractiveness, familiarity), shown only
+   to the observer.
+9. RF-7 (#62): screening designs, geometries, the exact-repeat set, counterfactual pairs.
+10. RF-8 (#63): analysis: factor effects, decision tree, the mapping, noise floor, stability,
+    stated against measured, intent against plan.
+
+RF-7 and RF-8 do not depend on RF-2 to RF-6. RF-5 and RF-6 can start once RF-2 and RF-17 are
+merged.
+
+**Part 2, one round per scenario** (D15). Every paid issue waits for the supervisor's approval
+of paid runs and a cap for its round, recorded in `CLAUDE.md`.
+
+- **Round 1, head-on in a corridor (full depth):** RF-9 (#64) paid pilot; RF-10 (#65) Phase A
+  screening of up to 16 factors; RF-11 (#66) Step 2 rule extractor, three runs, with references
+  and held-out fidelity; RF-12 (#67) translation to rule format 3 (low priority); RF-13 (#68)
+  Phase B (optional); RF-14 (#69) Step 3, verification against human evidence; RF-18 (#74) all
+  rules so far with ORCA on crowds and an unseen scenario, against plain ORCA, rerun after every
+  round; RF-15 (#70) results summary for the interim report (25 January 2027).
+- **Round 2, meeting in a narrow passage (lean):** RF-19 (#75) screening; RF-20 (#76) extract,
+  test with earlier rules, verify.
+- **Round 3, someone behind says "excuse me" (lean):** RF-21 (#77) scenario setup, pilot and
+  screening; RF-22 (#78) extract, test with earlier rules, verify.
+- **Rounds 4 to 6, builds only (mock):** RF-23 (#79) boarding a train while people get off;
+  RF-24 (#80) the escalator; RF-25 (#81) someone cuts into your queue. Each round's run issues
+  are created when its build is merged.
+
+Scenarios with cars are dropped for now (D17).
+
 ## How it works, in one list
 
 1. **A scenario** (`configs/scenarios/`) places two agents: a doorway and an intersection
@@ -893,6 +949,10 @@ python -m negsim.rulegen.cases list --set si32_passage_v1
 
 - `docs/architecture.md`: the modules, one run step by step, and every design decision,
   marked as a decision.
+- `docs/resolution.md`: the resolution design of track #55's Step 1 (issue #72), decisions D1
+  to D17: the reply, the description, the conditions, when an agent is prompted, who moves the
+  agents, the debrief, storage, variation, rounds, the scenario interface and the scenario
+  order. Not built yet; RF-2 onward build it.
 - `docs/gamechat-notes.md`: what the paper and its repository say, where they disagree,
   and where this platform departs from both.
 - `docs/derivations.md`: the follower's speed bound and the conflict zone; and, for the
@@ -918,7 +978,8 @@ python -m negsim.rulegen.cases list --set si32_passage_v1
 - `docs/behaviour-checks.md`: the behaviour checks of issues #28 and #32, every number from
   the committed logs, and what they show.
 - `docs/parameters.md`: every physical parameter of the avoidance scenarios with its
-  source and locator, or the word placeholder.
+  source and locator, or the word placeholder; since issue #72 also what an LLM agent is told it
+  can see and hear (section 8).
 - `docs/metrics.md`: the conflict metrics, defined operationally, with their thresholds;
   since issue #28 also the outcome of a pair interaction and the two artefact counts; since
   issue #30 pair exposure and the severity tiers.

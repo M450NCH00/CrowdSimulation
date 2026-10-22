@@ -23,6 +23,11 @@ See `integration/crowdgym_mapping.md` for exactly how records feed CrowdGym.
 > model to negotiate or state a rule (#30, roadmap step 3c) is no longer how rules are made, and
 > step 4 is superseded. `CLAUDE.md` holds the meeting notes word for word and the decisions still
 > pending; the roadmap table below has the RF rows.
+>
+> **Since 2026-10-22, Step 1 follows `llm_negotiation/docs/resolution.md`** (the user's design,
+> decisions D1 to D17): an agent says what it physically does, with no "who goes first" field,
+> is told what a person would perceive, and is prompted only when something new happens. The
+> work then goes one scenario at a time, in rounds.
 
 The dataset work below is **Phase 1**. It was put on hold after the second supervisor
 meeting ("on hold, not abandoned"); issue #24 (2026-10-13) describes it as retired, and
@@ -47,6 +52,11 @@ experiment code until the literature review is complete and discussed.**
 > Issue #32 (2026-10-16) makes no paid call. It adds a fictional-group factor that no paid run
 > may switch on until the supervisor's **ethics sign-off** is recorded in `CLAUDE.md`; that
 > sign-off is pending: `WORK_LOG-32.md`, Q1.
+>
+> **Lifted by the user on 2026-10-22** (track #55, former decision 2; recorded in `CLAUDE.md`,
+> "Pending sign-offs", item 8): the resolution design needs new simulation code (RF-4, RF-17),
+> and the user is fine with adding it. Paid calls are a separate matter and still wait for the
+> supervisor's approval.
 
 | # | Roadmap step | Status |
 |---|---|---|
@@ -58,12 +68,32 @@ experiment code until the literature review is complete and discussed.**
 | 3c | Conflict cases, rule generation by two LLMs negotiating or one stating, the rule writer (sub-issue 3 of 6, first half) | **built and rehearsed on the mock** (issue #30) — `llm_negotiation/negsim/rulegen/`, `llm_negotiation/cases/`; 18 conflict cases; the paid pilot is **held** (no recorded approval; its worst case exceeds its cap, `WORK_LOG-30.md` Q5) |
 | 3c.2 | A fictional group no rule may read, and two people meeting inside a single-file passage (`back_up`, rule format 3, prompt version 2) | **built and rehearsed on the mock** (issue #32) — the group is **off by default**, and no paid run may switch it on until the supervisor's ethics sign-off is recorded (pending); 576 free behaviour-check runs; 26 new case versions; the pilot moved to prompt version 2 and still **held** (issue #30's Q5 re-previewed, `llm_negotiation/docs/rule-generation.md` section 10.1) |
 | 4 | Analyse exchanges for a reusable pattern | **superseded by RF** (supervisor meeting of 2026-10-20); never started |
-| RF | Resolve first, then extract rules (track #55). The rows below are in the order of work, not of step number | **direction recorded** (issue #56) in `CLAUDE.md`, with the supervisor's notes word for word; every decision the track needs from the supervisor is **pending** |
-| RF S1 | Step 1: can LLM agents resolve a conflict, without being asked for a rule? Prompts, the protocol (talk and silent), the agreed actions run in the simulator, a paid pilot | not started — #57, #58, #59; the pilot #64 is paid and waits for a recorded approval |
-| RF S4 | Step 4: which factors drive the decision? Persona, situational and pairwise factors, screening designs, the analysis package, Phase A screening, Phase B factorial | not started — #60 to #63; #65 and #68 are paid and wait for a recorded approval |
-| RF S2 | Step 2: extract the hidden rule or pattern, with the LLM's reference for it; translate rules to rule format 3 (low priority) | not started — #66, #67 |
-| RF S3 | Step 3: verify extracted rules and factor effects against human behaviour | not started — #69; whether this means published studies or observed data is pending |
-| RF end | Results summary and the final factor-to-decision mapping | not started — #70 |
+| RF | Resolve first, then extract rules (track #55). The rows below are in #55's order of work: Part 1, the pipeline, built once (all mock, no paid call); then Part 2, one round per scenario. RF numbers are not the order (RF-16 to RF-25 were added on 2026-10-22) | **direction recorded** (issue #56); **resolution design recorded** (issue #72) in `llm_negotiation/docs/resolution.md`. Still pending from the supervisor: paid runs and their caps, the ethics sign-offs, how far track #34 is paused, what "real human behaviour" means (`CLAUDE.md`) |
+| RF-1 | Part 1. Record the resolve-first direction | **delivered** (issue #56, PR #71, merged into the stacked branch, not yet into `main`) |
+| RF-16 | Part 1. Record the 2026-10-22 resolution design, `docs/resolution.md` | **delivered** (issue #72) — `llm_negotiation/docs/resolution.md`, architecture section 8.7, `parameters.md` section 8 |
+| RF-2 | Part 1. Step 1 templates (three conditions and a debrief), the `View` structure, the scenario interface, the reply parser | not started — #57 |
+| RF-17 | Part 1. What an LLM agent perceives: view cone, occlusion, hearing, changes since it last looked | not started — #73 |
+| RF-4 | Part 1. Carry out plans in the simulator, `plan_only` and `plan_orca`, with physical outcomes | not started — #59 |
+| RF-3 | Part 1. The encounter protocol: trigger, event-driven decision points, conditions, debrief, storage, one outcome row per session | not started — #58 |
+| RF-5 | Part 1. The core factors (seven, with a memory note) and up to four situational factors | not started — #60 |
+| RF-6 | Part 1. Pairwise perception factors (perceived attractiveness, familiarity), shown only to the observer | not started — #61; attractiveness off by default, its ethics sign-off pending |
+| RF-7 | Part 1. Screening designs, geometries, the exact-repeat set, counterfactual pairs | not started — #62 |
+| RF-8 | Part 1. Analysis: factor effects, decision tree, the mapping, noise floor, stability, stated against measured, intent against plan | not started — #63 |
+| RF-9 | Part 2, round 1 (head-on in a corridor, full depth). Paid pilot | not started — #64; paid, waits for a recorded approval |
+| RF-10 | Round 1. Phase A screening of up to 16 factors | not started — #65; paid, waits for a recorded approval |
+| RF-11 | Round 1. Step 2: rule extractor, three runs, references, held-out fidelity | not started — #66; paid (small) |
+| RF-12 | Round 1. Translate to rule format 3, replay and crowd-screen (low priority) | not started — #67; paid (small) |
+| RF-13 | Round 1. Phase B: interactions and counterfactual pairs (optional) | not started — #68; paid |
+| RF-14 | Round 1. Step 3: verify rules, debrief sources and factor effects against human evidence | not started — #69; what "real human behaviour" means is pending |
+| RF-18 | Round 1. All rules so far + ORCA on crowds and an unseen scenario, against plain ORCA; rerun after every round | not started — #74 |
+| RF-15 | Round 1. Results summary for the interim report (25 January 2027) | not started — #70 |
+| RF-19 | Round 2 (meeting in a narrow passage, lean). Screening | not started — #75; paid |
+| RF-20 | Round 2. Extract, test with earlier rules, verify | not started — #76; paid (small) |
+| RF-21 | Round 3 ("excuse me" from behind, lean). Scenario setup, pilot and screening | not started — #77; paid |
+| RF-22 | Round 3. Extract, test with earlier rules, verify | not started — #78; paid (small) |
+| RF-23 | Round 4 build: boarding a train while people get off (more than two people prompted) | not started — #79; mock only |
+| RF-24 | Round 5 build: the escalator (a moving floor) | not started — #80; mock only |
+| RF-25 | Round 6 build: someone cuts into your queue (a queue model) | not started — #81; mock only |
 | 5 | Validate the pattern against real data or sociology | **coding scheme drafted** (issue #12) — `literature/human-conflict-resolution/` |
 | 5a | Demographic personas: realism vs LLM bias | **delivered** (issue #16) — `literature/demographic-personas/` |
 | 5b | Game theory: communication-free conflict rules | **delivered** (issue #20) — `literature/game-theory/` |

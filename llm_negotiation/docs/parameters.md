@@ -17,6 +17,10 @@ config files and fails if a quantity has none, or if a placeholder is missing fr
 Locators are file and line in `refs/` at the repository root. Every one was read in the
 cached copy, not recalled.
 
+Sections 1 to 7 are the avoidance scenarios' parameters. Section 8 (issue #72) holds the values
+of the resolution design, `resolution.md`, D12: what an LLM agent is told it can see and hear.
+They are in no config yet; RF-17 (#73) will put them in one, with these tags.
+
 ## 1. The agent type
 
 One agent type, `pedestrian`, is used by all five scenarios, with identical values
@@ -147,6 +151,9 @@ dressed as a table, so it was left out.
 | Menge 4squareS.xml | The Menge crowd-simulation framework, `github.com/MengeCrowdSim/Menge`, file `examples/core/4square/4squareS.xml` on branch `master` at commit `00f97ea` (the file last changed in `577b517`). Apache-2.0. An example configuration of a pedestrian simulator; cited for what is used in practice, not as evidence about pedestrians. | `si1_menge_4squareS.xml` |
 | ORCA paper | van den Berg, Guy, Lin, Manocha, "Reciprocal n-body collision avoidance"; `orca.md`, section 1. | `si1_orca_vandenberg2011.txt`, `.pdf` |
 | Nakahara et al. 2005 | K. Nakahara, T. Ishii, H. Ida, K. Nakazawa, H. Yamamoto, "The influence of walking speed on symmetry for temporal-spatial and GRF parameters in backward walking", *Proceedings of the XXIII International Symposium on Biomechanics in Sports* (ISBS 2005), Beijing, 823–826. ISBS Conference Proceedings Archive, open access (`ojs.ub.uni-konstanz.de/cpa/article/view/1194`). Read in full (issue #32). | `si32_nakahara2005_backward_walking.txt` (text, pypdf), `.pdf` |
+| Moussaïd et al. 2011 | M. Moussaïd, D. Helbing, G. Theraulaz, "How simple rules determine pedestrian behavior and crowd disasters", *PNAS* 108(17), 6884–6888, 2011. DOI 10.1073/pnas.1016507108. **Read in the accepted manuscript**, arXiv:1105.2152v1 ("Article accepted for publication in PNAS"); the published version could not be downloaded (section 8.3). Issue #72. | `rf16_moussaid2011_excerpts.txt` (tracked: every cited passage, with its line number in the full extract). The full PDF and text, `rf16_moussaid2011_arxiv.pdf` and `.txt`, are local only: arXiv's non-exclusive licence is not an open one (`.gitignore`). |
+| Rio et al. 2018 | K. W. Rio, G. C. Dachner, W. H. Warren, "Local interactions underlying collective motion in human crowds", *Proc. R. Soc. B* 285(1878): 20180611, 2018. DOI 10.1098/rspb.2018.0611. **Abstract only**, through the Europe PMC API (PMID 29769363). Issue #72. | `rf16_rio2018_abstract.txt` |
+| Wirth et al. 2023 | T. D. Wirth, G. C. Dachner, K. W. Rio, W. H. Warren, "Is the neighborhood of interaction in human crowds metric, topological, or visual?", *PNAS Nexus* 2(5): pgad118, 2023. DOI 10.1093/pnasnexus/pgad118. **Abstract only**, through the Europe PMC API (PMID 37200800). Issue #72. | `rf16_wirth2023_abstract.txt` |
 
 ## 7. What is missing
 
@@ -164,3 +171,46 @@ dressed as a table, so it was left out.
   wide, which a person is not, and it cannot turn sideways (section 3).
 - **The ORCA settings are borrowed from practice**, not fitted to data: `time_horizon_obst`
   and `max_neighbours` are what one simulator's example uses.
+
+## 8. What an LLM agent perceives: the values of the resolution design (issue #72)
+
+The description an LLM agent is given (`resolution.md`, D2) says whom it can see, in how much
+detail, and whom it can hear. These values shape **only what the LLM is told** (D10). ORCA's
+neighbour search keeps the `sensing_radius` and `max_neighbours` of section 2, and the
+perception record that rules read is unchanged. The same tags apply as in the table at the top. In the locators of `rf16_moussaid2011_excerpts.txt`, a number in square brackets is a line of the full text extract, as the excerpt file prints it.
+
+### 8.1 Cited values
+
+| Parameter | Value | Status | Source and locator | What the source measured, and the caveat |
+|---|---|---|---|---|
+| View half-angle | 75° each side of straight ahead (150° in total) | cited | Moussaïd et al. 2011, Fig. 2 caption; `rf16_moussaid2011_excerpts.txt`, [555]-[562] | "The model parameters are τ=0.5s, φ=75°, dmax=10m, k=5.103, vi0=1.3 m/s". φ is a half-angle: "the vision field of pedestrian i ranges to the left and to the right by φ degrees with respect to the line of sight" ([134]-[140]). **A model's parameter, not a measured limit of vision**: it is the value with which the authors' simulations matched the corridor experiments of Moussaïd et al. 2009 (the same 7.88 m by 1.75 m corridor, [548]-[555]). The same paper uses **φ=45°** for its high-density street simulations ([597]-[601]). |
+| Seeing range | 10 m | cited | same; [559] | dmax, "the 'horizon distance' of pedestrian i" ([163]-[164]): the distance assumed when nothing is in the way. Same caveat: a model's parameter, and **8 m** in the high-density simulations ([601]). |
+| Who is hidden | not described if hidden behind someone nearer | cited | same, Fig. 1 caption; [542]-[543] | "Pedestrian p4 is hidden by pedestrian p2 and, therefore, not visible." The model "correctly handles situations in which pedestrians are hidden or outside the field of view" ([339]-[340]). A modelling choice the authors argue for, not a measurement. |
+| Detail range | 5 m | cited | Rio et al. 2018, abstract; `rf16_rio2018_abstract.txt:20-22` | The neighbourhood is modelled with "weights that decay exponentially to zero by 5 m". **Two caveats.** It was measured with "a participant walked in a virtual crowd whose speed and heading were manipulated" (lines 17-18): following a crowd, not avoiding someone coming the other way. And the same model is "a circularly symmetric region", in which influence decreased "with distance, but not with lateral position (eccentricity)" (lines 18-19): it supports the 5 m, **not** the cone. Here it decides how much is said about a person, not whether they are seen. |
+| How many people are described | everyone visible, no fixed count | cited | Wirth et al. 2023, abstract; `rf16_wirth2023_abstract.txt:19-23` | "Our results rule out a topological neighborhood" (a fixed number of nearest neighbours), "are approximated by a metric neighborhood, but are best explained by a visual neighborhood", in which "an individual is influenced by the optical motions of all visible neighbors" (lines 19-20). Real and virtual crowds, with density manipulated (lines 20-21). |
+
+### 8.2 Placeholders
+
+None of these has a source. **Do not report a result that depends on one as if it rested on
+data.**
+
+| Parameter | Value | Why it has no source, and what would replace it |
+|---|---|---|
+| Hearing range | `[placeholder]`, no value yet | How far speech carries. It should depend on RF-5's `surroundings` factor (a quiet corridor against a busy station). RF-17 (#73) sets a value; a source on speech audibility against background noise would replace it. |
+| Eye-contact and nod range | `[placeholder]`, no value yet | How far away a signal (`eye_contact`, `nod`, and the rest of D1's list) can be seen. Within the seeing range by definition; nothing read gives a distance for eye contact. |
+| Change thresholds of D5 ("noticeably") | 0.2 m sideways, 0.2 m/s, 5° `[placeholder]` | What counts as the other having changed speed or direction noticeably, which can prompt an agent again. Round values. A source on the smallest change in another walker's speed or heading that people react to would replace them. |
+
+### 8.3 Design values
+
+Tagged `[design]`: choices about cost and prompting, not claims about people.
+
+| Parameter | Value | Why |
+|---|---|---|
+| Gap between two prompts of one agent | at least 1 s | `resolution.md`, D5: keeps an agent from being asked again for every small change. |
+| Decision points per agent per encounter | at most 3 (1 in the independent condition) | D3 and D5: a cost limit. |
+| Cap on people prompted in one encounter | only if needed | D11 and D12: a cost limit for scenes with more than two people (rounds 4 and 6), not a human number; the report says how often it is reached. |
+
+**Not read:** the published PNAS version of Moussaïd et al. 2011 (its PMC full text is not
+available for download, and Europe PMC's PDF route refused the request, 403); the full texts of
+Rio et al. 2018 and Wirth et al. 2023. The values above were checked in the accepted
+manuscript and in the two abstracts.

@@ -41,8 +41,9 @@ capable of handling **10,000 agents** without becoming too slow.
 ## Current task: resolve first, then extract rules (track #55, since 2026-10-20)
 At the supervisor meeting of 2026-10-20 the method changed. Until then (issue
 #30) an LLM was asked to negotiate or state a conflict rule directly. The work
-now follows four steps, tracked in issue #55 and built in issues #56 to #70
-(RF-1 to RF-15):
+now follows four steps, tracked in issue #55 and built in issues #56 to #81
+(RF-1 to RF-25; RF-16 to RF-25 were added on 2026-10-22, so the RF numbers no
+longer follow the order of work, which #55 gives):
 
 1. **Step 1 — resolve.** Test whether LLM agents can resolve a conflict,
    without asking them for a rule.
@@ -58,9 +59,21 @@ no longer matters much (see "Supervisor decisions"). The code is in
 `llm_negotiation/` (negsim); `README.md` has the roadmap and
 `llm_negotiation/README.md` the section "Direction since October 2026".
 
+Step 1 follows `llm_negotiation/docs/resolution.md` (decisions D1 to D17),
+decided by the user on 2026-10-22 on their own authority, with no supervisor
+sign-off needed. An agent's reply says what it physically does (`intent`, then
+`steps`), with no `priority` field: who went first is measured in the replay.
+Its description follows what a person would perceive (a 75° view to 10 m,
+detail within 5 m, hearing from any direction). There are three conditions
+(independent, non-verbal, talk), prompting is event-driven, and each agent is
+debriefed afterwards for the reference behind its decision. The work goes one
+scenario at a time, in rounds (D15 to D17). Architecture section 8.7 holds the
+decision record.
+
 Constraints for every RF issue (from #55):
 - No paid call unless this file records the supervisor's approval of paid runs
-  and the cap for that phase (see "Pending sign-offs").
+  and the cap for that phase or round (see "Pending sign-offs").
+- No reply format may ask an agent who goes first.
 - Perceived attractiveness and the fictional group stay off by default. No paid
   run with either switched on until this file records the ethics sign-off.
 - No rule may read a person's group.
@@ -144,8 +157,11 @@ The user's notes from the meeting, word for word:
   each simulator. Rules may be more specific, for example "keep left".
 
 ## Pending sign-offs
-None of these has been given. **Do not treat any of them as approved** until the
-user records the supervisor's answer in this file, with a date. The ethics
+Items 1, 2, 3, 5 and 6 are still pending. **Do not treat any of them as
+approved** until the user records the supervisor's answer in this file, with a
+date. Items 4, 7 and 8 were decided by the user on 2026-10-22, on their own
+authority, as part of the resolution design (`llm_negotiation/docs/resolution.md`);
+they need no supervisor sign-off. The ethics
 sign-off for the fictional group has an exact form that negsim checks for; see
 `llm_negotiation/docs/fictional-groups.md`, section 6. Numbers in brackets are
 the decisions of track issue #55.
@@ -156,20 +172,23 @@ the decisions of track issue #55.
    3). Without it, RF-10 drops both attractiveness factors.
 3. **PENDING** — Whether the fictional group stays (#55, 3), and its ethics
    sign-off, pending since issue #32.
-4. **PENDING** — Whether to add the silent condition beside the talk condition
-   (#55, 4).
+4. **Decided by the user, 2026-10-22** — Whether to add the silent condition
+   beside the talk condition (#55, 4): three conditions, namely independent,
+   non-verbal and talk (`resolution.md`, D3).
 5. **PENDING** — How far the portable-rules track (#34) is paused: only the
    build (#42 onward), or the remaining literature issues (#35 to #41) as well
    (#55, 5).
 6. **PENDING** — What "verify with real human behaviour" means: published
    studies only (RF-14 as written), or observed data such as recorded pedestrian
    trajectories, video or field observation in Singapore (#55, 6).
-7. **PENDING** — Which LLM gives the reference for a rule: the extractor model
-   that writes the rule from the results (RF-11 as written), or the agents
-   themselves, asked afterwards in a debrief (#55, 7).
-8. **PENDING** — Whether the "no new simulation code until the literature review
-   is discussed" instruction is lifted (#55, 2). Recorded as unconfirmed in
-   `README.md` since issue #24.
+7. **Decided by the user, 2026-10-22** — Which LLM gives the reference for a
+   rule: the extractor model that writes the rule from the results, or the
+   agents themselves, asked afterwards in a debrief (#55, 7): both, the agents
+   in a debrief and the extractor in RF-11 (`resolution.md`, D8).
+8. **Lifted by the user, 2026-10-22** — Whether the "no new simulation code
+   until the literature review is discussed" instruction is lifted (#55, 2):
+   the design needs new simulation code (RF-4, RF-17), and the user is fine with
+   adding it. Recorded as unconfirmed in `README.md` from issue #24 until then.
 
 ## Notes for Claude Code
 - When asked to work on a GitHub issue, follow `github_issue_workflow.md`
