@@ -113,6 +113,8 @@ STATUS_DEADLOCK = "deadlock"
 STATUS_TIMEOUT = "timeout"
 
 MODE_ORCA, MODE_ARBITER, MODE_BACK_UP = "orca", "arbiter", "back_up"
+#: An agent carrying out an LLM agent's plan (issue #59, ``negsim.resolution.execute``).
+MODE_PLAN = "plan"
 
 # A back-up manoeuvre (issue #32): the phases of the one backing up, what the other is doing
 # meanwhile (the trajectory's ``back_up`` column), and why it ended.
@@ -454,8 +456,12 @@ class AvoidanceSimulation:
         record_trajectory: bool = True,
         trajectory_stride: int = 1,
         perturbation: Optional[Perturbation] = None,
+        plans: Optional[Any] = None,
     ):
         self.spec = spec
+        #: A plan driver (issue #59, ``negsim.resolution.execute.PlanDriver``), or ``None``: then
+        #: every step runs exactly as it did before plans existed.
+        self.plans = plans
         self.world = spec.build_world()
         self.provider = provider or NullProvider()
         self.attributes = dict(attributes or {})
@@ -537,6 +543,8 @@ class AvoidanceSimulation:
         world = self.world
         if self.status is None:
             self.status = STATUS_COMPLETED if world.all_done else STATUS_TIMEOUT
+        if self.plans is not None:
+            self.plans.finish(self)
         for mine in self.open.values():
             for interaction in list(mine.values()):
                 self._end_interaction(interaction, END_RUN_ENDED)
@@ -660,6 +668,9 @@ class AvoidanceSimulation:
             held = self.coordinator.arbitrated
 
         # 4. Choose a velocity for every agent, all from the same state of the world.
+        driver = self.plans
+        if driver is not None:
+            driver.prepare(self)
         commands: dict[int, tuple[float, float]] = {}
         #: Each agent's intended velocity: what it hands ORCA, after its directives.
         intended: dict[int, tuple[float, float]] = {}
@@ -686,7 +697,14 @@ class AvoidanceSimulation:
             cx, cy = math.cos(along), math.sin(along)
             behind = any((agents[j].pose.x - x) * cx + (agents[j].pose.y - y) * cy < 0.0 for _, j in neighbours[i])
             phase = None
-            if manoeuvre is not None:
+            override = None
+            if driver is not None:
+                override = driver.velocity(self, a, travel_speed[i], None if decision is None else decision.speed_bound)
+            if override is not None:
+                # Carrying out a plan (issue #59): the plan sets the preferred velocity.
+                preferred = override
+                speed = math.hypot(*preferred)
+            elif manoeuvre is not None:
                 # Backing out, at its own backing speed, or waiting.
                 preferred = self._back_up_velocity(a, manoeuvre, dt)
                 speed, phase = math.hypot(*preferred), manoeuvre.phase
@@ -727,6 +745,8 @@ class AvoidanceSimulation:
                 pair_record = self.open_pairs[pair]
                 if separation < pair_record.min_separation_m:
                     pair_record.min_separation_m = separation
+                if driver is not None and driver.ignores(i, j):
+                    continue  # plan_only (issue #59): ORCA does not steer the encounter's two apart
                 resolution = resolutions.get(pair)
                 if resolution is not None:
                     share, side, margin = resolution.share_of(i), resolution.side, resolution.clearance_margin
@@ -781,6 +801,7 @@ class AvoidanceSimulation:
                     travel_speed[i] / a_spec.preferred_speed, exposed, not result.feasible,
                     sorted(mine[j].interaction_id for _, j in neighbours[i]),
                     phase,
+                    override is not None,
                 )
         self.fallback_agents = fallback_agents
         self.steps_with_fallback += bool(fallback_agents)
@@ -815,7 +836,9 @@ class AvoidanceSimulation:
                     manoeuvre.backing_distance_m += max(0.0, -forward) * dt
                 else:
                     manoeuvre.waiting_steps += 1
-            walking_backwards = not backing_out and forward < -limits.backward_speed_mps
+            # Backing up in a plan (issue #59) is intentional too.
+            planned_back = driver is not None and driver.backing(i)
+            walking_backwards = not backing_out and not planned_back and forward < -limits.backward_speed_mps
             self.backward[i].update(now, end, walking_backwards, -forward * dt if walking_backwards else 0.0)
             self.hurried[i].update(now, end, behind and speed > (1.0 + limits.hurried_fraction) * wanted)
             for index, entry_s, exit_s in a.spec.single_file_stretches:
@@ -844,6 +867,8 @@ class AvoidanceSimulation:
                 self.status = STATUS_COMPLETED
             elif self.monitor.update(now, end, speeds):
                 self.status, self.deadlock = STATUS_DEADLOCK, True
+        if driver is not None:
+            driver.after_step(self)
 
     # --- interactions ---------------------------------------------------------------------------
 
@@ -1254,7 +1279,7 @@ class AvoidanceSimulation:
     # --- trajectory rows ------------------------------------------------------------------------
 
     @staticmethod
-    def _row(step, now, agent, preferred, decision, under_arbiter, n_neighbours, speed_scale, exposed, fallback, ids, back_up=None):
+    def _row(step, now, agent, preferred, decision, under_arbiter, n_neighbours, speed_scale, exposed, fallback, ids, back_up=None, planned=False):
         role = None if decision is None or decision.role is None else decision.role.value
         source = None if decision is None or decision.role_source is None else decision.role_source.value
         return {
@@ -1270,7 +1295,7 @@ class AvoidanceSimulation:
             "speed_mps": None,
             "pref_vx_mps": round(preferred[0], 6),
             "pref_vy_mps": round(preferred[1], 6),
-            "control_mode": MODE_BACK_UP if back_up is not None else MODE_ARBITER if under_arbiter else MODE_ORCA,
+            "control_mode": MODE_PLAN if planned else MODE_BACK_UP if back_up is not None else MODE_ARBITER if under_arbiter else MODE_ORCA,
             "speed_bound_mps": None if decision is None else round(decision.speed_bound, 6),
             "role": role,
             "role_source": source,
