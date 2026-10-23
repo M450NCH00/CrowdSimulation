@@ -211,3 +211,28 @@ find which ones drive a decision. This issue adds the **core** factors that ever
    version.
 
 ## Summary (fill in at the end)
+
+**What changed.**
+- Seven core factors are in the persona table, rendered from a new frozen template
+  (`resolve_factors_v1`) into the blocks of D2.
+- The three observable ones have visibility switches, as design factors.
+- Two situational factors: `surroundings` (which also sets the hearing range) and `time_of_day`.
+- `load` widens the body for the whole run, and the live run, plain ORCA and both replays all use
+  that body.
+- The design codes each factor as `neither` or `p1`; `urgency` is the two-level form of `task`.
+- A rule reading `assertiveness`, `residence` or `memory_note` is `needs_communication`.
+- A config that names none of the new factors writes exactly what it wrote before.
+
+**Why.** Issue #60 and `docs/resolution.md`, D1, D2, D7 and D15.
+
+**How it was verified.**
+- 34 new tests in `tests/test_factors.py`.
+- Full suite: 1641 passed and 1 failed. The failure was `test_repo_hygiene`'s check on imports:
+  `test_factors.py` imports helpers from three other test modules, which that test's list of local
+  modules did not name. I added the three names, and the hygiene tests then passed (7). The
+  rule's purpose, to catch unpinned third-party packages, is unchanged.
+- A 24-session mock rehearsal, with the prompts checked by eye.
+- The replays rebuilt with `--verify`, byte for byte.
+- No paid call.
+
+The open questions above are for the user, the first one especially.
