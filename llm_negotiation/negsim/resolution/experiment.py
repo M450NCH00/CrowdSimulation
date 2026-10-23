@@ -36,12 +36,19 @@ outcome row each person's own perception as 0 or 1. **Perceived attractiveness n
 supervisor's ethics sign-off for a paid run** (``negsim.ethics``; ``docs/pairwise-factors.md``,
 section 6): without the sentence in ``CLAUDE.md`` the run is refused before anything is sent
 (``refused_no_sign_off``). A mock run needs none.
+
+**The core template** is ``resolve_v2`` unless the config names one, and ``resolve_v3`` for a
+design that varies an RF-5 or RF-6 factor (``prompt.default_core``; the user's decision of
+2026-10-23, issue #61): ``resolve_v3`` also prints a person's factor lines on the short line of
+someone 5 to 10 m away. A config that names ``resolve_v2`` keeps it, and ``--plan`` says that
+its factor lines then reach an agent only within 5 m.
 """
 
 from __future__ import annotations
 
 import argparse
 import csv
+import functools
 import io
 import json
 import math
@@ -74,14 +81,15 @@ from .mock import POLICIES as MOCK_POLICIES
 from .outcomes import GENERAL_COLUMNS, MODE_PLAIN_ORCA, RESOLVED
 from .pairwise import ATTRACTIVENESS, FAMILIARITY, PAIRWISE_TEMPLATE, PairwiseFactors, PairwiseTemplate
 from .perceive import LLM_VIEW_CONFIG, LLMViewSettings
-from .prompt import DEBRIEF_TEMPLATE, SIMULATION_CORE_TEMPLATE, CoreTemplate, DebriefTemplate
+from .factors import SWITCHES as OBSERVABLE
+from .prompt import DEBRIEF_TEMPLATE, CoreTemplate, DebriefTemplate, default_core
 from .protocol import SESSION_ABORTED, SESSION_COMPLETED, EncounterSession, ProtocolSettings
 from .replay import plain_orca, replay_session, run_plan_for
 from .reply import ParsedReply
 from .scenario import Scenario
 from .scenarios import load_scenario, plugin_for
 from .transcript import render as render_transcript
-from .view import CHANGES, CONDITION_TALK, CONDITIONS, DETAIL_FULL, MOTION_WALKING, Done, Heard, Me, SeenPerson, TimeToMeet, View
+from .view import CHANGES, CONDITION_TALK, CONDITIONS, DETAIL_FULL, DETAIL_SHORT, MOTION_WALKING, Done, Heard, Me, SeenPerson, TimeToMeet, View
 
 LAYER_RESOLUTION = "resolution"
 SCHEMA_VERSION = 1  # of the config
@@ -214,7 +222,8 @@ class ResolutionConfig:
             raise ConfigError(f"{where}: templates.factors and factor_values are for a design that varies a core or situational factor")
         if not design.uses_pairwise and templates.get("pairwise") is not None:
             raise ConfigError(f"{where}: templates.pairwise is for a design that varies a pairwise perception factor")
-        chosen = {"core": str(templates.get("core", SIMULATION_CORE_TEMPLATE)), "debrief": str(templates.get("debrief", DEBRIEF_TEMPLATE))}
+        core = templates.get("core", default_core(design.uses_factors or design.uses_pairwise))
+        chosen = {"core": str(core), "debrief": str(templates.get("debrief", DEBRIEF_TEMPLATE))}
         if design.uses_factors:
             chosen["factors"] = str(templates.get("factors", FACTOR_TEMPLATE))
         if design.uses_pairwise:
@@ -687,7 +696,8 @@ def _pairwise_columns(record: Mapping[str, Any], agent: int, other: int, prefix:
     """Issue #61: how ``agent`` sees ``other``, from its own point of view, as 0 or 1 (RF-8), for
     each pairwise factor the design varies, whether or not it was told (the switches are the cell's
     columns); and at how many of its decision points it was shown a pairwise line about them, which
-    ``resolve_v1`` and ``resolve_v2`` print only in full detail (within 5 m, D2)."""
+    ``resolve_v1`` and ``resolve_v2`` print only in full detail (within 5 m, D2) and ``resolve_v3``
+    on a short line too (issue #61)."""
     block = record["session"].get("pairwise")
     if block is None:
         return {}
@@ -697,15 +707,21 @@ def _pairwise_columns(record: Mapping[str, Any], agent: int, other: int, prefix:
         columns[f"{prefix}_finds_other_attractive"] = values[ATTRACTIVENESS]
     if FAMILIARITY in block:
         columns[f"{prefix}_knows_other"] = values[FAMILIARITY]
+    printed = _core(record["templates"]["core"]["key"]).prints_extra_lines
     shown = 0
     for point in record.get("decision_points") or []:
         if point["agent_id"] != agent:
             continue
         label = (point["view"].get("labels") or {}).get("label_of_agent", {}).get(str(other))
-        if any(p["label"] == label and p["detail"] == DETAIL_FULL and p.get("pairwise_lines") for p in point["view"]["seen"]):
+        if any(p["label"] == label and printed(p["detail"]) and p.get("pairwise_lines") for p in point["view"]["seen"]):
             shown += 1
     columns[f"{prefix}_pairwise_lines_shown"] = shown
     return columns
+
+
+@functools.lru_cache(maxsize=None)
+def _core(key: str) -> CoreTemplate:
+    return CoreTemplate.load(key)
 
 
 def outcome_row(record: Mapping[str, Any], case: Mapping[str, Any], physical: Optional[Mapping[str, Mapping[str, Any]]]) -> dict[str, Any]:
@@ -1086,6 +1102,12 @@ def print_plan(config: ResolutionConfig, client_name: Optional[str] = None, out:
     out(f"  design: {config.design.cells()} cell(s) per case and condition, {config.design.repeats} repeat(s) each")
     if config.design.uses_attractiveness and not attractiveness_signed_off():
         out("  perceived attractiveness is on: a paid run is refused until CLAUDE.md records the ethics sign-off")
+    seen_lines = config.design.uses_pairwise or any(name in config.design.levels for name in OBSERVABLE)
+    if seen_lines and not _core(config.templates["core"]).prints_extra_lines(DETAIL_SHORT):
+        out(
+            f"  core template {config.templates['core']}: what others are told of a person's factors is printed only within 5 m, "
+            "so in a head-on case it never reaches an agent (resolve_v3 prints it from 10 m; docs/pairwise-factors.md, section 1)"
+        )
     return plan_
 
 

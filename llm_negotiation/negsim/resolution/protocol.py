@@ -245,9 +245,10 @@ class EncounterSession:
         self.client, self.llm = client, llm
         self.settings = settings or ProtocolSettings()
         self.view_settings = view_settings or LLMViewSettings.load()
-        from .prompt import SIMULATION_CORE_TEMPLATE
+        from .prompt import default_core
 
-        self.core = core or CoreTemplate.load(SIMULATION_CORE_TEMPLATE)
+        # resolve_v3 when the session has factor lines (issue #61), as the experiment layer chooses
+        self.core = core or CoreTemplate.load(default_core(factors is not None or pairwise is not None))
         self.debrief_template = debrief or DebriefTemplate.load()
         self.people, self.show_age, self.show_gender = people, show_age, show_gender
         self.factors, self.pairwise = factors, pairwise

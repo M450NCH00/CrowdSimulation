@@ -34,7 +34,19 @@ CORE_TEMPLATE = "resolve_v1"
 #: an earlier decision. Lines a template does not have are not rendered, so ``resolve_v1`` still
 #: renders every view, as it did.
 SIMULATION_CORE_TEMPLATE = "resolve_v2"
+#: The core template for a session with factor lines (issue #61, the user's decision of
+#: 2026-10-23): ``resolve_v2`` with a person's factor lines (RF-5's observable ones, RF-6's
+#: pairwise ones) printed under a short line too, 5 to 10 m away. ``resolve_v2`` prints them only
+#: within 5 m, which in the head-on case is never the case at a decision point.
+FACTOR_CORE_TEMPLATE = "resolve_v3"
 DEBRIEF_TEMPLATE = "resolve_debrief_v1"
+
+
+def default_core(with_factor_lines: bool) -> str:
+    """The core template a session uses unless its config names one: ``resolve_v3`` when it has
+    factor lines (a design that varies an RF-5 or an RF-6 factor), else ``resolve_v2``, so that a
+    session without them renders, and records, exactly what it did before."""
+    return FACTOR_CORE_TEMPLATE if with_factor_lines else SIMULATION_CORE_TEMPLATE
 
 
 def seconds(value: float) -> str:
@@ -88,6 +100,11 @@ class CoreTemplate:
 
     def identity(self) -> dict[str, str]:
         return {"key": self.key, "sha256": self.sha256}
+
+    def prints_extra_lines(self, detail: str) -> bool:
+        """Whether a person's factor lines are printed at this detail level: always in full detail,
+        and on a short line only by a template that has wording for it (``resolve_v3``, issue #61)."""
+        return detail == DETAIL_FULL or "seen_short_extra" in self.data["view"]
 
     # --- the fixed text -------------------------------------------------------------------------
 
@@ -160,6 +177,8 @@ class CoreTemplate:
                 lines.append(fill(v["seen_short"], n=person.label, distance=along(person.distance_m), direction=direction, motion=motion))
                 if person.signal != "none" and "seen_short_signal" in v:
                     lines.append(fill(v["seen_short_signal"], signal=v["signals_seen"][person.signal]))
+                if "seen_short_extra" in v:  # resolve_v3 (issue #61): the factor lines on a short line too
+                    lines += [fill(v["seen_short_extra"], line=line) for line in (*person.factor_lines, *person.pairwise_lines)]
                 continue
             lines.append(fill(v["seen_full"], n=person.label, distance=along(person.distance_m), direction=direction))
             if person.motion == MOTION_STILL:
