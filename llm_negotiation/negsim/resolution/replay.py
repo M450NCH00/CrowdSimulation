@@ -16,6 +16,9 @@ the case's own run (rebuilt from its experiment config and checked to be that ru
                     "steps": [...]}],                # in the reply format, as PlanDriver logs them
      "release": null}                                 # or {"step": n, "reason": "..."}: ORCA took over
 
+An encounter of more than two people (issue #58) lists them all in ``encounter.agents``, may
+list its conflict pairs in ``encounter.pairs``, and each decision names its ``partner_id``.
+
 **Where:** ``<out>/<experiment>/replay/<session_id>/plan_only/`` and ``.../plan_orca/``, each an
 ordinary avoidance run folder (``log-schema.md``). Beside them, ``physical_outcomes.csv`` (one row
 per session and mode, and one for plain ORCA on the same seed) and ``report.md``.
@@ -77,8 +80,11 @@ def check_session(session: Any, where: str = "session") -> None:
     if missing:
         raise SessionError(f"{where}: missing {missing}")
     agents = session["encounter"].get("agents") if isinstance(session["encounter"], Mapping) else None
-    if not isinstance(agents, list) or len(agents) != 2:
-        raise SessionError(f"{where}.encounter.agents: two agent ids")
+    if not isinstance(agents, list) or len(agents) < 2 or len(set(agents)) != len(agents):
+        raise SessionError(f"{where}.encounter.agents: two or more different agent ids")
+    pairs = session["encounter"].get("pairs")
+    if pairs is not None and (not isinstance(pairs, list) or not all(isinstance(p, list) and len(p) == 2 and set(p) <= set(agents) for p in pairs)):
+        raise SessionError(f"{where}.encounter.pairs: pairs of the encounter's agents")
     steps = []
     for number, decision in enumerate(session["decisions"]):
         absent = [key for key in DECISION_KEYS if key not in decision]
@@ -108,6 +114,12 @@ def encounter_type(session: Mapping[str, Any], case: Mapping[str, Any]) -> str:
     return session["encounter"].get("type") or case["formation"]["encounter_class"] or case["scenario"]["type"]
 
 
+def pairs_of(session: Mapping[str, Any]) -> Optional[list[tuple[int, int]]]:
+    """The encounter's conflict pairs, if the session lists them (issue #58)."""
+    pairs = session["encounter"].get("pairs")
+    return None if pairs is None else [(int(i), int(j)) for i, j in pairs]
+
+
 def driver_for(session: Mapping[str, Any], mode: str, run_plan: AvoidanceRunPlan, scenario: Scenario) -> PlanDriver:
     """A driver with the session's plans scheduled at their steps, read back with the parser's checks."""
     agents = tuple(session["encounter"]["agents"])
@@ -116,7 +128,7 @@ def driver_for(session: Mapping[str, Any], mode: str, run_plan: AvoidanceRunPlan
     for decision in session["decisions"]:
         agent = int(decision["agent_id"])
         steps = steps_from_dicts(decision["steps"], specs[agent].max_speed, tuple(scenario.events))
-        driver.schedule(int(decision["step"]), agent, steps)
+        driver.schedule(int(decision["step"]), agent, steps, decision.get("partner_id"))
     release = session.get("release")
     if release:
         driver.schedule_release(int(release["step"]), str(release["reason"]))
@@ -135,7 +147,7 @@ def plain_orca(session: Mapping[str, Any], case: Mapping[str, Any], run_plan: Av
     simulation = simulation_for(run_plan, watcher)
     result = simulation.run()
     start = int(session["decisions"][0]["step"])
-    columns = physical_outcome(simulation, result, watcher.track, agents, start, scenario, result.goal_times, _labels(session, case, MODE_PLAIN_ORCA))
+    columns = physical_outcome(simulation, result, watcher.track, agents, start, scenario, result.goal_times, _labels(session, case, MODE_PLAIN_ORCA), pairs_of(session))
     return {"goal_times": {str(agent): time for agent, time in sorted(result.goal_times.items())}, "physical_outcome": columns}
 
 
@@ -173,7 +185,7 @@ def replay_session(
 
     def outcome_extra(simulation: Any, result: Any) -> dict[str, Any]:
         start = driver.started_step if driver.started_step is not None else int(session["decisions"][0]["step"])
-        columns = physical_outcome(simulation, result, driver.track, agents, start, scenario, plain_goals, _labels(session, case, mode))
+        columns = physical_outcome(simulation, result, driver.track, agents, start, scenario, plain_goals, _labels(session, case, mode), pairs_of(session))
         found["columns"] = columns
         return {
             "plans": {

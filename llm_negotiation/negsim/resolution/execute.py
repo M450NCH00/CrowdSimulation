@@ -42,6 +42,13 @@ one decision point to the next, returning the :class:`WorldState` there. Every p
 logged (:meth:`PlanDriver.decisions_record`) in the form a replay reads back
 (``negsim.resolution.replay``), so a live run and its replay are the same run.
 
+**More than two people** (issue #58, RF-3; D11). An encounter may hold more than two agents.
+Each plan then names its partner, the person its events and its ``at_distance_m`` start are
+read against (with two, the partner is the other one, as before). ORCA leaves out the
+half-planes between every two of them in ``plan_only``. The encounter goes back to ORCA when
+fewer than two of them are still walking, or when every two of them have passed each other
+with no plan of theirs left to carry out. With two agents this is exactly the rule above.
+
 **Assumptions of this module** (``WORK_LOG-59.md``), none of them sourced:
 
 - a step with no ``speed_mps`` walks at the agent's own speed;
@@ -226,12 +233,12 @@ class PlanDriver:
         if mode not in MODES:
             raise ValueError(f"mode: one of {MODES}, got {mode!r}")
         agents = tuple(int(agent) for agent in agents)
-        if len(agents) != 2 or agents[0] == agents[1]:
-            raise ValueError(f"an encounter has two different agents (rounds 1 to 3, D11), got {agents}")
+        if len(agents) < 2 or len(set(agents)) != len(agents):
+            raise ValueError(f"an encounter has at least two different agents (D11), got {agents}")
         self.mode, self.scenario, self.agents = mode, scenario, agents
         self.plans: dict[int, Plan] = {}
         self.decisions: list[Plan] = []
-        self._pending: dict[int, list[tuple[int, tuple[Step, ...]]]] = {}
+        self._pending: dict[int, list[tuple[int, tuple[Step, ...], int]]] = {}
         self.started_step: Optional[int] = None
         self.started_time_s: Optional[float] = None
         self.released_step: Optional[int] = None
@@ -243,23 +250,32 @@ class PlanDriver:
 
     # --- giving plans -----------------------------------------------------------------------
 
-    def partner_of(self, agent: int) -> int:
+    def partner_of(self, agent: int, partner: Optional[int] = None) -> int:
+        """``agent``'s partner: ``partner`` if given, else the other one of a two-person encounter."""
         if agent not in self.agents:
             raise ValueError(f"agent {agent} is not in the encounter {self.agents}")
+        if partner is not None:
+            partner = int(partner)
+            if partner not in self.agents or partner == agent:
+                raise ValueError(f"agent {agent}'s partner must be another agent of the encounter {self.agents}, got {partner}")
+            return partner
+        if len(self.agents) != 2:
+            raise ValueError(f"an encounter of {len(self.agents)} people: name agent {agent}'s partner")
         return self.agents[1] if agent == self.agents[0] else self.agents[0]
 
-    def schedule(self, step: int, agent: int, steps: Sequence[Step]) -> None:
-        """Give ``agent`` the plan ``steps`` at the start of simulation step ``step``."""
-        self.partner_of(agent)
+    def schedule(self, step: int, agent: int, steps: Sequence[Step], partner: Optional[int] = None) -> None:
+        """Give ``agent`` the plan ``steps`` at the start of simulation step ``step``; ``partner``
+        is the person it is read against (needed with more than two agents)."""
+        partner = self.partner_of(agent, partner)
         if any(not isinstance(item, Step) for item in steps):
             raise TypeError("steps: parsed reply steps (negsim.resolution.reply.Step)")
         if self.released_step is not None:
             raise ValueError("the encounter has been released to ORCA; no plan can be given after it")
-        self._pending.setdefault(int(step), []).append((agent, tuple(steps)))
+        self._pending.setdefault(int(step), []).append((agent, tuple(steps), partner))
 
-    def give(self, simulation: Any, agent: int, steps: Sequence[Step]) -> None:
+    def give(self, simulation: Any, agent: int, steps: Sequence[Step], partner: Optional[int] = None) -> None:
         """Give ``agent`` the plan ``steps`` now, before the simulation's next step."""
-        self.schedule(simulation.world.step_index, agent, steps)
+        self.schedule(simulation.world.step_index, agent, steps, partner)
 
     def schedule_release(self, step: int, reason: str) -> None:
         """Hand the encounter back to ORCA at the start of simulation step ``step``."""
@@ -285,17 +301,21 @@ class PlanDriver:
         return self.started_step is not None and self.released_step is None
 
     def decisions_record(self) -> list[dict[str, Any]]:
-        """Every plan given, in order, in the form a replay schedules from."""
-        return [
-            {
+        """Every plan given, in order, in the form a replay schedules from. With more than two
+        agents each also names its partner (``partner_id``)."""
+        records = []
+        for plan in self.decisions:
+            record = {
                 "agent_id": plan.agent_id,
                 "decision_point": plan.decision_point,
                 "step": plan.given_step,
                 "time_s": round(plan.given_time_s, 6),
                 "steps": [step.as_dict() for step in plan.steps],
             }
-            for plan in self.decisions
-        ]
+            if len(self.agents) > 2:
+                record["partner_id"] = plan.partner_id
+            records.append(record)
+        return records
 
     def outcomes(self, agent: int) -> list[str]:
         """What came of each of ``agent``'s decisions so far, in order (for a view's history)."""
@@ -308,8 +328,8 @@ class PlanDriver:
         encounter if it is over. Read from the state at the start of the step."""
         world = simulation.world
         step, now = world.step_index, world.time
-        for agent, steps in self._pending.pop(step, []):
-            self._take_up(agent, steps, step, now)
+        for agent, steps, partner in self._pending.pop(step, []):
+            self._take_up(agent, steps, partner, step, now)
         for agent in self.agents:
             plan = self.plans.get(agent)
             if plan is not None and plan.state in (WAITING, RUNNING):
@@ -375,13 +395,13 @@ class PlanDriver:
 
     # --- inside -----------------------------------------------------------------------------
 
-    def _take_up(self, agent: int, steps: tuple[Step, ...], step: int, now: float) -> None:
+    def _take_up(self, agent: int, steps: tuple[Step, ...], partner: int, step: int, now: float) -> None:
         old = self.plans.get(agent)
         if old is not None and old.state in (WAITING, RUNNING):
             self._end_step(old, step, now, ENDED_REPLACED)
             old.state, old.ended_step, old.ended_time_s = REPLACED, step, now
         number = 1 + sum(1 for plan in self.decisions if plan.agent_id == agent)
-        plan = Plan(agent, self.partner_of(agent), number, step, now, steps)
+        plan = Plan(agent, partner, number, step, now, steps)
         if not steps:
             plan.state, plan.ended_step, plan.ended_time_s = COMPLETED, step, now
         self.plans[agent] = plan
@@ -471,12 +491,14 @@ class PlanDriver:
 
     def _over(self, simulation: Any) -> Optional[str]:
         agents = simulation.world.agents
-        if any(agents[agent].goal_time is not None for agent in self.agents):
+        walking = [agent for agent in self.agents if agents[agent].goal_time is None]
+        if len(walking) < 2:  # with two: one of them has arrived
             return RELEASE_ARRIVED
         if any(plan.state in (WAITING, RUNNING) for plan in self.plans.values()):
             return None
-        i, j = self.agents
-        return RELEASE_PASSED if simulation._passed(i, j, simulation.spec.single_file_safety_margin) else None
+        margin = simulation.spec.single_file_safety_margin
+        pairs = [(i, j) for k, i in enumerate(walking) for j in walking[k + 1:]]
+        return RELEASE_PASSED if all(simulation._passed(i, j, margin) for i, j in pairs) else None
 
     def as_dict(self) -> dict[str, Any]:
         """What the driver did, for a run's ``outcome.json``."""
