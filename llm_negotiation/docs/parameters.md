@@ -19,7 +19,8 @@ cached copy, not recalled.
 
 Sections 1 to 7 are the avoidance scenarios' parameters. Section 8 (issue #72) holds the values
 of the resolution design, `resolution.md`, D12: what an LLM agent is told it can see and hear.
-They are in no config yet; RF-17 (#73) will put them in one, with these tags.
+Issue #73 (RF-17) put them in a config, `configs/resolution/llm_view_v1.yaml` (block
+`llm_view`), with these tags.
 
 ## 1. The agent type
 
@@ -177,17 +178,20 @@ dressed as a table, so it was left out.
 The description an LLM agent is given (`resolution.md`, D2) says whom it can see, in how much
 detail, and whom it can hear. These values shape **only what the LLM is told** (D10). ORCA's
 neighbour search keeps the `sensing_radius` and `max_neighbours` of section 2, and the
-perception record that rules read is unchanged. The same tags apply as in the table at the top. In the locators of `rf16_moussaid2011_excerpts.txt`, a number in square brackets is a line of the full text extract, as the excerpt file prints it.
+perception record that rules read is unchanged. The same tags apply as in the table at the top.
+The config keys of `llm_view_v1.yaml` are in backticks; `negsim/resolution/perceive.py` reads
+them (`LLMViewSettings`), and `tests/test_perceive.py` checks that every key is tagged and every
+placeholder is listed in 8.2. In the locators of `rf16_moussaid2011_excerpts.txt`, a number in square brackets is a line of the full text extract, as the excerpt file prints it.
 
 ### 8.1 Cited values
 
 | Parameter | Value | Status | Source and locator | What the source measured, and the caveat |
 |---|---|---|---|---|
-| View half-angle | 75° each side of straight ahead (150° in total) | cited | Moussaïd et al. 2011, Fig. 2 caption; `rf16_moussaid2011_excerpts.txt`, [555]-[562] | "The model parameters are τ=0.5s, φ=75°, dmax=10m, k=5.103, vi0=1.3 m/s". φ is a half-angle: "the vision field of pedestrian i ranges to the left and to the right by φ degrees with respect to the line of sight" ([134]-[140]). **A model's parameter, not a measured limit of vision**: it is the value with which the authors' simulations matched the corridor experiments of Moussaïd et al. 2009 (the same 7.88 m by 1.75 m corridor, [548]-[555]). The same paper uses **φ=45°** for its high-density street simulations ([597]-[601]). |
-| Seeing range | 10 m | cited | same; [559] | dmax, "the 'horizon distance' of pedestrian i" ([163]-[164]): the distance assumed when nothing is in the way. Same caveat: a model's parameter, and **8 m** in the high-density simulations ([601]). |
-| Who is hidden | not described if hidden behind someone nearer | cited | same, Fig. 1 caption; [542]-[543] | "Pedestrian p4 is hidden by pedestrian p2 and, therefore, not visible." The model "correctly handles situations in which pedestrians are hidden or outside the field of view" ([339]-[340]). A modelling choice the authors argue for, not a measurement. |
-| Detail range | 5 m | cited | Rio et al. 2018, abstract; `rf16_rio2018_abstract.txt:20-22` | The neighbourhood is modelled with "weights that decay exponentially to zero by 5 m". **Two caveats.** It was measured with "a participant walked in a virtual crowd whose speed and heading were manipulated" (lines 17-18): following a crowd, not avoiding someone coming the other way. And the same model is "a circularly symmetric region", in which influence decreased "with distance, but not with lateral position (eccentricity)" (lines 18-19): it supports the 5 m, **not** the cone. Here it decides how much is said about a person, not whether they are seen. |
-| How many people are described | everyone visible, no fixed count | cited | Wirth et al. 2023, abstract; `rf16_wirth2023_abstract.txt:19-23` | "Our results rule out a topological neighborhood" (a fixed number of nearest neighbours), "are approximated by a metric neighborhood, but are best explained by a visual neighborhood", in which "an individual is influenced by the optical motions of all visible neighbors" (lines 19-20). Real and virtual crowds, with density manipulated (lines 20-21). |
+| View half-angle (`half_angle_deg`) | 75° each side of straight ahead (150° in total) | cited | Moussaïd et al. 2011, Fig. 2 caption; `rf16_moussaid2011_excerpts.txt`, [555]-[562] | "The model parameters are τ=0.5s, φ=75°, dmax=10m, k=5.103, vi0=1.3 m/s". φ is a half-angle: "the vision field of pedestrian i ranges to the left and to the right by φ degrees with respect to the line of sight" ([134]-[140]). **A model's parameter, not a measured limit of vision**: it is the value with which the authors' simulations matched the corridor experiments of Moussaïd et al. 2009 (the same 7.88 m by 1.75 m corridor, [548]-[555]). The same paper uses **φ=45°** for its high-density street simulations ([597]-[601]). |
+| Seeing range (`range_m`) | 10 m | cited | same; [559] | dmax, "the 'horizon distance' of pedestrian i" ([163]-[164]): the distance assumed when nothing is in the way. Same caveat: a model's parameter, and **8 m** in the high-density simulations ([601]). |
+| Who is hidden (`occlusion`) | not described if hidden behind someone nearer: the straight line from the agent's centre to the other's passes through a nearer person's disc | cited | same, Fig. 1 caption; [542]-[543] | "Pedestrian p4 is hidden by pedestrian p2 and, therefore, not visible." The model "correctly handles situations in which pedestrians are hidden or outside the field of view" ([339]-[340]). A modelling choice the authors argue for, not a measurement. |
+| Detail range (`detail_range_m`) | 5 m | cited | Rio et al. 2018, abstract; `rf16_rio2018_abstract.txt:20-22` | The neighbourhood is modelled with "weights that decay exponentially to zero by 5 m". **Two caveats.** It was measured with "a participant walked in a virtual crowd whose speed and heading were manipulated" (lines 17-18): following a crowd, not avoiding someone coming the other way. And the same model is "a circularly symmetric region", in which influence decreased "with distance, but not with lateral position (eccentricity)" (lines 18-19): it supports the 5 m, **not** the cone. Here it decides how much is said about a person, not whether they are seen. |
+| How many people are described (`max_people`: null) | everyone visible, no fixed count | cited | Wirth et al. 2023, abstract; `rf16_wirth2023_abstract.txt:19-23` | "Our results rule out a topological neighborhood" (a fixed number of nearest neighbours), "are approximated by a metric neighborhood, but are best explained by a visual neighborhood", in which "an individual is influenced by the optical motions of all visible neighbors" (lines 19-20). Real and virtual crowds, with density manipulated (lines 20-21). |
 
 ### 8.2 Placeholders
 
@@ -196,9 +200,10 @@ data.**
 
 | Parameter | Value | Why it has no source, and what would replace it |
 |---|---|---|
-| Hearing range | `[placeholder]`, no value yet | How far speech carries. It should depend on RF-5's `surroundings` factor (a quiet corridor against a busy station). RF-17 (#73) sets a value; a source on speech audibility against background noise would replace it. |
-| Eye-contact and nod range | `[placeholder]`, no value yet | How far away a signal (`eye_contact`, `nod`, and the rest of D1's list) can be seen. Within the seeing range by definition; nothing read gives a distance for eye contact. |
-| Change thresholds of D5 ("noticeably") | 0.2 m sideways, 0.2 m/s, 5° `[placeholder]` | What counts as the other having changed speed or direction noticeably, which can prompt an agent again. Round values. A source on the smallest change in another walker's speed or heading that people react to would replace them. |
+| Hearing range (`hearing_range_m`) | 7 m `[placeholder]` | How far speech carries, from any direction, centre to centre; walls do not stop it. It should depend on RF-5's `surroundings` factor (a quiet corridor against a busy station). A round value set by issue #73, shorter than the seeing range; a source on speech audibility against background noise would replace it. |
+| Distance band of an unseen speaker (`heard_close_m`) | 3 m `[placeholder]` | A speaker the agent cannot see is "close by" within this and "further away" beyond it (issue #73). A round value; nothing was read on how well people judge the distance of a voice. |
+| Eye-contact and nod range (`eye_contact_range_m`) | 4 m `[placeholder]` | How close two people must be for `eye_contact` or a `nod` to be seen (issue #73). The other signals of D1 (`wave_on`, `hold_up_hand`, `point`, `other`) are seen anywhere in view. Within the seeing range by definition; nothing read gives a distance for eye contact. |
+| Change thresholds of D5 ("noticeably") (`change_thresholds`: `sideways_m`, `speed_mps`, `turn_deg`) | 0.2 m sideways, 0.2 m/s, 5° `[placeholder]` | What counts as the other having changed speed or direction noticeably since the agent last looked, which can prompt an agent again. Each fires at its value and not below it. Round values. A source on the smallest change in another walker's speed or heading that people react to would replace them. |
 | Largest turn in a reply (`turn.degrees`) | 0° to 90° `[placeholder]` | Issue #57 (RF-2): the reply parser refuses a turn beyond it (`negsim/resolution/reply.py`, `MAX_TURN_DEGREES`), and the step format tells the agent the range. 90° is walking straight sideways, the most a heading offset can mean; nothing read says how far people turn to pass. A source on avoidance heading changes would replace it. |
 
 ### 8.3 Design values
@@ -210,7 +215,12 @@ Tagged `[design]`: choices about cost and prompting, not claims about people.
 | Gap between two prompts of one agent | at least 1 s | `resolution.md`, D5: keeps an agent from being asked again for every small change. |
 | Decision points per agent per encounter | at most 3 (1 in the independent condition) | D3 and D5: a cost limit. |
 | Cap on people prompted in one encounter | only if needed | D11 and D12: a cost limit for scenes with more than two people (rounds 4 and 6), not a human number; the report says how often it is reached. |
-| What "you would meet Person 1 in about t s" means | the time of closest approach at the current velocities, `-(r·v)/(v·v)` | Issue #57 (RF-2), `negsim/resolution/adapter.py`: defined even when the two would pass each other without touching, unlike a time to collision; stated only for a person in view who is getting closer. |
+| What "you would meet Person 1 in about t s" means | the time of closest approach at the current velocities, `-(r·v)/(v·v)` | Issue #57 (RF-2), `negsim/resolution/adapter.py`: defined even when the two would pass each other without touching, unlike a time to collision; stated only for a person in view who is getting closer. From the running simulation (issue #73), only for the encounter partner, and only when that closest approach is nearer than the encounter's safety distance: the two radii and the scenario's `single_file.safety_margin`, as the conflict zone counts it. |
+| Walls block sight (`walls_block_sight`) | on | Issue #73: someone behind a wall is not seen, with the same segment-through-rectangle test as the world's (`architecture.md`, DD8). A switch, because a scene may have walls low enough to see over. |
+| Where a person faces | their direction of travel; when standing still or walking backwards, the direction their path takes where they are | Issue #73 (`negsim/resolution/perceive.py`). The simulator turns a disc to face its velocity, which for someone backing out of a passage is the wrong way; a person waiting to go on is taken to face the way they are going. The view cone is centred on it. |
+| What "moved over to your left" means | how far the other is off the straight line they were walking on when the agent last looked, along the agent's left and right now | Issue #73. Someone crossing at a steady angle has not "moved over"; someone who steps aside has. |
+| Where a voice came from | ahead within 45° of where the listener faces, behind within 45° of the opposite way, otherwise to the left or right | Issue #73: four quarters, a rough direction as the issue asks. As it was when the words were said. |
+| Who `max_people` keeps | the nearest, and always the encounter partner | Issue #73: off by default. When set, the view records how many it left out (`labels["people_left_out"]`), so a report can count how often the cap is reached. |
 
 **Not read:** the published PNAS version of Moussaïd et al. 2011 (its PMC full text is not
 available for download, and Europe PMC's PDF route refused the request, 403); the full texts of
