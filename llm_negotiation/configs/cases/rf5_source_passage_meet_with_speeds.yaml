@@ -1,0 +1,35 @@
+# Issue #60 (RF-5): the baseline runs that the passage cases with room for a wider body are taken
+# from, between a person who backs up slowly and one who does not. As
+# si32_source_passage_meet_with_speeds.yaml (issue #32), with each person 0.1 m less far into the
+# passage, so that the two start 0.3 m apart (body to body) instead of 0.1 m: room for a person
+# pulling a large suitcase, 0.2 m wider ([placeholder]), outside the near-miss distance
+# (rf5_source_passage_meet_middle.yaml says why; WORK_LOG-60.md). No model is called.
+#
+#   python run_experiment.py configs/cases/rf5_source_passage_meet_with_speeds.yaml
+#
+# The layouts, as issue #32's, 0.1 m less far in each: the scenario's unequal distances,
+# [1.9, 1.3] instead of [2.0, 1.4], and equal ones, [1.6, 1.6]; each at rest and walking. With
+# [1.9, 1.3] the distance-optimal and the time-optimal choice of who backs out still differ
+# (docs/derivations.md, section 18, with c = 0.6 m): by distance back out agent 1, 3.8 m of extra
+# walking against 5.0 m; by time back out agent 0, 2.5 / 0.92 = 2.7 s against 1.9 / 0.43 = 4.4 s.
+schema_version: 1
+layer: avoidance
+experiment_name: rf5_source_passage_meet_with_speeds
+description: Conflict-case source. Two people of different backing speeds meeting inside a single-file passage, 0.3 m apart, at rest and walking; primary baseline, plain ORCA.
+scenario: configs/scenarios/passage_meet_with_speeds_v1.yaml
+baseline: orca_perturbed_v1
+
+design:
+  seed: 60200
+  seeding: paired
+  repeats: 2
+  factors:
+    travelled:
+      - name: asymmetric_30cm
+        scenario_overrides: {geometry: {travelled: [1.9, 1.3]}}
+      - name: symmetric_30cm
+        scenario_overrides: {geometry: {travelled: [1.6, 1.6]}}
+    start:
+      - name: rest
+      - name: walking
+        scenario_overrides: {geometry: {start_speed: preferred}}

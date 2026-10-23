@@ -534,8 +534,10 @@ def session_bodies(factors: SessionFactors, values: FactorValues, session: Sessi
 
 def check_bodies(config: ResolutionConfig, sessions: Sequence[Session], cases: Mapping[str, Mapping[str, Any]]) -> None:
     """Refuse a design whose wider bodies (``load``, issue #60) do not fit a case's run: two people
-    who would overlap at the start, or a path too narrow for the body. Checked once per case and
-    set of loaded people, before anything runs."""
+    who would overlap at the start, a path too narrow for the body, or a loaded body that starts
+    closer to someone than the scenario's near-miss distance (the session would begin as a near
+    miss, and in the passage cases of issue #32 rounding alone decides whether such a start
+    "overlaps"). Checked once per case and set of loaded people, before anything runs."""
     values, checked = None, set()
     for session in sessions:
         loaded = tuple(sorted(agent for agent, levels in session.factor_levels.items() if levels.get("load") == "large_suitcase"))
@@ -546,7 +548,17 @@ def check_bodies(config: ResolutionConfig, sessions: Sequence[Session], cases: M
         run_plan = source_plan(cases[session.case_id])
         bodies = session_bodies(session_factors(config, session), values, session, run_plan)
         try:
-            build_crowd_scenario(with_bodies(run_plan, bodies).scenario_config)
+            spec = build_crowd_scenario(with_bodies(run_plan, bodies).scenario_config)
+            near = spec.thresholds.near_miss_distance
+            for agent in loaded:
+                me = spec.agents[agent]
+                for other in spec.agents:
+                    gap = math.dist(me.start.xy, other.start.xy) - me.radius - other.radius
+                    if other.agent_id != agent and gap < near:
+                        raise ConfigError(
+                            f"agents {agent} and {other.agent_id} would start {gap:.3f} m apart, closer than the near-miss "
+                            f"distance, {near} m"
+                        )
         except ConfigError as exc:
             raise ConfigError(
                 f"case {session.case_id}: a person pulling a large suitcase is {values.load_width_added_m} m wider "
