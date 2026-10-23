@@ -204,7 +204,9 @@ sentence in `CLAUDE.md`, with the date filled in:
 > Ethics sign-off for the fictional-group factor (issue #32): approved by the supervisor on YYYY-MM-DD
 
 Only the user may add it, once the supervisor has approved; nothing in this issue does. A mock
-run (no model, no spend) needs no sign-off, so that the pipeline can be rehearsed.
+run (no model, no spend) needs no sign-off, so that the pipeline can be rehearsed. Since issue
+#61 the check lives in `negsim/ethics.py`, shared with perceived attractiveness, which has a
+sentence of its own (`pairwise-factors.md`, section 6); one sign-off never stands for the other.
 
 ## 7. What fictional groups cannot show, and what is out of scope
 

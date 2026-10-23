@@ -26,6 +26,8 @@ def render(record: Mapping[str, Any]) -> str:
         + ("; in the exact-repeat set" if session.get("exact_repeat_set") else ""),
         f"- Design cell: {json.dumps(session['cell'], sort_keys=True)}",
         f"- People: " + "; ".join(f"agent {agent}: {json.dumps(person, sort_keys=True)}" for agent, person in session["personas"].items()),
+        # Issue #61: how each sees the other (a row is who is looking); only a session that has it.
+        *([f"- Pairwise: {json.dumps(session['pairwise'])}"] if session.get("pairwise") else []),
         f"- Model: {record['llm']['model']} (temperature {record['llm']['temperature']}, reply cap {record['llm']['max_tokens']} tokens)",
         f"- Outcome: **{record['outcome']}**" + (f" ({record['error']})" if record.get("error") else ""),
         "",

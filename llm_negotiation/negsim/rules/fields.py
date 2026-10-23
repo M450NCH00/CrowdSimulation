@@ -33,7 +33,9 @@ rule can read only the fields of its own ``schema_version``, so a version 1 or 2
 exactly what it always could. Version 3 adds the passage fields, the first field that is true
 or false (``in_segment``) among them. And a person's group (``ethnic_group``, issue #32) is
 **protected**: an agent may see it, but a rule that names it, or anything derived from it, is
-refused as ``protected_attribute`` (:func:`protected_reference`), before any other check.
+refused as ``protected_attribute`` (:func:`protected_reference`), before any other check. Since
+issue #61 so is **perceived attractiveness**, how one person sees another: an agent may be told
+its own view of someone, but until the supervisor decides, no rule may read it.
 """
 
 from __future__ import annotations
@@ -209,40 +211,67 @@ def fields_of(schema_version: int) -> tuple[dict[str, FieldSpec], dict[str, Fiel
     )
 
 
-# --- protected attributes (issue #32) ------------------------------------------------------------
+# --- protected attributes (issue #32; issue #61) ------------------------------------------------
 
-#: Attributes no rule may read, each with the reason. An agent may see them.
+#: Perceived attractiveness (issue #61, RF-6): how attractive one person finds another. It belongs
+#: to a pair, not to a person, so it is not in the persona table. An agent may be told its own view
+#: of someone, but until the supervisor decides (``CLAUDE.md``, "Pending sign-offs") no rule may
+#: read it. It stays in the outcome rows, for the factor analysis (RF-8) and the mapping.
+PERCEIVED_ATTRACTIVENESS = "perceived_attractiveness"
+#: What no rule may read, each with the reason. An agent may see them, or be told its own view.
 PROTECTED: dict[str, str] = {
-    name: (
-        "a person's group is something an agent may see but no rule may read: a rule that conditions on it, "
-        "or on anything derived from it, is refused (docs/rule-format.md, section 14; docs/fictional-groups.md)"
-    )
-    for name in sorted(NOT_RULE_REFERENCEABLE)
+    **{
+        name: (
+            "a person's group is something an agent may see but no rule may read: a rule that conditions on it, "
+            "or on anything derived from it, is refused (docs/rule-format.md, section 14; docs/fictional-groups.md)"
+        )
+        for name in sorted(NOT_RULE_REFERENCEABLE)
+    },
+    PERCEIVED_ATTRACTIVENESS: (
+        "how attractive one person finds another is something an agent may be told of its own view but, until the "
+        "supervisor decides, no rule may read: a rule that conditions on it is refused, and counted (docs/rule-format.md, "
+        "section 14; docs/pairwise-factors.md, section 7)"
+    ),
 }
+#: What a refusal calls each protected attribute.
+PROTECTED_NAMES = {"ethnic_group": "a person's group", PERCEIVED_ATTRACTIVENESS: "perceived attractiveness"}
 #: The word that marks a field as about ethnicity, whatever else its name says: ``ethnic_group``,
 #: ``same_ethnic_group``, ``ethnicity``, ``ethnic_difference``.
 PROTECTED_STEM = "ethnic"
+#: What marks a field as about attractiveness, whatever else its name says (issue #61): anything
+#: containing ``attract`` (``attractive``, ``attractiveness``, ``attraction``), ``beaut``,
+#: ``handsome`` or ``pretty``, or "good looking" however it is joined.
+ATTRACTIVENESS_PATTERN = re.compile(r"attract|beaut|handsome|pretty|good[\s_-]*looking")
 _TOKEN = re.compile(r"[^a-z0-9]+")
 
 
 def protected_reference(text: Any, terms: Iterable[str] = ()) -> Optional[str]:
     """The protected word ``text`` uses, or ``None``.
 
-    ``text`` uses one if it contains :data:`PROTECTED_STEM` anywhere, or if one of its words
-    (split at anything but letters and digits, ignoring case) is the name of a protected
-    attribute, one of the default group labels, or one of ``terms``: the words a session
-    introduced groups with, and its labels (``negsim.rulegen.validate``).
+    ``text`` uses one if it contains :data:`PROTECTED_STEM` or a match of
+    :data:`ATTRACTIVENESS_PATTERN` anywhere, or if one of its words (split at anything but letters
+    and digits, ignoring case) is the name of a protected attribute, one of the default group
+    labels, or one of ``terms``: the words a session introduced groups with, and its labels
+    (``negsim.rulegen.validate``).
     """
     if not isinstance(text, str):
         return None
     lowered = text.lower()
     if PROTECTED_STEM in lowered:
         return PROTECTED_STEM
+    found = ATTRACTIVENESS_PATTERN.search(lowered)
+    if found is not None:
+        return found.group(0)
     words = set(_TOKEN.split(lowered)) - {""}
     for term in (*PROTECTED, *DEFAULT_GROUP_LABELS, *terms):
         if term.lower() in words or term.lower() == lowered:
             return term
     return None
+
+
+def protected_attribute_of(word: str) -> str:
+    """The protected attribute a word that :func:`protected_reference` returned is about."""
+    return PERCEIVED_ATTRACTIVENESS if ATTRACTIVENESS_PATTERN.search(word.lower()) else "ethnic_group"
 
 #: Fields that exist, in the perception record or in an agent's own state, and that a
 #: rule may not read, each with the reason. Refused as ``unobservable_field``.
@@ -290,10 +319,11 @@ def resolve(
     """
     word = protected_reference(reference, terms)
     if word is not None:
+        attribute = protected_attribute_of(word)
         raise RuleError(
             "protected_attribute",
-            f"{where}: '{reference}' refers to a person's group ({word!r}), which no rule may read: "
-            f"{PROTECTED['ethnic_group']}. The attempt is kept, as data.",
+            f"{where}: '{reference}' refers to {PROTECTED_NAMES[attribute]} ({word!r}), which no rule may read: "
+            f"{PROTECTED[attribute]}. The attempt is kept, as data.",
         )
     if not isinstance(reference, str) or "." not in reference:
         raise RuleError("unknown_field", f"{where}: {reference!r} is not a field; write it as <prefix>.<name>")

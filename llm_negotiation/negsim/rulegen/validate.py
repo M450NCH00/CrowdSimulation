@@ -7,6 +7,9 @@ and given exactly one category. Nothing is discarded: a refused rule is data.
                          derived from it, a label, or a word the session introduced the groups
                          with, in its condition or its role assignment. No rule may read a
                          group; a model trying to is a finding, counted on its own and kept.
+                         Since issue #61 the same holds for perceived attractiveness (how one
+                         person sees another), until the supervisor decides: kept and counted,
+                         never written as a rule. It stays in the factor analysis (RF-8).
 ``valid``                It loads, and the session's visibility settings let both agents see
                          everything it reads.
 ``needs_communication``  It reads private or unobservable information: a field the loader
@@ -57,7 +60,7 @@ from typing import Any, Iterator, Mapping, Optional, Sequence
 
 from ..rules.database import RULE_DB_ROOT, RuleSchemas, load_validator
 from ..rules.errors import RuleError
-from ..rules.fields import AGENT_FIELDS, CATEGORY, CONDITION_PREFIXES, PAIR_FIELDS, ROLE_PREFIXES, resolve
+from ..rules.fields import AGENT_FIELDS, CATEGORY, CONDITION_PREFIXES, PAIR_FIELDS, PROTECTED_NAMES, ROLE_PREFIXES, protected_attribute_of, resolve
 from ..rules.model import parse_rule, protected_part
 
 VALID = "valid"
@@ -339,7 +342,7 @@ def validate_proposal(
     protected = protected_part(proposal, terms)
     if protected is not None:
         where, written, word = protected
-        return result(PROTECTED_ATTRIBUTE, "protected_attribute", f"{where}: {written!r} refers to a person's group ({word!r}), which no rule may read")
+        return result(PROTECTED_ATTRIBUTE, "protected_attribute", f"{where}: {written!r} refers to {PROTECTED_NAMES[protected_attribute_of(word)]} ({word!r}), which no rule may read")
     private = _needs_communication(proposal, visibility)
     if private is not None:
         return result(NEEDS_COMMUNICATION, private[0], private[1])

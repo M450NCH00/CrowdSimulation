@@ -163,7 +163,9 @@ date. Items 4, 7 and 8 were decided by the user on 2026-10-22, on their own
 authority, as part of the resolution design (`llm_negotiation/docs/resolution.md`);
 they need no supervisor sign-off. The ethics
 sign-off for the fictional group has an exact form that negsim checks for; see
-`llm_negotiation/docs/fictional-groups.md`, section 6. Numbers in brackets are
+`llm_negotiation/docs/fictional-groups.md`, section 6. So does the one for
+perceived attractiveness (item 2; issue #61); see
+`llm_negotiation/docs/pairwise-factors.md`, section 6. Numbers in brackets are
 the decisions of track issue #55.
 
 1. **PENDING** — Paid runs, and their cap: a total of about USD 1.80, split per

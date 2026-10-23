@@ -40,7 +40,12 @@ the experiment layer `resolution` (`negsim/resolution/protocol.py`, `design.py`,
 `experiment.py`; `docs/encounter-protocol.md`). RF-5 (#60), on the mock: the seven core factors
 and two situational factors with their visibility switches, D2's factor and situational lines,
 D7's designed memory note, and D1's fixed wider body for a person with a load
-(`negsim/resolution/factors.py`; template `resolve_factors_v1`). Nothing else yet. Configs and
+(`negsim/resolution/factors.py`; template `resolve_factors_v1`). RF-6 (#61), on the mock: D2's
+pairwise lines for one observer only, perceived attractiveness (a matrix) and familiarity, their
+switches, design factors and 0/1 outcome columns, an ethics gate for attractiveness, and its
+refusal in rules (`negsim/resolution/pairwise.py`; template `resolve_pairwise_v1`;
+`docs/pairwise-factors.md`); and, by the user's decision of 2026-10-23, the core template
+`resolve_v3`, which prints the factor lines on the short line too (D2, below). Nothing else yet. Configs and
 templates from before this track behave exactly as before.
 
 ## D1. The reply
@@ -109,6 +114,21 @@ unchanged: a person's own lines at the end of ABOUT YOU, a memory note in YOUR N
 situational lines after the scenario's in WHERE YOU ARE (the same for everyone), and an observable
 factor of someone in view under that person, only in full detail (within 5 m) and only when its
 visibility switch is on. A switched-off load still shows as the wider body it is.
+
+**As built (RF-6, #61).** The pairwise lines come from their own frozen template,
+`resolve_pairwise_v1`, and are placed the same way: under a person in view, after the observable
+factor lines, and in **the observer's own view only**. Nobody is told how another sees them, and
+nothing is said of a person who is only heard. With a switch on, both levels have a line ("You do
+not find them especially attractive.").
+
+**Amended by the user, 2026-10-23 (issue #61): factor lines from 10 m.** Under `resolve_v2` a
+person's factor lines (RF-5's observable ones, RF-6's pairwise ones) are printed only in full
+detail, within 5 m. In round 1's head-on case every decision point of the rehearsals was 5.0 to
+9.8 m away, so none ever reached an agent there. `resolve_v3` prints them under the short line
+too, from 5 to 10 m, and is the default core template of a design that varies an RF-5 or RF-6
+factor; a design without them keeps `resolve_v2`. The short line itself is unchanged: age, gender
+and body width stay full-detail lines. Printing the factor lines from 10 m is a choice for the
+prompt, not a measured recognition range (`pairwise-factors.md`, section 1).
 
 The view cone (75°), the seeing range (10 m) and the detail range (5 m) are sourced (D12). The
 hearing range is derived from measured speech and background levels (3.2 m in a public indoor
@@ -394,6 +414,8 @@ From track #55, repeated here because every issue that builds on this file must 
 - No reply format may ask an agent who goes first.
 - No rule may read a person's group. Perceived attractiveness and the fictional group stay off
   by default; no paid run with either switched on until `CLAUDE.md` records the ethics sign-off.
+  *As built:* the fictional group is never on in this layer, and a paid run that varies perceived
+  attractiveness is refused without its sentence (RF-6, `pairwise-factors.md`, section 6).
 - Prompt templates are frozen: a wording change means a new template version, never an edit.
 - Every feature is built and tested on the mock client first; no paid call until `CLAUDE.md`
   records the approval of paid runs and the cap for that round.

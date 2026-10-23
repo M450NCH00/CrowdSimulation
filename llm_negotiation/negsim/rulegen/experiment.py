@@ -34,7 +34,6 @@ import argparse
 import json
 import math
 import platform
-import re
 import sys
 from collections import Counter
 from dataclasses import dataclass, field
@@ -42,8 +41,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Mapping, Optional, Sequence
 
-from .. import __version__
-from ..configutil import PACKAGE_ROOT, REPO_ROOT, ConfigError, as_bool, as_choice, as_number, check_keys, load_yaml, resolve_path
+from .. import __version__, ethics
+from ..configutil import PACKAGE_ROOT, ConfigError, as_bool, as_choice, as_number, check_keys, load_yaml, resolve_path
 from ..llm.base import LLMClient, LLMFatalError
 from ..llm.budget import BudgetedClient, BudgetExceededError, BudgetGuard, SpendLedger, estimate_prompt_tokens
 from ..llm.deepseek import DeepSeekClient
@@ -102,18 +101,16 @@ STATUS_AWAITING = "awaiting_confirmation"  # a paid client, not confirmed: nothi
 
 #: Where the supervisor's approvals are recorded, and the sentence that records the ethics
 #: sign-off for the fictional-group factor (issue #32, Part 1.4; ``docs/fictional-groups.md``,
-#: section 6). Without it, no paid run may switch the factor on.
-SIGN_OFF_FILE = REPO_ROOT / "CLAUDE.md"
-ETHNICITY_SIGN_OFF = re.compile(
-    r"Ethics sign-off for the fictional-group factor \(issue #32\): approved by the supervisor on \d{4}-\d{2}-\d{2}"
-)
+#: section 6). Without it, no paid run may switch the factor on. Both live in ``negsim.ethics``
+#: since issue #61, which gates perceived attractiveness the same way.
+SIGN_OFF_FILE = ethics.SIGN_OFF_FILE
+ETHNICITY_SIGN_OFF = ethics.ETHNICITY_SIGN_OFF
 
 
 def ethnicity_signed_off(path: Optional[Path] = None) -> bool:
     """Whether ``CLAUDE.md`` (or ``path``) records the supervisor's ethics sign-off for the
     fictional-group factor."""
-    path = SIGN_OFF_FILE if path is None else path
-    return path.is_file() and ETHNICITY_SIGN_OFF.search(path.read_text(encoding="utf-8")) is not None
+    return ethics.recorded(ETHNICITY_SIGN_OFF, SIGN_OFF_FILE if path is None else path)
 
 
 def is_rule_generation_config(raw: Any) -> bool:

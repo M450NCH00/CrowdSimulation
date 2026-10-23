@@ -46,7 +46,7 @@ from ..avoidance.directives import (
 from ..configutil import ConfigError
 from .conditions import Condition, parse_condition
 from .errors import RuleError
-from .fields import BOOLEAN, CATEGORY, ROLE_PREFIXES, FieldRef, protected_reference, resolve
+from .fields import BOOLEAN, CATEGORY, PROTECTED_NAMES, ROLE_PREFIXES, FieldRef, protected_attribute_of, protected_reference, resolve
 from .jsonschema_subset import Validator
 from .snapshot import PairSnapshot
 
@@ -212,7 +212,8 @@ def _strings(value: Any, path: str) -> Iterator[tuple[str, str]]:
 
 
 def protected_part(raw: Mapping[str, Any], terms: Iterable[str] = ()) -> Optional[tuple[str, str, str]]:
-    """Where a written rule names a person's group: ``(where, the text, the protected word)``.
+    """Where a written rule names a person's group, or (issue #61) perceived attractiveness:
+    ``(where, the text, the protected word)``.
 
     Every key and string of its condition (``when``) and of its roles (the role assignment:
     its field, its role names and its tie policy) is read, in its written form, before the
@@ -242,8 +243,9 @@ def parse_rule(raw: Any, validator: Validator, where: str = "rule", terms: Itera
         part, text, word = found
         raise RuleError(
             "protected_attribute",
-            f"{where}.{part}: {text!r} refers to a person's group ({word!r}), which no rule may read, in a condition, a "
-            "role assignment or a tie policy (docs/rule-format.md, section 14). The attempt is kept, as data.",
+            f"{where}.{part}: {text!r} refers to {PROTECTED_NAMES[protected_attribute_of(word)]} ({word!r}), which no rule "
+            "may read, in a condition, a role assignment or a tie policy (docs/rule-format.md, section 14). The attempt is "
+            "kept, as data.",
         )
     roles_raw = raw.get("roles")
     if isinstance(roles_raw, Mapping) and isinstance(roles_raw.get("by"), Mapping) and "tie" not in roles_raw["by"]:
