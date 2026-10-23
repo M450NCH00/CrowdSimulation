@@ -659,15 +659,11 @@ def build_outcome(plan: AvoidanceRunPlan, spec: CrowdScenarioSpec, result: Simul
     }
 
 
-def execute_avoidance_run(
-    plan: AvoidanceRunPlan, run_dir: Path | str, git: Optional[Mapping[str, Any]] = None
-) -> dict[str, Any]:
-    """Run one avoidance simulation, write its folder, and return the outcome."""
-    spec = build_crowd_scenario(plan.scenario_config)
-    provider = plan.provider()
-    simulation = AvoidanceSimulation(
-        spec,
-        provider=provider,
+def simulation_for(plan: AvoidanceRunPlan, plans: Optional[Any] = None) -> AvoidanceSimulation:
+    """The simulation of one run, built but not run. ``plans`` is a plan driver (issue #59)."""
+    return AvoidanceSimulation(
+        build_crowd_scenario(plan.scenario_config),
+        provider=plan.provider(),
         attributes=plan.attributes(),
         visibility=plan.visibility,
         arbitration=plan.arbitration,
@@ -675,11 +671,33 @@ def execute_avoidance_run(
         seed=plan.seed,
         trajectory_stride=plan.logging["trajectory_stride"],
         perturbation=plan.perturbation,
+        plans=plans,
     )
+
+
+def execute_avoidance_run(
+    plan: AvoidanceRunPlan,
+    run_dir: Path | str,
+    git: Optional[Mapping[str, Any]] = None,
+    plans: Optional[Any] = None,
+    config_extra: Optional[Mapping[str, Any]] = None,
+    outcome_extra: Optional[Callable[[AvoidanceSimulation, SimulationResult], Mapping[str, Any]]] = None,
+) -> dict[str, Any]:
+    """Run one avoidance simulation, write its folder, and return the outcome.
+
+    For a replay of LLM agents' plans (issue #59): ``plans`` is the plan driver, and
+    ``config_extra`` and ``outcome_extra(simulation, result)`` add keys to ``config.json`` and
+    ``outcome.json``. Without them the run and its folder are exactly as before.
+    """
+    simulation = simulation_for(plan, plans)
+    spec, provider = simulation.spec, simulation.provider
     result = simulation.run()
 
     logger = AvoidanceRunLogger(run_dir)
-    logger.write_config(resolved_config(plan, spec, provider, git or {"commit": None, "dirty": None}))
+    config = resolved_config(plan, spec, provider, git or {"commit": None, "dirty": None})
+    if config_extra:
+        config.update(config_extra)
+    logger.write_config(config)
     logger.write_trajectory(result.trajectory)
     interactions = result.interactions if plan.logging["interactions"] else []
     logger.write_interactions(interaction.as_dict(spec.dt) for interaction in interactions)
@@ -687,6 +705,8 @@ def execute_avoidance_run(
     logger.write_pair_interactions(pair.as_dict(spec.dt) for pair in pairs)
     logger.write_events(build_events(result))
     outcome = build_outcome(plan, spec, result)
+    if outcome_extra is not None:
+        outcome.update(outcome_extra(simulation, result))
     logger.write_outcome(outcome)
 
     problems = validate_run_dir(run_dir)

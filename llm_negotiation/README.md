@@ -73,7 +73,8 @@ From track #55. **Part 1, the pipeline, built once** (all on the mock client, no
    last looked. *Built on the mock* (`negsim/resolution/perceive.py`, section "What an LLM
    agent perceives (issue #73)").
 5. RF-4 (#59): carry out plans in the simulator, in `plan_only` and `plan_orca`, with physical
-   outcomes.
+   outcomes. *Built on the mock* (`negsim/resolution/execute.py`, section "Carrying out plans
+   (issue #59)").
 6. RF-3 (#58): the encounter protocol: trigger, event-driven decision points, the three
    conditions, debrief, storage, one outcome row per session.
 7. RF-5 (#60): the core factors (seven, including a memory note) with visibility switches, and
@@ -947,7 +948,7 @@ read, in `negsim/resolution/`, all on the mock client:
   a signal in a condition that does not allow it is ignored and flagged.
 - `mock.py`: the policies `resolve_paths_v1` (every reply path) and `debrief_paths_v1`.
 
-Nothing runs a session yet: that is RF-3 (#58), after RF-17 (#73) and RF-4 (#59).
+Nothing runs a session yet: that is RF-3 (#58), now that RF-17 (#73) and RF-4 (#59) are built.
 
 ## What an LLM agent perceives (issue #73)
 
@@ -979,7 +980,51 @@ records what was said and signalled and who perceived it, as it was at the time;
 perceiver, exchange)` builds the view of the present step. Views render through `resolve_v2`
 (issue #73: `resolve_v1` word for word, plus the lines for an unseen speaker's direction, a signal
 on a short line and what came of a decision); `resolve_v1` still renders them, as it did. When an
-agent is prompted is RF-3's (#58); carrying out its plan is RF-4's (#59).
+agent is prompted is RF-3's (#58); carrying out its plan is RF-4's (#59, below).
+
+## Carrying out plans (issue #59)
+
+Issue #59 (RF-4) has the simulator carry out an agent's `steps` (`negsim/resolution/execute.py`),
+so that a plan counts as a resolution only if it works physically (`docs/resolution.md`, D6).
+
+- **Steps:**
+  - `speed_mps` sets the preferred speed;
+  - `turn` offsets the direction from the path's by its degrees, to the agent's own left or
+    right;
+  - `back_up_m` backs up along the path at the agent's backing speed;
+  - `start` waits for a distance or a delay;
+  - `until` ends a step after its seconds or at an event. **The scenario plug-in says when an
+    event has happened**: the executor knows none.
+
+  After the last step the agent walks on to its goal. A later decision replaces what is left of
+  the plan.
+- **`plan_only`** (the Step 1 measure): from the first decision, ORCA does not steer the
+  encounter's two apart, and the arbiter does not bound them. Walls and everyone else are as
+  before. **`plan_orca`**: the plan sets the preferred velocity, and everything else is the plain
+  run. Empty plans then reproduce plain ORCA exactly.
+- **For RF-3:** `PlanRun(simulation, mode, scenario, agents)` and
+  `advance(run, plans, until_time_s)`, which runs to the next decision point and returns the
+  world state there, with what came of each decision (`completed`, `ongoing`, `replaced`) for the
+  view's history.
+- **Physical outcomes** (`outcomes.py`), one row per session and mode:
+  - collision, smallest separation, near miss, deadlock;
+  - time to clear, each agent's delay against plain ORCA on the same seed;
+  - who passed first, each agent's passing side in its own frame;
+  - whether each stopped or backed up;
+  - the scenario's own columns, and "resolved" as the scenario defines it.
+- **Replay** (`replay.py`): a session's plans on its case's own run and seed, in both modes, into
+  `runs/<experiment>/replay/<session_id>/<mode>/`. There is also `physical_outcomes.csv`, and a
+  `report.md` with the resolution rate per encounter type and mode beside plain ORCA and the C0
+  runs. `--verify` rebuilds a replay from the session record alone and checks it is byte for byte
+  the same (D13):
+
+```
+python -m negsim.resolution.replay runs/<experiment>/sessions/<id>.json --experiment <experiment> [--verify]
+```
+
+Without a plan driver the simulator runs exactly as before (tested on the shipped scenarios and
+a case's perturbed baseline). Every definition the executor adds is a design value,
+`docs/parameters.md`, section 8.5.
 
 ## Changing things
 
@@ -1004,7 +1049,7 @@ agent is prompted is RF-3's (#58); carrying out its plan is RF-4's (#59).
 | choose what an agent is told about the situation | `negotiation.info_fields` (`all`, `none`, or a list of field names) |
 | choose what an agent can see of the other | `negotiation.visibility` (age, gender, task, backstory, speed, size) |
 | let the agents move while they talk | `negotiation.timing.mode: concurrent` |
-| add a scenario to Step 1 (track #55) | a subclass of `Scenario` in a new module under `negsim/resolution/scenarios/`, a line in that package's `PLUGINS`, and a frozen template `scenario_<name>_v1.yaml` of kind `resolution_scenario` (its place lines, its `until` events, any block of its own). Never an edit of `resolve_v1` or the parser (`docs/resolution.md`, D16) |
+| add a scenario to Step 1 (track #55) | a subclass of `Scenario` in a new module under `negsim/resolution/scenarios/`, a line in that package's `PLUGINS`, and a frozen template `scenario_<name>_v1.yaml` of kind `resolution_scenario` (its place lines, its `until` events, any block of its own). On the subclass: `happened` (what each event means), `zone_exits` (its conflict zone), `outcome_columns` and `resolved` (issue #59). Never an edit of `resolve_v1`, the parser or the executor (`docs/resolution.md`, D16) |
 | change what an LLM agent can see or hear (cone, ranges, hearing, change thresholds) | a new `configs/resolution/llm_view_v2.yaml`, never an edit of `llm_view_v1.yaml`; tag every value, give its source in `docs/parameters.md`, section 8.4, and list any placeholder in section 8.2 (`tests/test_perceive.py` checks) |
 | change any wording an agent sees | **a new template version.** Copy `negsim/negotiation/templates/<name>_v1.yaml` to `_v2`, edit it, run `python -m negsim.negotiation.freeze <name>_v2 "<why>"`, and record the reason in the work log. A frozen template that has been edited will not load. |
 | add a persona attribute | one entry in `negsim/personas/schema.py`, one line in a new template version |
@@ -1019,8 +1064,9 @@ agent is prompted is RF-3's (#58); carrying out its plan is RF-4's (#59).
   agents, the debrief, storage, variation, rounds, the scenario interface and the scenario
   order. RF-2 (#57) built the reply parser, the description templates, the conditions, the
   debrief and the scenario interface's description side (`negsim/resolution/`); RF-17 (#73)
-  built what an agent perceives in the running simulation (`perceive.py`); RF-4 onward build
-  the rest.
+  built what an agent perceives in the running simulation (`perceive.py`); RF-4 (#59) carries
+  plans out in the simulator (`execute.py`, `outcomes.py`, `replay.py`); RF-3 onward build the
+  rest.
 - `docs/gamechat-notes.md`: what the paper and its repository say, where they disagree,
   and where this platform departs from both.
 - `docs/derivations.md`: the follower's speed bound and the conflict zone; and, for the
