@@ -104,6 +104,17 @@ balanced subset) are in their own module, so the rulegen layer could use them la
 - Found: the rehearsal's **worst-case preview is USD 17.36** for 252 sessions (round 1's shape).
   See open questions.
 
+### 2026-10-23 — verified end to end on the mock
+- The rehearsal (`resolve_screening_mock_rehearsal.yaml`) ran all 252 sessions on the mock in
+  9 min 43 s, into the scratchpad (not committed): 252 completed. 126 sessions per geometry,
+  72 in the exact-repeat set (8 cells x 3 runs x 3 conditions), 12 in the pair (6 base, 6
+  flipped). Each of the 24 exact-repeat groups recorded identical prompts and identical outcomes.
+  The mock used at most 7.7% of a session's preview (its tokens are its own count, not
+  DeepSeek's). Its "resolutions" are scripted and mean nothing about a model.
+- Full suite: 1764 passed (1725 before + 39 new) in 9 min 43 s. It started before the docs
+  commit, so every test file that reads a document or README was run again afterwards: 1106
+  passed.
+
 ## Open questions / risks
 - **Round 1 cannot run under a cap near USD 0.50 as the runner stands.** The preview is a strict
   bound (peak prices, 6 sends per call, the longest description), about USD 0.03 to 0.10 per
@@ -125,3 +136,34 @@ balanced subset) are in their own module, so the rulegen layer could use them la
   (8 of 32 cells, 12 factors: every factor 4 and 4) but not proven optimal for every design.
 
 ## Summary (fill in at the end)
+**What changed.** The resolution layer can now screen many factors cheaply:
+- `design.kind` is `full` (unchanged default), `fractional` (a regular 2^(k-p) fraction of 16
+  or 32 cells at resolution IV or higher, checked on its cells; up to 16 two-level factors in
+  32, `mapping` one of them) or `sample` (a seeded, balanced random sample).
+- `design.geometries` (D14): cases of one encounter type, every cell once on each, the
+  geometry recorded on every session and outcome row.
+- `design.exact_repeats` (D14): a balanced, seeded handful of cells run several times on one
+  geometry with byte-identical prompts.
+- `design.counterfactual_pairs`: two sessions identical but for one factor, linked by
+  `pair_id`.
+- `--plan` reports all of it. A round-1-shaped mock rehearsal config is added.
+
+The generators are NIST's (Table 3.17) and, for 12 to 16 factors in 32 runs, Chen & Cheng
+2006's projections of the saturated 2^(16-11) design. All sources are cached in `refs/`. New
+doc: `llm_negotiation/docs/screening-designs.md`.
+
+**Why.** A full factorial of 12 to 16 factors is 4,096 to 65,536 cells per case and condition.
+Round 1 (D15) needs 32 cells x 2 geometries + the exact-repeat set = 240 sessions.
+
+**How it was verified.**
+- 39 new tests, covering every item of the issue's test list.
+- The generators match the cached NIST files, and the 12–16 factor designs pass an exhaustive
+  minimum-aberration search.
+- Old configs give identical sessions, ids, configs and previews: checked against the previous
+  commit in a worktree, and in tests against RF-3's algorithm.
+- The full suite passes (1764).
+- A 252-session mock run completed end to end.
+
+**Not done / for the user.** No paid call. The rulegen layer is unchanged (an assumption). The
+worst-case preview of round 1's shape (USD 17.36) is far above #55's estimate. See open
+questions.
