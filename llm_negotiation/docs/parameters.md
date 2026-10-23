@@ -253,3 +253,26 @@ three decision points (D5) limit how often an agent is prompted again.
 available for download, and Europe PMC's PDF route refused the request, 403); the full texts of
 Rio et al. 2018 and Wirth et al. 2023. The values above were checked in the accepted
 manuscript and in the two abstracts.
+
+### 8.5 Carrying out a plan (issue #59)
+
+Tagged `[design]`: definitions of what a step in a reply means physically, and of the outcome
+columns. None is a claim about people, and none has a source. `negsim/resolution/execute.py`,
+`scenarios/passing.py` and `outcomes.py` hold them.
+
+| Parameter | Value | Why |
+|---|---|---|
+| A step's speed when it gives none | the agent's own speed (its preferred speed, under the run's directives) | D1 makes `speed_mps` optional. A step that only turns is read as "turn, and keep walking". |
+| Which way a turn is measured from | the desired path direction: toward the point `lookahead` metres further along the path, as plain ORCA aims | The issue: "offsets the preferred direction from the desired path direction". Held for the step, so an agent that has moved off its path still turns from the way back to it. |
+| Which way a back-up step backs | against the path's direction where the agent is, at its `backing_speed`, its distance measured along that direction from where the step began | The simulator's own back-up manoeuvre (issue #32) backs along a passage's axis. A plan's back-up can happen anywhere, so the path is the only axis there is. A back-up step that also has an `until` ends at whichever comes first. |
+| When a back-up step has backed far enough | within 1 mm (`BACKED_UP_EPS_M`) | The same tolerance as the simulator's back-up manoeuvre (`BACK_UP_REACHED_M`). |
+| When the plan is in force | from its decision, including any delay before its first step | In `plan_only`, ORCA leaves the two to their plans from the decision on. Otherwise ORCA would steer them during a delayed start and get the credit. |
+| The arbiter in each mode | lifted in `plan_only`, kept in `plan_orca` | The arbiter's speed bound also keeps the two apart, so `plan_only` lifts it as well as ORCA's avoidance. `plan_orca` runs everything of the plain run on top of the plan. |
+| When the encounter is handed back to ORCA (`plan_only`) | when the protocol releases it, one of the two arrives, or the two have passed each other (separating, and further apart than the two radii and the safety margin) with no plan of theirs left to run | D6: "ORCA then takes over" once the encounter is not resolved by the LLM. After the pass, ORCA has nothing to do between the two. |
+| `other_stops` | the partner's speed is below 0.01 m/s | The issue's number: the deadlock monitor's `speed_eps`. |
+| `other_passes` | the partner is behind the agent (behind its path direction) and the distance is growing; or the partner has arrived; or, for the one overtaken, the partner was behind when the step began and is now ahead, with the distance growing | The issue's definition, plus the last case: without it, the person being overtaken would never see the other pass. **Known limit:** for the person ahead, an overtaker who gives up and drops back is "behind and getting further", so the event fires. |
+| `i_am_out_of_the_stretch` | the agent has been inside a single-file segment since the step began, and now is not, by either end | "From the passage fields": inside means the centre is in the segment's free space, as the perception record's `in_segment` counts it. Backing out and walking through both count. An agent that is never inside one never gets out of one. |
+| The conflict zone of a passing encounter | the shared single-file segment, left at the far end by the two radii and the safety margin (as the arbiter's `first_out`); in a corridor wide enough to pass, a disc of radius the two radii plus the safety margin round the midpoint of the two at their closest approach | Gives "who passed first" and "time to clear". In a wide corridor two people who pass side by side leave the disc on the same step: `together`. |
+| `passing_side` | the side the agent went by on, in its own frame, at the closest approach, if the two were abreast then (along-path offset within the two radii) | Empty when they were not side by side, as in a passage they go through one at a time. |
+| `stopped`, `backed_up` | speed below the deadlock monitor's `speed_eps`; moving against its path faster than the backward-walking threshold, 0.1 m/s (`metrics.md`, section 10) | Thresholds already in the run, reused so that no new number is added. In the passage cases that start at rest, both agents count as stopped from the start. |
+| "Resolved" (passing scenarios) | both left the conflict zone, with no collision, no near miss (`near_miss_distance`) and no deadlock, before the run's time limit | The issue's definition. A plain ORCA pass within 0.1 m is a near miss, so it is not resolved. |

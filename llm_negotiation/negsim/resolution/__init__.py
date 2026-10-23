@@ -9,5 +9,10 @@
 - :mod:`.perceive`: views built from the running simulation, with the view cone, occlusion,
   hearing, signals and changes since the agent last looked (RF-17, #73);
 - :mod:`.reply`: reading a reply (D1) and a debrief (D8);
+- :mod:`.execute`: carrying the plans out in the simulator, in ``plan_only`` and ``plan_orca``
+  (RF-4, #59), and ``advance`` for the protocol;
+- :mod:`.outcomes`: the physical outcome columns and the report (RF-4);
+- :mod:`.replay`: a session's plans replayed on its case's own run, rebuildable from the
+  session record (RF-4, D13);
 - :mod:`.mock`: mock-client policies for every path.
 """

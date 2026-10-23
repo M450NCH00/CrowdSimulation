@@ -50,6 +50,10 @@ it keeps out of the other's way (1 and 0, as a follower of the arbiter does). Th
 not hold the pair meanwhile. The backing is *intentional*, logged as such, and is never
 counted as issue #26's walking-backwards artefact; anything ORCA does to the waiting agent is
 ORCA's, and is. One manoeuvre per agent at a time, and one per pair interaction.
+
+**Plans** (issue #59). An optional plan driver (``negsim.resolution.execute.PlanDriver``) may set
+the preferred velocity of an encounter's agents in step 4, and in ``plan_only`` leave out the
+half-plane between the two. Without one, every step runs exactly as before.
 """
 
 from __future__ import annotations

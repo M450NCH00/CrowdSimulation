@@ -29,8 +29,11 @@ templates `resolve_v1`, `resolve_debrief_v1`, `scenario_passing_v1`). RF-17 (#73
 D2's description built from the running simulation with D10's perception for the LLM only and
 D12's values (`negsim/resolution/perceive.py`, `configs/resolution/llm_view_v1.yaml`; template
 `resolve_v2`, which words an unseen speaker as "someone" with a rough direction and a distance
-band, where `resolve_v1` says "someone behind you"). Nothing else yet. Configs and templates from before this track behave exactly as
-before.
+band, where `resolve_v1` says "someone behind you"). RF-4 (#59), on the mock: D6's two modes,
+carrying out the steps of D1 in the simulator, D16's execution side (events, conflict zone,
+outcome columns, "resolved"), the physical outcomes, and replays rebuildable from the session
+record (D13) (`negsim/resolution/execute.py`, `outcomes.py`, `replay.py`). Nothing else yet.
+Configs and templates from before this track behave exactly as before.
 
 ## D1. The reply
 
@@ -161,7 +164,23 @@ direction (`parameters.md`, section 8.4).
   resolved by the LLM**. ORCA then takes over, and what ORCA does after that is recorded
   separately.
 
-(Carrying out plans: RF-4, #59.)
+**As built (RF-4, #59).** In `plan_only`, from the encounter's first decision, the simulator
+leaves out the ORCA half-plane between the encounter's two agents, and the arbiter's speed bound
+does not apply to them. Everyone else, and the walls, are as before. The encounter goes back to
+ORCA when the protocol releases it (RF-3), when one of the two arrives, or when they have passed
+each other with no plan left to run. In `plan_orca` the plan replaces only the preferred
+velocity. An empty plan there changes nothing, so empty plans reproduce the plain run exactly
+(tested). A step carries out D1 as follows:
+- `speed_mps` is the preferred speed; with none, the agent's own speed.
+- `turn` is an offset from the desired path direction.
+- `back_up_m` backs against the path at the agent's `backing_speed`.
+- `start` holds the first step back.
+- `until` is asked of the scenario.
+
+After the last step the agent walks on to its goal. `parameters.md`, section 8.5, gives each
+definition. A replay runs a session's plans on its case's own run and seed, in either mode,
+under `runs/<experiment>/replay/<session_id>/<mode>/`. It is rebuilt byte for byte from the
+session record alone (`python -m negsim.resolution.replay ... --verify`; `log-schema.md`).
 
 ## D7. Memory
 
@@ -303,6 +322,19 @@ A scenario is a plug-in. The pipeline itself never names one. Each scenario supp
 
 Adding a scenario adds files. It never edits the core templates or the code of another
 scenario.
+
+**The execution side, as built (RF-4, #59).** A plug-in (`negsim/resolution/scenario.py`)
+answers four questions:
+- `happened(event, context)`: whether one of its events has happened. The executor asks; it
+  knows no event itself.
+- `zone_exits(...)`: when each agent left the conflict zone. This gives "who passed first" and
+  "time to clear".
+- `outcome_columns(...)`: its own columns.
+- `resolved(columns)`: what resolved means for it.
+
+For the passing scenarios, resolved means both left the zone, with no collision, no near miss
+and no deadlock, within the time limit. A test scenario with an event and a column of its own
+runs through the unchanged executor.
 
 ## D17. The scenarios, in order
 

@@ -268,7 +268,7 @@ always are.
 | `path_s_m` | Progress along the desired path |
 | `vx_mps`, `vy_mps`, `speed_mps` | The velocity the agent moved at during the step |
 | `pref_vx_mps`, `pref_vy_mps` | The velocity it wanted: along its path at its preferred speed, scaled by its directives and capped by the arbiter |
-| `control_mode` | `orca`; `arbiter` if the agent was in a pair the arbiter held on this step (`architecture.md`, section 6.4); `back_up` (version 5) if it was in a back-up manoeuvre, as the one backing out or as the other (`derivations.md`, section 17) |
+| `control_mode` | `orca`; `arbiter` if the agent was in a pair the arbiter held on this step (`architecture.md`, section 6.4); `back_up` (version 5) if it was in a back-up manoeuvre, as the one backing out or as the other (`derivations.md`, section 17); `plan` (issue #59) if an LLM agent's plan set its preferred velocity on this step, which happens only in a replay of plans (below) |
 | `speed_bound_mps` | The bound the arbiter put on the speed the agent wants; empty unless `control_mode` is `arbiter` |
 | `role`, `role_source` | `leader` or `follower`, and where the order came from: `negotiated` (here: the `passage_order` of the directives), `strategy1` (the rule of the arbiter itself) or `physical_precedence`. Empty unless the arbiter held the agent and the conflict was live |
 | `in_conflict` | Whether the arbiter found a live single-file conflict for the agent on this step |
@@ -404,6 +404,32 @@ version 4, pair exposure and the tiers (`pair_exposure_time_s`, `pairs_t0`, `pai
 `backing_distance_m`: the intentional backing; `backward_distance_m`: the walking-backwards
 artefact's distance) and `first_out` (of the first single-file segment), empty for a run
 written before; and `git_commit`.
+
+### Replays of LLM agents' plans (issue #59)
+
+A replay (`negsim/resolution/replay.py`; `resolution.md`, D6) runs a session's plans on its
+case's own run, on the same seed, in `plan_only` or `plan_orca`. Each is an ordinary avoidance
+run folder, of the current version, with one key more in two files and nothing else changed:
+
+```
+runs/<experiment>/replay/
+    <session_id>/plan_only/      config.json  trajectory.csv  interactions.jsonl  pair_interactions.jsonl  events.jsonl  outcome.json
+    <session_id>/plan_orca/      the same
+    physical_outcomes.csv        one row per session and mode, and one for plain ORCA on the same seed
+    report.md                    the physical resolution rate per encounter type and mode
+```
+
+| Where | Key | Contents |
+| --- | --- | --- |
+| `config.json` | `plans` | `session_id`, `case` (`case_id`, `version`), `mode`, `seed`, `scenario_sha256` (the case's resolved scenario hash), `plans_sha256` (SHA-256 of the session's `decisions` and `release` as canonical JSON) |
+| `outcome.json` | `plans` | The same, and `scenario_plugin` (the scenario template's key and SHA-256), `encounter` (`agents`, `type`), `driver` (the mode; when the encounter began and when, and why, ORCA took it back: `passed`, `arrived`, `run_ended` or a reason given by the protocol; and every decision with its steps, `state`, `outcome`, and per step `start_step`, `end_step` and `ended_by`: `seconds`, `backed_up`, an event's name, `replaced`, `arrived` or `run_ended`), `physical_outcome` (the row of `physical_outcomes.csv`), and `plain_orca` (plain ORCA's goal times and row) |
+
+The columns of `physical_outcomes.csv` are listed in `negsim/resolution/outcomes.py`. The
+scenario adds its own (the passing scenarios: `conflict_zone`). The log schema version is
+unchanged: an older run never has a `plans` key and never has `control_mode` `plan`.
+`python -m negsim.resolution.replay <session.json> --experiment <name> --verify` rebuilds a
+replay from the session record alone and checks every file is byte for byte the same. The one
+exception is `config.json`'s `created_utc`.
 
 ## Rule-generation experiments (issue #30)
 
@@ -595,3 +621,5 @@ lines whose `experiment` is that experiment's name.
   rule-generation log: `outcomes.jsonl`; the fictional group in `design.jsonl` and the session
   records (`cell`, `personas`, `visibility`, `framing`); `refused_no_sign_off` in
   `invocations.jsonl`; `design` and `groups` in `summary.json`.
+- (2026-10-23, issue #59; no version change.) A replay of LLM agents' plans adds a `plans` key
+  to `config.json` and `outcome.json`, and the `control_mode` `plan`. No other run changes.
