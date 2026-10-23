@@ -212,7 +212,10 @@ class EncounterSession:
     ``age``, ``gender`` and ``errand`` (the design's two people; anyone else has none), and
     ``show_age``/``show_gender`` are the visibility switches. ``factors`` are the session's core
     and situational factors (RF-5, :class:`~negsim.resolution.factors.SessionFactors`): their lines
-    go into every view. ``labels`` go with every request, as its metadata (never sent to a provider).
+    go into every view. ``pairwise`` are its pairwise perception factors (RF-6,
+    :class:`~negsim.resolution.pairwise.PairwiseFactors`): each agent's view gets only its own
+    lines, under the people it sees. ``labels`` go with every request, as its metadata (never sent
+    to a provider).
     """
 
     def __init__(
@@ -232,6 +235,7 @@ class EncounterSession:
         show_gender: bool = True,
         labels: Optional[Mapping[str, Any]] = None,
         factors: Optional[Any] = None,
+        pairwise: Optional[Any] = None,
     ):
         if condition not in CONDITIONS:
             raise ConfigError(f"condition: one of {CONDITIONS}, got {condition!r}")
@@ -246,7 +250,7 @@ class EncounterSession:
         self.core = core or CoreTemplate.load(SIMULATION_CORE_TEMPLATE)
         self.debrief_template = debrief or DebriefTemplate.load()
         self.people, self.show_age, self.show_gender = people, show_age, show_gender
-        self.factors = factors
+        self.factors, self.pairwise = factors, pairwise
         self.labels = dict(labels or {})
         self.max_dp = self.settings.decision_points_for(condition)
 
@@ -536,13 +540,17 @@ class EncounterSession:
 
     def _factor_lines(self, agent: int) -> dict[str, Any]:
         """The lines of the session's factors in ``agent``'s view (RF-5): its own, its notes, what
-        it is told of everyone it sees, and the setting. None without factors."""
-        if self.factors is None:
-            return {}
-        return {
-            "own_lines": self.factors.own(agent), "notes": self.factors.notes(agent),
-            "factor_lines": self.factors.seen_lines(), "situation_lines": self.factors.place(),
-        }
+        it is told of everyone it sees, and the setting; and how it sees each of them (RF-6), which
+        is in its view only. Nothing without factors."""
+        lines: dict[str, Any] = {}
+        if self.factors is not None:
+            lines.update({
+                "own_lines": self.factors.own(agent), "notes": self.factors.notes(agent),
+                "factor_lines": self.factors.seen_lines(), "situation_lines": self.factors.place(),
+            })
+        if self.pairwise is not None:
+            lines["pairwise_lines"] = self.pairwise.lines_for(agent)
+        return lines
 
     def _next_decision_index(self, agent: int) -> int:
         """The index, among ``agent``'s driver decisions, of the plan just given (taken up next step)."""

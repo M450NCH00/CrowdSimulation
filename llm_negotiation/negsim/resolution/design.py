@@ -32,6 +32,21 @@ agents is person 1.
 ``surroundings``          ``quiet`` or ``busy``: the setting, the same for both
 ``time_of_day``           ``daytime`` or ``late_night``: the same
 
+**The pairwise perception factors** (issue #61, RF-6; ``negsim.resolution.pairwise``) are optional
+too: a config that names none of them has the same cells, ids and records as before. Each is a
+level of how one person sees the other; 0 is person 1 and 1 is person 2.
+
+``attractiveness_0_sees_1``  ``unremarkable`` or ``attractive``: how person 1 sees person 2
+``attractiveness_1_sees_0``  the same, person 2 looking at person 1
+``familiarity``              ``strangers`` or ``acquaintances``: the same for both
+``attractiveness_visible``, ``familiarity_visible``
+                             ``true`` or ``false``: whether the observer is told it at all (a
+                             switch of a factor the design varies; ``true`` when left out)
+
+A session's ``pairwise`` block holds them in issue #61's format. Perceived attractiveness is off
+unless a design names it, and a paid run with it waits for the ethics sign-off
+(``negsim.ethics``; ``experiment.py``).
+
 The fictional group (issue #32) is not a factor of this layer: it stays off (track #55).
 """
 
@@ -49,6 +64,7 @@ from ..configutil import ConfigError, as_number, check_keys
 from ..personas.schema import ATTRIBUTES, FACTOR_ATTRIBUTES
 from ..rulegen.design import DEFAULT_TASKS, FACTOR_LEVELS as RULEGEN_LEVELS, personas_of, visibility_of
 from .factors import SITUATIONS, SWITCHES
+from .pairwise import ATTRACTIVENESS_FACTORS, DESIGN_FACTORS as PAIRWISE_DESIGN, LEVELS as PAIRWISE_LEVELS, SWITCHES as PAIRWISE_SWITCHES, block_for
 from .view import CONDITIONS
 
 #: The factors of issue #58: a design names all of them, but ``task`` may give way to ``urgency``.
@@ -58,16 +74,24 @@ NEITHER, P1 = "neither", "p1"
 PERSON_FACTORS = FACTOR_ATTRIBUTES
 SWITCH_FACTORS = tuple(SWITCHES.values())
 SITUATION_FACTORS = tuple(SITUATIONS)
+#: The factors of issue #60 (RF-5).
+RF5_FACTORS = (*PERSON_FACTORS, *SWITCH_FACTORS, *SITUATION_FACTORS)
+#: The pairwise perception factors of issue #61 (RF-6), and their switches.
+PAIRWISE_FACTORS = tuple(PAIRWISE_DESIGN)
+PAIRWISE_SWITCH_FACTORS = tuple(PAIRWISE_SWITCHES.values())
 #: Every factor, in the order a cell, its id and an outcome row list them; the factors of
 #: issue #58 keep their order among themselves.
 ALL_FACTORS = (
-    "age_pair", "gender_pair", "task", *PERSON_FACTORS, "demographics_visible", *SWITCH_FACTORS, *SITUATION_FACTORS, "mapping",
+    "age_pair", "gender_pair", "task", *PERSON_FACTORS, "demographics_visible", *SWITCH_FACTORS, *SITUATION_FACTORS,
+    *PAIRWISE_FACTORS, *PAIRWISE_SWITCH_FACTORS, "mapping",
 )
 FACTOR_LEVELS: dict[str, tuple[Any, ...]] = {
     **{name: RULEGEN_LEVELS[name] for name in FACTORS},
     **{name: (NEITHER, P1) for name in PERSON_FACTORS},
     **{name: (True, False) for name in SWITCH_FACTORS},
     **SITUATIONS,
+    **{name: PAIRWISE_LEVELS[factor] for name, (factor, _, _) in PAIRWISE_DESIGN.items()},
+    **{name: (True, False) for name in PAIRWISE_SWITCH_FACTORS},
 }
 REQUIRED = ("age_pair", "gender_pair", "demographics_visible", "mapping")
 CONDITION_LETTER = {"independent": "I", "non_verbal": "N", "talk": "T"}
@@ -93,7 +117,17 @@ class ResolutionDesign:
     @property
     def uses_factors(self) -> bool:
         """Whether it varies a core or situational factor of issue #60."""
-        return any(name not in FACTORS for name in self.levels)
+        return any(name in RF5_FACTORS for name in self.levels)
+
+    @property
+    def uses_pairwise(self) -> bool:
+        """Whether it varies a pairwise perception factor of issue #61."""
+        return any(name in PAIRWISE_FACTORS for name in self.levels)
+
+    @property
+    def uses_attractiveness(self) -> bool:
+        """Whether it varies perceived attractiveness: then a paid run needs the ethics sign-off."""
+        return any(name in ATTRACTIVENESS_FACTORS for name in self.levels)
 
     @classmethod
     def from_config(cls, raw: Any, where: str = "design") -> "ResolutionDesign":
@@ -104,6 +138,10 @@ class ResolutionDesign:
         for attribute, switch in SWITCHES.items():
             if switch in factors and attribute not in factors:
                 raise ConfigError(f"{where}.factors.{switch}: switches {attribute}, which the design does not vary")
+        for factor, switch in PAIRWISE_SWITCHES.items():
+            setting = [name for name, (of, _, _) in PAIRWISE_DESIGN.items() if of == factor]
+            if switch in factors and not any(name in factors for name in setting):
+                raise ConfigError(f"{where}.factors.{switch}: switches {factor}, which the design does not vary (name {' or '.join(setting)})")
         levels = {}
         for name in (name for name in ALL_FACTORS if name in factors):
             chosen = factors[name]
@@ -177,6 +215,9 @@ def visibility_for(cell: Mapping[str, Any]) -> dict[str, bool]:
     for attribute, switch in SWITCHES.items():
         if attribute in cell:
             visibility[attribute] = bool(cell.get(switch, True))
+    for factor, switch in PAIRWISE_SWITCHES.items():  # issue #61: whether the observer is told it
+        if any(name in cell for name, (of, _, _) in PAIRWISE_DESIGN.items() if of == factor):
+            visibility[factor] = bool(cell.get(switch, True))
     return visibility
 
 
@@ -218,7 +259,23 @@ class Session:
 
     @property
     def uses_factors(self) -> bool:
-        return any(name not in FACTORS for name in self.cell)
+        return any(name in RF5_FACTORS for name in self.cell)
+
+    @property
+    def uses_pairwise(self) -> bool:
+        return any(name in PAIRWISE_FACTORS for name in self.cell)
+
+    @property
+    def persons(self) -> tuple[int, int]:
+        """The agents of person 1 and person 2, in that order."""
+        first = self.agents[0] if self.cell["mapping"] == "p1_lower" else self.agents[1]
+        return (first, self.agents[1] if first == self.agents[0] else self.agents[0])
+
+    @property
+    def pairwise(self) -> Optional[dict[str, Any]]:
+        """The session's pairwise block (issue #61), rows person 1 then person 2; ``None`` if the
+        design varies no pairwise factor."""
+        return block_for(self.cell, self.persons)
 
     def person_of(self, agent: int) -> Optional[int]:
         """1 or 2: which person of the design ``agent`` is; ``None`` for anyone else."""
@@ -239,6 +296,7 @@ class Session:
             "exact_repeat_set": self.exact_repeat_set,
             "personas": {str(agent): dict(persona) for agent, persona in sorted(self.personas.items())},
             "visibility": dict(self.visibility),
+            **({"pairwise": self.pairwise} if self.uses_pairwise else {}),  # issue #61: only when the design has one
         }
 
 
