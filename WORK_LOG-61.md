@@ -200,3 +200,49 @@ this issue adds **pairwise** factors, one value per (who looks, who is seen), on
 6. **Counting for RF-7:** five more two-level design factors (three, and two switches).
 
 ## Summary (fill in at the end)
+
+**What changed.**
+- **Two pairwise factors.** Perceived attractiveness is a matrix (row = who is looking, column
+  = who is seen) and need not be mutual. Familiarity is the same for both. They live in a
+  session's `pairwise` block, in issue #61's format plus `agents`
+  (`negsim/resolution/pairwise.py`).
+- **Who is told what.** Each observer is told only its own row, under the person it sees, in
+  WHO YOU CAN SEE, from a new frozen template (`resolve_pairwise_v1`). Only people in view get
+  a line, and `resolve_v2` prints it in full detail only. Nobody is told how another sees them,
+  and nothing is said of a person who is only heard.
+- **Switches.** `attractiveness_visible` and `familiarity_visible`: on, either level has a line;
+  off, neither.
+- **Design factors.** `attractiveness_0_sees_1`, `attractiveness_1_sees_0`, `familiarity`, two
+  levels each; 0 is person 1. A config that names none of them writes exactly what it wrote
+  before.
+- **Outcome rows.** Each person's own view as 0 or 1 (`p1_finds_other_attractive`,
+  `p1_knows_other`), and how often a line was actually shown (`p1_pairwise_lines_shown`).
+- **The ethics gate.** A paid run that varies perceived attractiveness is refused
+  (`refused_no_sign_off`) until `CLAUDE.md` records the supervisor's sign-off in one exact
+  sentence. The check is the fictional group's, now shared in `negsim/ethics.py`. A mock run
+  needs none.
+- **Rules.** A rule that reads perceived attractiveness is `protected_attribute`: refused by the
+  loader, and kept and counted by rule generation. It stays in the outcome rows for RF-8.
+- **Docs.** A new `docs/pairwise-factors.md` (with the 10,000-agent note, task 8) and updates to
+  seven other docs, both READMEs, and a pointer in `CLAUDE.md`.
+
+**Why.** Issue #61; the supervisor's suggestion of attractiveness "represented in a matrix"
+(2026-10-20); `docs/resolution.md`, D2.
+
+**How it was verified.**
+- 52 new tests in `tests/test_pairwise.py`, covering every test the issue lists:
+  - an asymmetric matrix in each view;
+  - neither agent sees the other's perception (unit and protocol level);
+  - nothing for a person behind, outside the cone, beyond 5 m, or only heard;
+  - the gate refuses a paid run, and lets it through once the sentence is recorded;
+  - older configs and records unchanged.
+- **Full suite: 1709 passed**, 0 failed (`uv run ... pytest`, 8 min 50 s; 1657 before plus the 52
+  new). The tests that read the docs pass again after the docs commit (24).
+- A 24-session mock rehearsal, 24 of 24 completed, with the prompts and outcome rows checked by
+  eye (above).
+- `python -m negsim.resolution.replay ... --verify` rebuilds both replays of two rehearsal
+  sessions byte for byte.
+- No paid call. No sign-off recorded anywhere.
+
+**For the user, first:** open question 1. Under `resolve_v2` the pairwise lines (and RF-5's
+observable lines) never reach an agent in round 1's head-on case.
