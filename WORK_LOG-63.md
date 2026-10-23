@@ -140,3 +140,35 @@ scikit-learn, matplotlib), so negsim keeps its standard-library-only design. It:
    so nothing in the repository needs it.
 
 ## Summary (fill in at the end)
+**What changed.**
+- `analysis/` (new top-level package, own pinned `requirements.txt`): `python -m analysis
+  <outcomes.csv> [...]` reshapes to one row per agent per session with the other's factors as the
+  agent was told them, and writes logistic and linear models (clustered by session, per condition
+  and pooled, Holm over the whole report by default), a depth-3 decision tree (text and PNG, with
+  held-out accuracy), the mapping table, counterfactual flip rates against the exact-repeat noise
+  floor, stability with coin-flip cells, stated against measured (reason keywords, debrief kinds),
+  the intent-against-plan mismatch rate, and `report.md`. Versioned keyword codebooks
+  `intent_v1.json` and `reasons_v1.json` (drafts for RF-9). No LLM call; negsim stays
+  standard-library only.
+- negsim's resolution outcome rows: `p<n>_other_age_shown`, `p<n>_other_gender_shown`,
+  `p<n>_other_observable_shown` (with an RF-5 design) and `encounter_agents`. Session records,
+  replays and every other file unchanged; `encounter-protocol.md` section 7 and `log-schema.md`
+  change log updated.
+- Docs: `analysis/README.md`; status in the root README, `llm_negotiation/README.md` and
+  `resolution.md`.
+
+**Why.** Step 4 asks which factors drive the decision; that is a question about the outcome table,
+not about what agents say. RF-10 needs the tool before its paid screen.
+
+**How it was verified.**
+- `analysis/tests`: 42 tests, all pass (the issue's task 12 list, plus the a/b mapping, Holm
+  families, separation, the CLI end to end, and a check that `analysis/factors.py` agrees with
+  negsim).
+- Holm family checked on 20 synthetic no-effect screens: false positives in 17 (per model), 2 (per
+  subset), 0 (whole report).
+- negsim's full suite: **1769 passed** (1764 before, plus 5 new outcome-row tests), 8 min 54 s.
+- End to end on the RF-7 screening mock rehearsal (252 mock sessions, USD 0): report, tree,
+  mapping written; noise floor 0 and every repeat cell stable, as a deterministic mock should give;
+  the intent check found 20 real mismatches of a mock path (progress log).
+- Acceptance criteria: `python -m analysis <outcomes.csv>` writes the report, the tree and the
+  mapping (tested, `test_cli.py`); the synthetic tests pass.
