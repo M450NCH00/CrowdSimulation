@@ -1,0 +1,80 @@
+# Issue #60 (RF-5): the core and situational factors rehearsed end to end on the mock client.
+# No network and no cost; the output goes under runs_mock/, which git does not track.
+#
+#   python run_experiment.py configs/resolution/resolve_factors_mock_rehearsal.yaml --plan
+#   python run_experiment.py configs/resolution/resolve_factors_mock_rehearsal.yaml
+#
+# One case of each of rounds 1 to 3, in the independent and talk conditions. Person 1 has every
+# core factor at its other level (urgent, a cane, a large suitcase, a phone, holds ground, a
+# visitor, a bad memory), so that every line is rendered somewhere; person 2 has the base levels.
+# The design crosses the suitcase's visibility switch with the surroundings (quiet and busy set
+# two hearing ranges), so that a hidden and a shown observable line, and both hearing ranges, are
+# exercised. The suitcase widens person 1's body for the whole run, in the live run, in plain ORCA
+# and in both replays (the session record's "bodies").
+#
+# The mock does not imitate a model (negsim/resolution/mock.py): its replies are scripted and do
+# not read the factor lines. Nothing here is a finding about a model.
+schema_version: 1
+layer: resolution
+experiment_name: resolve_factors_mock_rehearsal
+description: >-
+  Mock rehearsal of the RF-5 factors: every core factor on for person 1, the suitcase shown and
+  hidden, quiet and busy surroundings; head-on, narrow passage and overtaking; independent and talk.
+
+cases:
+  store: cases
+  ids:
+    - head_on_02dfbadb@2      # round 1: wide_corridor_head_on, walking lines 20 cm apart
+    - passage_067961e3@1      # round 2: passage_meeting, symmetric, walking (passage_02fac1e4 cannot take the wider body: WORK_LOG-60.md)
+    - overtaking_23c5d31e@2   # round 3: overtaking, 30 cm aside
+
+conditions: [independent, talk]
+
+design:
+  seed: 60
+  base_age: 25
+  age_difference: 45
+  repeats: 1
+  factors:
+    age_pair: [p1_older]
+    gender_pair: [p1_female]
+    urgency: [p1]                # the two-level form of task: person 1 urgent, person 2 routine
+    mobility_aid: [p1]
+    load: [p1]
+    distraction: [p1]
+    assertiveness: [p1]
+    residence: [p1]
+    memory_note: [p1]
+    demographics_visible: [true]
+    load_visible: [true, false]
+    surroundings: [quiet, busy]
+    time_of_day: [late_night]
+    mapping: [p1_lower]
+
+protocol:
+  max_decision_points: 3         # D5
+  min_gap_s: 1.0                 # D5
+  no_conflict_end_s: 1.0         # [placeholder] the encounter ends after this long with no conflict predicted
+  max_prompted: 4                # D11, D12: the cap on prompted people per encounter (a cost limit)
+  speech_words_per_second: 2.5   # [placeholder] how fast a message is said
+
+templates:
+  core: resolve_v2
+  debrief: resolve_debrief_v1
+  factors: resolve_factors_v1
+
+llm_view: configs/resolution/llm_view_v1.yaml
+factor_values: configs/resolution/factors_v1.yaml
+
+llm:
+  client: mock
+  mock_policy: resolution_rehearsal_v1
+  model: deepseek-flash   # what the preview prices; the mock answers
+  temperature: 1.0
+  max_tokens: 400         # [placeholder] the reply cap, as in #30's config
+  thinking: disabled
+  transport_retries: 2
+
+budget:
+  cap_usd: 0.05
+  ledger: spend_ledger.jsonl
