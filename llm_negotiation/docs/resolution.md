@@ -25,7 +25,11 @@ if it rested on data.
 The issues that build each part are named in brackets, and track #55 gives their order.
 **Built so far:** RF-2 (#57), on the mock: D1's reply parser, D2's description templates and
 the `View`, D3's conditions, D8's debrief and D16's description side (`negsim/resolution/`;
-templates `resolve_v1`, `resolve_debrief_v1`, `scenario_passing_v1`). Nothing else yet. Configs and templates from before this track behave exactly as
+templates `resolve_v1`, `resolve_debrief_v1`, `scenario_passing_v1`). RF-17 (#73), on the mock:
+D2's description built from the running simulation with D10's perception for the LLM only and
+D12's values (`negsim/resolution/perceive.py`, `configs/resolution/llm_view_v1.yaml`; template
+`resolve_v2`, which words an unseen speaker as "someone" with a rough direction and a distance
+band, where `resolve_v1` says "someone behind you"). Nothing else yet. Configs and templates from before this track behave exactly as
 before.
 
 ## D1. The reply

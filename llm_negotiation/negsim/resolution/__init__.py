@@ -5,8 +5,9 @@
   :mod:`.scenarios`;
 - :mod:`.prompt`: the core template ``resolve_v1`` and the debrief ``resolve_debrief_v1``,
   rendered into messages (D2, D3, D8);
-- :mod:`.adapter`: the opening view of a frozen two-person case (RF-17 builds views from the
-  simulation);
+- :mod:`.adapter`: the opening view of a frozen two-person case;
+- :mod:`.perceive`: views built from the running simulation, with the view cone, occlusion,
+  hearing, signals and changes since the agent last looked (RF-17, #73);
 - :mod:`.reply`: reading a reply (D1) and a debrief (D8);
 - :mod:`.mock`: mock-client policies for every path.
 """
