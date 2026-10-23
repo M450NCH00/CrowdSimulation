@@ -78,7 +78,7 @@ experiment code until the literature review is complete and discussed.**
 | RF-5 | Part 1. The core factors (seven, with a memory note) and up to four situational factors | **built on the mock** (issue #60) — `llm_negotiation/negsim/resolution/factors.py`; frozen template `resolve_factors_v1`; values `configs/resolution/factors_v1.yaml` (three placeholders, `docs/parameters.md`, section 8.7); situational factors chosen: `surroundings`, `time_of_day`; case set `rf5_passage_v1` (round 2's passage layouts with room for a wider body); no paid call |
 | RF-6 | Part 1. Pairwise perception factors (perceived attractiveness, familiarity), shown only to the observer | **built on the mock** (issue #61) — `llm_negotiation/negsim/resolution/pairwise.py`; frozen templates `resolve_pairwise_v1` and `resolve_v3` (the factor lines from 10 m, the user's decision of 2026-10-23); `llm_negotiation/docs/pairwise-factors.md`; attractiveness off by default, a paid run with it refused until `CLAUDE.md` records the ethics sign-off (still pending); no paid call |
 | RF-7 | Part 1. Screening designs, geometries, the exact-repeat set, counterfactual pairs | **built on the mock** (issue #62) — `llm_negotiation/negsim/resolution/screening.py`, `design.py`; `design.kind` full, fractional (a regular resolution IV fraction of 16 or 32 cells, generators from NIST's Table 3.17 and Chen & Cheng 2006) or sample; `llm_negotiation/docs/screening-designs.md`; a round-1-shaped rehearsal config; no paid call |
-| RF-8 | Part 1. Analysis: factor effects, decision tree, the mapping, noise floor, stability, stated against measured, intent against plan | not started — #63 |
+| RF-8 | Part 1. Analysis: factor effects, decision tree, the mapping, noise floor, stability, stated against measured, intent against plan | **built and tested on synthetic and mock data** (issue #63) — `analysis/` (its own pinned requirements: pandas, statsmodels, scikit-learn, matplotlib), `python -m analysis <outcomes.csv>`; Holm's correction over the whole report by default; keyword codebooks `intent_v1` and `reasons_v1` are drafts for RF-9's pilot; negsim's outcome rows gain what each agent was told of the other and the encounter's order; no LLM call |
 | RF-9 | Part 2, round 1 (head-on in a corridor, full depth). Paid pilot | not started — #64; paid, waits for a recorded approval |
 | RF-10 | Round 1. Phase A screening of up to 16 factors | not started — #65; paid, waits for a recorded approval |
 | RF-11 | Round 1. Step 2: rule extractor, three runs, references, held-out fidelity | not started — #66; paid (small) |
@@ -590,6 +590,13 @@ CrowdSimulation/
                                     in llm_negotiation/README.md
     spend_ledger.jsonl              one line per paid API call for this work (Phase 1 spend is
                                     tracked separately in pipeline/config.py)
+  analysis/                         issue #63 (RF-8): `python -m analysis <outcomes.csv>`, factor
+                                    effects, a decision tree, the mapping, noise floor, stability,
+                                    stated against measured, intent against plan. Its own
+                                    requirements.txt (pandas, statsmodels, scikit-learn), so negsim
+                                    stays standard-library only. Has its own README
+    codebooks/                      versioned keyword codebooks for intents and reasons (no LLM)
+    tests/                          synthetic-data tests
 ```
 
 ## Output files (written to `dataset/generated/`)

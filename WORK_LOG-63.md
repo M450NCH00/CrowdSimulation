@@ -106,5 +106,37 @@ scikit-learn, matplotlib), so negsim keeps its standard-library-only design. It:
 - Result: 42 analysis tests pass.
 
 ## Open questions / risks
+1. **Separation will be common in round 1.** On the mock rehearsal (504 agent rows, 18
+   varying predictors plus geometry and condition), 9 of the 15 pooled models were `separation`: rare outcomes (backed up, a plan
+   that turns, resolved) with many 0/1 predictors. D14 aims at about 10 events per factor; with
+   16 factors that is about 160 events, more than most per-agent outcomes will have in 480 rows.
+   The analysis reports separation honestly and never as an effect, but RF-10 will need one of:
+   Firth's penalised logistic regression (not in statsmodels; a small implementation or another
+   package), fewer predictors per model, or leaning on counterfactual pairs for the rare
+   outcomes. **Not decided here; for RF-10 (#65).**
+2. **Holm over the whole report is conservative.** With about 400 terms, the smallest p-value
+   must be below 0.05/400 (about 1.2e-4) to pass. A modest real effect in round 1 may not. The
+   narrower families (`--holm-family subset|model`) exist, but which one RF-10 reports must be
+   fixed **before** it sees the results, or the choice becomes a forking path. Suggest RF-10
+   states it in its issue.
+3. **The codebooks are drafts** (`intent_v1`, `reasons_v1`), written with no model reply to read.
+   The issue says the intent codebook is "started in the pilot (RF-9)"; RF-9 should read real
+   intents and reasons and write v2 of both. Keyword mentions are not a reading of the text (for
+   example "her" is not counted as gender, and "left" in "little room left" would be coded as keeping to a
+   side).
+4. **Session-level models use the design levels, not "as told"**: a session's outcome
+   (resolved, decision points) depends on both people, so there is no single point of view.
+5. **"Clearly above the noise floor" is non-overlapping intervals**, which is stricter than a
+   test of the difference at 5%. Chosen because it is easy to state and defend; a reader who
+   wants the difference test can compute it from `flip_rates.csv` and `noise_floor.csv`.
+6. **The flips and stability compare physical behaviour only** (who passed first, sides,
+   stopped, backed up), as the issue lists. Flips of the coded plan are not computed.
+7. **Where the output goes.** By default `analysis/` beside the first `outcomes.csv`; for a paid
+   run under `llm_negotiation/runs/` that folder would sit beside committed data. Whether RF-10
+   commits it is RF-10's choice. The negsim tests that scan `runs/` look only for `config.json`
+   and API keys, so an `analysis/` folder there does not disturb them (checked).
+8. **An `outcomes.csv` written before this issue** lacks the new columns and is refused with how
+   to rebuild it (resume the experiment: no LLM call). No resolution experiment is committed yet,
+   so nothing in the repository needs it.
 
 ## Summary (fill in at the end)
