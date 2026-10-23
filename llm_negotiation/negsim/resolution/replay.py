@@ -272,7 +272,8 @@ def verify(session: Mapping[str, Any], mode: str, run_dir: Path, store: Optional
         return problems
 
 
-def main(argv: Optional[list[str]] = None, out: TextIO = sys.stdout) -> int:
+def main(argv: Optional[list[str]] = None, out: Optional[TextIO] = None) -> int:
+    out = out or sys.stdout
     parser = argparse.ArgumentParser(prog="python -m negsim.resolution.replay", description=__doc__.split("\n\n")[0])
     parser.add_argument("sessions", nargs="+", help="session records (JSON)")
     parser.add_argument("--experiment", required=True, help="the experiment the replays belong to")
