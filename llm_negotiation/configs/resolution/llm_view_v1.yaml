@@ -1,0 +1,27 @@
+# What an LLM agent perceives (issue #73, RF-17; docs/resolution.md, D2, D5, D10 and D12),
+# version 1. A new file, never an edit: a change is llm_view_v2.yaml.
+#
+# These values shape ONLY what an LLM agent is told (D10). ORCA's neighbour search keeps the
+# scenario's sensing_radius and max_neighbours, and the perception record that rules read is
+# unchanged.
+#
+# Tags: [cited] read in a source; [derived] worked out from cited values; [placeholder] no
+# source; [design] a choice about the prompts or the numerics. docs/parameters.md, section 8,
+# has the locators and lists every placeholder. Do not report a result that depends on a
+# placeholder as if it rested on data.
+schema_version: 1
+
+llm_view:
+  half_angle_deg: 75.0       # deg    how far to either side of straight ahead a person is seen (150 deg in all)   [cited: Moussaid et al. 2011, Fig. 2 caption (phi)]
+  range_m: 10.0              # m      how far away a person is seen, centre to centre   [cited: Moussaid et al. 2011, Fig. 2 caption (dmax)]
+  detail_range_m: 5.0        # m      within this a person is described in full; beyond it in one short line   [cited: Rio et al. 2018, abstract]
+  occlusion: true            #        someone behind a nearer person's body is not seen   [cited: Moussaid et al. 2011, Fig. 1 caption]
+  walls_block_sight: true    #        someone behind a wall is not seen (architecture DD8)   [design]
+  max_people: null           #        a cost cap on how many people are described; off: everyone in view is described   [cited: Wirth et al. 2023, abstract]
+  hearing_range_m: 7.0       # m      how far speech carries, from any direction. Should depend on RF-5's surroundings   [placeholder]
+  heard_close_m: 3.0         # m      a speaker the agent cannot see is "close by" within this, "further away" beyond   [placeholder]
+  eye_contact_range_m: 4.0   # m      how close two people must be for eye contact or a nod to be seen   [placeholder]
+  change_thresholds:         #        D5: what counts as the other having changed noticeably since the agent last looked
+    sideways_m: 0.2          # m      off the line they were walking on, to the agent's left or right   [placeholder]
+    speed_mps: 0.2           # m/s    faster or slower   [placeholder]
+    turn_deg: 5.0            # deg    a change in their direction of travel   [placeholder]
