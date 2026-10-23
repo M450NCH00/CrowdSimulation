@@ -20,6 +20,7 @@ from negsim.resolution import experiment as E
 from negsim.resolution import factors as F
 from negsim.resolution import protocol as P
 from negsim.resolution.prompt import render
+from negsim.rulegen.cases import CaseStore
 from negsim.rulegen.design import visibility_of
 from negsim.rulegen.replay import source_plan
 from negsim.rulegen.validate import NEEDS_COMMUNICATION, validate_proposal
@@ -31,6 +32,7 @@ from test_rulegen_validate import rule, when
 
 TEMPLATE = F.FactorTemplate.load()
 VALUES = F.FactorValues.load()
+STORE = CaseStore()
 #: Each core factor at its other level, and the block its own line goes to.
 MARKED = {name: ATTRIBUTES[name].levels[1] for name in FACTOR_ATTRIBUTES}
 EVERYTHING = {0: dict(MARKED), 1: {name: ATTRIBUTES[name].levels[0] for name in FACTOR_ATTRIBUTES}}
@@ -230,11 +232,22 @@ def test_surroundings_set_the_hearing_range_and_nothing_else_does():
     assert VALUES.hearing_range_m["quiet"] > VALUES.hearing_range_m["busy"]
 
 
-def test_a_case_that_cannot_take_the_wider_body_is_refused_before_anything_runs():
-    config = factor_config("tight", ids=("passage_02fac1e4@1",), factors_={"load": ["p1"]})
+def cases_of(case_set):
+    return json.loads((STORE.root / "MANIFEST.json").read_text(encoding="utf-8"))["case_sets"][case_set]["cases"]
+
+
+@pytest.mark.parametrize("case", cases_of("si32_passage_v1"))
+def test_issue_32s_passage_cases_cannot_take_the_wider_body_and_are_refused_before_anything_runs(case):
+    """Every one starts the pair 0.1 m apart: a body 0.2 m wider overlaps (asymmetric) or touches
+    (symmetric, by rounding), inside the near-miss distance either way."""
     with pytest.raises(ConfigError, match="large suitcase"):
-        E.plan(config)
-    E.plan(factor_config("tight_ok", ids=("passage_02fac1e4@1",), factors_={"mobility_aid": ["p1"]}))  # no load: it fits
+        E.plan(factor_config("tight", ids=(case,), factors_={"load": ["p1"]}))
+    E.plan(factor_config("tight_ok", ids=(case,), factors_={"mobility_aid": ["p1"]}))  # no load: it runs as before
+
+
+@pytest.mark.parametrize("case", cases_of("rf5_passage_v1"))
+def test_the_passage_cases_of_issue_60_take_a_loaded_person_whichever_agent_it_is(case):
+    E.plan(factor_config("roomy", ids=(case,), factors_={"load": ["p1"], "mapping": ["p1_lower", "p1_higher"]}))
 
 
 # --- the design (task 5) ---------------------------------------------------------------------------

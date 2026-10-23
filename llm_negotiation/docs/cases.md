@@ -220,3 +220,47 @@ walked in and how far each end is. The extraction report is `cases/extractions/s
 
 Which start SI-3b's cases should come from, at rest or walking, is open question Q2 of
 `WORK_LOG-32.md`: both are in the set.
+
+## 9. The case set of issue #60
+
+**Why.** Issue #60 (RF-5) gives a person pulling a large suitcase a body 0.2 m wider
+`[placeholder]` for the whole run (`parameters.md`, section 8.7). Every case of
+`si32_passage_v1` starts the pair 0.1 m apart, body to body. With one body 0.2 m wider, the two
+asymmetric layouts overlap at the start. The four symmetric layouts touch, with a gap of about
+1e-16 m: rounding alone decides which. So a resolution design that varies `load` is refused on
+all eight before anything runs (`experiment.check_bodies`: no loaded body may start closer to
+anyone than the near-miss distance, 0.1 m). The user chose new cases over a smaller width
+(2026-10-23, `WORK_LOG-60.md`).
+
+**`rf5_passage_v1`**: issue #32's layouts with each person 0.1 m less far into the passage, so
+that the pair starts 0.3 m apart (0.2 m with one person loaded). From
+`configs/cases/rf5_passage_cases_v1.yaml`, by the rules of `si32_passage_cases_v1.yaml` word for
+word. The sources are two experiments under `configs/cases/` on the primary baseline
+(`runs/rf5_source_passage_meet_middle`, `..._meet_with_speeds`, 16 runs). Every one of their 16
+pairs forms on step 0, both inside, and is eligible; the strata are again the source experiment
+and the layout, one case each. Issue #32's cases and runs are unchanged, and designs that do
+not vary `load` can use either set.
+
+| Case | Scenario | Layout | Distances walked in (agent 0, 1) | Tier | Baseline run | Source run, pair |
+|---|---|---|---|---|---|---|
+| `passage_03a2a59a` | passage_meet_middle_v1 | symmetric_30cm, rest | 1.6, 1.6 m | T3 | timeout (passed at 12.2 s) | `rf5_source_passage_meet_middle/001_symmetric_30cm_rest_r1`, pair 0 |
+| `passage_36a66c39` | passage_meet_middle_v1 | symmetric_30cm, walking | 1.6, 1.6 m | T3 | completed | `rf5_source_passage_meet_middle/003_symmetric_30cm_walking_r1`, pair 0 |
+| `passage_889517b0` | passage_meet_middle_v1 | asymmetric_30cm, rest | 2.6, 0.6 m | T3 | completed | `rf5_source_passage_meet_middle/006_asymmetric_30cm_rest_r2`, pair 0 |
+| `passage_f7bdb08d` | passage_meet_middle_v1 | asymmetric_30cm, walking | 2.6, 0.6 m | T3 | completed | `rf5_source_passage_meet_middle/008_asymmetric_30cm_walking_r2`, pair 0 |
+| `passage_55d89ee3` | passage_meet_with_speeds_v1 | asymmetric_30cm, rest | 1.9, 1.3 m | T3 | completed | `rf5_source_passage_meet_with_speeds/001_asymmetric_30cm_rest_r1`, pair 0 |
+| `passage_b4334843` | passage_meet_with_speeds_v1 | asymmetric_30cm, walking | 1.9, 1.3 m | T3 | completed | `rf5_source_passage_meet_with_speeds/003_asymmetric_30cm_walking_r1`, pair 0 |
+| `passage_0faca016` | passage_meet_with_speeds_v1 | symmetric_30cm, rest | 1.6, 1.6 m | T3 | completed | `rf5_source_passage_meet_with_speeds/005_symmetric_30cm_rest_r1`, pair 0 |
+| `passage_24405c83` | passage_meet_with_speeds_v1 | symmetric_30cm, walking | 1.6, 1.6 m | T3 | completed | `rf5_source_passage_meet_with_speeds/007_symmetric_30cm_walking_r1`, pair 0 |
+
+With `[1.9, 1.3]` the distance-optimal and the time-optimal choice of who backs out still differ
+(`derivations.md`, section 18, with c = 0.6 m): by distance, agent 1 backs out (3.8 m of extra
+walking against 5.0 m); by time, agent 0 (2.5 / 0.92 = 2.7 s against 1.9 / 0.43 = 4.4 s).
+
+**Less severe than issue #32's.** There, nobody got through from rest under the baseline (T4,
+deadlock). Here every case is T3. From rest, plain ORCA gets the pair past each other after
+12 to 39 s, with a near miss on the way, and in one case (`passage_03a2a59a`) the run times out
+after they have passed. The extra 0.2 m of room is enough for ORCA's slow sideways creep. A
+round 2 result on these cases is therefore not comparable, number for number, with one on
+issue #32's. The extraction report is `cases/extractions/rf5_passage_v1.json`. *Tested:*
+`tests/test_factors.py` (every case of the set takes a loaded person under both mappings, and
+every case of `si32_passage_v1` is refused).

@@ -334,9 +334,9 @@ starts.
 - **Common core factors:** every round keeps the core of RF-5 (age, gender, urgency, mobility
   aid, load, distraction, assertiveness, residence), so that effects can be compared across
   scenarios ("does urgency matter everywhere?"). A scenario adds its own factors on top. *As
-  built (RF-5, #60):* the memory note is a core factor too, and two of the passage cases
-  (`passage_02fac1e4`, `passage_10e542c2`) start the pair too close for a wider body, so a design
-  with `load` is refused on them until round 2 decides (`WORK_LOG-60.md`).
+  built (RF-5, #60):* the memory note is a core factor too. Issue #32's passage cases start the
+  pair too close for a wider body, so round 2 uses the case set `rf5_passage_v1`, the same
+  layouts with the pair 0.3 m apart (the user's choice, 2026-10-23; `cases.md`, section 9).
 - **A cap per round:** each round has its own cap, recorded in `CLAUDE.md` before its paid runs.
   No such cap is recorded yet: paid runs still wait for the supervisor's approval (`CLAUDE.md`,
   "Pending sign-offs", item 1).
@@ -377,7 +377,7 @@ runs through the unchanged executor.
 | Round | Scenario | Status |
 | --- | --- | --- |
 | 1 | Head-on in a corridor (`wide_corridor_head_on`) | cases exist |
-| 2 | Meeting in a narrow passage (`passage_meet_*`) | cases exist |
+| 2 | Meeting in a narrow passage (`passage_meet_*`) | cases exist; with `load`, the set `rf5_passage_v1` (issue #60) |
 | 3 | Someone behind says "excuse me" (overtaking, with hearing) | cases exist, plus RF-17's hearing |
 | 4 | Boarding a train while people get off (`mrt_door_alight_board`) | to build (RF-23, #79) |
 | 5 | The escalator (`escalator_entry_merge`) | to build (RF-24, #80) |

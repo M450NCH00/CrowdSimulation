@@ -184,15 +184,43 @@ find which ones drive a decision. This issue adds the **core** factors that ever
   the scan ("JIB.0"), so the doc cites only the 41 dB of suburban homes and conclusion 2(d)'s
   45 dB.
 
+### 2026-10-23 — The user's decision: new passage cases (option b)
+- **Decision (the user, 2026-10-23, after reading PR #87):** option (b), new passage cases whose
+  pair starts further apart, rather than leaving cases out or shrinking the width.
+- **What I found first: it was all eight cases, not two.** Every `si32_passage_v1` case starts the
+  pair exactly 0.1 m apart, body to body (measured: centres 0.6 m apart). With 0.2 m added, the
+  asymmetric ones overlap by about 1e-16 m and the symmetric ones are apart by about 1e-16 m.
+  Rounding alone made four of them "fit", touching. My earlier report of "6 of 8 fit" was wrong.
+  So `check_bodies` now also refuses a loaded body that starts closer to anyone than the
+  scenario's near-miss distance (0.1 m); with that, all eight are refused, and the head-on and
+  overtaking cases still fit.
+- **What I did:**
+  - Two new source experiments, `configs/cases/rf5_source_passage_meet_middle.yaml` and
+    `..._with_speeds.yaml` (new files; issue #32's untouched). They repeat issue #32's layouts
+    with each person 0.1 m less far in: [1.6, 1.6], [2.6, 0.6], [1.9, 1.3]. The pair starts
+    0.3 m apart, 0.2 m with one person loaded. *Design choice, mine:* 0.1 m less each, so that
+    a loaded pair is a whole near-miss distance clear of the near-miss line, and the layouts
+    stay recognisably issue #32's.
+  - For [1.9, 1.3] I checked by the arithmetic of `derivations.md` section 18 that the
+    distance-optimal and the time-optimal choice of who backs out still differ (agent 1 by
+    distance, 3.8 m against 5.0 m; agent 0 by time, 2.7 s against 4.4 s).
+  - Committed the configs first, so that the runs record a clean tree. Ran both (16 runs, no
+    model). Extracted `rf5_passage_v1` with `configs/cases/rf5_passage_cases_v1.yaml`, whose rules
+    are issue #32's word for word: 8 cases, all T3. `python -m negsim.rulegen.cases check`
+    passes.
+  - All eight take a loaded person under both mappings (tested). The rehearsal now uses
+    `passage_36a66c39` and ran 24 of 24.
+- **A difference to know about:** issue #32's at-rest cases deadlocked under plain ORCA (T4).
+  With 0.3 m of room, plain ORCA creeps the pair past each other in 12 to 39 s, so every new
+  case is T3. Round 2's passage conflicts are a little less severe than issue #32's, and results
+  on the two sets are not comparable number for number. Documented in `cases.md`, section 9.
+
 ## Open questions / risks
 
-1. **`load` in round 2.** With the 0.2 m placeholder, `passage_02fac1e4` and `passage_10e542c2`
-   start the pair too close for a wider body, and a design with `load` is refused on them. D15
-   says every round keeps the core factors. Options: (a) leave those two cases out of designs that
-   vary `load`; (b) new passage cases whose pair starts further apart; (c) a smaller width (0.1 m
-   fits every case), which would be choosing a number to fit a case, not from data. **The user's
-   call**; nothing is decided here. `passage_02fac1e4` is also the passage case of PR #86's
-   rehearsal.
+1. ~~**`load` in round 2.**~~ **Decided by the user (2026-10-23): new passage cases**, built as
+   case set `rf5_passage_v1` (above). What remains: these cases are T3 where issue #32's at-rest
+   ones were T4 (above), and a design that varies `load` must use them, while a design that does
+   not can use either set. Round 2 (RF-19, #75) chooses which.
 2. **Three new placeholders** (`parameters.md`, 8.7): the suitcase's 0.2 m, and the quiet (8.9 m)
    and busy (3.2 m) hearing ranges. The hearing ranges use cited inputs with an assumed
    background for each level.
@@ -222,6 +250,8 @@ find which ones drive a decision. This issue adds the **core** factors that ever
 - The design codes each factor as `neither` or `p1`; `urgency` is the two-level form of `task`.
 - A rule reading `assertiveness`, `residence` or `memory_note` is `needs_communication`.
 - A config that names none of the new factors writes exactly what it wrote before.
+- After the user's decision: a new case set, `rf5_passage_v1`, with room for a wider body, and a
+  plan-time check that refuses a loaded body starting within the near-miss distance.
 
 **Why.** Issue #60 and `docs/resolution.md`, D1, D2, D7 and D15.
 

@@ -1095,6 +1095,10 @@ The rehearsal gives person 1 every core factor, shows and hides the suitcase, an
 busy surroundings, on head-on, passage and overtaking cases (24 sessions). The mock's replies do
 not read the lines, so nothing in it is a finding.
 
+Issue #32's passage cases start the pair too close for the wider body, so a design with `load`
+is refused on them before anything runs; the case set `rf5_passage_v1` repeats their layouts
+with the pair 0.3 m apart (`docs/cases.md`, section 9).
+
 ## Changing things
 
 | To | Edit |
