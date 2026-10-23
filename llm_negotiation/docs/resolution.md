@@ -45,7 +45,10 @@ pairwise lines for one observer only, perceived attractiveness (a matrix) and fa
 switches, design factors and 0/1 outcome columns, an ethics gate for attractiveness, and its
 refusal in rules (`negsim/resolution/pairwise.py`; template `resolve_pairwise_v1`;
 `docs/pairwise-factors.md`); and, by the user's decision of 2026-10-23, the core template
-`resolve_v3`, which prints the factor lines on the short line too (D2, below). Nothing else yet. Configs and
+`resolve_v3`, which prints the factor lines on the short line too (D2, below). RF-7 (#62), on the
+mock: D14's geometries and exact-repeat set, the screening designs (a regular fraction of
+resolution IV, or a balanced sample) and counterfactual pairs (`negsim/resolution/screening.py`,
+`design.py`; `docs/screening-designs.md`). Nothing else yet. Configs and
 templates from before this track behave exactly as before.
 
 ## D1. The reply
@@ -327,7 +330,15 @@ most.
 - **Size from data:** the total number of sessions is set from RF-9's measured variability, with
   roughly 10 outcome events per factor estimated as the minimum to aim for.
 
-(Screening designs: RF-7, #62.)
+**As built (RF-7, #62).** `design.geometries` lists the cases of one encounter type; every cell
+runs once on each, and each session records its `geometry`. `design.exact_repeats: {cells: 8,
+times: 3}` picks 8 cells with the seed, balanced across each factor's levels, and runs each 3
+times in all on one geometry, the geometries taken in turn; the repeats send byte-identical
+prompts. `design.kind: fractional` gives 16 or 32 cells of a regular resolution IV fraction
+(generators from NIST's Table 3.17 and, for 12 to 16 factors, Chen & Cheng 2006);
+`design.kind: sample` a balanced random sample; `counterfactual_pairs` two sessions identical
+but for one factor. Round 1's shape (32 cells, 2 geometries, the exact-repeat set, all three
+conditions) is 240 sessions (`screening-designs.md`).
 
 ## D15. One scenario at a time (rounds)
 

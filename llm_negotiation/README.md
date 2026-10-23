@@ -86,6 +86,8 @@ From track #55. **Part 1, the pipeline, built once** (all on the mock client, no
    to the observer. *Built on the mock* (`negsim/resolution/pairwise.py`, section "The pairwise
    perception factors (issue #61)"; `docs/pairwise-factors.md`).
 9. RF-7 (#62): screening designs, geometries, the exact-repeat set, counterfactual pairs.
+   *Built on the mock* (`negsim/resolution/screening.py`, `design.py`, section "The screening
+   designs (issue #62)"; `docs/screening-designs.md`).
 10. RF-8 (#63): analysis: factor effects, decision tree, the mapping, noise floor, stability,
     stated against measured, intent against plan.
 
@@ -1140,6 +1142,36 @@ The rehearsal gives an asymmetric matrix, shows and hides attractiveness, crosse
 and gives person 1 a cane, on head-on, passage and overtaking cases (24 sessions), under
 `resolve_v3`. The mock's replies do not read the lines, so nothing in it is a finding.
 
+## The screening designs (issue #62)
+
+Issue #62 (RF-7) chooses which cells a resolution experiment runs, on the mock
+(`negsim/resolution/screening.py`, `design.py`; `docs/screening-designs.md`):
+
+- **`design.kind`**: `full` (every combination: the default, unchanged), `fractional` (a regular
+  2^(k-p) fraction of 16 or 32 cells, resolution IV or higher, checked on its cells: up to 16
+  two-level factors in 32 cells, `mapping` one of them so that it stays counterbalanced), or
+  `sample` (N cells drawn with the seed, each factor balanced). The generators are NIST's
+  (Table 3.17) and, for 12 to 16 factors in 32 cells, Chen & Cheng 2006's projections of the
+  saturated 2^(16-11) design.
+- **`design.geometries`** (D14): the cases of one encounter type; every cell once on each, and
+  each session records its `geometry`.
+- **`design.exact_repeats: {cells, times}`** (D14): a balanced handful of cells, each run `times`
+  times in all on one geometry with byte-identical prompts: the noise floor for RF-8.
+- **`design.counterfactual_pairs`**: a base cell and a factor, run as two sessions identical but
+  for that factor (same case, seed and mapping), linked by `pair_id`.
+- **`--plan`** prints the kind, the cells, the geometries, the exact-repeat set, the pairs, the
+  sessions per condition and the worst-case cost.
+
+```
+python run_experiment.py configs/resolution/resolve_screening_mock_rehearsal.yaml --plan
+python run_experiment.py configs/resolution/resolve_screening_mock_rehearsal.yaml
+```
+
+The rehearsal has round 1's shape: a 2^(12-7) fraction (32 cells) on two head-on geometries,
+8 cells repeated 3 times, all three conditions and one urgency pair, 252 sessions. Its factors
+only exercise the machinery; choosing them is RF-10's. A config with none of the new keys has the
+same cells, session ids and records as before.
+
 ## Changing things
 
 | To | Edit |
@@ -1165,6 +1197,7 @@ and gives person 1 a cane, on head-on, passage and overtaking cases (24 sessions
 | let the agents move while they talk | `negotiation.timing.mode: concurrent` |
 | add a scenario to Step 1 (track #55) | a subclass of `Scenario` in a new module under `negsim/resolution/scenarios/`, a line in that package's `PLUGINS`, and a frozen template `scenario_<name>_v1.yaml` of kind `resolution_scenario` (its place lines, its `until` events, any block of its own). On the subclass: `happened` (what each event means), `zone_exits` (its conflict zone), `outcome_columns` and `resolved` (issue #59); `conflict_predicted`, `encounter_members`, `CASE_TYPES` and `MAX_MEMBERS` (issue #58). Never an edit of `resolve_v1`, the parser, the executor or the protocol (`docs/resolution.md`, D16) |
 | vary a pairwise perception factor in Step 1 (track #55) | add `attractiveness_0_sees_1`, `attractiveness_1_sees_0` or `familiarity` (and a switch `attractiveness_visible` or `familiarity_visible`) to a resolution config's `design.factors` (`docs/pairwise-factors.md`, section 4). Change the wording in a new `resolve_pairwise_v2`. A paid run with attractiveness needs the ethics sign-off in `CLAUDE.md` first (section 6) |
+| screen many factors in Step 1 (track #55) | `design.kind: fractional` in a resolution config, each factor at one level (fixed) or two (screened), up to 16 screened in 32 cells; or `kind: sample` with `cells: N`. Add `geometries`, `exact_repeats` and `counterfactual_pairs` as needed (`docs/screening-designs.md`). Never edit the generator table: a new design is a new entry with its source |
 | vary a core or situational factor in Step 1 (track #55) | add it to a resolution config's `design.factors` (`neither`/`p1`, a switch `<name>_visible`, or the situational levels; `docs/parameters.md`, section 8.7). Change its wording in a new `resolve_factors_v2`, and what `load` and `surroundings` do in a new `configs/resolution/factors_v2.yaml` |
 | change what an LLM agent can see or hear (cone, ranges, hearing, change thresholds) | a new `configs/resolution/llm_view_v2.yaml`, never an edit of `llm_view_v1.yaml`; tag every value, give its source in `docs/parameters.md`, section 8.4, and list any placeholder in section 8.2 (`tests/test_perceive.py` checks) |
 | change any wording an agent sees | **a new template version.** Copy `negsim/negotiation/templates/<name>_v1.yaml` to `_v2`, edit it, run `python -m negsim.negotiation.freeze <name>_v2 "<why>"`, and record the reason in the work log. A frozen template that has been edited will not load. |
@@ -1184,7 +1217,11 @@ and gives person 1 a cane, on head-on, passage and overtaking cases (24 sessions
   plans out in the simulator (`execute.py`, `outcomes.py`, `replay.py`); RF-3 (#58) runs the
   encounters (`protocol.py`, `experiment.py`; `docs/encounter-protocol.md`); RF-5 (#60) adds
   the core and situational factors (`factors.py`); RF-6 (#61) adds the pairwise perception
-  factors (`pairwise.py`; `docs/pairwise-factors.md`); RF-7 onward build the rest.
+  factors (`pairwise.py`; `docs/pairwise-factors.md`); RF-7 (#62) adds the screening designs
+  (`screening.py`; `docs/screening-designs.md`); RF-8 onward build the rest.
+- `docs/screening-designs.md`: the screening designs of issue #62: the fraction and its
+  published generators, the balanced sample, geometries, the exact-repeat set, counterfactual
+  pairs, and what stays as before.
 - `docs/pairwise-factors.md`: the pairwise perception factors of issue #61: the block, who is
   told what, the switches, the design, what is logged, the ethics gate and its exact sentence,
   the rule check, and how a crowd of 10,000 would store them.
