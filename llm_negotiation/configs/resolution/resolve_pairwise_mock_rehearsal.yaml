@@ -1,0 +1,83 @@
+# Issue #61 (RF-6): the pairwise perception factors rehearsed end to end on the mock client.
+# No network and no cost; the output goes under runs_mock/, which git does not track.
+#
+#   python run_experiment.py configs/resolution/resolve_pairwise_mock_rehearsal.yaml --plan
+#   python run_experiment.py configs/resolution/resolve_pairwise_mock_rehearsal.yaml
+#
+# One case of each of rounds 1 to 3, in the independent and talk conditions. Person 1 finds
+# person 2 attractive and person 2 does not find person 1 especially attractive (an asymmetric
+# matrix), so that each view shows its own row only. The design crosses familiarity with the
+# switch of perceived attractiveness, so that a shown and a hidden line are both exercised.
+# mapping is p1_higher, so that person 1 is the case's agent 1 and the block's rows ("agents")
+# are not simply the agent ids.
+#
+# What each case shows: in the narrow passage the pair are within 5 m from the start, so both
+# are told their own lines; in the overtaking case the person ahead never sees the one behind,
+# so it is told nothing of them; in the head-on case every decision point is further than 5 m,
+# where resolve_v2 prints one short line per person (D2), so nobody is told a pairwise line
+# (WORK_LOG-61.md, open question 1). The outcome rows count, per person, the decision points at
+# which a pairwise line was shown (p1_pairwise_lines_shown).
+#
+# Perceived attractiveness is on here. A mock run needs no ethics sign-off; the same design with
+# the deepseek client is refused until CLAUDE.md records it (docs/pairwise-factors.md, section 6).
+#
+# The mock does not imitate a model (negsim/resolution/mock.py): its replies are scripted and do
+# not read the pairwise lines. Nothing here is a finding about a model.
+schema_version: 1
+layer: resolution
+experiment_name: resolve_pairwise_mock_rehearsal
+description: >-
+  Mock rehearsal of the RF-6 pairwise factors: an asymmetric attractiveness matrix, shown and
+  hidden, crossed with familiarity; head-on, narrow passage and overtaking; independent and talk.
+
+cases:
+  store: cases
+  ids:
+    - head_on_02dfbadb@2      # round 1: wide_corridor_head_on, walking lines 20 cm apart
+    - passage_36a66c39@1      # round 2: passage_meeting, symmetric, walking, 0.3 m apart
+    - overtaking_23c5d31e@2   # round 3: overtaking, 30 cm aside
+
+conditions: [independent, talk]
+
+design:
+  seed: 61
+  base_age: 25
+  age_difference: 45
+  repeats: 1
+  factors:
+    age_pair: [same]
+    gender_pair: [p1_female]
+    task: [none]
+    demographics_visible: [true]
+    attractiveness_0_sees_1: [attractive]      # person 1 finds person 2 attractive
+    attractiveness_1_sees_0: [unremarkable]    # person 2 does not find person 1 especially attractive
+    familiarity: [strangers, acquaintances]
+    attractiveness_visible: [true, false]
+    mapping: [p1_higher]
+
+protocol:
+  max_decision_points: 3         # D5
+  min_gap_s: 1.0                 # D5
+  no_conflict_end_s: 1.0         # [placeholder] the encounter ends after this long with no conflict predicted
+  max_prompted: 4                # D11, D12: the cap on prompted people per encounter (a cost limit)
+  speech_words_per_second: 2.5   # [placeholder] how fast a message is said
+
+templates:
+  core: resolve_v2
+  debrief: resolve_debrief_v1
+  pairwise: resolve_pairwise_v1
+
+llm_view: configs/resolution/llm_view_v1.yaml
+
+llm:
+  client: mock
+  mock_policy: resolution_rehearsal_v1
+  model: deepseek-flash   # what the preview prices; the mock answers
+  temperature: 1.0
+  max_tokens: 400         # [placeholder] the reply cap, as in #30's config
+  thinking: disabled
+  transport_retries: 2
+
+budget:
+  cap_usd: 0.05
+  ledger: spend_ledger.jsonl
