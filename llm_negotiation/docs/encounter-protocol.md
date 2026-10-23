@@ -185,12 +185,19 @@ could be in view in full detail. That is a true bound but a loose one; a paid cr
   age, gender, urgency, errand, and the person's level of each core factor the design varies
   (issue #60: `p1_mobility_aid`, `p2_load`, ...); how the person sees the other, as 0 or 1, and at
   how many of its decision points it was told so (issue #61: `p1_finds_other_attractive`,
-  `p1_knows_other`, `p1_pairwise_lines_shown`; `pairwise-factors.md`, section 5); the number of decision points and their reasons; unreadable
+  `p1_knows_other`, `p1_pairwise_lines_shown`; `pairwise-factors.md`, section 5); at how many of
+  its decision points it was told the other's age and gender (`p1_other_age_shown`,
+  `p1_other_gender_shown`: full detail only, with the demographics visible) and, with a design
+  that varies a core or situational factor, at how many the other was in view at a detail where
+  their observable factor lines are printed (`p1_other_observable_shown`; issue #63, for RF-8's
+  "as the agent was told"); the number of decision points and their reasons; unreadable
   replies; the first and the final plan coded mechanically (`side`: the sign of the turns, or
   `none` or `both`; `slowed`: a speed below the speed at the decision; `stopped`; `backed_up`;
   `start_distance_m`); signals used; messages; the debrief's `kind` and `source`;
-- **the encounter:** size, how many were prompted, how many the cap left out, start, end and
-  why, `not_resolved_by_llm`, when ORCA took over;
+- **the encounter:** size, its members in order (`encounter_agents`, issue #63: whoever noticed
+  first leads, and the physical columns' `_a` and `_b` are its first two, not person 1 and
+  person 2), how many were prompted, how many the cap left out, start, end and why,
+  `not_resolved_by_llm`, when ORCA took over;
 - **physical outcomes**, RF-4's columns and the scenario's own, once per mode with the mode as
   suffix: `_plan_only`, `_plan_orca`, and `_plain_orca` (the case's run with no plan, same seed).
   `resolved_plan_only` is the physical result in the Step 1 measure; **`resolved_by_llm`** is

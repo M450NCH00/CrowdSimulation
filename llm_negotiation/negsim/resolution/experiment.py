@@ -745,6 +745,32 @@ def _pairwise_columns(record: Mapping[str, Any], agent: int, other: int, prefix:
     return columns
 
 
+def _shown_columns(record: Mapping[str, Any], agent: int, other: int, prefix: str) -> dict[str, Any]:
+    """Issue #63 (RF-8): at how many of ``agent``'s decision points it was told ``other``'s age and
+    gender (printed only in full detail, and only when the demographics are visible, D2), and, with
+    a design that varies a core or situational factor, at how many ``other`` was in view at a detail
+    where their observable factor lines are printed (``resolve_v3`` prints them on a short line
+    too). A base level has no line, so the analysis counts a factor as told only when the person's
+    level has one and its switch is on (``analysis/load.py``)."""
+    printed = _core(record["templates"]["core"]["key"]).prints_extra_lines
+    age = gender = observable = 0
+    for point in record.get("decision_points") or []:
+        if point["agent_id"] != agent:
+            continue
+        label = (point["view"].get("labels") or {}).get("label_of_agent", {}).get(str(other))
+        person = next((p for p in point["view"]["seen"] if p["label"] == label), None)
+        if person is None:
+            continue
+        full = person["detail"] == DETAIL_FULL
+        age += full and person.get("age") is not None
+        gender += full and person.get("gender") is not None
+        observable += printed(person["detail"])
+    columns = {f"{prefix}_other_age_shown": age, f"{prefix}_other_gender_shown": gender}
+    if record.get("factors") is not None:
+        columns[f"{prefix}_other_observable_shown"] = observable
+    return columns
+
+
 @functools.lru_cache(maxsize=None)
 def _core(key: str) -> CoreTemplate:
     return CoreTemplate.load(key)
@@ -771,9 +797,14 @@ def outcome_row(record: Mapping[str, Any], case: Mapping[str, Any], physical: Op
         **{name: session["cell"][name] for name in ALL_FACTORS if name in session["cell"]},
         **_agent_columns(record, first, "p1"),
         **_pairwise_columns(record, first, second, "p1"),
+        **_shown_columns(record, first, second, "p1"),
         **_agent_columns(record, second, "p2"),
         **_pairwise_columns(record, second, first, "p2"),
+        **_shown_columns(record, second, first, "p2"),
         "encounter_size": len(encounter.get("agents") or []),
+        # Issue #63: the members in the encounter's order, whoever noticed first leading; the
+        # physical columns' ``_a`` and ``_b`` are its first two, not person 1 and person 2.
+        "encounter_agents": ";".join(str(agent) for agent in encounter.get("agents") or []) or None,
         "prompted": len(encounter.get("prompted") or []),
         "left_out_by_cap": len(encounter.get("left_out_by_cap") or []),
         "encounter_start_s": None if not encounter.get("trigger") else encounter["trigger"]["time_s"],

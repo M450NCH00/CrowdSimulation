@@ -48,7 +48,10 @@ refusal in rules (`negsim/resolution/pairwise.py`; template `resolve_pairwise_v1
 `resolve_v3`, which prints the factor lines on the short line too (D2, below). RF-7 (#62), on the
 mock: D14's geometries and exact-repeat set, the screening designs (a regular fraction of
 resolution IV, or a balanced sample) and counterfactual pairs (`negsim/resolution/screening.py`,
-`design.py`; `docs/screening-designs.md`). Nothing else yet. Configs and
+`design.py`; `docs/screening-designs.md`). RF-8 (#63), on synthetic and mock data: the analysis
+of the outcome tables, outside negsim (`analysis/` at the repository root): factor effects, a
+decision tree, the mapping, D14's noise floor and stability, D8's stated against measured, and
+D1's intent against plan. Nothing else yet. Configs and
 templates from before this track behave exactly as before.
 
 ## D1. The reply

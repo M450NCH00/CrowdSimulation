@@ -89,7 +89,10 @@ From track #55. **Part 1, the pipeline, built once** (all on the mock client, no
    *Built on the mock* (`negsim/resolution/screening.py`, `design.py`, section "The screening
    designs (issue #62)"; `docs/screening-designs.md`).
 10. RF-8 (#63): analysis: factor effects, decision tree, the mapping, noise floor, stability,
-    stated against measured, intent against plan.
+    stated against measured, intent against plan. *Built and tested on synthetic and mock data*,
+    outside negsim (`../analysis/`, its own requirements; `python -m analysis <outcomes.csv>`
+    from the repository root). The outcome rows gain what each agent was told of the other
+    and the encounter's order (`docs/encounter-protocol.md`, section 7).
 
 RF-7 and RF-8 do not depend on RF-2 to RF-6. RF-5 and RF-6 can start once RF-2 and RF-17 are
 merged.
@@ -1218,7 +1221,8 @@ same cells, session ids and records as before.
   encounters (`protocol.py`, `experiment.py`; `docs/encounter-protocol.md`); RF-5 (#60) adds
   the core and situational factors (`factors.py`); RF-6 (#61) adds the pairwise perception
   factors (`pairwise.py`; `docs/pairwise-factors.md`); RF-7 (#62) adds the screening designs
-  (`screening.py`; `docs/screening-designs.md`); RF-8 onward build the rest.
+  (`screening.py`; `docs/screening-designs.md`); RF-8 (#63) analyses the outcome tables
+  (`../analysis/`, outside negsim); RF-9 onward build the rest.
 - `docs/screening-designs.md`: the screening designs of issue #62: the fraction and its
   published generators, the balanced sample, geometries, the exact-repeat set, counterfactual
   pairs, and what stays as before.

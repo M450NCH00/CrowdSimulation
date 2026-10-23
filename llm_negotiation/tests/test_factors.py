@@ -318,6 +318,64 @@ def test_the_outcome_row_has_each_factor_and_each_persons_level(tmp_path):
     assert "task" not in row
 
 
+def told_counts(record, agent, other):
+    """What the views say the agent was told of the other, counted independently of the row."""
+    counts = {"age": 0, "gender": 0, "short": 0, "full": 0}
+    for point in record["decision_points"]:
+        if point["agent_id"] != agent:
+            continue
+        label = point["view"]["labels"]["label_of_agent"][str(other)]
+        for person in point["view"]["seen"]:
+            if person["label"] == label:
+                counts[person["detail"]] += 1
+                counts["age"] += person["detail"] == "full" and person["age"] is not None
+                counts["gender"] += person["detail"] == "full" and person["gender"] is not None
+    return counts
+
+
+@pytest.mark.parametrize("core", ["resolve_v3", "resolve_v2"])
+def test_the_outcome_row_counts_what_each_agent_was_told_of_the_other_in_the_head_on_case(tmp_path, core):
+    """Issue #63 (RF-8): in round 1's head-on case every decision point is beyond 5 m, so neither
+    is ever told the other's age or gender; resolve_v3 prints the observable lines on the short line."""
+    config = factor_config("told", conditions=("independent", "talk"), factors_={"distraction": ["p1"]})
+    if core == "resolve_v2":
+        config = replace(config, templates={**config.templates, "core": core})
+    E.run_resolution(config, out_root=tmp_path, report=lambda _: None, git=GIT)
+    for line in (tmp_path / "told" / "outcomes.jsonl").read_text(encoding="utf-8").splitlines():
+        row = json.loads(line)
+        record = json.loads((tmp_path / "told" / "sessions" / f"{row['session_id']}.json").read_text(encoding="utf-8"))
+        assert row["encounter_agents"] == ";".join(str(a) for a in record["encounter"]["agents"])
+        for me, other in (("p1", "p2"), ("p2", "p1")):
+            counts = told_counts(record, row[f"{me}_agent"], row[f"{other}_agent"])
+            assert counts["full"] == 0 and row[f"{me}_decision_points"] >= 1
+            assert row[f"{me}_other_age_shown"] == row[f"{me}_other_gender_shown"] == 0
+            expected = counts["short"] if core == "resolve_v3" else 0
+            assert row[f"{me}_other_observable_shown"] == expected
+        if core == "resolve_v3":
+            assert row["p1_other_observable_shown"] == row["p1_decision_points"]
+
+
+@pytest.mark.parametrize("visible", [True, False])
+def test_within_5_m_the_row_counts_age_and_gender_only_when_the_demographics_are_visible(tmp_path, visible):
+    config = factor_config("near", ids=("passage_02fac1e4@1",), factors_={"distraction": ["p1"], "demographics_visible": [visible]})
+    E.run_resolution(config, out_root=tmp_path, report=lambda _: None, git=GIT)
+    (line,) = (tmp_path / "near" / "outcomes.jsonl").read_text(encoding="utf-8").splitlines()
+    row = json.loads(line)
+    record = json.loads((tmp_path / "near" / "sessions" / f"{row['session_id']}.json").read_text(encoding="utf-8"))
+    for me, other in (("p1", "p2"), ("p2", "p1")):
+        counts = told_counts(record, row[f"{me}_agent"], row[f"{other}_agent"])
+        assert counts["full"] >= 1
+        assert row[f"{me}_other_age_shown"] == row[f"{me}_other_gender_shown"] == (counts["full"] if visible else 0)
+        assert row[f"{me}_other_observable_shown"] == counts["full"] + counts["short"]
+
+
+def test_a_design_without_factors_has_the_age_and_gender_counts_but_no_observable_count(tmp_path):
+    E.run_resolution(small_config("plain", conditions=("independent",)), out_root=tmp_path, report=lambda _: None, git=GIT)
+    row = json.loads((tmp_path / "plain" / "outcomes.jsonl").read_text(encoding="utf-8").splitlines()[0])
+    assert {"p1_other_age_shown", "p2_other_gender_shown", "encounter_agents"} <= set(row)
+    assert "p1_other_observable_shown" not in row
+
+
 def test_the_cost_preview_counts_the_factor_lines(tmp_path):
     plain = E.plan(factor_config("p0", factors_={"mobility_aid": ["neither"]})).preview
     full = {name: ["p1"] for name in FACTOR_ATTRIBUTES}

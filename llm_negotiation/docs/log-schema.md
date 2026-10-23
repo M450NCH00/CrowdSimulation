@@ -733,3 +733,9 @@ lines whose `experiment` is that experiment's name.
   resolution experiment, version 1 of its own (`resolution_log_version`), section "Resolution
   experiments". A replay's session record may now have more than two `encounter.agents`, their
   conflict `pairs`, and a `partner_id` per decision; a two-person record is as before.
+- (2026-10-23, issue #63; no version change.) A resolution experiment's outcome rows gain, per
+  person, `_other_age_shown` and `_other_gender_shown` and, with a design that varies a core or
+  situational factor, `_other_observable_shown` (what the person was told of the other, for
+  RF-8), and `encounter_agents` (the members in the encounter's order, which the physical
+  columns' `_a` and `_b` follow). Every other file is as before; the tables are rebuilt from the
+  session records when an experiment is resumed.
