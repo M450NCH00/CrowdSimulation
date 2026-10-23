@@ -249,8 +249,13 @@ class Session:
 
     @property
     def factor_levels(self) -> dict[int, dict[str, str]]:
-        """Each person's levels of the core factors the design varies (``urgency`` included)."""
-        return {agent: {name: persona[name] for name in PERSON_FACTORS if name in persona} for agent, persona in self.personas.items()}
+        """Each person's levels of the core factors the design varies (``urgency`` included). A
+        person with no errand (``task: none``) has no urgency, so none is given (issue #61 found
+        that ``None`` was passed on as a level, and the session refused)."""
+        return {
+            agent: {name: persona[name] for name in PERSON_FACTORS if persona.get(name) is not None}
+            for agent, persona in self.personas.items()
+        }
 
     @property
     def situation(self) -> dict[str, str]:
