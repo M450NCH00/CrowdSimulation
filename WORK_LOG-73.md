@@ -133,11 +133,52 @@ the perception record. Paid calls: none.
   `feat/57-resolve-templates-view-parser` and on this branch: both `02b881ba…`. The worktree was
   removed.
 
+### 2026-10-23 — The placeholders replaced by researched values (the user's request)
+- What I did: after PR #84 was opened, the user asked for real human values in place of the six
+  placeholders. Searched, downloaded and read the sources, cached them in `refs/rf17_*`
+  (tracked: text, excerpts with line numbers, abstracts; local only: the ISO preview, the Watt
+  manuscript and the Pearsons scan, in `.gitignore`), and wrote `parameters.md`, section 8.4.
+- Result:
+
+  | Key | Was | Now | Source |
+  | --- | --- | --- | --- |
+  | `hearing_range_m` | 7 m | **3.2 m**, derived | Pearsons, Bennett & Fidell 1977 (EPA): raised voice 64 dB at 1 m, department-store background 54 dB, 94% of sentences understood at 0 dB speech-to-noise; ISO 9921-1:1996 eq. (3), 6 dB per doubling of distance. 10^((64−54)/20) = 3.16 m |
+  | `heard_close_m` | 3 m | **1.0 m**, cited | Pearsons et al. 1977: people talk at about 1 m (0.4 m above 70 dB) |
+  | `eye_contact_range_m` | 4 m | **10 m** (all of the view), derived | Watt, Craven & Quinn 2007, Fig. 4: a 4° eye turn is read correctly to about 12 to 14 m for a 0.1 s glance, 18 to 25 m for 0.5 s (neutral eyebrows) |
+  | speed change | 0.2 m/s | **7% of the earlier speed**, cited | De Bruyn & Orban 1988: speed Weber fraction about 7% |
+  | direction change | 5° | **2°**, cited | Gurnsey, Roddy & Troje 2010: a walker's heading, 1 to 2°; De Bruyn & Orban 1988: 1.8° |
+  | sideways | 0.2 m | **2° off their earlier line** | no source gives metres; the direction threshold is used |
+
+- **Two changes of form, not just of number** (my decisions, open to change):
+  1. The speed threshold is now a **fraction** (`speed_fraction`), because the measured threshold
+     is a Weber fraction: 7% of 1.3 m/s is 0.09 m/s, of 1.1 m/s 0.08 m/s.
+  2. "Moved over" is now an **angle**: where the person is now lies at least 2° off the line they
+     were walking along at the last look (counting only the agent's left and right). Nothing read
+     gives a noticeable sideways shift in metres; the direction threshold is the human value that
+     exists. `sideways_m`, `speed_mps` and `turn_deg` became `speed_fraction` and `direction_deg`.
+- **`llm_view_v1.yaml` was edited, not versioned**, despite its own "never an edit" header: it
+  was unmerged and no run had read it. The header now says so.
+- **Context, not used as a value:** the Warren lab perturbs a neighbour by ±10° and ±0.3 m/s
+  (Dachner et al. 2022), sizes that reliably produce a response. The values above are
+  thresholds of perception, which are smaller: an agent may now be prompted again for a change
+  a person would notice without reacting to. D5's 1 s gap and three-decision cap limit that.
+- Not used: the Fotios et al. file downloaded turned out to be a different paper of theirs
+  (critical fixations), so the "people look at others from about 15 m" result was not cited.
+- Verified: `tests/test_perceive.py` rewritten for the new values and forms (the thresholds fire
+  at 7% and 2° and not below; moving over does not depend on the time between looks; the hearing
+  range equals the arithmetic of 8.4; every researched row names a source cached in `refs/`; no
+  value in `llm_view` is a placeholder). Full suite: **1542 passed** (322 s). `pyflakes` clean.
+
 ## Open questions / risks
 
-- **Q1. The new placeholders** (hearing 7 m, close by 3 m, eye contact 4 m) are round numbers
-  of mine. RF-5's `surroundings` factor is meant to set the hearing range; until then every
-  result that depends on who heard what rests on a placeholder.
+- **Q1. The hearing range assumes a raised voice in a public indoor background** (54 dB, the
+  department stores of Pearsons et al., the only public place they measured). In a quiet home
+  (45 dB) the same voice carries about 9 m, in a train (74 dB) 0.3 m. RF-5's `surroundings`
+  factor should set the background; the arithmetic is in `parameters.md` 8.4. Whether an agent's
+  message is "raised" or "normal" (57 dB, 1.6 m) is not said by the reply format.
+- **Q1b. The perception thresholds are laboratory values** (random dots, point-light walkers, a
+  face on a monitor, attentive observers, two observers in Watt et al.), and the nod's range has
+  no source of its own.
 - **Q2. Walls do not stop sound**, and a voice's direction is one of four quarters. Both are
   simplifications; a scenario with someone speaking round a corner would need more.
 - **Q3. Facing while backing or standing** (decision 2) changes who an agent sees compared with
@@ -190,6 +231,8 @@ views from five scenarios and a 100-person crowd through both templates in every
 **Acceptance criteria.**
 - [x] Views are built from the simulation for every block of D2, and render through
   `resolve_v1` (and `resolve_v2`, which words what `v1` cannot).
-- [x] Every placeholder is marked as one in the config and in `parameters.md` (tested).
+- [x] Every placeholder is marked as one in the config and in `parameters.md` (tested). After
+  the research of 2026-10-23 none is left in `llm_view`: every value is cited or derived, with
+  its source in `parameters.md` 8.4 and cached in `refs/` (tested).
 - [x] Existing runs, baselines and perception records are unchanged, and the full test suite
   passes.

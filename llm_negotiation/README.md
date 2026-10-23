@@ -962,11 +962,14 @@ are unchanged (D10; a run watched every few steps is byte for byte a plain run, 
   cost cap that records how many it left out.
 - **Labels** ("Person 1") stay the same for the whole encounter.
 - **What is heard:** whatever was said since the agent last looked, within the hearing range
-  (7 m, a placeholder), from any direction. An unseen speaker is "someone" with a rough direction
-  and a distance band: "Someone behind you, close by, says: ...".
-- **Signals** appear only if the agent could see the signaller when it was made; eye contact and a
-  nod also need the two within 4 m (a placeholder).
-- **Changes since you last looked** (D5: 0.2 m sideways, 0.2 m/s, 5°, placeholders), **the time to
+  (3.2 m: a raised voice against the background of a public indoor place, from Pearsons et al.
+  1977), from any direction. An unseen speaker is "someone" with a rough direction and a distance
+  band ("close by" within 1 m, the distance people talk at): "Someone behind you, close by,
+  says: ...".
+- **Signals** appear only if the agent could see the signaller when it was made. Eye contact and a
+  nod are seen anywhere in view: gaze direction stays readable beyond 10 m (Watt et al. 2007).
+- **Changes since you last looked** (D5: a 7% change of speed, or 2° of direction, the thresholds
+  of human motion perception; `docs/parameters.md`, section 8.4), **the time to
   meet** (only when the closest approach is inside the safety distance) and **what you have done
   so far** (each earlier decision, how far the agent has moved since, and whether its steps were
   finished, still going or replaced).
@@ -1002,7 +1005,7 @@ agent is prompted is RF-3's (#58); carrying out its plan is RF-4's (#59).
 | choose what an agent can see of the other | `negotiation.visibility` (age, gender, task, backstory, speed, size) |
 | let the agents move while they talk | `negotiation.timing.mode: concurrent` |
 | add a scenario to Step 1 (track #55) | a subclass of `Scenario` in a new module under `negsim/resolution/scenarios/`, a line in that package's `PLUGINS`, and a frozen template `scenario_<name>_v1.yaml` of kind `resolution_scenario` (its place lines, its `until` events, any block of its own). Never an edit of `resolve_v1` or the parser (`docs/resolution.md`, D16) |
-| change what an LLM agent can see or hear (cone, ranges, hearing, change thresholds) | a new `configs/resolution/llm_view_v2.yaml`, never an edit of `llm_view_v1.yaml`; tag every value and list each placeholder in `docs/parameters.md`, section 8.2 (`tests/test_perceive.py` checks) |
+| change what an LLM agent can see or hear (cone, ranges, hearing, change thresholds) | a new `configs/resolution/llm_view_v2.yaml`, never an edit of `llm_view_v1.yaml`; tag every value, give its source in `docs/parameters.md`, section 8.4, and list any placeholder in section 8.2 (`tests/test_perceive.py` checks) |
 | change any wording an agent sees | **a new template version.** Copy `negsim/negotiation/templates/<name>_v1.yaml` to `_v2`, edit it, run `python -m negsim.negotiation.freeze <name>_v2 "<why>"`, and record the reason in the work log. A frozen template that has been edited will not load. |
 | add a persona attribute | one entry in `negsim/personas/schema.py`, one line in a new template version |
 | add a controller | a class with `compute(agent, speed_bound, world)`, registered with `@register_controller("name")` |

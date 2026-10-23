@@ -93,7 +93,8 @@ TIME TO MEET            "At your current speeds you would meet Person 1 in about
   `persona_v1`'s scene text.
 
 The view cone (75°), the seeing range (10 m) and the detail range (5 m) are sourced (D12). The
-hearing range is a **`[placeholder]`**. (Perception for the LLM: RF-17, #73. Factor lines: RF-5,
+hearing range is derived from measured speech and background levels (3.2 m in a public indoor
+place; `parameters.md`, section 8.4, issue #73). (Perception for the LLM: RF-17, #73. Factor lines: RF-5,
 #60, and RF-6, #61.)
 
 ## D3. Conditions
@@ -143,7 +144,9 @@ Guards:
 - at most 3 decision points per agent per encounter;
 - every decision point logs why it fired.
 
-Thresholds for "noticeably": **`[placeholder]`** (0.2 m sideways, 0.2 m/s, 5°).
+Thresholds for "noticeably": first set as placeholders (0.2 m sideways, 0.2 m/s, 5°); issue #73
+replaced them with the thresholds of human motion perception: a 7% change of speed and 2° of
+direction (`parameters.md`, section 8.4).
 
 ## D6. Who moves the agents
 
@@ -214,9 +217,9 @@ people per encounter as a cost limit (D12).
 | Seeing range | 10 m | same (dmax) |
 | Detail range | 5 m | Rio, Dachner & Warren 2018, *Proc. R. Soc. B* 285: 20180611 (influence decays to zero by 5 m; measured while walking *with* a crowd) |
 | Who is described | everyone visible, no fixed count | Wirth, Dachner, Rio & Warren 2023, *PNAS Nexus* 2(5): pgad118 (rules out a fixed number of neighbours) |
-| Hearing range | **`[placeholder]`** | should depend on RF-5's `surroundings` |
-| Eye-contact and nod range | **`[placeholder]`** | |
-| Change thresholds (D5) | **`[placeholder]`** | |
+| Hearing range | 3.2 m | derived from Pearsons, Bennett & Fidell 1977 (a raised voice, 64 dB at 1 m, against a 54 dB public indoor background) and ISO 9921-1 (6 dB per doubling of distance); should depend on RF-5's `surroundings` (issue #73) |
+| Eye-contact and nod range | the whole seeing range (10 m) | derived from Watt, Craven & Quinn 2007: gaze direction is readable to about 12 m or more (issue #73) |
+| Change thresholds (D5) | 7% of speed; 2° of direction | De Bruyn & Orban 1988 (speed); Gurnsey, Roddy & Troje 2010 (a walker's direction) (issue #73) |
 | Prompt cap in dense scenes | only if needed | a cost limit, not a human number; report how often it is reached |
 
 `parameters.md`, section 8, gives each source's locator in `refs/` and what each source

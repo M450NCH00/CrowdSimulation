@@ -68,7 +68,14 @@ OBSERVER = body(0, 0.0, 0.0, vx=1.3)
 def test_the_shipped_settings_are_d12s():
     assert (SETTINGS.half_angle_deg, SETTINGS.range_m, SETTINGS.detail_range_m) == (75.0, 10.0, 5.0)
     assert SETTINGS.occlusion and SETTINGS.walls_block_sight and SETTINGS.max_people is None
-    assert (SETTINGS.change_sideways_m, SETTINGS.change_speed_mps, SETTINGS.change_turn_deg) == (0.2, 0.2, 5.0)
+    assert (SETTINGS.hearing_range_m, SETTINGS.heard_close_m, SETTINGS.eye_contact_range_m) == (3.2, 1.0, 10.0)
+    assert (SETTINGS.change_speed_fraction, SETTINGS.change_direction_deg) == (0.07, 2.0)
+
+
+def test_the_hearing_range_is_the_arithmetic_of_parameters_8_4():
+    """A raised voice (64 dB at 1 m) falls 6 dB per doubling of distance to a 54 dB background:
+    10 ** ((64 - 54) / 20) m (Pearsons et al. 1977; ISO 9921-1, eq. 3)."""
+    assert round(10 ** ((64 - 54) / 20), 1) == SETTINGS.hearing_range_m
 
 
 TAG = re.compile(r"\[(cited: [^\]]+|derived: [^\]]+|placeholder|design)\]")
@@ -82,24 +89,47 @@ def config_lines():
 
 def test_every_value_in_the_llm_view_block_is_tagged():
     lines = config_lines()
-    assert len(lines) == 12
+    assert len(lines) == 11
     for line in lines:
         assert TAG.search(line), f"llm_view_v1.yaml: {line.strip()!r} has no tag"
 
 
-def test_every_placeholder_is_marked_in_the_config_and_in_the_parameters_document():
-    placeholders = [line.split(":")[0].strip() for line in config_lines() if "[placeholder]" in line]
-    assert placeholders == ["hearing_range_m", "heard_close_m", "eye_contact_range_m", "sideways_m", "speed_mps", "turn_deg"]
-    section = (PACKAGE_ROOT / "docs" / "parameters.md").read_text(encoding="utf-8").split("### 8.2 Placeholders", 1)[1].split("### 8.3", 1)[0]
+PARAMETERS = (PACKAGE_ROOT / "docs" / "parameters.md").read_text(encoding="utf-8")
+SECTION_8_4 = PARAMETERS.split("### 8.4", 1)[1].split("**Not read:**", 1)[0]
+#: The researched values (issue #73): the key, its row's value cell, its status.
+RESEARCHED = (
+    ("hearing_range_m", "3.2 m", "derived"),
+    ("heard_close_m", "1.0 m", "cited"),
+    ("eye_contact_range_m", "10 m (all of the seeing range)", "derived"),
+    ("change_thresholds.speed_fraction", "7% of the earlier speed", "cited"),
+    ("change_thresholds.direction_deg", "2°", "cited"),
+)
+
+
+def test_no_value_in_the_llm_view_block_is_a_placeholder():
+    assert not [line for line in config_lines() if "[placeholder]" in line]
+    placeholders = PARAMETERS.split("### 8.2 Placeholders", 1)[1].split("### 8.3", 1)[0]
     for name in ("hearing_range_m", "heard_close_m", "eye_contact_range_m", "change_thresholds"):
-        row = next((line for line in section.splitlines() if f"`{name}`" in line), None)
-        assert row is not None and "[placeholder]" in row, f"parameters.md 8.2 does not list {name} as a placeholder"
+        assert f"`{name}`" not in placeholders
 
 
-def test_the_config_values_and_the_parameters_document_agree():
-    section = (PACKAGE_ROOT / "docs" / "parameters.md").read_text(encoding="utf-8").split("## 8.", 1)[1]
-    assert "7 m `[placeholder]`" in section and "3 m `[placeholder]`" in section and "4 m `[placeholder]`" in section
-    assert "0.2 m sideways, 0.2 m/s, 5° `[placeholder]`" in section
+@pytest.mark.parametrize("key, value, status", RESEARCHED)
+def test_section_8_4_gives_each_researched_value_with_a_source_that_is_cached(key, value, status):
+    row = next((line for line in SECTION_8_4.splitlines() if f"(`{key}`)" in line), None)
+    assert row is not None, f"parameters.md 8.4 has no row for {key}"
+    cells = [cell.strip() for cell in row.strip("|").split("|")]
+    assert cells[1:3] == [value, status]
+    for name in re.findall(r"`(rf17_[\w.]+?)(?::[\d-]+)?`", row):
+        assert (PACKAGE_ROOT.parent / "refs" / name).is_file(), f"{name} is not in refs/"
+
+
+def test_the_config_tags_name_the_sources_of_section_8_4():
+    tags = {line.split(":")[0].strip(): TAG.search(line).group(1) for line in config_lines()}
+    assert tags["hearing_range_m"].startswith("derived: Pearsons et al. 1977")
+    assert tags["heard_close_m"].startswith("cited: Pearsons et al. 1977")
+    assert tags["eye_contact_range_m"].startswith("derived: Watt, Craven & Quinn 2007")
+    assert tags["speed_fraction"].startswith("cited: De Bruyn & Orban 1988")
+    assert tags["direction_deg"].startswith("cited: Gurnsey, Roddy & Troje 2010")
 
 
 @pytest.mark.parametrize("change, message", [
@@ -226,7 +256,7 @@ def test_a_decision_point_needs_the_reply_to_the_one_before():
 
 def test_someone_behind_is_heard_but_not_seen_and_is_someone_behind_you():
     ex = P.Exchange(SETTINGS)
-    bodies = [OBSERVER, at(1, 2.0, 180.0, vx=1.5)]
+    bodies = [OBSERVER, at(1, 0.9, 180.0, vx=1.5)]
     ex.say(0.5, 1, "Excuse me.", bodies)
     view = look(bodies, exchange=ex)
     assert not view.seen
@@ -238,9 +268,10 @@ def test_someone_behind_is_heard_but_not_seen_and_is_someone_behind_you():
 
 
 @pytest.mark.parametrize("speaker, direction, band", [
-    (at(1, 2.0, 100.0), "left", "close"),
-    (at(1, 6.5, -90.0), "right", "far"),
-    (at(1, 3.0, 140.0), "behind", "close"),
+    (at(1, 0.8, 100.0), "left", "close"),
+    (at(1, 2.5, -90.0), "right", "far"),
+    (at(1, 3.0, 140.0), "behind", "far"),
+    (at(1, 1.0, 180.0), "behind", "close"),
 ])
 def test_a_voice_out_of_view_has_a_rough_direction_and_a_distance_band(speaker, direction, band):
     ex = P.Exchange(SETTINGS)
@@ -251,7 +282,7 @@ def test_a_voice_out_of_view_has_a_rough_direction_and_a_distance_band(speaker, 
 
 def test_a_speaker_hidden_ahead_is_someone_ahead_of_you_not_behind():
     ex = P.Exchange(SETTINGS)
-    bodies = [OBSERVER, at(1, 5.0, 0.0), at(2, 2.0, 0.0)]
+    bodies = [OBSERVER, at(1, 3.0, 0.0), at(2, 1.5, 0.0)]
     ex.say(0.5, 1, "Coming through.", bodies)
     view = look(bodies, exchange=ex)
     assert seen_ids(view) == [2]
@@ -311,17 +342,25 @@ def test_a_signal_counts_only_if_the_observer_could_see_it_when_it_was_made():
 
 
 def test_eye_contact_and_a_nod_need_the_two_within_the_eye_contact_range():
-    ex = P.Exchange(SETTINGS)
-    other = at(1, SETTINGS.eye_contact_range_m + 0.5, 0.0, vx=-1.3)
+    settings = dataclasses.replace(SETTINGS, eye_contact_range_m=4.0)
+    ex = P.Exchange(settings)
+    other = at(1, 4.5, 0.0, vx=-1.3)
     for signal in ("eye_contact", "nod", "wave_on"):
         ex.signal(0.5, 1, signal, [OBSERVER, other], [])
     assert [s.signal for s in ex.signals if 0 in s.seen_by] == ["wave_on"]
-    view = look([OBSERVER, other], exchange=ex)
-    assert view.seen[0].signal == "wave_on"
-    close = at(1, SETTINGS.eye_contact_range_m, 0.0, vx=-1.3)
-    ex2 = P.Exchange(SETTINGS)
+    p = perceiver(settings=settings)
+    assert look([OBSERVER, other], p, exchange=ex).seen[0].signal == "wave_on"
+    close = at(1, 4.0, 0.0, vx=-1.3)
+    ex2 = P.Exchange(settings)
     ex2.signal(0.5, 1, "nod", [OBSERVER, close], [])
-    assert look([OBSERVER, close], exchange=ex2).seen[0].signal == "nod"
+    assert look([OBSERVER, close], perceiver(settings=settings), exchange=ex2).seen[0].signal == "nod"
+
+
+def test_with_the_shipped_settings_eye_contact_is_seen_anywhere_in_view():
+    ex = P.Exchange(SETTINGS)
+    far = at(1, SETTINGS.range_m, 0.0, vx=-1.3)
+    ex.signal(0.5, 1, "eye_contact", [OBSERVER, far], [])
+    assert look([OBSERVER, far], exchange=ex).seen[0].signal == "eye_contact"
 
 
 def test_a_signal_on_a_short_line_is_rendered_by_resolve_v2_only():
@@ -339,27 +378,36 @@ def test_a_signal_on_a_short_line_is_rendered_by_resolve_v2_only():
 
 
 def change(then, now, elapsed=1.0, facing=0.0):
-    return P.changes_since(then, now, elapsed, facing, SETTINGS)
+    return P.changes_since(then, now, facing, SETTINGS)
 
 
-@pytest.mark.parametrize("offset, expected", [
-    (0.2, ("moved_left",)), (0.19, ()), (-0.2, ("moved_right",)), (-0.19, ()),
+@pytest.mark.parametrize("degrees, expected", [
+    (2.0, ("moved_left",)), (1.9, ()), (-2.0, ("moved_right",)), (-1.9, ()),
 ])
-def test_moving_sideways_fires_at_the_threshold_and_not_below_it(offset, expected):
+def test_moving_over_fires_at_the_direction_threshold_and_not_below_it(degrees, expected):
     then = body(1, 6.0, 0.0, vx=-1.3)
+    offset = 1.3 * math.tan(math.radians(degrees))  # off the line, after walking 1.3 m along it
     now = body(1, 4.7, offset, vx=-1.3)
     assert change(then, now) == expected
+
+
+def test_moving_over_does_not_depend_on_the_time_between_looks():
+    then = body(1, 6.0, 0.0, vx=-1.3)
+    two_seconds_on = body(1, 6.0 - 2.6, 2.6 * math.tan(math.radians(2.0)), vx=-1.3)
+    assert change(then, two_seconds_on) == ("moved_left",)
 
 
 def test_sideways_is_against_the_observers_left_and_right_and_ignores_a_straight_course():
     then = body(1, 6.0, 0.0, vx=-1.0, vy=0.5)
     assert change(then, body(1, 5.0, 0.5, vx=-1.0, vy=0.5)) == ()  # on its line: no change
-    # The same move off its line, seen by an observer facing the other way: right and left swap.
+    # Off its line, to the observer's left; seen by an observer facing the other way, its right.
+    assert change(then, body(1, 5.0, 0.75, vx=-1.0, vy=0.5)) == ("moved_left",)
     assert change(then, body(1, 5.0, 0.75, vx=-1.0, vy=0.5), facing=math.pi) == ("moved_right",)
 
 
 @pytest.mark.parametrize("before, after, expected", [
-    (1.0, 1.2, ("sped_up",)), (1.0, 1.19, ()), (1.2, 1.0, ("slowed_down",)), (1.19, 1.0, ()),
+    (1.0, 1.07, ("sped_up",)), (1.0, 1.069, ()), (1.0, 0.93, ("slowed_down",)), (1.0, 0.931, ()),
+    (1.3, 1.391, ("sped_up",)), (1.3, 1.39, ()),  # Weber's law: 7% of 1.3 m/s is 0.091 m/s
     (1.0, 0.0, ("stopped",)), (0.0, 1.0, ("started_walking",)),
 ])
 def test_speed_changes_fire_at_the_threshold_and_not_below_it(before, after, expected):
@@ -368,7 +416,7 @@ def test_speed_changes_fire_at_the_threshold_and_not_below_it(before, after, exp
     assert change(then, now) == expected
 
 
-@pytest.mark.parametrize("degrees, expected", [(5.0, ("turned",)), (4.9, ())])
+@pytest.mark.parametrize("degrees, expected", [(2.0, ("turned",)), (1.9, ())])
 def test_a_turn_fires_at_the_threshold_and_not_below_it(degrees, expected):
     then = body(1, 6.0, 0.0, vx=-1.3)
     rad = math.pi + math.radians(degrees)
@@ -379,7 +427,7 @@ def test_a_turn_fires_at_the_threshold_and_not_below_it(degrees, expected):
 def test_starting_to_back_up_is_its_own_change():
     then = body(1, 2.0, 0.0, vx=-1.0, facing=math.pi)
     now = body(1, 2.5, 0.0, vx=0.9, facing=math.pi, backing=True)
-    found = change(then, now, elapsed=0.5)
+    found = change(then, now)
     assert "backing_up" in found and "turned" not in found and "sped_up" not in found
 
 
@@ -497,7 +545,7 @@ def test_views_from_the_simulation_render_through_resolve_v1_and_v2_in_every_con
 
 def test_a_view_from_the_simulation_fills_every_block_of_d2():
     sim = AvoidanceSimulation(crowd("wide_corridor_head_on"))
-    while math.dist(sim.world.agents[0].pose.xy, sim.world.agents[1].pose.xy) > 4.0:
+    while math.dist(sim.world.agents[0].pose.xy, sim.world.agents[1].pose.xy) > 3.0:  # within the 3.2 m hearing range
         sim.step()
     ex = P.Exchange(SETTINGS)
     p = P.perceiver_for(sim, 0, 1, PASSING, people=PEOPLE, since_s=0.0)

@@ -35,8 +35,9 @@ handed only to the scenario plug-in.
 - *Where a person faces* is their direction of travel; when they stand still or walk backwards,
   the direction their path takes where they are. (The simulator turns a disc to face its
   velocity, which for someone backing out of a passage is the wrong way.)
-- *"Moved sideways"* is how far a person is off the straight line they were walking on when the
-  agent last looked, along the agent's left and right now.
+- *"Moved over"* uses the direction threshold: a person has moved over when where they are now
+  lies at least that angle off the line they were walking along when the agent last looked
+  (counting only the agent's left and right now). No source gives a threshold in metres.
 - *The rough direction of a voice* is one of four quarters of a circle around the listener:
   ahead within 45° of where it faces, behind within 45° of the opposite way, otherwise left or
   right. Walls do not stop sound.
@@ -89,9 +90,8 @@ class LLMViewSettings:
     hearing_range_m: float
     heard_close_m: float
     eye_contact_range_m: float
-    change_sideways_m: float
-    change_speed_mps: float
-    change_turn_deg: float
+    change_speed_fraction: float
+    change_direction_deg: float
     max_people: Optional[int] = None
 
     def __post_init__(self) -> None:
@@ -110,15 +110,14 @@ class LLMViewSettings:
     def from_mapping(cls, block: Any, where: str = "llm_view") -> "LLMViewSettings":
         numbers = ("half_angle_deg", "range_m", "detail_range_m", "hearing_range_m", "heard_close_m", "eye_contact_range_m")
         check_keys(block, where, (*numbers, "occlusion", "walls_block_sight", "change_thresholds"), ("max_people",))
-        changes = check_keys(block["change_thresholds"], f"{where}.change_thresholds", ("sideways_m", "speed_mps", "turn_deg"))
+        changes = check_keys(block["change_thresholds"], f"{where}.change_thresholds", ("speed_fraction", "direction_deg"))
         values = {name: as_number(block[name], f"{where}.{name}", minimum=0.0, strict_minimum=True) for name in numbers}
         return cls(
             **values,
             occlusion=as_bool(block["occlusion"], f"{where}.occlusion"),
             walls_block_sight=as_bool(block["walls_block_sight"], f"{where}.walls_block_sight"),
-            change_sideways_m=as_number(changes["sideways_m"], f"{where}.change_thresholds.sideways_m", minimum=0.0, strict_minimum=True),
-            change_speed_mps=as_number(changes["speed_mps"], f"{where}.change_thresholds.speed_mps", minimum=0.0, strict_minimum=True),
-            change_turn_deg=as_number(changes["turn_deg"], f"{where}.change_thresholds.turn_deg", minimum=0.0, strict_minimum=True),
+            change_speed_fraction=as_number(changes["speed_fraction"], f"{where}.change_thresholds.speed_fraction", minimum=0.0, strict_minimum=True),
+            change_direction_deg=as_number(changes["direction_deg"], f"{where}.change_thresholds.direction_deg", minimum=0.0, strict_minimum=True),
             max_people=block.get("max_people"),
         )
 
@@ -451,7 +450,7 @@ class Perceiver:
         if last is None:
             changes: tuple[str, ...] = ()
         elif body.agent_id in last.seen:
-            changes = changes_since(last.seen[body.agent_id], body, time_s - last.time_s, observer.facing_rad, self.settings)
+            changes = changes_since(last.seen[body.agent_id], body, observer.facing_rad, self.settings)
         else:
             changes = ("came_into_view",)
         return SeenPerson(
@@ -509,9 +508,18 @@ class Perceiver:
         )
 
 
-def changes_since(then: Body, now: Body, elapsed_s: float, facing_rad: float, settings: LLMViewSettings) -> tuple[str, ...]:
-    """What a person did between two looks (D5), in ``view.CHANGES`` order. Sideways is against
-    the agent's left and right now (``facing_rad``); every threshold is met at its value."""
+def changes_since(then: Body, now: Body, facing_rad: float, settings: LLMViewSettings) -> tuple[str, ...]:
+    """What a person did between two looks (D5), in ``view.CHANGES`` order; every threshold is met
+    at its value (``docs/parameters.md``, section 8.1).
+
+    - **Speed** (Weber's law): a change of at least ``change_speed_fraction`` of their speed at the
+      last look; stopping, starting and starting to walk backwards are named as such.
+    - **Turned:** their direction of travel differs by at least ``change_direction_deg``.
+    - **Moved over to the agent's left or right:** where they are now lies at least
+      ``change_direction_deg`` off the line they were walking along at the last look, counting
+      only the part of that offset that is across the agent's own left and right now
+      (``facing_rad``). A step aside followed by walking on straight is a "move over" and not a turn.
+    """
     found = set()
     was_still, is_still = _still(then.speed_mps), _still(now.speed_mps)
     if now.backing and not then.backing:
@@ -520,19 +528,20 @@ def changes_since(then: Body, now: Body, elapsed_s: float, facing_rad: float, se
         found.add("stopped")
     elif was_still and not is_still:
         found.add("started_walking")
-    elif now.speed_mps - then.speed_mps >= settings.change_speed_mps - _EPS:
+    elif now.speed_mps - then.speed_mps >= settings.change_speed_fraction * then.speed_mps - _EPS:
         found.add("sped_up")
-    elif then.speed_mps - now.speed_mps >= settings.change_speed_mps - _EPS:
+    elif then.speed_mps - now.speed_mps >= settings.change_speed_fraction * then.speed_mps - _EPS:
         found.add("slowed_down")
-    expected = (then.position[0] + then.velocity[0] * elapsed_s, then.position[1] + then.velocity[1] * elapsed_s)
-    left = _left(facing_rad)
-    off = (now.position[0] - expected[0]) * left[0] + (now.position[1] - expected[1]) * left[1]
-    if off >= settings.change_sideways_m - _EPS:
-        found.add("moved_left")
-    elif -off >= settings.change_sideways_m - _EPS:
-        found.add("moved_right")
+    if not was_still and not then.backing:
+        ux, uy = then.velocity[0] / then.speed_mps, then.velocity[1] / then.speed_mps
+        dx, dy = now.position[0] - then.position[0], now.position[1] - then.position[1]
+        along = dx * ux + dy * uy
+        left = _left(facing_rad)
+        across_me = (dx - along * ux) * left[0] + (dy - along * uy) * left[1]
+        if along > 0.0 and math.degrees(math.atan2(abs(across_me), along)) >= settings.change_direction_deg - _EPS:
+            found.add("moved_left" if across_me > 0.0 else "moved_right")
     if not was_still and not is_still and now.backing == then.backing:
-        if abs(math.degrees(wrap_angle(now.travel_rad - then.travel_rad))) >= settings.change_turn_deg - _EPS:
+        if abs(math.degrees(wrap_angle(now.travel_rad - then.travel_rad))) >= settings.change_direction_deg - _EPS:
             found.add("turned")
     return tuple(change for change in CHANGES if change in found)
 
