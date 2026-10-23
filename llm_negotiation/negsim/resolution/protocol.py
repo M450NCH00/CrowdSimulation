@@ -517,7 +517,9 @@ class EncounterSession:
                 member.replies.append(parsed)
                 member.last_prompt, member.last_raw = prompt, reply.attempts[-1].raw_output
                 if parsed.signal != "none":
-                    self.exchange.signal(now, agent, parsed.signal, bodies, sim.world.obstacles)
+                    # Made during the step after the decision: after everyone looked at this
+                    # decision point, so that it is new to them (perceive counts what came after a look).
+                    self.exchange.signal(now + sim.world.dt, agent, parsed.signal, bodies, sim.world.obstacles)
                 if parsed.message and self.condition == CONDITION_TALK:
                     words = max(1, len(parsed.message.split()))
                     self._pending_speech.append((now + words / self.settings.speech_words_per_second, agent, parsed.message))

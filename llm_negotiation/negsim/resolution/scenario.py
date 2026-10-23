@@ -73,6 +73,9 @@ class Scenario:
     TEMPLATE: Optional[str] = None
     #: The case types (a case's ``scenario.type``) the plug-in takes when a config names none.
     CASE_TYPES: tuple[str, ...] = ()
+    #: The most people :meth:`encounter_members` can return (``None``: as many as the case has),
+    #: for the cost preview before anything runs.
+    MAX_MEMBERS: Optional[int] = 2
 
     def __init__(self, key: str, data: Mapping[str, Any], sha256: str):
         check_template_data(key, data)

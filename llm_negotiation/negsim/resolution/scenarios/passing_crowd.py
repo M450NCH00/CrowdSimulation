@@ -23,6 +23,7 @@ from .passing import PassingScenario
 
 class PassingCrowdScenario(PassingScenario):
     CASE_TYPES = ("bidirectional_flow",)
+    MAX_MEMBERS = None
 
     def encounter_members(self, simulation: Any, i: int, j: int) -> list[int]:
         agents = simulation.world.agents
