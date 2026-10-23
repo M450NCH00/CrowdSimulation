@@ -32,7 +32,7 @@ condition, and records everything they were told and replied:
    by everyone within hearing range: an event for each listener.
 6. **The end.** The encounter ends when every conflict pair has passed (or one of the pair has
    arrived), when no conflict between members has been predicted for ``no_conflict_end_s``,
-   on deadlock, or at the run's time limit. If every prompted agent has used its decision
+   on deadlock, when the run stops on a collision, or at the run's time limit. If every prompted agent has used its decision
    points and has no plan left to carry out while the conflict is still predicted, the
    encounter is **not resolved by the LLM**: it is handed to ORCA (``PlanDriver.release``),
    and what ORCA does after that is in the ``plan_only`` replay, recorded separately.

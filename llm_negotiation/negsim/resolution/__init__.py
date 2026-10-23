@@ -14,5 +14,9 @@
 - :mod:`.outcomes`: the physical outcome columns and the report (RF-4);
 - :mod:`.replay`: a session's plans replayed on its case's own run, rebuildable from the
   session record (RF-4, D13);
-- :mod:`.mock`: mock-client policies for every path.
+- :mod:`.protocol`: one session's encounter: the trigger, event-driven decision points, the
+  three conditions, the end and the hand-over to ORCA, the debrief, the record (RF-3, #58);
+- :mod:`.design`, :mod:`.experiment`, :mod:`.transcript`: the experiment layer ``resolution``
+  (RF-3);
+- :mod:`.mock`: mock-client policies for every path, and for a whole session.
 """

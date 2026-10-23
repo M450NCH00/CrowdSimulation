@@ -32,8 +32,13 @@ D12's values (`negsim/resolution/perceive.py`, `configs/resolution/llm_view_v1.y
 band, where `resolve_v1` says "someone behind you"). RF-4 (#59), on the mock: D6's two modes,
 carrying out the steps of D1 in the simulator, D16's execution side (events, conflict zone,
 outcome columns, "resolved"), the physical outcomes, and replays rebuildable from the session
-record (D13) (`negsim/resolution/execute.py`, `outcomes.py`, `replay.py`). Nothing else yet.
-Configs and templates from before this track behave exactly as before.
+record (D13) (`negsim/resolution/execute.py`, `outcomes.py`, `replay.py`). RF-3 (#58), on the
+mock: the encounter protocol, D3 to D6 and D8 (the trigger, event-driven decision points with
+their guards, the three conditions, the end and the hand-over to ORCA, the debrief), D11's
+encounters of more than two people with a cap, D13's storage, one outcome row per session, and
+the experiment layer `resolution` (`negsim/resolution/protocol.py`, `design.py`,
+`experiment.py`; `docs/encounter-protocol.md`). Nothing else yet. Configs and templates from
+before this track behave exactly as before.
 
 ## D1. The reply
 
@@ -125,6 +130,13 @@ All of these must hold:
 
 Seeing someone is not enough on its own. (Encounter protocol: RF-3, #58.)
 
+**As built (RF-3, #58).** The conflict prediction is the scenario's (D16). For the passing
+scenarios: a shared single-file segment still to be cleared, or a closest approach under the
+safety distance at the present or the desired velocities, not yet passed. Each member's first
+prompt needs D4 to hold for it, so the person ahead in an overtaking case is first asked when it
+perceives the other. `encounter-protocol.md`, sections 2 and 3, and `parameters.md`, section 8.6,
+give each definition.
+
 ## D5. When an agent is prompted again (event-driven)
 
 Both (a) and (b) must hold.
@@ -151,6 +163,12 @@ Thresholds for "noticeably": first set as placeholders (0.2 m sideways, 0.2 m/s,
 replaced them with the thresholds of human motion perception: a 7% change of speed and 2° of
 direction (`parameters.md`, section 8.4).
 
+**As built (RF-3, #58).** Each reason is logged with the person it concerns (`other_stopped:1`,
+`signalled:0`, `heard:0`, `came_into_view:7`, `plan_failing`, `plan_ended`). A plan with no
+steps never "ends". A signal is made during the step after its decision point; a message is
+heard when it has been said, at 2.5 words a second `[placeholder]`
+(`encounter-protocol.md`, section 3).
+
 ## D6. Who moves the agents
 
 - **Live loop: plan only (`plan_only`).** The encounter's agents follow their plans; ORCA does
@@ -162,7 +180,10 @@ direction (`parameters.md`, section 8.4).
   needs no LLM call.
 - An encounter that is still unresolved after its last decision point is recorded as **not
   resolved by the LLM**. ORCA then takes over, and what ORCA does after that is recorded
-  separately.
+  separately. *As built (RF-3, #58):* ORCA takes over when every prompted agent has used its
+  decision points and has no plan left, while a conflict is still predicted; the outcome row's
+  `resolved_by_llm` counts a `plan_only` resolution only if ORCA did not take over
+  (`encounter-protocol.md`, sections 5 and 7).
 
 **As built (RF-4, #59).** In `plan_only`, from the encounter's first decision, the simulator
 leaves out the ORCA half-plane between the encounter's two agents, and the arbiter's speed bound

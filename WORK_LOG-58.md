@@ -103,7 +103,63 @@ Pieces the issue asks for, and where they go:
     persona (no age, gender or errand).
 - Next step: plan step 1 (n-person executor), RF-4's tests unchanged.
 
+### 2026-10-23 — n-person executor, scenario interface, the protocol
+- What I did: `PlanDriver` now takes two or more agents; each plan names its partner (two
+  agents: the other, as before). The release rule generalises: fewer than two still walking,
+  or every two passed with no plan left; with two that is RF-4's rule. RF-4's 29 tests pass
+  unchanged. `physical_outcome` of more than two people: the first pair's columns plus
+  `encounter_size`, `conflict_pairs`, `conflict_pairs_resolved`, resolved only if every conflict
+  pair is. `Scenario` gained `conflict_predicted`, `encounter_members`, `CASE_TYPES`,
+  `MAX_MEMBERS`; `passing` predicts; new plug-in `passing_crowd`. Wrote `protocol.py`.
+- Smoke runs on the mock (head-on in all three conditions, passage, overtaking, a flow case) found
+  three things, each fixed:
+  1. **Two people standing still read as "passed".** In the passage case both stopped nose to
+     nose; RF-4's pass test (`_passed`: separating and apart) fired on rounding noise in their
+     relative velocity, and the encounter ended after one step. The protocol's "passed" now also
+     needs no conflict predicted. (RF-4's own release rule is left as it was: it also needs no
+     plan running, which holds the two who are stopped by plans.)
+  2. **A collision that stops the run** (`on_collision: stop`) ended as a generic "run ended" and
+     was not counted as not resolved by the LLM. Now its own end, `collision`, which is.
+  3. **`flow_03ea57f6` never triggers**: the pair's lines never come within the safety distance
+     while in view. Scanned the eight flow cases: six trigger. `passing_crowd` brings in about
+     30 people within 10 m in a dense flow, so the cap is what limits it (recorded per session).
+     `flow_ba3c7962` gets all four of a cap of 4 prompted at the first decision point (two of the
+     others prompt only two), so the rehearsal uses it.
+- Next step: the design module, the experiment layer, the mock policy, the rehearsal config.
+
+### 2026-10-23 — The experiment layer, the tests
+- What I did: `design.py` (#30's factors less `order`), `experiment.py` (config, case
+  selection, preview, guard, resume, both replays, the tables, report), `transcript.py`, the mock
+  policy `resolution_rehearsal_v1`, `configs/resolution/resolve_mock_rehearsal.yaml`, and
+  `run_experiment.py` dispatch. 36 tests in `tests/test_encounter_protocol.py`.
+- **A bug the tests found:** a signal made at a decision point carried the same time as the
+  other agent's look at it, and both D5 and RF-17's view count only what comes *after* a look, so
+  nobody ever saw a signal. A signal is now made during the step after the decision point (its
+  time is one step later). Messages were not affected: they are heard after they have been said.
+- The first full rehearsal (on the code before that fix) ran all 24 sessions: every one reached an
+  encounter; ends were passed, collision, no_conflict and orca_took_over. The mock's replies are
+  scripted, not a model, so nothing here is a finding.
+- **The cost preview** (`--plan`): two-person sessions are bounded at USD 0.029 to 0.030
+  (independent), 0.074 to 0.076 (non-verbal), 0.094 to 0.096 (talk), with 6 sends a call at peak
+  prices, as in #30. The crowd case's bound is far higher (USD 0.38 to 0.91 a session) because
+  with `llm_view.max_people` off all 99 others could be described in full. True but loose; a
+  paid crowd run would set `max_people`.
+- Wrote `docs/encounter-protocol.md`, `log-schema.md` "Resolution experiments", `parameters.md`
+  8.2 (three placeholders) and 8.6, `resolution.md`'s status and as-built notes, both READMEs.
+
 ## Open questions / risks
+- **`resolved_by_llm` against `resolved_plan_only`.** The issue calls `resolved_plan_only` the
+  Step 1 answer. But once ORCA takes over (D6) the `plan_only` replay runs on under ORCA, so its
+  physical "resolved" can be ORCA's work. I kept `resolved_plan_only` as the physical column and
+  added `resolved_by_llm` (resolved, and ORCA did not take over). To review: which one the
+  report should lead with.
+- **The trigger reading of "every agent is prompted at the first decision point"** (see the
+  assumptions above): in overtaking, the person ahead is never asked unless it hears or sees the
+  other. Round 3 ("excuse me") depends on the talk condition for that, which is the design's
+  intent, but it should be checked when round 3 is run.
+- **`came_into_view` fires a lot in a crowd** (D5 says any new person), so crowd agents use their
+  three decision points quickly. Fine for rounds 1 to 3 (two people); rounds 4 and 6 may want it
+  limited to people in the encounter.
 - Speech rate (2.5 words/s) and the 1 s no-conflict end are placeholders.
 - The protocol does not check `CLAUDE.md` for a paid-run approval: like #30's layer it relies on
   the budget cap and `--confirm`. No paid call is made in this issue.
