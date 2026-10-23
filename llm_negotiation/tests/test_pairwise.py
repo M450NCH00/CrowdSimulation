@@ -2,7 +2,9 @@
 who is seen) and familiarity: the block, the lines each observer is told and nobody else is, the
 switches, the design, the numeric outcome columns, the ethics gate, the rule check, and that
 everything written before them behaves as before (``docs/pairwise-factors.md``;
-``docs/resolution.md``, D2)."""
+``docs/resolution.md``, D2). And ``resolve_v3`` (the user's decision of 2026-10-23), which prints
+the factor lines on the short line of someone 5 to 10 m away too, and is the default core
+template of a design with factors."""
 
 from __future__ import annotations
 
@@ -17,7 +19,8 @@ from negsim.resolution import design as D
 from negsim.resolution import experiment as E
 from negsim.resolution import pairwise as W
 from negsim.resolution.perceive import Exchange
-from negsim.resolution.prompt import render
+from negsim.resolution import factors as F
+from negsim.resolution.prompt import FACTOR_CORE_TEMPLATE, SIMULATION_CORE_TEMPLATE, CoreTemplate, default_core, render
 from negsim.resolution.transcript import render as transcript
 from negsim.rulegen import experiment as rg
 from negsim.rulegen.design import visibility_of
@@ -28,11 +31,12 @@ from negsim.rules.fields import CONDITION_PREFIXES, ROLE_PREFIXES, resolve
 from negsim.rules.model import parse_rule
 from negsim.avoidance.perception import default_visibility
 from test_encounter_protocol import GIT, OVERTAKING, PASSAGE, SLOW, reply, session_on
-from test_perceive import PASSING, SETTINGS, V2, at, look, perceiver
+from test_perceive import PASSING, SETTINGS, V1, V2, at, look, perceiver
 from test_resolution import GROUP_WORDS, ORDER_WORDS, SUGGESTIONS
 from test_rulegen_validate import rule, when
 
 TEMPLATE = W.PairwiseTemplate.load()
+V3 = CoreTemplate.load(FACTOR_CORE_TEMPLATE)
 SIGN_OFF = "Ethics sign-off for the perceived-attractiveness factor (issue #61): approved by the supervisor on 2026-11-02"
 ATTRACTIVE, UNREMARKABLE = TEMPLATE.line(W.ATTRACTIVENESS, "attractive"), TEMPLATE.line(W.ATTRACTIVENESS, "unremarkable")
 STRANGERS, ACQUAINTANCES = TEMPLATE.line(W.FAMILIARITY, "strangers"), TEMPLATE.line(W.FAMILIARITY, "acquaintances")
@@ -223,7 +227,7 @@ def test_the_three_design_factors_each_have_two_levels_and_cross():
     config = pairwise_config("design", factors_=FULL)
     assert config.design.cells() == 16 and config.design.uses_pairwise and config.design.uses_attractiveness
     assert not config.design.uses_factors  # RF-5's factors are not varied: no factor template, no factor values
-    assert config.templates == {"core": "resolve_v2", "debrief": "resolve_debrief_v1", "pairwise": "resolve_pairwise_v1"}
+    assert config.templates == {"core": "resolve_v3", "debrief": "resolve_debrief_v1", "pairwise": "resolve_pairwise_v1"}
     assert config.factor_values is None
     for name in W.DESIGN_FACTORS:
         assert len(D.FACTOR_LEVELS[name]) == 2
@@ -296,16 +300,27 @@ def test_a_line_switched_off_is_still_logged_as_designed_but_never_shown(tmp_pat
     assert row["p1_pairwise_lines_shown"] == 0 and "p1_knows_other" not in row
 
 
-def test_in_the_head_on_case_no_decision_point_is_within_the_detail_range_so_no_line_is_shown(tmp_path):
-    """The limitation documented in docs/pairwise-factors.md, section 2, and WORK_LOG-61.md: in
-    round 1's case every decision point is further than 5 m, where resolve_v2 prints one short
-    line per person, so the designed perception never reaches either agent."""
+@pytest.mark.parametrize("core, shown", [("resolve_v3", True), ("resolve_v2", False)])
+def test_in_the_head_on_case_the_lines_reach_both_agents_only_under_resolve_v3(tmp_path, core, shown):
+    """In round 1's case every decision point is further than 5 m. resolve_v2 prints one short line
+    per person there, so the designed perception never reached either agent (WORK_LOG-61.md);
+    resolve_v3, the default for a design with factors, prints it under the short line."""
     factors_ = {"attractiveness_0_sees_1": ["attractive"], "familiarity": ["acquaintances"]}
-    E.run_resolution(pairwise_config("far", ids=("head_on_02dfbadb@2",), conditions=("independent", "talk"), factors_=factors_),
-                     out_root=tmp_path, report=quiet, git=GIT)
+    config = pairwise_config("far", ids=("head_on_02dfbadb@2",), conditions=("independent", "talk"), factors_=factors_,
+                             **({} if core == "resolve_v3" else {"templates": {"core": core}}))
+    assert config.templates["core"] == core
+    E.run_resolution(config, out_root=tmp_path, report=quiet, git=GIT)
     for row in rows_of(tmp_path / "far"):
         assert row["outcome"] == "completed" and row["p1_finds_other_attractive"] == 1
-        assert row["p1_pairwise_lines_shown"] == row["p2_pairwise_lines_shown"] == 0
+        if shown:  # at every decision point of each, all of them on a short line
+            assert row["p1_pairwise_lines_shown"] == row["p1_decision_points"] >= 1
+            assert row["p2_pairwise_lines_shown"] == row["p2_decision_points"] >= 1
+        else:
+            assert row["p1_pairwise_lines_shown"] == row["p2_pairwise_lines_shown"] == 0
+    record = json.loads(next((tmp_path / "far" / "sessions").glob("I_*.json")).read_text(encoding="utf-8"))
+    for point in record["decision_points"]:
+        assert all(person["detail"] == "short" for person in point["view"]["seen"])
+        assert (ACQUAINTANCES in point["prompt"]["messages"][1]["content"]) is shown
 
 
 def test_the_cost_preview_counts_the_pairwise_lines():
@@ -417,6 +432,94 @@ def test_the_groups_refusal_reads_as_before_and_familiarity_is_not_protected():
     assert "refers to a person's group ('ethnic')" in str(caught.value)
     result = validate_proposal(rule(when=when({"field": "either.familiarity", "op": "==", "value": "acquaintances"})), default_visibility())
     assert result.category == SCHEMA_ERROR and result.loader_category == "unknown_field"
+
+
+# --- resolve_v3 (the user's decision of 2026-10-23) ------------------------------------------------
+
+
+def test_resolve_v3_is_resolve_v2_with_one_line_more():
+    assert prompts.load_manifest()[FACTOR_CORE_TEMPLATE]["kind"] == "resolution"
+    for condition in ("independent", "non_verbal", "talk"):
+        assert V3.system(condition, PASSING) == V2.system(condition, PASSING)
+    assert {k: v for k, v in V3.data["view"].items() if k != "seen_short_extra"} == V2.data["view"]
+    assert V3.data["view"]["seen_short_extra"] == V2.data["view"]["seen_extra"] == "  {line}"
+    for key in ("conditions", "step_format", "event_item", "decision_point", "role", "system"):
+        assert V3.data[key] == V2.data[key]
+    assert (V1.prints_extra_lines("short"), V2.prints_extra_lines("short"), V3.prints_extra_lines("short")) == (False, False, True)
+    assert all(core.prints_extra_lines("full") for core in (V1, V2, V3))
+
+
+@pytest.mark.parametrize("where", [(3.0, 0.0), (8.0, 0.0), (8.0, 40.0), (3.0, 180.0)])
+def test_without_factor_lines_resolve_v3_renders_exactly_what_resolve_v2_does(where):
+    distance, degrees = where
+    bodies = [at(0, 0.0, 0.0, vx=1.3), at(1, distance, degrees, vx=-1.3)]
+    two = render(look(bodies, perceiver(core=V2)), "talk", PASSING, V2).user
+    three = render(look(bodies, perceiver(core=V3)), "talk", PASSING, V3).user
+    assert two == three
+
+
+@pytest.mark.parametrize("where, shown", [
+    ((3.0, 0.0), True),     # within 5 m: full detail, as under resolve_v2
+    ((8.0, 0.0), True),     # 5 to 10 m: under the short line
+    ((9.9, 30.0), True),
+    ((3.0, 180.0), False),  # behind: not in view
+    ((3.0, 80.0), False),   # outside the view cone
+    ((10.5, 0.0), False),   # beyond the seeing range
+])
+def test_resolve_v3_prints_the_factor_and_pairwise_lines_for_anyone_in_view(where, shown):
+    distance, degrees = where
+    for switch in (True, False):
+        seen = F.SessionFactors(F.FactorTemplate.load(), {1: {"mobility_aid": "cane", "load": "large_suitcase"}}, {"load": switch}, {})
+        view = look([at(0, 0.0, 0.0, vx=1.3), at(1, distance, degrees, vx=-1.3)], perceiver(core=V3),
+                    factor_lines=seen.seen_lines(), pairwise_lines=pairwise().lines_for(0))
+        text = render(view, "talk", PASSING, V3).user
+        assert ("  They are walking with a cane." in text) is shown
+        assert ("  They are pulling a large suitcase." in text) is (shown and switch)
+        assert (f"  {ATTRACTIVE}" in text) is shown and (f"  {STRANGERS}" in text) is shown
+        assert UNREMARKABLE not in text  # never the other's row
+        if shown and distance > 5.0:
+            seen_block = text.split("WHO YOU CAN SEE\n", 1)[1].split("\n\n", 1)[0].splitlines()
+            assert ":" in seen_block[0] and "They look" not in text  # the short line: no age, gender or body width
+
+
+def test_the_default_core_template_is_resolve_v3_only_for_a_design_with_factors():
+    assert (default_core(False), default_core(True)) == (SIMULATION_CORE_TEMPLATE, FACTOR_CORE_TEMPLATE) == ("resolve_v2", "resolve_v3")
+    assert E.ResolutionConfig.from_raw(RAW).templates["core"] == "resolve_v2"
+    assert pairwise_config("rf6", factors_={"familiarity": ["strangers"]}).templates["core"] == "resolve_v3"
+    assert pairwise_config("rf5", factors_={"residence": ["p1"]}).templates["core"] == "resolve_v3"
+    named = pairwise_config("named", factors_={"familiarity": ["strangers"]}, templates={"core": "resolve_v2"})
+    assert named.templates["core"] == "resolve_v2"  # a config that names one keeps it
+    for path, core in (("configs/resolution/resolve_mock_rehearsal.yaml", "resolve_v2"),
+                       ("configs/resolution/resolve_factors_mock_rehearsal.yaml", "resolve_v2"),
+                       ("configs/resolution/resolve_pairwise_mock_rehearsal.yaml", "resolve_v3")):
+        assert E.ResolutionConfig.load(path).templates["core"] == core
+
+
+def test_the_protocol_picks_the_same_default():
+    run, _, _ = session_on(PASSAGE, "talk", {0: SLOW, 1: SLOW}, pairwise=pairwise())
+    assert run.core.key == "resolve_v3"
+    run, _, _ = session_on(PASSAGE, "talk", {0: SLOW, 1: SLOW})
+    assert run.core.key == "resolve_v2"
+
+
+def test_the_plan_warns_when_a_design_with_lines_for_others_keeps_resolve_v2():
+    said = []
+    E.print_plan(E.ResolutionConfig.load("configs/resolution/resolve_factors_mock_rehearsal.yaml"), out=said.append)
+    assert any("core template resolve_v2" in line and "within 5 m" in line for line in said)
+    for config in (pairwise_config("v3", factors_={"familiarity": ["strangers"]}), pairwise_config("own", factors_={"residence": ["p1"]}),
+                   E.ResolutionConfig.from_raw(RAW)):
+        said.clear()
+        E.print_plan(config, out=said.append)
+        assert not any("core template" in line for line in said)  # resolve_v3, or no line for others to be told
+
+
+def test_a_design_with_no_errand_and_a_core_factor_runs(tmp_path):
+    """Found by this issue (an RF-5 bug): with task "none" each person's urgency is None, which was
+    passed on as a level, and every session refused."""
+    config = pairwise_config("no_errand", factors_={"mobility_aid": ["p1"]})
+    (session,) = E.plan(config).sessions
+    assert session.personas[0]["urgency"] is None and all("urgency" not in levels for levels in session.factor_levels.values())
+    assert E.run_resolution(config, out_root=tmp_path, report=quiet, git=GIT).status == "completed"
 
 
 # --- what was written before (task 9) --------------------------------------------------------------
