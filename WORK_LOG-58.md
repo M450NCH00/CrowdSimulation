@@ -147,6 +147,22 @@ Pieces the issue asks for, and where they go:
 - Wrote `docs/encounter-protocol.md`, `log-schema.md` "Resolution experiments", `parameters.md`
   8.2 (three placeholders) and 8.6, `resolution.md`'s status and as-built notes, both READMEs.
 
+### 2026-10-23 — Verification
+- **A second bug, found by review:** when two agents are asked at one decision point and the
+  second call is refused (budget guard), the first agent's reply (paid for) was never recorded.
+  Now it is, before the session is recorded as aborted. Tested.
+- **Full suite:** 1605 passed, 2 failed. Both failures were RF-2's exact-set checks on the mock
+  policies and the plug-in registry, which this issue extends on purpose (`resolution_rehearsal_v1`,
+  `passing_crowd`); updated them. Then the resolution files (`test_resolution`,
+  `test_encounter_protocol`, `test_execute`, `test_perceive`, `test_repo_hygiene`): 234 passed,
+  which includes the refusal test added after the full run started.
+- **Final rehearsal** (into a scratch folder, on the final code): 24 sessions, all with an
+  encounter; ends: 8 orca_took_over, 8 collision, 6 passed, 2 no_conflict. Run again: 0 run, 24
+  already done (resumes cleanly). `outcomes.csv` loads with 24 rows, one per session. The four
+  crowd members were all prompted. Plain ORCA reads 0% resolved: these cases were chosen as severe
+  conflicts, and plain ORCA passes within the 0.1 m near-miss distance. The report now groups by
+  scenario plug-in as well, so the crowd case is not pooled with head-on.
+
 ## Open questions / risks
 - **`resolved_by_llm` against `resolved_plan_only`.** The issue calls `resolved_plan_only` the
   Step 1 answer. But once ORCA takes over (D6) the `plan_only` replay runs on under ORCA, so its
@@ -165,3 +181,25 @@ Pieces the issue asks for, and where they go:
   the budget cap and `--confirm`. No paid call is made in this issue.
 
 ## Summary (fill in at the end)
+
+**What changed.** The Step 1 encounter protocol (`negsim/resolution/protocol.py`): the trigger
+(D4), event-driven decision points with their guards (D5), the three conditions (D3), speech
+that takes time, the end and the hand-over to ORCA (D6), the debrief (D8) and the session
+record (D13). The experiment layer `resolution` (`experiment.py`, `design.py`, `transcript.py`,
+run by `run_experiment.py`): case selection, the design, the worst-case cost preview per
+condition, the scoped budget guard, `--plan`/`--confirm`, resume that never rewrites a record,
+both replays per session, `decisions.jsonl`, `debriefs.jsonl`, `outcomes.jsonl/.csv`, summary
+and report. RF-4 generalised to n people; the scenario interface gained the conflict
+prediction and encounter members; a `passing_crowd` plug-in for rehearsing four prompted
+people. A mock rehearsal config. Docs: `encounter-protocol.md` (with the cost derivation),
+`log-schema.md`, `parameters.md` 8.2 and 8.6, `resolution.md`, both READMEs.
+
+**Why.** Issue #58: Step 1 needs "can LLM agents resolve this conflict?" answered with numbers,
+and Step 4 needs one row per session.
+
+**How it was verified.** 37 new tests (every item of task 12, plus the live run against its
+replay, the hand-over to ORCA, the debrief, a refusal mid decision point, n-person outcomes,
+`--plan`, a paid client sending nothing without `--confirm`); RF-4's tests unchanged; the full
+suite (above). The acceptance criteria: the mock rehearsal runs end to end and resumes cleanly;
+`outcomes.csv` loads with exactly one row per session; `--plan` prints the worst-case cost for
+all three conditions. No paid call; `spend_ledger.jsonl` untouched.

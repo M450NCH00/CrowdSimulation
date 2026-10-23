@@ -608,14 +608,14 @@ def _rate(values: Sequence[Any]) -> Optional[float]:
 def summarise(config: ResolutionConfig, status: str, records: Sequence[Mapping[str, Any]], rows: Sequence[Mapping[str, Any]], preview: Mapping[str, Any], aborted_usd: float) -> dict[str, Any]:
     groups: dict[str, dict[str, Any]] = {}
     for row in rows:
-        key = f"{row['encounter_type']}/{row['condition']}"
-        groups.setdefault(key, {"encounter_type": row["encounter_type"], "condition": row["condition"], "rows": []})["rows"].append(row)
+        key = f"{row['encounter_type']}/{row['scenario_plugin']}/{row['condition']}"
+        groups.setdefault(key, {"encounter_type": row["encounter_type"], "scenario_plugin": row["scenario_plugin"], "condition": row["condition"], "rows": []})["rows"].append(row)
     by_group = {}
     for key, group in sorted(groups.items()):
         mine = group["rows"]
         met = [row for row in mine if row["outcome"] == SESSION_COMPLETED]
         by_group[key] = {
-            "encounter_type": group["encounter_type"], "condition": group["condition"], "sessions": len(mine),
+            "encounter_type": group["encounter_type"], "scenario_plugin": group["scenario_plugin"], "condition": group["condition"], "sessions": len(mine),
             "with_an_encounter": len(met),
             "resolved_plan_only": _rate([row["resolved_plan_only"] for row in met]),
             "resolved_plan_orca": _rate([row["resolved_plan_orca"] for row in met]),
@@ -683,14 +683,15 @@ def report_markdown(summary: Mapping[str, Any]) -> str:
         "",
         "Resolved as the scenario defines it (the passing scenarios: both left the conflict zone with no collision, no near "
         "miss and no deadlock, within the time limit), in each mode's replay. `by LLM` is the Step 1 answer: resolved in "
-        "`plan_only` and not handed to ORCA. `plain ORCA` is the case's own run with no plan, on the same seed.",
+        "`plan_only` and not handed to ORCA. `plain ORCA` is the case's own run with no plan, on the same seed; the cases were "
+        "chosen as severe conflicts, so plain ORCA often passes within the near-miss distance.",
         "",
-        "| Encounter type | Condition | Sessions | With an encounter | plan_only | plan_orca | by LLM | plain ORCA | Not resolved by LLM | Mean decision points | Mean calls | Cap reached |",
-        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| Encounter type | Scenario | Condition | Sessions | With an encounter | plan_only | plan_orca | by LLM | plain ORCA | Not resolved by LLM | Mean decision points | Mean calls | Cap reached |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for group in summary["by_encounter_type_and_condition"].values():
         lines.append(
-            f"| {group['encounter_type']} | {group['condition']} | {group['sessions']} | {group['with_an_encounter']} | "
+            f"| {group['encounter_type']} | {group['scenario_plugin']} | {group['condition']} | {group['sessions']} | {group['with_an_encounter']} | "
             f"{_pct(group['resolved_plan_only'])} | {_pct(group['resolved_plan_orca'])} | {_pct(group['resolved_by_llm'])} | "
             f"{_pct(group['resolved_plain_orca'])} | {group['not_resolved_by_llm']} | {group['mean_decision_points']} | "
             f"{group['mean_calls']} | {group['cap_reached']} |"
