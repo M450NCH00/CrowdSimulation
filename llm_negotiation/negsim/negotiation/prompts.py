@@ -218,6 +218,8 @@ TEMPLATE_KINDS: dict[str, tuple[str, ...]] = {
     "resolution_scenario": ("template_id", "version", "kind", "description", "place", "events", "extra_blocks", "factor_lines"),
     # Issue #60 (RF-5): the lines of the core and situational factors, placed in the core template's blocks.
     "resolution_factors": ("template_id", "version", "kind", "description", "attributes", "situations"),
+    # Issue #61 (RF-6): the lines of the pairwise perception factors, for one observer's view only.
+    "resolution_pairwise": ("template_id", "version", "kind", "description", "lines"),
 }
 
 
