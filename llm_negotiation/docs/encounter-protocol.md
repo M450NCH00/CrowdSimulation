@@ -178,8 +178,9 @@ could be in view in full detail. That is a true bound but a loose one; a paid cr
 `outcomes.jsonl` and `outcomes.csv` (the same rows; `others` only in the JSON) hold, per session:
 
 - **design:** session id, outcome, case and version, case geometry (its variant), encounter
-  type, scenario plug-in, condition, mapping, repeat, `exact_repeat_set`, model, temperature,
-  and the cell's factors;
+  type, scenario plug-in, condition, mapping, repeat, `exact_repeat_set`, with a design that
+  lists `geometries` also `geometry`, in a counterfactual pair also `pair_id`, `pair_role` and
+  `pair_factor` (issue #62), model, temperature, and the cell's factors;
 - **per person** (`p1_`, `p2_`: the design's two people; `others` for further members): agent,
   age, gender, urgency, errand, and the person's level of each core factor the design varies
   (issue #60: `p1_mobility_aid`, `p2_load`, ...); how the person sees the other, as 0 or 1, and at
@@ -213,10 +214,10 @@ python run_experiment.py configs/resolution/<config>.yaml --client deepseek --co
 | Key | What it sets |
 | --- | --- |
 | `experiment_name` | the folder, `runs/<name>/` or `runs_mock/<name>/`, and the budget scope |
-| `cases` | `store`, `set` and/or `ids` (each `id` or `id@version`) |
+| `cases` | `store`, `set` and/or `ids` (each `id` or `id@version`); with `design.geometries`, only `store` |
 | `scenarios` | optional: case id → plug-in; otherwise the plug-in whose `CASE_TYPES` holds the case's type |
 | `conditions` | any of `independent`, `non_verbal`, `talk` |
-| `design` | `seed`, `factors` (`age_pair`, `gender_pair`, `task`, `demographics_visible`, `mapping`), `repeats`, `base_age`, `age_difference`, `tasks` |
+| `design` | `seed`, `factors` (`age_pair`, `gender_pair`, `task`, `demographics_visible`, `mapping`), `repeats`, `base_age`, `age_difference`, `tasks`; issue #62: `kind` (`full`, `fractional`, `sample`), `cells`, `geometries`, `exact_repeats` (`cells`, `times`), `counterfactual_pairs` (`screening-designs.md`) |
 | `protocol` | `max_decision_points` (3), `min_gap_s` (1), `no_conflict_end_s` (1), `max_prompted` (none), `speech_words_per_second` (2.5) |
 | `templates` | `core` (`resolve_v2`; `resolve_v3` for a design that varies an RF-5 or RF-6 factor, issue #61), `debrief` (`resolve_debrief_v1`); with factors also `factors` (`resolve_factors_v1`) and `pairwise` (`resolve_pairwise_v1`) |
 | `llm_view` | the perception config (`configs/resolution/llm_view_v1.yaml`) |
@@ -224,8 +225,10 @@ python run_experiment.py configs/resolution/<config>.yaml --client deepseek --co
 | `budget` | `cap_usd` (on this experiment's own calls), `ledger` |
 
 The design is issue #30's, less speaking order (`design.py`). The fictional group is not a
-factor of this layer. A cell run more than once (`repeats` > 1) is in the exact-repeat set
-(D14); RF-7 builds the screening designs. **Resume:** a session with a record is read back,
+factor of this layer. A cell run more than once (`repeats` > 1, or a cell of
+`exact_repeats`) is in the exact-repeat set (D14). RF-7 (#62) added the screening designs: a
+fraction or a sample instead of every cell, geometries, a balanced exact-repeat set and
+counterfactual pairs (`screening-designs.md`). **Resume:** a session with a record is read back,
 never run or written again (tested byte for byte); an aborted one is kept as
 `<id>.aborted<n>.json` and runs again; the replays and the tables are rebuilt from the records.
 `log-schema.md`, "Resolution experiments", lists every file and field.
@@ -241,6 +244,6 @@ sets the wider body of `load` for the run and the hearing range of `surroundings
 session hands each agent's own lines (`pairwise.PairwiseFactors.lines_for`) to that agent's views
 only, and the perception of RF-17 attaches them to the people it sees (`pairwise-factors.md`).
 
-Screening designs (RF-7), the analysis (RF-8), any paid call, and the scenarios of rounds 4 to 6
+The analysis (RF-8), any paid call, and the scenarios of rounds 4 to 6
 (RF-23 to RF-25). `passing_crowd` only rehearses more than two
 prompted people; it is not a round's scenario.

@@ -74,7 +74,7 @@ from ..rulegen.protocol import LLMSettings
 from ..rulegen.replay import source_plan
 from ..runlog.schema import OUTCOME_FILE
 from ..scenarios.registry import build_crowd_scenario
-from .design import ALL_FACTORS, PERSON_FACTORS, ResolutionDesign, Session, cell_code, sessions_for
+from .design import ALL_FACTORS, KIND_FRACTIONAL, KIND_SAMPLE, PERSON_FACTORS, ResolutionDesign, Session, cell_code, sessions_for
 from .execute import MODES, MODE_PLAN_ONLY, MODE_PLAN_ORCA
 from .factors import FACTOR_TEMPLATE, FACTOR_VALUES_CONFIG, FactorTemplate, FactorValues, SessionFactors, with_bodies
 from .mock import POLICIES as MOCK_POLICIES
@@ -87,6 +87,7 @@ from .protocol import SESSION_ABORTED, SESSION_COMPLETED, EncounterSession, Prot
 from .replay import plain_orca, replay_session, run_plan_for
 from .reply import ParsedReply
 from .scenario import Scenario
+from .screening import base_count, resolution
 from .scenarios import load_scenario, plugin_for
 from .transcript import render as render_transcript
 from .view import CHANGES, CONDITION_TALK, CONDITIONS, DETAIL_FULL, DETAIL_SHORT, MOTION_WALKING, Done, Heard, Me, SeenPerson, TimeToMeet, View
@@ -189,8 +190,8 @@ class ResolutionConfig:
     def from_raw(cls, raw: Any, source: str = "<config>") -> "ResolutionConfig":
         where = f"resolution config {source}"
         check_keys(
-            raw, where, ("layer", "experiment_name", "cases", "conditions", "design", "llm"),
-            ("schema_version", "description", "scenarios", "protocol", "templates", "llm_view", "budget", "factor_values"),
+            raw, where, ("layer", "experiment_name", "conditions", "design", "llm"),
+            ("schema_version", "description", "cases", "scenarios", "protocol", "templates", "llm_view", "budget", "factor_values"),
         )
         if raw["layer"] != LAYER_RESOLUTION:
             raise ConfigError(f"{where}.layer: expected {LAYER_RESOLUTION!r}")
@@ -199,9 +200,12 @@ class ResolutionConfig:
         name = str(raw["experiment_name"])
         if not name or not all(ch.isalnum() or ch in "_-" for ch in name):
             raise ConfigError(f"{where}.experiment_name: letters, digits, '_' and '-' only, got {name!r}")
-        cases = check_keys(raw["cases"], f"{where}.cases", (), ("store", "set", "ids"))
-        if not cases.get("set") and not cases.get("ids"):
-            raise ConfigError(f"{where}.cases: name a case set, or case ids, or both")
+        geometries = isinstance(raw["design"], Mapping) and raw["design"].get("geometries") is not None
+        cases = check_keys(raw.get("cases") or {}, f"{where}.cases", (), ("store", "set", "ids"))
+        if geometries and (cases.get("set") or cases.get("ids")):
+            raise ConfigError(f"{where}: design.geometries are the cases the design runs on; cases may then give only the store")
+        if not geometries and not cases.get("set") and not cases.get("ids"):
+            raise ConfigError(f"{where}.cases: name a case set, or case ids, or both (or list design.geometries)")
         ids = cases.get("ids") or []
         if not isinstance(ids, list) or len(set(ids)) != len(ids):
             raise ConfigError(f"{where}.cases.ids: a list of distinct case ids (each may be id@version)")
@@ -298,6 +302,9 @@ def selected_cases(config: ResolutionConfig) -> list[dict[str, Any]]:
     """The cases, in case-id order: a case set's, and/or the ids listed (``id`` or ``id@version``;
     an id of the set without a version takes the set's version, else the latest)."""
     store = CaseStore(resolve_path(config.case_store))
+    if config.design.geometries:  # issue #62: the design's geometries are its cases
+        chosen = [entry.partition("@") for entry in config.design.geometries]
+        return [store.get(case_id, int(version) if version else None) for case_id, _, version in sorted(chosen)]
     in_set = dict(store.case_set(config.case_set)) if config.case_set else {}
     wanted: dict[str, Optional[int]] = {} if config.case_ids else dict(in_set)
     for entry in config.case_ids:
@@ -323,13 +330,32 @@ def plan(config: ResolutionConfig) -> Plan:
     if unknown:
         raise ConfigError(f"scenarios: names cases that are not selected: {unknown}")
     scenarios = {case_id: plugin_for(case, config.scenarios.get(case_id)) for case_id, case in cases.items()}
+    geometry_of = check_geometries(cases, scenarios) if config.design.geometries else None
     sessions = sessions_for(
         [(case_id, case["version"], tuple(case["agents"]), scenarios[case_id]) for case_id, case in cases.items()],
-        config.design, config.conditions, config.experiment_name,
+        config.design, config.conditions, config.experiment_name, geometry_of,
     )
     if config.design.uses_factors:
         check_bodies(config, sessions, cases)
     return Plan(cases, scenarios, sessions, preview_cost(config, sessions, cases, PriceTable.from_yaml()))
+
+
+def geometry_label(case: Mapping[str, Any]) -> str:
+    """A case's geometry as a session records it: its variant (``layout=apart_20cm``), or its id."""
+    variant = case["scenario"].get("variant") or {}
+    return ";".join(f"{key}={value}" for key, value in sorted(variant.items())) or case["case_id"]
+
+
+def check_geometries(cases: Mapping[str, Mapping[str, Any]], scenarios: Mapping[str, str]) -> dict[str, str]:
+    """Issue #62 (D14): the geometries of a design are cases of one encounter type, run by one
+    plug-in, each a geometry of its own. Returns each case's geometry, by case id."""
+    kinds = {(case["formation"]["encounter_class"] or case["scenario"]["type"], scenarios[case_id]) for case_id, case in cases.items()}
+    if len(kinds) != 1:
+        raise ConfigError(f"design.geometries: cases of one encounter type and one scenario plug-in, got {sorted(map(list, kinds))}")
+    labels = {case_id: geometry_label(case) for case_id, case in cases.items()}
+    if len(set(labels.values())) != len(labels):
+        raise ConfigError(f"design.geometries: two cases have the same geometry: {labels}")
+    return labels
 
 
 # --- the cost preview (task 10) -------------------------------------------------------------------
@@ -738,7 +764,10 @@ def outcome_row(record: Mapping[str, Any], case: Mapping[str, Any], physical: Op
         "case_geometry": ";".join(f"{key}={value}" for key, value in sorted(variant.items())) or None,
         "encounter_type": encounter.get("type") or case["formation"]["encounter_class"], "scenario_plugin": record["scenario"],
         "condition": record["condition"], "mapping": session["cell"]["mapping"], "repeat": session["repeat"],
-        "exact_repeat_set": session["exact_repeat_set"], "model": record["llm"]["model"], "temperature": record["llm"]["temperature"],
+        "exact_repeat_set": session["exact_repeat_set"],
+        # Issue #62: only when the design lists geometries, or the session is half of a counterfactual pair.
+        **{key: session[key] for key in ("geometry", "pair_id", "pair_role", "pair_factor") if key in session},
+        "model": record["llm"]["model"], "temperature": record["llm"]["temperature"],
         **{name: session["cell"][name] for name in ALL_FACTORS if name in session["cell"]},
         **_agent_columns(record, first, "p1"),
         **_pairwise_columns(record, first, second, "p1"),
@@ -1099,7 +1128,8 @@ def print_plan(config: ResolutionConfig, client_name: Optional[str] = None, out:
         )
     if (client_name or config.llm["client"]) == "mock":
         out("  (with the mock client nothing is charged: this is what the same sessions could cost with deepseek)")
-    out(f"  design: {config.design.cells()} cell(s) per case and condition, {config.design.repeats} repeat(s) each")
+    for line in design_lines(config, plan_):
+        out(f"  {line}")
     if config.design.uses_attractiveness and not attractiveness_signed_off():
         out("  perceived attractiveness is on: a paid run is refused until CLAUDE.md records the ethics sign-off")
     seen_lines = config.design.uses_pairwise or any(name in config.design.levels for name in OBSERVABLE)
@@ -1109,6 +1139,37 @@ def print_plan(config: ResolutionConfig, client_name: Optional[str] = None, out:
             "so in a head-on case it never reaches an agent (resolve_v3 prints it from 10 m; docs/pairwise-factors.md, section 1)"
         )
     return plan_
+
+
+def design_lines(config: ResolutionConfig, plan_: Plan) -> list[str]:
+    """What ``--plan`` says of the design (issue #62, task 8): its kind and cells, the cases or
+    geometries, the exact-repeat set, the counterfactual pairs, and the sessions per condition."""
+    design = config.design
+    if design.kind == KIND_FRACTIONAL:
+        k = len(design.screened)
+        found = resolution(k, design.size)
+        kind = f"a 2^({k}-{k - base_count(design.size)}) fraction of {k} two-level factor(s), " + (f"resolution {found}" if found else "in full")
+    elif design.kind == KIND_SAMPLE:
+        kind = f"a balanced random sample of the {math.prod(len(design.levels[name]) for name in design.factors)} cells of the full factorial"
+    else:
+        kind = "every combination"
+    lines = [f"design: {design.kind}, {kind}; {design.cells()} cell(s) per case and condition, {design.repeats} repeat(s) each"]
+    if design.geometries:
+        geometries = sorted({(session.case_id, session.geometry) for session in plan_.sessions})
+        lines.append(f"geometries: {len(geometries)}, every cell once on each: " + ", ".join(f"{case} ({label})" for case, label in geometries))
+    if design.exact_repeats is not None:
+        cells, times = design.exact_repeats
+        extra = sum(1 for session in plan_.sessions if session.exact_repeat_set and session.repeat > 1)
+        lines.append(f"exact-repeat set: {cells} cell(s), each run {times} times in all on one geometry: {extra} session(s) more")
+    if design.counterfactual_pairs:
+        named = ", ".join(sorted({pair.factor for pair in design.counterfactual_pairs}))
+        lines.append(f"counterfactual pairs: {len(design.counterfactual_pairs)} (flipping {named}), two sessions each per case and condition")
+    for condition in config.conditions if design.exact_repeats is not None or design.counterfactual_pairs else ():
+        mine = [session for session in plan_.sessions if session.condition == condition]
+        repeats = sum(1 for session in mine if session.repeat > 1)
+        pairs = sum(1 for session in mine if session.pair_id is not None)
+        lines.append(f"{condition}: {len(mine)} session(s): {len(mine) - repeats - pairs} of the design, {repeats} exact repeat(s), {pairs} in pairs")
+    return lines
 
 
 def cli_run(args: argparse.Namespace) -> int:

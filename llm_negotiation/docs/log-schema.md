@@ -595,7 +595,9 @@ runs/<experiment_name>/
 as read: `experiment_name`, `description`, `source`, `cases`, `scenarios`, `conditions`,
 `design`, `protocol`, `templates`, `llm_view`, `llm`, `budget`), `client_name`, `created_utc`,
 `git`, `software`, `templates` (the core and debrief templates with their SHA-256) and
-`llm_view` (the perception settings as read). With a design that varies a core or situational
+`llm_view` (the perception settings as read). `experiment.design` names `kind`, `cells`,
+`geometries`, `exact_repeats` and `counterfactual_pairs` only when the config does (issue #62;
+`screening-designs.md`), so an older config is described as before. With a design that varies a core or situational
 factor (issue #60), `experiment` also has `factor_values` (the values file) and
 `templates.factors`, and the file has `factors` (`template`, with its SHA-256, and `values` as
 read). With a design that varies a pairwise perception factor (issue #61), `experiment` has
@@ -607,10 +609,15 @@ has a record, an invocation with another config or client is refused.
 #61 `refused_no_sign_off`: a paid run that varies perceived attractiveness without the ethics
 sign-off in `CLAUDE.md`), `executed`, `aborted`, `preview_usd`.
 
-**`design.jsonl`**: per session `session_id` (`<I|N|T>_<case_id>_<cell code>_r<repeat>`),
+**`design.jsonl`**: per session `session_id` (`<I|N|T>_<case_id>_<cell code>_r<repeat>`; a
+session of a counterfactual pair, issue #62: `<I|N|T>_<case_id>_<cell code>_x<pair code>`),
 `index`, `condition`, `case_id`, `case_version`, `scenario` (the plug-in), `agents` (the case's
 two people), `cell` (the five factors, and any of issue #60 the design varies), `repeat`,
-`exact_repeat_set`, `personas` (per agent: `age`, `gender`, `task`, `urgency`, and each core
+`exact_repeat_set` (true for every run of a cell of the exact-repeat set, `_r1` included), only
+with a design that lists `geometries` (issue #62) `geometry` (the case's variant, for example
+`layout=apart_20cm`), only in a counterfactual pair (issue #62) `pair_id`
+(`<I|N|T>_<case_id>_x<pair code>`, shared by its two sessions), `pair_role` (`base` or `flipped`)
+and `pair_factor`, `personas` (per agent: `age`, `gender`, `task`, `urgency`, and each core
 factor the design varies), `visibility` (with the switch of each observable core factor varied,
 and of each pairwise factor varied: `perceived_attractiveness`, `familiarity`), and, only with a
 design that varies a pairwise factor (issue #61), `pairwise`: the block of
