@@ -9,8 +9,13 @@ One model per outcome and subset:
 - **standard errors clustered by session** for the per-agent models, because the two rows of
   one session are not independent; heteroskedasticity-robust (HC1) for the per-session models,
   which have one row per session;
-- **Holm-corrected p-values**, the family being the terms of one model (the intercept left
-  out). A term is reported as significant when its Holm p-value is below ``alpha``;
+- **Holm-corrected p-values** (the intercept left out). A term is reported as significant when
+  its Holm p-value is below ``alpha``. By default the family is **every term of every model in
+  the report** (``report``), so that the chance of even one false positive anywhere in it is at
+  most ``alpha``: a screen fits some 45 models, and a family of one model would let one or two
+  terms through by chance in nearly every report with no effect at all (found on synthetic data,
+  ``WORK_LOG-63.md``). ``subset`` (the models of one condition, or of all together) and
+  ``model`` are narrower families, for a reader who states which one they used;
 - **each condition separately**, and all conditions together with condition as a factor.
 
 A column that does not vary in a subset, or that is a linear combination of the columns before
@@ -42,6 +47,8 @@ ALL = "all"
 SEPARATION_LOGIT = 10.0
 
 OK, SEPARATION, NO_DATA, ONE_VALUE, FAILED = "ok", "separation", "no data", "one value", "failed"
+#: Over which terms Holm's correction runs.
+FAMILIES = ("report", "subset", "model")
 
 
 @dataclass
@@ -126,9 +133,15 @@ def fit_one(frame: pd.DataFrame, outcome: Outcome, numeric: Sequence[str], categ
         fitted.status, fitted.note = NO_DATA, "no predictor varies"
         return fitted
     X = sm.add_constant(matrix, has_constant="add")
+    if len(rows) <= X.shape[1]:
+        fitted.status, fitted.note = NO_DATA, f"{len(rows)} rows for {X.shape[1]} parameters"
+        return fitted
     if cluster is not None:
         groups = pd.factorize(rows[cluster])[0]
         fitted.clusters = int(groups.max() + 1)
+        if fitted.clusters < 2:
+            fitted.status, fitted.note = NO_DATA, "one session: no clustered standard error"
+            return fitted
         cov = {"cov_type": "cluster", "cov_kwds": {"groups": groups}}
     else:
         cov = {"cov_type": "HC1"}
@@ -139,7 +152,7 @@ def fit_one(frame: pd.DataFrame, outcome: Outcome, numeric: Sequence[str], categ
                 result = sm.Logit(y, X).fit(disp=0, maxiter=200, **cov)
             else:
                 result = sm.OLS(y, X).fit(**cov)
-        except (PerfectSeparationError, np.linalg.LinAlgError, ValueError) as error:
+        except (PerfectSeparationError, np.linalg.LinAlgError, ValueError, ZeroDivisionError) as error:
             fitted.status = SEPARATION if isinstance(error, PerfectSeparationError) else FAILED
             fitted.note = str(error).splitlines()[0][:200]
             return fitted
@@ -151,25 +164,40 @@ def fit_one(frame: pd.DataFrame, outcome: Outcome, numeric: Sequence[str], categ
             fitted.note = "the outcome is (nearly) separated by the predictors: no finite estimate"
             return fitted
     params, bse, pvalues, ci = result.params, result.bse, result.pvalues, result.conf_int(alpha=0.05)
-    terms = [name for name in params.index if name != "const"]
-    raw = [float(pvalues[name]) for name in terms]
-    holm = multipletests(raw, alpha=alpha, method="holm")[1] if terms else []
-    for name, p, adjusted in zip(terms, raw, holm):
+    for name in (name for name in params.index if name != "const"):
         entry = {
             "outcome": outcome.name, "level": outcome.level, "subset": subset, "model": kind, "term": name, "factor": factor_of(name),
             "estimate": float(params[name]), "se": float(bse[name]), "ci_low": float(ci.loc[name, 0]), "ci_high": float(ci.loc[name, 1]),
-            "p": p, "p_holm": float(adjusted), "significant": bool(adjusted < alpha),
-            "n": fitted.n, "events": fitted.events, "clusters": fitted.clusters,
+            "p": float(pvalues[name]), "n": fitted.n, "events": fitted.events, "clusters": fitted.clusters,
         }
         if kind == "logistic":
             entry.update({"odds_ratio": math.exp(entry["estimate"]), "or_low": math.exp(entry["ci_low"]), "or_high": math.exp(entry["ci_high"])})
         fitted.terms.append(entry)
+    correct([fitted], "model", alpha)
     return fitted
 
 
+def correct(fitted: Sequence[Fitted], family: str = "report", alpha: float = ALPHA) -> None:
+    """Holm's correction over each family of terms: ``p_holm``, ``significant`` and
+    ``holm_family`` on every term, in place."""
+    if family not in FAMILIES:
+        raise AnalysisError(f"Holm family: one of {FAMILIES}, got {family!r}")
+    groups: dict[tuple, list[dict]] = {}
+    for model in fitted:
+        key = () if family == "report" else (model.subset,) if family == "subset" else (model.outcome, model.subset)
+        groups.setdefault(key, []).extend(model.terms)
+    for terms in groups.values():
+        if not terms:
+            continue
+        adjusted = multipletests([t["p"] for t in terms], alpha=alpha, method="holm")[1]
+        for t, p in zip(terms, adjusted):
+            t.update({"p_holm": float(p), "significant": bool(p < alpha), "holm_family": family, "family_size": len(terms)})
+
+
 def run_all(agents: pd.DataFrame, predictors: Sequence[str], sessions: pd.DataFrame, interactions: Sequence[str] = (),
-            alpha: float = ALPHA) -> list[Fitted]:
-    """Every outcome, pooled (condition as a factor) and in each condition."""
+            alpha: float = ALPHA, family: str = "report") -> list[Fitted]:
+    """Every outcome, pooled (condition as a factor) and in each condition, with Holm's correction
+    over ``family``."""
     conditions = [c for c in CONDITIONS if c in set(agents["condition"])] + sorted(set(agents["condition"]) - set(CONDITIONS))
     design = session_predictors(sessions)
     agent_interactions = [term for term in interactions if all(side in predictors for side in term.split(":"))]
@@ -183,6 +211,7 @@ def run_all(agents: pd.DataFrame, predictors: Sequence[str], sessions: pd.DataFr
             fitted.append(fit_one(mine, outcome, predictors, categorical, subset, "session_key", agent_interactions, alpha))
         for outcome in SESSION_OUTCOMES:
             fitted.append(fit_one(theirs, outcome, [], [*design, *categorical], subset, None, session_interactions, alpha))
+    correct(fitted, family, alpha)
     return fitted
 
 

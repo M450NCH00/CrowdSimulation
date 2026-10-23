@@ -20,6 +20,11 @@ if TYPE_CHECKING:
 
 MAPPING_ROWS = 25
 EXAMPLES = 5
+FAMILY_WORDS = {
+    "report": "every term of every model in this report (the chance of any false positive in it is at most alpha)",
+    "subset": "the terms of all models of one subset (one condition, or all together)",
+    "model": "the terms of one model",
+}
 
 
 def _cell(value: Any, digits: int = 3) -> str:
@@ -86,7 +91,8 @@ def _inputs(r: "Results") -> list[str]:
         f"- Client: {', '.join(sorted(r.clients)) or 'unknown (no config.json beside the file)'}.",
         f"- Predictors that vary: {', '.join(f'`{p}`' for p in r.varied_predictors) or 'none'}; constant, left out: "
         f"{', '.join(f'`{p}`' for p in r.predictors if p not in r.varied_predictors) or 'none'}.",
-        f"- Holm's correction at alpha = {o.alpha}; seed {o.seed}; codebooks `{o.intent_codebook}` and `{o.reasons_codebook}`.",
+        f"- Holm's correction at alpha = {o.alpha}, over {FAMILY_WORDS[o.holm_family]}; seed {o.seed}; codebooks "
+        f"`{o.intent_codebook}` and `{o.reasons_codebook}`.",
         "",
         "**The other's factors are as the agent was told them.** A factor of the other person counts only if it was "
         "printed to the agent at one or more of its decision points (`analysis/load.py`).",
@@ -99,7 +105,7 @@ def _effects(r: "Results") -> list[str]:
     lines = ["## 1. Factor effects", "",
              "Logistic regression per binary outcome (odds ratios, OR, with 95% intervals), linear regression for a "
              "continuous one (coefficients). Per-agent models cluster standard errors by session; per-session models "
-             "use HC1. Holm's correction runs over the terms of one model. `all` is every condition together, with "
+             f"use HC1. Holm's correction runs over {FAMILY_WORDS[r.options.holm_family]}. `all` is every condition together, with "
              "condition as a factor. A model whose outcome is separated by the predictors has no finite estimate and "
              "is listed as `separation`, never read as an effect.", ""]
     terms = [t for m in r.fitted for t in m.terms]

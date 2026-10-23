@@ -46,6 +46,7 @@ class Options:
     interactions: tuple[str, ...] = ()
     mapping_factors: Optional[tuple[str, ...]] = None
     alpha: float = effects.ALPHA
+    holm_family: str = "report"
     coin_flip_below: float = noise.COIN_FLIP_BELOW
     named_often: float = stated.NAMED_OFTEN
     intent_codebook: str = intent.INTENT_CODEBOOK
@@ -88,7 +89,7 @@ def analyse(paths: Sequence[Path | str], options: Optional[Options] = None) -> R
     if options.tree_outcome not in known:
         raise load.AnalysisError(f"--tree-outcome: one of {sorted(known)}, got {options.tree_outcome!r}")
     varied = load.varied(agents, predictors)
-    fitted = effects.run_all(agents, varied, sessions, options.interactions, options.alpha)
+    fitted = effects.run_all(agents, varied, sessions, options.interactions, options.alpha, options.holm_family)
     grown = tree.grow(agents, varied, options.tree_outcome, options.tree_depth, options.seed)
     floors, flips = noise.summaries(sessions, options.seed)
     stable = noise.stability(sessions, options.coin_flip_below)
@@ -157,6 +158,8 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--interaction", action="append", default=[], metavar="A:B", help="a named interaction of two predictors (repeatable)")
     p.add_argument("--mapping-factors", help="comma-separated columns for the mapping (default: every predictor that varies, and geometry)")
     p.add_argument("--alpha", type=float, default=effects.ALPHA, help="for Holm's correction (default 0.05)")
+    p.add_argument("--holm-family", default="report", choices=effects.FAMILIES,
+                   help="the terms Holm's correction runs over: every term in the report (default), one subset's, or one model's")
     p.add_argument("--coin-flip-below", type=float, default=noise.COIN_FLIP_BELOW, help="a cell is a coin flip below this stability (default 0.75)")
     p.add_argument("--named-often", type=float, default=stated.NAMED_OFTEN, help="a factor named in at least this share of reasons is named often (default 0.10)")
     p.add_argument("--intent-codebook", default=intent.INTENT_CODEBOOK)
@@ -170,7 +173,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     options = Options(
         mode=args.mode, tree_outcome=args.tree_outcome, tree_depth=args.tree_depth, interactions=tuple(args.interaction),
         mapping_factors=tuple(name.strip() for name in args.mapping_factors.split(",")) if args.mapping_factors else None,
-        alpha=args.alpha, coin_flip_below=args.coin_flip_below, named_often=args.named_often,
+        alpha=args.alpha, holm_family=args.holm_family, coin_flip_below=args.coin_flip_below, named_often=args.named_often,
         intent_codebook=args.intent_codebook, reasons_codebook=args.reasons_codebook, seed=args.seed,
     )
     try:

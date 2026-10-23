@@ -47,6 +47,64 @@ scikit-learn, matplotlib), so negsim keeps its standard-library-only design. It:
 
 ## Progress log
 
+### 2026-10-23 — what the outcome rows lacked
+- What I did: read `resolution.md`, `log-schema.md` (resolution experiments), `encounter-protocol.md`
+  section 7, `screening-designs.md`, `literature/trained-deciders/verdict.md`, and the code that
+  writes an outcome row (`experiment.outcome_row`, `outcomes.physical_outcome`).
+- Found two gaps:
+  1. **The physical columns are not per person.** `passing_side_a`, `stopped_b` and so on follow
+     the encounter's member order, which starts with whoever noticed first
+     (`protocol._start`), not person 1. The row drops `agent_a`/`agent_b`, so a passing side
+     could not be given to a person from the CSV alone. Only `who_passed_first` (an agent id)
+     could be mapped.
+  2. **"As told" was counted only for the pairwise lines** (`p1_pairwise_lines_shown`), as the
+     issue says.
+- Decision: add to negsim's outcome row (as the issue suggests, "as `_pairwise_columns` does"):
+  `p<n>_other_age_shown`, `p<n>_other_gender_shown` (always) and `p<n>_other_observable_shown`
+  (only with a design that varies an RF-5 factor, as the pairwise columns appear only with a
+  pairwise design), and `encounter_agents`. Session records, replays and every other file are
+  unchanged; resuming an experiment rebuilds its tables from the records.
+- **Observable factors and "printed".** A base level (no cane) has no line, so "printed" is
+  vacuous for it. The row counts the decision points where the other was in view at a detail that
+  prints their factor lines; the analysis counts the factor as told when, in addition, the level
+  has a line and the switch is on. From the agent's side that is exactly what it could know: a
+  cane line, or nothing.
+- Result: 5 new tests in `tests/test_factors.py` (head-on under `resolve_v3` and `resolve_v2`, a
+  passage case within 5 m with the demographics visible and hidden, a design without factors),
+  counted independently from the views. Pass.
+
+### 2026-10-23 — the package, and a first run on the RF-7 mock rehearsal
+- What I did: `analysis/` (load, effects, tree, noise, mapping, stated, intent, report, cli) and
+  two codebooks; ran the RF-7 screening rehearsal (252 mock sessions, USD 0) and resumed it once to
+  rebuild its tables with the new columns; ran `python -m analysis` on it.
+- Found, and fixed before committing the codebook:
+  - every intent came out "unreadable": a missing `parse_error` comes back from a data frame as
+    NaN, which is truthy;
+  - the side pattern needed whitespace after the verb ("Move over to my right" got no side).
+- Found, and kept (the check doing its job): "Keep going for a moment, then slow down." with a
+  plan coded as not slowing, 20 times. The mock's plan sets 0.8 m/s, and at a later decision point
+  the agent was already slower, so `code_plan` (a speed below the speed at the decision) does not
+  call it slowing. The intent says slow down; the plan does not: a mismatch.
+- On the mock: the noise floor is exactly 0 (the mock is deterministic and the repeats send
+  identical prompts, RF-7), every exact-repeat cell is stable, and most logistic models are
+  `separation`. The mock's "effects" are its path cycling, not findings; the report says so in a
+  banner when `config.json` names the mock client.
+
+### 2026-10-23 — Holm's family changed from one model to the whole report
+- What happened: the test "with no planted effect, nothing is significant after correction" failed
+  with Holm over one model's terms: two terms through, out of some 45 models.
+- Why: a family of one model controls the error per model; a report of 45 models then has a
+  false positive almost every time. Checked on 20 synthetic no-effect screens (seeds 100 to 119):
+  at least one false positive in **17 of 20** reports with a family of one model, **2 of 20** with
+  one subset, **0 of 20** with the whole report.
+- Decision: the default family is every term of every model in the report; `--holm-family
+  subset|model` remain for a reader who states the narrower one. The first attempt (per model) is
+  kept in the test's comment. Power: the planted effects (OR about 4.5 and 7) still pass at
+  p_holm < 0.05 with 400 sessions.
+- Also: a subset with one session divided by zero in statsmodels' cluster correction; such a
+  model is now `no data` ("one session"), as is one with no more rows than parameters.
+- Result: 42 analysis tests pass.
+
 ## Open questions / risks
 
 ## Summary (fill in at the end)
