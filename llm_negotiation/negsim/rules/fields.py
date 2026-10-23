@@ -262,6 +262,10 @@ UNOBSERVABLE: dict[str, str] = {
     "relative_position_m": "in one agent's own frame; the two agents get different values",
     "relative_velocity_mps": "in one agent's own frame; the two agents get different values",
     "neighbour_heading_relative_rad": "in one agent's own frame; use pair.heading_difference_rad",
+    # Issue #60 (RF-5): core factors nobody else can see (docs/resolution.md, D9).
+    "assertiveness": "a person's assertiveness is known only to them: another agent cannot see it",
+    "residence": "where a person lives is known only to them: another agent cannot see it",
+    "memory_note": "a person's memory of an earlier encounter is known only to them: another agent cannot see it",
 }
 
 
