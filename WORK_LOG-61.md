@@ -174,9 +174,51 @@ this issue adds **pairwise** factors, one value per (who looks, who is seen), on
   is about 131 m², so at 1 person/m² about 131 people per agent and about 1.3 million directed
   entries for 10,000 agents (1.3% of the 100 million); within 5 m, about 0.33 million.
 
+### 2026-10-23 — The user's decision: resolve_v3 (open question 1)
+- **Decision (the user, 2026-10-23, after reading PR #88):** "Ok let's go with your fix of
+  resolve_v3", the fix proposed in open question 1. The core template prints a person's factor
+  lines (RF-5's observable ones, RF-6's pairwise ones) on the short line too, 5 to 10 m away.
+- What I did:
+  - **`resolve_v3`**: `resolve_v2` word for word plus one key, `seen_short_extra` (`"  {line}"`,
+    as `seen_extra`). Frozen. Its system message is v2's (and v1's) byte for byte, and a view
+    without factor lines renders exactly as under v2 (tested at 3 m, 8 m, 8 m off to the side,
+    and behind).
+  - **The renderer** prints the factor and pairwise lines after a short line only when the
+    template has the key, so v1 and v2 render as before. `CoreTemplate.prints_extra_lines(detail)`
+    says which template prints what.
+  - **The default** (`prompt.default_core`): `resolve_v3` for a design that varies an RF-5 or
+    RF-6 factor, `resolve_v2` otherwise, in the experiment layer and in the protocol. A config
+    that names a core template keeps it. *Why not v3 for everything:* a design without factors
+    would then record another template hash, and an older run folder would refuse to resume. RF-5's
+    committed rehearsal names `resolve_v2`, so it is unchanged; `--plan` now warns that its lines
+    for others reach an agent only within 5 m.
+  - **`p1_pairwise_lines_shown`** asks the session's core template whether a short-line entry
+    was printed, instead of counting full detail only.
+  - **The rehearsal** now names `resolve_v3`, and person 1 also walks with a cane
+    (`mobility_aid: p1`), so that the fix shows for an RF-5 line too.
+- Result / what I found:
+  - **An RF-5 bug, found by the rehearsal**: "person 1: urgency is one of ['routine', 'urgent'],
+    got None". With `task: none` each persona has `urgency: None`, and `Session.factor_levels`
+    passed it to `SessionFactors`, which refused every session. So any RF-5 design with no errand
+    could not run; RF-5's own tests all used `task: p1_urgent`. Fixed: a person with no errand
+    has no urgency level. Tested.
+  - **The rehearsal on `resolve_v3`** (24 of 24 completed): in the head-on case every decision
+    point now shows its pairwise lines (1 of 1 in the independent condition, 3 of 3 or 2 of 2 in
+    talk), all on short lines at 9.8 m and closer. By eye, person 2's view at 9.8 m: "- Person 1,
+    9.8 m away, straight ahead of you: walking in the opposite direction to you." then "They are
+    walking with a cane." and "You know each other from your classes." (attractiveness switched
+    off in that cell); person 1's view has the familiarity line only (person 2 has no cane).
+    Passage and overtaking as before.
+  - The test that pinned the limit now runs both templates: lines at every decision point under
+    v3, none under an explicitly named v2.
+- **What `resolve_v3` does not change:** age, gender and body width stay full-detail lines (D2).
+  So at 8 m an agent can be told "You find them attractive." without being told the person's
+  gender. Open question 7.
+
 ## Open questions / risks
 
-1. **Lines only within 5 m (point 4 above).** In round 1's head-on case no RF-5 observable line
+1. ~~**Lines only within 5 m (point 4 above).**~~ **Decided by the user (2026-10-23):
+   `resolve_v3`**, built (above). What follows is the question as it was asked. In round 1's head-on case no RF-5 observable line
    and no RF-6 line reaches an agent, because every decision point there is beyond the detail
    range. A `resolve_v3` that prints these lines on the short line too (5 to 10 m) would fix it
    for both issues; it is a new core template, so it is for the user to decide, and D2 would
@@ -198,6 +240,14 @@ this issue adds **pairwise** factors, one value per (who looks, who is seen), on
    for RF-5's observable factors. Both people know it, so it could become a pair field; that is
    for RF-11 and RF-12.
 6. **Counting for RF-7:** five more two-level design factors (three, and two switches).
+7. **Factor lines from 10 m, demographics only within 5 m** (`resolve_v3`). The short line still
+   gives no age, gender or body width. If the supervisor's example ("men yield to women they
+   find attractive") is to be tested in the head-on case, the agent at 8 m is told whom it finds
+   attractive but not their gender. A `resolve_v4` could put age and gender on the short line
+   too. That changes what `demographics_visible` means beyond 5 m, so it is for the user.
+8. **Printing the factor lines from 10 m is a prompt choice, not a sourced range.** No source here
+   says at what distance a cane, a phone or a familiar face is recognised. `pairwise-factors.md`,
+   section 1, and `parameters.md`, section 8.7, say so.
 
 ## Summary (fill in at the end)
 
@@ -225,6 +275,14 @@ this issue adds **pairwise** factors, one value per (who looks, who is seen), on
   loader, and kept and counted by rule generation. It stays in the outcome rows for RF-8.
 - **Docs.** A new `docs/pairwise-factors.md` (with the 10,000-agent note, task 8) and updates to
   seven other docs, both READMEs, and a pointer in `CLAUDE.md`.
+- **After the user's decision (2026-10-23): `resolve_v3`.**
+  - It prints a person's factor lines (RF-5's observable ones, RF-6's pairwise ones) under the
+    short line too, from 10 m.
+  - It is the default core template of a design that varies an RF-5 or RF-6 factor; a design
+    without factors keeps `resolve_v2`, and `--plan` warns when a factor design names `resolve_v2`.
+  - D2 is amended to match, in `resolution.md` and `architecture.md`.
+- **An RF-5 bug fixed on the way:** a design with `task: none` and any core factor refused every
+  session.
 
 **Why.** Issue #61; the supervisor's suggestion of attractiveness "represented in a matrix"
 (2026-10-20); `docs/resolution.md`, D2.
@@ -243,6 +301,18 @@ this issue adds **pairwise** factors, one value per (who looks, who is seen), on
 - `python -m negsim.resolution.replay ... --verify` rebuilds both replays of two rehearsal
   sessions byte for byte.
 - No paid call. No sign-off recorded anywhere.
+- **After `resolve_v3`:**
+  - 16 more tests in `tests/test_pairwise.py` (68 in all):
+    - v3 against v2 (system text, line keys, the same rendering without factor lines);
+    - the lines at 8 and 9.9 m and none behind, outside the cone or beyond 10 m;
+    - the default template, the protocol's default and the `--plan` warning;
+    - the head-on case under both templates;
+    - the no-errand design.
+  - **Full suite: 1725 passed**, 0 failed (9 min 28 s). The doc-reading tests pass again after
+    the docs commit (24).
+  - The rehearsal on `resolve_v3`: 24 of 24 completed, with lines shown at every head-on
+    decision point.
+  - Replays of two of its sessions rebuild byte for byte (`--verify`).
 
-**For the user, first:** open question 1. Under `resolve_v2` the pairwise lines (and RF-5's
-observable lines) never reach an agent in round 1's head-on case.
+**Open for the user:** question 7 (age and gender still only within 5 m under `resolve_v3`), and
+question 2 (the ethics sign-off, still pending).
