@@ -88,6 +88,126 @@ find which ones drive a decision. This issue adds the **core** factors that ever
 - Result / what I found: the four points under "What I found before planning".
 - Next step: the schema and the factor template.
 
+### 2026-10-23 — Schema, template, factors module
+- What I did: declared the seven in `ATTRIBUTES` (`AttributeSpec.levels`, optional, left out when
+  not given); kept them out of both `default_visibility()` copies; wrote and froze
+  `resolve_factors_v1` (new kind `resolution_factors`); wrote `negsim/resolution/factors.py`
+  (`FactorTemplate`, `FactorValues`, `SessionFactors`, `with_bodies`) and
+  `configs/resolution/factors_v1.yaml`.
+- Why: the plan's steps 1 to 3.
+- Result / what I found: **a mistake of mine, caught by an existing test.** I first froze the
+  visibility list into a module constant at import time. `test_the_schema_is_a_table_...` adds an
+  attribute with `monkeypatch` and expects `default_visibility()` to pick it up; a constant broke
+  that contract. Now filtered at call time, and the constant is gone.
+- **Wording changed from the issue's examples** (decision, recorded in the template's provenance):
+  the issue's lines named a corridor ("The corridor around you is ...", "in a corridor like this
+  one"), and D16 says the pipeline never names a scenario. Now "It is quiet around you." / "It is
+  busy and noisy around you." and "... in a place like this one." "Noisy" says what the factor
+  changes outside the prompt (the hearing range); the scene is not made busier. Every other line is
+  the issue's, word for word.
+- Next step: views, protocol, design, experiment, replay.
+
+### 2026-10-23 — Wiring: views, protocol, design, experiment, replays
+- What I did: `view_in` takes a person's own lines and the situational lines; the protocol passes a
+  session's lines into every view (`EncounterSession(factors=...)`). The design gains optional
+  factors (`neither`/`p1`), the switches and the situational factors; `urgency` replaces `task`
+  when named. The experiment builds `SessionFactors` per session, widens the loaded body through
+  `agents.overrides.<id>.radius` in the run's scenario config, sets the hearing range from
+  `surroundings`, records `factors` and `bodies`, adds the levels to the outcome row, and counts the
+  factor lines in the cost preview. `replay.run_plan_for` applies the bodies in plain ORCA and both
+  replays.
+- Why: steps 4 to 6. A config that names no new factor must write exactly what it wrote before:
+  cells, cell codes and ids are computed over the factors a cell has, and `as_dict` adds keys only
+  when the design uses a new factor (the resume check compares `config.json` with `as_dict`).
+- Result / what I found: **`load` does not fit two passage cases.** The first rehearsal stopped at
+  `scenario 'passage_meeting': agents 0 and 1 overlap at their starting positions`. I checked every
+  head-on, passage and overtaking case with each agent widened (a scratch script): with 0.2 m, only
+  `passage_02fac1e4` and `passage_10e542c2` (both "asymmetric") fail; with 0.1 m every case fits. I
+  did **not** shrink the placeholder to make a case fit. Instead `plan()` now refuses such a design
+  before anything runs, naming the case (`check_bodies`), and the question is below for the user.
+  The rehearsal uses `passage_067961e3` instead.
+- Next step: task 6, tests, rehearsal.
+
+### 2026-10-23 — Task 6, the rehearsal, the tests
+- What I did: added `assertiveness`, `residence` and `memory_note` to the rule loader's
+  `UNOBSERVABLE` (`negsim/rules/fields.py`). Left `urgency` out on purpose: `either.urgency` is
+  already `needs_communication` (as `private_information`), and a test pins that reason. Ran
+  `configs/resolution/resolve_factors_mock_rehearsal.yaml` (24 sessions, all with an encounter,
+  1 min). Wrote `tests/test_factors.py` (34 tests).
+- Result / what I found:
+  - The rendered prompts hold every line in the block D2 says (checked by eye on a head-on
+    session: ABOUT YOU, YOUR NOTES, WHERE YOU ARE for both people; the 70-year-old visitor is
+    told "Your body is 0.70 m wide").
+  - Person 2 sees the cane, the suitcase and the phone of person 1 when within 5 m; with
+    `load_visible: false` only the cane and the phone. Person 1 sees nothing of person 2 (base
+    levels).
+  - `python -m negsim.resolution.replay ... --verify` rebuilds both replays of a loaded session
+    byte for byte; their `config.json` shows radius 0.35 m for the loaded agent.
+  - **A switched-off load still shows as width:** WHO YOU CAN SEE gives every person's body
+    width, so the hidden suitcase person is "0.70 m wide". That is the body the simulator moves,
+    so it is told truthfully; documented (`parameters.md`, 8.7).
+  - **Observable lines only within 5 m:** from 5 to 10 m `resolve_v2` prints one short line per
+    person (D2), with no factor lines. A cane 8 m away is not mentioned. Documented, not changed
+    (it would need a new core template).
+  - **"give way" in the assertiveness line.** The issue's line "You are easy-going and tend to
+    give way." contains a phrase on issue #32's list of words that hint at a way of settling a
+    meeting. Here the disposition is the factor itself, and the line appears only when a design
+    varies assertiveness, so I kept the issue's wording and exempted only that phrase for that
+    attribute in the new wording test. Flagged below.
+  - Four of my first tests were wrong (a `radius_m` key, tuples in an in-memory record, a test
+    that gave both people the same hidden levels so it could not tell them apart, and the
+    wording exemption above); fixed, 34 pass.
+- Next step: docs, full suite.
+
+### 2026-10-23 — Situational factors: the session's choice (task 7)
+- **Chosen: `surroundings` (quiet, busy) and `time_of_day` (daytime, late_night).**
+  - `surroundings` is the one candidate that also acts on the talk condition, through the hearing
+    range that RF-17 already said should depend on it (`parameters.md`, 8.4).
+  - `time_of_day` changes nothing physical, so it tests whether the setting alone moves a
+    decision. Late at night, wariness of a stranger is plausible.
+- **Not chosen: `companion`.** The simulator moves one disc per person. "You are walking with a
+  friend" describes a pair and a width the replay does not have, and the LLM may plan for both
+  (for example "we both move over"). The confound between prompt and physics would be larger than
+  for any other factor. It would need a group model first.
+- **Two slots left free** of RF-7's 16: D15 lets each round add its own factors (a pram on the
+  train, for example). Note the count: the issue's 12 person factors plus these 2 make 14,
+  *without* the visibility switches (`demographics_visible`, three `<name>_visible`) and `mapping`,
+  which are also two-level design factors. RF-7 has to decide whether those count against the 16.
+
+### 2026-10-23 — Docs
+- What I did: `resolution.md` (built so far, D2 and D7 as built, D12's hearing range, D15), a new
+  `parameters.md` section 8.7 (three placeholders and the design values), `rule-format.md` (the
+  three fields), `encounter-protocol.md` (outcome columns, section 9), `log-schema.md` (`factors`,
+  `bodies`, change log; no version change), both READMEs.
+- Result: while writing 8.7 I checked my Pearsons locators against the cached file and corrected
+  two (department stores is `:1146`, not `:1145`). The inside-urban homes value is unreadable in
+  the scan ("JIB.0"), so the doc cites only the 41 dB of suburban homes and conclusion 2(d)'s
+  45 dB.
+
 ## Open questions / risks
+
+1. **`load` in round 2.** With the 0.2 m placeholder, `passage_02fac1e4` and `passage_10e542c2`
+   start the pair too close for a wider body, and a design with `load` is refused on them. D15
+   says every round keeps the core factors. Options: (a) leave those two cases out of designs that
+   vary `load`; (b) new passage cases whose pair starts further apart; (c) a smaller width (0.1 m
+   fits every case), which would be choosing a number to fit a case, not from data. **The user's
+   call**; nothing is decided here. `passage_02fac1e4` is also the passage case of PR #86's
+   rehearsal.
+2. **Three new placeholders** (`parameters.md`, 8.7): the suitcase's 0.2 m, and the quiet (8.9 m)
+   and busy (3.2 m) hearing ranges. The hearing ranges use cited inputs with an assumed
+   background for each level.
+3. **"give way" in the assertiveness line** (the issue's wording). It names an outcome, as a
+   disposition. If the supervisor reads it as steering the decision, a `resolve_factors_v2` could
+   say "You are easy-going." / "You are determined." instead.
+4. **Prompt-only physics.** A cane does not slow the agent, a phone does not narrow its view, a busy
+   place has nobody in it. A factor's effect is an effect on the decision only (documented). If
+   RF-8 finds, say, that the cane changes plans, a replay still walks at full speed.
+5. **Rule fields.** A rule cannot read the observable factors (mobility aid, load, distraction)
+   either: they are not in the perception record, so a rule naming them is `unknown_field`
+   (`schema_error`). Whether they become rule fields is for RF-11 and RF-12.
+6. **Counting factors for RF-7** (above): 14 named factors plus switches and `mapping`.
+7. **A switched-off load still shows as width** (above). If the switch is meant to hide the load
+   entirely, the width line would have to go too, which `resolve_v2` cannot do without a new
+   version.
 
 ## Summary (fill in at the end)
