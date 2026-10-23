@@ -490,11 +490,12 @@ class EncounterSession:
                     self.client, [dict(m) for m in prompt.messages], self.llm.model, self.llm.temperature, self.llm.max_tokens,
                     self.llm.thinking, metadata, reply_parser(context), self.core.retry(self.condition),
                 )
-            except Exception as exc:  # refused before anything was sent
+            except Exception as exc:  # refused before anything was sent for this agent
+                self._keep_unapplied(asked, now, step)
                 raise _Stopped(exc) from exc
             asked.append((member, partner, reasons, view, prompt, reply))
             if reply.stopped is not None:
-                self._record(member, reasons, view, prompt, reply, None, now, step)
+                self._keep_unapplied(asked, now, step)
                 raise _Stopped(reply.stopped)
         bodies, by_id = self._bodies()
         for member, partner, reasons, view, prompt, reply in asked:
@@ -536,13 +537,19 @@ class EncounterSession:
             1 for entries in self.run.driver._pending.values() for entry in entries if entry[0] == agent
         ) - 1
 
-    def _record(self, member, reasons, view, prompt, reply, given, now, step) -> None:
+    def _keep_unapplied(self, asked: Sequence[tuple], now: float, step: int) -> None:
+        """The session is stopping: record every reply of this decision point received so far,
+        none of them carried out, so that nothing paid for is lost (D13)."""
+        for member, _, reasons, view, prompt, reply in asked:
+            self._record(member, reasons, view, prompt, reply, None, now, step, number=member.prompts + 1)
+
+    def _record(self, member, reasons, view, prompt, reply, given, now, step, number: Optional[int] = None) -> None:
         parsed = reply.parsed
         record = {
             "index": len(self.decision_points) + 1,
             "agent_id": member.agent_id,
             "partner_id": member.partner,
-            "number": member.prompts if reply.stopped is None else member.prompts + 1,
+            "number": member.prompts if number is None else number,
             "step": step,
             "time_s": round(now, 6),
             "trigger_reasons": list(reasons),

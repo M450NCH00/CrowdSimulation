@@ -216,6 +216,27 @@ def test_an_unreadable_reply_uses_a_decision_point_and_the_agent_carries_on():
     assert [d["agent_id"] for d in record["debriefs"]] == [1]
 
 
+def test_a_refusal_mid_decision_point_keeps_every_reply_already_paid_for():
+    from negsim.llm.budget import BudgetExceededError
+
+    class RefusesTheSecondAgent(MockClient):
+        def complete(self, request):
+            if request.metadata.get("agent_id") == 1:
+                raise BudgetExceededError("the cap is reached")
+            return super().complete(request)
+
+    sim = simulation_for(source_plan(HEAD_ON))
+    run = P.EncounterSession(sim, HEAD_ON["agents"], S.load_scenario("passing"), "independent",
+                             RefusesTheSecondAgent(policy=policy({0: SWERVE_LEFT})), LLM)
+    with pytest.raises(BudgetExceededError):
+        run.run_session()
+    record = run.as_dict()
+    assert record["outcome"] == P.SESSION_ABORTED and "BudgetExceededError" in record["error"]
+    (kept,) = record["decision_points"]
+    assert kept["agent_id"] == 0 and kept["attempts"][0]["raw_output"] == SWERVE_LEFT and kept["plan_given"] is None
+    assert not record["decisions"]  # nothing was carried out
+
+
 def test_orca_takes_over_when_the_llm_has_nothing_left_and_the_conflict_remains():
     # Each slows once, for 2 s, in the independent condition: then nobody can be asked again.
     _, record, _ = session_on(HEAD_ON, "independent", {0: SLOW, 1: SLOW})
