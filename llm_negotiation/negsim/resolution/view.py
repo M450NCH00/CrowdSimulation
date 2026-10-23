@@ -48,7 +48,14 @@ CHANGES = (
 
 OUTCOME_COMPLETED = "completed"
 OUTCOME_ONGOING = "ongoing"
-OUTCOMES = (OUTCOME_COMPLETED, OUTCOME_ONGOING)
+#: Steps that the agent's next decision replaced before they had all been carried out (RF-17).
+#: Only ``resolve_v2`` has wording for it.
+OUTCOME_REPLACED = "replaced"
+OUTCOMES = (OUTCOME_COMPLETED, OUTCOME_ONGOING, OUTCOME_REPLACED)
+
+#: Where the voice of a speaker the agent cannot see came from, roughly (RF-17), and how far.
+HEARD_DIRECTIONS = ("ahead", "behind", "left", "right")
+HEARD_BANDS = ("close", "far")
 
 
 @dataclass(frozen=True)
@@ -99,10 +106,20 @@ class SeenPerson:
 
 @dataclass(frozen=True)
 class Heard:
-    """Something said within hearing range. ``label`` is ``None`` for a speaker not in view."""
+    """Something said within hearing range. ``label`` is ``None`` for a speaker not in view;
+    then ``direction`` and ``band`` say roughly where the voice came from (RF-17), or are
+    ``None`` when nobody worked it out (RF-2's views)."""
 
     message: str
     label: Optional[int] = None
+    direction: Optional[str] = None
+    band: Optional[str] = None
+
+    def __post_init__(self) -> None:
+        if self.direction is not None and self.direction not in HEARD_DIRECTIONS:
+            raise ValueError(f"direction: one of {HEARD_DIRECTIONS}, got {self.direction!r}")
+        if self.band is not None and self.band not in HEARD_BANDS:
+            raise ValueError(f"band: one of {HEARD_BANDS}, got {self.band!r}")
 
 
 @dataclass(frozen=True)
@@ -114,6 +131,10 @@ class Done:
     outcome: str
     message: str = ""
     signal: str = "none"
+    #: What came of it (RF-17): how far the agent has moved since, against the way it faced
+    #: then: to its left (positive) or right, and back (positive) from where it was.
+    sideways_m: Optional[float] = None
+    back_m: Optional[float] = None
 
     def __post_init__(self) -> None:
         if self.outcome not in OUTCOMES:

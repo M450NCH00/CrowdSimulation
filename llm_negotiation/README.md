@@ -70,7 +70,8 @@ From track #55. **Part 1, the pipeline, built once** (all on the mock client, no
    scenario interface, the reply parser. *Built on the mock* (`negsim/resolution/`, section
    "Step 1 prompts (issue #57)").
 4. RF-17 (#73): what an LLM agent perceives: view cone, occlusion, hearing, changes since it
-   last looked.
+   last looked. *Built on the mock* (`negsim/resolution/perceive.py`, section "What an LLM
+   agent perceives (issue #73)").
 5. RF-4 (#59): carry out plans in the simulator, in `plan_only` and `plan_orca`, with physical
    outcomes.
 6. RF-3 (#58): the encounter protocol: trigger, event-driven decision points, the three
@@ -948,6 +949,38 @@ read, in `negsim/resolution/`, all on the mock client:
 
 Nothing runs a session yet: that is RF-3 (#58), after RF-17 (#73) and RF-4 (#59).
 
+## What an LLM agent perceives (issue #73)
+
+Issue #73 (RF-17) builds the `View` from the running simulation (`negsim/resolution/perceive.py`),
+with the values of `configs/resolution/llm_view_v1.yaml` (`docs/parameters.md`, section 8). It
+**only reads** the simulation: ORCA's neighbour search and the perception record that rules read
+are unchanged (D10; a run watched every few steps is byte for byte a plain run, tested).
+
+- **Who is seen:** everyone whose centre is within 75° of where the agent faces and 10 m, unless
+  the line of sight passes through a nearer person's disc or a wall (`walls_block_sight`). Nearest
+  first; within 5 m in full, beyond in one short line. No fixed count; `max_people` is an optional
+  cost cap that records how many it left out.
+- **Labels** ("Person 1") stay the same for the whole encounter.
+- **What is heard:** whatever was said since the agent last looked, within the hearing range
+  (3.2 m: a raised voice against the background of a public indoor place, from Pearsons et al.
+  1977), from any direction. An unseen speaker is "someone" with a rough direction and a distance
+  band ("close by" within 1 m, the distance people talk at): "Someone behind you, close by,
+  says: ...".
+- **Signals** appear only if the agent could see the signaller when it was made. Eye contact and a
+  nod are seen anywhere in view: gaze direction stays readable beyond 10 m (Watt et al. 2007).
+- **Changes since you last looked** (D5: a 7% change of speed, or 2° of direction, the thresholds
+  of human motion perception; `docs/parameters.md`, section 8.4), **the time to
+  meet** (only when the closest approach is inside the safety distance) and **what you have done
+  so far** (each earlier decision, how far the agent has moved since, and whether its steps were
+  finished, still going or replaced).
+
+`Perceiver` holds one agent's labels, last look and decisions across an encounter; `Exchange`
+records what was said and signalled and who perceived it, as it was at the time; `view_in(simulation,
+perceiver, exchange)` builds the view of the present step. Views render through `resolve_v2`
+(issue #73: `resolve_v1` word for word, plus the lines for an unseen speaker's direction, a signal
+on a short line and what came of a decision); `resolve_v1` still renders them, as it did. When an
+agent is prompted is RF-3's (#58); carrying out its plan is RF-4's (#59).
+
 ## Changing things
 
 | To | Edit |
@@ -972,6 +1005,7 @@ Nothing runs a session yet: that is RF-3 (#58), after RF-17 (#73) and RF-4 (#59)
 | choose what an agent can see of the other | `negotiation.visibility` (age, gender, task, backstory, speed, size) |
 | let the agents move while they talk | `negotiation.timing.mode: concurrent` |
 | add a scenario to Step 1 (track #55) | a subclass of `Scenario` in a new module under `negsim/resolution/scenarios/`, a line in that package's `PLUGINS`, and a frozen template `scenario_<name>_v1.yaml` of kind `resolution_scenario` (its place lines, its `until` events, any block of its own). Never an edit of `resolve_v1` or the parser (`docs/resolution.md`, D16) |
+| change what an LLM agent can see or hear (cone, ranges, hearing, change thresholds) | a new `configs/resolution/llm_view_v2.yaml`, never an edit of `llm_view_v1.yaml`; tag every value, give its source in `docs/parameters.md`, section 8.4, and list any placeholder in section 8.2 (`tests/test_perceive.py` checks) |
 | change any wording an agent sees | **a new template version.** Copy `negsim/negotiation/templates/<name>_v1.yaml` to `_v2`, edit it, run `python -m negsim.negotiation.freeze <name>_v2 "<why>"`, and record the reason in the work log. A frozen template that has been edited will not load. |
 | add a persona attribute | one entry in `negsim/personas/schema.py`, one line in a new template version |
 | add a controller | a class with `compute(agent, speed_bound, world)`, registered with `@register_controller("name")` |
@@ -984,8 +1018,9 @@ Nothing runs a session yet: that is RF-3 (#58), after RF-17 (#73) and RF-4 (#59)
   to D17: the reply, the description, the conditions, when an agent is prompted, who moves the
   agents, the debrief, storage, variation, rounds, the scenario interface and the scenario
   order. RF-2 (#57) built the reply parser, the description templates, the conditions, the
-  debrief and the scenario interface's description side (`negsim/resolution/`); RF-17 onward
-  build the rest.
+  debrief and the scenario interface's description side (`negsim/resolution/`); RF-17 (#73)
+  built what an agent perceives in the running simulation (`perceive.py`); RF-4 onward build
+  the rest.
 - `docs/gamechat-notes.md`: what the paper and its repository say, where they disagree,
   and where this platform departs from both.
 - `docs/derivations.md`: the follower's speed bound and the conflict zone; and, for the

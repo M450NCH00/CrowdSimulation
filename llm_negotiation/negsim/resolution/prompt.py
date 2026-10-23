@@ -29,6 +29,11 @@ from .view import CONDITIONS, DETAIL_FULL, MOTION_BACKING, MOTION_STILL, View
 KIND_CORE = "resolution"
 KIND_DEBRIEF = "resolution_debrief"
 CORE_TEMPLATE = "resolve_v1"
+#: The core template for views built from the running simulation (RF-17, #73): ``resolve_v1``
+#: with the lines for an unseen speaker's direction, a signal on a short line and what came of
+#: an earlier decision. Lines a template does not have are not rendered, so ``resolve_v1`` still
+#: renders every view, as it did.
+SIMULATION_CORE_TEMPLATE = "resolve_v2"
 DEBRIEF_TEMPLATE = "resolve_debrief_v1"
 
 
@@ -153,6 +158,8 @@ class CoreTemplate:
             if person.detail != DETAIL_FULL:
                 motion = fill(v["short_motion"][person.motion], heading=heading)
                 lines.append(fill(v["seen_short"], n=person.label, distance=along(person.distance_m), direction=direction, motion=motion))
+                if person.signal != "none" and "seen_short_signal" in v:
+                    lines.append(fill(v["seen_short_signal"], signal=v["signals_seen"][person.signal]))
                 continue
             lines.append(fill(v["seen_full"], n=person.label, distance=along(person.distance_m), direction=direction))
             if person.motion == MOTION_STILL:
@@ -181,7 +188,10 @@ class CoreTemplate:
             return []
         lines = [v["heard_header"]]
         for heard in view.heard:
-            if heard.label is None:
+            if heard.label is None and heard.direction is not None and "heard_unseen_from" in v:
+                direction, band = v["heard_directions"][heard.direction], v["heard_bands"][heard.band]
+                lines.append(fill(v["heard_unseen_from"], direction=direction, band=band, message=heard.message))
+            elif heard.label is None:
                 lines.append(fill(v["heard_unseen"], message=heard.message))
             else:
                 lines.append(fill(v["heard_seen"], n=heard.label, message=heard.message))
@@ -198,6 +208,16 @@ class CoreTemplate:
                 lines.append(fill(v["history_said"], message=done.message))
             if done.signal != "none":
                 lines.append(fill(v["history_signal"], signal=v["signals_made"][done.signal]))
+            if done.sideways_m is not None and "history_sideways" in v:
+                if along(abs(done.sideways_m)) == along(0.0):
+                    lines.append(v["history_no_sideways"])
+                else:
+                    side = "left" if done.sideways_m > 0.0 else "right"
+                    lines.append(fill(v["history_sideways"], distance=along(abs(done.sideways_m)), side=side))
+            if done.back_m is not None and "history_back" in v and done.back_m > 0.0 and along(done.back_m) != along(0.0):
+                lines.append(fill(v["history_back"], distance=along(done.back_m)))
+            if done.outcome not in v["history_outcome"]:
+                raise ConfigError(f"prompt template {self.key!r} has no wording for the outcome {done.outcome!r}")
             lines.append(v["history_outcome"][done.outcome])
         return lines
 
