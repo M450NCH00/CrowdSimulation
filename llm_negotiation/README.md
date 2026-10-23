@@ -76,7 +76,9 @@ From track #55. **Part 1, the pipeline, built once** (all on the mock client, no
    outcomes. *Built on the mock* (`negsim/resolution/execute.py`, section "Carrying out plans
    (issue #59)").
 6. RF-3 (#58): the encounter protocol: trigger, event-driven decision points, the three
-   conditions, debrief, storage, one outcome row per session.
+   conditions, debrief, storage, one outcome row per session. *Built on the mock*
+   (`negsim/resolution/protocol.py`, `experiment.py`, section "The encounter protocol (issue
+   #58)").
 7. RF-5 (#60): the core factors (seven, including a memory note) with visibility switches, and
    up to four situational factors.
 8. RF-6 (#61): pairwise perception factors (perceived attractiveness, familiarity), shown only
@@ -948,7 +950,7 @@ read, in `negsim/resolution/`, all on the mock client:
   a signal in a condition that does not allow it is ignored and flagged.
 - `mock.py`: the policies `resolve_paths_v1` (every reply path) and `debrief_paths_v1`.
 
-Nothing runs a session yet: that is RF-3 (#58), now that RF-17 (#73) and RF-4 (#59) are built.
+RF-3 (#58) runs sessions: section "The encounter protocol (issue #58)".
 
 ## What an LLM agent perceives (issue #73)
 
@@ -1026,6 +1028,44 @@ Without a plan driver the simulator runs exactly as before (tested on the shippe
 a case's perturbed baseline). Every definition the executor adds is a design value,
 `docs/parameters.md`, section 8.5.
 
+Since issue #58 an encounter may hold more than two people: each plan then names its partner,
+and the outcome row adds `encounter_size` and the conflict pairs resolved. A two-person run is as
+before (RF-4's tests).
+
+## The encounter protocol (issue #58)
+
+Issue #58 (RF-3) runs Step 1 sessions: LLM agents meet in a conflict case and are asked what they
+do (`negsim/resolution/protocol.py`; `docs/encounter-protocol.md` has every definition and the
+cost preview's derivation).
+
+- **The trigger (D4):** the case's own run goes on as plain ORCA until one of the two sees (or
+  hears) the other, the distance shrinks, and the scenario predicts a conflict. Who is in the
+  encounter is the scenario's (`passing`: the two; `passing_crowd`: also everyone in conflict
+  with them, for rehearsing more than two), capped by `protocol.max_prompted`.
+- **Decision points (D5):** asked again only when the conflict still matters and something new
+  happened from the agent's point of view (someone changed speed or direction, signalled,
+  spoke, came into view; its plan is failing or has ended); only the agent who noticed, at least
+  1 s apart, at most 3 per agent. Between them the plans run in `plan_only` (RF-4).
+- **Conditions (D3):** `independent` (one decision point, no message or signal), `non_verbal`
+  (signals), `talk` (a message per decision point, heard when it has been said).
+- **The end:** passed, no conflict for 1 s, deadlock, collision, or the time limit. When the LLM
+  agents have nothing left and the conflict remains, ORCA takes over and the session is **not
+  resolved by the LLM**. Then one **debrief** per agent that decided (D8).
+- **The layer `resolution`** (`negsim/resolution/experiment.py`, run by `run_experiment.py`):
+  cases, the design (#30's factors less speaking order), the worst-case cost preview per
+  condition, the scoped budget guard, `--plan` and `--confirm`, resume that never rewrites a
+  session record, both replays of every session, and one row per session in `outcomes.csv`
+  (`docs/log-schema.md`, "Resolution experiments").
+
+```
+python run_experiment.py configs/resolution/resolve_mock_rehearsal.yaml --plan
+python run_experiment.py configs/resolution/resolve_mock_rehearsal.yaml
+```
+
+The rehearsal runs head-on, a narrow passage, overtaking and a crowd case with four prompted, in
+all three conditions, on the mock client (`runs_mock/`, not committed). No paid call has been
+made.
+
 ## Changing things
 
 | To | Edit |
@@ -1049,7 +1089,7 @@ a case's perturbed baseline). Every definition the executor adds is a design val
 | choose what an agent is told about the situation | `negotiation.info_fields` (`all`, `none`, or a list of field names) |
 | choose what an agent can see of the other | `negotiation.visibility` (age, gender, task, backstory, speed, size) |
 | let the agents move while they talk | `negotiation.timing.mode: concurrent` |
-| add a scenario to Step 1 (track #55) | a subclass of `Scenario` in a new module under `negsim/resolution/scenarios/`, a line in that package's `PLUGINS`, and a frozen template `scenario_<name>_v1.yaml` of kind `resolution_scenario` (its place lines, its `until` events, any block of its own). On the subclass: `happened` (what each event means), `zone_exits` (its conflict zone), `outcome_columns` and `resolved` (issue #59). Never an edit of `resolve_v1`, the parser or the executor (`docs/resolution.md`, D16) |
+| add a scenario to Step 1 (track #55) | a subclass of `Scenario` in a new module under `negsim/resolution/scenarios/`, a line in that package's `PLUGINS`, and a frozen template `scenario_<name>_v1.yaml` of kind `resolution_scenario` (its place lines, its `until` events, any block of its own). On the subclass: `happened` (what each event means), `zone_exits` (its conflict zone), `outcome_columns` and `resolved` (issue #59); `conflict_predicted`, `encounter_members`, `CASE_TYPES` and `MAX_MEMBERS` (issue #58). Never an edit of `resolve_v1`, the parser, the executor or the protocol (`docs/resolution.md`, D16) |
 | change what an LLM agent can see or hear (cone, ranges, hearing, change thresholds) | a new `configs/resolution/llm_view_v2.yaml`, never an edit of `llm_view_v1.yaml`; tag every value, give its source in `docs/parameters.md`, section 8.4, and list any placeholder in section 8.2 (`tests/test_perceive.py` checks) |
 | change any wording an agent sees | **a new template version.** Copy `negsim/negotiation/templates/<name>_v1.yaml` to `_v2`, edit it, run `python -m negsim.negotiation.freeze <name>_v2 "<why>"`, and record the reason in the work log. A frozen template that has been edited will not load. |
 | add a persona attribute | one entry in `negsim/personas/schema.py`, one line in a new template version |
@@ -1065,8 +1105,12 @@ a case's perturbed baseline). Every definition the executor adds is a design val
   order. RF-2 (#57) built the reply parser, the description templates, the conditions, the
   debrief and the scenario interface's description side (`negsim/resolution/`); RF-17 (#73)
   built what an agent perceives in the running simulation (`perceive.py`); RF-4 (#59) carries
-  plans out in the simulator (`execute.py`, `outcomes.py`, `replay.py`); RF-3 onward build the
-  rest.
+  plans out in the simulator (`execute.py`, `outcomes.py`, `replay.py`); RF-3 (#58) runs the
+  encounters (`protocol.py`, `experiment.py`; `docs/encounter-protocol.md`); RF-5 onward build
+  the rest.
+- `docs/encounter-protocol.md`: the Step 1 encounter protocol and the `resolution` experiment
+  layer (issue #58): the trigger, decision points, conditions, the end, the debrief, the cost
+  preview, the outcome row and the config.
 - `docs/gamechat-notes.md`: what the paper and its repository say, where they disagree,
   and where this platform departs from both.
 - `docs/derivations.md`: the follower's speed bound and the conflict zone; and, for the

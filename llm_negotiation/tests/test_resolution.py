@@ -24,7 +24,7 @@ from negsim.resolution.reply import (
     DEBRIEF_KINDS, ReplyContext, parse_debrief, parse_reply, reply_parser,
 )
 from negsim.resolution.scenario import Scenario
-from negsim.resolution.scenarios import PLUGINS, PassingScenario, load_scenario
+from negsim.resolution.scenarios import PLUGINS, PassingCrowdScenario, PassingScenario, load_scenario
 from negsim.resolution.view import CHANGES, CONDITIONS, SIGNALS, Block, Done, Heard
 from negsim.rulegen.cases import CASE_FILE, CASES_ROOT, CaseStore
 
@@ -486,7 +486,7 @@ def test_the_debrief_mock_paths():
     for index, name in enumerate(mock.DEBRIEF_PATH_NAMES):
         result = ask(mock.debrief_paths_v1, index, None, DEBRIEF.retry(), parse=parse_debrief)
         assert result.failure is None and (result.parsed.source is None) == (name == "none")
-    assert set(mock.POLICIES) == {"resolve_paths_v1", "debrief_paths_v1"}
+    assert set(mock.POLICIES) == {"resolve_paths_v1", "debrief_paths_v1", "resolution_rehearsal_v1"}  # the last: issue #58
 
 
 # --- a second scenario: added without touching the core template or the parser ------------------------------
@@ -534,7 +534,7 @@ def test_a_second_scenario_renders_through_the_same_core_template():
 
 
 def test_scenario_plugins_and_their_templates():
-    assert PLUGINS == {"passing": PassingScenario}
+    assert PLUGINS == {"passing": PassingScenario, "passing_crowd": PassingCrowdScenario}  # passing_crowd: issue #58
     with pytest.raises(ConfigError, match="unknown scenario"):
         load_scenario("escalator")
     with pytest.raises(ConfigError, match="at least one event"):

@@ -19,6 +19,7 @@ The speeds stay at or below 1.3 m/s, below every case's top speed (1.4 to 2.0 m/
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from typing import Any, Callable
 
 from ..llm.base import LLMRequest
@@ -82,6 +83,20 @@ def debrief_paths_v1(request: LLMRequest) -> str:
     return DEBRIEF_PATHS[DEBRIEF_PATH_NAMES[index % len(DEBRIEF_PATH_NAMES)]]
 
 
+def resolution_rehearsal_v1(request: LLMRequest) -> str:
+    """For a whole session (issue #58): a debrief request (``kind: debrief``) takes a path of
+    ``debrief_paths_v1``, and a decision point one of ``resolve_paths_v1``, chosen from the
+    session's cell (``path_index``), the agent's place in the encounter (``agent_slot``) and its
+    decision point, so that the agents of one session, and one agent's decision points, differ."""
+    meta = request.metadata
+    slot, number = int(meta.get("agent_slot", 0)), int(meta.get("decision_point") or 1)
+    index = int(meta.get("path_index", 0)) + 7 * slot + 3 * (number - 1)
+    if meta.get("kind") == "debrief":
+        return DEBRIEF_PATHS[DEBRIEF_PATH_NAMES[(int(meta.get("path_index", 0)) + slot) % len(DEBRIEF_PATH_NAMES)]]
+    return resolve_paths_v1(replace(request, metadata={**meta, "path_index": index}))
+
+
 POLICIES: dict[str, Callable[[LLMRequest], str]] = {
     "resolve_paths_v1": resolve_paths_v1, "debrief_paths_v1": debrief_paths_v1,
+    "resolution_rehearsal_v1": resolution_rehearsal_v1,
 }

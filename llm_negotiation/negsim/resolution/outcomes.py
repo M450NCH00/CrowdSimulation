@@ -20,6 +20,13 @@ order the session gives them.
 
 The scenario adds its own columns and says what ``resolved`` means (D16).
 
+**More than two people** (issue #58, RF-3). The general columns are those of the encounter's
+first two agents. Three columns are added: ``encounter_size``; ``conflict_pairs``, the pairs
+of the encounter predicted to be in conflict (the session says which; every pair by default);
+and ``conflict_pairs_resolved``, how many of them are resolved, each measured as a two-person
+encounter. The encounter is ``resolved`` only if every conflict pair is. A two-person row is
+exactly as it was.
+
 **The report** gives the physical resolution rate per encounter type and mode, beside plain ORCA
 on the same cases and seeds, and beside the C0 runs (no LLM, Strategy 1 only) of the negotiation
 layer. C0's scenarios are GameChat's doorway, intersection and hallway, not these encounters: it
@@ -47,6 +54,8 @@ GENERAL_COLUMNS = (
     "stopped_a", "stopped_b", "backed_up_a", "backed_up_b", "backed_distance_a_m", "backed_distance_b_m",
 )
 RESOLVED = "resolved"
+#: The columns an encounter of more than two people adds (issue #58).
+ENCOUNTER_COLUMNS = ("encounter_size", "conflict_pairs", "conflict_pairs_resolved")
 
 
 def _rounded(value: Optional[float], places: int = 6) -> Optional[float]:
@@ -62,13 +71,17 @@ def physical_outcome(
     scenario: Scenario,
     plain_goal_times: Optional[Mapping[int, Optional[float]]] = None,
     labels: Optional[Mapping[str, Any]] = None,
+    pairs: Optional[Sequence[Sequence[int]]] = None,
 ) -> dict[str, Any]:
     """The outcome columns of one encounter in one finished run.
 
     ``track`` holds the encounter agents' states after each step (``execute.TrackRow``);
     ``start_step`` is the step of the encounter's first decision. ``labels`` (session id, case,
-    encounter type, mode) are put first, as given.
+    encounter type, mode) are put first, as given. With more than two ``agents``, ``pairs`` are
+    the conflict pairs (every pair if not given).
     """
+    if len(agents) > 2:
+        return _encounter_outcome(simulation, result, track, agents, start_step, scenario, plain_goal_times, labels, pairs)
     a, b = agents
     world = simulation.world
     specs = {agent: world.agents[agent].spec for agent in agents}
@@ -159,6 +172,22 @@ def physical_outcome(
     })
     columns.update(scenario.outcome_columns(simulation, track, agents, start_step, columns))
     columns[RESOLVED] = bool(scenario.resolved(columns))
+    return columns
+
+
+def _encounter_outcome(simulation, result, track, agents, start_step, scenario, plain_goal_times, labels, pairs) -> dict[str, Any]:
+    """An encounter of more than two people: the first two agents' columns, and every conflict pair."""
+    members = [int(agent) for agent in agents]
+    if pairs is None:
+        pairs = [(i, j) for k, i in enumerate(members) for j in members[k + 1:]]
+    pairs = [tuple(int(agent) for agent in pair) for pair in pairs]
+    if not pairs or any(len(pair) != 2 or not set(pair) <= set(members) for pair in pairs):
+        raise ValueError(f"conflict pairs must be pairs of the encounter's agents {members}, got {pairs}")
+    columns = physical_outcome(simulation, result, track, members[:2], start_step, scenario, plain_goal_times, labels)
+    solved = [physical_outcome(simulation, result, track, pair, start_step, scenario, plain_goal_times)[RESOLVED] for pair in pairs]
+    del columns[RESOLVED]  # only the conflict pairs count
+    columns.update({"encounter_size": len(members), "conflict_pairs": len(pairs), "conflict_pairs_resolved": sum(solved)})
+    columns[RESOLVED] = all(solved)
     return columns
 
 

@@ -205,12 +205,15 @@ none is a placeholder, and that section 8.4 gives each researched value. In the 
 Issue #73 first set the hearing range (7 m), the distance band of an unseen speaker (3 m), the
 eye-contact range (4 m) and D5's change thresholds (0.2 m sideways, 0.2 m/s, 5°) as placeholders.
 At the user's request (2026-10-23) each was replaced by a sourced value before any run read it:
-section 8.4. One placeholder of the resolution design is left. None of these has a source. **Do not report a result that depends on one as if it rested on
+section 8.4. One placeholder of the resolution design was left, and issue #58 (RF-3) added three for the encounter protocol. None of these has a source. **Do not report a result that depends on one as if it rested on
 data.**
 
 | Parameter | Value | Why it has no source, and what would replace it |
 |---|---|---|
 | Largest turn in a reply (`turn.degrees`) | 0° to 90° `[placeholder]` | Issue #57 (RF-2): the reply parser refuses a turn beyond it (`negsim/resolution/reply.py`, `MAX_TURN_DEGREES`), and the step format tells the agent the range. 90° is walking straight sideways, the most a heading offset can mean; nothing read says how far people turn to pass. A source on avoidance heading changes would replace it. |
+| How fast a message is said (`protocol.speech_words_per_second`) | 2.5 words a second `[placeholder]` | Issue #58 (RF-3): D3 says speaking takes simulated time; a message is heard `len(words) / 2.5` s after its decision point. 2.5 words a second (150 a minute) is a commonly quoted conversational rate, but no source on it has been read or cached. A measured speech rate, ideally for short utterances in public, would replace it. |
+| How long without a predicted conflict ends an encounter (`protocol.no_conflict_end_s`) | 1 s `[placeholder]` | Issue #58, task 4 ("no conflict has been predicted for 1 s `[placeholder]`"). Shorter ends encounters on a momentary gap in the prediction; longer keeps prompting after the two are clear. Nothing measures it. |
+| The reply cap (`llm.max_tokens`) | 400 tokens `[placeholder]` | Issue #58, task 7 ("the reply cap at 400 tokens `[placeholder]`, as in #30's config"). It bounds the cost preview (`encounter-protocol.md`, section 6); RF-9's pilot measures how long replies are. |
 
 ### 8.3 Design values
 
@@ -276,3 +279,26 @@ columns. None is a claim about people, and none has a source. `negsim/resolution
 | `passing_side` | the side the agent went by on, in its own frame, at the closest approach, if the two were abreast then (along-path offset within the two radii) | Empty when they were not side by side, as in a passage they go through one at a time. |
 | `stopped`, `backed_up` | speed below the deadlock monitor's `speed_eps`; moving against its path faster than the backward-walking threshold, 0.1 m/s (`metrics.md`, section 10) | Thresholds already in the run, reused so that no new number is added. In the passage cases that start at rest, both agents count as stopped from the start. |
 | "Resolved" (passing scenarios) | both left the conflict zone, with no collision, no near miss (`near_miss_distance`) and no deadlock, before the run's time limit | The issue's definition. A plain ORCA pass within 0.1 m is a near miss, so it is not resolved. |
+
+### 8.6 The encounter protocol (issue #58)
+
+Tagged `[design]` unless they are in section 8.2: when an agent is asked, what its reply does,
+and when an encounter ends. None is a claim about people; several are assumptions to review
+(`WORK_LOG-58.md`). `negsim/resolution/protocol.py` and `scenarios/` hold them;
+`encounter-protocol.md` explains each in context. The gap between prompts, the cap of three
+decision points and the cap on prompted people are in section 8.3.
+
+| Parameter | Value | Why |
+|---|---|---|
+| When a conflict is predicted (passing scenarios) | a shared too-narrow single-file segment whose zone is still live; or, not yet passed, a closest approach still to come nearer than the two radii and the safety margin at the present velocities **or** the desired ones (along the path, at the preferred speed) | "The existing detector plus approaching" (issue #58, task 1): the arbiter's own zone for passages, and the time-to-meet line's safety distance in a corridor. The desired velocities keep two people who have both stopped face to face in conflict. The trigger also needs the distance to be shrinking (D4). |
+| Who a crowd encounter holds (`passing_crowd`) | the two who started it, then everyone still walking within 10 m of either and predicted in conflict with either, nearest first | Only to rehearse more than two prompted people (D11) before rounds 4 and 6. 10 m is the seeing range (section 8.1). The cap keeps the first N. |
+| A member's first prompt | when D4 holds for it toward any member; its partner is the nearest such member | Issue #58 says every member is prompted at the first decision point; D4 says one is prompted only if it perceives the other. Read together: everyone who perceives is asked then, and anyone else when they first do. |
+| A plan that has "ended" (D5) | a plan with at least one step, all carried out | `[]` means "carry on as I am": treating it as ended would ask the agent again a second later. |
+| An unreadable reply (after its retry) | uses up the decision point; the agent carries on with its plan, or with `[]` if it had none; its look is dropped from its perception | `[]` keeps the encounter under `plan_only`, so ORCA never steps in for an unreadable reply. Dropping the look keeps WHAT YOU HAVE DONE SO FAR to decisions the agent made. |
+| When a signal is made | during the step after the decision point | Everyone at a decision point looks first and replies after, so a signal made there must be new to the others at their next look; RF-17's view counts what came after a look. |
+| When a message is heard | `len(words) / speech_words_per_second` after its decision point, by everyone within the hearing range then | D3: speaking takes simulated time. The rate is a placeholder (section 8.2). |
+| "Passed" as an encounter's end | every conflict pair separating, further apart than the two radii and the margin, **and** no conflict predicted between them (or one has arrived) | RF-4's pass test alone reads two people standing still as separating when a rounding error makes their relative velocity point apart (found on the passage case). |
+| When ORCA takes over (D6) | every prompted member has used its decision points (or arrived) and has no plan left to carry out, while a conflict is still predicted | "Still unresolved after its last decision point": the last decision point has played out. The release is recorded so the replay repeats it. |
+| `not_resolved_by_llm` | the end was `orca_took_over`, `deadlock` or `collision`, or the time limit with a conflict still predicted | The encounter ended without the LLM agents' plans resolving it. |
+| `resolved_by_llm` | `resolved_plan_only` and not `not_resolved_by_llm` | The `plan_only` replay runs on after ORCA takes over, so its physical "resolved" can be ORCA's work; this column credits the LLM only. |
+| The plan coding (`code_plan`) | `side`: the sign of its turns (`none`, `left`, `right`, `both`); `slowed`: a speed below the agent's speed at the decision; `stopped`: a speed of 0; `backed_up`: a back-up step; `start_distance_m`, `start_after_s` | Issue #58, task 9: "coded mechanically". |

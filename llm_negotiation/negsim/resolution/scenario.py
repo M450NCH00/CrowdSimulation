@@ -19,6 +19,14 @@ On the execution side (issue #59, RF-4) a scenario supplies:
 - its own outcome columns (:meth:`Scenario.outcome_columns`) and what "resolved" means for it
   (:meth:`Scenario.resolved`).
 
+On the encounter side (issue #58, RF-3) a scenario supplies:
+
+- when a conflict is predicted between two people (:meth:`Scenario.conflict_predicted`): the
+  part of the trigger (D4) and of "the conflict still matters" (D5) that is the scenario's;
+- who is in an encounter that two people started (:meth:`Scenario.encounter_members`): the
+  two, or more (D11). The protocol applies the cap on prompted people;
+- which case types it takes when a config names no plug-in (``CASE_TYPES``).
+
 Adding a scenario adds a subclass and a template. It never edits the core template
 (``resolve_v1``), the parser, the executor, or another scenario. The plug-ins themselves live in
 :mod:`negsim.resolution.scenarios`.
@@ -63,6 +71,11 @@ class Scenario:
 
     #: The frozen scenario template :meth:`load` reads.
     TEMPLATE: Optional[str] = None
+    #: The case types (a case's ``scenario.type``) the plug-in takes when a config names none.
+    CASE_TYPES: tuple[str, ...] = ()
+    #: The most people :meth:`encounter_members` can return (``None``: as many as the case has),
+    #: for the cost preview before anything runs.
+    MAX_MEMBERS: Optional[int] = 2
 
     def __init__(self, key: str, data: Mapping[str, Any], sha256: str):
         check_template_data(key, data)
@@ -133,3 +146,15 @@ class Scenario:
     def resolved(self, columns: Mapping[str, Any]) -> bool:
         """Whether an encounter with these outcome columns was resolved, as this scenario means it."""
         raise NotImplementedError(f"{type(self).__name__} does not say what resolved means")
+
+    # --- the encounter side (issue #58) ---------------------------------------------------------
+
+    def conflict_predicted(self, simulation: Any, i: int, j: int) -> bool:
+        """Whether a conflict between agents ``i`` and ``j`` is predicted on the present state of
+        the running ``simulation`` (read only)."""
+        raise NotImplementedError(f"{type(self).__name__} does not say when a conflict is predicted")
+
+    def encounter_members(self, simulation: Any, i: int, j: int) -> list[int]:
+        """Who is in the encounter that ``i`` and ``j`` start: ``i`` and ``j`` first, then anyone
+        else the scenario brings in, in the order they are to be prompted. Two people by default."""
+        return [i, j]

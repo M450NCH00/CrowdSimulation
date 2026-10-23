@@ -16,6 +16,8 @@ It calls no model at all, so ``--client`` does not apply to it and it costs noth
 output goes under ``runs/``.
 
 A config that says ``layer: rule_generation`` is a rule-generation experiment (issue #30).
+A config that says ``layer: resolution`` is a resolution experiment (issue #58): LLM agents
+meet in conflict cases and are asked what they do.
 ``--plan`` prints its sessions and worst-case cost; with ``--client deepseek`` it writes the
 preview and sends nothing unless ``--confirm`` is given too. ``--limit N`` runs at most N
 sessions that have no record yet; running it again resumes it.
@@ -32,6 +34,8 @@ from typing import Optional
 
 from ..configutil import ConfigError, load_yaml, resolve_path
 from ..llm import LLMError
+from ..resolution.experiment import cli_run as run_resolution
+from ..resolution.experiment import is_resolution_config
 from ..rulegen.experiment import cli_run as run_rule_generation
 from ..rulegen.experiment import is_rule_generation_config
 from .avoidance import AvoidanceExperiment, is_avoidance_config, run_avoidance_experiment
@@ -69,7 +73,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser.add_argument("--plan", action="store_true", help="list the runs and the worst-case cost, then stop")
     parser.add_argument(
         "--confirm", action="store_true",
-        help="rule generation with a paid client: send the calls, having read the worst-case cost preview",
+        help="rule generation or resolution with a paid client: send the calls, having read the worst-case cost preview",
     )
     args = parser.parse_args(argv)
 
@@ -79,8 +83,12 @@ def main(argv: Optional[list[str]] = None) -> int:
             if args.overwrite:
                 raise ConfigError("--overwrite does not apply to rule generation, which resumes; give the config a new experiment_name")
             return run_rule_generation(args)
+        if is_resolution_config(raw):
+            if args.overwrite:
+                raise ConfigError("--overwrite does not apply to a resolution experiment, which resumes and never rewrites a session")
+            return run_resolution(args)
         if args.confirm:
-            raise ConfigError("--confirm applies only to rule-generation experiments")
+            raise ConfigError("--confirm applies only to rule-generation and resolution experiments")
         if is_avoidance_config(raw):
             return run_avoidance(args)
 

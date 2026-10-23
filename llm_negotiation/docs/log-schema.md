@@ -566,6 +566,82 @@ factorial (each factor's number of levels, the cells per case, the sessions), an
 sessions' outcomes by condition, group pair and whether the groups were shown; **`report.md`**
 the same, for reading.
 
+## Resolution experiments (issue #58)
+
+A resolution experiment (`encounter-protocol.md`) puts LLM agents into conflict cases and asks
+them what they do (Step 1 of track #55). Like a rule-generation experiment it is not a run: it
+holds sessions with a model, and avoidance runs that replay their plans. Its folder,
+`runs/<experiment_name>/` (`runs_mock/` with the mock client), is **version 1** of the resolution
+log (`resolution_log_version` in `config.json` and in every session record); the run folders
+under `replay/` are avoidance runs of the code's log schema version, with the `plans` key above.
+
+```
+runs/<experiment_name>/
+  config.json, invocations.jsonl        the config as read, the client, git, the templates, the llm_view; each run or resume
+  cases.json, design.jsonl              the cases (with their plug-in); the session list with each person's persona
+  preview.json, cost.json               the worst-case cost before any call; the actual cost after, per session
+  sessions/<session_id>.json            the record of one session, written once, when it ends; never rewritten
+  sessions/<session_id>.md              the same, for reading, rendered from the record alone
+  sessions/<session_id>.aborted<n>.json the record of a session that was aborted and run again (and .md)
+  decisions.jsonl                       one line per decision point
+  debriefs.jsonl                        one line per debrief
+  outcomes.jsonl, outcomes.csv          one row per session
+  replay/<session_id>/plan_only/        RF-4's replays: trajectory.csv, events.jsonl, outcome.json, ...
+  replay/<session_id>/plan_orca/
+  summary.json, report.md               the report's numbers; the report
+```
+
+**`config.json`**: `resolution_log_version`, `layer` (`resolution`), `experiment` (every setting
+as read: `experiment_name`, `description`, `source`, `cases`, `scenarios`, `conditions`,
+`design`, `protocol`, `templates`, `llm_view`, `llm`, `budget`), `client_name`, `created_utc`,
+`git`, `software`, `templates` (the core and debrief templates with their SHA-256) and
+`llm_view` (the perception settings as read). Once a session has a record, an invocation with
+another config or client is refused.
+
+**`invocations.jsonl`**: per invocation `utc`, `git`, `client`, `confirm`, `limit`, `status`
+(`completed`, `partial`, `aborted`, `awaiting_confirmation`, `refused_over_cap`), `executed`,
+`aborted`, `preview_usd`.
+
+**`design.jsonl`**: per session `session_id` (`<I|N|T>_<case_id>_<cell code>_r<repeat>`),
+`index`, `condition`, `case_id`, `case_version`, `scenario` (the plug-in), `agents` (the case's
+two people), `cell` (the five factors), `repeat`, `exact_repeat_set`, `personas` (per agent:
+`age`, `gender`, `task`, `urgency`), `visibility`.
+
+**`sessions/<session_id>.json`**:
+
+| Key | Contents |
+| --- | --- |
+| `resolution_log_version`, `session_id`, `session` | the version; the id; the session as in `design.jsonl` |
+| `case`, `scenario` | `case_id` and `version`; the plug-in (what a replay loads) |
+| `templates`, `llm` | core, debrief and scenario templates with their SHA-256; model, temperature, reply cap, thinking |
+| `started_utc`, `ended_utc`, `model_returned` | when; the model names the provider returned |
+| `outcome`, `error` | `completed`, `no_encounter` or `aborted`; why it was aborted |
+| `condition`, `protocol`, `llm_view`, `max_decision_points_per_agent`, `max_attempts_per_call` | the settings it ran under |
+| `encounter` | `agents` (the members, in order), `pairs` (the conflict pairs), `left_out_by_cap`, `trigger` (`step`, `time_s`, `agent_id`, `other_id`), `start_step`, `end` (`reason`: `passed`, `no_conflict`, `deadlock`, `collision`, `time_limit` or `orca_took_over`; `step`, `time_s`, `conflict_still_predicted`, `not_resolved_by_llm`), `orca_took_over` (the release, or null), `prompted`, `type` (the case's encounter class) |
+| `decision_points` | one per agent prompt, in order: `index`, `agent_id`, `partner_id`, `number` (the agent's own count), `step`, `time_s`, `trigger_reasons`, `view` (the structured `View`), `prompt` (the exact messages and template identities), `attempts` (each with its raw reply, model, `system_fingerprint`, tokens, cost, parse and API errors), `parse_error`, `parsed` (the reply as read), `plan_given` (the steps given to the driver; `[]` for an unreadable reply with no plan before; null when an unreadable reply left a plan running), `coded` (`code_plan`), `until_next` (`time_s`, `ended_by`: the next decision point or the end, the plan's `plan_state` and `plan_outcome`, `smallest_gap_m` to any member in between) |
+| `debriefs` | per agent: `agent_id`, `templates`, `attempts`, `parse_error`, `parsed` (`basis`, `kind`, `source`, `applies_to`, `source_status`: `unchecked`) |
+| `utterances`, `signals` | what was said (`time_s` when it had been said, `speaker_id`, `message`, `heard_by` with each listener's direction and band) and signalled (`time_s`, `signaller_id`, `signal`, `seen_by`) |
+| `decisions`, `release` | the plans as a replay schedules them (`PlanDriver.decisions_record`; with `partner_id` when more than two), and the release to ORCA (`step`, `reason`) or null: what `replay.py` reads (section "Replays of LLM agents' plans") |
+| `replays` | the replay folders of both modes, relative to the experiment folder; null without an encounter |
+| `totals` | `decision_points`, `debriefs`, `llm_calls`, `retries`, `tokens`, `cost_usd` |
+
+**`decisions.jsonl`**: per decision point `session_id`, `agent_id`, `index`, `number`, `time_s`,
+`condition`, `trigger_reasons`, `parse_error`, the parsed reply's `message`, `signal`, `intent`,
+`steps`, `reason`, and `coded`. Every line's raw replies are in its session's record (tested).
+
+**`debriefs.jsonl`**: per debrief `session_id`, `agent_id`, `parse_error`, `basis`, `kind`,
+`source`, `applies_to`, `check_status` (`unchecked`; RF-14 checks it).
+
+**`outcomes.jsonl` and `outcomes.csv`**: one row per session; the columns are listed in
+`encounter-protocol.md`, section 7. The CSV has every column but `others`.
+
+**`cost.json`**: the preview, the actual and the cap in USD, the client, and per session its
+calls, tokens and cost beside its preview. **`summary.json`**: per encounter type and condition
+the sessions, those with an encounter, the resolution rate in `plan_only`, `plan_orca`, by the
+LLM and in plain ORCA, how many were not resolved by the LLM, the mean decision points and
+calls per session and how often the cap was reached; the end reasons, the debrief kinds, tokens
+per session, the largest share of a preview used, the cost and the failure modes.
+
 ## `spend_ledger.jsonl`
 
 One line per paid call: `utc`, `experiment`, `run_id`, `turn_index`, `speaker`, `attempt`,
@@ -623,3 +699,7 @@ lines whose `experiment` is that experiment's name.
   `invocations.jsonl`; `design` and `groups` in `summary.json`.
 - (2026-10-23, issue #59; no version change.) A replay of LLM agents' plans adds a `plans` key
   to `config.json` and `outcome.json`, and the `control_mode` `plan`. No other run changes.
+- (2026-10-23, issue #58; not a run format, the run schema is unchanged.) The folder of a
+  resolution experiment, version 1 of its own (`resolution_log_version`), section "Resolution
+  experiments". A replay's session record may now have more than two `encounter.agents`, their
+  conflict `pairs`, and a `partner_id` per decision; a two-person record is as before.

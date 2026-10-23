@@ -27,6 +27,20 @@ side, ``scenario_passing_v1``: the wall, passage and narrowing lines of issue #3
 
 **Resolved** means: the two left the conflict zone (cleared), with no collision, no near miss
 and no deadlock, within the run's time limit.
+
+**The encounter side** (issue #58, RF-3). A conflict between two people is predicted when
+neither has arrived and either
+
+- both paths run through a single-file segment too narrow for them to pass in, and neither has
+  yet left it (the arbiter's own zone, ``SingleFileDetector``, still live); or
+- they have not yet passed each other (``AvoidanceSimulation._passed``) and, at their present
+  velocities or at their desired ones (along the path where each is, at its preferred speed),
+  their closest approach still to come is nearer than the two radii and the scenario's safety
+  margin: the safety distance the agent's time-to-meet line uses.
+
+The desired velocities keep two people who have both stopped face to face in conflict; the
+present ones alone would not. **[assumption, ``WORK_LOG-58.md``]** The encounter is the two
+people who started it.
 """
 
 from __future__ import annotations
@@ -34,6 +48,7 @@ from __future__ import annotations
 import math
 from typing import Any, Mapping, Optional, Sequence
 
+from ...avoidance.coordination import SingleFileDetector
 from ...rulegen.describe import _place
 from ..scenario import EventContext, Scenario
 
@@ -58,6 +73,23 @@ def _separating(me: Any, other: Any) -> bool:
     rx, ry = other.pose.x - me.pose.x, other.pose.y - me.pose.y
     vx, vy = other.velocity[0] - me.velocity[0], other.velocity[1] - me.velocity[1]
     return rx * vx + ry * vy > 0.0
+
+
+def closest_gap(pa: tuple[float, float], va: tuple[float, float], pb: tuple[float, float], vb: tuple[float, float]) -> Optional[float]:
+    """How near two bodies' centres come at these velocities, if that is still to come; else ``None``."""
+    rx, ry = pb[0] - pa[0], pb[1] - pa[1]
+    vx, vy = vb[0] - va[0], vb[1] - va[1]
+    v2 = vx * vx + vy * vy
+    if v2 <= 0.0:
+        return None
+    t = -(rx * vx + ry * vy) / v2
+    return None if t <= 0.0 else math.hypot(rx + vx * t, ry + vy * t)
+
+
+def desired_velocity(agent: Any) -> tuple[float, float]:
+    """Along the agent's path where it is, at its preferred speed."""
+    heading = agent.spec.path.heading_at(agent.path_s)
+    return (agent.spec.preferred_speed * math.cos(heading), agent.spec.preferred_speed * math.sin(heading))
 
 
 def shared_segment(simulation: Any, agents: Sequence[int]) -> Optional[tuple[int, Any]]:
@@ -140,3 +172,28 @@ class PassingScenario(Scenario):
 
     def resolved(self, columns: Mapping[str, Any]) -> bool:
         return bool(columns["cleared"]) and not (columns["collision"] or columns["near_miss"] or columns["deadlock"])
+
+    # --- the encounter side (issue #58) ---------------------------------------------------------
+
+    def conflict_predicted(self, simulation: Any, i: int, j: int) -> bool:
+        agents = simulation.world.agents
+        a, b = agents[i], agents[j]
+        if a.done or b.done:
+            return False
+        margin = simulation.spec.single_file_safety_margin
+        if shared_segment(simulation, (i, j)) is not None:
+            detector = SingleFileDetector(
+                margin, {i: a.spec.single_file_stretches, j: b.spec.single_file_stretches},
+                [segment.width for segment in simulation.spec.single_file_segments],
+            )
+            zone = detector.zone(a, b)
+            if zone is not None and zone.live:
+                return True
+        if simulation._passed(i, j, margin):
+            return False
+        reach = a.spec.radius + b.spec.radius + margin
+        for va, vb in ((a.velocity, b.velocity), (desired_velocity(a), desired_velocity(b))):
+            gap = closest_gap(a.pose.xy, va, b.pose.xy, vb)
+            if gap is not None and gap < reach:
+                return True
+        return False
