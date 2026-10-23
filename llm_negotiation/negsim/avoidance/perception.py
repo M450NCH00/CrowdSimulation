@@ -364,8 +364,10 @@ def default_visibility() -> dict[str, bool]:
     The same defaults as issue #24 (``negsim.negotiation.prompts.default_visibility``):
     each persona attribute as its schema entry says (age and gender are visible, task and
     backstory are not), and the physical ``speed`` and ``size``. A test keeps the two equal.
+    The core factors of track #55 (issue #60) are not here: their switches are the resolution
+    design's, and no prompt of these layers has a line for them.
     """
-    visibility = {name: spec.observable for name, spec in ATTRIBUTES.items()}
+    visibility = {name: spec.observable for name, spec in ATTRIBUTES.items() if not spec.levels}
     visibility.update({"speed": True, "size": True})
     return visibility
 

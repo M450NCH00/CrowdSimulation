@@ -180,7 +180,8 @@ could be in view in full detail. That is a true bound but a loose one; a paid cr
   type, scenario plug-in, condition, mapping, repeat, `exact_repeat_set`, model, temperature,
   and the cell's factors;
 - **per person** (`p1_`, `p2_`: the design's two people; `others` for further members): agent,
-  age, gender, urgency, errand; the number of decision points and their reasons; unreadable
+  age, gender, urgency, errand, and the person's level of each core factor the design varies
+  (issue #60: `p1_mobility_aid`, `p2_load`, ...); the number of decision points and their reasons; unreadable
   replies; the first and the final plan coded mechanically (`side`: the sign of the turns, or
   `none` or `both`; `slowed`: a speed below the speed at the decision; `stopped`; `backed_up`;
   `start_distance_m`); signals used; messages; the debrief's `kind` and `source`;
@@ -228,6 +229,11 @@ never run or written again (tested byte for byte); an aborted one is kept as
 
 ## 9. What is not here
 
-New factors (RF-5, RF-6), screening designs (RF-7), the analysis (RF-8), any paid call, and the
+**The core and situational factors** (issue #60, RF-5) are not part of the protocol: a session
+hands their lines (`factors.SessionFactors`) to every view it builds, and the experiment layer
+sets the wider body of `load` for the run and the hearing range of `surroundings`
+(`parameters.md`, section 8.7; `log-schema.md`, "Resolution experiments").
+
+Pairwise factors (RF-6), screening designs (RF-7), the analysis (RF-8), any paid call, and the
 scenarios of rounds 4 to 6 (RF-23 to RF-25). `passing_crowd` only rehearses more than two
 prompted people; it is not a round's scenario.

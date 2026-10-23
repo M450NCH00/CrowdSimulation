@@ -628,12 +628,15 @@ def view_in(
     outcomes: Sequence[str] = (),
     factor_lines: Optional[Mapping[int, Sequence[str]]] = None,
     pairwise_lines: Optional[Mapping[int, Sequence[str]]] = None,
+    own_lines: Sequence[str] = (),
+    situation_lines: Sequence[str] = (),
 ) -> View:
     """The view of ``perceiver``'s agent at the simulation's present step: every block of D2.
 
-    ABOUT YOU from the agent's body and its own ``people`` entry; WHERE YOU ARE (and any block of
-    the scenario's own) from the scenario plug-in and the agent's own record; the rest from
-    :meth:`Perceiver.look`. Reads the simulation and changes nothing in it.
+    ABOUT YOU from the agent's body and its own ``people`` entry, then ``own_lines`` (its own
+    factor lines, RF-5); WHERE YOU ARE (and any block of the scenario's own) from the scenario
+    plug-in and the agent's own record, then ``situation_lines`` (RF-5's setting, the same for
+    everyone); the rest from :meth:`Perceiver.look`. Reads the simulation and changes nothing in it.
     """
     agents = simulation.world.agents
     agent = agents[perceiver.agent_id]
@@ -650,6 +653,7 @@ def view_in(
         age=info.get("age") if perceiver.show_age else None,
         gender=info.get("gender") if perceiver.show_gender else None,
         errand=info.get("errand"),
+        factor_lines=tuple(own_lines),
     )
     return perceiver.look(
         simulation.world.time,
@@ -657,7 +661,7 @@ def view_in(
         simulation.world.obstacles,
         me,
         exchange,
-        place=perceiver.scenario.place_lines(scene, record),
+        place=[*perceiver.scenario.place_lines(scene, record), *situation_lines],
         extra_blocks=perceiver.scenario.extra_blocks(scene, record),
         notes=notes,
         outcomes=outcomes,

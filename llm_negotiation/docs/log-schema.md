@@ -595,8 +595,10 @@ runs/<experiment_name>/
 as read: `experiment_name`, `description`, `source`, `cases`, `scenarios`, `conditions`,
 `design`, `protocol`, `templates`, `llm_view`, `llm`, `budget`), `client_name`, `created_utc`,
 `git`, `software`, `templates` (the core and debrief templates with their SHA-256) and
-`llm_view` (the perception settings as read). Once a session has a record, an invocation with
-another config or client is refused.
+`llm_view` (the perception settings as read). With a design that varies a core or situational
+factor (issue #60), `experiment` also has `factor_values` (the values file) and
+`templates.factors`, and the file has `factors` (`template`, with its SHA-256, and `values` as
+read). Once a session has a record, an invocation with another config or client is refused.
 
 **`invocations.jsonl`**: per invocation `utc`, `git`, `client`, `confirm`, `limit`, `status`
 (`completed`, `partial`, `aborted`, `awaiting_confirmation`, `refused_over_cap`), `executed`,
@@ -604,8 +606,9 @@ another config or client is refused.
 
 **`design.jsonl`**: per session `session_id` (`<I|N|T>_<case_id>_<cell code>_r<repeat>`),
 `index`, `condition`, `case_id`, `case_version`, `scenario` (the plug-in), `agents` (the case's
-two people), `cell` (the five factors), `repeat`, `exact_repeat_set`, `personas` (per agent:
-`age`, `gender`, `task`, `urgency`), `visibility`.
+two people), `cell` (the five factors, and any of issue #60 the design varies), `repeat`,
+`exact_repeat_set`, `personas` (per agent: `age`, `gender`, `task`, `urgency`, and each core
+factor the design varies), `visibility` (with the switch of each observable core factor varied).
 
 **`sessions/<session_id>.json`**:
 
@@ -624,6 +627,8 @@ two people), `cell` (the five factors), `repeat`, `exact_repeat_set`, `personas`
 | `decisions`, `release` | the plans as a replay schedules them (`PlanDriver.decisions_record`; with `partner_id` when more than two), and the release to ORCA (`step`, `reason`) or null: what `replay.py` reads (section "Replays of LLM agents' plans") |
 | `replays` | the replay folders of both modes, relative to the experiment folder; null without an encounter |
 | `totals` | `decision_points`, `debriefs`, `llm_calls`, `retries`, `tokens`, `cost_usd` |
+| `factors` | issue #60, only with a design that varies a core or situational factor: `template` (with its SHA-256; also under `templates.factors`), `people` (each person's levels), `visible` (the switches), `situation` (the setting), `hearing_range_m` (what the session's views used) |
+| `bodies` | issue #60, only when someone carries a load: per agent id, `radius_m` for the whole run and `because`. Plain ORCA and both replays run the same bodies (`replay.run_plan_for`), and each replay's `plans` block repeats it |
 
 **`decisions.jsonl`**: per decision point `session_id`, `agent_id`, `index`, `number`, `time_s`,
 `condition`, `trigger_reasons`, `parse_error`, the parsed reply's `message`, `signal`, `intent`,
@@ -699,6 +704,11 @@ lines whose `experiment` is that experiment's name.
   `invocations.jsonl`; `design` and `groups` in `summary.json`.
 - (2026-10-23, issue #59; no version change.) A replay of LLM agents' plans adds a `plans` key
   to `config.json` and `outcome.json`, and the `control_mode` `plan`. No other run changes.
+- (2026-10-23, issue #60; no version change.) A resolution experiment whose design varies a core
+  or situational factor adds `factors` and, with a load, `bodies` to a session record, the
+  factor levels to `design.jsonl` and the outcome rows, and `factor_values` and
+  `templates.factors` to `config.json`; a replay's `plans` block repeats `bodies`. Without such a
+  factor every file is as before.
 - (2026-10-23, issue #58; not a run format, the run schema is unchanged.) The folder of a
   resolution experiment, version 1 of its own (`resolution_log_version`), section "Resolution
   experiments". A replay's session record may now have more than two `encounter.agents`, their

@@ -21,6 +21,13 @@ folder that holds another config, or a run with another client, is refused.
 
 The budget guard (issue #24) and its scoped cap are #30's (``rulegen.experiment``): only this
 experiment's own calls count against its cap. The fictional group is not a factor here.
+
+**The core and situational factors** (issue #60, RF-5) are used only when the design varies one:
+then the config may name ``templates.factors`` (default ``resolve_factors_v1``) and
+``factor_values`` (default ``configs/resolution/factors_v1.yaml``), each session record gains
+``factors`` (the levels, the switches, the template) and, when someone carries a load, ``bodies``
+(the radii every run of the session uses), and the session's ``surroundings`` sets its hearing
+range. A config that varies none of them writes exactly what it wrote before.
 """
 
 from __future__ import annotations
@@ -51,14 +58,16 @@ from ..rulegen.cases import CaseStore
 from ..rulegen.protocol import LLMSettings
 from ..rulegen.replay import source_plan
 from ..runlog.schema import OUTCOME_FILE
-from .design import FACTORS, ResolutionDesign, Session, cell_code, sessions_for
+from ..scenarios.registry import build_crowd_scenario
+from .design import ALL_FACTORS, PERSON_FACTORS, ResolutionDesign, Session, cell_code, sessions_for
 from .execute import MODES, MODE_PLAN_ONLY, MODE_PLAN_ORCA
+from .factors import FACTOR_TEMPLATE, FACTOR_VALUES_CONFIG, FactorTemplate, FactorValues, SessionFactors, with_bodies
 from .mock import POLICIES as MOCK_POLICIES
 from .outcomes import GENERAL_COLUMNS, MODE_PLAIN_ORCA, RESOLVED
 from .perceive import LLM_VIEW_CONFIG, LLMViewSettings
 from .prompt import DEBRIEF_TEMPLATE, SIMULATION_CORE_TEMPLATE, CoreTemplate, DebriefTemplate
 from .protocol import SESSION_ABORTED, SESSION_COMPLETED, EncounterSession, ProtocolSettings
-from .replay import plain_orca, replay_session
+from .replay import plain_orca, replay_session, run_plan_for
 from .reply import ParsedReply
 from .scenario import Scenario
 from .scenarios import load_scenario, plugin_for
@@ -144,6 +153,7 @@ class ResolutionConfig:
     llm_view: str
     llm: Mapping[str, Any]
     budget: Mapping[str, Any]
+    factor_values: Optional[str] = None  # issue #60: only when the design varies a core or situational factor
 
     @classmethod
     def load(cls, path: Path | str) -> "ResolutionConfig":
@@ -154,7 +164,7 @@ class ResolutionConfig:
         where = f"resolution config {source}"
         check_keys(
             raw, where, ("layer", "experiment_name", "cases", "conditions", "design", "llm"),
-            ("schema_version", "description", "scenarios", "protocol", "templates", "llm_view", "budget"),
+            ("schema_version", "description", "scenarios", "protocol", "templates", "llm_view", "budget", "factor_values"),
         )
         if raw["layer"] != LAYER_RESOLUTION:
             raise ConfigError(f"{where}.layer: expected {LAYER_RESOLUTION!r}")
@@ -175,12 +185,19 @@ class ResolutionConfig:
         scenarios = raw.get("scenarios") or {}
         if not isinstance(scenarios, Mapping):
             raise ConfigError(f"{where}.scenarios: a mapping of case id to scenario plug-in")
-        templates = check_keys(raw.get("templates") or {}, f"{where}.templates", (), ("core", "debrief"))
+        templates = check_keys(raw.get("templates") or {}, f"{where}.templates", (), ("core", "debrief", "factors"))
         llm = check_keys(raw["llm"], f"{where}.llm", (), ("client", "mock_policy", "model", "temperature", "max_tokens", "thinking", "transport_retries"))
         budget = check_keys(raw.get("budget") or {}, f"{where}.budget", (), ("cap_usd", "ledger"))
         policy = str(llm.get("mock_policy", "resolution_rehearsal_v1"))
         if policy not in MOCK_POLICIES:
             raise ConfigError(f"{where}.llm.mock_policy: one of {sorted(MOCK_POLICIES)}, got {policy!r}")
+        design = ResolutionDesign.from_config(raw["design"], f"{where}.design")
+        if not design.uses_factors and (templates.get("factors") is not None or raw.get("factor_values") is not None):
+            raise ConfigError(f"{where}: templates.factors and factor_values are for a design that varies a core or situational factor")
+        chosen = {"core": str(templates.get("core", SIMULATION_CORE_TEMPLATE)), "debrief": str(templates.get("debrief", DEBRIEF_TEMPLATE))}
+        if design.uses_factors:
+            chosen["factors"] = str(templates.get("factors", FACTOR_TEMPLATE))
+        default_values = str(FACTOR_VALUES_CONFIG.relative_to(PACKAGE_ROOT)).replace("\\", "/")
         return cls(
             experiment_name=name,
             description=" ".join(str(raw.get("description", "")).split()),
@@ -190,9 +207,9 @@ class ResolutionConfig:
             case_ids=tuple(str(case) for case in ids),
             scenarios={str(case): str(plugin) for case, plugin in scenarios.items()},
             conditions=tuple(conditions),
-            design=ResolutionDesign.from_config(raw["design"], f"{where}.design"),
+            design=design,
             protocol=ProtocolSettings.from_mapping(raw.get("protocol"), f"{where}.protocol"),
-            templates={"core": str(templates.get("core", SIMULATION_CORE_TEMPLATE)), "debrief": str(templates.get("debrief", DEBRIEF_TEMPLATE))},
+            templates=chosen,
             llm_view=str(raw.get("llm_view", str(LLM_VIEW_CONFIG.relative_to(PACKAGE_ROOT)).replace("\\", "/"))),
             llm={
                 "client": as_choice(llm.get("client", "mock"), f"{where}.llm.client", CLIENTS),
@@ -207,13 +224,20 @@ class ResolutionConfig:
                 "cap_usd": as_number(budget.get("cap_usd", 0.05), f"{where}.budget.cap_usd", minimum=0.0),
                 "ledger": str(budget.get("ledger", "spend_ledger.jsonl")),
             },
+            factor_values=str(raw.get("factor_values", default_values)) if design.uses_factors else None,
         )
 
     def llm_settings(self) -> LLMSettings:
         return LLMSettings(self.llm["model"], self.llm["temperature"], self.llm["max_tokens"], self.llm["thinking"] == "enabled")
 
+    def factor_template(self) -> Optional[FactorTemplate]:
+        return FactorTemplate.load(self.templates["factors"]) if "factors" in self.templates else None
+
+    def values(self) -> Optional[FactorValues]:
+        return FactorValues.load(resolve_path(self.factor_values)) if self.factor_values is not None else None
+
     def as_dict(self) -> dict[str, Any]:
-        return {
+        described = {
             "experiment_name": self.experiment_name,
             "description": self.description,
             "source": self.source,
@@ -227,6 +251,9 @@ class ResolutionConfig:
             "llm": dict(self.llm),
             "budget": dict(self.budget),
         }
+        if self.factor_values is not None:  # only a design with factors of issue #60: an older config is described as before
+            described["factor_values"] = self.factor_values
+        return described
 
 
 def _comparable(experiment: Mapping[str, Any]) -> dict[str, Any]:
@@ -266,6 +293,8 @@ def plan(config: ResolutionConfig) -> Plan:
         [(case_id, case["version"], tuple(case["agents"]), scenarios[case_id]) for case_id, case in cases.items()],
         config.design, config.conditions, config.experiment_name,
     )
+    if config.design.uses_factors:
+        check_bodies(config, sessions, cases)
     return Plan(cases, scenarios, sessions, preview_cost(config, sessions, cases, PriceTable.from_yaml()))
 
 
@@ -276,18 +305,28 @@ def _longest(words: Mapping[str, str]) -> str:
     return max(words.values(), key=len)
 
 
-def worst_view(core: CoreTemplate, scenario: Scenario, case: Mapping[str, Any], seen: int, heard: int, history: int, errand: str) -> View:
+def worst_view(
+    core: CoreTemplate, scenario: Scenario, case: Mapping[str, Any], seen: int, heard: int, history: int, errand: str,
+    factor_lines: Optional[Mapping[str, Sequence[str]]] = None,
+) -> View:
     """A view with every line a description can have: ``seen`` people in full detail with every
     change, a signal and both demographics; ``heard`` voices from someone unseen; ``history``
     earlier decision points with a signal, both kinds of movement and the outcome "replaced". Its
-    free texts (messages, intents) are empty: the preview adds them at the reply cap each."""
+    free texts (messages, intents) are empty: the preview adds them at the reply cap each.
+    ``factor_lines`` are the longest factor lines of each kind (``FactorTemplate.longest``, RF-5):
+    the agent's own and its notes, the setting, and what it is told of everyone it sees."""
+    lines = factor_lines or {}
     record = case["observations"][str(case["agents"][0])]
-    person = SeenPerson(1, DETAIL_FULL, 9.99, 1.0, 1.99, 3.0, 1.99, 0.99, MOTION_WALKING, 120, "female", _longest_signal(core), CHANGES)
+    person = SeenPerson(
+        1, DETAIL_FULL, 9.99, 1.0, 1.99, 3.0, 1.99, 0.99, MOTION_WALKING, 120, "female", _longest_signal(core), CHANGES,
+        factor_lines=tuple(lines.get("other", ())),
+    )
     return View(
         agent_id=case["agents"][0],
         decision_point=2 if history else 1,
-        me=Me(1.99, 1.99, 1.99, 0.99, 120, "female", errand),
-        place=tuple(scenario.place_lines(case, record)),
+        me=Me(1.99, 1.99, 1.99, 0.99, 120, "female", errand, factor_lines=tuple(lines.get("self", ()))),
+        place=(*scenario.place_lines(case, record), *lines.get("place", ())),
+        notes=tuple(lines.get("note", ())),
         templates={"core": core.identity(), "scenario": scenario.identity()},
         seen=tuple(replace(person, label=n) for n in range(1, seen + 1)),
         heard=tuple(Heard("", None, "behind", "close") for _ in range(heard)),
@@ -322,6 +361,8 @@ def preview_cost(config: ResolutionConfig, sessions: Sequence[Session], cases: M
     core, debrief = CoreTemplate.load(config.templates["core"]), DebriefTemplate.load(config.templates["debrief"])
     errand = max(config.design.tasks.values(), key=len)
     view_settings = LLMViewSettings.load(resolve_path(config.llm_view))
+    factors = config.factor_template()
+    longest = factors.longest(config.design.factors) if factors is not None else None
     cache: dict[tuple, dict[str, Any]] = {}
     rows, totals = [], {condition: 0.0 for condition in config.conditions}
     for session in sessions:
@@ -334,7 +375,7 @@ def preview_cost(config: ResolutionConfig, sessions: Sequence[Session], cases: M
         key = (session.case_id, session.scenario, session.condition)
         if key not in cache:
             heard = (k - 1) * d if session.condition == CONDITION_TALK else 0
-            view = worst_view(core, scenario, case, seen, heard, d - 1, errand)
+            view = worst_view(core, scenario, case, seen, heard, d - 1, errand, longest)
             system = core.system(session.condition, scenario)
             user = core.description(view) + "\n\n" + core.wrapper(view)
             fixed = estimate_prompt_tokens([{"content": system}, {"content": user}]) + (heard + (d - 1)) * cap
@@ -432,10 +473,19 @@ def run_session(
         "experiment": config.experiment_name, "session_id": session.session_id, "condition": session.condition,
         "case_id": session.case_id, "repeat": session.repeat, "path_index": path_index,
     }
+    run_plan, factors, bodies = source_plan(case), None, {}
+    if session.uses_factors:
+        factors, values = session_factors(config, session), config.values()
+        bodies = session_bodies(factors, values, session, run_plan)
+        run_plan = with_bodies(run_plan, bodies)
+        hearing = factors.hearing_range_m(values)
+        if hearing is not None:
+            view_settings = replace(view_settings, hearing_range_m=hearing)
     protocol = EncounterSession(
-        simulation_for(source_plan(case)), session.agents, scenario, session.condition, client, config.llm_settings(),
+        simulation_for(run_plan), session.agents, scenario, session.condition, client, config.llm_settings(),
         config.protocol, view_settings, core, debrief, people=session.people,
         show_age=session.visibility.get("age", True), show_gender=session.visibility.get("gender", True), labels=labels,
+        factors=factors,
     )
     started = _utc_now()
     try:
@@ -452,6 +502,11 @@ def run_session(
         "llm": config.llm_settings().as_dict(),
         "started_utc": started,
     }
+    if factors is not None:  # issue #60: only a design that varies a core or situational factor
+        record["templates"]["factors"] = factors.template.identity()
+        record["factors"] = {**factors.as_dict(), "hearing_range_m": view_settings.hearing_range_m}
+        if bodies:
+            record["bodies"] = bodies
     record.update(protocol.as_dict())
     record["encounter"]["type"] = case["formation"]["encounter_class"] or case["scenario"]["type"]
     record["ended_utc"] = _utc_now()
@@ -462,6 +517,54 @@ def run_session(
         if record["outcome"] == SESSION_COMPLETED else None
     )
     return record
+
+
+def session_factors(config: ResolutionConfig, session: Session) -> SessionFactors:
+    """The core and situational factors of a session (issue #60): each person's levels, the
+    switches of the observable ones the design varies, and the setting."""
+    visible = {name: session.visibility[name] for levels in session.factor_levels.values() for name in levels if name in session.visibility}
+    return SessionFactors(config.factor_template(), session.factor_levels, visible, session.situation)
+
+
+def session_bodies(factors: SessionFactors, values: FactorValues, session: Session, run_plan: Any) -> dict[str, dict[str, Any]]:
+    """The radii ``load`` sets for the session's run (issue #60), from the radii the case's run gives."""
+    specs = build_crowd_scenario(run_plan.scenario_config).agents
+    return factors.bodies({agent: specs[agent].radius for agent in session.agents}, values)
+
+
+def check_bodies(config: ResolutionConfig, sessions: Sequence[Session], cases: Mapping[str, Mapping[str, Any]]) -> None:
+    """Refuse a design whose wider bodies (``load``, issue #60) do not fit a case's run: two people
+    who would overlap at the start, a path too narrow for the body, or a loaded body that starts
+    closer to someone than the scenario's near-miss distance (the session would begin as a near
+    miss, and in the passage cases of issue #32 rounding alone decides whether such a start
+    "overlaps"). Checked once per case and set of loaded people, before anything runs."""
+    values, checked = None, set()
+    for session in sessions:
+        loaded = tuple(sorted(agent for agent, levels in session.factor_levels.items() if levels.get("load") == "large_suitcase"))
+        if not loaded or (session.case_id, loaded) in checked:
+            continue
+        checked.add((session.case_id, loaded))
+        values = values or config.values()
+        run_plan = source_plan(cases[session.case_id])
+        bodies = session_bodies(session_factors(config, session), values, session, run_plan)
+        try:
+            spec = build_crowd_scenario(with_bodies(run_plan, bodies).scenario_config)
+            near = spec.thresholds.near_miss_distance
+            for agent in loaded:
+                me = spec.agents[agent]
+                for other in spec.agents:
+                    gap = math.dist(me.start.xy, other.start.xy) - me.radius - other.radius
+                    if other.agent_id != agent and gap < near:
+                        raise ConfigError(
+                            f"agents {agent} and {other.agent_id} would start {gap:.3f} m apart, closer than the near-miss "
+                            f"distance, {near} m"
+                        )
+        except ConfigError as exc:
+            raise ConfigError(
+                f"case {session.case_id}: a person pulling a large suitcase is {values.load_width_added_m} m wider "
+                f"(factor_values), and the case's run cannot take that body: {exc}. Leave load out of the design for "
+                "this case (docs/resolution.md, D15; WORK_LOG-60.md, open questions)"
+            ) from exc
 
 
 def replay_record(record: Mapping[str, Any], experiment_dir: Path, experiment: str, git: Mapping[str, Any], store: CaseStore) -> dict[str, Any]:
@@ -476,7 +579,7 @@ def replay_record(record: Mapping[str, Any], experiment_dir: Path, experiment: s
             continue
         if plain is None:
             case = store.get(record["case"]["case_id"], record["case"]["version"])
-            plain = plain_orca(record, case, source_plan(case), load_scenario(record["scenario"]))
+            plain = plain_orca(record, case, run_plan_for(record, case), load_scenario(record["scenario"]))
         found[mode] = replay_session(record, mode, run_dir, experiment, git, store, plain)
     found[MODE_PLAIN_ORCA] = plain["physical_outcome"]
     return found
@@ -526,6 +629,8 @@ def _agent_columns(record: Mapping[str, Any], agent: Optional[int], prefix: str)
         f"{prefix}_agent": agent,
         f"{prefix}_age": persona.get("age"), f"{prefix}_gender": persona.get("gender"),
         f"{prefix}_urgency": persona.get("urgency"), f"{prefix}_errand": persona.get("task"),
+        # Issue #60: each core factor the design varies, as this person's level.
+        **{f"{prefix}_{name}": persona[name] for name in PERSON_FACTORS if name != "urgency" and name in persona},
         f"{prefix}_decision_points": len(points),
         f"{prefix}_trigger_reasons": "|".join(";".join(p["trigger_reasons"]) for p in points) or None,
         f"{prefix}_unreadable": sum(1 for p in points if p.get("parse_error")),
@@ -554,7 +659,7 @@ def outcome_row(record: Mapping[str, Any], case: Mapping[str, Any], physical: Op
         "encounter_type": encounter.get("type") or case["formation"]["encounter_class"], "scenario_plugin": record["scenario"],
         "condition": record["condition"], "mapping": session["cell"]["mapping"], "repeat": session["repeat"],
         "exact_repeat_set": session["exact_repeat_set"], "model": record["llm"]["model"], "temperature": record["llm"]["temperature"],
-        **{name: session["cell"][name] for name in FACTORS},
+        **{name: session["cell"][name] for name in ALL_FACTORS if name in session["cell"]},
         **_agent_columns(record, first, "p1"),
         **_agent_columns(record, second, "p2"),
         "encounter_size": len(encounter.get("agents") or []),
@@ -757,6 +862,7 @@ def _start_folder(experiment_dir: Path, config: ResolutionConfig, client_name: s
             "debrief": DebriefTemplate.load(config.templates["debrief"]).identity(),
         },
         "llm_view": view_settings.as_dict(),
+        **({"factors": {"template": config.factor_template().identity(), "values": config.values().as_dict()}} if config.factor_values is not None else {}),
     })
 
 

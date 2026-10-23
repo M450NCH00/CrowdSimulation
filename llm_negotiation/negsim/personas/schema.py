@@ -14,6 +14,15 @@ index and ``persona_id`` in logs.
 ``ethnic_group`` (issue #32) is a **fictional** group label (``negsim.personas.groups``). It is
 hidden by default, it is left out of a persona that does not give it (so personas written
 before it existed are unchanged), and **no rule may read it** (``rule_referenceable``).
+
+**The core factors of track #55** (issue #60, RF-5; ``docs/resolution.md``, D15): ``urgency``,
+``mobility_aid``, ``load``, ``distraction``, ``assertiveness``, ``residence`` and
+``memory_note``, each with two ``levels`` (the first is the base level). They are left out of a
+persona that does not give them, and out of the older layers' visibility settings
+(:func:`negsim.avoidance.perception.default_visibility`), whose prompts have no line for them:
+whether someone else sees one is the resolution design's switch (``<name>_visible``), and their
+lines are ``resolve_factors_v1``'s (``negsim.resolution.factors``). ``urgency`` has no line of
+its own: it says how urgent the ``task`` is, and the task line carries it.
 """
 
 from __future__ import annotations
@@ -73,6 +82,15 @@ def _group(value: Any) -> str:
         raise ValueError(str(exc)) from exc
 
 
+def _level(levels: tuple[str, ...]) -> Callable[[Any], str]:
+    def validate(value: Any) -> str:
+        if value not in levels:
+            raise ValueError(f"must be one of {list(levels)}, got {value!r}")
+        return value
+
+    return validate
+
+
 @dataclass(frozen=True)
 class AttributeSpec:
     """One persona attribute.
@@ -83,6 +101,8 @@ class AttributeSpec:
     rule may read: ``negsim.rules`` refuses any rule that names it (``protected_attribute``).
     ``fill_default`` is false for an optional attribute that is left out of a persona that
     does not give it, instead of being set to its default.
+    ``levels`` (issue #60) marks a core factor of track #55: its two levels, the base level
+    first. Such an attribute is not in the older layers' visibility settings.
     """
 
     name: str
@@ -92,6 +112,12 @@ class AttributeSpec:
     observable: bool
     rule_referenceable: bool = True
     fill_default: bool = True
+    levels: tuple[str, ...] = ()
+
+
+def _factor(name: str, levels: tuple[str, str], observable: bool) -> AttributeSpec:
+    """A core factor of track #55 (issue #60): optional, left out when not given."""
+    return AttributeSpec(name, _level(levels), required=False, default=None, observable=observable, fill_default=False, levels=levels)
 
 
 ATTRIBUTES: dict[str, AttributeSpec] = {
@@ -105,10 +131,20 @@ ATTRIBUTES: dict[str, AttributeSpec] = {
             "ethnic_group", _group, required=False, default=None, observable=False,
             rule_referenceable=False, fill_default=False,
         ),
+        # The core factors (issue #60, RF-5), in the order of the issue's table.
+        _factor("urgency", ("routine", "urgent"), observable=False),
+        _factor("mobility_aid", ("none", "cane"), observable=True),
+        _factor("load", ("none", "large_suitcase"), observable=True),
+        _factor("distraction", ("none", "phone"), observable=True),
+        _factor("assertiveness", ("gives_way", "holds_ground"), observable=False),
+        _factor("residence", ("local", "visitor"), observable=False),
+        _factor("memory_note", ("none", "bad_experience"), observable=False),
     )
 }
 #: Attributes an agent may see but no rule may read (issue #32).
 NOT_RULE_REFERENCEABLE = frozenset(name for name, spec in ATTRIBUTES.items() if not spec.rule_referenceable)
+#: The core factors of track #55 (issue #60), in order.
+FACTOR_ATTRIBUTES = tuple(name for name, spec in ATTRIBUTES.items() if spec.levels)
 
 
 @dataclass(frozen=True)
@@ -147,8 +183,11 @@ class Persona:
             if key == "task":
                 continue
             value = changes[key]
-            # A group label is a name, spelled out like a gender (issue #32); only free text is not.
-            free_text = isinstance(value, str) and value not in GENDERS and key != "ethnic_group"
+            # A group label is a name, spelled out like a gender (issue #32), and so is a factor's
+            # level (issue #60); only free text is not.
+            spec = ATTRIBUTES.get(key)
+            named = key == "ethnic_group" or (spec is not None and value in spec.levels)
+            free_text = isinstance(value, str) and value not in GENDERS and not named
             parts.append(f"{key}*" if free_text else f"{key}={value}")
         new_id = f"{self.persona_id}+{','.join(parts)}" if parts else self.persona_id
         return validate_persona({**self.attributes, **changes}, persona_id=new_id)

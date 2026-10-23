@@ -190,6 +190,7 @@ starts (`visibility`), naming the rule.
 |---|---|
 | `task` | Never in a perception record: no agent sees another's errand |
 | `backstory` | Free text, hidden by default; not something two agents can compare |
+| `assertiveness`, `residence`, `memory_note` | Core factors of track #55 (issue #60) that only the person knows: the other agent cannot see them. A rule-generation check counts such a rule as `needs_communication` |
 | `preferred_speed_mps`, `max_speed_mps`, `goal`, `path` | An agent knows its own, never another's |
 | `nearest_wall_distance_m`, `free_width_m`, `free_width_left_m`, `free_width_right_m`, `single_file_ahead_m` | Measured at one agent's own position or along its own path: the two get different values. Use `pair.min_corridor_width_m` and `agent.time_to_segment_s` |
 | `bearing_rad`, `relative_position_m`, `relative_velocity_mps`, `neighbour_heading_relative_rad` | In one agent's own frame. Use `pair.heading_difference_rad` |

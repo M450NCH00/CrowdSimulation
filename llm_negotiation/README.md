@@ -80,7 +80,8 @@ From track #55. **Part 1, the pipeline, built once** (all on the mock client, no
    (`negsim/resolution/protocol.py`, `experiment.py`, section "The encounter protocol (issue
    #58)").
 7. RF-5 (#60): the core factors (seven, including a memory note) with visibility switches, and
-   up to four situational factors.
+   up to four situational factors. *Built on the mock* (`negsim/resolution/factors.py`, section
+   "The core and situational factors (issue #60)").
 8. RF-6 (#61): pairwise perception factors (perceived attractiveness, familiarity), shown only
    to the observer.
 9. RF-7 (#62): screening designs, geometries, the exact-repeat set, counterfactual pairs.
@@ -1066,6 +1067,38 @@ The rehearsal runs head-on, a narrow passage, overtaking and a crowd case with f
 all three conditions, on the mock client (`runs_mock/`, not committed). No paid call has been
 made.
 
+## The core and situational factors (issue #60)
+
+Issue #60 (RF-5) adds the factors every round keeps (`docs/resolution.md`, D15), on the mock
+(`negsim/resolution/factors.py`; the lines in the frozen template `resolve_factors_v1`):
+
+- **Seven core factors**, person attributes in the persona table, two levels each: `urgency`
+  (picks the errand), `mobility_aid`, `load`, `distraction` (these three can be seen),
+  `assertiveness`, `residence`, `memory_note` (a designed note in YOUR NOTES, D7).
+- **Two situational factors**, the setting, the same line for everyone: `surroundings` (quiet or
+  busy, which also sets the hearing range) and `time_of_day`.
+- **Who is told what:** a person's own lines in ABOUT YOU; an observable factor under that person
+  in WHO YOU CAN SEE, only in view, in full detail, and with its switch (`<name>_visible`, a
+  design factor) on; an unobservable one never.
+- **Outside the prompt:** `load` makes the body 0.2 m wider for the whole run `[placeholder]`,
+  in the live run, plain ORCA and both replays; `surroundings` sets the hearing range (8.9 m or
+  3.2 m, `[placeholder]`). Nothing else changes the physics (`docs/parameters.md`, section 8.7).
+- **In a design:** each core factor is `neither` or `p1`, and `mapping` says which agent is
+  person 1. A config that names none of them runs exactly as before.
+
+```
+python run_experiment.py configs/resolution/resolve_factors_mock_rehearsal.yaml --plan
+python run_experiment.py configs/resolution/resolve_factors_mock_rehearsal.yaml
+```
+
+The rehearsal gives person 1 every core factor, shows and hides the suitcase, and runs quiet and
+busy surroundings, on head-on, passage and overtaking cases (24 sessions). The mock's replies do
+not read the lines, so nothing in it is a finding.
+
+Issue #32's passage cases start the pair too close for the wider body, so a design with `load`
+is refused on them before anything runs; the case set `rf5_passage_v1` repeats their layouts
+with the pair 0.3 m apart (`docs/cases.md`, section 9).
+
 ## Changing things
 
 | To | Edit |
@@ -1090,6 +1123,7 @@ made.
 | choose what an agent can see of the other | `negotiation.visibility` (age, gender, task, backstory, speed, size) |
 | let the agents move while they talk | `negotiation.timing.mode: concurrent` |
 | add a scenario to Step 1 (track #55) | a subclass of `Scenario` in a new module under `negsim/resolution/scenarios/`, a line in that package's `PLUGINS`, and a frozen template `scenario_<name>_v1.yaml` of kind `resolution_scenario` (its place lines, its `until` events, any block of its own). On the subclass: `happened` (what each event means), `zone_exits` (its conflict zone), `outcome_columns` and `resolved` (issue #59); `conflict_predicted`, `encounter_members`, `CASE_TYPES` and `MAX_MEMBERS` (issue #58). Never an edit of `resolve_v1`, the parser, the executor or the protocol (`docs/resolution.md`, D16) |
+| vary a core or situational factor in Step 1 (track #55) | add it to a resolution config's `design.factors` (`neither`/`p1`, a switch `<name>_visible`, or the situational levels; `docs/parameters.md`, section 8.7). Change its wording in a new `resolve_factors_v2`, and what `load` and `surroundings` do in a new `configs/resolution/factors_v2.yaml` |
 | change what an LLM agent can see or hear (cone, ranges, hearing, change thresholds) | a new `configs/resolution/llm_view_v2.yaml`, never an edit of `llm_view_v1.yaml`; tag every value, give its source in `docs/parameters.md`, section 8.4, and list any placeholder in section 8.2 (`tests/test_perceive.py` checks) |
 | change any wording an agent sees | **a new template version.** Copy `negsim/negotiation/templates/<name>_v1.yaml` to `_v2`, edit it, run `python -m negsim.negotiation.freeze <name>_v2 "<why>"`, and record the reason in the work log. A frozen template that has been edited will not load. |
 | add a persona attribute | one entry in `negsim/personas/schema.py`, one line in a new template version |
@@ -1106,8 +1140,8 @@ made.
   debrief and the scenario interface's description side (`negsim/resolution/`); RF-17 (#73)
   built what an agent perceives in the running simulation (`perceive.py`); RF-4 (#59) carries
   plans out in the simulator (`execute.py`, `outcomes.py`, `replay.py`); RF-3 (#58) runs the
-  encounters (`protocol.py`, `experiment.py`; `docs/encounter-protocol.md`); RF-5 onward build
-  the rest.
+  encounters (`protocol.py`, `experiment.py`; `docs/encounter-protocol.md`); RF-5 (#60) adds
+  the core and situational factors (`factors.py`); RF-6 onward build the rest.
 - `docs/encounter-protocol.md`: the Step 1 encounter protocol and the `resolution` experiment
   layer (issue #58): the trigger, decision points, conditions, the end, the debrief, the cost
   preview, the outcome row and the config.

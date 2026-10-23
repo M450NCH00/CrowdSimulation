@@ -59,9 +59,10 @@ def default_visibility() -> dict[str, bool]:
     """What one agent can see of the other unless the experiment says otherwise.
 
     Persona attributes take their default from the schema (age and gender are visible,
-    task and backstory are not). ``speed`` and ``size`` are physical and visible.
+    task and backstory are not). ``speed`` and ``size`` are physical and visible. The core
+    factors of track #55 (issue #60) are not here: this layer's prompts have no line for them.
     """
-    visibility = {name: spec.observable for name, spec in ATTRIBUTES.items()}
+    visibility = {name: spec.observable for name, spec in ATTRIBUTES.items() if not spec.levels}
     visibility.update({"speed": True, "size": True})
     return visibility
 
@@ -215,6 +216,8 @@ TEMPLATE_KINDS: dict[str, tuple[str, ...]] = {
     "resolution": ("template_id", "version", "kind", "description", "system", "role", "conditions", "step_format", "event_item", "view", "decision_point"),
     "resolution_debrief": ("template_id", "version", "kind", "description", "text", "decision", "steps", "no_steps", "said", "signal", "reply_format", "retry"),
     "resolution_scenario": ("template_id", "version", "kind", "description", "place", "events", "extra_blocks", "factor_lines"),
+    # Issue #60 (RF-5): the lines of the core and situational factors, placed in the core template's blocks.
+    "resolution_factors": ("template_id", "version", "kind", "description", "attributes", "situations"),
 }
 
 

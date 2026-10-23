@@ -37,8 +37,11 @@ mock: the encounter protocol, D3 to D6 and D8 (the trigger, event-driven decisio
 their guards, the three conditions, the end and the hand-over to ORCA, the debrief), D11's
 encounters of more than two people with a cap, D13's storage, one outcome row per session, and
 the experiment layer `resolution` (`negsim/resolution/protocol.py`, `design.py`,
-`experiment.py`; `docs/encounter-protocol.md`). Nothing else yet. Configs and templates from
-before this track behave exactly as before.
+`experiment.py`; `docs/encounter-protocol.md`). RF-5 (#60), on the mock: the seven core factors
+and two situational factors with their visibility switches, D2's factor and situational lines,
+D7's designed memory note, and D1's fixed wider body for a person with a load
+(`negsim/resolution/factors.py`; template `resolve_factors_v1`). Nothing else yet. Configs and
+templates from before this track behave exactly as before.
 
 ## D1. The reply
 
@@ -99,6 +102,13 @@ TIME TO MEET            "At your current speeds you would meet Person 1 in about
 - **Never in a description:** another person's errand or private factors, the fictional group
   (off by default), any walking convention, "usually", "one of you has to go first", or
   `persona_v1`'s scene text.
+
+**As built (RF-5, #60).** The factor lines come from their own frozen template,
+`resolve_factors_v1`, and the core template places them verbatim, so `resolve_v2` renders them
+unchanged: a person's own lines at the end of ABOUT YOU, a memory note in YOUR NOTES, the
+situational lines after the scenario's in WHERE YOU ARE (the same for everyone), and an observable
+factor of someone in view under that person, only in full detail (within 5 m) and only when its
+visibility switch is on. A switched-off load still shows as the wider body it is.
 
 The view cone (75°), the seeing range (10 m) and the detail range (5 m) are sourced (D12). The
 hearing range is derived from measured speech and background levels (3.2 m in a public indoor
@@ -207,7 +217,9 @@ session record alone (`python -m negsim.resolution.replay ... --verify`; `log-sc
 
 - **Within an encounter:** the "WHAT YOU HAVE DONE" lines.
 - **Across encounters:** only as **designed notes** (RF-5's `memory_note` factor), never as
-  memory that accumulates in Steps 1 to 4, because sessions must stay independent.
+  memory that accumulates in Steps 1 to 4, because sessions must stay independent. *As built
+  (RF-5, #60):* one note, "Earlier today someone walked straight into you in a place like this
+  one.", in YOUR NOTES of the person the design gives it to.
 
 ## D8. References: a debrief, and the extractor
 
@@ -257,7 +269,7 @@ people per encounter as a cost limit (D12).
 | Seeing range | 10 m | same (dmax) |
 | Detail range | 5 m | Rio, Dachner & Warren 2018, *Proc. R. Soc. B* 285: 20180611 (influence decays to zero by 5 m; measured while walking *with* a crowd) |
 | Who is described | everyone visible, no fixed count | Wirth, Dachner, Rio & Warren 2023, *PNAS Nexus* 2(5): pgad118 (rules out a fixed number of neighbours) |
-| Hearing range | 3.2 m | derived from Pearsons, Bennett & Fidell 1977 (a raised voice, 64 dB at 1 m, against a 54 dB public indoor background) and ISO 9921-1 (6 dB per doubling of distance); should depend on RF-5's `surroundings` (issue #73) |
+| Hearing range | 3.2 m | derived from Pearsons, Bennett & Fidell 1977 (a raised voice, 64 dB at 1 m, against a 54 dB public indoor background) and ISO 9921-1 (6 dB per doubling of distance) (issue #73). A design that varies RF-5's `surroundings` sets it per session: 8.9 m when quiet, 3.2 m when busy, both `[placeholder]` (`parameters.md`, section 8.7) |
 | Eye-contact and nod range | the whole seeing range (10 m) | derived from Watt, Craven & Quinn 2007: gaze direction is readable to about 12 m or more (issue #73) |
 | Change thresholds (D5) | 7% of speed; 2° of direction | De Bruyn & Orban 1988 (speed); Gurnsey, Roddy & Troje 2010 (a walker's direction) (issue #73) |
 | Prompt cap in dense scenes | only if needed | a cost limit, not a human number; report how often it is reached |
@@ -321,7 +333,10 @@ starts.
     ask for full depth, with the reason.
 - **Common core factors:** every round keeps the core of RF-5 (age, gender, urgency, mobility
   aid, load, distraction, assertiveness, residence), so that effects can be compared across
-  scenarios ("does urgency matter everywhere?"). A scenario adds its own factors on top.
+  scenarios ("does urgency matter everywhere?"). A scenario adds its own factors on top. *As
+  built (RF-5, #60):* the memory note is a core factor too. Issue #32's passage cases start the
+  pair too close for a wider body, so round 2 uses the case set `rf5_passage_v1`, the same
+  layouts with the pair 0.3 m apart (the user's choice, 2026-10-23; `cases.md`, section 9).
 - **A cap per round:** each round has its own cap, recorded in `CLAUDE.md` before its paid runs.
   No such cap is recorded yet: paid runs still wait for the supervisor's approval (`CLAUDE.md`,
   "Pending sign-offs", item 1).
@@ -362,7 +377,7 @@ runs through the unchanged executor.
 | Round | Scenario | Status |
 | --- | --- | --- |
 | 1 | Head-on in a corridor (`wide_corridor_head_on`) | cases exist |
-| 2 | Meeting in a narrow passage (`passage_meet_*`) | cases exist |
+| 2 | Meeting in a narrow passage (`passage_meet_*`) | cases exist; with `load`, the set `rf5_passage_v1` (issue #60) |
 | 3 | Someone behind says "excuse me" (overtaking, with hearing) | cases exist, plus RF-17's hearing |
 | 4 | Boarding a train while people get off (`mrt_door_alight_board`) | to build (RF-23, #79) |
 | 5 | The escalator (`escalator_entry_merge`) | to build (RF-24, #80) |

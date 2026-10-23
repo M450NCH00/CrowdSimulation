@@ -206,7 +206,7 @@ Issue #73 first set the hearing range (7 m), the distance band of an unseen spea
 eye-contact range (4 m) and D5's change thresholds (0.2 m sideways, 0.2 m/s, 5°) as placeholders.
 At the user's request (2026-10-23) each was replaced by a sourced value before any run read it:
 section 8.4. One placeholder of the resolution design was left, and issue #58 (RF-3) added three for the encounter protocol. None of these has a source. **Do not report a result that depends on one as if it rested on
-data.**
+data.** Issue #60 (RF-5) added three more, for the factors that act outside the prompt: section 8.7.
 
 | Parameter | Value | Why it has no source, and what would replace it |
 |---|---|---|
@@ -302,3 +302,28 @@ decision points and the cap on prompted people are in section 8.3.
 | `not_resolved_by_llm` | the end was `orca_took_over`, `deadlock` or `collision`, or the time limit with a conflict still predicted | The encounter ended without the LLM agents' plans resolving it. |
 | `resolved_by_llm` | `resolved_plan_only` and not `not_resolved_by_llm` | The `plan_only` replay runs on after ORCA takes over, so its physical "resolved" can be ORCA's work; this column credits the LLM only. |
 | The plan coding (`code_plan`) | `side`: the sign of its turns (`none`, `left`, `right`, `both`); `slowed`: a speed below the agent's speed at the decision; `stopped`: a speed of 0; `backed_up`: a back-up step; `start_distance_m`, `start_after_s` | Issue #58, task 9: "coded mechanically". |
+
+### 8.7 The core and situational factors (issue #60)
+
+`configs/resolution/factors_v1.yaml` holds the numbers of the two factors that act outside the
+prompt; `negsim/resolution/factors.py` reads them (`FactorValues`). Every one is a placeholder.
+**Do not report a result that depends on one as if it rested on data.** Every other core and
+situational factor exists only in the prompt: the simulator does not slow a person with a cane,
+narrow the view of one looking at a phone, or fill a busy place with people.
+
+| Parameter | Value | Why it has no source, and what would replace it |
+|---|---|---|
+| How much wider a person pulling a large suitcase is (`load.large_suitcase.width_added_m`) | 0.2 m `[placeholder]` | Task 3: "a sourced value if `docs/parameters.md` has one, otherwise a placeholder". None was found in the repository or its references. A disc cannot have a suitcase behind it, so a disc 0.2 m wider (0.50 m to 0.70 m with the shipped pedestrian) stands in for the body and the suitcase: it overstates the width beside the person and leaves out the length behind them. Fixed for the whole run (D1). A measured width of pedestrians with wheeled luggage, as they walk, would replace it. Issue #32's eight passage cases start the pair 0.1 m apart, so with 0.2 m added they overlap or touch, and a design with `load` is refused on them (no loaded body may start within the near-miss distance). The user chose new cases over a smaller width: `rf5_passage_v1` starts the pair 0.3 m apart (`cases.md`, section 9). The 4 head-on and 3 overtaking cases fit. |
+| Hearing range when it is quiet (`surroundings.quiet.hearing_range_m`) | 8.9 m `[placeholder]` | The arithmetic of section 8.4 with a background of 45 dB, which Pearsons et al. 1977 call typical of homes (conclusion 2(d), `rf17_pearsons1977_epa.txt:254-260`; Table II gives 41 dB inside suburban homes, `:1143`; its inside-urban value is unreadable in the scan, `:1142`): 10^((64 − 45)/20) = 8.9 m. The inputs are cited; that a quiet public place is as quiet as a home is an assumption, so the value is a placeholder. A measured background level of the kind of place a scenario stands for would replace it. |
+| Hearing range when it is busy (`surroundings.busy.hearing_range_m`) | 3.2 m `[placeholder]` | `llm_view_v1.yaml`'s value: the same voice against a department store's 54 dB (Table II, `:1146`), section 8.4. That a busy place is as loud as a department store, and no louder, is an assumption. The trains of Table II (74 dB, `:1147`) would give 0.3 m. |
+
+Tagged `[design]`: how the factors are coded and shown. None is a claim about people.
+
+| Parameter | Value | Why |
+|---|---|---|
+| The coding of a core factor | `neither` (both people at the base level) or `p1` (person 1 at the other level, person 2 at the base); `mapping` balances which agent is person 1 | Task 5. For `assertiveness` and `residence`, whose base level also has a line, `neither` means both give way, or both live in Singapore. |
+| `urgency` | the two-level form of #30's `task`: `neither` is two routine errands, `p1` person 1's urgent one; a design has one or the other | Task 1: "formalise it as a two-level factor rather than adding a duplicate". `task`'s level `none` gives no errand at all, so it varies having an errand as well as its urgency; `urgency` varies only the urgency. |
+| A visibility switch left out of a design | on | An observable factor is seen unless the design says otherwise, as age and gender are. |
+| Which situational factors | `surroundings` and `time_of_day` | The session's choice (task 7), with the reasons in `WORK_LOG-60.md`: `surroundings` is the one that also acts on the talk condition (the hearing range); `time_of_day` changes nothing physical and tests whether the setting moves a decision. `companion` was not taken: the simulator moves one disc, so "walking with a friend" would describe a body and a pair the replay does not have. Two slots of the 16 are left for each round's own factors. |
+| Where an observable factor is seen | under the person in WHO YOU CAN SEE, in full detail only (within 5 m) | D2: from 5 to 10 m a person gets one short line. So someone with a cane 8 m away is described without it. |
+| What a switched-off `load` hides | the words, not the width | The body is as wide as it is, and WHO YOU CAN SEE gives every person's width. |

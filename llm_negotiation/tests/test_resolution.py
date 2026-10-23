@@ -114,7 +114,7 @@ def test_the_core_template_names_no_scenario():
 
 
 def test_every_case_renders_in_every_condition_with_every_placeholder_filled():
-    assert len(PAIRS) == 28 and len(CROWDS) == 16  # every file of cases/: 28 of two people, 16 out of crowds
+    assert len(PAIRS) == 28 + 8 and len(CROWDS) == 16  # every file of cases/: 28 of two people (and issue #60's 8 passage cases), 16 out of crowds
     count = 0
     for case, agent, condition, rendered in every_prompt():
         assert [m["role"] for m in rendered.messages] == ["system", "user"]

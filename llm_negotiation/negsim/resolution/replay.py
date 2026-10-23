@@ -14,7 +14,8 @@ the case's own run (rebuilt from its experiment config and checked to be that ru
      "encounter": {"agents": [0, 1], "type": "head_on"},  # type: the case's encounter class if left out
      "decisions": [{"agent_id": 0, "decision_point": 1, "step": 40, "time_s": 4.0,
                     "steps": [...]}],                # in the reply format, as PlanDriver logs them
-     "release": null}                                 # or {"step": n, "reason": "..."}: ORCA took over
+     "release": null,                                 # or {"step": n, "reason": "..."}: ORCA took over
+     "bodies": {"0": {"radius_m": 0.35}}}             # optional (issue #60): radii set for the whole run
 
 An encounter of more than two people (issue #58) lists them all in ``encounter.agents``, may
 list its conflict pairs in ``encounter.pairs``, and each decision names its ``partner_id``.
@@ -50,6 +51,7 @@ from ..rulegen.replay import source_plan
 from ..runlog.schema import CONFIG_FILE, OUTCOME_FILE
 from ..scenarios.registry import build_crowd_scenario
 from .execute import MODE_PLAN_ORCA, MODES, PlanDriver, steps_from_dicts
+from .factors import with_bodies
 from .outcomes import MODE_PLAIN_ORCA, c0_baselines, physical_outcome, report, to_csv
 from .scenario import Scenario
 from .scenarios import load_scenario
@@ -110,6 +112,13 @@ def case_of(session: Mapping[str, Any], store: Optional[CaseStore] = None) -> di
     return (store or CaseStore()).get(reference["case_id"], reference.get("version"))
 
 
+def run_plan_for(session: Mapping[str, Any], case: Mapping[str, Any]) -> AvoidanceRunPlan:
+    """The case's own run, with the bodies the session set for it (issue #60: a person with a
+    load is wider for the whole run), so that the live run, plain ORCA and both replays move the
+    same bodies."""
+    return with_bodies(source_plan(case), session.get("bodies"))
+
+
 def encounter_type(session: Mapping[str, Any], case: Mapping[str, Any]) -> str:
     return session["encounter"].get("type") or case["formation"]["encounter_class"] or case["scenario"]["type"]
 
@@ -165,7 +174,7 @@ def replay_session(
         raise ValueError(f"mode: one of {MODES}, got {mode!r}")
     check_session(session)
     case = case_of(session, store)
-    base = source_plan(case)
+    base = run_plan_for(session, case)
     scenario = load_scenario(session["scenario"])
     run_plan = replace(base, run_id=f"{session['session_id']}_{mode}", experiment_name=experiment)
     if plain is None:
@@ -181,6 +190,8 @@ def replay_session(
         "scenario_sha256": case["scenario"]["resolved_sha256"],
         "plans_sha256": plans_sha256(session),
     }
+    if session.get("bodies"):  # issue #60: the scenario ran with these radii, not the case's
+        identity["bodies"] = dict(session["bodies"])
     found: dict[str, Any] = {}
 
     def outcome_extra(simulation: Any, result: Any) -> dict[str, Any]:
@@ -236,7 +247,7 @@ def replay_sessions(
             else:
                 if plain is None:
                     case = case_of(session, store)
-                    plain = plain_orca(session, case, source_plan(case), load_scenario(session["scenario"]))
+                    plain = plain_orca(session, case, run_plan_for(session, case), load_scenario(session["scenario"]))
                 columns = replay_session(session, mode, run_dir, experiment, git, store, plain)
             rows.append(columns)
             if report_to is not None:

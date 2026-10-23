@@ -210,8 +210,9 @@ class EncounterSession:
     ``simulation`` is the case's source run, built and not yet stepped (``simulation_for``);
     ``pair`` the case's two people, who can start the encounter. ``people`` gives each agent's
     ``age``, ``gender`` and ``errand`` (the design's two people; anyone else has none), and
-    ``show_age``/``show_gender`` are the visibility switches. ``labels`` go with every request,
-    as its metadata (never sent to a provider).
+    ``show_age``/``show_gender`` are the visibility switches. ``factors`` are the session's core
+    and situational factors (RF-5, :class:`~negsim.resolution.factors.SessionFactors`): their lines
+    go into every view. ``labels`` go with every request, as its metadata (never sent to a provider).
     """
 
     def __init__(
@@ -230,6 +231,7 @@ class EncounterSession:
         show_age: bool = True,
         show_gender: bool = True,
         labels: Optional[Mapping[str, Any]] = None,
+        factors: Optional[Any] = None,
     ):
         if condition not in CONDITIONS:
             raise ConfigError(f"condition: one of {CONDITIONS}, got {condition!r}")
@@ -244,6 +246,7 @@ class EncounterSession:
         self.core = core or CoreTemplate.load(SIMULATION_CORE_TEMPLATE)
         self.debrief_template = debrief or DebriefTemplate.load()
         self.people, self.show_age, self.show_gender = people, show_age, show_gender
+        self.factors = factors
         self.labels = dict(labels or {})
         self.max_dp = self.settings.decision_points_for(condition)
 
@@ -478,7 +481,7 @@ class EncounterSession:
                     people=self.people, show_age=self.show_age, show_gender=self.show_gender, since_s=self.trigger["time_s"] - _EPS,
                 )
             outcomes = self.run.driver.outcomes(agent)
-            view = view_in(sim, member.perceiver, self.exchange, outcomes=[outcomes[k] for k in member.driver_decisions])
+            view = view_in(sim, member.perceiver, self.exchange, outcomes=[outcomes[k] for k in member.driver_decisions], **self._factor_lines(agent))
             prompt = render(view, self.condition, self.scenario, self.core)
             context = ReplyContext.of(view, self.condition, self.scenario.events)
             metadata = {
@@ -530,6 +533,16 @@ class EncounterSession:
                     self.run.driver.give(sim, agent, (), member.partner)  # it carries on as it is
                     given = []
             self._record(member, reasons, view, prompt, reply, given, now, step)
+
+    def _factor_lines(self, agent: int) -> dict[str, Any]:
+        """The lines of the session's factors in ``agent``'s view (RF-5): its own, its notes, what
+        it is told of everyone it sees, and the setting. None without factors."""
+        if self.factors is None:
+            return {}
+        return {
+            "own_lines": self.factors.own(agent), "notes": self.factors.notes(agent),
+            "factor_lines": self.factors.seen_lines(), "situation_lines": self.factors.place(),
+        }
 
     def _next_decision_index(self, agent: int) -> int:
         """The index, among ``agent``'s driver decisions, of the plan just given (taken up next step)."""
