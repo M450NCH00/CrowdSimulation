@@ -983,7 +983,9 @@ are unchanged (D10; a run watched every few steps is byte for byte a plain run, 
 records what was said and signalled and who perceived it, as it was at the time; `view_in(simulation,
 perceiver, exchange)` builds the view of the present step. Views render through `resolve_v2`
 (issue #73: `resolve_v1` word for word, plus the lines for an unseen speaker's direction, a signal
-on a short line and what came of a decision); `resolve_v1` still renders them, as it did. When an
+on a short line and what came of a decision); `resolve_v1` still renders them, as it did. A session
+with factor lines renders through `resolve_v3` (issue #61: `resolve_v2` plus a person's factor lines
+under the short line too, from 10 m). When an
 agent is prompted is RF-3's (#58); carrying out its plan is RF-4's (#59, below).
 
 ## Carrying out plans (issue #59)
@@ -1079,8 +1081,10 @@ Issue #60 (RF-5) adds the factors every round keeps (`docs/resolution.md`, D15),
 - **Two situational factors**, the setting, the same line for everyone: `surroundings` (quiet or
   busy, which also sets the hearing range) and `time_of_day`.
 - **Who is told what:** a person's own lines in ABOUT YOU; an observable factor under that person
-  in WHO YOU CAN SEE, only in view, in full detail, and with its switch (`<name>_visible`, a
-  design factor) on; an unobservable one never.
+  in WHO YOU CAN SEE, only in view and with its switch (`<name>_visible`, a design factor) on; an
+  unobservable one never. Under the core template `resolve_v2` it is printed only in full detail
+  (within 5 m); under `resolve_v3`, the default for a design with factors since issue #61, from
+  10 m.
 - **Outside the prompt:** `load` makes the body 0.2 m wider for the whole run `[placeholder]`,
   in the live run, plain ORCA and both replays; `surroundings` sets the hearing range (8.9 m or
   3.2 m, `[placeholder]`). Nothing else changes the physics (`docs/parameters.md`, section 8.7).
@@ -1110,7 +1114,7 @@ Issue #61 (RF-6) adds factors that belong to a pair, not to a person, on the moc
   need not be mutual: `attractiveness_0_sees_1` (how person 1 sees person 2) and
   `attractiveness_1_sees_0`, each `unremarkable` or `attractive`.
 - **Familiarity**, the same for both: `strangers` or `acquaintances`.
-- **Who is told what:** the observer, of a person in view and in full detail (within 5 m), its
+- **Who is told what:** the observer, of a person in view (from 10 m, under `resolve_v3`), its
   own perception only ("You find them attractive.", "You have never seen them before."). Nobody
   is told how another sees them; nothing is said of a person who is only heard. A switch
   (`attractiveness_visible`, `familiarity_visible`) off means no line at all, for either level.
@@ -1121,18 +1125,20 @@ Issue #61 (RF-6) adds factors that belong to a pair, not to a person, on the moc
   is refused (`refused_no_sign_off`) until `CLAUDE.md` records the supervisor's ethics sign-off
   in one exact sentence (`docs/pairwise-factors.md`, section 6). No rule may read it
   (`protected_attribute`), but it stays in the outcome rows for the factor analysis.
-- **A limit to know about:** in the head-on case every decision point is further than 5 m, where
-  `resolve_v2` prints one short line per person, so no pairwise line (and no observable RF-5
-  line) reaches an agent there (`docs/pairwise-factors.md`, section 1).
+- **`resolve_v3`** (the user's decision of 2026-10-23). In the head-on case every decision point
+  is further than 5 m, where `resolve_v2` prints one short line per person, so no pairwise line
+  and no observable RF-5 line reached an agent there. `resolve_v3` prints them under the short
+  line too, and is the default core template of a design that varies an RF-5 or RF-6 factor; a
+  design without them keeps `resolve_v2` (`docs/pairwise-factors.md`, section 1).
 
 ```
 python run_experiment.py configs/resolution/resolve_pairwise_mock_rehearsal.yaml --plan
 python run_experiment.py configs/resolution/resolve_pairwise_mock_rehearsal.yaml
 ```
 
-The rehearsal gives an asymmetric matrix, shows and hides attractiveness, and crosses
-familiarity, on head-on, passage and overtaking cases (24 sessions). The mock's replies do not
-read the lines, so nothing in it is a finding.
+The rehearsal gives an asymmetric matrix, shows and hides attractiveness, crosses familiarity,
+and gives person 1 a cane, on head-on, passage and overtaking cases (24 sessions), under
+`resolve_v3`. The mock's replies do not read the lines, so nothing in it is a finding.
 
 ## Changing things
 

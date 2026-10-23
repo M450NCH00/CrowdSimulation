@@ -89,7 +89,8 @@ of one agent; at most `max_decision_points` (3) per agent, 1 in the independent 
 every decision point records its reasons (`trigger_reasons`).
 
 **A prompt** is a fresh request of two messages: the condition's fixed text, then the view
-(`perceive.view_in`) and the wrapper (`prompt.render`, template `resolve_v2`). **History is
+(`perceive.view_in`) and the wrapper (`prompt.render`, template `resolve_v2`, or `resolve_v3` for a
+session with factor lines, issue #61). **History is
 compact**: an earlier decision point reappears only as its lines in WHAT YOU HAVE DONE SO FAR,
 never as the transcript. The reply is read by RF-2's parser, retried once if unreadable
 (`request_with_retry`).
@@ -217,7 +218,7 @@ python run_experiment.py configs/resolution/<config>.yaml --client deepseek --co
 | `conditions` | any of `independent`, `non_verbal`, `talk` |
 | `design` | `seed`, `factors` (`age_pair`, `gender_pair`, `task`, `demographics_visible`, `mapping`), `repeats`, `base_age`, `age_difference`, `tasks` |
 | `protocol` | `max_decision_points` (3), `min_gap_s` (1), `no_conflict_end_s` (1), `max_prompted` (none), `speech_words_per_second` (2.5) |
-| `templates` | `core` (`resolve_v2`), `debrief` (`resolve_debrief_v1`) |
+| `templates` | `core` (`resolve_v2`; `resolve_v3` for a design that varies an RF-5 or RF-6 factor, issue #61), `debrief` (`resolve_debrief_v1`); with factors also `factors` (`resolve_factors_v1`) and `pairwise` (`resolve_pairwise_v1`) |
 | `llm_view` | the perception config (`configs/resolution/llm_view_v1.yaml`) |
 | `llm` | `client`, `mock_policy` (`resolution_rehearsal_v1`), `model`, `temperature`, `max_tokens` (400), `thinking` (disabled), `transport_retries` |
 | `budget` | `cap_usd` (on this experiment's own calls), `ledger` |

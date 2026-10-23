@@ -44,7 +44,8 @@ D7's designed memory note, and D1's fixed wider body for a person with a load
 pairwise lines for one observer only, perceived attractiveness (a matrix) and familiarity, their
 switches, design factors and 0/1 outcome columns, an ethics gate for attractiveness, and its
 refusal in rules (`negsim/resolution/pairwise.py`; template `resolve_pairwise_v1`;
-`docs/pairwise-factors.md`). Nothing else yet. Configs and
+`docs/pairwise-factors.md`); and, by the user's decision of 2026-10-23, the core template
+`resolve_v3`, which prints the factor lines on the short line too (D2, below). Nothing else yet. Configs and
 templates from before this track behave exactly as before.
 
 ## D1. The reply
@@ -115,13 +116,19 @@ factor of someone in view under that person, only in full detail (within 5 m) an
 visibility switch is on. A switched-off load still shows as the wider body it is.
 
 **As built (RF-6, #61).** The pairwise lines come from their own frozen template,
-`resolve_pairwise_v1`, and are placed the same way: under a person in view, in full detail only,
-after the observable factor lines, and in **the observer's own view only**. Nobody is told how
-another sees them, and nothing is said of a person who is only heard. With a switch on, both
-levels have a line ("You do not find them especially attractive."). **A consequence of the 5 m
-detail range:** in round 1's head-on case every decision point of the rehearsals was further
-than 5 m, so no factor line of RF-5's and no pairwise line reaches an agent there
-(`pairwise-factors.md`, section 1; `WORK_LOG-61.md`, open question 1).
+`resolve_pairwise_v1`, and are placed the same way: under a person in view, after the observable
+factor lines, and in **the observer's own view only**. Nobody is told how another sees them, and
+nothing is said of a person who is only heard. With a switch on, both levels have a line ("You do
+not find them especially attractive.").
+
+**Amended by the user, 2026-10-23 (issue #61): factor lines from 10 m.** Under `resolve_v2` a
+person's factor lines (RF-5's observable ones, RF-6's pairwise ones) are printed only in full
+detail, within 5 m. In round 1's head-on case every decision point of the rehearsals was 5.0 to
+9.8 m away, so none ever reached an agent there. `resolve_v3` prints them under the short line
+too, from 5 to 10 m, and is the default core template of a design that varies an RF-5 or RF-6
+factor; a design without them keeps `resolve_v2`. The short line itself is unchanged: age, gender
+and body width stay full-detail lines. Printing the factor lines from 10 m is a choice for the
+prompt, not a measured recognition range (`pairwise-factors.md`, section 1).
 
 The view cone (75°), the seeing range (10 m) and the detail range (5 m) are sourced (D12). The
 hearing range is derived from measured speech and background levels (3.2 m in a public indoor

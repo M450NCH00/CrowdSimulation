@@ -12,8 +12,8 @@ this issue adds two pairwise factors to the Step 1 design of track #55, on the m
 | `familiarity` | `strangers`, `acquaintances` | yes | `familiarity` |
 
 Code: `negsim/resolution/pairwise.py`. Wording: the frozen template `resolve_pairwise_v1`
-(kind `resolution_pairwise`). Tests: `tests/test_pairwise.py`. Rehearsal:
-`configs/resolution/resolve_pairwise_mock_rehearsal.yaml`.
+(kind `resolution_pairwise`), placed by the core template `resolve_v3` (section 1). Tests:
+`tests/test_pairwise.py`. Rehearsal: `configs/resolution/resolve_pairwise_mock_rehearsal.yaml`.
 
 **Ethics sign-off from the supervisor for perceived attractiveness: pending unless recorded
 otherwise** (`CLAUDE.md`, "Pending sign-offs", item 2). Attractiveness is off by default, and no
@@ -51,18 +51,29 @@ in the same session, is told "You do not find them especially attractive." of pe
   that observer's view only.
 - **Only while the person is in view** (RF-17): within 75° of straight ahead, within 10 m, and
   not hidden. A person behind, outside the cone, or only heard gets no line.
-- **Only in full detail, within 5 m.** The core template `resolve_v2` prints a person's extra
-  lines (RF-5's observable factor lines and these) only in full detail; from 5 to 10 m it prints
-  one short line per person (D2). The pairwise lines follow D2 as it stands. **The
-  consequence in round 1 is serious.** In the head-on case (`head_on_02dfbadb`) every decision
-  point of the rehearsals of RF-5 and of this issue was 5.0 to 9.8 m away (the first at 9.8 m,
-  at the edge of the seeing range). There no pairwise line, and no RF-5 observable line, ever
-  reaches an agent; the independent condition has only that one decision point. In the passage
-  and overtaking cases they do reach the agent (`tests/test_pairwise.py`, the head-on test, pins
-  this). A `resolve_v3` that prints these lines on the short line too would change it; that is a
-  new core template and a decision for the user (`WORK_LOG-61.md`, open question 1). The
-  outcome row says how often a line was actually shown (section 5), so the analysis can tell "not
-  told" from "told, and no effect".
+- **From 10 m, under `resolve_v3`** (the user's decision of 2026-10-23). The core template
+  `resolve_v2` printed a person's factor lines (RF-5's observable ones and these) only in full
+  detail, within 5 m; from 5 to 10 m it gives one short line per person (D2). In the head-on
+  case (`head_on_02dfbadb`, round 1) every decision point of the rehearsals of RF-5 and of this
+  issue was 5.0 to 9.8 m away (the first at 9.8 m, at the edge of the seeing range), so under
+  `resolve_v2` no pairwise line and no RF-5 observable line ever reached an agent there; the
+  independent condition has only that one decision point. `resolve_v3` is `resolve_v2` word for
+  word with one line more, which prints them under the short line too:
+
+  ```
+  - Person 1, 9.8 m away, straight ahead of you: walking in the opposite direction to you.
+    They are walking with a cane.
+    You know each other from your classes.
+  ```
+
+  (The rehearsal on `resolve_v3`, head-on, independent condition, person 2's view.) It is the
+  default core template of a design that varies an RF-5 or RF-6 factor; a design without them
+  keeps `resolve_v2`, so it records exactly what it did before. A config that names `resolve_v2`
+  keeps it, and `--plan` warns that its lines for others then reach an agent only within 5 m.
+  Age, gender and body width stay full-detail lines. Printing the factor lines from 10 m is a
+  choice for the prompt, made so that the factors can act at all; it is not a measured range at
+  which a cane or a face is recognised. The outcome row says how often a line was actually
+  printed (section 5), so the analysis can tell "not told" from "told, and no effect".
 - **With a switch on, both levels have a line**, so that "not attractive" is said as plainly as
   "attractive"; RF-5's base levels say nothing. **With it off, neither has**: the factor is in
   the design and the record, but the observer is told nothing about it.
@@ -142,7 +153,7 @@ perception to which end of the corridor someone starts at.
 | --- | --- |
 | `p1_finds_other_attractive`, `p2_...` | 1 if this person finds the other attractive, 0 if not, empty if not designed. As designed, whether or not the person was told: the switch is the cell's `attractiveness_visible` |
 | `p1_knows_other`, `p2_...` | 1 for `acquaintances`, 0 for `strangers` (the same for both) |
-| `p1_pairwise_lines_shown`, `p2_...` | at how many of this person's decision points it was shown a pairwise line about the other (in full detail, section 1) |
+| `p1_pairwise_lines_shown`, `p2_...` | at how many of this person's decision points it was shown a pairwise line about the other: printed by the session's core template, from 10 m under `resolve_v3`, within 5 m under `resolve_v2` (section 1) |
 
   The cell's own columns (`attractiveness_0_sees_1`, ... as levels) are in the row as well.
 - **The transcript** (`sessions/<id>.md`) has a line `- Pairwise: {...}` with the block.
@@ -210,8 +221,11 @@ map from (observer, seen) to a level:
 ## 9. What these factors cannot show, and the open points
 
 - **Prompt only** (section 2): no appearance is described, and nothing physical changes.
-- **The 5 m limit** (section 1): in head-on encounters the lines never reach the agent under
-  `resolve_v2`.
+- **Lines from 10 m, but no age or gender** (section 1). Under `resolve_v3` an agent 8 m away
+  may be told "You find them attractive." without being told the person's age or gender, which
+  stay full-detail lines (D2). A design that wants both at that distance would need the short
+  line to carry age and gender too: a `resolve_v4`, and a decision for the user. Under
+  `resolve_v2` the lines never reach an agent in a head-on encounter.
 - **"From your classes"** is the issue's wording. It presumes a shared class, which may read
   oddly with an age gap of 45 years (`age_pair: p1_older`). A `resolve_pairwise_v2` could say
   "You know each other." instead.

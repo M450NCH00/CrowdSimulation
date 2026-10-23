@@ -916,7 +916,10 @@ first for the prompt cache; then ABOUT YOU, YOUR NOTES, WHERE YOU ARE, WHO YOU C
 10 m, not hidden, full detail within 5 m), WHAT YOU CAN HEAR (any direction), WHAT YOU HAVE DONE
 and TIME TO MEET. Left and right are the agent's own. Never another's errand or private factors,
 the fictional group, a walking convention, "usually", "one of you has to go first", or
-`persona_v1`'s scene text.
+`persona_v1`'s scene text. *Amended by the user, 2026-10-23 (issue #61):* a person's factor lines
+(RF-5's observable ones, RF-6's pairwise ones) are given from 10 m, under the short line too
+(core template `resolve_v3`); under `resolve_v2` they were given only within 5 m, and so never in
+the head-on case.
 
 **D3. Three conditions, first person only** (the user, 2026-10-22): independent (one decision
 point, no message, no signal), non-verbal (signals and movement, up to 3 decision points) and
