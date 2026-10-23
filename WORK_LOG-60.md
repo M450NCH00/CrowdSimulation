@@ -262,6 +262,11 @@ find which ones drive a decision. This issue adds the **core** factors that ever
   modules did not name. I added the three names, and the hygiene tests then passed (7). The
   rule's purpose, to catch unpinned third-party packages, is unchanged.
 - A 24-session mock rehearsal, with the prompts checked by eye.
+- After the new case set: full suite 1655 passed and 2 failed. Both were exact counts of
+  committed files: the run folders (`test_avoidance_runs`, now + 16 runs) and the case files
+  (`test_resolution`, now + 8 cases). I updated the two counts, with a note on what the new
+  files are, and both pass. The schema check over every committed run folder passes, the
+  new ones included.
 - The replays rebuilt with `--verify`, byte for byte.
 - No paid call.
 
