@@ -598,17 +598,24 @@ as read: `experiment_name`, `description`, `source`, `cases`, `scenarios`, `cond
 `llm_view` (the perception settings as read). With a design that varies a core or situational
 factor (issue #60), `experiment` also has `factor_values` (the values file) and
 `templates.factors`, and the file has `factors` (`template`, with its SHA-256, and `values` as
-read). Once a session has a record, an invocation with another config or client is refused.
+read). With a design that varies a pairwise perception factor (issue #61), `experiment` has
+`templates.pairwise` and the file has `pairwise` (`template`, with its SHA-256). Once a session
+has a record, an invocation with another config or client is refused.
 
 **`invocations.jsonl`**: per invocation `utc`, `git`, `client`, `confirm`, `limit`, `status`
-(`completed`, `partial`, `aborted`, `awaiting_confirmation`, `refused_over_cap`), `executed`,
-`aborted`, `preview_usd`.
+(`completed`, `partial`, `aborted`, `awaiting_confirmation`, `refused_over_cap`, and since issue
+#61 `refused_no_sign_off`: a paid run that varies perceived attractiveness without the ethics
+sign-off in `CLAUDE.md`), `executed`, `aborted`, `preview_usd`.
 
 **`design.jsonl`**: per session `session_id` (`<I|N|T>_<case_id>_<cell code>_r<repeat>`),
 `index`, `condition`, `case_id`, `case_version`, `scenario` (the plug-in), `agents` (the case's
 two people), `cell` (the five factors, and any of issue #60 the design varies), `repeat`,
 `exact_repeat_set`, `personas` (per agent: `age`, `gender`, `task`, `urgency`, and each core
-factor the design varies), `visibility` (with the switch of each observable core factor varied).
+factor the design varies), `visibility` (with the switch of each observable core factor varied,
+and of each pairwise factor varied: `perceived_attractiveness`, `familiarity`), and, only with a
+design that varies a pairwise factor (issue #61), `pairwise`: the block of
+`pairwise-factors.md`, section 3 (`agents`, person 1 first; `perceived_attractiveness`, row =
+who is looking; `familiarity`).
 
 **`sessions/<session_id>.json`**:
 
@@ -629,6 +636,7 @@ factor the design varies), `visibility` (with the switch of each observable core
 | `totals` | `decision_points`, `debriefs`, `llm_calls`, `retries`, `tokens`, `cost_usd` |
 | `factors` | issue #60, only with a design that varies a core or situational factor: `template` (with its SHA-256; also under `templates.factors`), `people` (each person's levels), `visible` (the switches), `situation` (the setting), `hearing_range_m` (what the session's views used) |
 | `bodies` | issue #60, only when someone carries a load: per agent id, `radius_m` for the whole run and `because`. Plain ORCA and both replays run the same bodies (`replay.run_plan_for`), and each replay's `plans` block repeats it |
+| `pairwise` | issue #61, only with a design that varies a pairwise perception factor: `template` (with its SHA-256; also under `templates.pairwise`), the block (`agents`, `perceived_attractiveness`, `familiarity`, as in `session`), and `visible` (the switches). Each view's seen people keep their `pairwise_lines`, the observer's own |
 
 **`decisions.jsonl`**: per decision point `session_id`, `agent_id`, `index`, `number`, `time_s`,
 `condition`, `trigger_reasons`, `parse_error`, the parsed reply's `message`, `signal`, `intent`,
@@ -709,6 +717,11 @@ lines whose `experiment` is that experiment's name.
   factor levels to `design.jsonl` and the outcome rows, and `factor_values` and
   `templates.factors` to `config.json`; a replay's `plans` block repeats `bodies`. Without such a
   factor every file is as before.
+- (2026-10-23, issue #61; no version change.) A resolution experiment whose design varies a
+  pairwise perception factor adds `pairwise` to `design.jsonl` and a session record, the
+  switches to `visibility`, `templates.pairwise` to the record and `config.json`, and each
+  person's own perception as 0 or 1 to the outcome rows; `invocations.jsonl` may say
+  `refused_no_sign_off`. Without such a factor every file is as before.
 - (2026-10-23, issue #58; not a run format, the run schema is unchanged.) The folder of a
   resolution experiment, version 1 of its own (`resolution_log_version`), section "Resolution
   experiments". A replay's session record may now have more than two `encounter.agents`, their

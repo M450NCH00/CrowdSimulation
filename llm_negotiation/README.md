@@ -83,7 +83,8 @@ From track #55. **Part 1, the pipeline, built once** (all on the mock client, no
    up to four situational factors. *Built on the mock* (`negsim/resolution/factors.py`, section
    "The core and situational factors (issue #60)").
 8. RF-6 (#61): pairwise perception factors (perceived attractiveness, familiarity), shown only
-   to the observer.
+   to the observer. *Built on the mock* (`negsim/resolution/pairwise.py`, section "The pairwise
+   perception factors (issue #61)"; `docs/pairwise-factors.md`).
 9. RF-7 (#62): screening designs, geometries, the exact-repeat set, counterfactual pairs.
 10. RF-8 (#63): analysis: factor effects, decision tree, the mapping, noise floor, stability,
     stated against measured, intent against plan.
@@ -1099,6 +1100,40 @@ Issue #32's passage cases start the pair too close for the wider body, so a desi
 is refused on them before anything runs; the case set `rf5_passage_v1` repeats their layouts
 with the pair 0.3 m apart (`docs/cases.md`, section 9).
 
+## The pairwise perception factors (issue #61)
+
+Issue #61 (RF-6) adds factors that belong to a pair, not to a person, on the mock
+(`negsim/resolution/pairwise.py`; the lines in the frozen template `resolve_pairwise_v1`;
+`docs/pairwise-factors.md`):
+
+- **Perceived attractiveness**, a matrix (row = who is looking, column = who is seen), which
+  need not be mutual: `attractiveness_0_sees_1` (how person 1 sees person 2) and
+  `attractiveness_1_sees_0`, each `unremarkable` or `attractive`.
+- **Familiarity**, the same for both: `strangers` or `acquaintances`.
+- **Who is told what:** the observer, of a person in view and in full detail (within 5 m), its
+  own perception only ("You find them attractive.", "You have never seen them before."). Nobody
+  is told how another sees them; nothing is said of a person who is only heard. A switch
+  (`attractiveness_visible`, `familiarity_visible`) off means no line at all, for either level.
+- **Logged** in the session's `pairwise` block, and in the outcome row as each person's own view,
+  0 or 1 (`p1_finds_other_attractive`, `p1_knows_other`), with how often a line was shown
+  (`p1_pairwise_lines_shown`).
+- **Perceived attractiveness is gated.** It is off unless a design names it. A paid run with it
+  is refused (`refused_no_sign_off`) until `CLAUDE.md` records the supervisor's ethics sign-off
+  in one exact sentence (`docs/pairwise-factors.md`, section 6). No rule may read it
+  (`protected_attribute`), but it stays in the outcome rows for the factor analysis.
+- **A limit to know about:** in the head-on case every decision point is further than 5 m, where
+  `resolve_v2` prints one short line per person, so no pairwise line (and no observable RF-5
+  line) reaches an agent there (`docs/pairwise-factors.md`, section 1).
+
+```
+python run_experiment.py configs/resolution/resolve_pairwise_mock_rehearsal.yaml --plan
+python run_experiment.py configs/resolution/resolve_pairwise_mock_rehearsal.yaml
+```
+
+The rehearsal gives an asymmetric matrix, shows and hides attractiveness, and crosses
+familiarity, on head-on, passage and overtaking cases (24 sessions). The mock's replies do not
+read the lines, so nothing in it is a finding.
+
 ## Changing things
 
 | To | Edit |
@@ -1123,6 +1158,7 @@ with the pair 0.3 m apart (`docs/cases.md`, section 9).
 | choose what an agent can see of the other | `negotiation.visibility` (age, gender, task, backstory, speed, size) |
 | let the agents move while they talk | `negotiation.timing.mode: concurrent` |
 | add a scenario to Step 1 (track #55) | a subclass of `Scenario` in a new module under `negsim/resolution/scenarios/`, a line in that package's `PLUGINS`, and a frozen template `scenario_<name>_v1.yaml` of kind `resolution_scenario` (its place lines, its `until` events, any block of its own). On the subclass: `happened` (what each event means), `zone_exits` (its conflict zone), `outcome_columns` and `resolved` (issue #59); `conflict_predicted`, `encounter_members`, `CASE_TYPES` and `MAX_MEMBERS` (issue #58). Never an edit of `resolve_v1`, the parser, the executor or the protocol (`docs/resolution.md`, D16) |
+| vary a pairwise perception factor in Step 1 (track #55) | add `attractiveness_0_sees_1`, `attractiveness_1_sees_0` or `familiarity` (and a switch `attractiveness_visible` or `familiarity_visible`) to a resolution config's `design.factors` (`docs/pairwise-factors.md`, section 4). Change the wording in a new `resolve_pairwise_v2`. A paid run with attractiveness needs the ethics sign-off in `CLAUDE.md` first (section 6) |
 | vary a core or situational factor in Step 1 (track #55) | add it to a resolution config's `design.factors` (`neither`/`p1`, a switch `<name>_visible`, or the situational levels; `docs/parameters.md`, section 8.7). Change its wording in a new `resolve_factors_v2`, and what `load` and `surroundings` do in a new `configs/resolution/factors_v2.yaml` |
 | change what an LLM agent can see or hear (cone, ranges, hearing, change thresholds) | a new `configs/resolution/llm_view_v2.yaml`, never an edit of `llm_view_v1.yaml`; tag every value, give its source in `docs/parameters.md`, section 8.4, and list any placeholder in section 8.2 (`tests/test_perceive.py` checks) |
 | change any wording an agent sees | **a new template version.** Copy `negsim/negotiation/templates/<name>_v1.yaml` to `_v2`, edit it, run `python -m negsim.negotiation.freeze <name>_v2 "<why>"`, and record the reason in the work log. A frozen template that has been edited will not load. |
@@ -1141,7 +1177,11 @@ with the pair 0.3 m apart (`docs/cases.md`, section 9).
   built what an agent perceives in the running simulation (`perceive.py`); RF-4 (#59) carries
   plans out in the simulator (`execute.py`, `outcomes.py`, `replay.py`); RF-3 (#58) runs the
   encounters (`protocol.py`, `experiment.py`; `docs/encounter-protocol.md`); RF-5 (#60) adds
-  the core and situational factors (`factors.py`); RF-6 onward build the rest.
+  the core and situational factors (`factors.py`); RF-6 (#61) adds the pairwise perception
+  factors (`pairwise.py`; `docs/pairwise-factors.md`); RF-7 onward build the rest.
+- `docs/pairwise-factors.md`: the pairwise perception factors of issue #61: the block, who is
+  told what, the switches, the design, what is logged, the ethics gate and its exact sentence,
+  the rule check, and how a crowd of 10,000 would store them.
 - `docs/encounter-protocol.md`: the Step 1 encounter protocol and the `resolution` experiment
   layer (issue #58): the trigger, decision points, conditions, the end, the debrief, the cost
   preview, the outcome row and the config.

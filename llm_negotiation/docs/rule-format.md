@@ -206,7 +206,9 @@ see another's fictional group (`perception.md`, "The group"), but no rule may co
 A rule whose condition or role assignment, its tie policy and role names included, names it, or
 anything derived from it (any name containing `ethnic`, such as `pair.same_ethnic_group`), or a
 group label, is refused as `protected_attribute`, **before every other check**: whatever else is
-wrong with such a rule, that is what it is counted as. Section 14 has the details.
+wrong with such a rule, that is what it is counted as. Section 14 has the details. **Since issue
+#61 so is perceived attractiveness**, how one person sees another, until the supervisor decides
+(`pairwise-factors.md`, section 7).
 
 ## 6. Roles
 
@@ -517,6 +519,15 @@ another's fictional group when a run shows it (`perception.md`, "The group";
   named `kestrop`);
 - in rule generation, a word the session introduced groups with, or one of its labels
   (`negsim.rulegen.validate`).
+
+**Nor perceived attractiveness** (issue #61, `protected_attribute`). An agent may be told its
+own view of someone ("You find them attractive.", `pairwise-factors.md`), but until the
+supervisor decides no rule may read it. A rule is refused in the same way, before every other
+check, if its condition or role assignment (the same parts) contains `attract` (`attractive`,
+`attractiveness`, `attraction`), `beaut`, `handsome` or `pretty`, or "good looking" however it
+is joined (`fields.py`, `ATTRACTIVENESS_PATTERN`). The refusal says which of the two it read; the
+group's message is unchanged. This keeps attractiveness out of the rule database only: it stays
+in the outcome rows and the factor analysis (RF-8).
 
 Whatever else is wrong with such a rule, that is what it is counted as: a model trying to
 condition a rule on ethnicity is a finding, and the attempt is kept as data, in a category of

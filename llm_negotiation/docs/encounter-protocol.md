@@ -181,7 +181,9 @@ could be in view in full detail. That is a true bound but a loose one; a paid cr
   and the cell's factors;
 - **per person** (`p1_`, `p2_`: the design's two people; `others` for further members): agent,
   age, gender, urgency, errand, and the person's level of each core factor the design varies
-  (issue #60: `p1_mobility_aid`, `p2_load`, ...); the number of decision points and their reasons; unreadable
+  (issue #60: `p1_mobility_aid`, `p2_load`, ...); how the person sees the other, as 0 or 1, and at
+  how many of its decision points it was told so (issue #61: `p1_finds_other_attractive`,
+  `p1_knows_other`, `p1_pairwise_lines_shown`; `pairwise-factors.md`, section 5); the number of decision points and their reasons; unreadable
   replies; the first and the final plan coded mechanically (`side`: the sign of the turns, or
   `none` or `both`; `slowed`: a speed below the speed at the decision; `stopped`; `backed_up`;
   `start_distance_m`); signals used; messages; the debrief's `kind` and `source`;
@@ -234,6 +236,10 @@ hands their lines (`factors.SessionFactors`) to every view it builds, and the ex
 sets the wider body of `load` for the run and the hearing range of `surroundings`
 (`parameters.md`, section 8.7; `log-schema.md`, "Resolution experiments").
 
-Pairwise factors (RF-6), screening designs (RF-7), the analysis (RF-8), any paid call, and the
-scenarios of rounds 4 to 6 (RF-23 to RF-25). `passing_crowd` only rehearses more than two
+**The pairwise perception factors** (issue #61, RF-6) are not part of the protocol either: a
+session hands each agent's own lines (`pairwise.PairwiseFactors.lines_for`) to that agent's views
+only, and the perception of RF-17 attaches them to the people it sees (`pairwise-factors.md`).
+
+Screening designs (RF-7), the analysis (RF-8), any paid call, and the scenarios of rounds 4 to 6
+(RF-23 to RF-25). `passing_crowd` only rehearses more than two
 prompted people; it is not a round's scenario.
