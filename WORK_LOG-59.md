@@ -122,6 +122,14 @@ Paid calls: none.
   columns, and git checks it out with CRLF, so it cannot match. `test_rulegen_cases`'s
   re-extraction test already checks that old runs reproduce.
 
+### 2026-10-23 — Full suite
+- Result: **1570 passed, 1 failed.** The failure was
+  `test_perceive::test_nothing_in_the_avoidance_layer_imports_the_resolution_package`. It
+  matches the text `negsim.resolution` in any avoidance file, and three of my docstrings named
+  the executor's module path. Nothing imported it. I reworded the docstrings rather than loosen
+  the test. That test, `test_execute.py` and `test_repo_hygiene.py` then passed (126 passed).
+  The fix changed only docstrings, so I did not rerun the whole suite.
+
 ## Open questions / risks
 
 These are **assumptions I made**, not sourced values and not the issue's words. All are
@@ -151,3 +159,26 @@ listed, with reasons, in `parameters.md`, section 8.5:
   RF-3 writes session records. RF-3 must write at least those fields, or change both.
 
 ## Summary (fill in at the end)
+
+**What changed.**
+- `AvoidanceSimulation` takes an optional plan driver. Without one, every run is unchanged.
+- `negsim/resolution/execute.py` carries an agent's steps out, in `plan_only` (ORCA and the
+  arbiter do not steer the encounter's two apart) or in `plan_orca` (the plan sets the
+  preferred velocity, everything else is the plain run). It also has `PlanRun` and `advance()`
+  for RF-3.
+- The scenario interface gained its execution side (events, conflict zone, own columns,
+  "resolved"), filled in for the passing scenarios.
+- `outcomes.py` gives the physical columns and the report. `replay.py` replays a session's plans
+  on its case's own run and seed, in both modes, and rebuilds a replay byte for byte from the
+  session record.
+- Docs: `resolution.md`, `log-schema.md`, `parameters.md` section 8.5, both READMEs.
+
+**Why.** #59 and D6: a plan counts only if it works physically, and plain ORCA must not get the
+credit.
+
+**How it was verified.**
+- 29 new tests: task 7's list, the rebuild, live against replay, and empty plans equal plain ORCA
+  in four scenarios and on a perturbed baseline.
+- A demo replay reproduced the case's recorded baseline separation exactly.
+- Full suite: 1570 passed, then the one layering test above was fixed.
+- No paid call.

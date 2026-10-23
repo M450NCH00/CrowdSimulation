@@ -51,7 +51,7 @@ not hold the pair meanwhile. The backing is *intentional*, logged as such, and i
 counted as issue #26's walking-backwards artefact; anything ORCA does to the waiting agent is
 ORCA's, and is. One manoeuvre per agent at a time, and one per pair interaction.
 
-**Plans** (issue #59). An optional plan driver (``negsim.resolution.execute.PlanDriver``) may set
+**Plans** (issue #59). An optional plan driver (``PlanDriver``, in the Step 1 package of track #55) may set
 the preferred velocity of an encounter's agents in step 4, and in ``plan_only`` leave out the
 half-plane between the two. Without one, every step runs exactly as before.
 """
@@ -117,7 +117,7 @@ STATUS_DEADLOCK = "deadlock"
 STATUS_TIMEOUT = "timeout"
 
 MODE_ORCA, MODE_ARBITER, MODE_BACK_UP = "orca", "arbiter", "back_up"
-#: An agent carrying out an LLM agent's plan (issue #59, ``negsim.resolution.execute``).
+#: An agent carrying out an LLM agent's plan (issue #59; the plan executor of track #55).
 MODE_PLAN = "plan"
 
 # A back-up manoeuvre (issue #32): the phases of the one backing up, what the other is doing
@@ -463,7 +463,7 @@ class AvoidanceSimulation:
         plans: Optional[Any] = None,
     ):
         self.spec = spec
-        #: A plan driver (issue #59, ``negsim.resolution.execute.PlanDriver``), or ``None``: then
+        #: A plan driver (issue #59: ``PlanDriver``, the plan executor of track #55), or ``None``: then
         #: every step runs exactly as it did before plans existed.
         self.plans = plans
         self.world = spec.build_world()
