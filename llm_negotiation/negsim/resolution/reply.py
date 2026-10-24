@@ -26,6 +26,12 @@ not walk backwards, a number that is not a number).
 **Ignored and flagged, not a failure:** a ``message`` or a ``signal`` in a condition that does
 not allow it, and a speed or a turn on a step that walks backwards (it walks back at the
 agent's backing speed, D1).
+
+**Under ``resolve_v6``** (issue #65) an ``until`` may also be ``{"at_distance_m": <metres>}``, the
+step ending when the person the agent would meet is that close (checked as a start's is); and an
+event written as an object, ``{"other_passes": true}``, is read as the event and flagged
+(``until_event_as_object``), unless its value is ``false``. RF-9's pilot (issue #64) lost 58 of
+63 unreadable sends to these two forms. Earlier templates read an ``until`` as before.
 """
 
 from __future__ import annotations
@@ -72,9 +78,14 @@ class Turn:
 class Until:
     seconds: Optional[float] = None
     event: Optional[str] = None
+    at_distance_m: Optional[float] = None  # resolve_v6 (issue #65)
 
     def as_json(self) -> Any:
-        return self.event if self.event is not None else {"seconds": self.seconds}
+        if self.event is not None:
+            return self.event
+        if self.at_distance_m is not None:
+            return {START_AT_DISTANCE: self.at_distance_m}
+        return {"seconds": self.seconds}
 
 
 @dataclass(frozen=True)
@@ -126,23 +137,32 @@ class ParsedReply:
 @dataclass(frozen=True)
 class ReplyContext:
     """What a reply is read against: the condition, the agent's top speed, the scenario's events,
-    the current distance to the person the agent would meet (``None``: nobody in view), and
-    whether a later step may have a ``start`` (``resolve_v5``, issue #64; before it, only the
-    opening step may)."""
+    the current distance to the person the agent would meet (``None``: nobody in view), whether a
+    later step may have a ``start`` (``resolve_v5``, issue #64; before it, only the opening step
+    may), and whether an ``until`` may be a distance or an event written as an object
+    (``resolve_v6``, issue #65)."""
 
     condition: str
     max_speed_mps: float
     events: tuple[str, ...]
     distance_m: Optional[float] = None
     later_step_start: bool = False
+    until_at_distance: bool = False
+    until_event_as_object: bool = False
 
     def __post_init__(self) -> None:
         if self.condition not in CONDITIONS:
             raise ValueError(f"condition: one of {CONDITIONS}, got {self.condition!r}")
 
     @classmethod
-    def of(cls, view: View, condition: str, events: Mapping[str, str] | tuple[str, ...], later_step_start: bool = False) -> "ReplyContext":
-        return cls(condition, view.me.max_speed_mps, tuple(events), view.meeting_distance_m(), later_step_start)
+    def of(
+        cls, view: View, condition: str, events: Mapping[str, str] | tuple[str, ...], later_step_start: bool = False,
+        until_at_distance: bool = False, until_event_as_object: bool = False,
+    ) -> "ReplyContext":
+        return cls(
+            condition, view.me.max_speed_mps, tuple(events), view.meeting_distance_m(), later_step_start,
+            until_at_distance, until_event_as_object,
+        )
 
 
 # --- small readers --------------------------------------------------------------------------------
@@ -189,6 +209,19 @@ def _text(data: Mapping[str, Any], key: str, required: bool) -> Optional[str]:
 # --- the reply ------------------------------------------------------------------------------------
 
 
+def _at_distance(amount: Any, context: ReplyContext, prefix: str, where: str) -> float:
+    """A distance a ``start`` (or, under ``resolve_v6``, an ``until``) waits for: positive, someone
+    in view, and no further than they are now. ``prefix`` names the failure codes."""
+    metres = _number(amount, f"{prefix}_not_a_number", where)
+    if metres <= 0.0:
+        raise _fail(f"{prefix}_at_distance_not_positive", f"{where}: {metres}")
+    if context.distance_m is None:
+        raise _fail(f"{prefix}_at_distance_with_nobody_in_view", where)
+    if metres > context.distance_m:
+        raise _fail(f"{prefix}_at_distance_beyond_current", f"{where}: {metres} m, but the other is {context.distance_m:.1f} m away")
+    return metres
+
+
 def _start(value: Any, context: ReplyContext, where: str) -> Start:
     if isinstance(value, str):
         if value.strip().lower() != START_NOW:
@@ -198,14 +231,7 @@ def _start(value: Any, context: ReplyContext, where: str) -> Start:
         raise _fail("unknown_start", f"{where}: got {value!r}")
     ((kind, amount),) = value.items()
     if kind == START_AT_DISTANCE:
-        metres = _number(amount, "start_not_a_number", where)
-        if metres <= 0.0:
-            raise _fail("start_at_distance_not_positive", f"{where}: {metres}")
-        if context.distance_m is None:
-            raise _fail("start_at_distance_with_nobody_in_view", where)
-        if metres > context.distance_m:
-            raise _fail("start_at_distance_beyond_current", f"{where}: {metres} m, but the other is {context.distance_m:.1f} m away")
-        return Start(START_AT_DISTANCE, metres)
+        return Start(START_AT_DISTANCE, _at_distance(amount, context, "start", where))
     if kind == START_AFTER_SECONDS:
         delay = _number(amount, "start_not_a_number", where)
         if delay < 0.0:
@@ -214,7 +240,7 @@ def _start(value: Any, context: ReplyContext, where: str) -> Start:
     raise _fail("unknown_start", f"{where}: got {value!r}")
 
 
-def _until(value: Any, context: ReplyContext, where: str) -> Until:
+def _until(value: Any, context: ReplyContext, where: str, flags: Optional[list[str]] = None) -> Until:
     if isinstance(value, str):
         event = value.strip().lower()
         if event not in context.events:
@@ -225,6 +251,15 @@ def _until(value: Any, context: ReplyContext, where: str) -> Until:
         if duration <= 0.0:
             raise _fail("until_seconds_not_positive", f"{where}: {duration}")
         return Until(seconds=duration)
+    if context.until_at_distance and isinstance(value, dict) and set(value) == {START_AT_DISTANCE}:
+        return Until(at_distance_m=_at_distance(value[START_AT_DISTANCE], context, "until", where))
+    if context.until_event_as_object and isinstance(value, dict) and len(value) == 1:
+        ((name, amount),) = value.items()
+        event = name.strip().lower() if isinstance(name, str) else None
+        if event in context.events and amount is not False:
+            if flags is not None:
+                flags.append(f"until_event_as_object:{where}")
+            return Until(event=event)
     raise _fail("unknown_until", f"{where}: got {value!r}")
 
 
@@ -260,7 +295,7 @@ def _step(index: int, data: Any, context: ReplyContext, flags: list[str]) -> Ste
         turn = Turn(side, angle)
     until = None
     if data.get("until") is not None:
-        until = _until(data["until"], context, f"{where}.until")
+        until = _until(data["until"], context, f"{where}.until", flags)
     elif back_up is None:
         raise _fail("missing_until", where)
     if back_up is not None:

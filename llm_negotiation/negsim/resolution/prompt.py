@@ -17,6 +17,7 @@ it, and then the debrief question with every decision the agent made.
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import dataclass
 from typing import Any, Mapping, Optional, Sequence
 
@@ -49,8 +50,30 @@ def default_core(with_factor_lines: bool) -> str:
     return FACTOR_CORE_TEMPLATE if with_factor_lines else SIMULATION_CORE_TEMPLATE
 
 
+#: Up to this many degrees off the same or the opposite direction, a walking person's heading is a
+#: drift ("in the opposite direction to you, drifting to your left by 15°") rather than a
+#: crossing, under a template with wording for it (``resolve_v6``, issue #65).
+#: **[placeholder]**: the 45° that splits ahead
+#: from the side in the directions (``perceive``), not a sourced threshold. RF-9 (issue #64): 28 of
+#: 30 agents told that someone 10° to 30° off opposite was "walking across" reasoned about a crossing.
+DRIFT_MAX_DEG = 45.0
+
+
 def seconds(value: float) -> str:
     return f"{value:.1f}"
+
+
+def _walking_heading(relative: float, headings: Mapping[str, str]) -> str:
+    """A walking person's heading: a drift off the same or the opposite direction when the template
+    has wording for it (``resolve_v6``), else ``negsim.rulegen.describe``'s, unchanged."""
+    angle = abs(math.degrees(relative))
+    if "opposite_drifting" in headings and 10.0 < angle < 170.0:
+        to_side = "left" if relative > 0 else "right"
+        if angle >= 180.0 - DRIFT_MAX_DEG:
+            return fill(headings["opposite_drifting"], to_side=to_side, angle=int(round(180.0 - angle)))
+        if angle <= DRIFT_MAX_DEG:
+            return fill(headings["same_drifting"], to_side=to_side, angle=int(round(angle)))
+    return _heading(relative, headings)
 
 
 def _check_condition(condition: str) -> None:
@@ -110,6 +133,16 @@ class CoreTemplate:
     def later_step_start(self) -> bool:
         """Whether a later step of a reply may have a ``start`` (``resolve_v5``, issue #64)."""
         return bool(self.data.get("later_step_start", False))
+
+    @property
+    def until_at_distance(self) -> bool:
+        """Whether a step's ``until`` may be a distance (``resolve_v6``, issue #65)."""
+        return bool(self.data.get("until_at_distance", False))
+
+    @property
+    def until_event_as_object(self) -> bool:
+        """Whether an ``until`` event written as an object is read as the event (``resolve_v6``)."""
+        return bool(self.data.get("until_event_as_object", False))
 
     def prints_demographics(self, detail: str) -> bool:
         """Whether the other's age and gender are printed at this detail level (when visible):
@@ -181,7 +214,9 @@ class CoreTemplate:
             return lines + [v["seen_nobody"]]
         for person in view.seen:
             direction = _direction(person.bearing_rad, v["directions"])
-            heading = _heading(person.heading_relative_rad, v["headings"])
+            # A drift is a way of walking, not of facing: someone standing still keeps the old words.
+            describe = _heading if person.motion == MOTION_STILL else _walking_heading
+            heading = describe(person.heading_relative_rad, v["headings"])
             if person.detail != DETAIL_FULL:
                 motion = fill(v["short_motion"][person.motion], heading=heading)
                 lines.append(fill(v["seen_short"], n=person.label, distance=along(person.distance_m), direction=direction, motion=motion))

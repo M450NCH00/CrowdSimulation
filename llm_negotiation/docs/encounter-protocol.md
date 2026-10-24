@@ -123,7 +123,7 @@ The encounter ends, checked at the start of every step, on the first of:
 | End | When |
 | --- | --- |
 | `passed` | every conflict pair has passed each other (separating, further apart than the two radii and the margin, **and** no conflict predicted between them, since two people standing still can read as separating by a rounding error) or one of them has arrived |
-| `no_conflict` | no conflict between any two members has been predicted for `no_conflict_end_s` (1 s **[placeholder]**) |
+| `no_conflict` | no conflict between any two members has been predicted for `no_conflict_end_s` (1 s **[placeholder]**); with `no_conflict_waits_for_plans` (issue #65), also no member's plan is still waiting or running (RF-9: 3 of 16 `no_conflict` sessions collided after the end, as a step back to the old line brought the two together, with nobody prompted again) |
 | `deadlock` | the run's deadlock monitor stopped it |
 | `collision` | the run stopped on a collision (a scenario with `on_collision: stop`) |
 | `time_limit` | the run's time limit |
@@ -239,8 +239,8 @@ python run_experiment.py configs/resolution/<config>.yaml --client deepseek --co
 | `scenarios` | optional: case id → plug-in; otherwise the plug-in whose `CASE_TYPES` holds the case's type |
 | `conditions` | any of `independent`, `non_verbal`, `talk` |
 | `design` | `seed`, `factors` (`age_pair`, `gender_pair`, `task`, `demographics_visible`, `mapping`), `repeats`, `base_age`, `age_difference`, `tasks`; issue #62: `kind` (`full`, `fractional`, `sample`), `cells`, `geometries`, `exact_repeats` (`cells`, `times`), `counterfactual_pairs` (`screening-designs.md`); issue #92: `ethnicity_shares` (default `configs/resolution/ethnicity_sg_2026.yaml`) and `ethnicity_draw` (`real`, the default, or `balanced`), for a design that varies `ethnicity_pair` (`ethnicity.md`) |
-| `protocol` | `max_decision_points` (3), `min_gap_s` (1), `no_conflict_end_s` (1), `max_prompted` (none), `speech_words_per_second` (2.5), `execution` (`rf4`, or `as_prompted`: issue #64, `execute.py`) |
-| `templates` | `core` (`resolve_v2`; `resolve_v3` for a design that varies an RF-5 or RF-6 factor, issue #61; `resolve_v4`, named, also gives the other's age and gender from 10 m, issue #64; `resolve_v5`, named, also lets any step have a `start`, issue #64), `debrief` (`resolve_debrief_v1`); with factors also `factors` (`resolve_factors_v1`; `resolve_factors_v2` for a design that varies real ethnicity, issue #92) and `pairwise` (`resolve_pairwise_v1`) |
+| `protocol` | `max_decision_points` (3), `min_gap_s` (1), `no_conflict_end_s` (1), `max_prompted` (none), `speech_words_per_second` (2.5), `execution` (`rf4`, or `as_prompted`: issue #64, `execute.py`), `no_conflict_waits_for_plans` (false; issue #65) |
+| `templates` | `core` (`resolve_v2`; `resolve_v3` for a design that varies an RF-5 or RF-6 factor, issue #61; `resolve_v4`, named, also gives the other's age and gender from 10 m, issue #64; `resolve_v5`, named, also lets any step have a `start`, issue #64; `resolve_v6`, named, also reads an `until` at a distance or written as an object, and calls a walker up to 45° off the opposite or the same direction drifting rather than walking across, issue #65), `debrief` (`resolve_debrief_v1`); with factors also `factors` (`resolve_factors_v1`; `resolve_factors_v2` for a design that varies real ethnicity, issue #92) and `pairwise` (`resolve_pairwise_v1`) |
 | `llm_view` | the perception config (`configs/resolution/llm_view_v1.yaml`) |
 | `llm` | `client`, `mock_policy` (`resolution_rehearsal_v1`), `model`, `temperature`, `max_tokens` (400), `thinking` (disabled), `transport_retries` |
 | `budget` | `cap_usd` (on this experiment's own calls), `ledger`, `over_cap` (`refuse`, the default, or `stop_at_cap`; issue #64, section 6) |
