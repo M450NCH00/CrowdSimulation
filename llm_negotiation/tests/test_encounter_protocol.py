@@ -539,6 +539,86 @@ def test_a_paid_client_sends_nothing_without_confirm(tmp_path):
     assert result.status == E.STATUS_AWAITING and not (tmp_path / "paid" / "sessions").exists()
 
 
+def capped_config(name, cap_usd, over_cap=None):
+    """Eight independent head-on sessions (one cell, repeated) with a budget of their own."""
+    return E.ResolutionConfig.from_raw({
+        "layer": "resolution", "experiment_name": name, "cases": {"ids": ["head_on_02dfbadb@2"]}, "conditions": ["independent"],
+        "design": {"seed": 1, "repeats": 8, "factors": {"age_pair": ["same"], "gender_pair": ["p1_female"], "task": ["p1_urgent"],
+                                                       "demographics_visible": [True], "mapping": ["p1_lower"]}},
+        "llm": {"client": "mock", "mock_policy": "resolution_rehearsal_v1"},
+        "budget": {"cap_usd": cap_usd, **({"over_cap": over_cap} if over_cap else {})},
+    })
+
+
+class PaidMock(MockClient):
+    """The mock's replies and token counts, under the paid client's name, so that it is charged."""
+
+    name = "deepseek"
+
+
+def paid_client(config, ledger):
+    from negsim.llm.budget import BudgetedClient, BudgetGuard, SpendLedger
+    from negsim.llm.pricing import PriceTable
+
+    guard = BudgetGuard(SpendLedger(ledger), config.budget["cap_usd"], PriceTable.from_yaml(), scope=config.experiment_name)
+    return BudgetedClient(PaidMock(policy=M.POLICIES["resolution_rehearsal_v1"]), guard)
+
+
+def test_by_default_a_paid_run_whose_worst_case_exceeds_the_cap_is_refused_even_confirmed(tmp_path):
+    config = capped_config("over", 0.01)
+    assert "over_cap" not in config.budget and not E.plan(config).preview["fits_the_cap"]
+    client = paid_client(config, tmp_path / "ledger.jsonl")
+    with pytest.raises(ConfigError, match="exceeds the cap"):
+        E.run_resolution(config, client=client, out_root=tmp_path, confirm=True, report=lambda _: None, git=GIT)
+    assert not (tmp_path / "over" / "sessions").exists() and not (tmp_path / "ledger.jsonl").exists()
+    (call,) = [json.loads(line) for line in (tmp_path / "over" / "invocations.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert call["status"] == "refused_over_cap"
+
+
+def test_stop_at_cap_runs_until_the_guard_stops_it_and_the_spend_stays_under_the_cap(tmp_path):
+    """Issue #64: with budget.over_cap stop_at_cap a confirmed run starts although its worst case
+    exceeds the cap; the guard refuses the first call that could pass the cap, that session is
+    kept as aborted, and the run stops there. Running it again with the same cap stops again."""
+    config = capped_config("to_cap", 0.004, over_cap="stop_at_cap")
+    preview = E.plan(config).preview
+    assert config.budget["over_cap"] == "stop_at_cap" and not preview["fits_the_cap"] and preview["sessions"] == 8
+    ledger = tmp_path / "ledger.jsonl"
+    said = []
+    result = E.run_resolution(config, client=paid_client(config, ledger), out_root=tmp_path, confirm=True, report=said.append, git=GIT)
+    entries = [json.loads(line) for line in ledger.read_text(encoding="utf-8").splitlines()]
+    spent = math.fsum(entry["cost_usd"] for entry in entries)
+    assert entries and 0.0 < spent <= 0.004 and {entry["experiment"] for entry in entries} == {"to_cap"}
+    assert result.status == E.STATUS_ABORTED and "BudgetExceededError" in result.aborted
+    records = [json.loads(path.read_text(encoding="utf-8")) for path in (tmp_path / "to_cap" / "sessions").glob("*.json")]
+    outcomes = sorted(record["outcome"] for record in records)
+    assert outcomes.count(P.SESSION_ABORTED) == 1 and len(outcomes) >= 2  # at least one session finished first
+    cost = json.loads((tmp_path / "to_cap" / "cost.json").read_text(encoding="utf-8"))
+    assert cost["actual_usd"] == pytest.approx(spent) and cost["cap_usd"] == 0.004
+    again = E.run_resolution(config, client=paid_client(config, ledger), out_root=tmp_path, confirm=True, report=lambda _: None, git=GIT)
+    assert again.status == E.STATUS_ABORTED
+    assert math.fsum(json.loads(line)["cost_usd"] for line in ledger.read_text(encoding="utf-8").splitlines()) <= 0.004
+
+
+def test_stop_at_cap_still_needs_confirm_and_plan_says_what_it_does(tmp_path):
+    config = capped_config("unconfirmed", 0.01, over_cap="stop_at_cap")
+    result = E.run_resolution(config, client=paid_client(config, tmp_path / "ledger.jsonl"), out_root=tmp_path, report=lambda _: None, git=GIT)
+    assert result.status == E.STATUS_AWAITING and not (tmp_path / "unconfirmed" / "sessions").exists()
+    said = []
+    E.print_plan(config, out=said.append)
+    assert any("DOES NOT FIT" in line for line in said) and any("stop_at_cap" in line and "stops it" in line for line in said)
+    said.clear()
+    E.print_plan(capped_config("default", 0.01), out=said.append)
+    assert not any("stop_at_cap" in line for line in said)
+
+
+def test_over_cap_is_described_only_when_not_the_default():
+    assert small_config("x").as_dict()["budget"] == {"cap_usd": 0.05, "ledger": "spend_ledger.jsonl"}
+    assert capped_config("x", 0.05, over_cap="refuse").as_dict()["budget"] == {"cap_usd": 0.05, "ledger": "spend_ledger.jsonl"}
+    assert capped_config("x", 0.05, over_cap="stop_at_cap").as_dict()["budget"]["over_cap"] == "stop_at_cap"
+    with pytest.raises(ConfigError):
+        capped_config("x", 0.05, over_cap="ignore")
+
+
 def test_a_bad_resolution_config_is_refused():
     with pytest.raises(ConfigError):
         small_config("x", conditions=("negotiated",))

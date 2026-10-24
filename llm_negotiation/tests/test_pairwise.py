@@ -482,6 +482,59 @@ def test_resolve_v3_prints_the_factor_and_pairwise_lines_for_anyone_in_view(wher
             assert ":" in seen_block[0] and "They look" not in text  # the short line: no age, gender or body width
 
 
+# --- resolve_v4 (the user's decision of 2026-10-24, issue #64) ---------------------------------------
+
+
+V4 = CoreTemplate.load("resolve_v4")
+SHORT_DEMOGRAPHICS = ("seen_short_age", "seen_short_gender")
+
+
+def test_resolve_v4_is_resolve_v3_with_two_lines_more():
+    assert prompts.load_manifest()["resolve_v4"]["kind"] == "resolution"
+    for condition in ("independent", "non_verbal", "talk"):
+        assert V4.system(condition, PASSING) == V3.system(condition, PASSING)
+    assert {k: v for k, v in V4.data["view"].items() if k not in SHORT_DEMOGRAPHICS} == V3.data["view"]
+    assert (V4.data["view"]["seen_short_age"], V4.data["view"]["seen_short_gender"]) == (V3.data["view"]["seen_age"], V3.data["view"]["seen_gender"])
+    for key in ("conditions", "step_format", "event_item", "decision_point", "role", "system"):
+        assert V4.data[key] == V3.data[key]
+    assert [core.prints_demographics("short") for core in (V1, V2, V3, V4)] == [False, False, False, True]
+    assert all(core.prints_demographics("full") for core in (V1, V2, V3, V4))
+    assert V4.prints_extra_lines("short")
+
+
+@pytest.mark.parametrize("where, shown", [
+    ((3.0, 0.0), True),     # within 5 m: full detail, as under resolve_v3
+    ((8.0, 0.0), True),     # 5 to 10 m: under the short line
+    ((9.9, 30.0), True),
+    ((3.0, 180.0), False),  # behind: not in view
+    ((10.5, 0.0), False),   # beyond the seeing range
+])
+def test_resolve_v4_prints_the_others_age_and_gender_for_anyone_in_view_when_visible(where, shown):
+    distance, degrees = where
+    bodies = [at(0, 0.0, 0.0, vx=1.3), at(1, distance, degrees, vx=-1.3)]
+    text = render(look(bodies, perceiver(core=V4)), "talk", PASSING, V4).user
+    assert ("  They look about 71 years old." in text) is shown and ("  They look like a man." in text) is shown
+    if shown and distance > 5.0:
+        seen_block = text.split("WHO YOU CAN SEE\n", 1)[1].split("\n\n", 1)[0].splitlines()
+        assert ":" in seen_block[0] and seen_block[1:3] == ["  They look about 71 years old.", "  They look like a man."]
+        assert "wide" not in "\n".join(seen_block)  # body width stays a full-detail line
+        three = render(look(bodies, perceiver(core=V3)), "talk", PASSING, V3).user
+        assert three == text.replace("\n  They look about 71 years old.\n  They look like a man.", "")
+    for age, gender in ((False, True), (True, False), (False, False)):  # demographics_visible false, or one of them off
+        hidden = render(look(bodies, perceiver(core=V4, show_age=age, show_gender=gender)), "talk", PASSING, V4).user
+        assert ("years old" in hidden) is (shown and age) and ("They look like" in hidden) is (shown and gender)
+
+
+def test_without_demographics_or_anyone_beyond_5_m_resolve_v4_renders_what_resolve_v3_does():
+    for distance in (3.0, 8.0):
+        bodies = [at(0, 0.0, 0.0, vx=1.3), at(1, distance, 0.0, vx=-1.3)]
+        if distance < 5.0:
+            assert render(look(bodies, perceiver(core=V4)), "talk", PASSING, V4).user == render(look(bodies, perceiver(core=V3)), "talk", PASSING, V3).user
+        hidden = dict(show_age=False, show_gender=False)
+        assert (render(look(bodies, perceiver(core=V4, **hidden)), "talk", PASSING, V4).user
+                == render(look(bodies, perceiver(core=V3, **hidden)), "talk", PASSING, V3).user)
+
+
 def test_the_default_core_template_is_resolve_v3_only_for_a_design_with_factors():
     assert (default_core(False), default_core(True)) == (SIMULATION_CORE_TEMPLATE, FACTOR_CORE_TEMPLATE) == ("resolve_v2", "resolve_v3")
     assert E.ResolutionConfig.from_raw(RAW).templates["core"] == "resolve_v2"
