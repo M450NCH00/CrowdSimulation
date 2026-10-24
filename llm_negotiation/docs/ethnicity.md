@@ -91,14 +91,52 @@ and at least one stated limit.
 Both are two-level, so a fractional screen holds them as columns (RF-7). A config that names
 neither has the same cells, session ids and records as before.
 
-**The draw.** Each session's two groups are drawn with the design's seed:
+**Two ways to draw** (`design.ethnicity_draw`). The user decided on 2026-10-24, after the first
+build (open question 3), that the screen needs enough sessions for every group, so `balanced` was
+added; RF-10 is to use it:
+
+| `ethnicity_draw` | Who meets whom | For what |
+| --- | --- | --- |
+| `real` (the default) | person 1 drawn at the resident shares (below) | a design whose sessions should look like Singapore as they are |
+| `balanced` | every group equally often, in a fixed rotation (below) | a screen: enough sessions per group to compare groups |
+
+**The `real` draw.** Each session's two groups are drawn with the design's seed:
 - **Person 1** at the shares;
 - **Person 2** of a `same` session: person 1's group;
 - **Person 2** of a `different` session: one of the other three groups, at their shares
   renormalised (for example, after a Chinese person 1, Malay with 13.5 / 26.1 = 51.7%).
 
-So the screen estimates same against different while each person keeps the population's real mix.
 Both groups are kept on the session's personas (`ethnicity`) and in its record.
+
+**The `balanced` draw** (`ethnicity.py`, `balanced_assignment`). The groups are assigned in a
+fixed rotation rather than at random, so that the counts come out even in a small design. The
+units (a case and a cell, or a case and a counterfactual pair) are taken in an order shuffled with
+the seed, within each stratum: the units that run only `same`, those that run only `different`,
+and counterfactual pairs that flip `ethnicity_pair`. A `same` unit gets the four groups in turn. A
+`different` unit gets the twelve ordered pairs in turn, in blocks of four in which each group is
+person 1 once and person 2 once; any whole block balances both people. In the rehearsal's 16
+`same` and 16 `different` units, person 1 is each group in 4 of each.
+
+**The weight** (`ethnicity_weight`, every session of a design that varies ethnicity, under either
+draw). A population-level figure, such as how often a Singapore pair resolves the conflict, must
+not be read from the sessions as drawn: under `balanced` the smaller groups are over-represented on
+purpose, and under `real` the design, not the population, sets how many sessions are `same`. Each
+session is weighted by its pair's chance between **two residents met at random**, each at the
+shares, over the pair's share of the design's sessions:
+
+    weight = (share of person 1's group) x (share of person 2's group) x (sessions) / (sessions with this pair)
+
+This is post-stratification on the pairs actually drawn, the way a survey oversamples a small
+group and then reweights. The weights add up to the number of sessions, and the weighted persons
+are at the resident shares exactly, with a same-group pair 57.4% of the time (the sum of the
+squared shares). A pair the design never drew loses its share, and `--plan` names it. A comparison
+between groups, and same against different, uses the sessions as they are, unweighted.
+
+**The price of weighting.** Weighted figures rest on fewer sessions than were run: Kish's effective
+number of sessions, (sum of weights)^2 / (sum of squared weights), is reported beside each weighted
+rate. In the balanced rehearsal it is 24 of 72: the Chinese / Chinese sessions, 10 of 72, carry 39 of
+the 72 weight. That is the trade the user chose: enough sessions per group for the comparison
+between groups, at the cost of precision in the population-level figures.
 
 **The random stream** is named by the design's seed, the case, and the cell (for a counterfactual
 pair, the pair). It is never named by the condition or the repeat. This is my design choice
@@ -108,32 +146,34 @@ pair, the pair). It is never named by the condition or the repeat. This is my de
 - a counterfactual pair that flips another factor keeps both groups, and one that flips
   `ethnicity_pair` keeps person 1's group and changes only person 2's.
 
-**What the draw does to the mix of persons.** Person 1, and both people of a `same` session, are
-at the resident shares. Person 2 of a `different` session is not: excluding person 1's group
+**What the `real` draw does to the mix of persons.** Person 1, and both people of a `same`
+session, are at the resident shares. Person 2 of a `different` session is not: excluding person 1's group
 (usually Chinese) makes the smaller groups more common. With half the sessions `same` and half
 `different`, the expected shares among all persons are Chinese 60.8%, Malay 20.1%, Indian 13.6%,
-Others 5.5% (against 73.9, 13.5, 9.0 and 3.6% of residents). This follows from task 2's rule, and
-`--plan` prints it.
+Others 5.5% (against 73.9, 13.5, 9.0 and 3.6% of residents). This follows from task 2's rule; the
+weights correct it for a population-level figure.
 
-**`--plan`** prints, for the design's sessions, the expected and the drawn number of sessions
-for each pair of groups (person 1 / person 2), and the shares among persons, drawn and expected.
-For the mock rehearsal's 72 sessions (36 per condition, the same people in both): Chinese /
-Chinese expected 26.6; Others / Others expected 1.3; six of the sixteen pairs are expected fewer
-than one session. **At real shares the smaller groups get few sessions**, so a per-group effect
-(for example, toward Indian people) cannot be estimated from a screen of RF-10's size (section 9).
+**`--plan`** prints, for each pair of groups (person 1 / person 2), the sessions drawn, what the
+draw should give, and the weighted number; then the persons' shares, drawn and weighted; and any
+pair never drawn. **At real shares the smaller groups get few sessions:** in the first rehearsal
+(`real`, 72 sessions), Others / Others was expected 1.3 times and six of the sixteen pairs fewer
+than once. In the balanced rehearsal (`resolve_ethnicity_mock_rehearsal.yaml`, 72 sessions) the
+persons drawn are 26.4% Chinese, 27.8% Malay, 23.6% Indian and 22.2% Others, every pair is drawn at
+least twice, and weighted they are 73.9, 13.5, 9.0 and 3.6%.
 
 ## 5. What is logged
 
 - **The session record**: `session.personas[<agent>].ethnicity`, `session.visibility.ethnicity`,
   and `factors.ethnicity` (by agent) with `factors.ethnicity_visible`; `templates.factors` is
-  `resolve_factors_v2`. The design in `config.json` gains `ethnicity_shares` (the file and its
-  shares).
+  `resolve_factors_v2`; the session's `ethnicity_weight`. The design in `config.json` gains
+  `ethnicity_shares` (the file and its shares), and `ethnicity_draw` when it is `balanced`.
 - **The outcome row** (`outcomes.jsonl`, `outcomes.csv`):
 
 | Column | Meaning |
 | --- | --- |
 | `ethnicity_pair`, `ethnicity_visible` | the cell's levels |
 | `p1_ethnicity`, `p2_ethnicity` | each person's group |
+| `ethnicity_weight` | the session's weight back to two residents met at random (section 4) |
 | `p1_other_ethnicity_shown`, `p2_...` | at how many of the person's decision points it was told the other's group: the other in view at a detail where factor lines are printed, with the switch on. Every group has a line, so this is the count of the line in the prompts (tested) |
 
 - **RF-8's analysis** (`analysis/load.py`) reads the other's group **as told**, never as set: the
@@ -141,7 +181,10 @@ than one session. **At real shares the smaller groups get few sessions**, so a p
   and `ethnicity_unseen` is 1 when it was not told. The groups are kept as descriptive columns
   (`own_ethnicity`, `other_ethnicity` as told, `other_ethnicity_actual`), not as predictors: at
   real shares the smaller groups are too rare for a term of their own, which would make RF-8's
-  separation problem worse (`WORK_LOG-63.md`, open questions 1 and 2). This is my choice
+  separation problem worse (`WORK_LOG-63.md`, open questions 1 and 2). Section 8 of the report
+  (`analysis/groups.py`) gives the outcomes by own group and the other's group as told
+  (unweighted), and each session outcome weighted back to random resident pairs with its effective
+  number of sessions. This is my choice
   (`WORK_LOG-92.md`, A3). The session-level terms `ethnicity_pair[different]` and
   `ethnicity_visible[False]` come from the design columns as for any factor.
 
@@ -193,15 +236,18 @@ same limits apply (residents only; visitors at the same shares).
 
 ## 9. What it cannot show, and the open points
 
-- **Same against different, not each group.** The screen's factor is `ethnicity_pair`. At real
-  shares a per-group effect gets few sessions (section 4). Open question 3: a `balanced` option,
-  with equal shares and the analysis weighted back to the real shares, would estimate
-  group-specific effects better. Not built: the issue says build it only if the user asks.
+- **Same against different, and each group only descriptively.** The screen's factor is
+  `ethnicity_pair`. The `balanced` draw (built on the user's request, open question 3) gives every
+  group enough sessions to compare, and the report tabulates them, but a per-group term in RF-8's
+  models is not built: with RF-9's noise (77% of identical-prompt pairs flip), even a balanced
+  screen of RF-10's size may not show one. The counterfactual pairs that flip only ethnicity are
+  the efficient way to measure it.
 - **Told, not seen.** The model is told a group in words; no appearance is described. An effect
   is an effect of the word.
 - **"They look ..."** (open question 2, *for the supervisor*): telling an agent another's
   ethnicity as an inference from appearance.
 - **Residents only, and visitors at the same shares** (section 3).
-- **The persons' mix** differs from the residents' because of the `different` sessions' second
-  draw (section 4).
+- **The persons' mix** differs from the residents' under either draw: by design under `balanced`,
+  and because of the `different` sessions' second draw under `real` (section 4). The weights
+  restore it for population-level figures, at a cost in precision.
 - **The mock does not read the lines.** The rehearsal checks the pipeline, not a model.

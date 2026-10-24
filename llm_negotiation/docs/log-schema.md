@@ -742,8 +742,9 @@ lines whose `experiment` is that experiment's name.
 - (2026-10-24, issue #92; no version change.) A resolution experiment whose design varies real
   ethnicity (`ethnicity_pair`) adds `ethnicity` to each persona in `design.jsonl` and the session
   record, `ethnicity` to `visibility`, `ethnicity` and `ethnicity_visible` to the record's
-  `factors`, `ethnicity_shares` to the design in `config.json`, and to the outcome rows the cell's
-  `ethnicity_pair` and `ethnicity_visible`, `p1_ethnicity`, `p2_ethnicity` and
-  `_other_ethnicity_shown` (`ethnicity.md`, section 5); its factor template is
+  `factors`, `ethnicity_weight` to the session in `design.jsonl` and the record, `ethnicity_shares`
+  (and `ethnicity_draw` when `balanced`) to the design in `config.json`, and to the outcome rows the
+  cell's `ethnicity_pair` and `ethnicity_visible`, `p1_ethnicity`, `p2_ethnicity`,
+  `_other_ethnicity_shown` and `ethnicity_weight` (`ethnicity.md`, section 5); its factor template is
   `resolve_factors_v2`; `invocations.jsonl` may say `refused_no_sign_off`. Without it every file
   is as before.

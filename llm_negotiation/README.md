@@ -1187,21 +1187,24 @@ Issue #92 (RF-26) adds real ethnicity as a factor, in place of the fictional gro
   `configs/resolution/ethnicity_sg_2026.yaml`). Residents only (4.23 of 6.21 million); a visitor
   is drawn at the same shares (the user's decision).
 - **In a design:** `ethnicity_pair` (`same` or `different`) and its switch `ethnicity_visible`.
-  Person 1's group is drawn at the shares with the design's seed; person 2's is the same, or one
-  of the other three at their shares renormalised. The same cell and case is the same two people
-  under every condition and repeat.
+  `design.ethnicity_draw: real` (the default) draws person 1 at the shares and person 2 the same
+  group or one of the other three renormalised; `balanced` (the user's decision, for the screen)
+  gives every group equally often in a fixed rotation. Each session's `ethnicity_weight` makes
+  the sessions stand for two residents met at random, for population-level figures. The same cell
+  and case is the same two people under every condition and repeat.
 - **Who is told what:** one's own group always ("- You are Malay."); the other's under them, from
   10 m under `resolve_v3` on, when the switch is on ("They look Malay."). Others is "neither
   Chinese, Malay nor Indian" (the user's wording).
 - **Logged:** both groups on the personas and in the record's `factors`; in the outcome row
   `p1_ethnicity`, `p2_ethnicity` and how often each was told the other's
-  (`p1_other_ethnicity_shown`). RF-8's analysis reads it as told (`same_ethnicity`,
-  `ethnicity_unseen`).
+  (`p1_other_ethnicity_shown`), and `ethnicity_weight`. RF-8's analysis reads it as told
+  (`same_ethnicity`, `ethnicity_unseen`), and its report gives the outcomes by group and the
+  weighted rates.
 - **Gated:** a paid run that varies it is refused (`refused_no_sign_off`) unless `CLAUDE.md`
   holds its own sentence (recorded on 2026-10-24). No rule may read it (`protected_attribute`):
   a field with `ethnic`, a census group's name or a word for race.
-- **`--plan`** prints the sessions per pair of groups, expected and drawn: at real shares the
-  smaller groups get few.
+- **`--plan`** prints the sessions per pair of groups: drawn, expected under the draw, and
+  weighted.
 
 ```
 python run_experiment.py configs/resolution/resolve_ethnicity_mock_rehearsal.yaml --plan
@@ -1209,8 +1212,8 @@ python run_experiment.py configs/resolution/resolve_ethnicity_mock_rehearsal.yam
 ```
 
 The rehearsal has RF-10's shape: a 2^(7-3) fraction (16 cells) on two head-on geometries,
-independent and talk, with a counterfactual pair that flips `ethnicity_pair`, under `resolve_v5`
-and `as_prompted`; 72 sessions. The mock's replies do not read the lines, so nothing in it is a
+independent and talk, with a counterfactual pair that flips `ethnicity_pair`, groups drawn
+`balanced`, under `resolve_v5` and `as_prompted`; 72 sessions. The mock's replies do not read the lines, so nothing in it is a
 finding.
 
 ## Changing things

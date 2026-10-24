@@ -204,7 +204,7 @@ could be in view in full detail. That is a true bound but a loose one; a paid cr
   their observable factor lines are printed (`p1_other_observable_shown`; issue #63, for RF-8's
   "as the agent was told"); with a design that varies real ethnicity (issue #92), the person's
   group (`p1_ethnicity`) and at how many of its decision points it was told the other's
-  (`p1_other_ethnicity_shown`; `ethnicity.md`, section 5); the number of decision points and their reasons; unreadable
+  (`p1_other_ethnicity_shown`; `ethnicity.md`, section 5), and per session `ethnicity_weight`; the number of decision points and their reasons; unreadable
   replies; the first and the final plan coded mechanically (`side`: the sign of the turns, or
   `none` or `both`; `slowed`: a speed below the speed at the decision; `stopped`; `backed_up`;
   `start_distance_m`); signals used; messages; the debrief's `kind` and `source`;
@@ -238,7 +238,7 @@ python run_experiment.py configs/resolution/<config>.yaml --client deepseek --co
 | `cases` | `store`, `set` and/or `ids` (each `id` or `id@version`); with `design.geometries`, only `store` |
 | `scenarios` | optional: case id → plug-in; otherwise the plug-in whose `CASE_TYPES` holds the case's type |
 | `conditions` | any of `independent`, `non_verbal`, `talk` |
-| `design` | `seed`, `factors` (`age_pair`, `gender_pair`, `task`, `demographics_visible`, `mapping`), `repeats`, `base_age`, `age_difference`, `tasks`; issue #62: `kind` (`full`, `fractional`, `sample`), `cells`, `geometries`, `exact_repeats` (`cells`, `times`), `counterfactual_pairs` (`screening-designs.md`); issue #92: `ethnicity_shares` (default `configs/resolution/ethnicity_sg_2026.yaml`, for a design that varies `ethnicity_pair`; `ethnicity.md`) |
+| `design` | `seed`, `factors` (`age_pair`, `gender_pair`, `task`, `demographics_visible`, `mapping`), `repeats`, `base_age`, `age_difference`, `tasks`; issue #62: `kind` (`full`, `fractional`, `sample`), `cells`, `geometries`, `exact_repeats` (`cells`, `times`), `counterfactual_pairs` (`screening-designs.md`); issue #92: `ethnicity_shares` (default `configs/resolution/ethnicity_sg_2026.yaml`) and `ethnicity_draw` (`real`, the default, or `balanced`), for a design that varies `ethnicity_pair` (`ethnicity.md`) |
 | `protocol` | `max_decision_points` (3), `min_gap_s` (1), `no_conflict_end_s` (1), `max_prompted` (none), `speech_words_per_second` (2.5), `execution` (`rf4`, or `as_prompted`: issue #64, `execute.py`) |
 | `templates` | `core` (`resolve_v2`; `resolve_v3` for a design that varies an RF-5 or RF-6 factor, issue #61; `resolve_v4`, named, also gives the other's age and gender from 10 m, issue #64; `resolve_v5`, named, also lets any step have a `start`, issue #64), `debrief` (`resolve_debrief_v1`); with factors also `factors` (`resolve_factors_v1`; `resolve_factors_v2` for a design that varies real ethnicity, issue #92) and `pairwise` (`resolve_pairwise_v1`) |
 | `llm_view` | the perception config (`configs/resolution/llm_view_v1.yaml`) |
