@@ -174,6 +174,41 @@ change):
   "a pair that meets as the design says", for example keeping the 50/50 same/different. Easy to
   change if the user or the supervisor prefers it.
 
+### 2026-10-24 — Two questions from the user, and pairs that flip one person's group
+- **The user asked** what my weighting target (random resident pairs) gains over keeping the
+  design's 50/50 same/different split, and what I meant by counterfactual pairs being "the most
+  efficient way" to measure a per-group effect.
+- **My answer, with numbers from the balanced rehearsal (`_v2`):**
+  - Random residents: the weighted persons are at the resident shares, but only 24 of 72 sessions
+    are effective.
+  - The 50/50 target: the persons stay Chinese 60.8%, Malay 20.1%, Indian 13.6%, Others 5.5%, with
+    31 of 72 effective.
+  - I kept random residents for any figure that claims to describe Singapore: it answers a real
+    question, restores the real mix, and does not depend on design choices.
+- **A correction of my own:** "most efficient" overstated it. Pairs remove the noise of the other
+  factors, but not the model's own randomness (77% of identical-prompt pairs flip), so they are
+  the *cleanest* test, with a modest gain in efficiency.
+- **The gap I named:** the existing pairs flip only `ethnicity_pair`, so none could ask about a
+  specific group. **The user asked to add it.**
+- What I did:
+  - `factor: p1_ethnicity` or `p2_ethnicity` in `counterfactual_pairs`, with
+    `ethnicity: {p1, p2}` fixing the base's groups and `to` the flipped person's other group
+    (`design.py`: `CounterfactualPair.groups`, `_group_flip`). The flipped cell's `ethnicity_pair`
+    follows from the groups.
+  - Sessions and rows carry `pair_change` (`malay->indian`).
+  - RF-8's flip rates are labelled `p2_ethnicity:malay->indian` (`analysis/noise.py`).
+  - The rehearsal is `_v3`, adding Chinese→Indian and Malay→Indian pairs.
+- **A mistake caught by `--plan`:** the Malay→Indian pair's two cells are the same (both
+  `different`), so its two sessions had the same id. A group flip's ids now end in `_base` and
+  `_flipped`; every other pair keeps its code (the groups enter only a group flip's code) and its
+  ids (tested).
+- Result:
+  - `_v3` ran 88 of 88 on the mock; the weights add up to 88.
+  - The Malay→Indian pairs never flipped under the mock. The mock does not read the ethnicity line,
+    so this confirms the pair's two sessions are otherwise identical.
+  - Tests: `test_ethnicity.py` 57 passed, 4 skipped; `analysis/tests` 60 passed.
+  - Full negsim suite: 1850 passed, 4 skipped (11 min 32 s).
+
 ## Open questions / risks
 1. **"They look Malay"** (issue's open question 2, *for the supervisor*): telling an agent another
    person's ethnicity as an inference from appearance. Built as the issue words it; not decided.
