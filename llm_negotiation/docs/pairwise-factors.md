@@ -172,8 +172,9 @@ ledger line, and `refused_no_sign_off` in `invocations.jsonl`. `--plan` says so.
 fictional group's (`docs/fictional-groups.md`, section 6), shared in `negsim/ethics.py`, with a
 sentence of its own; one sign-off never stands for the other. **A mock run needs none**, so that
 the pipeline can be rehearsed. **Familiarity is not gated.** Only the user may add the sentence,
-once the supervisor has approved. Nothing in this issue does, and the repository records no
-sign-off (tested).
+once the supervisor has approved. Nothing in this issue does. **Recorded on 2026-10-24:** the user
+added the sentence to `CLAUDE.md`, approved by the supervisor on 2026-10-24 (issue #92's branch),
+so a paid run may now vary perceived attractiveness (tested).
 
 ## 7. Rules: kept out of the rule database only
 
