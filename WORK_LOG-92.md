@@ -169,6 +169,7 @@ change):
 - Tests: `tests/test_ethnicity.py` 53 passed (rotation balance, design balance and people kept
   across conditions, weights to random resident pairs, weight in record and row under both draws,
   validation, `real` unchanged); `analysis/tests` 59 passed (new `test_groups.py`).
+- Full negsim suite after the change: 1846 passed, 4 skipped (12 min 4 s).
 - **A5 (my choice):** the weights' target is two residents met at random. An alternative would be
   "a pair that meets as the design says", for example keeping the 50/50 same/different. Easy to
   change if the user or the supervisor prefers it.
