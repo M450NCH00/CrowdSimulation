@@ -237,8 +237,8 @@ python run_experiment.py configs/resolution/<config>.yaml --client deepseek --co
 | `scenarios` | optional: case id → plug-in; otherwise the plug-in whose `CASE_TYPES` holds the case's type |
 | `conditions` | any of `independent`, `non_verbal`, `talk` |
 | `design` | `seed`, `factors` (`age_pair`, `gender_pair`, `task`, `demographics_visible`, `mapping`), `repeats`, `base_age`, `age_difference`, `tasks`; issue #62: `kind` (`full`, `fractional`, `sample`), `cells`, `geometries`, `exact_repeats` (`cells`, `times`), `counterfactual_pairs` (`screening-designs.md`) |
-| `protocol` | `max_decision_points` (3), `min_gap_s` (1), `no_conflict_end_s` (1), `max_prompted` (none), `speech_words_per_second` (2.5) |
-| `templates` | `core` (`resolve_v2`; `resolve_v3` for a design that varies an RF-5 or RF-6 factor, issue #61; `resolve_v4`, named, also gives the other's age and gender from 10 m, issue #64), `debrief` (`resolve_debrief_v1`); with factors also `factors` (`resolve_factors_v1`) and `pairwise` (`resolve_pairwise_v1`) |
+| `protocol` | `max_decision_points` (3), `min_gap_s` (1), `no_conflict_end_s` (1), `max_prompted` (none), `speech_words_per_second` (2.5), `execution` (`rf4`, or `as_prompted`: issue #64, `execute.py`) |
+| `templates` | `core` (`resolve_v2`; `resolve_v3` for a design that varies an RF-5 or RF-6 factor, issue #61; `resolve_v4`, named, also gives the other's age and gender from 10 m, issue #64; `resolve_v5`, named, also lets any step have a `start`, issue #64), `debrief` (`resolve_debrief_v1`); with factors also `factors` (`resolve_factors_v1`) and `pairwise` (`resolve_pairwise_v1`) |
 | `llm_view` | the perception config (`configs/resolution/llm_view_v1.yaml`) |
 | `llm` | `client`, `mock_policy` (`resolution_rehearsal_v1`), `model`, `temperature`, `max_tokens` (400), `thinking` (disabled), `transport_retries` |
 | `budget` | `cap_usd` (on this experiment's own calls), `ledger`, `over_cap` (`refuse`, the default, or `stop_at_cap`; issue #64, section 6) |

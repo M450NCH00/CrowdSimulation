@@ -156,6 +156,56 @@ changed over earlier issues. What I found, and told the user:
   sessions' records, prompts and raw replies are committed, as D13 requires.
 - Next step: the user's decision.
 
+### 2026-10-24 — The user's decisions; resolve_v5 and protocol.execution
+- **The user's decisions** (options I gave; the user chose):
+  1. A turn walks at its angle, as the prompt says ("make the executor match the prompt"),
+     opt-in per config so earlier replays rebuild as before.
+  2. **A start is allowed on any step** (not my recommendation, which was a retry message saying
+     why a reply failed; the user chose to accept what the model was evidently trying to say).
+  3. Rerun the whole pilot under a new experiment name with the rest of the cap, keeping the 12
+     sessions as a documented first batch.
+- **A third mismatch found while checking the fix (free, no LLM call).** I replayed the 12 paid
+  sessions' recorded plans with turns at their angle: still 2 of 12 resolved in `plan_only`, 8
+  collisions. The trajectories showed why: the plans are time-bounded sidesteps ("left 10 degrees
+  for 2 s"), and when a step ends the executor steers the agent back to its original line, often
+  before the meeting (agent 0 of `I_head_on_02dfbadb_54f8aa95_r1` reached y = 0.52 m and was back
+  near 0.25 m when they met). The prompt says only "After the last step ends, you walk on towards
+  where you are going". A scratch patch that keeps the line after a step resolved 4 of 12. I asked
+  the user; **the user chose: keep the new line until the encounter is over.**
+- What I built:
+  - **`resolve_v5`** (frozen 2026-10-24): `resolve_v4` except two sentences of the step format
+    (any step may have a start, `after_seconds` counted from now; a later step waits for its
+    start, the agent walking on meanwhile) and `later_step_start: true`. The retry and the
+    description are `resolve_v4`'s. `ReplyContext.later_step_start` lets the parser accept a later
+    start only under a template that says so; `steps_from_dicts` (the replay) accepts it, since the
+    parser decided when the reply came.
+  - **The executor:** a later step whose start has not come puts the plan back in `WAITING` for
+    that step (`Plan.waiting_for`), with the agent walking its path meanwhile, as between steps.
+    No earlier plan has a later start, so RF-4's runs are unchanged.
+  - **`protocol.execution`**: `rf4` (default) or `as_prompted`. Under `as_prompted` a turn walks
+    at its angle off the path's direction where the step began, and between steps and after the
+    last, until the encounter is over, the agent walks parallel to its path at its own speed
+    (only once a step has run, so an empty plan still reproduces the plain run). The session record
+    names it only when not `rf4`, and the replay reads it from there. I first wrote this as
+    `protocol.turn: offset | angle`; renamed to `execution` when the third change joined it, since
+    it is no longer only about turns.
+  - Replayed under the real `as_prompted` code, rf_pilot's 12 plans resolve 4 of 12 in `plan_only`
+    and in `plan_orca` (plain ORCA 0 of 12), with 7 collisions left in `plan_only`. What remains
+    looks like coordination failures (one agent goes to its left and the other to its right, both
+    to the same side of the passage) and zigzag plans, which the pilot is meant to measure.
+- Tests: `test_execute.py` (a turn as prompted moves 1.3 × 2.5 × sin 8° aside and holds −8°, under
+  `rf4` it settles under 0.30 m; after its steps the agent keeps its line as prompted and steers
+  back under `rf4`; empty plans give the same run under both; a later step waits for its start
+  from the decision, or starts at once if due; `at_distance_m` on a later step; the parser takes a
+  later start only when allowed; the replay reads `execution` and rebuilds the live run).
+  `test_pairwise.py` (`resolve_v5` is `resolve_v4` but for two step-format lines; the protocol
+  reads a later start only under `resolve_v5` and records `execution`; `execution` described only
+  when not the default). 114 passed in the two files.
+- `configs/resolution/rf_pilot_v2.yaml`: `rf_pilot`'s design with `resolve_v5`,
+  `execution: as_prompted`, cap USD 0.18 (the issue's USD 0.20 less rf_pilot's USD 0.013398,
+  rounded down). `rf_pilot.yaml` is left as it was, since its run folder holds its config. Mock
+  rehearsal: 72 sessions, all on `resolve_v5` and `as_prompted`.
+
 ## Open questions / risks
 
 ## Summary (fill in at the end)
