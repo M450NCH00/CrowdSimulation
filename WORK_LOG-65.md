@@ -184,6 +184,63 @@ about 790 sessions): about USD 0.70 off-peak. Balance USD 1.41 (2026-10-24).
   its retry. Not changed mid-run (templates frozen, one design): a note for a `resolve_v7`.
 - Then the remaining 252 sessions in one run, off-peak.
 
+### 2026-10-24 23:55 — The paid run is done
+- **288 of 288 completed**, 1,887 sends, all off-peak, no API error. **USD 0.289517** (ledger) of
+  the USD 0.35 cap; USD 0.00101 a session. Balance **USD 1.41 → 1.13**, consistent with the ledger
+  at cent precision. The projection after 36 sessions (about 0.30) held.
+- **Correction of the batch figure above:** over the whole run, 63 of 1,887 sends were unreadable
+  (3.3%; RF-9: 63 of 492, 12.8%), and 30 of 1,283 decision points (2.3%) stayed unreadable after
+  the retry. The first 243 sends had undercounted one form: an event used as a later step's
+  `start` (`"start": "other_passes"`), 53 sends. Two `until`s were `{"after_seconds": …}` and two
+  `{"event": "other_passes"}`. A `resolve_v7` could read the start form; not changed mid-run.
+
+### 2026-10-25 00:10 — Analysis (tasks 5 to 7)
+- `python -m analysis.gate`: **59 of 192 (0.31, 95% CI 0.25 to 0.38): head-on fails the gate.**
+  Independent 0.34, non-verbal 0.27, talk 0.31; aligned 0.33, 20 cm apart 0.28; `plan_orca` 0.34;
+  plain ORCA 0.
+- **Why it fails, found by reading the replays:** 116 of the 133 failures are collisions, yet every
+  pair ended on compatible sides (both right 123, both left 69). The sidestep is too small. Wrote
+  `analysis/lateral.py` (with a test) so that the measure is reproducible: when level, collisions
+  are a median 0.29 m apart sideways, resolved sessions 0.88 m; each agent moved aside 0.28 m
+  against 0.45 m. First plans of failures turn less (12° against 15° median) and 19 do not turn.
+  I first wrote "bodies 0.5 m wide" in the report; the prompts say 0.5 m or 0.7 m (a load), so the
+  report now says both.
+- `python -m analysis` (RF-8): Holm over the whole report leaves own assertiveness on slowing
+  (OR 0.26), familiarity on signalling (OR 221) and attractiveness on signalling (OR 5.3), plus
+  the conditions' decision points. Nothing on resolution (best uncorrected: p1 assertiveness OR
+  0.47, p = 0.011). No counterfactual pair above the noise floor (behaviour 0.86, who first 0.69,
+  side 0.42). All 24 exact-repeat cells are coin flips (mean stability 0.47).
+- Signals 431 (nod, eye contact, wave on, hand up); messages in 34 of 64 talk sessions (RF-9: 1 in
+  24), many greetings between acquaintances; resolution the same with or without them.
+- Told: the other's factors at 1,282 of 1,283 decision points.
+- Write-up: `llm_negotiation/runs/rf10_round1_head_on/screen_report.md` (Step 1 answer, the gate,
+  how it fails, conditions, factors, the shortlist, caveats). Every number in it was checked
+  against a file; two were corrected (the unreadable count and the body width).
+
+## Advice for later rounds (task 8, D15)
+1. **Conditions.** No condition differed in resolution, and non-verbal costs most (USD 0.00133 a
+   session). For the lean rounds: **independent and talk**, dropping non-verbal; round 3 ("excuse
+   me") needs talk anyway. Talk now speaks (34 of 64), so it is no longer the near-silent
+   condition RF-9 saw.
+2. **Core factors that mattered** (on behaviour, not on resolution): assertiveness, familiarity,
+   residence, the other's age; perceived attractiveness for signalling. Next in line, about as
+   strong uncorrected as the other's age: own distraction (kept left, p = 0.002) and mobility aid
+   (signalling, p = 0.003 for the other's, 0.008 for one's own). (I first wrote that distraction
+   and mobility aid showed nothing clear; a check of every term's smallest p corrected it.) Weakest:
+   urgency (smallest p 0.09), memory note (0.03), time of day (0.04), surroundings (0.07), gender
+   (0.04), own age (0.08); the ethnicity pair as a cell factor 0.5, as the agent's `same_ethnicity`
+   0.019 (not a candidate for a rule in any case). A lean round could fix the weakest at one level and screen 6 to 8
+   factors, which RF-9's sizing rule supports far better than 16.
+3. **Geometries: 1 is enough** for a lean round. Aligned and 20 cm apart resolved alike (0.33 and
+   0.28, intervals overlapping), and the geometry term was not significant in any model. Spend
+   the sessions on exact repeats and counterfactual pairs instead: the noise floor is the limit.
+4. **Before round 2, a decision for the user:** whether the sidestep finding is the model or the
+   description. The view gives the other's distance and bearing but not how far their walking line
+   is from one's own; a `resolve_v7` that says it (and reads `"start": "<event>"`) would test that.
+   Changing it changes the experiment, so it is not done here.
+5. **Cost:** USD 0.001 a session off-peak at this design's shape; a lean round of 50 to 80 sessions
+   in two conditions is about USD 0.05 to 0.08.
+
 ## Open questions / risks
 1. ~~Paid approval for #65 is not recorded~~ Recorded 2026-10-24, cap USD 0.35.
 2. **The screen is underpowered for 16 factors** (about 69 resolved outcomes in 288 sessions at
@@ -198,7 +255,32 @@ about 790 sessions): about USD 0.70 off-peak. Balance USD 1.41 (2026-10-24).
    rate in the counterfactual pairs against the exact-repeat noise floor, plus its descriptive
    table; Firth would need a new dependency and a new estimator, which is more than this issue's
    session. The user's call. **Decided by the user, 2026-10-24: as recommended.**
-5. **The paid run's numbers:** 288 sessions (not the 276 first estimated), about USD 0.25
-   off-peak; the proposed cap USD 0.35 needs recording in `CLAUDE.md` with the approval.
+5. **The paid run's numbers:** 288 sessions (not the 276 first estimated); spent USD 0.2895 of
+   the USD 0.35 cap recorded in `CLAUDE.md`.
+6. **Head-on failed the gate.** By the issue's rule no rule is extracted from round 1 in RF-11
+   unless the supervisor says otherwise. That is the supervisor's call, and it affects RF-11 (#66)
+   directly: the agents choose a side reliably (compatible in 192 of 192), so a side-choice rule
+   could still be extracted even though the sidesteps fail physically.
+7. **Sidestep size: model or description?** (advice 4). Open; not tested here.
+8. **The run folder is 73 MB**, committed as RF-9's was (`.gitignore`: paid runs are research
+   data), mostly replays (35 MB) and session records (33 MB).
 
-## Summary (fill in at the end)
+## Summary
+**What changed.** RF-9's three fixes in a new frozen core template `resolve_v6` and a protocol
+setting (`no_conflict_waits_for_plans`), all off by default; an optional `resolution_gate` config
+block; `configs/resolution/round1_head_on_screening.yaml` (16 factors, 32 cells, 2 geometries, 3
+conditions, exact repeats and 4 counterfactual pairs: 288 sessions); `analysis.gate` and
+`analysis.lateral`; the paid run `runs/rf10_round1_head_on/` with its analysis and
+`screen_report.md`; `CLAUDE.md` records the approval (#65 only, USD 0.35) and the balance.
+
+**Result.** Step 1 for head-on: the LLM agents' own plans resolve 0.31 of meetings (CI 0.25 to
+0.38): **fails the 0.50 gate**. They agree on sides but sidestep too little; signalling and
+talking do not help. Phase B shortlist: assertiveness, familiarity, residence, the other's age,
+perceived attractiveness (never readable by a rule).
+
+**How it was verified.** Unit tests for every fix, the gate and the lateral measure
+(`tests/test_resolve_v6.py` 29, `analysis/tests` 65 with the new ones); the full `llm_negotiation`
+suite (1879 passed after one expected test update); a mock rehearsal of the whole screen (288 of
+288) through the gate and RF-8's analysis before paying; a 6-session and a 30-session paid batch
+read before the rest; the ledger against the account balance; and every number in the report
+checked against its file.
