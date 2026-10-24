@@ -12,6 +12,11 @@ someone else can be told (``<name>_visible`` switches it); the base level has no
 
 **Pairwise factors** (RF-6): from the outcome row's own point of view columns
 (``p1_finds_other_attractive``, ``p1_knows_other``), 0 or 1; both levels have a line.
+
+**Real ethnicity** (RF-26, issue #92; ``negsim/resolution/ethnicity.py``): each person's group
+(``p1_ethnicity``, ``p2_ethnicity``, one of :data:`ETHNICITY_GROUPS`); the design's
+``ethnicity_pair`` (same or different) and its switch ``ethnicity_visible``. Every group has a
+line, so the other's is told whenever ``<p>_other_ethnicity_shown`` >= 1.
 """
 
 from __future__ import annotations
@@ -37,10 +42,12 @@ PAIRWISE: dict[str, str] = {
     "finds_other_attractive": "perceived_attractiveness",
     "knows_other": "familiarity",
 }
+#: Real ethnicity's groups (issue #92), in negsim's order.
+ETHNICITY_GROUPS = ("chinese", "malay", "indian", "others")
 #: Every design column a cell may have (``negsim.resolution.design.ALL_FACTORS``).
 DESIGN_COLUMNS = (
-    "age_pair", "gender_pair", "task", *PERSON, "demographics_visible", *(f"{name}_visible" for name in OBSERVABLE),
-    *SITUATIONS, "attractiveness_0_sees_1", "attractiveness_1_sees_0", "familiarity",
+    "age_pair", "gender_pair", "task", *PERSON, "ethnicity_pair", "demographics_visible", *(f"{name}_visible" for name in OBSERVABLE),
+    "ethnicity_visible", *SITUATIONS, "attractiveness_0_sees_1", "attractiveness_1_sees_0", "familiarity",
     "attractiveness_visible", "familiarity_visible", "mapping",
 )
 
@@ -53,6 +60,7 @@ BASE_LEVEL: dict[str, str] = {
     "age_pair": "same", "task": "none", "mapping": "p1_lower", "demographics_visible": "True",
     **{f"{name}_visible": "True" for name in OBSERVABLE},
     "attractiveness_visible": "True", "familiarity_visible": "True", "condition": "independent",
+    "ethnicity_pair": "same", "ethnicity_visible": "True",
 }
 
 
@@ -76,6 +84,10 @@ def factor_of(predictor: str) -> str:
             return name
     if predictor == "pairwise_unseen":
         return "pairwise_visible"
+    if predictor == "same_ethnicity":  # issue #92
+        return "ethnicity_pair"
+    if predictor == "ethnicity_unseen":
+        return "ethnicity_visible"
     for name, (_, marked) in SITUATIONS.items():
         if predictor == f"{name}_{marked}":
             return name
