@@ -333,8 +333,11 @@ def test_the_cost_preview_counts_the_pairwise_lines():
 # --- the ethics gate (task 6) ----------------------------------------------------------------------
 
 
-def test_the_repository_records_no_sign_off_for_attractiveness_yet():
-    assert not E.attractiveness_signed_off()
+def test_the_repository_records_the_supervisors_sign_off_for_attractiveness():
+    """Recorded by the user in CLAUDE.md on 2026-10-24 (issue #92). The fictional group's is not:
+    real ethnicity replaced it in track #55."""
+    assert E.attractiveness_signed_off()
+    assert not rg.ethnicity_signed_off()
 
 
 def test_the_sign_off_is_one_exact_sentence(tmp_path):
@@ -382,10 +385,18 @@ def test_a_mock_run_with_attractiveness_on_needs_no_sign_off(tmp_path, monkeypat
     assert result.status == "completed"
 
 
-def test_the_plan_says_a_paid_run_would_be_refused():
+def test_the_plan_says_a_paid_run_would_be_refused(tmp_path, monkeypatch):
     said = []
-    E.print_plan(pairwise_config("said", factors_={"attractiveness_1_sees_0": ["unremarkable"]}), out=said.append)
+    on = pairwise_config("said", factors_={"attractiveness_1_sees_0": ["unremarkable"]})
+    monkeypatch.setattr(E, "SIGN_OFF_FILE", tmp_path / "missing.md")
+    E.print_plan(on, out=said.append)
     assert any("perceived attractiveness is on" in line for line in said)
+    said.clear()
+    claude = tmp_path / "CLAUDE.md"
+    claude.write_text(SIGN_OFF + "\n", encoding="utf-8")
+    monkeypatch.setattr(E, "SIGN_OFF_FILE", claude)
+    E.print_plan(on, out=said.append)
+    assert not any("perceived attractiveness is on" in line for line in said)  # signed off: no warning
     said.clear()
     E.print_plan(pairwise_config("unsaid", factors_={"familiarity": ["strangers"]}), out=said.append)
     assert not any("attractiveness" in line for line in said)

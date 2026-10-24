@@ -127,6 +127,9 @@ schema, prompting pipeline, generation, validation, the bridge to CrowdGym) are
 in `README.md`, "Order of work (from the plan) and current status".
 
 ## Supervisor decisions
+Ethics sign-off for the perceived-attractiveness factor (issue #61): approved by the supervisor on 2026-10-24
+
+Ethics sign-off for the real-ethnicity factor (issue #92): approved by the supervisor on 2026-10-24
 
 ### Meeting of Tuesday 2026-10-20
 The user's notes from the meeting, word for word:
