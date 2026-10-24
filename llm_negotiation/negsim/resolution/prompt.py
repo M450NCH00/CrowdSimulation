@@ -106,6 +106,11 @@ class CoreTemplate:
         and on a short line only by a template that has wording for it (``resolve_v3``, issue #61)."""
         return detail == DETAIL_FULL or "seen_short_extra" in self.data["view"]
 
+    @property
+    def later_step_start(self) -> bool:
+        """Whether a later step of a reply may have a ``start`` (``resolve_v5``, issue #64)."""
+        return bool(self.data.get("later_step_start", False))
+
     def prints_demographics(self, detail: str) -> bool:
         """Whether the other's age and gender are printed at this detail level (when visible):
         always in full detail, and on a short line only by ``resolve_v4`` (issue #64)."""

@@ -18,6 +18,7 @@ from negsim.negotiation import prompts
 from negsim.resolution import design as D
 from negsim.resolution import experiment as E
 from negsim.resolution import pairwise as W
+from negsim.resolution import protocol as P
 from negsim.resolution.perceive import Exchange
 from negsim.resolution import factors as F
 from negsim.resolution.prompt import FACTOR_CORE_TEMPLATE, SIMULATION_CORE_TEMPLATE, CoreTemplate, default_core, render
@@ -533,6 +534,49 @@ def test_without_demographics_or_anyone_beyond_5_m_resolve_v4_renders_what_resol
         hidden = dict(show_age=False, show_gender=False)
         assert (render(look(bodies, perceiver(core=V4, **hidden)), "talk", PASSING, V4).user
                 == render(look(bodies, perceiver(core=V3, **hidden)), "talk", PASSING, V3).user)
+
+
+# --- resolve_v5 (the user's decision of 2026-10-24, issue #64) ---------------------------------------
+
+
+V5 = CoreTemplate.load("resolve_v5")
+
+
+def test_resolve_v5_is_resolve_v4_with_a_start_allowed_on_any_step():
+    assert prompts.load_manifest()["resolve_v5"]["kind"] == "resolution"
+    assert (V1.later_step_start, V2.later_step_start, V3.later_step_start, V4.later_step_start, V5.later_step_start) == (False,) * 4 + (True,)
+    assert V5.data["view"] == V4.data["view"]
+    for key in ("conditions", "event_item", "decision_point", "role", "system"):
+        assert V5.data[key] == V4.data[key]
+    changed = [(a, b) for a, b in zip(V4.data["step_format"].splitlines(), V5.data["step_format"].splitlines()) if a != b]
+    assert len(changed) == 2 and len(V4.data["step_format"].splitlines()) == len(V5.data["step_format"].splitlines())
+    assert "in the opening step only" in changed[1][0] and "in any step" in changed[1][1] and "counted from now" in changed[1][1]
+    for condition in ("independent", "non_verbal", "talk"):
+        assert V5.system(condition, PASSING) != V4.system(condition, PASSING)
+        assert V5.retry(condition) == V4.retry(condition)
+    bodies = [at(0, 0.0, 0.0, vx=1.3), at(1, 8.0, 0.0, vx=-1.3)]
+    assert render(look(bodies, perceiver(core=V5)), "talk", PASSING, V5).user == render(look(bodies, perceiver(core=V4)), "talk", PASSING, V4).user
+
+
+def test_the_protocol_reads_a_later_start_only_under_resolve_v5_and_records_the_execution():
+    later = reply("Slow, then move to my left.", [{"speed_mps": 1.0, "until": {"seconds": 0.5}},
+                                                  {"start": {"after_seconds": 1}, "turn": {"to": "left", "degrees": 15}, "until": {"seconds": 1}}])
+    _, record, _ = session_on(PASSAGE, "independent", {0: later, 1: SLOW}, core=V4)
+    assert all(a["parse_error"].startswith("start_on_later_step") for a in record["decision_points"][0]["attempts"])
+    assert "execution" not in record["protocol"]
+    settings = P.ProtocolSettings(execution="as_prompted")
+    run, record, _ = session_on(PASSAGE, "independent", {0: later, 1: SLOW}, core=V5, settings=settings)
+    point = next(p for p in record["decision_points"] if p["agent_id"] == 0)
+    assert point["parse_error"] is None and point["parsed"]["steps"][1]["start"] == {"after_seconds": 1.0}
+    assert record["protocol"]["execution"] == "as_prompted" and run.run.driver.execution == "as_prompted"
+
+
+def test_protocol_execution_is_described_only_when_not_the_default():
+    assert "execution" not in P.ProtocolSettings().as_dict()
+    assert P.ProtocolSettings.from_mapping({"execution": "as_prompted"}).as_dict()["execution"] == "as_prompted"
+    assert P.ProtocolSettings.from_mapping({"execution": "rf4"}) == P.ProtocolSettings()
+    with pytest.raises(ConfigError):
+        P.ProtocolSettings.from_mapping({"execution": "sideways"})
 
 
 def test_the_default_core_template_is_resolve_v3_only_for_a_design_with_factors():

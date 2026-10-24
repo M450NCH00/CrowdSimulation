@@ -45,11 +45,11 @@ def result_json(result):
     }, sort_keys=True, default=str)
 
 
-def run_plans(mode, plans, at_s=3.0, scenario=PASSING, name="wide_corridor_head_on", spec=None, **overrides):
+def run_plans(mode, plans, at_s=3.0, scenario=PASSING, name="wide_corridor_head_on", spec=None, execution=X.EXECUTION_RF4, **overrides):
     """Run a shipped scenario plainly until ``at_s``, give ``plans`` (agent -> reply-format steps),
     run to the end, and return (run, result, outcome columns)."""
     sim = AvoidanceSimulation(spec if spec is not None else crowd(name, **overrides))
-    run = X.PlanRun(sim, mode, scenario, (0, 1))
+    run = X.PlanRun(sim, mode, scenario, (0, 1), execution)
     run.advance({}, at_s)
     run.advance({agent: X.steps_from_dicts(raw, sim.world.agents[agent].spec.max_speed, tuple(scenario.events)) for agent, raw in plans.items()}, math.inf)
     result = run.finish()
@@ -304,6 +304,116 @@ def test_steps_from_dicts_uses_the_parsers_checks():
         X.PlanDriver("orca_only", PASSING, (0, 1))
     with pytest.raises(ValueError):
         X.PlanDriver(X.MODE_PLAN_ONLY, PASSING, (0, 0))
+
+
+# --- issue #64: a turn that holds its angle, and a start on a later step ---------------------------
+
+
+def _row(result, agent, step):
+    return next(r for r in result.trajectory if r["agent_id"] == agent and r["step"] == step)
+
+
+def test_a_turn_holds_its_angle_as_prompted_and_settles_near_the_path_under_rf4():
+    """Agent 0 walks along +x (its right is -y), and turns right 8 degrees for 2.5 s from 3 s. As
+    the prompt describes a turn, it moves 1.3 x 2.5 x sin 8 = 0.45 m aside; under RF-4's offset it
+    settles about lookahead x tan 8 = 0.28 m aside, its heading turning back toward the path."""
+    plan = {0: [{"turn": {"to": "right", "degrees": 8}, "speed_mps": 1.3, "until": {"seconds": 2.5}}], 1: []}
+    aside = {}
+    for execution in X.EXECUTIONS:
+        run, result, _ = run_plans(X.MODE_PLAN_ONLY, plan, execution=execution)
+        start, end = (records(run, 0)[0][key] for key in ("start_step", "end_step"))
+        assert end - start == 25
+        last = _row(result, 0, end - 1)
+        heading = math.degrees(math.atan2(last["pref_vy_mps"], last["pref_vx_mps"]))
+        aside[execution] = _row(result, 0, start)["y_m"] - _row(result, 0, end)["y_m"]
+        if execution == X.EXECUTION_AS_PROMPTED:
+            assert heading == pytest.approx(-8.0, abs=1e-4)  # the trajectory rounds its velocities
+        else:
+            assert -8.0 + 1.0 < heading < 0.0
+    assert aside[X.EXECUTION_AS_PROMPTED] == pytest.approx(1.3 * 2.5 * math.sin(math.radians(8)), abs=0.03)
+    assert aside[X.EXECUTION_RF4] < 0.30 < 0.40 < aside[X.EXECUTION_AS_PROMPTED]
+
+
+def test_after_its_steps_the_agent_keeps_its_line_as_prompted_and_steers_back_under_rf4():
+    """Agent 0 turns right 10 degrees for 1.5 s from 3 s, then has no step left; the encounter is
+    still on. As prompted it walks on parallel to its path, where the step took it; under RF-4 it
+    steers back to its path."""
+    plan = {0: [{"turn": {"to": "right", "degrees": 10}, "speed_mps": 1.3, "until": {"seconds": 1.5}}], 1: []}
+    for execution in X.EXECUTIONS:
+        run, result, _ = run_plans(X.MODE_PLAN_ONLY, plan, execution=execution)
+        end = records(run, 0)[0]["end_step"]
+        later_ = _row(result, 0, end + 10)
+        assert run.driver.released_step is None or run.driver.released_step > end + 10
+        if execution == X.EXECUTION_AS_PROMPTED:
+            assert later_["pref_vy_mps"] == pytest.approx(0.0, abs=1e-6) and later_["y_m"] == pytest.approx(_row(result, 0, end)["y_m"], abs=1e-3)
+        else:
+            assert later_["pref_vy_mps"] > 0.05  # back toward its path, at +y
+
+
+def test_as_prompted_changes_nothing_but_turns_and_what_follows_a_step():
+    empty = {0: [], 1: []}
+    for mode in X.MODES:
+        _, rf4, _ = run_plans(mode, empty)
+        _, prompted, _ = run_plans(mode, empty, execution=X.EXECUTION_AS_PROMPTED)
+        assert result_json(rf4) == result_json(prompted)  # empty plans: no step ever ran
+    with pytest.raises(ValueError):
+        X.PlanDriver(X.MODE_PLAN_ONLY, PASSING, (0, 1), "sideways")
+
+
+def later(start):
+    return [{"speed_mps": 1.0, "until": {"seconds": 0.5}}, {"start": start, "turn": {"to": "left", "degrees": 15}, "until": {"seconds": 1}}]
+
+
+def test_steps_from_dicts_reads_a_later_start_and_the_parser_takes_one_only_when_allowed():
+    from negsim.resolution.reply import START_AFTER_SECONDS, ReplyContext, parse_reply
+
+    assert steps(later({"after_seconds": 2}))[1].start.kind == START_AFTER_SECONDS
+    raw = json.dumps({"intent": "Slow, then move left.", "steps": later({"at_distance_m": 3}), "reason": "r"})
+    with pytest.raises(TurnParseError, match="start_on_later_step"):
+        parse_reply(raw, ReplyContext("independent", 2.0, EVENTS, 9.0))
+    assert parse_reply(raw, ReplyContext("independent", 2.0, EVENTS, 9.0, later_step_start=True)).steps[1].start.value == 3.0
+    with pytest.raises(TurnParseError, match="start_at_distance_beyond_current"):
+        parse_reply(raw, ReplyContext("independent", 2.0, EVENTS, 2.0, later_step_start=True))
+
+
+def test_a_later_step_waits_for_its_start_counted_from_the_decision_walking_its_path_meanwhile():
+    run, result, _ = run_plans(X.MODE_PLAN_ONLY, {0: later({"after_seconds": 2}), 1: []})
+    first, second = records(run, 0)
+    given = run.driver.decisions[0].given_step
+    assert first["end_step"] == given + 5 and first["ended_by"] == X.ENDED_SECONDS
+    assert second["start_step"] == given + 20  # 2 s from the decision, not from the first step's end
+    between = _row(result, 0, given + 12)
+    assert math.hypot(between["pref_vx_mps"], between["pref_vy_mps"]) == pytest.approx(1.3, abs=1e-6)  # its own speed, along its path
+    assert abs(between["pref_vy_mps"]) < 0.05
+    turning = _row(result, 0, given + 21)
+    assert math.degrees(math.atan2(turning["pref_vy_mps"], turning["pref_vx_mps"])) > 10.0
+    assert [p.outcome for p in run.driver.decisions if p.agent_id == 0] == ["completed"]
+
+
+def test_a_later_step_at_distance_starts_when_the_other_is_that_close_and_one_already_due_starts_at_once():
+    run, _, _ = run_plans(X.MODE_PLAN_ORCA, {0: later({"at_distance_m": 3}), 1: []})
+    first, second = records(run, 0)
+    track = {row.step: row for row in run.driver.track}
+    close = lambda k: math.dist(*(track[k].bodies[a].xy for a in (0, 1))) <= 3.0 + 1e-9
+    assert second["start_step"] > first["end_step"] and close(second["start_step"]) and not close(second["start_step"] - 1)
+    run, _, _ = run_plans(X.MODE_PLAN_ONLY, {0: later({"after_seconds": 0.2}), 1: []})
+    first, second = records(run, 0)
+    assert second["start_step"] == first["end_step"]
+
+
+def test_a_replay_reads_the_execution_from_the_session_and_rebuilds_the_live_run():
+    plan = source_plan(CaseStore().get("head_on_02dfbadb", 2))
+    for execution in X.EXECUTIONS:
+        sim = simulation_for(plan)
+        run = X.PlanRun(sim, X.MODE_PLAN_ONLY, PASSING, (0, 1), execution)
+        run.advance({}, 3.0)
+        run.advance({0: steps(later({"after_seconds": 1.5})), 1: steps(RIGHT)}, math.inf)
+        live = run.finish()
+        session = {**SESSION, "decisions": run.driver.decisions_record(), "release": run.driver.release_record(),
+                   **({"protocol": {"execution": execution}} if execution != X.EXECUTION_RF4 else {})}
+        driver = R.driver_for(session, X.MODE_PLAN_ONLY, plan, PASSING)
+        assert driver.execution == execution
+        assert result_json(simulation_for(plan, driver).run()) == result_json(live)
 
 
 # --- the outcome columns, the replay and its rebuild -----------------------------------------------

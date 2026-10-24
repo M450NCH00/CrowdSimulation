@@ -67,11 +67,11 @@ from datetime import datetime, timezone
 from typing import Any, Mapping, Optional, Sequence
 
 from ..avoidance.simulation import STATUS_COLLISION, STATUS_COMPLETED, STATUS_DEADLOCK
-from ..configutil import ConfigError, as_number, check_keys
+from ..configutil import ConfigError, as_choice, as_number, check_keys
 from ..llm.base import LLMClient, Usage
 from ..negotiation.protocol import MAX_ATTEMPTS_PER_TURN, request_with_retry
 from ..rulegen.protocol import LLMSettings
-from .execute import COMPLETED, MODE_PLAN_ONLY, RUNNING, WAITING, PlanRun
+from .execute import COMPLETED, EXECUTION_RF4, EXECUTIONS, MODE_PLAN_ONLY, RUNNING, WAITING, PlanRun
 from .perceive import (
     Exchange, LLMViewSettings, Perceiver, bodies_in, changes_since, in_sight, perceiver_for, safety_distance, sees, view_in,
 )
@@ -128,8 +128,9 @@ class ProtocolSettings:
     no_conflict_end_s: float = 1.0  # [placeholder]
     max_prompted: Optional[int] = None  # the cap on prompted people per encounter (D11, D12); None: no cap
     speech_words_per_second: float = 2.5  # [placeholder]
+    execution: str = EXECUTION_RF4  # issue #64: how a plan is carried out (execute.EXECUTIONS)
 
-    KEYS = ("max_decision_points", "min_gap_s", "no_conflict_end_s", "max_prompted", "speech_words_per_second")
+    KEYS = ("max_decision_points", "min_gap_s", "no_conflict_end_s", "max_prompted", "speech_words_per_second", "execution")
 
     def __post_init__(self) -> None:
         if self.max_decision_points < 1:
@@ -138,6 +139,8 @@ class ProtocolSettings:
             raise ConfigError(f"protocol.max_prompted: a whole number of at least 2, or null, got {self.max_prompted!r}")
         if self.speech_words_per_second <= 0.0:
             raise ConfigError("protocol.speech_words_per_second: more than 0")
+        if self.execution not in EXECUTIONS:
+            raise ConfigError(f"protocol.execution: one of {EXECUTIONS}, got {self.execution!r}")
 
     @classmethod
     def from_mapping(cls, raw: Any, where: str = "protocol") -> "ProtocolSettings":
@@ -149,6 +152,7 @@ class ProtocolSettings:
             no_conflict_end_s=as_number(block.get("no_conflict_end_s", default.no_conflict_end_s), f"{where}.no_conflict_end_s", minimum=0.0),
             max_prompted=block.get("max_prompted", default.max_prompted),
             speech_words_per_second=as_number(block.get("speech_words_per_second", default.speech_words_per_second), f"{where}.speech_words_per_second", minimum=0.0, strict_minimum=True),
+            execution=as_choice(block.get("execution", default.execution), f"{where}.execution", EXECUTIONS),
         )
 
     def decision_points_for(self, condition: str) -> int:
@@ -156,7 +160,10 @@ class ProtocolSettings:
         return 1 if condition == CONDITION_INDEPENDENT else self.max_decision_points
 
     def as_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        described = asdict(self)
+        if self.execution == EXECUTION_RF4:  # issue #64: named only when not the default, so older records read as before
+            del described["execution"]
+        return described
 
 
 # --- coding a plan mechanically (task 9) ----------------------------------------------------------
@@ -319,7 +326,7 @@ class EncounterSession:
             if {p, q} != {observer, other} and self.scenario.conflict_predicted(sim, p, q)
         ]
         self.trigger = {"step": sim.world.step_index, "time_s": round(sim.world.time, 6), "agent_id": observer, "other_id": other}
-        self.run = PlanRun(sim, MODE_PLAN_ONLY, self.scenario, members)
+        self.run = PlanRun(sim, MODE_PLAN_ONLY, self.scenario, members, self.settings.execution)
         self._last_conflict_s = sim.world.time
 
     def _encounter(self) -> None:
@@ -488,7 +495,7 @@ class EncounterSession:
             outcomes = self.run.driver.outcomes(agent)
             view = view_in(sim, member.perceiver, self.exchange, outcomes=[outcomes[k] for k in member.driver_decisions], **self._factor_lines(agent))
             prompt = render(view, self.condition, self.scenario, self.core)
-            context = ReplyContext.of(view, self.condition, self.scenario.events)
+            context = ReplyContext.of(view, self.condition, self.scenario.events, self.core.later_step_start)
             metadata = {
                 **self.labels, "kind": "decision", "agent_id": agent, "agent_slot": member.slot,
                 "decision_point": member.prompts + 1, "step": step,

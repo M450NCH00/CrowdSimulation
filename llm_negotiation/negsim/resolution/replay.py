@@ -50,7 +50,7 @@ from ..rulegen.cases import CaseStore
 from ..rulegen.replay import source_plan
 from ..runlog.schema import CONFIG_FILE, OUTCOME_FILE
 from ..scenarios.registry import build_crowd_scenario
-from .execute import MODE_PLAN_ORCA, MODES, PlanDriver, steps_from_dicts
+from .execute import EXECUTION_RF4, MODE_PLAN_ORCA, MODES, PlanDriver, steps_from_dicts
 from .factors import with_bodies
 from .outcomes import MODE_PLAIN_ORCA, c0_baselines, physical_outcome, report, to_csv
 from .scenario import Scenario
@@ -132,7 +132,8 @@ def pairs_of(session: Mapping[str, Any]) -> Optional[list[tuple[int, int]]]:
 def driver_for(session: Mapping[str, Any], mode: str, run_plan: AvoidanceRunPlan, scenario: Scenario) -> PlanDriver:
     """A driver with the session's plans scheduled at their steps, read back with the parser's checks."""
     agents = tuple(session["encounter"]["agents"])
-    driver = PlanDriver(mode, scenario, agents)
+    # Issue #64: how plans are carried out is the session's protocol.execution (named only when not the default).
+    driver = PlanDriver(mode, scenario, agents, (session.get("protocol") or {}).get("execution", EXECUTION_RF4))
     specs = build_crowd_scenario(run_plan.scenario_config).agents
     for decision in session["decisions"]:
         agent = int(decision["agent_id"])
