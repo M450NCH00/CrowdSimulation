@@ -75,7 +75,7 @@ from ..rulegen.replay import source_plan
 from ..runlog.schema import OUTCOME_FILE
 from ..scenarios.registry import build_crowd_scenario
 from .design import ALL_FACTORS, KIND_FRACTIONAL, KIND_SAMPLE, PERSON_FACTORS, ResolutionDesign, Session, cell_code, sessions_for
-from .execute import MODES, MODE_PLAN_ONLY, MODE_PLAN_ORCA
+from .execute import MODES, MODE_PLAN_ONLY, MODE_PLAN_ORCA, steps_from_dicts
 from .factors import FACTOR_TEMPLATE, FACTOR_VALUES_CONFIG, FactorTemplate, FactorValues, SessionFactors, with_bodies
 from .mock import POLICIES as MOCK_POLICIES
 from .outcomes import GENERAL_COLUMNS, MODE_PLAIN_ORCA, RESOLVED
@@ -83,7 +83,7 @@ from .pairwise import ATTRACTIVENESS, FAMILIARITY, PAIRWISE_TEMPLATE, PairwiseFa
 from .perceive import LLM_VIEW_CONFIG, LLMViewSettings
 from .factors import SWITCHES as OBSERVABLE
 from .prompt import DEBRIEF_TEMPLATE, CoreTemplate, DebriefTemplate, default_core
-from .protocol import SESSION_ABORTED, SESSION_COMPLETED, EncounterSession, ProtocolSettings
+from .protocol import SESSION_ABORTED, SESSION_COMPLETED, EncounterSession, ProtocolSettings, code_plan
 from .replay import plain_orca, replay_session, run_plan_for
 from .reply import ParsedReply
 from .scenario import Scenario
@@ -682,9 +682,21 @@ def decision_rows(record: Mapping[str, Any]) -> list[dict[str, Any]]:
             "time_s": point["time_s"], "condition": record["condition"], "trigger_reasons": point["trigger_reasons"],
             "parse_error": point.get("parse_error"),
             "message": parsed.get("message"), "signal": parsed.get("signal"), "intent": parsed.get("intent"),
-            "steps": parsed.get("steps"), "reason": parsed.get("reason"), "coded": point.get("coded"),
+            "steps": parsed.get("steps"), "reason": parsed.get("reason"), "coded": coded_plan(record, point),
         })
     return rows
+
+
+def coded_plan(record: Mapping[str, Any], point: Mapping[str, Any]) -> Optional[dict[str, Any]]:
+    """A decision point's plan coded again from its recorded steps and the speed the agent was
+    shown (issue #64): the coding stored in the record before issue #64 counted a step at the
+    shown speed (1.3 against 1.30005) as slowing down. A record is never rewritten, so the tables
+    code it afresh. ``None`` for an unreadable reply."""
+    parsed = point.get("parsed")
+    if parsed is None or point.get("coded") is None:
+        return None
+    events = tuple(load_scenario(record["scenario"]).events)
+    return code_plan(steps_from_dicts(parsed.get("steps") or [], math.inf, events), point["view"]["me"]["speed_mps"])
 
 
 def debrief_rows(record: Mapping[str, Any]) -> list[dict[str, Any]]:
@@ -704,7 +716,7 @@ def _agent_columns(record: Mapping[str, Any], agent: Optional[int], prefix: str)
     session = record["session"]
     persona = session["personas"].get(str(agent), {}) if agent is not None else {}
     points = [p for p in record.get("decision_points") or [] if p["agent_id"] == agent]
-    coded = [p["coded"] for p in points if p.get("coded")]
+    coded = [c for c in (coded_plan(record, p) for p in points) if c]
     first, final = (coded[0], coded[-1]) if coded else ({}, {})
     debrief = next((d.get("parsed") or {} for d in record.get("debriefs") or [] if d["agent_id"] == agent), {})
     signals = [p["parsed"]["signal"] for p in points if p.get("parsed") and p["parsed"]["signal"] != "none"]

@@ -301,6 +301,26 @@ def test_code_plan():
     assert P.code_plan((), 1.3)["carry_on"]
 
 
+def test_a_step_at_the_speed_the_agent_was_shown_is_not_slowing_down():
+    """Issue #64: the agent is told its speed to 0.01 m/s ("1.30"); a step at 1.3 while it walks at
+    1.30005 was coded as slowing down in 16 of rf_pilot's 46 readable decision points."""
+    at = lambda speed: (Step(None, speed, Turn("right", 8), None, Until(seconds=2)),)
+    assert not P.code_plan(at(1.3), 1.3000563)["slowed"] and not P.code_plan(at(1.3), 1.2951)["slowed"]
+    assert P.code_plan(at(1.29), 1.3000563)["slowed"] and P.code_plan(at(1.2), 1.3)["slowed"]
+
+
+def test_the_tables_code_each_plan_again_from_its_recorded_steps(tmp_path):
+    config = small_config("recoded", conditions=("independent",))
+    E.run_resolution(config, out_root=tmp_path, report=lambda _: None, git=GIT)
+    path = next((tmp_path / "recoded" / "sessions").glob("*.json"))
+    record = json.loads(path.read_text(encoding="utf-8"))
+    point = next(p for p in record["decision_points"] if p.get("coded"))
+    assert E.coded_plan(record, point) == point["coded"]  # the same, where the stored coding was right
+    point["coded"] = {**point["coded"], "slowed": not point["coded"]["slowed"]}
+    assert E.coded_plan(record, point)["slowed"] is not point["coded"]["slowed"]  # recoded, not read back
+    assert E.coded_plan(record, {**point, "parsed": None}) is None
+
+
 def test_protocol_settings_are_checked():
     with pytest.raises(ConfigError):
         P.ProtocolSettings.from_mapping({"max_prompted": 1})

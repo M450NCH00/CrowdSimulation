@@ -171,14 +171,16 @@ class ProtocolSettings:
 
 def code_plan(steps: Sequence[Step], current_speed_mps: float) -> dict[str, Any]:
     """A plan coded mechanically: the side of its turns, whether it slows (a speed below the
-    current one), stops, or backs up, and when it starts."""
+    current one, as the agent was told it: to 0.01 m/s, issue #64), stops, or backs up, and when
+    it starts."""
+    told = round(current_speed_mps, 2)  # issue #64: 1.3 against 1.30005 is not slowing down
     sides = {step.turn.to for step in steps if step.turn is not None and step.turn.degrees > 0.0}
     start = steps[0].start if steps else None
     return {
         "carry_on": not steps,
         "n_steps": len(steps),
         "side": "none" if not sides else sides.pop() if len(sides) == 1 else "both",
-        "slowed": any(step.speed_mps is not None and step.speed_mps < current_speed_mps - _EPS for step in steps),
+        "slowed": any(step.speed_mps is not None and step.speed_mps < told - _EPS for step in steps),
         "stopped": any(step.speed_mps == 0.0 for step in steps),
         "backed_up": any(step.back_up_m is not None for step in steps),
         "start_distance_m": start.value if start is not None and start.kind == START_AT_DISTANCE else None,
