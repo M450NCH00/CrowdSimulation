@@ -31,6 +31,11 @@ no counterfactual pair), and writes `analysis/gate.json` and `gate.md`: the pool
 rate, pass or fail, the rate per condition and geometry with Wilson intervals, and the
 `plan_orca` and plain ORCA baselines.
 
+**Why a head-on encounter failed** (issue #65): `python -m analysis.lateral llm_negotiation/runs/<experiment>`
+reads the `plan_only` replays of the same sessions and writes `analysis/lateral.md`: the two
+walkers' lateral separation when level along the corridor, and how far each moved aside, by
+outcome (resolved, collision, near miss). Head-on cases only.
+
 An `outcomes.csv` written before issue #63 lacks two kinds of column the analysis needs (what each
 agent was told of the other, and the encounter's order). Running its experiment again rebuilds its
 tables from the session records, with no LLM call; the analysis says so when it meets one.
