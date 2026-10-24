@@ -95,6 +95,8 @@ Budget:
   to about USD 0.10 of a USD 2.00 credit, so about USD 0.41 is unaccounted for:
   either the credit was not 2.00, or the key was used outside these records.
   Plan caps against the balance, not against USD 2.00 (`WORK_LOG-64.md`).
+  After issue #64's pilot (USD 0.075 in the ledger): **USD 1.41**, checked
+  2026-10-24.
 
 ### Phase 1 (on hold): the behaviour dataset
 The task from the first supervisor meeting, on hold since the second meeting.

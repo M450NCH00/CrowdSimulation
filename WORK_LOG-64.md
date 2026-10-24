@@ -206,6 +206,132 @@ changed over earlier issues. What I found, and told the user:
   rounded down). `rf_pilot.yaml` is left as it was, since its run folder holds its config. Mock
   rehearsal: 72 sessions, all on `resolve_v5` and `as_prompted`.
 
-## Open questions / risks
+### 2026-10-24 — The pilot (rf_pilot_v2), paid
+- Full suite before paying: **1791 passed**. Committed (7d6b92e, ada7fd9).
+- `--client deepseek` without `--confirm`: nothing sent. Then 6 sessions (`--limit 6`) to check
+  the fixes on the real model: `start_on_later_step` gone; 2 of 6 resolved; a new failure,
+  `unknown_until` (4 of 20 decision points), an event written as an object
+  (`{"other_passes": true}`) or a step meant to end at a distance (`{"at_distance_m": 2.0}`).
+  **I did not stop again.** The two failures that made the first batch meaningless were fixed;
+  this one costs a share of decision points rather than every session, and measuring parse
+  failures by reason is part of the pilot's report (task 4). Whether to fix it for RF-10 is in
+  the recommendation below.
+- The other 66 sessions, in one run: **72 of 72 completed, USD 0.061703, all 492 sends off-peak,
+  no API error.** Issue total USD 0.075101 of USD 0.20. DeepSeek balance afterwards **USD 1.41**
+  (1.49 before): USD 0.08 billed against the ledger's 0.075, consistent to the cent.
 
-## Summary (fill in at the end)
+### 2026-10-24 — A bug in the plan coding: "slowed"
+- Found while reading the transcripts: `code_plan` marked a step at 1.3 m/s as slowing down when
+  the agent walked at 1.30005 m/s and was told "1.30". In rf_pilot, 16 of 46 readable decision
+  points were wrongly "slowed" (20 stored, 4 real).
+- Fix: `code_plan` compares against the speed as the agent was told it (to 0.01 m/s). A record
+  is never rewritten, so `experiment.coded_plan` codes each plan again from its recorded steps
+  when the tables are built (`decisions.jsonl`, the outcome rows); the coding stored in the
+  records, and shown in the transcripts' "Coded" lines, is the old one. Tests: a step at the shown
+  speed is not slowing; the tables code afresh from the recorded steps.
+- Both runs' tables rebuilt with `--limit 0` (no session run, ledger unchanged at 634 lines).
+
+### 2026-10-24 — The intent codebook, version 2 (task 6)
+- RF-8 had already committed `intent_v1` as a draft written before any reply, for RF-9 to replace
+  with v2 (#55). So task 6's "version 1" is `analysis/codebooks/intent_v2.json`, written from the
+  334 readable intents of both runs, and now the analysis default (`intent.INTENT_CODEBOOK`).
+  Its `changes_from_v1` lists each change and why. In short: a negated slowing is not slowing;
+  "to my side", "sidestep", "step aside" and giving room are keeping to a side (51 of 54
+  room-giving intents came with a turn; I first left them out, then checked the data and
+  reversed that before committing); "keep heading", "hold my line", "my course" are carrying on;
+  movement verbs in any form, with or without "my"/"the", name a side; and "let her pass on my
+  left" names the agent's side as right. "I pass X on my right" is ambiguous in the data (3 of 4
+  meant "I go right") and is not read.
+- Effect on these 334 intents (in-sample): uncodable 23 → 7; sides read 37 → 144, all 72 that can
+  be checked against a one-way plan agree; intent-against-plan mismatch 41% → 27%.
+- The scratch generator wrote JSON through a script file: a heredoc mangled the backslashes on
+  the first try (`\b` became a JSON backspace), caught by grepping the file.
+
+### 2026-10-24 — Analysis and report
+- `python -m analysis.pilot` on both runs; `python -m analysis` (RF-8) on `rf_pilot_v2`.
+  `runs/rf_pilot_v2/pilot_report.md` gives every item of task 4 with the file each number comes
+  from; `runs/rf_pilot_v2/report.md` and `cost.json` are the runner's (the acceptance criterion
+  names `runs/rf_pilot/`, which holds the paused first batch's; the pilot is `rf_pilot_v2`).
+- Findings beyond the issue's list: the model keeps right (56 of 72 sessions both kept right);
+  speech is almost never used (1 message in 24 talk sessions); debriefs are 85% "common sense";
+  a small drift by the other is described as "walking across", and 28 of 30 replies given that
+  reasoned about a crossing; 3 of 16 sessions that ended `no_conflict` collided afterwards.
+
+## Recommendation for Phase A (RF-10), task 5
+Measured: USD 0.00086 a session off-peak on average (independent 0.00046, non-verbal 0.00104,
+talk 0.00107), double at peak; RF-10's factor lines add about 2% (the screening rehearsal's
+preview per session is 0.0689 against the pilot's 0.0673). Identical prompts flip the behaviour
+in 77% of pairs; "resolved" (`plan_only`) is the rarer outcome at 24% (17 of 72).
+
+1. **Before RF-10, fix three things** (each the user's call; none is done here):
+   - the reply format: `unknown_until` was 58 of 63 unreadable sends. Accept an event written as
+     an object (`{"other_passes": true}`), and decide whether a step may end at a distance;
+   - the view's wording: a heading 10° to 30° off opposite is "walking across your direction of
+     travel"; a word for "coming towards you, drifting to your left" would stop agents reading a
+     drift as a crossing;
+   - the end of the encounter: `no_conflict` stops prompting while plans still run; either keep
+     the encounter open until the plans have ended, or re-open it when a conflict is predicted again.
+   Also, for RF-8's coder, a step-aside-and-back plan is coded side `both` (common here); coding
+   the side held at the meeting would say more.
+2. **Template and execution:** RF-10 must name the pilot's core template (`resolve_v5`, or a
+   `resolve_v6` from point 1) and `protocol.execution: as_prompted`.
+3. **Reply cap: 300 tokens.** The largest reply was 214 (decisions) and 113 (debriefs); none was
+   cut off.
+4. **Geometries per cell: keep 2.** Aligned and 20 cm apart resolved alike (8 and 9 of 36).
+5. **Exact-repeat set: 8 cells, 3 runs each, per condition** (the rehearsal's). The pilot's 2
+   cells per condition gave a noise-floor interval 0.6 to 0.9; more cells narrow it more cheaply
+   than more runs of the same cell.
+6. **Size against the noise floor, not the budget.** For about 10 events of the rarer outcome per
+   term (k screened factors, plus 2 condition terms and geometry), a screen needs about
+   10 (k + 3) / 0.24 sessions: k = 12 → about 625 (USD 0.55 off-peak), k = 8 → about 460 (USD 0.40),
+   k = 6 → about 375 (USD 0.33). Options to bring that down: screen 6 to 8 factors; drop the talk
+   condition, which spoke once in 24 sessions and resolved least (two conditions: about two
+   thirds of the sessions); or, to lower the model's own randomness, a lower temperature, which
+   would change the experiment's one sampling setting (`llm-backend.md`, section 2) and is the
+   user's or supervisor's decision.
+7. **Cap:** for the rehearsal's shape (252 sessions), USD 0.22 off-peak; a cap of **USD 0.30** with
+   `budget.over_cap: stop_at_cap`, off-peak only. For a screen sized by point 6, its sessions
+   × USD 0.0009 × 1.3. The balance is USD 1.41, and the pending total for the whole track still
+   has to be revised to fit it (`CLAUDE.md`, item 1).
+
+## Open questions / risks
+1. **Approval is for this issue only.** RF-10 needs its own approval and cap in `CLAUDE.md`, and
+   the track's total (pending item 1, about USD 1.80) no longer fits a balance of USD 1.41.
+2. **USD 0.41 of the credit is unaccounted for** in the repo's records. DeepSeek's usage page
+   would say where it went.
+3. **`protocol.execution: as_prompted` changes what a plan means physically** (a turn holds its
+   angle; after its steps an agent keeps its line until the encounter is over). It is the user's
+   decision of 2026-10-24; the supervisor may want to know, since "resolved" depends on it. The
+   first batch's plans resolve 0 of 12 under RF-4's execution and 4 of 12 under it.
+4. **A later step's `after_seconds` counts from the decision**, as the opening step's does. The
+   model's own use is ambiguous ("for 2 s, then start after 2.5 s" reads either way).
+5. **The stored "Coded" lines in the records and transcripts carry the old "slowed" bug**; the
+   tables do not. Anyone reading a transcript's "Coded" line should know.
+6. **`intent_v2` was written from, and measured on, the same 334 intents.** Its rates are
+   in-sample; RF-10's intents are the first out-of-sample test.
+7. **The model keeps right.** In Singapore traffic keeps left; whether pedestrians do is for RF-14.
+8. **Small numbers.** 24 sessions per condition: the conditions' resolution rates (8, 5, 4 of 24)
+   are not distinguishable from each other at this size.
+9. `rf_pilot.yaml` is left in the repo unchanged, with its folder: it must not be run again
+   without `--limit 0`, or it would pay for its 60 remaining sessions under the old setup.
+
+## Summary
+**What changed.**
+- `CLAUDE.md`: paid runs approved for #64 only, cap USD 0.20; the balance check (USD 1.49, then
+  1.41 after the pilot) and the unaccounted USD 0.41.
+- `budget.over_cap: stop_at_cap` (resolution layer, opt-in): a confirmed paid run may start
+  although its worst-case preview exceeds the cap; the per-call guard still stops it at the cap.
+- Core templates `resolve_v4` (the other's age and gender from 10 m) and `resolve_v5` (a start on
+  any step), both frozen; neither is a default.
+- `protocol.execution: as_prompted` (opt-in): a turn holds its angle, and after its steps an agent
+  keeps its line until the encounter is over; a later step with a start waits for it.
+- `code_plan` compares speeds as the agent was told them, and the tables recode from the records.
+- `analysis/pilot.py` (the pilot's measures) and the intent codebook `intent_v2` (the default).
+- Pricing check of 2026-10-24 (no price changed; model version `DeepSeek-V4.1-Flash-1017`).
+- Configs `rf_pilot.yaml` and `rf_pilot_v2.yaml`; runs `runs/rf_pilot/` (12 sessions, paused) and
+  `runs/rf_pilot_v2/` (72 sessions) with their analyses and `pilot_report.md`.
+
+**How it was verified.** The full negsim suite passed before each paid run (1781, then 1791) and
+after the last change (1793 passed, 11 min); the analysis suite 55 passed. Every feature was rehearsed on
+the mock first. The paid spend was checked against the ledger and against the provider's
+balance. Each number in `pilot_report.md` was recomputed from the committed files.
