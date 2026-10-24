@@ -186,12 +186,12 @@ track issue #55.
      paid runs for RF-9's pilot (#64), and only for it, with a cap of
      **USD 0.20** on that experiment's own calls (`experiment_name: rf_pilot`).
      Every other paid run still needs its own approval and cap recorded here.
-2. **Approved by the user, 2026-10-24** — Ethics sign-off for perceived attractiveness as a factor (#55,
+2. **Approved by the supervisor, 2026-10-24** — Ethics sign-off for perceived attractiveness as a factor (#55,
    3). *The user decided on 2026-10-24* that attractiveness (both directions) is
    **in** RF-10's design, because bias can affect the decision a person makes.
    The sign-off is still the supervisor's: without it, a paid run that varies
    attractiveness is refused, and RF-10 stops and asks the user.
-3. **Approved by the user, 2026-10-24** — Ethics sign-off for **real ethnicity** as a factor. *The user
+3. **Approved by the supervisor, 2026-10-24** — Ethics sign-off for **real ethnicity** as a factor. *The user
    decided on 2026-10-24* that real ethnicity replaces the fictional group in
    this track: Singapore's ethnic groups at their resident shares (SingStat,
    *Population Trends 2026*, end-June 2026: 73.9% Chinese, 13.5% Malay, 9.0%
