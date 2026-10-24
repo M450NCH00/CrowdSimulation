@@ -1,0 +1,110 @@
+# Issue #92 (RF-26): real ethnicity rehearsed end to end on the mock client, in a screening
+# design of RF-10's shape. No network and no cost; the output goes under runs_mock/, which git
+# does not track.
+#
+#   python run_experiment.py configs/resolution/resolve_ethnicity_mock_rehearsal.yaml --plan
+#   python run_experiment.py configs/resolution/resolve_ethnicity_mock_rehearsal.yaml
+#
+# The design: a 2^(7-3) fraction (16 cells, resolution IV) of seven two-level factors, ethnicity_pair
+# and its switch ethnicity_visible among them, on round 1's two head-on geometries (D14), in the
+# independent and talk conditions; plus one counterfactual pair that flips ethnicity_pair, so that
+# the two sessions keep person 1's group and differ only in person 2's; and two pairs that fix both
+# groups and flip only person 2's (factor: p2_ethnicity; Chinese to Indian, Malay to Indian), the
+# direct test of behaviour towards someone the agent is told is Indian.
+#
+# The groups are drawn balanced (design.ethnicity_draw: balanced; the user's decision of 2026-10-24,
+# issue #92's open question 3): every group equally often, in a fixed rotation, so that a per-group
+# effect gets enough sessions; each session's ethnicity_weight restores the resident shares of
+# configs/resolution/ethnicity_sg_2026.yaml (SingStat, Population Trends 2026: residents only, 4.23
+# of 6.21 million; a visitor is drawn at the same shares, the user's decision of 2026-10-24) for a
+# population-level figure. --plan prints the sessions per pair of groups, drawn and weighted.
+# (The first version of this rehearsal, experiment resolve_ethnicity_mock_rehearsal, drew at the
+# real shares; _v2 was balanced; this one, _v3, adds the pairs that flip person 2's group, each
+# version under its own name so that its run folder is a new one.)
+#
+# Person 1 may walk with a cane (mobility_aid), so that an observable factor line is printed under
+# the ethnicity line. The core template is resolve_v5 with protocol.execution: as_prompted, as RF-9
+# recommends for RF-10; the factor template is resolve_factors_v2 (the default for a design that
+# varies ethnicity), which prints "They look Chinese." and the like from 10 m (resolve_v3 on).
+#
+# Real ethnicity is on here. A mock run needs no ethics sign-off; the same design with the deepseek
+# client is refused unless CLAUDE.md holds the gate's sentence (docs/ethnicity.md, section 6). No
+# rule may read it (negsim.rules.fields, protected_attribute).
+#
+# The mock does not imitate a model (negsim/resolution/mock.py): its replies are scripted and do
+# not read the ethnicity lines. Nothing here is a finding about a model.
+schema_version: 1
+layer: resolution
+experiment_name: resolve_ethnicity_mock_rehearsal_v3
+description: >-
+  Mock rehearsal of RF-26's real ethnicity in a 16-cell fraction of seven factors (ethnicity_pair
+  and ethnicity_visible among them) on two head-on geometries, independent and talk, with a
+  counterfactual pair that flips ethnicity_pair and two that flip only person 2's group; groups drawn balanced and weighted back to the
+  resident shares; resolve_v5, resolve_factors_v2, as_prompted.
+
+conditions: [independent, talk]
+
+design:
+  seed: 92
+  base_age: 25
+  age_difference: 45
+  kind: fractional
+  ethnicity_draw: balanced   # every group equally often; ethnicity_weight restores the resident shares
+  cells: 16
+  geometries:
+    - head_on_de176842@2   # wide_corridor_head_on, walking lines aligned (0 cm apart)
+    - head_on_02dfbadb@2   # the same, walking lines 20 cm apart
+  factors:
+    age_pair: [same, p1_older]
+    gender_pair: [p1_female, p1_male]
+    urgency: [neither, p1]
+    mobility_aid: [neither, p1]
+    ethnicity_pair: [same, different]
+    demographics_visible: [true]
+    ethnicity_visible: [true, false]
+    mapping: [p1_lower, p1_higher]
+  counterfactual_pairs:
+    - base: {age_pair: same, gender_pair: p1_female, urgency: neither, mobility_aid: neither, ethnicity_pair: same, ethnicity_visible: true, mapping: p1_lower}
+      factor: ethnicity_pair
+    # Two pairs that flip only person 2's group, both groups fixed by the pair rather than drawn
+    # (issue #92): the same Chinese person 1 meets a Chinese, then an Indian person 2; and a Malay,
+    # then an Indian person 2. Person 1's rows measure behaviour towards the person it is told of;
+    # person 2's, behaviour as that group.
+    - base: {age_pair: same, gender_pair: p1_female, urgency: neither, mobility_aid: neither, ethnicity_pair: same, ethnicity_visible: true, mapping: p1_lower}
+      factor: p2_ethnicity
+      ethnicity: {p1: chinese, p2: chinese}
+      to: indian
+    - base: {age_pair: same, gender_pair: p1_female, urgency: neither, mobility_aid: neither, ethnicity_pair: different, ethnicity_visible: true, mapping: p1_lower}
+      factor: p2_ethnicity
+      ethnicity: {p1: chinese, p2: malay}
+      to: indian
+
+protocol:
+  max_decision_points: 3         # D5
+  min_gap_s: 1.0                 # D5
+  no_conflict_end_s: 1.0         # [placeholder] the encounter ends after this long with no conflict predicted
+  max_prompted: 4                # D11, D12: the cap on prompted people per encounter (a cost limit)
+  speech_words_per_second: 2.5   # [placeholder] how fast a message is said
+  execution: as_prompted         # issue #64: a turn holds its angle; after its steps an agent keeps its line
+
+templates:
+  core: resolve_v5               # age and gender from 10 m (resolve_v4), a start on any step
+  debrief: resolve_debrief_v1
+  factors: resolve_factors_v2    # resolve_factors_v1 plus the ethnicity lines (issue #92)
+
+llm_view: configs/resolution/llm_view_v1.yaml
+factor_values: configs/resolution/factors_v1.yaml
+
+llm:
+  client: mock
+  mock_policy: resolution_rehearsal_v1
+  model: deepseek-flash   # what the preview prices; the mock answers
+  temperature: 1.0
+  max_tokens: 300         # RF-9's recommended reply cap for RF-10
+  thinking: disabled
+  transport_retries: 2
+
+budget:
+  cap_usd: 0.05
+  ledger: spend_ledger.jsonl
+  over_cap: stop_at_cap

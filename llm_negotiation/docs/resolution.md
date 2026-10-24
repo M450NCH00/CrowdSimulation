@@ -51,7 +51,11 @@ resolution IV, or a balanced sample) and counterfactual pairs (`negsim/resolutio
 `design.py`; `docs/screening-designs.md`). RF-8 (#63), on synthetic and mock data: the analysis
 of the outcome tables, outside negsim (`analysis/` at the repository root): factor effects, a
 decision tree, the mapping, D14's noise floor and stability, D8's stated against measured, and
-D1's intent against plan. Nothing else yet. Configs and
+D1's intent against plan. RF-26 (#92), on the mock: real ethnicity as a factor in place of the
+fictional group, Singapore's census groups drawn at their resident shares, D2's lines for oneself
+and for the other, a switch, outcome columns, an ethics gate and its refusal in rules
+(`negsim/resolution/ethnicity.py`; template `resolve_factors_v2`; `docs/ethnicity.md`). Nothing
+else yet. Configs and
 templates from before this track behave exactly as before.
 
 ## D1. The reply
@@ -111,7 +115,7 @@ TIME TO MEET            "At your current speeds you would meet Person 1 in about
 - The instructions say what others perceive: the agent's words (within hearing range), its
   signals and its movement (if they can see it), **never its intent or reason**.
 - **Never in a description:** another person's errand or private factors, the fictional group
-  (off by default), any walking convention, "usually", "one of you has to go first", or
+  (not used in this track: real ethnicity replaced it, RF-26, below), any walking convention, "usually", "one of you has to go first", or
   `persona_v1`'s scene text.
 
 **As built (RF-5, #60).** The factor lines come from their own frozen template,
@@ -126,6 +130,15 @@ visibility switch is on. A switched-off load still shows as the wider body it is
 factor lines, and in **the observer's own view only**. Nobody is told how another sees them, and
 nothing is said of a person who is only heard. With a switch on, both levels have a line ("You do
 not find them especially attractive.").
+
+**As built (RF-26, #92): real ethnicity.** The lines come from `resolve_factors_v2`, which is
+`resolve_factors_v1` word for word plus one line per group for oneself and one for the other. A
+person's own group ("- You are Malay.") is the first of their lines in ABOUT YOU, always told when
+the design varies it. The other's ("They look Malay.") is the first line under them, only when
+the design's `ethnicity_visible` is on, and it is printed where the observable factor lines are
+(from 10 m under `resolve_v3` and later). Others is worded "neither Chinese, Malay nor Indian"
+(the user's choice, 2026-10-24). "They look ..." is an inference from appearance; whether that is
+acceptable is for the supervisor (`ethnicity.md`, section 9).
 
 **Amended by the user, 2026-10-23 (issue #61): factor lines from 10 m.** Under `resolve_v2` a
 person's factor lines (RF-5's observable ones, RF-6's pairwise ones) are printed only in full
@@ -256,6 +269,8 @@ session record alone (`python -m negsim.resolution.replay ... --verify`; `log-sc
   memory that accumulates in Steps 1 to 4, because sessions must stay independent. *As built
   (RF-5, #60):* one note, "Earlier today someone walked straight into you in a place like this
   one.", in YOUR NOTES of the person the design gives it to.
+- **Real ethnicity (RF-26, #92)** is a designed attribute of the same kind: drawn for the session
+  and fixed in it, never learned during an encounter or carried to another.
 
 ## D8. References: a debrief, and the extractor
 
@@ -436,10 +451,12 @@ be modelled separately.
 From track #55, repeated here because every issue that builds on this file must keep them:
 
 - No reply format may ask an agent who goes first.
-- No rule may read a person's group. Perceived attractiveness and the fictional group stay off
-  by default; no paid run with either switched on until `CLAUDE.md` records the ethics sign-off.
-  *As built:* the fictional group is never on in this layer, and a paid run that varies perceived
-  attractiveness is refused without its sentence (RF-6, `pairwise-factors.md`, section 6).
+- No rule may read a person's group, ethnicity or perceived attractiveness. Perceived
+  attractiveness and ethnicity stay off by default; no paid run with either switched on until
+  `CLAUDE.md` records that factor's ethics sign-off. *As built:* the fictional group is never on in
+  this layer (real ethnicity replaced it, RF-26), and a paid run that varies perceived
+  attractiveness or real ethnicity is refused without its own sentence (`pairwise-factors.md`,
+  section 6; `ethnicity.md`, section 6). Both sentences were recorded on 2026-10-24.
 - Prompt templates are frozen: a wording change means a new template version, never an edit.
 - Every feature is built and tested on the mock client first; no paid call until `CLAUDE.md`
   records the approval of paid runs and the cap for that round.

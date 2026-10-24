@@ -65,7 +65,22 @@ A session's ``pairwise`` block holds them in issue #61's format. Perceived attra
 unless a design names it, and a paid run with it waits for the ethics sign-off
 (``negsim.ethics``; ``experiment.py``).
 
-The fictional group (issue #32) is not a factor of this layer: it stays off (track #55).
+**Real ethnicity** (issue #92, RF-26; ``negsim.resolution.ethnicity``; ``docs/ethnicity.md``)
+replaces the fictional group of issue #32 in this track; the fictional group stays only in the
+rule-generation layer. Optional too: a config that names neither factor is as before.
+
+``ethnicity_pair``     ``same`` or ``different``: whether the two people are of one group. Each
+                       session's two groups are drawn with the design's seed at the shares of
+                       ``ethnicity_shares`` (default ``configs/resolution/ethnicity_sg_2026.yaml``),
+                       person 1 first, and kept on the personas (``ethnicity``)
+``ethnicity_visible``  ``true`` or ``false``: whether each is told the other's (a switch of
+                       ``ethnicity_pair``; ``true`` when left out); one's own is always told
+
+``ethnicity_draw`` (a key of the design, not a factor): ``real`` (the default), person 1 at the
+shares; or ``balanced``, every group equally often in a fixed rotation, each session weighted back
+to the shares (``ethnicity_weight``; ``ethnicity.py``).
+
+A paid run that varies it waits for the ethics sign-off (``negsim.ethics``; ``experiment.py``).
 """
 
 from __future__ import annotations
@@ -78,9 +93,13 @@ import random
 from dataclasses import dataclass, field, replace
 from typing import Any, Mapping, Optional, Sequence
 
-from ..configutil import ConfigError, as_number, check_keys
+from ..configutil import ConfigError, as_number, check_keys, resolve_path
 from ..personas.schema import ATTRIBUTES, FACTOR_ATTRIBUTES
 from ..rulegen.design import DEFAULT_TASKS, FACTOR_LEVELS as RULEGEN_LEVELS, personas_of, visibility_of
+from .ethnicity import (
+    DIFFERENT, DRAW_BALANCED, DRAW_REAL, DRAWS, ETHNICITY_FACTORS, GROUPS, PAIR_FACTOR, PAIR_LEVELS, SAME, SHARES_CONFIG, SWITCH_FACTOR,
+    EthnicityShares, balanced_assignment, weights,
+)
 from .factors import SITUATIONS, SWITCHES
 from .pairwise import ATTRACTIVENESS_FACTORS, DESIGN_FACTORS as PAIRWISE_DESIGN, LEVELS as PAIRWISE_LEVELS, SWITCHES as PAIRWISE_SWITCHES, block_for
 from .screening import DesignError, aliasing_problems, balanced_sample, balanced_subset, fraction, smallest_runs
@@ -101,8 +120,8 @@ PAIRWISE_SWITCH_FACTORS = tuple(PAIRWISE_SWITCHES.values())
 #: Every factor, in the order a cell, its id and an outcome row list them; the factors of
 #: issue #58 keep their order among themselves.
 ALL_FACTORS = (
-    "age_pair", "gender_pair", "task", *PERSON_FACTORS, "demographics_visible", *SWITCH_FACTORS, *SITUATION_FACTORS,
-    *PAIRWISE_FACTORS, *PAIRWISE_SWITCH_FACTORS, "mapping",
+    "age_pair", "gender_pair", "task", *PERSON_FACTORS, PAIR_FACTOR, "demographics_visible", *SWITCH_FACTORS, SWITCH_FACTOR,
+    *SITUATION_FACTORS, *PAIRWISE_FACTORS, *PAIRWISE_SWITCH_FACTORS, "mapping",
 )
 FACTOR_LEVELS: dict[str, tuple[Any, ...]] = {
     **{name: RULEGEN_LEVELS[name] for name in FACTORS},
@@ -111,6 +130,8 @@ FACTOR_LEVELS: dict[str, tuple[Any, ...]] = {
     **SITUATIONS,
     **{name: PAIRWISE_LEVELS[factor] for name, (factor, _, _) in PAIRWISE_DESIGN.items()},
     **{name: (True, False) for name in PAIRWISE_SWITCH_FACTORS},
+    PAIR_FACTOR: PAIR_LEVELS,  # issue #92
+    SWITCH_FACTOR: (True, False),
 }
 REQUIRED = ("age_pair", "gender_pair", "demographics_visible", "mapping")
 CONDITION_LETTER = {"independent": "I", "non_verbal": "N", "talk": "T"}
@@ -119,28 +140,67 @@ KIND_FULL, KIND_FRACTIONAL, KIND_SAMPLE = "full", "fractional", "sample"
 KINDS = (KIND_FULL, KIND_FRACTIONAL, KIND_SAMPLE)
 #: A counterfactual pair's two sessions.
 ROLE_BASE, ROLE_FLIPPED = "base", "flipped"
+#: Issue #92: what a counterfactual pair may flip besides a design factor: one person's group of
+#: real ethnicity, with both groups fixed by the pair (``ethnicity: {p1, p2}``) instead of drawn.
+GROUP_FLIPS = ("p1_ethnicity", "p2_ethnicity")
+
+
+def pair_level(groups: tuple[str, str]) -> str:
+    """``same`` or ``different``: the level of ``ethnicity_pair`` two groups make."""
+    return SAME if groups[0] == groups[1] else DIFFERENT
 
 
 @dataclass(frozen=True)
 class CounterfactualPair:
-    """Two cells identical but for ``factor``: ``base``, and ``base`` with ``factor`` at ``to``."""
+    """Two cells identical but for ``factor``: ``base``, and ``base`` with ``factor`` at ``to``.
+
+    Issue #92: ``factor`` may also be ``p1_ethnicity`` or ``p2_ethnicity``, with ``groups`` the
+    base's two groups (person 1, person 2), fixed rather than drawn: the flipped session has that
+    person's group at ``to`` and everything else the same. Its ``ethnicity_pair`` follows from
+    the groups (a Malay and a Chinese person flipped to two Malay people is ``same``)."""
 
     base: Mapping[str, Any]
     factor: str
     to: Any
+    groups: Optional[tuple[str, str]] = None
+
+    @property
+    def flipped_groups(self) -> Optional[tuple[str, str]]:
+        if self.groups is None:
+            return None
+        return (self.to, self.groups[1]) if self.factor == "p1_ethnicity" else (self.groups[0], self.to)
 
     @property
     def flipped(self) -> dict[str, Any]:
+        if self.groups is not None:
+            return {**self.base, PAIR_FACTOR: pair_level(self.flipped_groups)}
         return {**self.base, self.factor: self.to}
+
+    def groups_for(self, role: str) -> Optional[tuple[str, str]]:
+        """The fixed groups of the pair's ``base`` or ``flipped`` session; ``None`` if drawn."""
+        return self.groups if role == ROLE_BASE else self.flipped_groups
+
+    @property
+    def change(self) -> Optional[str]:
+        """What a group flip changes, ``chinese->indian``; ``None`` for a design factor."""
+        if self.groups is None:
+            return None
+        return f"{self.groups[0 if self.factor == 'p1_ethnicity' else 1]}->{self.to}"
 
     @property
     def code(self) -> str:
-        """Eight hexadecimal characters that name the pair: its base cell, factor and level."""
+        """Eight hexadecimal characters that name the pair: its base cell, factor and level (and,
+        for a group flip, the base's groups)."""
         named = {"base": cell_code(self.base), "factor": self.factor, "to": self.to}
+        if self.groups is not None:  # issue #92: only then, so that every other pair keeps its code
+            named["groups"] = list(self.groups)
         return hashlib.sha256(json.dumps(named, sort_keys=True).encode("utf-8")).hexdigest()[:8]
 
     def as_dict(self) -> dict[str, Any]:
-        return {"base": dict(self.base), "factor": self.factor, "to": self.to}
+        described = {"base": dict(self.base), "factor": self.factor, "to": self.to}
+        if self.groups is not None:
+            described["ethnicity"] = {"p1": self.groups[0], "p2": self.groups[1]}
+        return described
 
 
 @dataclass(frozen=True)
@@ -163,6 +223,10 @@ class ResolutionDesign:
     counterfactual_pairs: tuple[CounterfactualPair, ...] = ()
     #: Whether the config named ``kind``: an older config is described as before.
     kind_given: bool = False
+    #: Issue #92: the shares the groups are drawn at, for a design that varies ``ethnicity_pair``.
+    ethnicity_shares: Optional[EthnicityShares] = None
+    #: Issue #92: how the groups are drawn, ``real`` or ``balanced``.
+    ethnicity_draw: str = DRAW_REAL
 
     #: ``personas_of`` reads it: the fictional group is never on in this layer.
     groups = None
@@ -174,8 +238,14 @@ class ResolutionDesign:
 
     @property
     def uses_factors(self) -> bool:
-        """Whether it varies a core or situational factor of issue #60."""
-        return any(name in RF5_FACTORS for name in self.levels)
+        """Whether it varies a core or situational factor of issue #60, or real ethnicity (issue
+        #92), whose lines are in the factor template too."""
+        return any(name in RF5_FACTORS or name in ETHNICITY_FACTORS for name in self.levels)
+
+    @property
+    def uses_ethnicity(self) -> bool:
+        """Whether it varies real ethnicity (issue #92): then a paid run needs the ethics sign-off."""
+        return PAIR_FACTOR in self.levels
 
     @property
     def uses_pairwise(self) -> bool:
@@ -191,7 +261,8 @@ class ResolutionDesign:
     def from_config(cls, raw: Any, where: str = "design") -> "ResolutionDesign":
         check_keys(
             raw, where, ("seed", "factors"),
-            ("repeats", "base_age", "age_difference", "tasks", "kind", "cells", "geometries", "exact_repeats", "counterfactual_pairs"),
+            ("repeats", "base_age", "age_difference", "tasks", "kind", "cells", "geometries", "exact_repeats", "counterfactual_pairs",
+             "ethnicity_shares", "ethnicity_draw"),
         )
         factors = check_keys(raw["factors"], f"{where}.factors", REQUIRED, tuple(name for name in ALL_FACTORS if name not in REQUIRED))
         if ("task" in factors) == ("urgency" in factors):
@@ -203,6 +274,13 @@ class ResolutionDesign:
             setting = [name for name, (of, _, _) in PAIRWISE_DESIGN.items() if of == factor]
             if switch in factors and not any(name in factors for name in setting):
                 raise ConfigError(f"{where}.factors.{switch}: switches {factor}, which the design does not vary (name {' or '.join(setting)})")
+        if SWITCH_FACTOR in factors and PAIR_FACTOR not in factors:
+            raise ConfigError(f"{where}.factors.{SWITCH_FACTOR}: switches real ethnicity, which the design does not vary (name {PAIR_FACTOR})")
+        for key in ("ethnicity_shares", "ethnicity_draw"):
+            if raw.get(key) is not None and PAIR_FACTOR not in factors:
+                raise ConfigError(f"{where}.{key}: for a design that varies {PAIR_FACTOR}")
+        if raw.get("ethnicity_draw", DRAW_REAL) not in DRAWS:
+            raise ConfigError(f"{where}.ethnicity_draw: one of {list(DRAWS)}, got {raw.get('ethnicity_draw')!r}")
         levels = {}
         for name in (name for name in ALL_FACTORS if name in factors):
             chosen = factors[name]
@@ -244,6 +322,8 @@ class ResolutionDesign:
             size=size,
             geometries=cls._geometries(raw.get("geometries"), f"{where}.geometries"),
             kind_given="kind" in raw,
+            ethnicity_shares=EthnicityShares.load(resolve_path(raw.get("ethnicity_shares") or SHARES_CONFIG)) if PAIR_FACTOR in factors else None,
+            ethnicity_draw=str(raw.get("ethnicity_draw", DRAW_REAL)),
         )
         if kind == KIND_FRACTIONAL:
             try:
@@ -288,8 +368,10 @@ class ResolutionDesign:
     def _pair(self, raw: Any, where: str) -> CounterfactualPair:
         """A counterfactual pair from the config: ``base`` gives a level of every factor the design
         varies (one with a single level may be left out), ``factor`` the one that differs, and
-        ``to`` its other level (left out when the factor has only two levels)."""
-        entry = check_keys(raw, where, ("base", "factor"), ("to",))
+        ``to`` its other level (left out when the factor has only two levels). Issue #92:
+        ``factor`` ``p1_ethnicity`` or ``p2_ethnicity`` flips one person's group, with ``ethnicity:
+        {p1, p2}`` the base's two groups and ``to`` the flipped person's other group."""
+        entry = check_keys(raw, where, ("base", "factor"), ("to", "ethnicity"))
         base = check_keys(entry["base"], f"{where}.base", self.screened, tuple(name for name in self.factors if name not in self.screened))
         cell = {}
         for name in self.factors:
@@ -298,6 +380,10 @@ class ResolutionDesign:
                 raise ConfigError(f"{where}.base.{name}: one of the design's levels, {list(self.levels[name])}, got {level!r}")
             cell[name] = level
         factor = entry["factor"]
+        if factor in GROUP_FLIPS:
+            return self._group_flip(entry, cell, where)
+        if entry.get("ethnicity") is not None:
+            raise ConfigError(f"{where}.ethnicity: the groups are fixed only by a pair that flips {' or '.join(GROUP_FLIPS)}")
         if factor not in self.factors:
             raise ConfigError(f"{where}.factor: a factor the design names, one of {list(self.factors)}, got {factor!r}")
         if factor == "mapping":
@@ -310,6 +396,27 @@ class ResolutionDesign:
         if to not in others or isinstance(to, bool) != isinstance(allowed[0], bool):
             raise ConfigError(f"{where}.to: a level of {factor} other than the base's, one of {others}, got {to!r}")
         return CounterfactualPair(cell, factor, to)
+
+    def _group_flip(self, entry: Mapping[str, Any], cell: Mapping[str, Any], where: str) -> CounterfactualPair:
+        """Issue #92: a pair that flips one person's group of real ethnicity."""
+        factor = entry["factor"]
+        if not self.uses_ethnicity:
+            raise ConfigError(f"{where}.factor: {factor} flips a person's group, and the design does not vary {PAIR_FACTOR}")
+        given = check_keys(entry.get("ethnicity"), f"{where}.ethnicity", ("p1", "p2"))
+        groups = (given["p1"], given["p2"])
+        for who, group in zip(("p1", "p2"), groups):
+            if group not in GROUPS:
+                raise ConfigError(f"{where}.ethnicity.{who}: one of {list(GROUPS)}, got {group!r}")
+        if cell[PAIR_FACTOR] != pair_level(groups):
+            raise ConfigError(f"{where}.base.{PAIR_FACTOR}: {groups[0]} and {groups[1]} are {pair_level(groups)!r}, not {cell[PAIR_FACTOR]!r}")
+        mine = groups[0] if factor == "p1_ethnicity" else groups[1]
+        to = entry.get("to")
+        if to not in GROUPS or to == mine:
+            raise ConfigError(f"{where}.to: a group other than {mine!r}, one of {[g for g in GROUPS if g != mine]}, got {to!r}")
+        pair = CounterfactualPair(cell, factor, to, groups)
+        if pair.flipped[PAIR_FACTOR] not in self.levels[PAIR_FACTOR]:
+            raise ConfigError(f"{where}.to: the flipped session would be {PAIR_FACTOR} {pair.flipped[PAIR_FACTOR]!r}, which the design does not run")
+        return pair
 
     @property
     def screened(self) -> tuple[str, ...]:
@@ -374,7 +481,23 @@ class ResolutionDesign:
             described["exact_repeats"] = {"cells": self.exact_repeats[0], "times": self.exact_repeats[1]}
         if self.counterfactual_pairs:
             described["counterfactual_pairs"] = [pair.as_dict() for pair in self.counterfactual_pairs]
+        if self.ethnicity_shares is not None:  # issue #92: only when used
+            described["ethnicity_shares"] = self.ethnicity_shares.as_dict()
+            if self.ethnicity_draw != DRAW_REAL:  # only when not the default
+                described["ethnicity_draw"] = self.ethnicity_draw
         return described
+
+    def ethnicity_assignment(self, units: Mapping[tuple[str, str], set]) -> dict[tuple[str, str], dict[str, tuple[str, str]]]:
+        """Issue #92: for each unit, ``(case id, cell code)`` or ``(case id, "x" + pair code)``, and
+        each level of ``ethnicity_pair`` it runs at, person 1's group and person 2's. ``real``:
+        drawn from the stream of the design's seed, the case and the cell or pair. ``balanced``:
+        :func:`~negsim.resolution.ethnicity.balanced_assignment`."""
+        if self.ethnicity_draw == DRAW_BALANCED:
+            return balanced_assignment({unit: frozenset(levels) for unit, levels in units.items()}, self.seed)
+        return {
+            (case_id, draw): {level: self.ethnicity_shares.draw(level, f"{self.seed}:{case_id}:{draw}") for level in sorted(levels)}
+            for (case_id, draw), levels in units.items()
+        }
 
 
 def cell_code(cell: Mapping[str, Any]) -> str:
@@ -383,9 +506,12 @@ def cell_code(cell: Mapping[str, Any]) -> str:
     return hashlib.sha256(json.dumps({name: cell[name] for name in ALL_FACTORS if name in cell}, sort_keys=True).encode("utf-8")).hexdigest()[:8]
 
 
-def personas_for(cell: Mapping[str, Any], agents: tuple[int, int], design: "ResolutionDesign") -> dict[int, dict[str, Any]]:
+def personas_for(
+    cell: Mapping[str, Any], agents: tuple[int, int], design: "ResolutionDesign", ethnicity: Optional[tuple[str, str]] = None,
+) -> dict[int, dict[str, Any]]:
     """The two people of a cell, each assigned to an agent: the age, gender, errand and urgency
-    of issue #30, then each core factor the cell varies (issue #60). ``urgency`` picks both errands."""
+    of issue #30, then each core factor the cell varies (issue #60). ``urgency`` picks both errands.
+    ``ethnicity`` (issue #92) is person 1's group and person 2's, when the design varies it."""
     people = personas_of({**cell, "task": cell.get("task", "none")}, agents, design)
     lower, higher = agents
     first, second = (lower, higher) if cell["mapping"] == "p1_lower" else (higher, lower)
@@ -397,6 +523,8 @@ def personas_for(cell: Mapping[str, Any], agents: tuple[int, int], design: "Reso
             if name == "urgency":
                 people[agent]["task"] = design.tasks[level]
             people[agent][name] = level
+    if ethnicity is not None:
+        people[first]["ethnicity"], people[second]["ethnicity"] = ethnicity
     return people
 
 
@@ -410,6 +538,8 @@ def visibility_for(cell: Mapping[str, Any]) -> dict[str, bool]:
     for factor, switch in PAIRWISE_SWITCHES.items():  # issue #61: whether the observer is told it
         if any(name in cell for name, (of, _, _) in PAIRWISE_DESIGN.items() if of == factor):
             visibility[factor] = bool(cell.get(switch, True))
+    if PAIR_FACTOR in cell:  # issue #92: whether each is told the other's ethnicity
+        visibility["ethnicity"] = bool(cell.get(SWITCH_FACTOR, True))
     return visibility
 
 
@@ -426,7 +556,8 @@ class Session:
     repeat: int
     exact_repeat_set: bool
     #: The two people's personas: ``age``, ``gender``, ``task`` (text or None), ``urgency``, and
-    #: each core factor the design varies (issue #60).
+    #: each core factor the design varies (issue #60); ``ethnicity`` when the design varies it
+    #: (issue #92).
     personas: Mapping[int, Mapping[str, Any]]
     visibility: Mapping[str, bool]
     #: Issue #62, only when used: the case's geometry when the design lists ``geometries`` (D14),
@@ -435,6 +566,10 @@ class Session:
     pair_id: Optional[str] = None
     pair_role: Optional[str] = None
     pair_factor: Optional[str] = None
+    #: Issue #92, only for a pair that flips a person's group: what it changes, ``chinese->indian``.
+    pair_change: Optional[str] = None
+    #: Issue #92, only when the design varies ethnicity: the session's weight back to the shares.
+    ethnicity_weight: Optional[float] = None
 
     @property
     def people(self) -> dict[int, dict[str, Any]]:
@@ -462,7 +597,12 @@ class Session:
 
     @property
     def uses_factors(self) -> bool:
-        return any(name in RF5_FACTORS for name in self.cell)
+        return any(name in RF5_FACTORS or name in ETHNICITY_FACTORS for name in self.cell)
+
+    @property
+    def ethnicity(self) -> dict[int, str]:
+        """Each person's group of real ethnicity (issue #92); empty unless the design varies it."""
+        return {agent: persona["ethnicity"] for agent, persona in self.personas.items() if persona.get("ethnicity") is not None}
 
     @property
     def uses_pairwise(self) -> bool:
@@ -499,6 +639,8 @@ class Session:
             "exact_repeat_set": self.exact_repeat_set,
             **({"geometry": self.geometry} if self.geometry is not None else {}),  # issue #62: only when used
             **({"pair_id": self.pair_id, "pair_role": self.pair_role, "pair_factor": self.pair_factor} if self.pair_id is not None else {}),
+            **({"pair_change": self.pair_change} if self.pair_change is not None else {}),  # issue #92
+            **({"ethnicity_weight": self.ethnicity_weight} if self.ethnicity_weight is not None else {}),
             "personas": {str(agent): dict(persona) for agent, persona in sorted(self.personas.items())},
             "visibility": dict(self.visibility),
             **({"pairwise": self.pairwise} if self.uses_pairwise else {}),  # issue #61: only when the design has one
@@ -532,23 +674,49 @@ def sessions_for(
                 in_set = times > 1 if repeats else design.repeats > 1
                 for repeat in range(1, times + 1):
                     session_id = f"{letter}_{case_id}_{cell_code(cell)}_r{repeat}"
-                    unordered.append({**common, "session_id": session_id, "cell": cell, "repeat": repeat, "exact_repeat_set": in_set})
+                    unordered.append({
+                        **common, "session_id": session_id, "cell": cell, "repeat": repeat, "exact_repeat_set": in_set,
+                        "_unit": (case_id, cell_code(cell)),
+                    })
             for pair in design.counterfactual_pairs:
                 pair_id = f"{letter}_{case_id}_x{pair.code}"
                 for role, cell in ((ROLE_BASE, pair.base), (ROLE_FLIPPED, pair.flipped)):
                     unordered.append({
-                        **common, "session_id": f"{letter}_{case_id}_{cell_code(cell)}_x{pair.code}", "cell": dict(cell), "repeat": 1,
+                        # Issue #92: a group flip's two cells may be the same, so its ids name the role too.
+                        **common, "session_id": f"{letter}_{case_id}_{cell_code(cell)}_x{pair.code}" + (f"_{role}" if pair.groups else ""),
+                        "cell": dict(cell), "repeat": 1,
                         "exact_repeat_set": False, "pair_id": pair_id, "pair_role": role, "pair_factor": pair.factor,
+                        "pair_change": pair.change,
+                        "_unit": (case_id, f"x{pair.code}"),  # both sessions of a pair see the same people
+                        "_fixed": pair.groups_for(role),  # issue #92: a group flip fixes both groups
                     })
     ids = [entry["session_id"] for entry in unordered]
     if len(set(ids)) != len(ids):
         raise ConfigError(f"experiment {experiment}: two sessions have the same id; a case is listed twice")
     order = sorted(unordered, key=lambda entry: entry["session_id"])
     random.Random(f"{experiment}:{design.seed}").shuffle(order)
+    # Issue #92: the two people's groups, by unit (every session of a unit sees the same people).
+    assigned: dict = {}
+    drawn = design.ethnicity_shares is not None
+    if drawn:
+        units: dict = {}
+        for entry in order:
+            if entry.get("_fixed") is None:  # a group flip's groups are the pair's own
+                units.setdefault(entry["_unit"], set()).add(entry["cell"][PAIR_FACTOR])
+        assigned = design.ethnicity_assignment(units)
+
+    def groups_of(entry: Mapping[str, Any]) -> Optional[tuple[str, str]]:
+        if not drawn:
+            return None
+        return entry.get("_fixed") or assigned[entry["_unit"]][entry["cell"][PAIR_FACTOR]]
+
+    weight_of = dict(zip(range(len(order)), weights(design.ethnicity_shares, [groups_of(e) for e in order]))) if drawn else {}
     return [
         Session(
-            index=index, **entry, personas=personas_for(entry["cell"], entry["agents"], design), visibility=visibility_for(entry["cell"]),
+            index=index, **{key: value for key, value in entry.items() if key not in ("_unit", "_fixed")},
+            personas=personas_for(entry["cell"], entry["agents"], design, groups_of(entry)), visibility=visibility_for(entry["cell"]),
             geometry=(geometry_of or {}).get(entry["case_id"]) if design.geometries else None,
+            ethnicity_weight=weight_of.get(index - 1),
         )
         for index, entry in enumerate(order, start=1)
     ]

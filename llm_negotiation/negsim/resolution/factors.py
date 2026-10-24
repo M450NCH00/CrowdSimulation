@@ -33,6 +33,13 @@ view adds it under that person only when they are in view (RF-17), and the core 
 it only in full detail (within 5 m, D2). An unobservable attribute has no ``other`` line, so it
 can never reach another person's view.
 
+**Real ethnicity** (issue #92, RF-26; ``ethnicity.py``; ``docs/ethnicity.md``) has its lines in
+``resolve_factors_v2`` (``ethnicity``, a ``self`` and an ``other`` line per group); version 1 has
+none. A session's two groups are drawn by the design (:class:`SessionFactors`, ``ethnicity``):
+one's own line comes first in ABOUT YOU, and the other's first under them in WHO YOU CAN SEE, when
+``ethnicity_visible`` is on, so it reaches an agent where the observable factors do. It is only in
+the prompt, and no rule may read it.
+
 **Only ``load`` and ``surroundings`` change anything outside the prompt.** ``load`` widens the
 person's body by ``load.large_suitcase.width_added_m`` (:class:`FactorValues`), fixed from the
 start of the run and never changed during it (D1): the run's scenario gets a per-agent radius
@@ -46,16 +53,20 @@ therefore an effect on the decision, not on the physics.
 from __future__ import annotations
 
 import copy
-from dataclasses import asdict, dataclass, replace
+from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 from typing import Any, Mapping, Optional, Sequence
 
 from ..configutil import PACKAGE_ROOT, ConfigError, as_number, check_keys, load_yaml
 from ..negotiation.prompts import check_template_data, load_template_data
 from ..personas.schema import ATTRIBUTES, FACTOR_ATTRIBUTES
+from .ethnicity import GROUPS, PAIR_FACTOR
 
 KIND_FACTORS = "resolution_factors"
 FACTOR_TEMPLATE = "resolve_factors_v1"
+#: The factor template of a design that varies real ethnicity (issue #92): version 1 word for
+#: word, plus the ethnicity lines. A design without it keeps version 1, and so its records.
+ETHNICITY_FACTOR_TEMPLATE = "resolve_factors_v2"
 FACTOR_VALUES_CONFIG = PACKAGE_ROOT / "configs" / "resolution" / "factors_v1.yaml"
 
 #: The situational factors chosen in issue #60 (task 7), each with its two levels, the base first.
@@ -67,6 +78,13 @@ SITUATIONS: dict[str, tuple[str, str]] = {
 SWITCHES: dict[str, str] = {name: f"{name}_visible" for name in FACTOR_ATTRIBUTES if ATTRIBUTES[name].observable}
 #: The keys a level of an attribute may have in the template.
 LINE_KINDS = ("self", "other", "note")
+#: The lines each group of real ethnicity has in a template that has them (issue #92).
+ETHNICITY_LINES = ("self", "other")
+
+
+def default_factor_template(with_ethnicity: bool) -> str:
+    """The factor template a design uses unless its config names one (issue #92)."""
+    return ETHNICITY_FACTOR_TEMPLATE if with_ethnicity else FACTOR_TEMPLATE
 
 
 def levels_of(name: str) -> tuple[str, ...]:
@@ -85,7 +103,8 @@ class FactorTemplate:
     """``resolve_factors_v<n>``: one entry per attribute and level, and the situational lines.
 
     Loading checks it against the schema: every core factor, with exactly its levels in order;
-    an ``other`` line only for an observable attribute; every situational factor and level.
+    an ``other`` line only for an observable attribute; every situational factor and level; and,
+    if it has the ethnicity block (version 2, issue #92), every group in order, each with both lines.
     """
 
     def __init__(self, key: str, data: Mapping[str, Any], sha256: str):
@@ -110,6 +129,13 @@ class FactorTemplate:
         for name, lines in situations.items():
             if not isinstance(lines, Mapping) or tuple(lines) != SITUATIONS[name]:
                 raise ConfigError(f"factor template {key!r}: {name} must have the levels {list(SITUATIONS[name])}, in that order")
+        groups = data.get("ethnicity")
+        if groups is not None:
+            if not isinstance(groups, Mapping) or tuple(groups) != GROUPS:
+                raise ConfigError(f"factor template {key!r}: ethnicity must give the groups {list(GROUPS)}, in that order")
+            for group, lines in groups.items():
+                if not isinstance(lines, Mapping) or tuple(lines) != ETHNICITY_LINES or not all(isinstance(lines[kind], str) and lines[kind].strip() for kind in ETHNICITY_LINES):
+                    raise ConfigError(f"factor template {key!r}: ethnicity.{group} must have a 'self' and an 'other' line, in that order")
         self.key, self.data, self.sha256 = key, data, sha256
 
     @classmethod
@@ -125,6 +151,19 @@ class FactorTemplate:
         if level not in self.data["attributes"][attribute]:
             raise ConfigError(f"factor template {self.key!r}: {attribute} has no level {level!r}")
         return (self.data["attributes"][attribute][level] or {}).get(kind) or None
+
+    @property
+    def has_ethnicity(self) -> bool:
+        """Whether it has the lines of real ethnicity (version 2 on, issue #92)."""
+        return self.data.get("ethnicity") is not None
+
+    def ethnicity(self, group: str, kind: str) -> str:
+        """A group's ``self`` or ``other`` line (issue #92)."""
+        if not self.has_ethnicity:
+            raise ConfigError(f"factor template {self.key!r} has no ethnicity lines; a design that varies {PAIR_FACTOR} needs {ETHNICITY_FACTOR_TEMPLATE} or later")
+        if group not in self.data["ethnicity"]:
+            raise ConfigError(f"factor template {self.key!r}: no ethnicity group {group!r}; the groups are {list(GROUPS)}")
+        return self.data["ethnicity"][group][kind]
 
     def situation(self, name: str, level: str) -> str:
         if level not in self.data["situations"][name]:
@@ -144,6 +183,9 @@ class FactorTemplate:
                         found[kind].append(max(lines, key=len))
             elif name in SITUATIONS:
                 found["place"].append(max((self.situation(name, level) for level in SITUATIONS[name]), key=len))
+            elif name == PAIR_FACTOR:  # issue #92
+                for kind in ETHNICITY_LINES:
+                    found[kind].append(max((self.ethnicity(group, kind) for group in GROUPS), key=len))
         return {kind: tuple(lines) for kind, lines in found.items()}
 
 
@@ -195,12 +237,16 @@ class SessionFactors:
     """One session's factors: each person's levels (``people``, by agent id, only the core
     factors the design varies), the visibility switches of the observable ones (``visible``),
     and the situational levels (``situation``). Anyone without an entry (the others of a crowd
-    encounter) has no factor line."""
+    encounter) has no factor line. Issue #92: each person's group of real ethnicity
+    (``ethnicity``, by agent id; empty unless the design varies it), and whether others are told
+    it (``ethnicity_visible``)."""
 
     template: FactorTemplate
     people: Mapping[int, Mapping[str, str]]
     visible: Mapping[str, bool]
     situation: Mapping[str, str]
+    ethnicity: Mapping[int, str] = field(default_factory=dict)
+    ethnicity_visible: bool = True
 
     def __post_init__(self) -> None:
         for agent, levels in self.people.items():
@@ -215,14 +261,24 @@ class SessionFactors:
         for name, level in self.situation.items():
             if name not in SITUATIONS or level not in SITUATIONS[name]:
                 raise ConfigError(f"situational factor {name}={level!r}: known {SITUATIONS}")
+        for agent, group in self.ethnicity.items():
+            if group not in GROUPS:
+                raise ConfigError(f"person {agent}: ethnicity is one of {list(GROUPS)}, got {group!r}")
+        if self.ethnicity and not self.template.has_ethnicity:
+            raise ConfigError(f"factor template {self.template.key!r} has no ethnicity lines; a design that varies {PAIR_FACTOR} needs {ETHNICITY_FACTOR_TEMPLATE} or later")
 
     def _levels(self, agent: int) -> Mapping[str, str]:
         return self.people.get(agent, self.people.get(str(agent), {}))  # type: ignore[call-overload]
 
+    def _group(self, agent: int) -> Optional[str]:
+        return self.ethnicity.get(agent, self.ethnicity.get(str(agent)))  # type: ignore[call-overload]
+
     def own(self, agent: int) -> tuple[str, ...]:
-        """ABOUT YOU: the person's own lines, in the schema's order."""
-        levels = self._levels(agent)
-        return tuple(line for name in FACTOR_ATTRIBUTES if name in levels and (line := self.template.line(name, levels[name], "self")))
+        """ABOUT YOU: the person's own lines, their ethnicity first (issue #92), then the core
+        factors in the schema's order."""
+        levels, group = self._levels(agent), self._group(agent)
+        mine = (self.template.ethnicity(group, "self"),) if group is not None else ()
+        return mine + tuple(line for name in FACTOR_ATTRIBUTES if name in levels and (line := self.template.line(name, levels[name], "self")))
 
     def notes(self, agent: int) -> tuple[str, ...]:
         """YOUR NOTES: the person's designed notes."""
@@ -230,10 +286,12 @@ class SessionFactors:
         return tuple(line for name in FACTOR_ATTRIBUTES if name in levels and (line := self.template.line(name, levels[name], "note")))
 
     def seen(self, agent: int) -> tuple[str, ...]:
-        """What someone who sees ``agent`` is told of its factors: the observable ones whose switch
-        is on (on unless the design switches it off)."""
-        levels = self._levels(agent)
-        return tuple(
+        """What someone who sees ``agent`` is told of its factors: its ethnicity first, when
+        ``ethnicity_visible`` is on (issue #92), then the observable ones whose switch is on (on
+        unless the design switches it off)."""
+        levels, group = self._levels(agent), self._group(agent)
+        theirs = (self.template.ethnicity(group, "other"),) if group is not None and self.ethnicity_visible else ()
+        return theirs + tuple(
             line for name in FACTOR_ATTRIBUTES
             if name in levels and name in SWITCHES and self.visible.get(name, True)
             and (line := self.template.line(name, levels[name], "other"))
@@ -241,7 +299,9 @@ class SessionFactors:
 
     def seen_lines(self) -> dict[int, tuple[str, ...]]:
         """:meth:`seen` for everyone who has a line: the view's ``factor_lines``."""
-        return {int(agent): lines for agent in self.people if (lines := self.seen(int(agent)))}
+        agents = [int(agent) for agent in self.people]
+        agents += [int(agent) for agent in self.ethnicity if int(agent) not in agents]  # issue #92
+        return {agent: lines for agent in agents if (lines := self.seen(agent))}
 
     def place(self) -> tuple[str, ...]:
         """WHERE YOU ARE: the situational lines, the same for everyone."""
@@ -268,6 +328,11 @@ class SessionFactors:
             "people": {str(agent): dict(levels) for agent, levels in sorted(self.people.items(), key=lambda item: int(item[0]))},
             "visible": dict(self.visible),
             "situation": dict(self.situation),
+            # Issue #92: only when the design varies it, so that an older record is written as before.
+            **({
+                "ethnicity": {str(agent): group for agent, group in sorted(self.ethnicity.items(), key=lambda item: int(item[0]))},
+                "ethnicity_visible": self.ethnicity_visible,
+            } if self.ethnicity else {}),
         }
 
 

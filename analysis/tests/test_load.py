@@ -55,6 +55,30 @@ def test_the_others_age_and_gender_count_only_where_they_were_printed(tmp_path):
     assert one(agents, "hidden_r1", "p1")["own_age_high"] == 0 and hidden["own_demographics_hidden"] == 1
 
 
+def test_the_others_ethnicity_counts_only_where_it_was_told(tmp_path):
+    # Issue #92: one's own group is always told; the other's only where its line was printed.
+    malay_chinese = {"p1": {"ethnicity": "malay"}, "p2": {"ethnicity": "chinese"}}
+    both_indian = {"p1": {"ethnicity": "indian"}, "p2": {"ethnicity": "indian"}}
+    rows = [
+        row("same_told_r1", cell={"ethnicity_pair": "same"}, people=both_indian, shown={"p1": {"ethnicity": 2}, "p2": {"ethnicity": 1}}),
+        row("same_far_r1", cell={"ethnicity_pair": "same"}, people=both_indian, shown={"p1": {"ethnicity": 0}, "p2": {"ethnicity": 0}}),
+        row("different_told_r1", cell={"ethnicity_pair": "different"}, people=malay_chinese, shown={"p1": {"ethnicity": 1}, "p2": {"ethnicity": 3}}),
+        row("hidden_r1", cell={"ethnicity_pair": "same", "ethnicity_visible": False}, people=both_indian, shown={"p1": {"ethnicity": 0}, "p2": {"ethnicity": 0}}),
+    ]
+    _, agents, predictors, _ = agents_of(tmp_path, rows)
+    assert "same_ethnicity" in predictors and "ethnicity_unseen" in predictors
+    assert not any(name in predictors for name in ("own_ethnicity", "other_ethnicity", "other_ethnicity_actual"))  # descriptive only (A3)
+    told = one(agents, "same_told_r1", "p2")
+    assert (told["same_ethnicity"], told["ethnicity_unseen"], told["other_ethnicity"]) == (1, 0, "indian")
+    far = one(agents, "same_far_r1", "p1")
+    assert (far["same_ethnicity"], far["ethnicity_unseen"], far["own_ethnicity"], far["other_ethnicity_actual"]) == (0, 1, "indian", "indian")
+    assert far["other_ethnicity"] != far["other_ethnicity"]  # NaN: not told
+    different = one(agents, "different_told_r1", "p1")
+    assert (different["same_ethnicity"], different["ethnicity_unseen"], different["other_ethnicity"]) == (0, 0, "chinese")
+    assert one(agents, "hidden_r1", "p1")["ethnicity_unseen"] == 1
+    assert F.factor_of("same_ethnicity") == "ethnicity_pair" and F.factor_of("ethnicity_unseen") == "ethnicity_visible"
+
+
 def test_a_pairwise_value_counts_only_where_its_line_was_shown(tmp_path):
     rows = [
         row("shown_r1", shown={"p1": {"pairwise": 2}, "p2": {"pairwise": 2}}),
@@ -116,7 +140,7 @@ def test_the_factor_table_agrees_with_negsim():
     pytest.importorskip("yaml")
     sys.path.insert(0, str(L.Path(__file__).resolve().parents[2] / "llm_negotiation"))
     from negsim.personas.schema import ATTRIBUTES, FACTOR_ATTRIBUTES
-    from negsim.resolution import design, factors, pairwise
+    from negsim.resolution import design, ethnicity, factors, pairwise
 
     assert list(F.PERSON) == list(FACTOR_ATTRIBUTES)
     for name, (base, marked, observable) in F.PERSON.items():
@@ -124,3 +148,4 @@ def test_the_factor_table_agrees_with_negsim():
     assert F.SITUATIONS == factors.SITUATIONS
     assert set(F.DESIGN_COLUMNS) == set(design.ALL_FACTORS)
     assert set(pairwise.SWITCHES.values()) <= set(F.DESIGN_COLUMNS)
+    assert F.ETHNICITY_GROUPS == ethnicity.GROUPS and set(ethnicity.ETHNICITY_FACTORS) <= set(F.DESIGN_COLUMNS)

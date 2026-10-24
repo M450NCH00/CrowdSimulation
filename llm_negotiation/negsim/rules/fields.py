@@ -35,7 +35,10 @@ or false (``in_segment``) among them. And a person's group (``ethnic_group``, is
 **protected**: an agent may see it, but a rule that names it, or anything derived from it, is
 refused as ``protected_attribute`` (:func:`protected_reference`), before any other check. Since
 issue #61 so is **perceived attractiveness**, how one person sees another: an agent may be told
-its own view of someone, but until the supervisor decides, no rule may read it.
+its own view of someone, but until the supervisor decides, no rule may read it. Since issue #92
+so is **real ethnicity** (``ethnicity``, the resolution layer's factor, which replaced the
+fictional group in track #55): a field named with "ethnic" was already refused, and the names of
+Singapore's census groups and the words for race are refused too.
 """
 
 from __future__ import annotations
@@ -218,6 +221,13 @@ def fields_of(schema_version: int) -> tuple[dict[str, FieldSpec], dict[str, Fiel
 #: of someone, but until the supervisor decides (``CLAUDE.md``, "Pending sign-offs") no rule may
 #: read it. It stays in the outcome rows, for the factor analysis (RF-8) and the mapping.
 PERCEIVED_ATTRACTIVENESS = "perceived_attractiveness"
+#: Real ethnicity (issue #92, RF-26): Singapore's census groups, a factor of the resolution layer
+#: only, and never in the perception record. An agent may be told it; no rule may read it.
+REAL_ETHNICITY = "ethnicity"
+#: The words that name real ethnicity (issue #92), whole words, ignoring case: the census groups
+#: but Others (an ordinary English word; a rule naming "others" reads no group), and the words for
+#: race. A field such as ``ethnicity_pair`` is caught by :data:`PROTECTED_STEM` already.
+REAL_ETHNICITY_WORDS = ("chinese", "malay", "malays", "indian", "indians", "race", "races", "racial")
 #: What no rule may read, each with the reason. An agent may see them, or be told its own view.
 PROTECTED: dict[str, str] = {
     **{
@@ -232,9 +242,15 @@ PROTECTED: dict[str, str] = {
         "supervisor decides, no rule may read: a rule that conditions on it is refused, and counted (docs/rule-format.md, "
         "section 14; docs/pairwise-factors.md, section 7)"
     ),
+    REAL_ETHNICITY: (
+        "a person's ethnicity is something an agent may be told, so that the screen can measure whether a model treats "
+        "people of different ethnicities differently, but no rule may read it: a rule that conditions on it, or on anything "
+        "derived from it, is refused and counted, and kept out of the rule database (docs/rule-format.md, section 14; "
+        "docs/ethnicity.md, section 7)"
+    ),
 }
 #: What a refusal calls each protected attribute.
-PROTECTED_NAMES = {"ethnic_group": "a person's group", PERCEIVED_ATTRACTIVENESS: "perceived attractiveness"}
+PROTECTED_NAMES = {"ethnic_group": "a person's group", PERCEIVED_ATTRACTIVENESS: "perceived attractiveness", REAL_ETHNICITY: "a person's ethnicity"}
 #: The word that marks a field as about ethnicity, whatever else its name says: ``ethnic_group``,
 #: ``same_ethnic_group``, ``ethnicity``, ``ethnic_difference``.
 PROTECTED_STEM = "ethnic"
@@ -251,8 +267,8 @@ def protected_reference(text: Any, terms: Iterable[str] = ()) -> Optional[str]:
     ``text`` uses one if it contains :data:`PROTECTED_STEM` or a match of
     :data:`ATTRACTIVENESS_PATTERN` anywhere, or if one of its words (split at anything but letters
     and digits, ignoring case) is the name of a protected attribute, one of the default group
-    labels, or one of ``terms``: the words a session introduced groups with, and its labels
-    (``negsim.rulegen.validate``).
+    labels, one of :data:`REAL_ETHNICITY_WORDS` (issue #92), or one of ``terms``: the words a
+    session introduced groups with, and its labels (``negsim.rulegen.validate``).
     """
     if not isinstance(text, str):
         return None
@@ -263,7 +279,7 @@ def protected_reference(text: Any, terms: Iterable[str] = ()) -> Optional[str]:
     if found is not None:
         return found.group(0)
     words = set(_TOKEN.split(lowered)) - {""}
-    for term in (*PROTECTED, *DEFAULT_GROUP_LABELS, *terms):
+    for term in (*PROTECTED, *DEFAULT_GROUP_LABELS, *REAL_ETHNICITY_WORDS, *terms):
         if term.lower() in words or term.lower() == lowered:
             return term
     return None
@@ -271,7 +287,9 @@ def protected_reference(text: Any, terms: Iterable[str] = ()) -> Optional[str]:
 
 def protected_attribute_of(word: str) -> str:
     """The protected attribute a word that :func:`protected_reference` returned is about."""
-    return PERCEIVED_ATTRACTIVENESS if ATTRACTIVENESS_PATTERN.search(word.lower()) else "ethnic_group"
+    if ATTRACTIVENESS_PATTERN.search(word.lower()):
+        return PERCEIVED_ATTRACTIVENESS
+    return REAL_ETHNICITY if word.lower() in (REAL_ETHNICITY, *REAL_ETHNICITY_WORDS) else "ethnic_group"
 
 #: Fields that exist, in the perception record or in an agent's own state, and that a
 #: rule may not read, each with the reason. Refused as ``unobservable_field``.

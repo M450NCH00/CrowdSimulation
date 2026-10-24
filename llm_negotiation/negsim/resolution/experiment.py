@@ -20,7 +20,8 @@ replays and the tables are rebuilt from the records whenever they are missing or
 folder that holds another config, or a run with another client, is refused.
 
 The budget guard (issue #24) and its scoped cap are #30's (``rulegen.experiment``): only this
-experiment's own calls count against its cap. The fictional group is not a factor here.
+experiment's own calls count against its cap. The fictional group of issue #32 is not a factor
+here: track #55 uses real ethnicity instead (below).
 
 **The core and situational factors** (issue #60, RF-5) are used only when the design varies one:
 then the config may name ``templates.factors`` (default ``resolve_factors_v1``) and
@@ -36,6 +37,14 @@ outcome row each person's own perception as 0 or 1. **Perceived attractiveness n
 supervisor's ethics sign-off for a paid run** (``negsim.ethics``; ``docs/pairwise-factors.md``,
 section 6): without the sentence in ``CLAUDE.md`` the run is refused before anything is sent
 (``refused_no_sign_off``). A mock run needs none.
+
+**Real ethnicity** (issue #92, RF-26; ``ethnicity.py``; ``docs/ethnicity.md``) rides on the
+factor template: a design that varies ``ethnicity_pair`` uses ``resolve_factors_v2`` unless the
+config names a template (one without the ethnicity lines is refused), each session record's
+``factors`` gains both people's groups and the switch, and the outcome row gains ``p1_ethnicity``,
+``p2_ethnicity`` and ``p<n>_other_ethnicity_shown``. **A paid run that varies it needs the
+supervisor's ethics sign-off** (``negsim.ethics``; ``docs/ethnicity.md``, section 6), checked the
+same way, and ``--plan`` prints the sessions per pair of groups.
 
 **The core template** is ``resolve_v2`` unless the config names one, and ``resolve_v3`` for a
 design that varies an RF-5 or RF-6 factor (``prompt.default_core``; the user's decision of
@@ -76,7 +85,8 @@ from ..runlog.schema import OUTCOME_FILE
 from ..scenarios.registry import build_crowd_scenario
 from .design import ALL_FACTORS, KIND_FRACTIONAL, KIND_SAMPLE, PERSON_FACTORS, ResolutionDesign, Session, cell_code, sessions_for
 from .execute import MODES, MODE_PLAN_ONLY, MODE_PLAN_ORCA, steps_from_dicts
-from .factors import FACTOR_TEMPLATE, FACTOR_VALUES_CONFIG, FactorTemplate, FactorValues, SessionFactors, with_bodies
+from .ethnicity import DIFFERENT, PAIR_FACTOR, SAME, pair_table
+from .factors import FACTOR_VALUES_CONFIG, FactorTemplate, FactorValues, SessionFactors, default_factor_template, with_bodies
 from .mock import POLICIES as MOCK_POLICIES
 from .outcomes import GENERAL_COLUMNS, MODE_PLAIN_ORCA, RESOLVED
 from .pairwise import ATTRACTIVENESS, FAMILIARITY, PAIRWISE_TEMPLATE, PairwiseFactors, PairwiseTemplate
@@ -141,6 +151,13 @@ def attractiveness_signed_off(path: Optional[Path] = None) -> bool:
     """Whether ``CLAUDE.md`` (or ``path``) records the supervisor's ethics sign-off for perceived
     attractiveness (issue #61; ``docs/pairwise-factors.md``, section 6)."""
     return ethics.recorded(ethics.ATTRACTIVENESS_SIGN_OFF, SIGN_OFF_FILE if path is None else path)
+
+
+def ethnicity_signed_off(path: Optional[Path] = None) -> bool:
+    """Whether ``CLAUDE.md`` (or ``path``) records the supervisor's ethics sign-off for real
+    ethnicity (issue #92; ``docs/ethnicity.md``, section 6). The fictional group's sentence (issue
+    #32) does not stand for it."""
+    return ethics.recorded(ethics.REAL_ETHNICITY_SIGN_OFF, SIGN_OFF_FILE if path is None else path)
 
 
 def is_resolution_config(raw: Any) -> bool:
@@ -237,7 +254,9 @@ class ResolutionConfig:
         core = templates.get("core", default_core(design.uses_factors or design.uses_pairwise))
         chosen = {"core": str(core), "debrief": str(templates.get("debrief", DEBRIEF_TEMPLATE))}
         if design.uses_factors:
-            chosen["factors"] = str(templates.get("factors", FACTOR_TEMPLATE))
+            chosen["factors"] = str(templates.get("factors", default_factor_template(design.uses_ethnicity)))
+            if design.uses_ethnicity and not FactorTemplate.load(chosen["factors"]).has_ethnicity:
+                raise ConfigError(f"{where}.templates.factors: {chosen['factors']} has no ethnicity lines, and the design varies {PAIR_FACTOR}")
         if design.uses_pairwise:
             chosen["pairwise"] = str(templates.get("pairwise", PAIRWISE_TEMPLATE))
         default_values = str(FACTOR_VALUES_CONFIG.relative_to(PACKAGE_ROOT)).replace("\\", "/")
@@ -600,7 +619,10 @@ def session_factors(config: ResolutionConfig, session: Session) -> SessionFactor
     """The core and situational factors of a session (issue #60): each person's levels, the
     switches of the observable ones the design varies, and the setting."""
     visible = {name: session.visibility[name] for levels in session.factor_levels.values() for name in levels if name in session.visibility}
-    return SessionFactors(config.factor_template(), session.factor_levels, visible, session.situation)
+    return SessionFactors(
+        config.factor_template(), session.factor_levels, visible, session.situation,
+        ethnicity=session.ethnicity, ethnicity_visible=session.visibility.get("ethnicity", True),  # issue #92
+    )
 
 
 def session_pairwise(config: ResolutionConfig, session: Session) -> PairwiseFactors:
@@ -727,6 +749,8 @@ def _agent_columns(record: Mapping[str, Any], agent: Optional[int], prefix: str)
         f"{prefix}_urgency": persona.get("urgency"), f"{prefix}_errand": persona.get("task"),
         # Issue #60: each core factor the design varies, as this person's level.
         **{f"{prefix}_{name}": persona[name] for name in PERSON_FACTORS if name != "urgency" and name in persona},
+        # Issue #92: the person's group of real ethnicity, when the design varies it.
+        **({f"{prefix}_ethnicity": persona["ethnicity"]} if "ethnicity" in persona else {}),
         f"{prefix}_decision_points": len(points),
         f"{prefix}_trigger_reasons": "|".join(";".join(p["trigger_reasons"]) for p in points) or None,
         f"{prefix}_unreadable": sum(1 for p in points if p.get("parse_error")),
@@ -774,10 +798,15 @@ def _shown_columns(record: Mapping[str, Any], agent: int, other: int, prefix: st
     situational factor, at how many ``other`` was in view at a detail where their observable factor
     lines are printed (``resolve_v3`` prints them on a short line too). A base level has no line,
     so the analysis counts a factor as told only when the person's level has one and its switch is
-    on (``analysis/load.py``)."""
+    on (``analysis/load.py``). Issue #92: with a design that varies real ethnicity, at how many
+    ``agent`` was told ``other``'s (in view at such a detail, with ``ethnicity_visible`` on; every
+    group has a line)."""
     core = _core(record["templates"]["core"]["key"])
     printed, demographics = core.prints_extra_lines, core.prints_demographics
-    age = gender = observable = 0
+    factors = record.get("factors") or {}
+    groups = factors.get("ethnicity") or {}
+    ethnicity_told = bool(factors.get("ethnicity_visible", True)) and str(other) in groups
+    age = gender = observable = ethnicity = 0
     for point in record.get("decision_points") or []:
         if point["agent_id"] != agent:
             continue
@@ -789,9 +818,12 @@ def _shown_columns(record: Mapping[str, Any], agent: int, other: int, prefix: st
         age += told and person.get("age") is not None
         gender += told and person.get("gender") is not None
         observable += printed(person["detail"])
+        ethnicity += ethnicity_told and printed(person["detail"])
     columns = {f"{prefix}_other_age_shown": age, f"{prefix}_other_gender_shown": gender}
     if record.get("factors") is not None:
         columns[f"{prefix}_other_observable_shown"] = observable
+    if groups:
+        columns[f"{prefix}_other_ethnicity_shown"] = ethnicity
     return columns
 
 
@@ -816,7 +848,9 @@ def outcome_row(record: Mapping[str, Any], case: Mapping[str, Any], physical: Op
         "condition": record["condition"], "mapping": session["cell"]["mapping"], "repeat": session["repeat"],
         "exact_repeat_set": session["exact_repeat_set"],
         # Issue #62: only when the design lists geometries, or the session is half of a counterfactual pair.
-        **{key: session[key] for key in ("geometry", "pair_id", "pair_role", "pair_factor") if key in session},
+        **{key: session[key] for key in ("geometry", "pair_id", "pair_role", "pair_factor", "pair_change") if key in session},
+        # Issue #92: the session's weight back to the resident shares, when the design varies ethnicity.
+        **({"ethnicity_weight": session["ethnicity_weight"]} if "ethnicity_weight" in session else {}),
         "model": record["llm"]["model"], "temperature": record["llm"]["temperature"],
         **{name: session["cell"][name] for name in ALL_FACTORS if name in session["cell"]},
         **_agent_columns(record, first, "p1"),
@@ -1086,6 +1120,12 @@ def run_resolution(
                 "the design varies perceived attractiveness, and the supervisor's ethics sign-off for it is not recorded in "
                 "CLAUDE.md: no paid run may switch it on until it is (docs/pairwise-factors.md, section 6)"
             )
+        if config.design.uses_ethnicity and not ethnicity_signed_off():
+            invocation("refused_no_sign_off", {"client": name})
+            raise ConfigError(
+                "the design varies real ethnicity, and the supervisor's ethics sign-off for it is not recorded in "
+                "CLAUDE.md: no paid run may switch it on until it is (docs/ethnicity.md, section 6)"
+            )
         if not preview["fits_the_cap"] and config.budget.get("over_cap", OVER_CAP_REFUSE) == OVER_CAP_REFUSE:
             invocation("refused_over_cap", {"client": name})
             raise ConfigError(
@@ -1192,6 +1232,8 @@ def print_plan(config: ResolutionConfig, client_name: Optional[str] = None, out:
         out(f"  {line}")
     if config.design.uses_attractiveness and not attractiveness_signed_off():
         out("  perceived attractiveness is on: a paid run is refused until CLAUDE.md records the ethics sign-off")
+    if config.design.uses_ethnicity and not ethnicity_signed_off():
+        out("  real ethnicity is on: a paid run is refused until CLAUDE.md records the ethics sign-off")
     seen_lines = config.design.uses_pairwise or any(name in config.design.levels for name in OBSERVABLE)
     if seen_lines and not _core(config.templates["core"]).prints_extra_lines(DETAIL_SHORT):
         out(
@@ -1229,6 +1271,11 @@ def design_lines(config: ResolutionConfig, plan_: Plan) -> list[str]:
         repeats = sum(1 for session in mine if session.repeat > 1)
         pairs = sum(1 for session in mine if session.pair_id is not None)
         lines.append(f"{condition}: {len(mine)} session(s): {len(mine) - repeats - pairs} of the design, {repeats} exact repeat(s), {pairs} in pairs")
+    if design.ethnicity_shares is not None:  # issue #92, task 9: how few sessions the smaller groups get
+        drawn = [(session.personas[first]["ethnicity"], session.personas[second]["ethnicity"]) for session in plan_.sessions for first, second in [session.persons]]
+        at_level = Counter(session.cell[PAIR_FACTOR] for session in plan_.sessions)
+        weights = [session.ethnicity_weight for session in plan_.sessions]
+        lines.extend(pair_table(design.ethnicity_shares, drawn, {SAME: at_level[SAME], DIFFERENT: at_level[DIFFERENT]}, design.ethnicity_draw, weights))
     return lines
 
 

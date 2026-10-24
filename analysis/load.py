@@ -20,7 +20,13 @@ more of its decision points:
   switch ``<name>_visible`` is on (on when the design does not vary it), and
   ``<p>_other_observable_shown`` >= 1;
 - a pairwise factor: ``<p>_pairwise_lines_shown`` >= 1; then both levels have a line, so the
-  agent was told one or the other.
+  agent was told one or the other;
+- the other's ethnicity (RF-26, issue #92): ``<p>_other_ethnicity_shown`` >= 1 (every group has a
+  line; the switch ``ethnicity_visible`` off gives 0). The predictor ``same_ethnicity`` is 1 when
+  the agent was told the other's group and it is its own; ``ethnicity_unseen`` when it was not
+  told. The groups themselves (``own_ethnicity``, ``other_ethnicity`` as told,
+  ``other_ethnicity_actual``) are descriptive columns, not predictors: at real shares the smaller
+  groups have too few sessions for a term of their own (``WORK_LOG-92.md``, A3).
 
 The agent's own age and gender count only when the demographics are visible (they hide both
 people's). Its own core factors are always in its own description.
@@ -191,9 +197,12 @@ def sessions_table(raw: pd.DataFrame, mode: str = "plan_only") -> tuple[pd.DataF
         "exact_repeat_set": as_bool(_column(data, "exact_repeat_set")).fillna(0.0).astype(bool),
         "repeat_group": data["session_key"].map(repeat_group),
         "pair_id": _column(data, "pair_id"), "pair_role": _column(data, "pair_role"), "pair_factor": _column(data, "pair_factor"),
+        "pair_change": _column(data, "pair_change"),  # issue #92: a pair that flips a person's group, chinese->indian
         "p1_agent": as_number(data["p1_agent"]).astype(int), "p2_agent": as_number(data["p2_agent"]).astype(int),
     })
     out["geometry"] = out["geometry"].fillna(out["case_id"])
+    if "ethnicity_weight" in data.columns:  # issue #92: the session's weight back to random resident pairs
+        out["ethnicity_weight"] = as_number(data["ethnicity_weight"])
     for name in DESIGN_COLUMNS:
         if name in data.columns:
             out[name] = data[name]
@@ -264,6 +273,14 @@ def agents_table(raw: pd.DataFrame, sessions: pd.DataFrame) -> tuple[pd.DataFram
         for name, (_, marked) in SITUATIONS.items():
             if name in data.columns:
                 frame[f"{name}_{marked}"] = (data[name] == marked).astype(float)
+        if f"{me}_ethnicity" in data.columns:  # issue #92: one's own is always told, the other's as told
+            own_group, other_group = data[f"{me}_ethnicity"], data[f"{other}_ethnicity"]
+            ethnicity_told = as_number(_column(data, f"{me}_other_ethnicity_shown")).fillna(0) >= 1
+            frame["own_ethnicity"] = own_group.to_numpy()
+            frame["other_ethnicity"] = other_group.where(ethnicity_told).to_numpy()
+            frame["other_ethnicity_actual"] = other_group.to_numpy()
+            frame["same_ethnicity"] = ((own_group == other_group) & ethnicity_told).astype(float)
+            frame["ethnicity_unseen"] = (~ethnicity_told).astype(float)
         shown = _column(data, f"{me}_pairwise_lines_shown")
         if shown.notna().any():
             pairwise_told = as_number(shown).fillna(0) >= 1
@@ -294,7 +311,7 @@ def agents_table(raw: pd.DataFrame, sessions: pd.DataFrame) -> tuple[pd.DataFram
     agents = pd.concat(rows, ignore_index=True)
     order = [
         "own_age_high", "own_female", "own_demographics_hidden", "other_age_high", "other_female", "other_demographics_unseen",
-        *(f"own_{name}" for name in PERSON), *(f"other_{name}" for name in OBSERVABLE),
+        *(f"own_{name}" for name in PERSON), *(f"other_{name}" for name in OBSERVABLE), "same_ethnicity", "ethnicity_unseen",
         *(f"{name}_{marked}" for name, (_, marked) in SITUATIONS.items()), *PAIRWISE, "pairwise_unseen", "is_lower_agent",
     ]
     return agents, [column for column in order if column in agents.columns]

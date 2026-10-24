@@ -74,6 +74,8 @@ def row(
         })
         if "pairwise" in seen:
             out[f"{p}_pairwise_lines_shown"] = seen["pairwise"]
+        if "ethnicity" in seen:  # issue #92
+            out[f"{p}_other_ethnicity_shown"] = seen["ethnicity"]
     out["encounter_size"] = 2
     out["encounter_agents"] = ";".join(str(a) for a in order)
     who = None if first is None else "together" if first == "together" else agents[first]

@@ -73,6 +73,7 @@ def render(results: "Results") -> str:
     lines += _mapping(results)
     lines += _stated(results)
     lines += _intent(results)
+    lines += _ethnicity(results)
     lines += _reading(results)
     return "\n".join(lines).rstrip() + "\n"
 
@@ -243,6 +244,29 @@ def _intent(r: "Results") -> list[str]:
     lines += ["", "### Intents the codebook could not place (the commonest)", ""]
     lines += [f"- {count} x \"{_cell(text)}\"" for text, count in uncoded.items()] or ["None."]
     return lines + [""]
+
+
+def _ethnicity(r: "Results") -> list[str]:
+    """Issue #92: only when the outcome rows carry real ethnicity."""
+    if r.ethnicity_groups is None and r.ethnicity_weighted is None:
+        return []
+    lines = ["## 8. Real ethnicity", "",
+             "Descriptive. A difference between groups here is the model's behaviour towards people it was told are of a group, "
+             "not a fact about those groups, and no rule may read ethnicity (`llm_negotiation/docs/ethnicity.md`).", ""]
+    if r.ethnicity_groups is not None and not r.ethnicity_groups.empty:
+        frame = r.ethnicity_groups
+        shown = [c for c in ("passed_first", "kept_left", "stopped", "backed_up", "plan_slowed", "plan_left", "plan_right") if c in frame.columns]
+        lines += ["### By group, the other's as told (unweighted agent rows)", ""]
+        lines += table(frame, ["own", "other_as_told", "n", *shown])
+        lines += ["", "Each share is over the rows where the outcome is defined (`<outcome>_n` in `ethnicity_groups.csv`).", ""]
+    if r.ethnicity_weighted is not None and not r.ethnicity_weighted.empty:
+        lines += ["### Weighted back to random resident pairs", "",
+                  "Each session weighted by `ethnicity_weight`, so that the sessions stand for two residents met at random (each at "
+                  "the resident shares; residents only). Use the weighted rate for a population-level figure; the effective number "
+                  "of sessions is what the weighting leaves.", ""]
+        lines += table(r.ethnicity_weighted, ["outcome", "sessions", "unweighted", "weighted", "effective_sessions"])
+        lines += [""]
+    return lines
 
 
 def _reading(r: "Results") -> list[str]:

@@ -1175,6 +1175,51 @@ The rehearsal has round 1's shape: a 2^(12-7) fraction (32 cells) on two head-on
 only exercise the machinery; choosing them is RF-10's. A config with none of the new keys has the
 same cells, session ids and records as before.
 
+## Real ethnicity (issue #92)
+
+Issue #92 (RF-26) adds real ethnicity as a factor, in place of the fictional group, which track
+#55 no longer uses (the user's decision of 2026-10-24); on the mock
+(`negsim/resolution/ethnicity.py`; the lines in the frozen template `resolve_factors_v2`;
+`docs/ethnicity.md`):
+
+- **The groups:** Singapore's census groups at their shares of the resident population (SingStat,
+  *Population Trends 2026*: Chinese 73.9%, Malay 13.5%, Indian 9.0%, Others 3.6%;
+  `configs/resolution/ethnicity_sg_2026.yaml`). Residents only (4.23 of 6.21 million); a visitor
+  is drawn at the same shares (the user's decision).
+- **In a design:** `ethnicity_pair` (`same` or `different`) and its switch `ethnicity_visible`.
+  `design.ethnicity_draw: real` (the default) draws person 1 at the shares and person 2 the same
+  group or one of the other three renormalised; `balanced` (the user's decision, for the screen)
+  gives every group equally often in a fixed rotation. Each session's `ethnicity_weight` makes
+  the sessions stand for two residents met at random, for population-level figures. The same cell
+  and case is the same two people under every condition and repeat.
+- **Who is told what:** one's own group always ("- You are Malay."); the other's under them, from
+  10 m under `resolve_v3` on, when the switch is on ("They look Malay."). Others is "neither
+  Chinese, Malay nor Indian" (the user's wording).
+- **Logged:** both groups on the personas and in the record's `factors`; in the outcome row
+  `p1_ethnicity`, `p2_ethnicity` and how often each was told the other's
+  (`p1_other_ethnicity_shown`), and `ethnicity_weight`. RF-8's analysis reads it as told
+  (`same_ethnicity`, `ethnicity_unseen`), and its report gives the outcomes by group and the
+  weighted rates.
+- **Gated:** a paid run that varies it is refused (`refused_no_sign_off`) unless `CLAUDE.md`
+  holds its own sentence (recorded on 2026-10-24). No rule may read it (`protected_attribute`):
+  a field with `ethnic`, a census group's name or a word for race.
+- **`--plan`** prints the sessions per pair of groups: drawn, expected under the draw, and
+  weighted.
+- **Counterfactual pairs can flip one person's group** (`factor: p2_ethnicity`, both groups fixed
+  by `ethnicity: {p1, p2}`, `to: indian`): two sessions identical but for that person's group, the
+  direct test of behaviour towards (person 1's rows) and as (person 2's) a group.
+
+```
+python run_experiment.py configs/resolution/resolve_ethnicity_mock_rehearsal.yaml --plan
+python run_experiment.py configs/resolution/resolve_ethnicity_mock_rehearsal.yaml
+```
+
+The rehearsal has RF-10's shape: a 2^(7-3) fraction (16 cells) on two head-on geometries,
+independent and talk, with a counterfactual pair that flips `ethnicity_pair` and two that flip only
+person 2's group (Chinese to Indian, Malay to Indian), groups drawn `balanced`, under `resolve_v5`
+and `as_prompted`; 88 sessions. The mock's replies do not read the lines, so nothing in it is a
+finding.
+
 ## Changing things
 
 | To | Edit |
@@ -1222,13 +1267,17 @@ same cells, session ids and records as before.
   the core and situational factors (`factors.py`); RF-6 (#61) adds the pairwise perception
   factors (`pairwise.py`; `docs/pairwise-factors.md`); RF-7 (#62) adds the screening designs
   (`screening.py`; `docs/screening-designs.md`); RF-8 (#63) analyses the outcome tables
-  (`../analysis/`, outside negsim); RF-9 onward build the rest.
+  (`../analysis/`, outside negsim); RF-26 (#92) adds real ethnicity (`ethnicity.py`;
+  `docs/ethnicity.md`); RF-9 onward build the rest.
 - `docs/screening-designs.md`: the screening designs of issue #62: the fraction and its
   published generators, the balanced sample, geometries, the exact-repeat set, counterfactual
   pairs, and what stays as before.
 - `docs/pairwise-factors.md`: the pairwise perception factors of issue #61: the block, who is
   told what, the switches, the design, what is logged, the ethics gate and its exact sentence,
   the rule check, and how a crowd of 10,000 would store them.
+- `docs/ethnicity.md`: real ethnicity (issue #92): the lines, the sourced shares and their limits,
+  the design and its draw, what is logged, the ethics gate and its exact sentence, the rule
+  check, and what it cannot show.
 - `docs/encounter-protocol.md`: the Step 1 encounter protocol and the `resolution` experiment
   layer (issue #58): the trigger, decision points, conditions, the end, the debrief, the cost
   preview, the outcome row and the config.
@@ -1249,7 +1298,7 @@ same cells, session ids and records as before.
   are the same rule (issue #30); `back_up`, and the check that no rule reads a group (issue #32).
 - `docs/fictional-groups.md`: the fictional group of issue #32: the labels and every search
   that checked them, why no rule may read it, what is logged, the sign-off, and what such
-  groups cannot show.
+  groups cannot show. Not used in track #55, which uses real ethnicity (issue #92).
 - `docs/rule-matching.md`: which rule a pair follows, step by step, and why one shared
   snapshot stands for each agent deciding alone.
 - `docs/baseline.md`: the two frozen baselines that "plain ORCA" means, and paired seeds
