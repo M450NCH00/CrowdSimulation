@@ -206,6 +206,9 @@ class ResolutionConfig:
     llm: Mapping[str, Any]
     budget: Mapping[str, Any]
     factor_values: Optional[str] = None  # issue #60: only when the design varies a core or situational factor
+    #: Issue #65 (task 3): the ``plan_only`` resolution rate below which the encounter type counts
+    #: as not resolved by the LLM, fixed before the run, with the reason. None: no gate.
+    resolution_gate: Optional[Mapping[str, Any]] = None
 
     @classmethod
     def load(cls, path: Path | str) -> "ResolutionConfig":
@@ -216,7 +219,8 @@ class ResolutionConfig:
         where = f"resolution config {source}"
         check_keys(
             raw, where, ("layer", "experiment_name", "conditions", "design", "llm"),
-            ("schema_version", "description", "cases", "scenarios", "protocol", "templates", "llm_view", "budget", "factor_values"),
+            ("schema_version", "description", "cases", "scenarios", "protocol", "templates", "llm_view", "budget", "factor_values",
+             "resolution_gate"),
         )
         if raw["layer"] != LAYER_RESOLUTION:
             raise ConfigError(f"{where}.layer: expected {LAYER_RESOLUTION!r}")
@@ -289,6 +293,7 @@ class ResolutionConfig:
                 **({"over_cap": OVER_CAP_STOP} if as_choice(budget.get("over_cap", OVER_CAP_REFUSE), f"{where}.budget.over_cap", OVER_CAP) == OVER_CAP_STOP else {}),
             },
             factor_values=str(raw.get("factor_values", default_values)) if design.uses_factors else None,
+            resolution_gate=_gate(raw.get("resolution_gate"), f"{where}.resolution_gate"),
         )
 
     def llm_settings(self) -> LLMSettings:
@@ -320,7 +325,25 @@ class ResolutionConfig:
         }
         if self.factor_values is not None:  # only a design with factors of issue #60: an older config is described as before
             described["factor_values"] = self.factor_values
+        if self.resolution_gate is not None:  # issue #65: likewise
+            described["resolution_gate"] = dict(self.resolution_gate)
         return described
+
+
+def _gate(raw: Any, where: str) -> Optional[dict[str, Any]]:
+    """``resolution_gate`` (issue #65, task 3): ``plan_only_resolved_min``, a rate from 0 to 1, and
+    ``reason``, the reason it was chosen, both required, so that the threshold is a recorded
+    design decision made before the run."""
+    if raw is None:
+        return None
+    block = check_keys(raw, where, ("plan_only_resolved_min", "reason"), ())
+    reason = " ".join(str(block["reason"]).split())
+    if not reason:
+        raise ConfigError(f"{where}.reason: say why the threshold was chosen")
+    rate = as_number(block["plan_only_resolved_min"], f"{where}.plan_only_resolved_min", minimum=0.0)
+    if rate > 1.0:
+        raise ConfigError(f"{where}.plan_only_resolved_min: a rate from 0 to 1, got {rate}")
+    return {"plan_only_resolved_min": rate, "reason": reason}
 
 
 def _comparable(experiment: Mapping[str, Any]) -> dict[str, Any]:
@@ -1230,6 +1253,9 @@ def print_plan(config: ResolutionConfig, client_name: Optional[str] = None, out:
         out("  (with the mock client nothing is charged: this is what the same sessions could cost with deepseek)")
     for line in design_lines(config, plan_):
         out(f"  {line}")
+    if config.resolution_gate is not None:
+        out(f"  resolution gate: the encounter type is resolved by the LLM if at least "
+            f"{config.resolution_gate['plan_only_resolved_min']:.2f} of its sessions resolve in plan_only (fixed before the run)")
     if config.design.uses_attractiveness and not attractiveness_signed_off():
         out("  perceived attractiveness is on: a paid run is refused until CLAUDE.md records the ethics sign-off")
     if config.design.uses_ethnicity and not ethnicity_signed_off():

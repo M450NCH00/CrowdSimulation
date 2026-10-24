@@ -434,7 +434,8 @@ def test_the_cost_preview_counts_the_ethnicity_lines():
 
 @pytest.mark.parametrize("path", sorted(str(p.relative_to(PACKAGE_ROOT)).replace("\\", "/") for p in (PACKAGE_ROOT / "configs" / "resolution").glob("*.yaml")))
 def test_configs_written_before_have_no_ethnicity_anywhere(path):
-    if path.endswith(("ethnicity_sg_2026.yaml", "resolve_ethnicity_mock_rehearsal.yaml", "llm_view_v1.yaml", "factors_v1.yaml")):
+    if path.endswith(("ethnicity_sg_2026.yaml", "resolve_ethnicity_mock_rehearsal.yaml", "llm_view_v1.yaml", "factors_v1.yaml",
+                      "round1_head_on_screening.yaml")):  # issue #65: RF-10's screen, written after #92, varies ethnicity
         pytest.skip("not an experiment config written before issue #92")
     c = E.ResolutionConfig.load(path)
     assert not c.design.uses_ethnicity and c.design.ethnicity_shares is None and "ethnicity_shares" not in c.design.as_dict()
