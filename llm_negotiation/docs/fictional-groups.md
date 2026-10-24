@@ -1,5 +1,10 @@
 # Fictional groups (issue #32)
 
+**Not used in track #55 (the user's decision, 2026-10-24).** The resolve-first track uses real
+ethnicity instead: Singapore's census groups at their resident shares (issue #92, RF-26;
+`ethnicity.md`). The fictional group stays in the rule-generation layer only (#30, #32), whose
+code and configs behave exactly as before, and its own sign-off is no longer needed for track #55.
+
 A person in a rule-generation session may belong to a **fictional group**: an `ethnic_group`
 attribute that holds an invented label, such as `Kestrop`. It lets an experiment ask whether a
 model treats people of its own group differently from people of another, with a label that

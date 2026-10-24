@@ -49,7 +49,9 @@ Each module's docstring is the full statement; in short:
 - **`load.py`, one row per agent.** Own factors; the other's factors **as the agent was told
   them**: the other's age and gender only where they were printed (full detail, demographics
   visible), an observable core factor only where its line was printed (marked level, switch on,
-  the other in view at a detail that prints it), a pairwise value only where its line was shown.
+  the other in view at a detail that prints it), a pairwise value only where its line was shown,
+  the other's ethnicity (issue #92) only where it was told (`same_ethnicity`, `ethnicity_unseen`;
+  the groups themselves are descriptive columns, too rare at real shares to be predictors).
   The physical columns' `_a` and `_b` are mapped to person 1 and person 2 through
   `encounter_agents`.
 - **`effects.py`, factor effects.** Logistic regression per binary outcome (odds ratios), linear
@@ -83,8 +85,8 @@ These are this issue's choices, not the supervisor's; `WORK_LOG-63.md` gives the
    2, and the whole report in none. `--holm-family subset|model` is there for a reader who states
    the narrower family.
 2. **"As told" is coded as 0/1 predictors.** Where both levels of a factor have a line (age,
-   gender, the pairwise factors), "not told" is its own indicator
-   (`other_demographics_unseen`, `pairwise_unseen`), not folded into the base level. An
+   gender, the pairwise factors, real ethnicity), "not told" is its own indicator
+   (`other_demographics_unseen`, `pairwise_unseen`, `ethnicity_unseen`), not folded into the base level. An
    observable core factor's base level has no line, so "told it has a cane" against everything
    else is exactly what the agent could know.
 3. **An age is "high" when above the lowest age in the data** (a design has two ages).

@@ -182,7 +182,7 @@ design (`llm_negotiation/docs/resolution.md`); they need no supervisor sign-off.
 a paid run that varies the factor is refused until this file holds the
 factor's sentence, word for word, with the date. Perceived attractiveness:
 `llm_negotiation/docs/pairwise-factors.md`, section 6 (issue #61). Real
-ethnicity: issue #92, task 6 (the gate is built there). The fictional group:
+ethnicity: `llm_negotiation/docs/ethnicity.md`, section 6 (issue #92). The fictional group:
 `llm_negotiation/docs/fictional-groups.md`, section 6 (issue #32; no longer
 used in this track). Numbers in brackets are the decisions of track issue #55.
 
