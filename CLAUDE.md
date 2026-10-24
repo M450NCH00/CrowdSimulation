@@ -170,7 +170,7 @@ The user's notes from the meeting, word for word:
   each simulator. Rules may be more specific, for example "keep left".
 
 ## Pending sign-offs
-Items 1, 5 and 6 are still pending (item 1 was approved for issue #64 only).
+Items 1, 5 and 6 are still pending (item 1 was approved for issues #64 and #65 only).
 **Do not treat any of them as approved** until the user records the
 supervisor's answer in this file, with a date. Items 2 and 3, the ethics
 sign-offs for perceived attractiveness and real ethnicity, were recorded by the
@@ -193,6 +193,10 @@ used in this track). Numbers in brackets are the decisions of track issue #55.
      paid runs for RF-9's pilot (#64), and only for it, with a cap of
      **USD 0.20** on that experiment's own calls (`experiment_name: rf_pilot`).
      Every other paid run still needs its own approval and cap recorded here.
+   - **Approved for issue #65 only, 2026-10-24:** the user approved paid runs for
+     RF-10's round 1 screen (#65), and only for it, with a cap of **USD 0.35** on
+     that experiment's own calls (`experiment_name: rf10_round1_head_on`; 288
+     sessions, about USD 0.25 off-peak, `WORK_LOG-65.md`).
 2. **Approved by the supervisor, 2026-10-24** — Ethics sign-off for perceived
    attractiveness as a factor (#55, 3). *The user decided on 2026-10-24* that
    attractiveness (both directions) is **in** RF-10's design, because bias can

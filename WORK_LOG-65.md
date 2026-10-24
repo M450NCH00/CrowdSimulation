@@ -140,7 +140,7 @@ about 790 sessions): about USD 0.70 off-peak. Balance USD 1.41 (2026-10-24).
 - **The Holm family is fixed now, before the run:** the whole report, RF-8's default (RF-8: on 20
   no-effect synthetic screens it gave 0 false positives, against 17 for a family of one model).
 
-### 2026-10-25 00:00 — Full suite; where this stops
+### 2026-10-24 22:40 — Full suite; where this stops
 - Full `llm_negotiation` suite: **1 failed, 1879 passed, 4 skipped** (13 min). The failure was
   `test_configs_written_before_have_no_ethnicity_anywhere` on the new config: the test guards
   configs written before #92, and RF-10's varies ethnicity on purpose. Added it to the test's
