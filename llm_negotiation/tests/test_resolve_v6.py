@@ -22,6 +22,7 @@ from negsim.configutil import ConfigError
 from negsim.negotiation import prompts
 from negsim.negotiation.parsing import TurnParseError
 from negsim.resolution import execute as X
+from negsim.resolution import experiment as E
 from negsim.resolution import protocol as P
 from negsim.resolution.prompt import DRIFT_MAX_DEG, CoreTemplate, render
 from negsim.resolution.reply import ReplyContext, Until, parse_reply
@@ -177,3 +178,48 @@ def test_the_wait_is_described_only_when_on_and_must_be_true_or_false():
     assert P.ProtocolSettings.from_mapping({"no_conflict_waits_for_plans": True}).as_dict()["no_conflict_waits_for_plans"] is True
     with pytest.raises(ConfigError):
         P.ProtocolSettings.from_mapping({"no_conflict_waits_for_plans": "yes"})
+
+
+# --- the resolution gate (task 3) and the screen's config ----------------------------------------
+
+
+RAW = {
+    "layer": "resolution", "experiment_name": "raw", "cases": {"ids": ["head_on_02dfbadb@2"]}, "conditions": ["talk"],
+    "design": {"seed": 1, "factors": {"age_pair": ["same"], "gender_pair": ["p1_female"], "task": ["p1_urgent"], "demographics_visible": [True], "mapping": ["p1_lower"]}},
+    "llm": {"client": "mock"},
+}
+GATE = {"plan_only_resolved_min": 0.5, "reason": "More often than not."}
+
+
+def test_the_gate_is_recorded_only_when_set_and_needs_a_rate_and_a_reason():
+    assert E.ResolutionConfig.from_raw(RAW).resolution_gate is None
+    assert "resolution_gate" not in E.ResolutionConfig.from_raw(RAW).as_dict()
+    gated = E.ResolutionConfig.from_raw({**RAW, "resolution_gate": GATE})
+    assert gated.as_dict()["resolution_gate"] == {"plan_only_resolved_min": 0.5, "reason": "More often than not."}
+    for bad in ({"plan_only_resolved_min": 0.5}, {"reason": "r"}, {**GATE, "plan_only_resolved_min": 1.5},
+                {**GATE, "plan_only_resolved_min": -0.1}, {**GATE, "reason": "  "}, {**GATE, "mode": "plan_orca"}):
+        with pytest.raises(ConfigError):
+            E.ResolutionConfig.from_raw({**RAW, "resolution_gate": bad})
+
+
+SCREEN = "configs/resolution/round1_head_on_screening.yaml"
+
+
+def test_the_round_1_screen_is_the_issues_design_with_rf9s_fixes_and_the_gate():
+    config = E.ResolutionConfig.load(SCREEN)
+    varied = [name for name, levels in config.design.levels.items() if len(levels) == 2]
+    assert len(varied) == 16 and config.design.kind == "fractional"
+    for name in ("age_pair", "gender_pair", "urgency", "mobility_aid", "load", "distraction", "assertiveness", "residence",
+                 "attractiveness_0_sees_1", "attractiveness_1_sees_0", "familiarity", "memory_note", "ethnicity_pair",
+                 "surroundings", "time_of_day", "mapping"):
+        assert name in varied
+    assert config.conditions == ("independent", "non_verbal", "talk")
+    assert config.templates["core"] == "resolve_v6" and config.protocol.execution == "as_prompted"
+    assert config.protocol.no_conflict_waits_for_plans and config.llm["max_tokens"] == 300 and config.llm["temperature"] == 1.0
+    assert config.resolution_gate["plan_only_resolved_min"] == 0.5
+    assert config.llm["client"] == "mock"  # a paid run waits for CLAUDE.md's approval and cap for #65
+    assert config.budget["over_cap"] == "stop_at_cap"
+    said = []
+    plan = E.print_plan(config, out=said.append)
+    assert len(plan.sessions) == 288
+    assert any("resolution gate" in line and "0.50" in line for line in said)
