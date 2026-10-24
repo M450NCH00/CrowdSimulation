@@ -152,8 +152,40 @@ about 790 sessions): about USD 0.70 off-peak. Balance USD 1.41 (2026-10-24).
   wording, the encounters kept open), then the rest; `python -m analysis.gate`, `python -m
   analysis` per condition and pooled, and tasks 6 to 8.
 
+### 2026-10-24 22:45 — The user's answers; the approval recorded (commit 252aa82)
+- The user: "1. Yes I approve 2. I agree with your recommendation". Recorded in `CLAUDE.md`,
+  pending item 1: **approved for issue #65 only, 2026-10-24, cap USD 0.35** on
+  `rf10_round1_head_on`'s own calls. (I first wrote 2026-10-25; it was still 22:43 on the 24th in
+  Singapore, corrected before committing.)
+- **Separated models (open question 4), the user's decision before the results:** a separated
+  model is reported as such; a factor's claim rests on its counterfactual-pair flip rate against
+  the exact-repeat noise floor and its descriptive table; no Firth regression.
+- Checks before paying: Saturday 14:43 UTC, off-peak all day (the price page: "All other hours are
+  off-peak, including weekends"). Balance **USD 1.41** (`GET /user/balance`; key not printed).
+  Prices re-read from the page today: deepseek-flash, DeepSeek-V4.1-Flash-1017, off-peak USD 0.003
+  / 0.15 / 0.60 per million (cache hit / miss / output), as in `deepseek_pricing.yaml`: no change.
+- `--client deepseek` without `--confirm`: nothing sent, ledger unchanged at 634 lines, no gate
+  refused.
+
+### 2026-10-24 22:50 — The first 36 paid sessions (6, then 30)
+- **6 sessions**, USD 0.00736: 32 sends, **0 unreadable, 0 retries**; untils: `other_passes` 27,
+  `{"at_distance_m": d}` 27 (from 1.2 to 4 m), seconds 13, `other_stops` 3; no event written as an
+  object. The drift wording appeared 10 times, "walking across" never. 3 of 6 resolved in
+  `plan_only`.
+- **Cost above the estimate.** Non-verbal and talk sessions now use all 6 decision points (the
+  encounter stays open while plans run, fix 3), so every condition costs more than in RF-9: after
+  36 sessions, independent USD 0.00056, non-verbal 0.00133, talk 0.00120 a session (RF-9: 0.00046,
+  0.00104, 0.00107). Projected total **about USD 0.30** (remaining 252 about 0.26 by condition),
+  against the cap of 0.35; the spread per session is small (sum s.d. about 0.005), so `stop_at_cap`
+  should not cut the fraction. Ledger after 36: USD 0.0395. (I misread the runner's "actual cost"
+  line as the batch's; it is the experiment's running total.)
+- 4 of 243 sends unreadable (1.6%; RF-9 had 63): 3 `unknown_start` (an event as a later step's
+  start, `"start": "other_passes"`), 1 `unknown_signal` ("smile"). One decision point lost after
+  its retry. Not changed mid-run (templates frozen, one design): a note for a `resolve_v7`.
+- Then the remaining 252 sessions in one run, off-peak.
+
 ## Open questions / risks
-1. **Paid approval for #65 is not recorded** in `CLAUDE.md`. Nothing paid runs until it is.
+1. ~~Paid approval for #65 is not recorded~~ Recorded 2026-10-24, cap USD 0.35.
 2. **The screen is underpowered for 16 factors** (about 69 resolved outcomes in 288 sessions at
    RF-9's 24% rate, 46 in the design's 192: enough for 4 to 7 terms at 10 events per term, not 19). Only large effects will show; the
    report must say so.
@@ -165,7 +197,7 @@ about 790 sessions): about USD 0.70 off-peak. Balance USD 1.41 (2026-10-24).
    report a separated model as such (as RF-8 already does) and rest a factor's claim on its flip
    rate in the counterfactual pairs against the exact-repeat noise floor, plus its descriptive
    table; Firth would need a new dependency and a new estimator, which is more than this issue's
-   session. The user's call.
+   session. The user's call. **Decided by the user, 2026-10-24: as recommended.**
 5. **The paid run's numbers:** 288 sessions (not the 276 first estimated), about USD 0.25
    off-peak; the proposed cap USD 0.35 needs recording in `CLAUDE.md` with the approval.
 
