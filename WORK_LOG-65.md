@@ -76,13 +76,97 @@ about 790 sessions): about USD 0.70 off-peak. Balance USD 1.41 (2026-10-24).
   `later_step_start`; protocol setting like `execution`), so old configs stay byte-identical.
 - Next step: fix 1.
 
+### 2026-10-24 22:15 to 23:00 — The three fixes, resolve_v6, the gate (commit 714ccc9)
+- **The pilot's unreadable `until`s**, tallied from `runs/rf_pilot*`: the event as an object with
+  every kind of value (`true`, `"other_passes"`, `""`, `null`, `1`), and `{"at_distance_m": 2.0}`
+  (also 2.5, 3, and 0 twice). So fix 1 accepts both forms: `{event: anything but false}` is read
+  as the event and flagged `until_event_as_object`; `{"at_distance_m": d}` is a real `until`,
+  checked as a start at a distance is (positive, someone in view, no further than now; the start's
+  checks moved into a shared `_at_distance`, its failure codes unchanged, tested). The executor
+  ends such a step with `ended_by: at_distance`. `steps_from_dicts` reads it back, so a replay
+  rebuilds the run. Gated by two template flags, as `later_step_start` was.
+- **The drift (fix 2).** `negsim.rulegen.describe._heading` is shared with the rule-generation
+  layer, so it is untouched: `prompt._walking_heading` uses the new phrases only when the template
+  has them. Someone standing still keeps the old words ("facing ... drifting" would mean nothing).
+  **Changed my mind on the wording** before freezing: RF-9 suggested "coming towards you, drifting
+  to your left", but "towards you" is false for someone behind the agent walking the other way,
+  and the clause after it already says whether the distance shrinks. The phrase is "in the
+  opposite direction to you, drifting to your left by 15°". The 45° band is a placeholder
+  (`docs/parameters.md`, 8.2).
+- **`no_conflict` (fix 3).** RF-9's 3 collisions: `no_conflict` ended the encounter while a step
+  back to the old line was still to run, and the replay then carried it out with nobody asked
+  again. `protocol.no_conflict_waits_for_plans` (default false, described only when true) keeps
+  the encounter open while any member's plan waits or runs. On a head-on step-aside-and-back plan
+  the encounter now ends `passed` at 6.6 s with 4 decision points, against `no_conflict` at 4.2 s
+  with 2 (a test).
+- **`resolve_v6`** frozen in the manifest (sha256 b3b89563…). It is `resolve_v5` but for the
+  `until` sentence, two headings and two flags; a test pins every other key against v5.
+- **The gate** is an optional config block `resolution_gate` (rate and reason, both required),
+  recorded in `config.json` only when set and printed by `--plan`.
+- A slip: a stray `cat > "$TMPDIR/freeze_v6.py"` in a shell line waited on stdin and left an
+  empty file `C:\Users\chooz\AppData\Local\Temp\freeze_v6.py` (outside the repo; harmless). The
+  manifest was written by a script in the scratchpad instead.
+- Tests: `tests/test_resolve_v6.py`, 29 passed; with `test_repo_hygiene.py` (which now lists
+  `test_execute` as a local module), 34 passed.
+
+### 2026-10-24 23:00 — The screen's config (commit 8616db3)
+- `configs/resolution/round1_head_on_screening.yaml`, experiment `rf10_round1_head_on`. `--plan`:
+  **288 sessions**, 96 per condition: 64 of the design, 16 exact repeats and 16 in pairs each.
+  My estimate to the user said about 276: I counted the pairs as 36 sessions, but each pair is
+  2 sessions × 2 geometries × 3 conditions = 12, so 4 pairs are 48. At USD 0.00088 a session that
+  is **about USD 0.25 off-peak** (0.51 at peak); the proposed cap of USD 0.35 still leaves about 38%
+  headroom.
+- **The fourth counterfactual pair** flips `attractiveness_0_sees_1` (person 1 told it finds person
+  2 attractive) rather than urgency: attractiveness is the bias factor the user put in the screen
+  beside ethnicity, and a pair tests it directly. The other three are RF-26's ethnicity flips.
+- 16 factors in 32 cells is the saturated resolution IV design: every slot used, as the issue
+  asks. Ethnicity per pair of groups, drawn balanced: from 6 (chinese/others) to 42 (malay/malay)
+  sessions; persons drawn 20% to 28% per group (the `--plan` table).
+- Worst-case preview USD 17.63; `stop_at_cap` lets a confirmed run start and stops it at the cap.
+
+### 2026-10-24 23:30 — The gate in the analysis, and the mock rehearsal (commit 5c3f783)
+- `analysis/gate.py` (`python -m analysis.gate <experiment folder>`) applies the gate with the
+  threshold read from the run's `config.json`, never from the command line, so it cannot be moved
+  after the results are seen. 4 tests (`analysis/tests/test_gate.py`).
+- **Mock rehearsal of the whole screen** (`runs_mock/rf10/`, git-ignored): 288 of 288 sessions
+  completed, no error. The gate counts exactly the design's 192 (168 plain first runs plus the
+  first runs of the 24 exact-repeat sessions marked `repeat` 1); the mock "fails" it at 22 of 192,
+  which says nothing about a model (the mock's replies are scripted). RF-8's
+  `python -m analysis` runs end to end on it, with the ethnicity tables.
+- **Separation, as #55 warned:** on the mock, 17 of 60 models are separated (no finite estimate),
+  5 have no data. This is about the mock's scripted outcomes, but the real screen has 16 factors
+  on about 46 resolved sessions (at RF-9's 0.24), so it will happen there too. Not one of the
+  decisions the user delegated: open question 4 below.
+- **The Holm family is fixed now, before the run:** the whole report, RF-8's default (RF-8: on 20
+  no-effect synthetic screens it gave 0 false positives, against 17 for a family of one model).
+
+### 2026-10-25 00:00 — Full suite; where this stops
+- Full `llm_negotiation` suite: **1 failed, 1879 passed, 4 skipped** (13 min). The failure was
+  `test_configs_written_before_have_no_ethnicity_anywhere` on the new config: the test guards
+  configs written before #92, and RF-10's varies ethnicity on purpose. Added it to the test's
+  skip list beside the ethnicity rehearsal; `test_ethnicity.py` then 57 passed, 5 skipped.
+  `analysis/tests`: 64 passed.
+- **Stopped here, before any paid call.** Next, once `CLAUDE.md` records the approval and cap for
+  #65: check the balance (free `GET /user/balance`), re-check the price page, `--limit 6` with
+  `--client deepseek --confirm` off-peak, read the transcripts (the new `until` forms, the drift
+  wording, the encounters kept open), then the rest; `python -m analysis.gate`, `python -m
+  analysis` per condition and pooled, and tasks 6 to 8.
+
 ## Open questions / risks
 1. **Paid approval for #65 is not recorded** in `CLAUDE.md`. Nothing paid runs until it is.
-2. **The screen is underpowered for 16 factors** (about 66 resolved outcomes expected at RF-9's
-   24% rate, enough for 3 to 4 terms at 10 events per term). Only large effects will show; the
+2. **The screen is underpowered for 16 factors** (about 69 resolved outcomes in 288 sessions at
+   RF-9's 24% rate, 46 in the design's 192: enough for 4 to 7 terms at 10 events per term, not 19). Only large effects will show; the
    report must say so.
 3. **The gate (0.50) is my choice on the user's delegation**, not a sourced number. RF-9's pilot
    resolved 24% (before the fixes), so head-on may fail it; that is a Step 1 finding, not an
    error.
+4. **How to handle separated models, to fix before the results (#55, from RF-8):** Firth
+   regression, fewer predictors, or relying on the counterfactual pairs. My recommendation:
+   report a separated model as such (as RF-8 already does) and rest a factor's claim on its flip
+   rate in the counterfactual pairs against the exact-repeat noise floor, plus its descriptive
+   table; Firth would need a new dependency and a new estimator, which is more than this issue's
+   session. The user's call.
+5. **The paid run's numbers:** 288 sessions (not the 276 first estimated), about USD 0.25
+   off-peak; the proposed cap USD 0.35 needs recording in `CLAUDE.md` with the approval.
 
 ## Summary (fill in at the end)
