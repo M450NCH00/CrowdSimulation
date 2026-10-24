@@ -120,6 +120,42 @@ changed over earlier issues. What I found, and told the user:
   `pricing-check.md`; the table is updated after the full suite.
 - Next step: the full suite, commits, then the paid run.
 
+### 2026-10-24 — Full suite; pricing table; the first paid sessions; paused
+- What I did: full negsim suite **1781 passed** (13 min; 1769 before this issue, 12 new). Updated
+  `deepseek_pricing.yaml` (`date_checked` 2026-10-24, `model_version` `DeepSeek-V4.1-Flash-1017`)
+  and the date pinned in `test_llm.py`; committed with the record (58c7b20) before any paid call.
+  `--client deepseek` without `--confirm`: `awaiting_confirmation`, nothing sent, no ledger line.
+- **One paid session first** (`--confirm --limit 1`, Saturday, off-peak): a talk session, 10
+  sends, USD 0.001370; replies 93 to 166 tokens; most of each prompt was a cache hit after the
+  first send. Then **11 more** (`--limit 11`), a mix of the three conditions by the design's
+  shuffled order. **12 of 72 sessions, USD 0.013398 spent** (ledger, `experiment: rf_pilot`).
+  Independent sessions cost about USD 0.0004 to 0.0006, non-verbal and talk about 0.0010 to
+  0.0015: the whole pilot would cost about USD 0.07 off-peak.
+- **Finding 1: 14 of 60 decision points (23%) were unreadable after the retry.** 35 of 81 sends
+  were unreadable: 34 `start_on_later_step`, 1 `unknown_until`. The model puts `start` on a
+  later step, which the format allows only on the first. Mostly with meaning:
+  `{"at_distance_m": 2.0}`, `{"after_seconds": 1.5}`, `"now"`. It wants a later step to wait for a
+  distance or a time. The retry fixed only 6 of 20 such decision points: the retry instruction
+  says only "Your last reply could not be read", not why, so the model sends the same thing again.
+  An unreadable decision point gives that agent no plan.
+- **Finding 2: no session was resolved, even with every decision readable.** In `plan_only`, 11
+  of 12 sessions ended in a collision and none resolved; `plan_orca` resolved 0 of 12; plain ORCA 0
+  of 12 (it passes at 0.004 to 0.010 m, a near miss). The 6 sessions with no unreadable decision
+  point collided too. Example, `I_head_on_02dfbadb_4c33115a_r5`: both agents planned the sensible
+  mirror moves "shift slightly right", turn right 8° and 10° for 3.8 s at 1.3 m/s, which as the
+  prompt describes a turn ("walk at this angle to your left or right of the direction you are
+  going") would move each about 0.6 to 0.7 m sideways. The replay moved them 0.26 and 0.32 m, and
+  they collided (overlap 0.087 m). **Cause:** RF-4's executor (`execute.py`, `_step_velocity`)
+  rotates the direction toward a point `lookahead_m` = 2.0 m further along the path. As the agent
+  leaves its path that point pulls it back, so a turn of θ holds the agent at a sideways offset of
+  about 2.0 m × tan θ: 0.17 m at 5°, 0.28 m at 8°, 0.35 m at 10°, 0.54 m at 15°. The executor
+  does what its docstring says, but not what the prompt tells the agent a turn does.
+- Why I stopped: both findings are design questions (the reply format and retry text are frozen
+  templates; what a turn means is RF-4's executor and the prompt's wording), and the remaining 60
+  sessions would mostly measure these two artifacts. The money already spent is kept: the 12
+  sessions' records, prompts and raw replies are committed, as D13 requires.
+- Next step: the user's decision.
+
 ## Open questions / risks
 
 ## Summary (fill in at the end)
