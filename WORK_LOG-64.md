@@ -257,6 +257,21 @@ changed over earlier issues. What I found, and told the user:
   a small drift by the other is described as "walking across", and 28 of 30 replies given that
   reasoned about a crossing; 3 of 16 sessions that ended `no_conflict` collided afterwards.
 
+### 2026-10-24 — After the PR: the user's decisions on ethnicity and attractiveness
+- The user decided: **real ethnicity replaces the fictional group** in track #55, at Singapore's
+  real shares; and **perceived attractiveness and real ethnicity are both in RF-10's design**.
+  Both still need the supervisor's ethics sign-off before a paid run uses them.
+- The shares, read from SingStat's *Population Trends 2026* on 2026-10-24: 73.9% Chinese, 13.5%
+  Malay, 9.0% Indian, 3.6% Others, of the resident population (4.23 of 6.21 million) at end-June
+  2026. Non-residents have no breakdown there.
+- Opened **#92 (RF-26)**: real ethnicity as a factor of the resolution layer, mock only, with its
+  own ethics gate; ordered before RF-10 in #55. Updated #55 (order, decisions, pending items,
+  constraints, RF-9's notes under RF-10), #65, #66, #68, #69, #75 and #77, and commented on #32.
+- `CLAUDE.md`: constraints and sign-off items 2 and 3 record the decisions; the ethics tests
+  still find no sign-off recorded (7 passed).
+- Speaking notes for the supervisor:
+  `literature/paper-summaries/supervisor-meeting-talking-points-rf9-pilot.md`.
+
 ## Recommendation for Phase A (RF-10), task 5
 Measured: USD 0.00086 a session off-peak on average (independent 0.00046, non-verbal 0.00104,
 talk 0.00107), double at peak; RF-10's factor lines add about 2% (the screening rehearsal's

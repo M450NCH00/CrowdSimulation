@@ -74,9 +74,11 @@ Constraints for every RF issue (from #55):
 - No paid call unless this file records the supervisor's approval of paid runs
   and the cap for that phase or round (see "Pending sign-offs").
 - No reply format may ask an agent who goes first.
-- Perceived attractiveness and the fictional group stay off by default. No paid
-  run with either switched on until this file records the ethics sign-off.
-- No rule may read a person's group.
+- Perceived attractiveness and ethnicity stay off by default. No paid run with
+  either switched on until this file records that factor's own ethics sign-off.
+  (Since 2026-10-24 real ethnicity replaces the fictional group in this track;
+  see "Pending sign-offs", item 3.)
+- No rule may read a person's ethnicity (or group) or perceived attractiveness.
 - Prompt templates are frozen: a wording change means a new template version,
   never an edit.
 - Every feature is built and tested on the mock client first.
@@ -173,8 +175,9 @@ they need no supervisor sign-off. The ethics
 sign-off for the fictional group has an exact form that negsim checks for; see
 `llm_negotiation/docs/fictional-groups.md`, section 6. So does the one for
 perceived attractiveness (item 2; issue #61); see
-`llm_negotiation/docs/pairwise-factors.md`, section 6. Numbers in brackets are
-the decisions of track issue #55.
+`llm_negotiation/docs/pairwise-factors.md`, section 6. So will the one for real
+ethnicity (item 3; issue #92, task 6). Numbers in brackets are the decisions of
+track issue #55.
 
 1. **PENDING** — Paid runs, and their cap: a total of about USD 1.80, split per
    phase (#55, 1). Until it is recorded, no paid call. The balance is now
@@ -184,9 +187,20 @@ the decisions of track issue #55.
      **USD 0.20** on that experiment's own calls (`experiment_name: rf_pilot`).
      Every other paid run still needs its own approval and cap recorded here.
 2. **PENDING** — Ethics sign-off for perceived attractiveness as a factor (#55,
-   3). Without it, RF-10 drops both attractiveness factors.
-3. **PENDING** — Whether the fictional group stays (#55, 3), and its ethics
-   sign-off, pending since issue #32.
+   3). *The user decided on 2026-10-24* that attractiveness (both directions) is
+   **in** RF-10's design, because bias can affect the decision a person makes.
+   The sign-off is still the supervisor's: without it, a paid run that varies
+   attractiveness is refused, and RF-10 stops and asks the user.
+3. **PENDING** — Ethics sign-off for **real ethnicity** as a factor. *The user
+   decided on 2026-10-24* that real ethnicity replaces the fictional group in
+   this track: Singapore's ethnic groups at their resident shares (SingStat,
+   *Population Trends 2026*, end-June 2026: 73.9% Chinese, 13.5% Malay, 9.0%
+   Indian, 3.6% Others), built in RF-26 (issue #92), and included in RF-10. Its
+   sign-off sentence will be: "Ethics sign-off for the real-ethnicity factor
+   (issue #92): approved by the supervisor on YYYY-MM-DD". The fictional group
+   (issue #32) stays only in the rule-generation layer, unchanged; its own
+   sign-off is no longer needed for this track. *Earlier wording:* whether the
+   fictional group stays, and its ethics sign-off, pending since issue #32.
 4. **Decided by the user, 2026-10-22** — Whether to add the silent condition
    beside the talk condition (#55, 4): three conditions, namely independent,
    non-verbal and talk (`resolution.md`, D3).
