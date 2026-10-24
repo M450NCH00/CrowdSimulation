@@ -8,11 +8,16 @@
 # The design: a 2^(7-3) fraction (16 cells, resolution IV) of seven two-level factors, ethnicity_pair
 # and its switch ethnicity_visible among them, on round 1's two head-on geometries (D14), in the
 # independent and talk conditions; plus one counterfactual pair that flips ethnicity_pair, so that
-# the two sessions keep person 1's group and differ only in person 2's. Each session's two groups
-# are drawn with the seed at the resident shares of configs/resolution/ethnicity_sg_2026.yaml
-# (SingStat, Population Trends 2026: residents only, 4.23 of 6.21 million; a visitor is drawn at the
-# same shares, the user's decision of 2026-10-24). --plan prints the sessions per pair of groups,
-# expected and drawn: at real shares the Indian and Others groups get few.
+# the two sessions keep person 1's group and differ only in person 2's.
+#
+# The groups are drawn balanced (design.ethnicity_draw: balanced; the user's decision of 2026-10-24,
+# issue #92's open question 3): every group equally often, in a fixed rotation, so that a per-group
+# effect gets enough sessions; each session's ethnicity_weight restores the resident shares of
+# configs/resolution/ethnicity_sg_2026.yaml (SingStat, Population Trends 2026: residents only, 4.23
+# of 6.21 million; a visitor is drawn at the same shares, the user's decision of 2026-10-24) for a
+# population-level figure. --plan prints the sessions per pair of groups, drawn and weighted.
+# (The first version of this rehearsal, experiment resolve_ethnicity_mock_rehearsal, drew at the
+# real shares; this one is _v2 so that its run folder is a new one.)
 #
 # Person 1 may walk with a cane (mobility_aid), so that an observable factor line is printed under
 # the ethnicity line. The core template is resolve_v5 with protocol.execution: as_prompted, as RF-9
@@ -27,11 +32,12 @@
 # not read the ethnicity lines. Nothing here is a finding about a model.
 schema_version: 1
 layer: resolution
-experiment_name: resolve_ethnicity_mock_rehearsal
+experiment_name: resolve_ethnicity_mock_rehearsal_v2
 description: >-
   Mock rehearsal of RF-26's real ethnicity in a 16-cell fraction of seven factors (ethnicity_pair
   and ethnicity_visible among them) on two head-on geometries, independent and talk, with a
-  counterfactual pair that flips ethnicity_pair; resolve_v5, resolve_factors_v2, as_prompted.
+  counterfactual pair that flips ethnicity_pair; groups drawn balanced and weighted back to the
+  resident shares; resolve_v5, resolve_factors_v2, as_prompted.
 
 conditions: [independent, talk]
 
@@ -40,6 +46,7 @@ design:
   base_age: 25
   age_difference: 45
   kind: fractional
+  ethnicity_draw: balanced   # every group equally often; ethnicity_weight restores the resident shares
   cells: 16
   geometries:
     - head_on_de176842@2   # wide_corridor_head_on, walking lines aligned (0 cm apart)

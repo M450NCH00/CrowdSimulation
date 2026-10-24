@@ -407,10 +407,12 @@ def test_the_plan_prints_the_sessions_per_pair_of_groups_and_the_gate(tmp_path, 
     c = E.ResolutionConfig.load("configs/resolution/resolve_ethnicity_mock_rehearsal.yaml")
     plan_ = E.print_plan(c, out=said.append)
     text = "\n".join(said)
-    assert "shares of residents only" in text and "others / others: expected" in text and "persons expected:" in text
+    assert "shares of residents only" in text and "draw balanced" in text and "persons weighted:" in text
     drawn = Counter(tuple(s.personas[a]["ethnicity"] for a in s.persons) for s in plan_.sessions)
     for (first, second), count in drawn.items():
-        assert f"{first} / {second}: expected" in text and f"drawn {count}" in text
+        assert f"{first} / {second}: drawn {count} (expected" in text
+    # Weighted, the persons are at the resident shares exactly (every pair of groups is drawn).
+    assert "chinese 73.9% (residents 73.9%)" in text and "others 3.6% (residents 3.6%)" in text and "never drawn" not in text
     assert "real ethnicity is on" not in text  # the repository records the sign-off
     monkeypatch.setattr(E, "SIGN_OFF_FILE", tmp_path / "missing.md")
     said.clear()
@@ -449,3 +451,84 @@ def test_the_old_factor_template_and_the_fictional_groups_layer_are_unchanged():
     assert F.default_factor_template(True) == "resolve_factors_v2"
     from negsim.personas.groups import DEFAULT_GROUP_LABELS
     assert DEFAULT_GROUP_LABELS == ("Kestrop", "Dremmik", "Pellund")
+
+
+# --- the balanced draw and the weights (the user's decision of 2026-10-24, open question 3) --------
+
+
+def test_the_balanced_rotation_gives_every_group_and_every_ordered_pair_equally_often():
+    units = {("c", f"s{k}"): frozenset({"same"}) for k in range(16)}
+    units.update({("c", f"d{k}"): frozenset({"different"}) for k in range(24)})
+    units.update({("c", f"x{k}"): frozenset({"same", "different"}) for k in range(12)})
+    found = Y.balanced_assignment(units, seed=5)
+    same = Counter(found[("c", f"s{k}")]["same"] for k in range(16))
+    assert same == Counter({(g, g): 4 for g in Y.GROUPS})
+    different = Counter(found[("c", f"d{k}")]["different"] for k in range(24))
+    assert different == Counter({pair: 2 for pair in Y.DIFFERENT_PAIRS}) and len(Y.DIFFERENT_PAIRS) == 12
+    for k in range(12):  # a pair that flips ethnicity_pair keeps person 1
+        both = found[("c", f"x{k}")]
+        assert both["same"] == (both["different"][0],) * 2 and both["different"][0] != both["different"][1]
+    # Any whole block of four different pairs balances person 1 and person 2.
+    for block in range(3):
+        four = Y.DIFFERENT_PAIRS[4 * block: 4 * block + 4]
+        assert sorted(a for a, _ in four) == sorted(Y.GROUPS) == sorted(b for _, b in four)
+    assert Y.balanced_assignment(units, seed=5) == found and Y.balanced_assignment(units, seed=6) != found
+
+
+def test_a_balanced_design_balances_each_level_and_keeps_the_people_across_conditions():
+    c = config("bal", {"ethnicity_pair": ["same", "different"], "age_pair": ["same", "p1_older"], "gender_pair": ["p1_female", "p1_male"],
+                       "mapping": ["p1_lower", "p1_higher"]}, conditions=("independent", "talk"), design={"ethnicity_draw": "balanced"})
+    assert c.design.ethnicity_draw == "balanced" and c.design.as_dict()["ethnicity_draw"] == "balanced"
+    sessions = E.plan(c).sessions
+    for level, groups in (("same", 4), ("different", 4)):
+        firsts = Counter(s.ethnicity[s.persons[0]] for s in sessions if s.cell["ethnicity_pair"] == level)
+        assert set(firsts) == set(Y.GROUPS) and len(set(firsts.values())) == 1, (level, firsts)  # 8 cells x 2 conditions: 4 each
+    people = {}
+    for s in sessions:
+        people.setdefault(D.cell_code(s.cell), set()).add(tuple(sorted(s.ethnicity.items())))
+    assert all(len(draws) == 1 for draws in people.values())
+
+
+def test_the_weights_make_the_sessions_stand_for_random_resident_pairs():
+    pairs = [(a, b) for a in Y.GROUPS for b in Y.GROUPS] * 3 + [("chinese", "malay")] * 5  # every pair, one over-drawn
+    w = Y.weights(SHARES, pairs)
+    assert math.isclose(sum(w), len(pairs), rel_tol=1e-5)
+    persons = Counter()
+    for (a, b), weight_ in zip(pairs, w):
+        persons[a] += weight_
+        persons[b] += weight_
+    for g in Y.GROUPS:
+        assert math.isclose(persons[g] / (2 * sum(w)), SHARES.shares[g] / 100, rel_tol=1e-5)
+    same = sum(weight_ for (a, b), weight_ in zip(pairs, w) if a == b) / sum(w)
+    assert math.isclose(same, sum((s / 100) ** 2 for s in SHARES.shares.values()), rel_tol=1e-5)  # 57.4%
+    assert math.isclose(same, 0.574, abs_tol=0.0005)
+    assert Y.missing_pairs(pairs) == [] and ("others", "others") in Y.missing_pairs([("chinese", "chinese")])
+
+
+@pytest.mark.parametrize("draw", ["real", "balanced"])
+def test_every_session_of_an_ethnicity_design_carries_its_weight_into_the_record_and_the_row(tmp_path, draw):
+    c = config(f"w_{draw}", {"ethnicity_pair": ["same", "different"]}, design={"ethnicity_draw": draw})
+    sessions = E.plan(c).sessions
+    assert all(s.ethnicity_weight is not None and s.as_dict()["ethnicity_weight"] == s.ethnicity_weight for s in sessions)
+    assert math.isclose(sum(s.ethnicity_weight for s in sessions), len(sessions), rel_tol=1e-4) or Y.missing_pairs(
+        [tuple(s.ethnicity[a] for a in s.persons) for s in sessions])  # unless a pair was never drawn
+    E.run_resolution(c, out_root=tmp_path, report=quiet, git=GIT)
+    by_id = {s.session_id: s for s in sessions}
+    for line in (tmp_path / f"w_{draw}" / "outcomes.jsonl").read_text(encoding="utf-8").splitlines():
+        row = json.loads(line)
+        assert row["ethnicity_weight"] == by_id[row["session_id"]].ethnicity_weight
+    plain = E.plan(config("plain_w", {"mobility_aid": ["p1"]})).sessions
+    assert all(s.ethnicity_weight is None and "ethnicity_weight" not in s.as_dict() for s in plain)
+
+
+def test_the_draw_must_be_known_and_needs_the_pair_and_real_is_the_default():
+    with pytest.raises(ConfigError, match="ethnicity_draw: one of"):
+        config("bad", {"ethnicity_pair": ["same"]}, design={"ethnicity_draw": "equal"})
+    with pytest.raises(ConfigError, match="ethnicity_draw: for a design that varies ethnicity_pair"):
+        config("nopair", {"mobility_aid": ["p1"]}, design={"ethnicity_draw": "balanced"})
+    real = config("default", {"ethnicity_pair": ["same", "different"]})
+    assert real.design.ethnicity_draw == "real" and "ethnicity_draw" not in real.design.as_dict()
+    # The real draw is unchanged by the balanced option: the same stream as before.
+    for s in E.plan(real).sessions:
+        unit = (s.case_id, D.cell_code(s.cell))
+        assert tuple(s.ethnicity[a] for a in s.persons) == SHARES.draw(s.cell["ethnicity_pair"], f"{real.design.seed}:{unit[0]}:{unit[1]}")

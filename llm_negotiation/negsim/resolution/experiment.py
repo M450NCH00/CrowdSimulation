@@ -849,6 +849,8 @@ def outcome_row(record: Mapping[str, Any], case: Mapping[str, Any], physical: Op
         "exact_repeat_set": session["exact_repeat_set"],
         # Issue #62: only when the design lists geometries, or the session is half of a counterfactual pair.
         **{key: session[key] for key in ("geometry", "pair_id", "pair_role", "pair_factor") if key in session},
+        # Issue #92: the session's weight back to the resident shares, when the design varies ethnicity.
+        **({"ethnicity_weight": session["ethnicity_weight"]} if "ethnicity_weight" in session else {}),
         "model": record["llm"]["model"], "temperature": record["llm"]["temperature"],
         **{name: session["cell"][name] for name in ALL_FACTORS if name in session["cell"]},
         **_agent_columns(record, first, "p1"),
@@ -1272,7 +1274,8 @@ def design_lines(config: ResolutionConfig, plan_: Plan) -> list[str]:
     if design.ethnicity_shares is not None:  # issue #92, task 9: how few sessions the smaller groups get
         drawn = [(session.personas[first]["ethnicity"], session.personas[second]["ethnicity"]) for session in plan_.sessions for first, second in [session.persons]]
         at_level = Counter(session.cell[PAIR_FACTOR] for session in plan_.sessions)
-        lines.extend(pair_table(design.ethnicity_shares, drawn, {SAME: at_level[SAME], DIFFERENT: at_level[DIFFERENT]}))
+        weights = [session.ethnicity_weight for session in plan_.sessions]
+        lines.extend(pair_table(design.ethnicity_shares, drawn, {SAME: at_level[SAME], DIFFERENT: at_level[DIFFERENT]}, design.ethnicity_draw, weights))
     return lines
 
 
