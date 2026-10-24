@@ -68,6 +68,58 @@ changed over earlier issues. What I found, and told the user:
   `resolve_v3`, `WORK_LOG-61.md` open question 7.
 - Next step: `CLAUDE.md`, then `resolve_v4`.
 
+### 2026-10-24 13:30 — CLAUDE.md, resolve_v4, the worst-case check
+- What I did:
+  - `CLAUDE.md`: the approval under sign-off item 1 (this issue only, USD 0.20, `rf_pilot`'s own
+    calls), and under "Budget" the balance check and the unexplained USD 0.41; the total spend is
+    `ALREADY_SPENT_USD` plus the ledger.
+  - **`resolve_v4`** (frozen in the manifest, 2026-10-24): `resolve_v3` plus `seen_short_age` and
+    `seen_short_gender`, worded as `seen_age` and `seen_gender`. `prompt.py` prints them under a
+    short line when the template has them and the demographics are visible;
+    `CoreTemplate.prints_demographics(detail)` says whether a template does. The outcome row's
+    `*_other_age_shown` and `*_other_gender_shown` now count a short-line decision point under
+    `resolve_v4`. **Not the default:** `default_core` still gives `resolve_v3` for a design with
+    factors, so the screening rehearsal and every earlier config render as before; the pilot names
+    `resolve_v4`, and RF-10 must too.
+  - **The worst-case check:** `budget.over_cap` in a resolution config, `refuse` (default) or
+    `stop_at_cap`. Under `stop_at_cap` a confirmed paid run starts although its preview exceeds the
+    cap; `--plan` says so; the per-call budget guard (unchanged) refuses the first call that could
+    take the experiment's recorded spend past the cap, that session is kept as aborted, and the run
+    stops. The key appears in `config.json` only when it is `stop_at_cap`, so an older folder still
+    resumes. `--confirm` is still required.
+- Why not a looser bound instead: the bound is a true worst case (six sends per call, a reply at
+  the cap each time); shrinking it would stop it being one. The guard already makes the cap hard,
+  so the preview's refusal added no safety, only a block. Why opt-in: the issue said "for this
+  issue", and earlier configs must behave as before. The rule-generation layer keeps its own
+  refusal untouched.
+- Why not a session-level gate (start a session only if its whole bound fits): one talk session's
+  bound is USD 0.095, so with USD 0.20 the run would stop after spending about USD 0.10, roughly
+  half the cap, for no gain in safety. The cost of the per-call gate is at most one session's
+  calls paid for and set aside.
+- Result: tests. `test_encounter_protocol.py`: by default a confirmed paid run over the cap is
+  refused and nothing is sent or recorded; under `stop_at_cap` (eight sessions, cap USD 0.004,
+  the mock's tokens charged at the table's prices through the real `BudgetedClient`) the run
+  stops with one aborted session, at least one finished first, the ledger stays under the cap,
+  and a rerun stays under it too; `stop_at_cap` still needs `--confirm`; `over_cap` is described
+  only when not the default. `test_pairwise.py`: `resolve_v4` is `resolve_v3` plus the two lines,
+  prints them for anyone in view within 10 m when visible (and each alone when only one is), and
+  otherwise renders exactly what `resolve_v3` does. `test_factors.py`: in the head-on case the
+  outcome row counts age and gender at every decision point under `resolve_v4`, none under v2 and
+  v3. 134 passed in the three files.
+- Mock rehearsal of `configs/resolution/rf_pilot.yaml` (`runs_mock/`, not tracked): 72 sessions
+  completed; the other's age and gender were shown at all 312 decision points (RF-6's rehearsal
+  under `resolve_v3`: 0 of 31). `--plan`: worst case USD 4.770835, cap USD 0.20, DOES NOT FIT, and
+  the `stop_at_cap` line.
+- `analysis/pilot.py` (task 4's measures the main analysis does not give): tokens per send by
+  kind against the preview's bound, cache-hit share, cost by tier and condition, sends per
+  session, decision points per agent, trigger reasons, unreadable replies by reason, signals and
+  messages, who passed first and passing sides per mode. Standard library only; 3 tests on a
+  hand-made folder; the analysis suite 45 passed.
+- Pricing check (2026-10-24, `refs/ln_deepseek_pricing_2026-10-24.txt`): no price and no peak
+  hour changed; `deepseek-flash` is now `DeepSeek-V4.1-Flash-1017`. Recorded in
+  `pricing-check.md`; the table is updated after the full suite.
+- Next step: the full suite, commits, then the paid run.
+
 ## Open questions / risks
 
 ## Summary (fill in at the end)

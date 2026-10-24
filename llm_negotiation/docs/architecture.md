@@ -919,7 +919,8 @@ the fictional group, a walking convention, "usually", "one of you has to go firs
 `persona_v1`'s scene text. *Amended by the user, 2026-10-23 (issue #61):* a person's factor lines
 (RF-5's observable ones, RF-6's pairwise ones) are given from 10 m, under the short line too
 (core template `resolve_v3`); under `resolve_v2` they were given only within 5 m, and so never in
-the head-on case.
+the head-on case. *Amended by the user, 2026-10-24 (issue #64):* the other's age and gender are
+given from 10 m too, under the core template `resolve_v4`, which a config names.
 
 **D3. Three conditions, first person only** (the user, 2026-10-22): independent (one decision
 point, no message, no signal), non-verbal (signals and movement, up to 3 decision points) and
