@@ -1,0 +1,82 @@
+# Issue #64 (RF-9): round 1's paid pilot (head-on), all three conditions, age and gender only.
+#
+#   python run_experiment.py configs/resolution/rf_pilot.yaml --plan
+#   python run_experiment.py configs/resolution/rf_pilot.yaml                                # mock: runs_mock/
+#   python run_experiment.py configs/resolution/rf_pilot.yaml --client deepseek             # preview only
+#   python run_experiment.py configs/resolution/rf_pilot.yaml --client deepseek --confirm   # paid: runs/
+#
+# PAID RUNS: approved for this issue only, with a cap of USD 0.20 on this experiment's own calls
+# (CLAUDE.md, pending sign-offs, item 1; the user, 2026-10-24). Run off-peak: in Singapore time
+# 18:00 to 09:00 or 12:00 to 14:00 on weekdays, all day at weekends (half price).
+#
+# The design: 2 x 2 x 2 cells (age_pair, gender_pair, mapping) on 2 geometries (D14), 16 sessions
+# per condition, plus the exact-repeat set: 2 cells run 5 times in all on identical prompts, 8
+# more per condition, for a first noise-floor estimate. 24 sessions per condition, 72 in all.
+# Both errands are the non-urgent one (urgency: neither), RF-10's base level, so that age and
+# gender are the only factors that vary.
+#
+# The core template is resolve_v4 (the user's decision of 2026-10-24, WORK_LOG-61.md, open
+# question 7): the other's age and gender are given from 10 m. In the head-on case every
+# decision point is 5 to 10 m away, so under resolve_v3 neither agent would ever be told them.
+# RF-10 must name the same template so that the pilot's prompts are the screening's.
+#
+# The budget: the worst-case preview (about USD 4.8) is far above the cap, because it assumes
+# six sends per call, every reply at the cap and no cache. budget.over_cap: stop_at_cap lets the
+# confirmed run start anyway; the budget guard checks every call's worst case and stops the run
+# before the recorded spend could pass USD 0.20 (issue #64; docs/encounter-protocol.md, section 6).
+# The realistic estimate from the mock's prompts is USD 0.10 to 0.18 off-peak.
+#
+# Running it again resumes it (sessions already done are read back, never run or paid again).
+schema_version: 1
+layer: resolution
+experiment_name: rf_pilot
+description: >-
+  RF-9, round 1's paid pilot: head-on on two geometries, independent, non-verbal and talk, age
+  and gender as the only factors, with an exact-repeat set of 2 cells run 5 times each.
+
+conditions: [independent, non_verbal, talk]
+
+design:
+  seed: 64
+  base_age: 25
+  age_difference: 45
+  geometries:
+    - head_on_de176842@2   # wide_corridor_head_on, walking lines aligned (0 cm apart)
+    - head_on_02dfbadb@2   # the same, walking lines 20 cm apart
+  exact_repeats:
+    cells: 2
+    times: 5
+  factors:
+    age_pair: [same, p1_older]
+    gender_pair: [p1_female, p1_male]
+    urgency: [neither]
+    demographics_visible: [true]
+    mapping: [p1_lower, p1_higher]
+
+protocol:
+  max_decision_points: 3         # D5
+  min_gap_s: 1.0                 # D5
+  no_conflict_end_s: 1.0         # [placeholder] the encounter ends after this long with no conflict predicted
+  max_prompted: 4                # D11, D12: the cap on prompted people per encounter (a cost limit)
+  speech_words_per_second: 2.5   # [placeholder] how fast a message is said
+
+templates:
+  core: resolve_v4
+  debrief: resolve_debrief_v1
+
+llm_view: configs/resolution/llm_view_v1.yaml
+factor_values: configs/resolution/factors_v1.yaml
+
+llm:
+  client: mock            # the paid run is --client deepseek --confirm
+  mock_policy: resolution_rehearsal_v1
+  model: deepseek-flash
+  temperature: 1.0
+  max_tokens: 400         # [placeholder] the reply cap, as in #30's config; RF-9 measures what replies use
+  thinking: disabled
+  transport_retries: 2
+
+budget:
+  cap_usd: 0.20           # this issue's cap, on rf_pilot's own calls (CLAUDE.md, 2026-10-24)
+  ledger: spend_ledger.jsonl
+  over_cap: stop_at_cap   # issue #64: the guard, not the preview, enforces the cap

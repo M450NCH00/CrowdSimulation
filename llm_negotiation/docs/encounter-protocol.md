@@ -167,6 +167,18 @@ default), at the peak cache-miss input price and the peak output price. As in #3
 takes a message or intent to be no longer when it reappears than when it was written (c).
 `summary.json` reports the largest share of a session's preview its tokens used.
 
+**When the preview exceeds the cap** (issue #64). By default (`budget.over_cap: refuse`) a paid
+run whose preview exceeds its cap is refused before anything is sent, even with `--confirm`. The
+bound is far looser than a real session (RF-7: mock sessions used at most 7.7% of it): one talk
+session alone is bounded at about USD 0.095, so a pilot of any useful size would need a cap many
+times what it could plausibly spend. With `over_cap: stop_at_cap` a confirmed run starts anyway,
+and `--plan` says so. The budget guard (`llm-backend.md`, section 5) is unchanged: before every
+call it refuses one whose worst case could take the experiment's recorded spend past the cap. The
+session that call belonged to is kept as `<id>.aborted<n>.json`, the run stops there, and the
+recorded spend cannot pass the cap. What is lost is at most the calls of that one session, paid
+for but not used. A config that does not name `over_cap` is described, and behaves, exactly as
+before.
+
 **For the mock rehearsal** (`--plan`): a two-person session is bounded at USD 0.029 to 0.030
 (independent), 0.074 to 0.076 (non-verbal) and 0.094 to 0.096 (talk). The crowd case is bounded
 far higher (USD 0.38 to 0.91 a session), because with `max_people` off every one of its 99 others
@@ -225,11 +237,11 @@ python run_experiment.py configs/resolution/<config>.yaml --client deepseek --co
 | `scenarios` | optional: case id → plug-in; otherwise the plug-in whose `CASE_TYPES` holds the case's type |
 | `conditions` | any of `independent`, `non_verbal`, `talk` |
 | `design` | `seed`, `factors` (`age_pair`, `gender_pair`, `task`, `demographics_visible`, `mapping`), `repeats`, `base_age`, `age_difference`, `tasks`; issue #62: `kind` (`full`, `fractional`, `sample`), `cells`, `geometries`, `exact_repeats` (`cells`, `times`), `counterfactual_pairs` (`screening-designs.md`) |
-| `protocol` | `max_decision_points` (3), `min_gap_s` (1), `no_conflict_end_s` (1), `max_prompted` (none), `speech_words_per_second` (2.5) |
-| `templates` | `core` (`resolve_v2`; `resolve_v3` for a design that varies an RF-5 or RF-6 factor, issue #61), `debrief` (`resolve_debrief_v1`); with factors also `factors` (`resolve_factors_v1`) and `pairwise` (`resolve_pairwise_v1`) |
+| `protocol` | `max_decision_points` (3), `min_gap_s` (1), `no_conflict_end_s` (1), `max_prompted` (none), `speech_words_per_second` (2.5), `execution` (`rf4`, or `as_prompted`: issue #64, `execute.py`) |
+| `templates` | `core` (`resolve_v2`; `resolve_v3` for a design that varies an RF-5 or RF-6 factor, issue #61; `resolve_v4`, named, also gives the other's age and gender from 10 m, issue #64; `resolve_v5`, named, also lets any step have a `start`, issue #64), `debrief` (`resolve_debrief_v1`); with factors also `factors` (`resolve_factors_v1`) and `pairwise` (`resolve_pairwise_v1`) |
 | `llm_view` | the perception config (`configs/resolution/llm_view_v1.yaml`) |
 | `llm` | `client`, `mock_policy` (`resolution_rehearsal_v1`), `model`, `temperature`, `max_tokens` (400), `thinking` (disabled), `transport_retries` |
-| `budget` | `cap_usd` (on this experiment's own calls), `ledger` |
+| `budget` | `cap_usd` (on this experiment's own calls), `ledger`, `over_cap` (`refuse`, the default, or `stop_at_cap`; issue #64, section 6) |
 
 The design is issue #30's, less speaking order (`design.py`). The fictional group is not a
 factor of this layer. A cell run more than once (`repeats` > 1, or a cell of

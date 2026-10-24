@@ -224,7 +224,9 @@ map from (observer, seen) to a level:
 - **Lines from 10 m, but no age or gender** (section 1). Under `resolve_v3` an agent 8 m away
   may be told "You find them attractive." without being told the person's age or gender, which
   stay full-detail lines (D2). A design that wants both at that distance would need the short
-  line to carry age and gender too: a `resolve_v4`, and a decision for the user. Under
+  line to carry age and gender too. *The user chose that on 2026-10-24 (issue #64):* `resolve_v4`
+  gives age and gender under the short line as well (`resolution.md`, D2), when a config names
+  it; the default stays `resolve_v3`. Under
   `resolve_v2` the lines never reach an agent in a head-on encounter.
 - **"From your classes"** is the issue's wording. It presumes a shared class, which may read
   oddly with an age gap of 45 years (`age_pair: p1_older`). A `resolve_pairwise_v2` could say

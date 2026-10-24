@@ -75,7 +75,7 @@ from ..rulegen.replay import source_plan
 from ..runlog.schema import OUTCOME_FILE
 from ..scenarios.registry import build_crowd_scenario
 from .design import ALL_FACTORS, KIND_FRACTIONAL, KIND_SAMPLE, PERSON_FACTORS, ResolutionDesign, Session, cell_code, sessions_for
-from .execute import MODES, MODE_PLAN_ONLY, MODE_PLAN_ORCA
+from .execute import MODES, MODE_PLAN_ONLY, MODE_PLAN_ORCA, steps_from_dicts
 from .factors import FACTOR_TEMPLATE, FACTOR_VALUES_CONFIG, FactorTemplate, FactorValues, SessionFactors, with_bodies
 from .mock import POLICIES as MOCK_POLICIES
 from .outcomes import GENERAL_COLUMNS, MODE_PLAIN_ORCA, RESOLVED
@@ -83,7 +83,7 @@ from .pairwise import ATTRACTIVENESS, FAMILIARITY, PAIRWISE_TEMPLATE, PairwiseFa
 from .perceive import LLM_VIEW_CONFIG, LLMViewSettings
 from .factors import SWITCHES as OBSERVABLE
 from .prompt import DEBRIEF_TEMPLATE, CoreTemplate, DebriefTemplate, default_core
-from .protocol import SESSION_ABORTED, SESSION_COMPLETED, EncounterSession, ProtocolSettings
+from .protocol import SESSION_ABORTED, SESSION_COMPLETED, EncounterSession, ProtocolSettings, code_plan
 from .replay import plain_orca, replay_session, run_plan_for
 from .reply import ParsedReply
 from .scenario import Scenario
@@ -98,6 +98,14 @@ SCHEMA_VERSION = 1  # of the config
 #: experiments"); the run folders under ``replay/`` are avoidance runs.
 RESOLUTION_LOG_VERSION = 1
 CLIENTS = ("mock", "deepseek")
+#: ``budget.over_cap`` (issue #64): what a confirmed paid run does when its worst-case preview
+#: exceeds the cap. ``refuse`` (the default, as before): nothing is sent. ``stop_at_cap``: the run
+#: starts, and the budget guard, which checks every call's worst case against the cap, stops it
+#: there; the recorded spend still cannot pass the cap. The preview's bound is far looser than a
+#: real session (RF-7: mock sessions used at most 7.7% of it), so under ``refuse`` a pilot of any
+#: useful size would need a cap many times what it could plausibly spend.
+OVER_CAP_REFUSE, OVER_CAP_STOP = "refuse", "stop_at_cap"
+OVER_CAP = (OVER_CAP_REFUSE, OVER_CAP_STOP)
 RUNS_DIR, MOCK_RUNS_DIR = PACKAGE_ROOT / "runs", PACKAGE_ROOT / "runs_mock"
 
 CONFIG_FILE = "config.json"
@@ -217,7 +225,7 @@ class ResolutionConfig:
             raise ConfigError(f"{where}.scenarios: a mapping of case id to scenario plug-in")
         templates = check_keys(raw.get("templates") or {}, f"{where}.templates", (), ("core", "debrief", "factors", "pairwise"))
         llm = check_keys(raw["llm"], f"{where}.llm", (), ("client", "mock_policy", "model", "temperature", "max_tokens", "thinking", "transport_retries"))
-        budget = check_keys(raw.get("budget") or {}, f"{where}.budget", (), ("cap_usd", "ledger"))
+        budget = check_keys(raw.get("budget") or {}, f"{where}.budget", (), ("cap_usd", "ledger", "over_cap"))
         policy = str(llm.get("mock_policy", "resolution_rehearsal_v1"))
         if policy not in MOCK_POLICIES:
             raise ConfigError(f"{where}.llm.mock_policy: one of {sorted(MOCK_POLICIES)}, got {policy!r}")
@@ -258,6 +266,8 @@ class ResolutionConfig:
             budget={
                 "cap_usd": as_number(budget.get("cap_usd", 0.05), f"{where}.budget.cap_usd", minimum=0.0),
                 "ledger": str(budget.get("ledger", "spend_ledger.jsonl")),
+                # Issue #64: only when not the default, so that an older config is described as before.
+                **({"over_cap": OVER_CAP_STOP} if as_choice(budget.get("over_cap", OVER_CAP_REFUSE), f"{where}.budget.over_cap", OVER_CAP) == OVER_CAP_STOP else {}),
             },
             factor_values=str(raw.get("factor_values", default_values)) if design.uses_factors else None,
         )
@@ -672,9 +682,21 @@ def decision_rows(record: Mapping[str, Any]) -> list[dict[str, Any]]:
             "time_s": point["time_s"], "condition": record["condition"], "trigger_reasons": point["trigger_reasons"],
             "parse_error": point.get("parse_error"),
             "message": parsed.get("message"), "signal": parsed.get("signal"), "intent": parsed.get("intent"),
-            "steps": parsed.get("steps"), "reason": parsed.get("reason"), "coded": point.get("coded"),
+            "steps": parsed.get("steps"), "reason": parsed.get("reason"), "coded": coded_plan(record, point),
         })
     return rows
+
+
+def coded_plan(record: Mapping[str, Any], point: Mapping[str, Any]) -> Optional[dict[str, Any]]:
+    """A decision point's plan coded again from its recorded steps and the speed the agent was
+    shown (issue #64): the coding stored in the record before issue #64 counted a step at the
+    shown speed (1.3 against 1.30005) as slowing down. A record is never rewritten, so the tables
+    code it afresh. ``None`` for an unreadable reply."""
+    parsed = point.get("parsed")
+    if parsed is None or point.get("coded") is None:
+        return None
+    events = tuple(load_scenario(record["scenario"]).events)
+    return code_plan(steps_from_dicts(parsed.get("steps") or [], math.inf, events), point["view"]["me"]["speed_mps"])
 
 
 def debrief_rows(record: Mapping[str, Any]) -> list[dict[str, Any]]:
@@ -694,7 +716,7 @@ def _agent_columns(record: Mapping[str, Any], agent: Optional[int], prefix: str)
     session = record["session"]
     persona = session["personas"].get(str(agent), {}) if agent is not None else {}
     points = [p for p in record.get("decision_points") or [] if p["agent_id"] == agent]
-    coded = [p["coded"] for p in points if p.get("coded")]
+    coded = [c for c in (coded_plan(record, p) for p in points) if c]
     first, final = (coded[0], coded[-1]) if coded else ({}, {})
     debrief = next((d.get("parsed") or {} for d in record.get("debriefs") or [] if d["agent_id"] == agent), {})
     signals = [p["parsed"]["signal"] for p in points if p.get("parsed") and p["parsed"]["signal"] != "none"]
@@ -747,12 +769,14 @@ def _pairwise_columns(record: Mapping[str, Any], agent: int, other: int, prefix:
 
 def _shown_columns(record: Mapping[str, Any], agent: int, other: int, prefix: str) -> dict[str, Any]:
     """Issue #63 (RF-8): at how many of ``agent``'s decision points it was told ``other``'s age and
-    gender (printed only in full detail, and only when the demographics are visible, D2), and, with
-    a design that varies a core or situational factor, at how many ``other`` was in view at a detail
-    where their observable factor lines are printed (``resolve_v3`` prints them on a short line
-    too). A base level has no line, so the analysis counts a factor as told only when the person's
-    level has one and its switch is on (``analysis/load.py``)."""
-    printed = _core(record["templates"]["core"]["key"]).prints_extra_lines
+    gender (printed in full detail, and only when the demographics are visible, D2; ``resolve_v4``
+    prints them on a short line too, issue #64), and, with a design that varies a core or
+    situational factor, at how many ``other`` was in view at a detail where their observable factor
+    lines are printed (``resolve_v3`` prints them on a short line too). A base level has no line,
+    so the analysis counts a factor as told only when the person's level has one and its switch is
+    on (``analysis/load.py``)."""
+    core = _core(record["templates"]["core"]["key"])
+    printed, demographics = core.prints_extra_lines, core.prints_demographics
     age = gender = observable = 0
     for point in record.get("decision_points") or []:
         if point["agent_id"] != agent:
@@ -761,9 +785,9 @@ def _shown_columns(record: Mapping[str, Any], agent: int, other: int, prefix: st
         person = next((p for p in point["view"]["seen"] if p["label"] == label), None)
         if person is None:
             continue
-        full = person["detail"] == DETAIL_FULL
-        age += full and person.get("age") is not None
-        gender += full and person.get("gender") is not None
+        told = demographics(person["detail"])
+        age += told and person.get("age") is not None
+        gender += told and person.get("gender") is not None
         observable += printed(person["detail"])
     columns = {f"{prefix}_other_age_shown": age, f"{prefix}_other_gender_shown": gender}
     if record.get("factors") is not None:
@@ -1062,7 +1086,7 @@ def run_resolution(
                 "the design varies perceived attractiveness, and the supervisor's ethics sign-off for it is not recorded in "
                 "CLAUDE.md: no paid run may switch it on until it is (docs/pairwise-factors.md, section 6)"
             )
-        if not preview["fits_the_cap"]:
+        if not preview["fits_the_cap"] and config.budget.get("over_cap", OVER_CAP_REFUSE) == OVER_CAP_REFUSE:
             invocation("refused_over_cap", {"client": name})
             raise ConfigError(
                 f"the worst-case cost, USD {preview['usd_total']:.6f}, exceeds the cap, USD {config.budget['cap_usd']:.2f}: "
@@ -1150,6 +1174,11 @@ def print_plan(config: ResolutionConfig, client_name: Optional[str] = None, out:
     )
     out(f"  worst-case cost USD {preview['usd_total']:.6f} with model {preview['model']}; cap USD {preview['cap_usd']:.2f}; "
         f"{'fits' if preview['fits_the_cap'] else 'DOES NOT FIT'}")
+    if not preview["fits_the_cap"] and config.budget.get("over_cap", OVER_CAP_REFUSE) == OVER_CAP_STOP:
+        out(
+            "  budget.over_cap is stop_at_cap: a confirmed paid run starts anyway, and the budget guard stops it before any call "
+            "that could take this experiment's recorded spend past the cap, so it may end before every session has run"
+        )
     for condition in config.conditions:
         mine = [row for row in preview["per_session"] if row["condition"] == condition]
         out(

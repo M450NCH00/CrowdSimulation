@@ -333,12 +333,13 @@ def told_counts(record, agent, other):
     return counts
 
 
-@pytest.mark.parametrize("core", ["resolve_v3", "resolve_v2"])
+@pytest.mark.parametrize("core", ["resolve_v4", "resolve_v3", "resolve_v2"])
 def test_the_outcome_row_counts_what_each_agent_was_told_of_the_other_in_the_head_on_case(tmp_path, core):
-    """Issue #63 (RF-8): in round 1's head-on case every decision point is beyond 5 m, so neither
-    is ever told the other's age or gender; resolve_v3 prints the observable lines on the short line."""
+    """Issue #63 (RF-8): in round 1's head-on case every decision point is beyond 5 m, so under
+    resolve_v2 and resolve_v3 neither is ever told the other's age or gender; resolve_v3 prints the
+    observable lines on the short line. Issue #64: resolve_v4 prints age and gender there too."""
     config = factor_config("told", conditions=("independent", "talk"), factors_={"distraction": ["p1"]})
-    if core == "resolve_v2":
+    if core != "resolve_v3":
         config = replace(config, templates={**config.templates, "core": core})
     E.run_resolution(config, out_root=tmp_path, report=lambda _: None, git=GIT)
     for line in (tmp_path / "told" / "outcomes.jsonl").read_text(encoding="utf-8").splitlines():
@@ -348,11 +349,14 @@ def test_the_outcome_row_counts_what_each_agent_was_told_of_the_other_in_the_hea
         for me, other in (("p1", "p2"), ("p2", "p1")):
             counts = told_counts(record, row[f"{me}_agent"], row[f"{other}_agent"])
             assert counts["full"] == 0 and row[f"{me}_decision_points"] >= 1
-            assert row[f"{me}_other_age_shown"] == row[f"{me}_other_gender_shown"] == 0
-            expected = counts["short"] if core == "resolve_v3" else 0
+            demographics = counts["short"] if core == "resolve_v4" else 0
+            assert row[f"{me}_other_age_shown"] == row[f"{me}_other_gender_shown"] == demographics
+            expected = counts["short"] if core != "resolve_v2" else 0
             assert row[f"{me}_other_observable_shown"] == expected
-        if core == "resolve_v3":
+        if core != "resolve_v2":
             assert row["p1_other_observable_shown"] == row["p1_decision_points"]
+        if core == "resolve_v4":
+            assert row["p1_other_age_shown"] == row["p1_decision_points"] and row["p2_other_gender_shown"] == row["p2_decision_points"]
 
 
 @pytest.mark.parametrize("visible", [True, False])

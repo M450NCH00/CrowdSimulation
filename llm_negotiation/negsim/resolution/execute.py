@@ -9,13 +9,19 @@ after another, in a running :class:`~negsim.avoidance.simulation.AvoidanceSimula
   directives);
 - ``turn`` offsets the preferred direction from the desired path direction (toward the point
   ``lookahead`` metres further along the path, as plain ORCA aims) by its degrees, to the agent's
-  own left or right;
+  own left or right. That point pulls an agent back as it leaves its path, so it settles about
+  ``lookahead`` x tan(degrees) to the side. With ``execution="as_prompted"`` (issue #64,
+  ``protocol.execution``) the agent instead walks at the angle off the path's direction where the
+  step began, as the prompt describes a turn;
 - ``back_up_m`` walks backwards, against the path's direction where the agent is, at the agent's
   ``backing_speed``, until it has backed that far (measured along that direction from where the
   step began). If the step also has an ``until``, it ends at whichever comes first;
 - ``start`` delays the first step: until the encounter partner is no further than
   ``at_distance_m`` (centre to centre, as the agent is told distances), or until
-  ``after_seconds`` have passed since the decision. Meanwhile the agent carries on as it was;
+  ``after_seconds`` have passed since the decision. Meanwhile the agent carries on as it was.
+  Under ``resolve_v5`` (issue #64) a later step may have a ``start`` too: when the step before
+  it ends, the plan waits for it (``after_seconds`` still counted from the decision), the agent
+  walking its path meanwhile, as between steps;
 - ``until`` ends a step after its ``seconds``, or when its event has happened. **The executor
   knows no event**: it asks the scenario plug-in (:meth:`Scenario.happened`, D16).
 
@@ -73,8 +79,19 @@ MODE_PLAN_ONLY = "plan_only"
 MODE_PLAN_ORCA = "plan_orca"
 MODES = (MODE_PLAN_ONLY, MODE_PLAN_ORCA)
 
+#: How a plan is carried out (issue #64; ``protocol.execution``). ``rf4`` (the default, RF-4's): a
+#: ``turn`` rotates the direction toward the point ``lookahead`` m along the path, which pulls the
+#: agent back as it leaves its path, so it settles about ``lookahead`` x tan(angle) to the side
+#: (0.35 m at 10 degrees with a 2 m lookahead); and when no step is running the agent steers back
+#: to its path. ``as_prompted``, as the prompt describes a plan: a ``turn`` walks at its angle off
+#: the path's direction where the step began ("walk at this angle to your left or right of the
+#: direction you are going"); and between steps and after the last, until the encounter is over,
+#: the agent keeps the line a step took it to, walking parallel to its path.
+EXECUTION_RF4, EXECUTION_AS_PROMPTED = "rf4", "as_prompted"
+EXECUTIONS = (EXECUTION_RF4, EXECUTION_AS_PROMPTED)
+
 # The states of a plan.
-WAITING = "waiting"  # given, its first step not yet started
+WAITING = "waiting"  # given, its first step not yet started; or (resolve_v5) a later step's start not yet come
 RUNNING = "running"
 COMPLETED = "completed"
 REPLACED = "replaced"
@@ -103,9 +120,10 @@ def steps_from_dicts(steps: Sequence[Mapping[str, Any]], max_speed_mps: float, e
     """Steps in the reply format (``Step.as_dict``), read back with the reply parser's own checks.
 
     A recorded ``start.at_distance_m`` was checked against the distance when it was given; it is
-    not checked again here.
+    not checked again here. Nor is whether a later step may have a ``start``: the parser decided
+    that from the session's core template when the reply came.
     """
-    context = ReplyContext(CONDITION_TALK, max_speed_mps, tuple(events), math.inf)
+    context = ReplyContext(CONDITION_TALK, max_speed_mps, tuple(events), math.inf, later_step_start=True)
     flags: list[str] = []
     parsed = tuple(_step(index, dict(data), context, flags) for index, data in enumerate(steps))
     if flags:
@@ -153,6 +171,7 @@ class Plan:
     records: list[StepRecord] = field(default_factory=list)
     ended_step: Optional[int] = None
     ended_time_s: Optional[float] = None
+    waiting_for: int = 0  # the step a WAITING plan starts next (resolve_v5: a later one too)
     _origin: Vec = (0.0, 0.0)
     _tangent: Vec = (1.0, 0.0)
     _memory: dict[str, Any] = field(default_factory=dict)
@@ -229,13 +248,15 @@ class PlanDriver:
     effect in the next :meth:`prepare`, so a live run and a replay of its log are the same run.
     """
 
-    def __init__(self, mode: str, scenario: Scenario, agents: Sequence[int]):
+    def __init__(self, mode: str, scenario: Scenario, agents: Sequence[int], execution: str = EXECUTION_RF4):
         if mode not in MODES:
             raise ValueError(f"mode: one of {MODES}, got {mode!r}")
+        if execution not in EXECUTIONS:
+            raise ValueError(f"execution: one of {EXECUTIONS}, got {execution!r}")
         agents = tuple(int(agent) for agent in agents)
         if len(agents) < 2 or len(set(agents)) != len(agents):
             raise ValueError(f"an encounter has at least two different agents (D11), got {agents}")
-        self.mode, self.scenario, self.agents = mode, scenario, agents
+        self.mode, self.scenario, self.agents, self.execution = mode, scenario, agents, execution
         self.plans: dict[int, Plan] = {}
         self.decisions: list[Plan] = []
         self._pending: dict[int, list[tuple[int, tuple[Step, ...], int]]] = {}
@@ -350,12 +371,18 @@ class PlanDriver:
             return None
         plan = self.plans.get(i)
         step = None if plan is None else plan.step
-        if step is None:
-            if self.mode == MODE_PLAN_ORCA or not self.active:
-                return None
+        if step is not None:
+            velocity = self._step_velocity(simulation, agent, plan, step, own_speed)
+        elif self.execution == EXECUTION_AS_PROMPTED and self.active and plan is not None and plan.records:
+            # Issue #64: between steps and after the last, until the encounter is over, keep the
+            # line a step took the agent to: walk parallel to the path, at its own speed.
+            heading = agent.spec.path.heading_at(agent.path_s)
+            velocity = (own_speed * math.cos(heading), own_speed * math.sin(heading))
+        elif self.mode == MODE_PLAN_ORCA or not self.active:
+            return None
+        else:
             # plan_only: carry on along the path, at its own speed, free of the arbiter.
             return simulation._preferred_velocity(agent, own_speed)
-        velocity = self._step_velocity(simulation, agent, plan, step, own_speed)
         if self.mode == MODE_PLAN_ORCA and bound is not None:
             speed = math.hypot(*velocity)
             if speed > bound:
@@ -418,21 +445,29 @@ class PlanDriver:
             plan.state, plan.ended_step, plan.ended_time_s = COMPLETED, step, now
             return
         if plan.state == WAITING:
-            if not self._may_start(simulation, plan):
+            if not self._may_start(simulation, plan, plan.waiting_for):
                 return
-            self._begin(simulation, plan, 0)
+            self._begin(simulation, plan, plan.waiting_for)
         while plan.state == RUNNING:
             ended_by = self._ended(simulation, plan)
             if ended_by is None:
                 return
             self._end_step(plan, step, now, ended_by)
-            if plan.current + 1 < len(plan.steps):
-                self._begin(simulation, plan, plan.current + 1)
+            following = plan.current + 1
+            if following < len(plan.steps):
+                # resolve_v5 (issue #64): a later step with a start waits for it, the agent walking
+                # its path meanwhile. Under earlier templates no later step has one.
+                if not self._may_start(simulation, plan, following):
+                    plan.state, plan.waiting_for = WAITING, following
+                    return
+                self._begin(simulation, plan, following)
             else:
                 plan.state, plan.ended_step, plan.ended_time_s = COMPLETED, step, now
 
-    def _may_start(self, simulation: Any, plan: Plan) -> bool:
-        start = plan.steps[0].start
+    def _may_start(self, simulation: Any, plan: Plan, index: int = 0) -> bool:
+        """Whether step ``index``'s start has come. ``after_seconds`` counts from the decision, for a
+        later step as for the opening one."""
+        start = plan.steps[index].start
         if start is None or start.kind == START_NOW:
             return True
         world = simulation.world
@@ -483,7 +518,10 @@ class PlanDriver:
         speed = own_speed if step.speed_mps is None else min(step.speed_mps, agent.spec.max_speed)
         if speed <= 0.0:
             return (0.0, 0.0)
-        ux, uy = simulation._preferred_velocity(agent, 1.0)
+        if step.turn is not None and self.execution == EXECUTION_AS_PROMPTED:
+            ux, uy = plan._tangent  # the path's direction where the step began (issue #64)
+        else:
+            ux, uy = simulation._preferred_velocity(agent, 1.0)
         if step.turn is not None:
             angle = math.radians(step.turn.degrees) * (1.0 if step.turn.to == "left" else -1.0)
             ux, uy = ux * math.cos(angle) - uy * math.sin(angle), ux * math.sin(angle) + uy * math.cos(angle)
@@ -536,11 +574,11 @@ class WorldState:
 class PlanRun:
     """A simulation with a plan driver attached: one encounter's live run, or its replay."""
 
-    def __init__(self, simulation: Any, mode: str, scenario: Scenario, agents: Sequence[int]):
+    def __init__(self, simulation: Any, mode: str, scenario: Scenario, agents: Sequence[int], execution: str = EXECUTION_RF4):
         if simulation.plans is not None:
             raise ValueError("the simulation already has a plan driver")
         self.simulation = simulation
-        self.driver = PlanDriver(mode, scenario, agents)
+        self.driver = PlanDriver(mode, scenario, agents, execution)
         simulation.plans = self.driver
         self.result: Any = None
 

@@ -74,11 +74,11 @@ templates from before this track behave exactly as before.
 | `signal` | `none`, `eye_contact`, `nod`, `wave_on`, `hold_up_hand`, `point`, `other` | Non-verbal and talk conditions only. Seen only by people whose view contains the agent. Never heard. |
 | `intent` | free text | What the agent is trying to do. It comes **before** `steps`, so the numbers follow from a plan. |
 | `steps` | a list, carried out in order | `[]` means "carry on as I am", and must be written explicitly. |
-| `steps[].start` | `"now"`, `{"at_distance_m": d}`, `{"after_seconds": t}` | First step only. Each later step starts when the one before it ends. |
+| `steps[].start` | `"now"`, `{"at_distance_m": d}`, `{"after_seconds": t}` | First step only. Each later step starts when the one before it ends. *Amended by the user, 2026-10-24 (issue #64):* under `resolve_v5` any step may have one; a later step then waits for it after the step before it has ended (`after_seconds` counted from the decision), the agent walking on meanwhile. |
 | `steps[].speed_mps` | 0 to the agent's `max_speed` | Target speed. `0` is stop and wait. |
-| `steps[].turn` | `{"to": "left" or "right", "degrees": n}` | Heading offset from the agent's desired direction, in its own frame, held for the step. |
+| `steps[].turn` | `{"to": "left" or "right", "degrees": n}` | Heading offset from the agent's desired direction, in its own frame, held for the step. *Issue #64:* with `protocol.execution: rf4` (the default) the desired direction aims at a point on the path, which pulls the agent back, so a turn of n degrees settles about 2 m × tan n aside; with `as_prompted` (the user's decision, 2026-10-24) the agent walks at the angle off the path's direction where the step began. |
 | `steps[].back_up_m` | metres | Walk backwards, at the agent's `backing_speed`. |
-| `steps[].until` | `{"seconds": t}` or an event | Passing encounters: `other_passes`, `other_stops`, `i_am_out_of_the_stretch`. After the last step ends, the agent steers back towards its goal. |
+| `steps[].until` | `{"seconds": t}` or an event | Passing encounters: `other_passes`, `other_stops`, `i_am_out_of_the_stretch`. After the last step ends, the agent steers back towards its goal. *Issue #64:* with `protocol.execution: as_prompted` it first keeps the line a step took it to, walking parallel to its path, until the encounter is over. |
 | `reason` | free text, private | Never shown to anyone. Last field. |
 
 There is **no `priority` field**. Who went first is measured in the replay. Agents are discs of
@@ -135,6 +135,16 @@ too, from 5 to 10 m, and is the default core template of a design that varies an
 factor; a design without them keeps `resolve_v2`. The short line itself is unchanged: age, gender
 and body width stay full-detail lines. Printing the factor lines from 10 m is a choice for the
 prompt, not a measured recognition range (`pairwise-factors.md`, section 1).
+
+**Amended by the user, 2026-10-24 (issue #64): age and gender from 10 m too.** Under
+`resolve_v3` the other's age and gender are still given only within 5 m, so in the head-on case
+neither agent was ever told them, and a design whose factors are age and gender would vary only
+how each agent describes itself. `resolve_v4` is `resolve_v3` with two lines more: under the
+short line of someone 5 to 10 m away, "They look about {age} years old." and "They look like
+{gender}.", worded as the full-detail lines, and only when the demographics are visible. Body
+width stays a full-detail line. It is not the default: a config names it (`rf_pilot.yaml` does,
+and RF-10 must, so that the pilot's prompts are the screening's). Like the factor lines, giving
+age and gender from 10 m is a prompt choice, not a sourced recognition range.
 
 The view cone (75°), the seeing range (10 m) and the detail range (5 m) are sourced (D12). The
 hearing range is derived from measured speech and background levels (3.2 m in a public indoor

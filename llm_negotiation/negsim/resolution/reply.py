@@ -16,7 +16,8 @@ unknown key inside a step is also flagged). Enum values ignore case and surround
 
 **Parse failures**, each with its code (:class:`~negsim.negotiation.parsing.TurnParseError`, so
 ``request_with_retry`` asks once more): an unknown enum value; an event the scenario does not
-have; ``start`` on any step but the opening one; ``speed_mps`` outside 0 to the agent's
+have; ``start`` on any step but the opening one (unless the core template allows it,
+``resolve_v5``, issue #64); ``speed_mps`` outside 0 to the agent's
 ``max_speed``; ``turn.degrees`` outside 0 to 90 **[placeholder]**; ``back_up_m`` not positive;
 ``until.seconds`` not positive; ``start.at_distance_m`` larger than the current distance; and
 the structural ones (no ``intent``, ``steps`` not a list, a step with no ``until`` that does
@@ -125,20 +126,23 @@ class ParsedReply:
 @dataclass(frozen=True)
 class ReplyContext:
     """What a reply is read against: the condition, the agent's top speed, the scenario's events,
-    and the current distance to the person the agent would meet (``None``: nobody in view)."""
+    the current distance to the person the agent would meet (``None``: nobody in view), and
+    whether a later step may have a ``start`` (``resolve_v5``, issue #64; before it, only the
+    opening step may)."""
 
     condition: str
     max_speed_mps: float
     events: tuple[str, ...]
     distance_m: Optional[float] = None
+    later_step_start: bool = False
 
     def __post_init__(self) -> None:
         if self.condition not in CONDITIONS:
             raise ValueError(f"condition: one of {CONDITIONS}, got {self.condition!r}")
 
     @classmethod
-    def of(cls, view: View, condition: str, events: Mapping[str, str] | tuple[str, ...]) -> "ReplyContext":
-        return cls(condition, view.me.max_speed_mps, tuple(events), view.meeting_distance_m())
+    def of(cls, view: View, condition: str, events: Mapping[str, str] | tuple[str, ...], later_step_start: bool = False) -> "ReplyContext":
+        return cls(condition, view.me.max_speed_mps, tuple(events), view.meeting_distance_m(), later_step_start)
 
 
 # --- small readers --------------------------------------------------------------------------------
@@ -231,7 +235,7 @@ def _step(index: int, data: Any, context: ReplyContext, flags: list[str]) -> Ste
     flags.extend(f"unknown_step_key:{where}.{key}" for key in data if key not in STEP_KEYS)
     start = None
     if "start" in data:
-        if index > 0:
+        if index > 0 and not context.later_step_start:
             raise _fail("start_on_later_step", where)
         start = _start(data["start"], context, f"{where}.start")
     back_up = None
