@@ -17,6 +17,7 @@ writes, by default to ``analysis/`` beside the first file:
 | ``noise_floor.csv``, ``flip_rates.csv``, ``stability.csv`` | the noise floor, the counterfactual flip rates against it, stability per cell |
 | ``reason_mentions.csv``, ``debrief_kinds.csv``, ``stated_vs_measured.csv`` | stated against measured |
 | ``intent_check.csv``, ``intent_summary.csv`` | the coded intents and plans; the mismatch rate |
+| ``ethnicity_groups.csv``, ``ethnicity_weighted.csv`` | issue #92, with real ethnicity: outcomes by group; rates weighted back to random resident pairs |
 
 ``decisions.jsonl`` beside an ``outcomes.csv`` is read for the reasons and the intents; without
 it those two parts say so. No LLM is called, and nothing outside the output folder is written.
@@ -32,7 +33,7 @@ from typing import Optional, Sequence
 
 import pandas as pd
 
-from . import effects, intent, load, mapping, noise, report, stated, tree
+from . import effects, groups, intent, load, mapping, noise, report, stated, tree
 from .factors import factor_of
 
 SEED = 63
@@ -77,6 +78,8 @@ class Results:
     checked: Optional[pd.DataFrame]
     intent_summary: Optional[pd.DataFrame]
     decisions_found: bool = field(default=False)
+    ethnicity_groups: Optional[pd.DataFrame] = None  # issue #92
+    ethnicity_weighted: Optional[pd.DataFrame] = None
 
 
 def analyse(paths: Sequence[Path | str], options: Optional[Options] = None) -> Results:
@@ -111,6 +114,7 @@ def analyse(paths: Sequence[Path | str], options: Optional[Options] = None) -> R
         predictors=predictors, varied_predictors=varied, fitted=fitted, tree=grown, floors=floors, flips=flips, stability=stable,
         mapping_factors=factors, mapping=table, named=named, kinds=stated.debrief_kinds(agents), stated=against,
         checked=checked, intent_summary=intent.summary(checked) if checked is not None else None, decisions_found=decisions is not None,
+        ethnicity_groups=groups.by_group(agents), ethnicity_weighted=groups.weighted(sessions),
     )
 
 
@@ -138,6 +142,8 @@ def write(results: Results, out: Path) -> list[Path]:
     csv("stated_vs_measured.csv", results.stated)
     csv("intent_check.csv", results.checked)
     csv("intent_summary.csv", results.intent_summary)
+    csv("ethnicity_groups.csv", results.ethnicity_groups)
+    csv("ethnicity_weighted.csv", results.ethnicity_weighted)
     (out / "tree.txt").write_text(results.tree.text or results.tree.note + "\n", encoding="utf-8")
     written.append(out / "tree.txt")
     if tree.save_figure(results.tree, out / "tree.png"):

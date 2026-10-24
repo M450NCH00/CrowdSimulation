@@ -52,6 +52,9 @@ Each module's docstring is the full statement; in short:
   the other in view at a detail that prints it), a pairwise value only where its line was shown,
   the other's ethnicity (issue #92) only where it was told (`same_ethnicity`, `ethnicity_unseen`;
   the groups themselves are descriptive columns, too rare at real shares to be predictors).
+- **`groups.py`, real ethnicity** (issue #92). Outcomes by own group and the other's group as told
+  (unweighted, the comparison between groups), and each session outcome weighted by
+  `ethnicity_weight` back to random resident pairs, with Kish's effective number of sessions.
   The physical columns' `_a` and `_b` are mapped to person 1 and person 2 through
   `encounter_agents`.
 - **`effects.py`, factor effects.** Logistic regression per binary outcome (odds ratios), linear

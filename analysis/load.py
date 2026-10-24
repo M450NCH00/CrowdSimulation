@@ -200,6 +200,8 @@ def sessions_table(raw: pd.DataFrame, mode: str = "plan_only") -> tuple[pd.DataF
         "p1_agent": as_number(data["p1_agent"]).astype(int), "p2_agent": as_number(data["p2_agent"]).astype(int),
     })
     out["geometry"] = out["geometry"].fillna(out["case_id"])
+    if "ethnicity_weight" in data.columns:  # issue #92: the session's weight back to random resident pairs
+        out["ethnicity_weight"] = as_number(data["ethnicity_weight"])
     for name in DESIGN_COLUMNS:
         if name in data.columns:
             out[name] = data[name]
