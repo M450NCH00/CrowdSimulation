@@ -161,3 +161,44 @@ change):
    still describes the fictional group; updating it is a separate pass.
 
 ## Summary (fill in at the end)
+**What changed.** Real ethnicity is a factor of the resolution layer (track #55), on the mock. It
+replaces the fictional group, which stays in the rule-generation layer, unchanged.
+- The shares are data (`configs/resolution/ethnicity_sg_2026.yaml`; source cached in
+  `refs/rf26_singstat_population_trends_2026.txt`), including the resident-only limit and the
+  visitor decision.
+- `ethnicity_pair` (same, different) and `ethnicity_visible` are design factors. The groups are
+  drawn with the seed (`negsim/resolution/ethnicity.py`, `design.py`).
+- The lines are in the new frozen template `resolve_factors_v2`, the default for a design that
+  varies ethnicity (`factors.py`).
+- Outcome columns: `p1_ethnicity`, `p2_ethnicity`, `p<n>_other_ethnicity_shown`. `--plan` prints
+  the sessions per pair of groups and the persons' mix (`experiment.py`).
+- The ethics gate is its own sentence (`ethics.py`). The rule check protects the census group
+  names and race words (`rules/fields.py`).
+- RF-8's analysis reads it as told (`analysis/`).
+- Mock rehearsal: `configs/resolution/resolve_ethnicity_mock_rehearsal.yaml`. Docs:
+  `docs/ethnicity.md` and the updates listed above.
+
+**Why.** The user's decision of 2026-10-24 (#55), so that RF-10's screen can include real
+ethnicity, and RF-10 must not start before this is merged.
+
+**How it was verified.**
+- Full negsim suite: `uv run --directory llm_negotiation ... python -m pytest`, 1840 passed, 4
+  skipped (11 min 32 s). The 26 test files that read docs were rerun after the doc edits: 1123
+  passed, 4 skipped.
+- `analysis/tests`: 56 passed.
+- The 72-session mock rehearsal ran to completion, and its prompts were checked line by line
+  against the session records (progress log). The analysis ran end to end on its
+  `outcomes.csv`.
+- No paid call was made: the spend ledger is untouched.
+
+**Acceptance criteria.**
+- `ethnicity_pair` and `ethnicity_visible` work in a screening design on the mock, with the
+  groups drawn at the sourced shares: met.
+- A paid run that varies ethnicity is refused without the recorded sign-off, and a mock run is
+  not: met (tested with a file lacking the sentence, and with only the other factors'
+  sentences).
+- A rule that names ethnicity is `protected_attribute`: met (12 field forms × both prefix sets,
+  plus 7 paths in rule generation and the loader).
+- Every config and template from before behaves as before: met. Every older resolution config
+  plans with no ethnicity anywhere, `resolve_factors_v1`'s hash is unchanged, and the full suite
+  passes.
