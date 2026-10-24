@@ -88,7 +88,13 @@ Budget:
   spend tracked in `pipeline/config.py` -> `ALREADY_SPENT_USD`) — be mindful of
   token usage when touching the prompting scripts.
 - The negotiation work's paid calls are logged separately, one line per call, in
-  `llm_negotiation/spend_ledger.jsonl`.
+  `llm_negotiation/spend_ledger.jsonl`. The total spent is the two added
+  together; neither file alone gives it.
+- **Balance checked 2026-10-24: USD 1.49** (DeepSeek's balance endpoint; 1.48
+  topped up, 0.01 granted), before issue #64's pilot. The records above add up
+  to about USD 0.10 of a USD 2.00 credit, so about USD 0.41 is unaccounted for:
+  either the credit was not 2.00, or the key was used outside these records.
+  Plan caps against the balance, not against USD 2.00 (`WORK_LOG-64.md`).
 
 ### Phase 1 (on hold): the behaviour dataset
 The task from the first supervisor meeting, on hold since the second meeting.
@@ -169,7 +175,12 @@ perceived attractiveness (item 2; issue #61); see
 the decisions of track issue #55.
 
 1. **PENDING** — Paid runs, and their cap: a total of about USD 1.80, split per
-   phase (#55, 1). Until it is recorded, no paid call.
+   phase (#55, 1). Until it is recorded, no paid call. The balance is now
+   USD 1.49 (see "Budget"), so the total needs revising.
+   - **Approved for issue #64 only, 2026-10-24:** the user confirmed approval of
+     paid runs for RF-9's pilot (#64), and only for it, with a cap of
+     **USD 0.20** on that experiment's own calls (`experiment_name: rf_pilot`).
+     Every other paid run still needs its own approval and cap recorded here.
 2. **PENDING** — Ethics sign-off for perceived attractiveness as a factor (#55,
    3). Without it, RF-10 drops both attractiveness factors.
 3. **PENDING** — Whether the fictional group stays (#55, 3), and its ethics
