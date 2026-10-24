@@ -532,3 +532,82 @@ def test_the_draw_must_be_known_and_needs_the_pair_and_real_is_the_default():
     for s in E.plan(real).sessions:
         unit = (s.case_id, D.cell_code(s.cell))
         assert tuple(s.ethnicity[a] for a in s.persons) == SHARES.draw(s.cell["ethnicity_pair"], f"{real.design.seed}:{unit[0]}:{unit[1]}")
+
+
+# --- counterfactual pairs that flip one person's group (the user's request, 2026-10-24) ------------
+
+
+FLIP_BASE = {"age_pair": "same", "ethnicity_pair": "different", "mapping": "p1_lower"}
+
+
+def flip_config(name, pairs, factors_=None, **kwargs):
+    return config(name, {"ethnicity_pair": ["same", "different"], "age_pair": ["same", "p1_older"], **(factors_ or {})},
+                  design={"counterfactual_pairs": pairs, **kwargs.pop("design", {})}, **kwargs)
+
+
+def test_a_group_flip_fixes_both_groups_and_changes_only_the_flipped_persons():
+    c = flip_config("flip", [
+        {"base": FLIP_BASE, "factor": "p2_ethnicity", "ethnicity": {"p1": "chinese", "p2": "malay"}, "to": "indian"},
+        {"base": {**FLIP_BASE, "ethnicity_pair": "same"}, "factor": "p2_ethnicity", "ethnicity": {"p1": "chinese", "p2": "chinese"}, "to": "indian"},
+        {"base": FLIP_BASE, "factor": "p1_ethnicity", "ethnicity": {"p1": "others", "p2": "malay"}, "to": "malay"},
+    ], conditions=("independent", "talk"))
+    found: dict = {}
+    for s in E.plan(c).sessions:
+        if s.pair_change is None:
+            continue
+        found.setdefault((s.condition, s.pair_change, s.pair_factor), {})[s.pair_role] = (s.cell, tuple(s.ethnicity[a] for a in s.persons), s.session_id)
+    assert len(found) == 6  # three pairs, two conditions
+    for (condition, change, factor), roles in found.items():
+        (base_cell, base_groups, base_id), (flip_cell, flip_groups, flip_id) = roles["base"], roles["flipped"]
+        assert base_id.endswith("_base") and flip_id.endswith("_flipped") and base_id != flip_id
+        assert {k: v for k, v in base_cell.items() if k != "ethnicity_pair"} == {k: v for k, v in flip_cell.items() if k != "ethnicity_pair"}
+        for cell, groups in ((base_cell, base_groups), (flip_cell, flip_groups)):
+            assert cell["ethnicity_pair"] == ("same" if groups[0] == groups[1] else "different")  # follows from the groups
+        kept, moved = (0, 1) if factor == "p2_ethnicity" else (1, 0)
+        assert base_groups[kept] == flip_groups[kept] and f"{base_groups[moved]}->{flip_groups[moved]}" == change
+    assert {key[1] for key in found} == {"malay->indian", "chinese->indian", "others->malay"}
+
+
+def test_a_group_flip_is_told_in_the_prompts_and_recorded_in_the_rows(tmp_path):
+    c = flip_config("flip_run", [{"base": FLIP_BASE, "factor": "p2_ethnicity", "ethnicity": {"p1": "chinese", "p2": "malay"}, "to": "indian"}])
+    E.run_resolution(c, out_root=tmp_path, report=quiet, git=GIT)
+    rows = [json.loads(line) for line in (tmp_path / "flip_run" / "outcomes.jsonl").read_text(encoding="utf-8").splitlines()]
+    pair = {row["pair_role"]: row for row in rows if row.get("pair_change")}
+    assert set(pair) == {"base", "flipped"} and all(row["pair_change"] == "malay->indian" and row["pair_factor"] == "p2_ethnicity" for row in pair.values())
+    assert (pair["base"]["p1_ethnicity"], pair["base"]["p2_ethnicity"], pair["flipped"]["p2_ethnicity"]) == ("chinese", "malay", "indian")
+    record = json.loads((tmp_path / "flip_run" / "sessions" / f"{pair['flipped']['session_id']}.json").read_text(encoding="utf-8"))
+    p1, p2 = pair["flipped"]["p1_agent"], pair["flipped"]["p2_agent"]
+    texts = {point["agent_id"]: point["prompt"]["messages"][1]["content"] for point in record["decision_points"]}
+    assert OWN["indian"] in texts[p2] and OWN["chinese"] in texts[p1] and SEEN["indian"] in texts[p1]
+
+
+def test_a_group_flip_is_checked():
+    good = {"base": FLIP_BASE, "factor": "p2_ethnicity", "ethnicity": {"p1": "chinese", "p2": "malay"}, "to": "indian"}
+    for broken, message in (
+        ({**good, "ethnicity": {"p1": "chinese", "p2": "chinese"}}, "are 'same', not 'different'"),  # the groups contradict the cell
+        ({**good, "to": "malay"}, "a group other than 'malay'"),
+        ({**good, "to": "kestrop"}, "a group other than"),
+        ({**good, "ethnicity": {"p1": "chinese"}}, "ethnicity"),
+        ({**good, "ethnicity": {"p1": "eurasian", "p2": "malay"}}, "ethnicity.p1"),
+        ({"base": FLIP_BASE, "factor": "age_pair", "to": "p1_older", "ethnicity": {"p1": "chinese", "p2": "malay"}}, "fixed only by a pair that flips"),
+    ):
+        with pytest.raises(ConfigError, match=message):
+            flip_config("bad", [broken])
+    with pytest.raises(ConfigError, match="which the design does not run"):  # to the other's group, in a design of different only
+        flip_config("only_different", [{**good, "to": "chinese"}], factors_={"ethnicity_pair": ["different"]})
+    with pytest.raises(ConfigError, match="does not vary ethnicity_pair"):
+        config("no_eth", {"age_pair": ["same", "p1_older"]}, design={"counterfactual_pairs": [
+            {"base": {"age_pair": "same"}, "factor": "p2_ethnicity", "ethnicity": {"p1": "chinese", "p2": "malay"}, "to": "indian"}]})
+
+
+def test_every_other_pair_keeps_its_code_and_ids():
+    base = {"age_pair": "same", "gender_pair": "p1_female", "mapping": "p1_lower"}
+    plain = D.CounterfactualPair(base, "age_pair", "p1_older")
+    named = {"base": D.cell_code(base), "factor": "age_pair", "to": "p1_older"}
+    import hashlib
+    assert plain.code == hashlib.sha256(json.dumps(named, sort_keys=True).encode("utf-8")).hexdigest()[:8]
+    assert plain.groups is None and plain.change is None and "ethnicity" not in plain.as_dict()
+    c = config("old_pair", {"age_pair": ["same", "p1_older"]}, design={"counterfactual_pairs": [{"base": {"age_pair": "same"}, "factor": "age_pair", "to": "p1_older"}]})
+    for s in E.plan(c).sessions:
+        if s.pair_id is not None:
+            assert not s.session_id.endswith(("_base", "_flipped")) and s.pair_change is None and "pair_change" not in s.as_dict()

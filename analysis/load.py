@@ -197,6 +197,7 @@ def sessions_table(raw: pd.DataFrame, mode: str = "plan_only") -> tuple[pd.DataF
         "exact_repeat_set": as_bool(_column(data, "exact_repeat_set")).fillna(0.0).astype(bool),
         "repeat_group": data["session_key"].map(repeat_group),
         "pair_id": _column(data, "pair_id"), "pair_role": _column(data, "pair_role"), "pair_factor": _column(data, "pair_factor"),
+        "pair_change": _column(data, "pair_change"),  # issue #92: a pair that flips a person's group, chinese->indian
         "p1_agent": as_number(data["p1_agent"]).astype(int), "p2_agent": as_number(data["p2_agent"]).astype(int),
     })
     out["geometry"] = out["geometry"].fillna(out["case_id"])

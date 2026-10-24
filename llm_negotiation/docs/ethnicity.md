@@ -134,7 +134,8 @@ between groups, and same against different, uses the sessions as they are, unwei
 
 **The price of weighting.** Weighted figures rest on fewer sessions than were run: Kish's effective
 number of sessions, (sum of weights)^2 / (sum of squared weights), is reported beside each weighted
-rate. In the balanced rehearsal it is 24 of 72: the Chinese / Chinese sessions, 10 of 72, carry 39 of
+rate. In the balanced rehearsal (experiment `_v2`, 72 sessions, before the group flips below were
+added) it is 24 of 72: the Chinese / Chinese sessions, 10 of 72, carry 39 of
 the 72 weight. That is the trade the user chose: enough sessions per group for the comparison
 between groups, at the cost of precision in the population-level figures.
 
@@ -157,9 +158,43 @@ weights correct it for a population-level figure.
 draw should give, and the weighted number; then the persons' shares, drawn and weighted; and any
 pair never drawn. **At real shares the smaller groups get few sessions:** in the first rehearsal
 (`real`, 72 sessions), Others / Others was expected 1.3 times and six of the sixteen pairs fewer
-than once. In the balanced rehearsal (`resolve_ethnicity_mock_rehearsal.yaml`, 72 sessions) the
-persons drawn are 26.4% Chinese, 27.8% Malay, 23.6% Indian and 22.2% Others, every pair is drawn at
-least twice, and weighted they are 73.9, 13.5, 9.0 and 3.6%.
+than once. In the balanced rehearsal (experiment `_v2`, 72 sessions) the persons drawn are 26.4% Chinese, 27.8% Malay, 23.6% Indian and 22.2% Others, every pair is drawn at
+least twice, and weighted they are 73.9, 13.5, 9.0 and 3.6%. The rehearsal now (`_v3`, 88
+sessions, with the group flips below) draws 33.0% Chinese, 25.0% Malay, 23.9% Indian and 18.2%
+Others: a group flip's groups are the pair's own, not the rotation's.
+
+**Counterfactual pairs that flip one person's group** (added on the user's request, 2026-10-24).
+A pair that flips `ethnicity_pair` changes person 2's group to whatever the draw gives. To ask a
+specific question ("does the agent behave differently towards someone it is told is Indian?"), a
+pair can instead fix both groups and change one person's only:
+
+```yaml
+counterfactual_pairs:
+  - base: {age_pair: same, ..., ethnicity_pair: different, ethnicity_visible: true, mapping: p1_lower}
+    factor: p2_ethnicity            # or p1_ethnicity
+    ethnicity: {p1: chinese, p2: malay}
+    to: indian                      # the flipped session: a Chinese person 1 meets an Indian person 2
+```
+
+- **Everything else is the same**: the case and its seed, every other factor, the mapping, the
+  condition, and the other person's group. The base's `ethnicity_pair` must agree with the groups;
+  the flipped session's follows from them (Chinese and Chinese flipped to Chinese and Indian becomes
+  `different`), and must be a level the design runs.
+- **Both people's rows count.** Changing person 2 from Malay to Indian changes what person 1 is
+  told ("They look Indian."), so **person 1's** outcomes measure behaviour *towards* the group;
+  and it changes what person 2 is told of itself ("- You are Indian."), so **person 2's** measure
+  behaviour *as* the group. The report's by-group table (section 8) has them as separate rows (own
+  Chinese, other Indian; own Indian, other Chinese); the flip rates are per session, both people
+  together.
+- **Recorded:** `pair_factor` (`p2_ethnicity`) and `pair_change` (`malay->indian`) on the
+  sessions and the outcome rows. RF-8's flip rates are kept apart by change
+  (`p2_ethnicity:malay->indian`), so Chinese to Indian and Malay to Indian are not pooled. The
+  session ids end in `_base` and `_flipped`, because the two cells can be the same (Malay to Indian
+  stays `different`). Every other pair keeps its code and ids.
+- **Weighted** like any session, with the design's other sessions.
+- **The noise floor still matters.** A flip counts as an effect only above the exact-repeat set's
+  flip rate (RF-9: 77% of identical-prompt pairs). Pairing removes the noise of the other factors,
+  not the model's own randomness, so many pairs are needed.
 
 ## 5. What is logged
 

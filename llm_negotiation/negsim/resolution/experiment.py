@@ -848,7 +848,7 @@ def outcome_row(record: Mapping[str, Any], case: Mapping[str, Any], physical: Op
         "condition": record["condition"], "mapping": session["cell"]["mapping"], "repeat": session["repeat"],
         "exact_repeat_set": session["exact_repeat_set"],
         # Issue #62: only when the design lists geometries, or the session is half of a counterfactual pair.
-        **{key: session[key] for key in ("geometry", "pair_id", "pair_role", "pair_factor") if key in session},
+        **{key: session[key] for key in ("geometry", "pair_id", "pair_role", "pair_factor", "pair_change") if key in session},
         # Issue #92: the session's weight back to the resident shares, when the design varies ethnicity.
         **({"ethnicity_weight": session["ethnicity_weight"]} if "ethnicity_weight" in session else {}),
         "model": record["llm"]["model"], "temperature": record["llm"]["temperature"],

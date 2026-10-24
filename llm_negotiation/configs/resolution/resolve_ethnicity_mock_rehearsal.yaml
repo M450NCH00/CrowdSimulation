@@ -8,7 +8,9 @@
 # The design: a 2^(7-3) fraction (16 cells, resolution IV) of seven two-level factors, ethnicity_pair
 # and its switch ethnicity_visible among them, on round 1's two head-on geometries (D14), in the
 # independent and talk conditions; plus one counterfactual pair that flips ethnicity_pair, so that
-# the two sessions keep person 1's group and differ only in person 2's.
+# the two sessions keep person 1's group and differ only in person 2's; and two pairs that fix both
+# groups and flip only person 2's (factor: p2_ethnicity; Chinese to Indian, Malay to Indian), the
+# direct test of behaviour towards someone the agent is told is Indian.
 #
 # The groups are drawn balanced (design.ethnicity_draw: balanced; the user's decision of 2026-10-24,
 # issue #92's open question 3): every group equally often, in a fixed rotation, so that a per-group
@@ -17,7 +19,8 @@
 # of 6.21 million; a visitor is drawn at the same shares, the user's decision of 2026-10-24) for a
 # population-level figure. --plan prints the sessions per pair of groups, drawn and weighted.
 # (The first version of this rehearsal, experiment resolve_ethnicity_mock_rehearsal, drew at the
-# real shares; this one is _v2 so that its run folder is a new one.)
+# real shares; _v2 was balanced; this one, _v3, adds the pairs that flip person 2's group, each
+# version under its own name so that its run folder is a new one.)
 #
 # Person 1 may walk with a cane (mobility_aid), so that an observable factor line is printed under
 # the ethnicity line. The core template is resolve_v5 with protocol.execution: as_prompted, as RF-9
@@ -32,11 +35,11 @@
 # not read the ethnicity lines. Nothing here is a finding about a model.
 schema_version: 1
 layer: resolution
-experiment_name: resolve_ethnicity_mock_rehearsal_v2
+experiment_name: resolve_ethnicity_mock_rehearsal_v3
 description: >-
   Mock rehearsal of RF-26's real ethnicity in a 16-cell fraction of seven factors (ethnicity_pair
   and ethnicity_visible among them) on two head-on geometries, independent and talk, with a
-  counterfactual pair that flips ethnicity_pair; groups drawn balanced and weighted back to the
+  counterfactual pair that flips ethnicity_pair and two that flip only person 2's group; groups drawn balanced and weighted back to the
   resident shares; resolve_v5, resolve_factors_v2, as_prompted.
 
 conditions: [independent, talk]
@@ -63,6 +66,18 @@ design:
   counterfactual_pairs:
     - base: {age_pair: same, gender_pair: p1_female, urgency: neither, mobility_aid: neither, ethnicity_pair: same, ethnicity_visible: true, mapping: p1_lower}
       factor: ethnicity_pair
+    # Two pairs that flip only person 2's group, both groups fixed by the pair rather than drawn
+    # (issue #92): the same Chinese person 1 meets a Chinese, then an Indian person 2; and a Malay,
+    # then an Indian person 2. Person 1's rows measure behaviour towards the person it is told of;
+    # person 2's, behaviour as that group.
+    - base: {age_pair: same, gender_pair: p1_female, urgency: neither, mobility_aid: neither, ethnicity_pair: same, ethnicity_visible: true, mapping: p1_lower}
+      factor: p2_ethnicity
+      ethnicity: {p1: chinese, p2: chinese}
+      to: indian
+    - base: {age_pair: same, gender_pair: p1_female, urgency: neither, mobility_aid: neither, ethnicity_pair: different, ethnicity_visible: true, mapping: p1_lower}
+      factor: p2_ethnicity
+      ethnicity: {p1: chinese, p2: malay}
+      to: indian
 
 protocol:
   max_decision_points: 3         # D5

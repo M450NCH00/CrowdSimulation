@@ -194,6 +194,12 @@ is eight hexadecimal characters of the base cell's code, the factor and the leve
 may be a cell of the design, or of the exact-repeat set, or neither. A pair listed twice is
 refused.
 
+**A pair that flips one person's group of real ethnicity** (issue #92): `factor: p1_ethnicity` or
+`p2_ethnicity`, with `ethnicity: {p1, p2}` the base's groups (fixed, not drawn) and `to` the
+flipped person's other group. Its sessions also carry `pair_change` (`malay->indian`), and their ids
+end in `_base` and `_flipped`, because the two cells may be the same (`ethnicity.md`, section 4).
+Its pair code includes the groups; every other pair's code is as before.
+
 ## 8. What stays as before
 
 A config that names none of `kind`, `cells`, `geometries`, `exact_repeats` and

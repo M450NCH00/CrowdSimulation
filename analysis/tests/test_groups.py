@@ -52,3 +52,19 @@ def test_rates_are_weighted_back_and_the_cost_is_reported(tmp_path):
 def test_without_ethnicity_there_are_no_tables(tmp_path):
     sessions, agents = tables(tmp_path, [row("a_r1"), row("b_r1")])
     assert G.by_group(agents) is None and G.weighted(sessions) is None
+
+
+def test_pairs_that_flip_a_persons_group_are_kept_apart_by_what_changed(tmp_path):
+    from analysis import noise as N
+
+    rows = []
+    for k, (change, flips) in enumerate((("chinese->indian", True), ("chinese->indian", False), ("malay->indian", True))):
+        for role, first in (("base", "p1"), ("flipped", "p2" if flips else "p1")):
+            out = row(f"s{k}_{role}", pair=(f"x{k}", role, "p2_ethnicity"), first=first)
+            out["pair_change"] = change
+            rows.append(out)
+    sessions, _ = tables(tmp_path, rows)
+    rates = N.flip_rates(sessions).set_index(["factor", "subset"])
+    assert rates.loc[("p2_ethnicity:chinese->indian", "all"), "pairs"] == 2
+    assert rates.loc[("p2_ethnicity:chinese->indian", "all"), "flips"] == 1
+    assert rates.loc[("p2_ethnicity:malay->indian", "all"), "flips"] == 1

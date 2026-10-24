@@ -1205,6 +1205,9 @@ Issue #92 (RF-26) adds real ethnicity as a factor, in place of the fictional gro
   a field with `ethnic`, a census group's name or a word for race.
 - **`--plan`** prints the sessions per pair of groups: drawn, expected under the draw, and
   weighted.
+- **Counterfactual pairs can flip one person's group** (`factor: p2_ethnicity`, both groups fixed
+  by `ethnicity: {p1, p2}`, `to: indian`): two sessions identical but for that person's group, the
+  direct test of behaviour towards (person 1's rows) and as (person 2's) a group.
 
 ```
 python run_experiment.py configs/resolution/resolve_ethnicity_mock_rehearsal.yaml --plan
@@ -1212,8 +1215,9 @@ python run_experiment.py configs/resolution/resolve_ethnicity_mock_rehearsal.yam
 ```
 
 The rehearsal has RF-10's shape: a 2^(7-3) fraction (16 cells) on two head-on geometries,
-independent and talk, with a counterfactual pair that flips `ethnicity_pair`, groups drawn
-`balanced`, under `resolve_v5` and `as_prompted`; 72 sessions. The mock's replies do not read the lines, so nothing in it is a
+independent and talk, with a counterfactual pair that flips `ethnicity_pair` and two that flip only
+person 2's group (Chinese to Indian, Malay to Indian), groups drawn `balanced`, under `resolve_v5`
+and `as_prompted`; 88 sessions. The mock's replies do not read the lines, so nothing in it is a
 finding.
 
 ## Changing things

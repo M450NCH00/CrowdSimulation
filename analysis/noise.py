@@ -118,7 +118,10 @@ def flip_rates(sessions: pd.DataFrame, component: str = "behaviour") -> pd.DataF
         roles = dict(zip(members["pair_role"], members.index))
         if set(roles) != {"base", "flipped"} or len(members) != 2:
             continue  # an unfinished pair (a session without an encounter) is left out
-        found.append({"factor": members["pair_factor"].iloc[0], "condition": members["condition"].iloc[0],
+        factor, change = members["pair_factor"].iloc[0], members["pair_change"].iloc[0] if "pair_change" in members else None
+        if isinstance(change, str) and change:  # issue #92: one person's group flipped, kept apart by what changed
+            factor = f"{factor}:{change}"
+        found.append({"factor": factor, "condition": members["condition"].iloc[0],
                       "flipped": keys.loc[roles["base"]] != keys.loc[roles["flipped"]]})
     pairs = pd.DataFrame(found)
     out = []
