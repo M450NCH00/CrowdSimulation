@@ -134,6 +134,45 @@ change):
   before the first run: one now pins `resolve_factors_v1`'s hash as it was before this issue
   (`bb3351d4...`, from commit 03f1f86's manifest).
 
+### 2026-10-24 — The user's decision: a balanced draw, weighted back (open question 3)
+- **The user's question, after PR #94 was opened:** should the agents follow Singapore's ratio,
+  since too few Indian sessions would give less accurate results for Indian people? The build
+  drew at the real shares, so the user's concern was an argument *for* equal shares. I
+  recommended equal shares for the screen, weighted back to the real shares for population-level
+  figures (survey practice). **The user said yes**, so the `balanced` option the issue held back
+  "unless the user asks" was built.
+- What I did: `design.ethnicity_draw` (`real`, the default, unchanged; or `balanced`).
+  `balanced_assignment` rotates the four groups through `same` units and the twelve ordered pairs
+  through `different` units, in blocks of four that balance both people, in a seeded order within
+  each stratum. Every session of an ethnicity design gets `ethnicity_weight`, carried into the
+  record and the outcome row. `--plan` prints drawn, expected and weighted counts per pair, and any
+  pair never drawn. `analysis/groups.py` gives outcomes by own group and the other's as told,
+  unweighted, and session outcomes weighted, with Kish's effective number of sessions. The rehearsal
+  is now `balanced`, experiment `resolve_ethnicity_mock_rehearsal_v2` (a new run folder).
+- **Two changes of direction while building it, both found by reading `--plan`:**
+  1. First weights: the pair's chance at the shares over its chance under the design (1/4, 1/12).
+     With 16 `different` units, not a multiple of 12, some pairs came up twice, and the weighted
+     persons were Malay 25.8% against 20.1% expected. Replaced with post-stratification on the
+     pairs actually drawn.
+  2. Then the target itself was wrong. The weights restored the real mix *within* each level, but
+     kept the design's 50/50 same/different and task 2's rule that keeps person 1 at the shares
+     inside `different`. Neither is what "a Singapore pair" means: two residents met at random,
+     each at the shares, are a same-group pair 57.4% of the time. The weight is now (share of
+     person 1's group) x (share of person 2's) x sessions / sessions with that pair, under either
+     draw. So under `real` the weights are no longer 1. This is my methodological choice (A5
+     below), not the user's.
+- Result: the balanced rehearsal ran 72 of 72 on the mock. Persons drawn: Chinese 26.4%, Malay
+  27.8%, Indian 23.6%, Others 22.2%. Every pair was drawn at least twice. Weighted: 73.9, 13.5, 9.0,
+  3.6% exactly, and the weights add up to 72. Analysis section 8 renders. Kish's effective number
+  of sessions is 24 of 72: Chinese / Chinese, 10 sessions, carries 39 of the 72 weight. That is the
+  price in precision of population-level figures under `balanced`.
+- Tests: `tests/test_ethnicity.py` 53 passed (rotation balance, design balance and people kept
+  across conditions, weights to random resident pairs, weight in record and row under both draws,
+  validation, `real` unchanged); `analysis/tests` 59 passed (new `test_groups.py`).
+- **A5 (my choice):** the weights' target is two residents met at random. An alternative would be
+  "a pair that meets as the design says", for example keeping the 50/50 same/different. Easy to
+  change if the user or the supervisor prefers it.
+
 ## Open questions / risks
 1. **"They look Malay"** (issue's open question 2, *for the supervisor*): telling an agent another
    person's ethnicity as an inference from appearance. Built as the issue words it; not decided.
@@ -141,10 +180,14 @@ change):
    `different` session over-represents the smaller groups. If the user wants every person at the
    resident shares, the rule must change (for example, draw both independently and let
    `ethnicity_pair` be observed rather than set, which a fractional screen cannot hold). Needs the
-   user's view before RF-10.
+   user's view before RF-10. *Later the same day:* the `ethnicity_weight` corrects it for any
+   population-level figure, under either draw, so the rule can stay as the issue gives it.
 3. **Few sessions for the smaller groups.** At real shares, a per-group effect cannot be estimated
-   from RF-10's screen; only same against different. The `balanced` option (open question 3) is
-   not built, as the issue says.
+   from RF-10's screen. *Resolved by the user's decision of 2026-10-24:* `balanced` is built, and
+   RF-10 should name `ethnicity_draw: balanced`. Still open: a per-group term in RF-8's models is
+   not built (the report tabulates groups descriptively). With RF-9's 77% flip rate, even a
+   balanced screen may not show one. Population-level figures under `balanced` rest on about a
+   third of the sessions (Kish).
 4. **My design choices A1 to A4** (the plan): the draw's key, the line order, the analysis
    predictors, and which words the rule check protects. Each is documented and easy to change;
    none is the user's or the supervisor's decision.
