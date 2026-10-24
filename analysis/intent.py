@@ -32,7 +32,7 @@ import pandas as pd
 from .noise import wilson
 
 CODEBOOKS = Path(__file__).resolve().parent / "codebooks"
-INTENT_CODEBOOK = "intent_v1"
+INTENT_CODEBOOK = "intent_v2"  # issue #64: written from the pilot's intents; intent_v1 was the draft
 CATEGORIES = ("keep_to_side", "slow_down", "stop_and_wait", "back_up", "carry_on")
 OTHER, CARRY_ON = "other", "carry_on"
 MATCH, MISMATCH, UNCODED, UNREADABLE = "match", "mismatch", "uncoded", "unreadable"

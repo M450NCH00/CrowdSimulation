@@ -34,10 +34,11 @@ MODES = ("plan_only", "plan_orca", "plain_orca")
 KIND_DECISION, KIND_DEBRIEF = "decision", "debrief"
 
 
-def _spread(values: Sequence[float]) -> dict[str, Any]:
+def _spread(values: Sequence[float], digits: int = 2) -> dict[str, Any]:
     if not values:
         return {"n": 0, "mean": None, "median": None, "max": None}
-    return {"n": len(values), "mean": round(statistics.fmean(values), 2), "median": statistics.median(values), "max": max(values)}
+    return {"n": len(values), "mean": round(statistics.fmean(values), digits), "median": round(statistics.median(values), digits),
+            "max": round(max(values), digits)}
 
 
 def _sends(record: Mapping[str, Any]) -> Iterable[tuple[str, Mapping[str, Any]]]:
@@ -142,7 +143,7 @@ def measure(experiment: Path) -> dict[str, Any]:
             "calls_per_session": _spread(rows["calls"]),
             "calls_bound_per_session": max(rows["calls_bound"]) if rows["calls_bound"] else None,
             "decision_points_per_agent": dict(sorted(Counter(rows["decision_points_per_agent"]).items())),
-            "cost_per_session_usd": {key: (round(value, 6) if isinstance(value, float) else value) for key, value in _spread(rows["cost"]).items()},
+            "cost_per_session_usd": _spread(rows["cost"], digits=6),
             "cost_usd": round(sum(rows["cost"]), 6),
             "preview_usd": round(sum(rows["cost_bound"]), 6),
             "largest_share_of_a_session_preview": round(max(rows["share_of_preview"]), 4) if rows["share_of_preview"] else None,

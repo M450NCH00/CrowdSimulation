@@ -109,5 +109,29 @@ def test_the_intent_codebook_codes_these_intents(text, categories, side):
 
 
 def test_the_codebooks_are_versioned_files():
-    assert I.load_codebook()["version"] == 1 and S.load_codebook()["version"] == 1
-    assert list(I.load_codebook()["categories"]) == list(I.CATEGORIES)
+    assert I.load_codebook()["version"] == 2 and S.load_codebook()["version"] == 1  # issue #64: intent_v2 is the default
+    assert I.load_codebook("intent_v1")["version"] == 1
+    assert list(I.load_codebook()["categories"]) == list(I.CATEGORIES) == list(I.load_codebook("intent_v1")["categories"])
+
+
+@pytest.mark.parametrize("text, categories, side", [  # intents of the pilot's paid runs (issue #64)
+    ("Keep walking to the supermarket without slowing, keeping well to my right so Person 1 can pass on my left.", {"keep_to_side"}, None),  # a side said with 'Person 1' is unknown, as in v1
+    ("Keep walking to the supermarket, easing slightly right so we pass without bumping", {"keep_to_side"}, "right"),
+    ("Keep walking to the supermarket, shifting a bit more to my left to pass the man cleanly", {"keep_to_side"}, "left"),
+    ("Keep to my side of the passage and let the young woman pass", {"keep_to_side"}, None),
+    ("Keep to my right and let the young woman pass on my left", {"keep_to_side"}, "right"),
+    ("Keep walking to the supermarket and pass the oncoming woman on my right side", {"keep_to_side", }, None),  # ambiguous: not read
+    ("keep straight toward the supermarket while the man crosses in front of me", {"carry_on"}, None),
+    ("Keep walking to the supermarket, giving the oncoming man room to pass.", {"keep_to_side"}, None),  # 51 of 54 such came with a turn
+    ("Keep to my side and slow a little so the young man can cross in front of me safely", {"keep_to_side", "slow_down"}, None),
+])
+def test_intent_v2_codes_the_pilots_intents(text, categories, side):
+    assert I.code_intent(text, I.load_codebook("intent_v2")) == (frozenset(categories), side)
+
+
+def test_intent_v1_coded_a_negated_slowing_as_slowing_and_missed_most_sides():
+    v1, v2 = I.load_codebook("intent_v1"), I.load_codebook("intent_v2")
+    text = "Keep heading to the supermarket without slowing, but shift slightly to the right to leave room for Person 1 to pass."
+    assert "slow_down" in I.code_intent(text, v1)[0] and "slow_down" not in I.code_intent(text, v2)[0]
+    text = "Keep walking to the supermarket, easing slightly right so we pass without bumping"
+    assert I.code_intent(text, v1)[1] is None and I.code_intent(text, v2)[1] == "right"
