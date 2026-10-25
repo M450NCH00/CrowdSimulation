@@ -101,3 +101,7 @@ run (flash: 2 of 8).
 - **One model family, temperature 1.0, thinking off, independent condition only.** A model of
   another family, or thinking mode, was not tried (`gpt-6-astra` was weighed and left for later,
   WORK_LOG-100.md).
+
+## Addendum, 2026-10-25: an executor rule (issue #101)
+
+Found in RF-29 (issue #101, `runs/rf29_round1_head_on_sidestep/comparison_report.md`): under `protocol.execution: as_prompted` a step with no `turn` steered the agent back to the path it started on, so a move aside followed by a plain step ("walk on until the other passes") was partly undone before the meeting. The prompt says the agent keeps its line. The independent sessions were carried out again from their recorded plans under `keep_line` (the line kept; no LLM call, exact because every independent decision came at the trigger). Under `keep_line`: flash 35 of 64, v4-pro 21 of 64 (paired p = 0.024): **v4-pro does worse**. Its "one holds the line" strategy leaves a lone sidestep to give the whole clearance (18 of 19 collisions with one or both not aside). The common failure across the runs is then coordination, not sizing. (`runs/rf28_round1_head_on_v4pro_cap600_keep_line/`.)

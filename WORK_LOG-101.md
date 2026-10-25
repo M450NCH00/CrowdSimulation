@@ -90,8 +90,45 @@ USD 0.08; recorded in `CLAUDE.md`, pending item 1.
 - Stopped here and asked the user how to correct it (a new execution setting, off for every
   earlier config, and re-replays of the four runs).
 
+### 2026-10-25 — keep_line, and the four runs carried out again
+- **The user chose (AskUserQuestion): a new execution setting plus free re-replays of all four
+  runs.** `protocol.execution: keep_line` = `as_prompted`, and a step with no turn walks parallel
+  to the path from where the agent is. Off for every earlier config (they name `as_prompted` or
+  nothing). Tests (`tests/test_reexecute.py`, 6).
+- `negsim/resolution/reexecute.py`: copies each session record with the execution set, rebuilds
+  both replays and `outcomes.csv` with the experiment's own functions, refuses a session with a
+  decision after the trigger. **Check of the tool: under RF-29's own execution it reproduced RF-29
+  exactly** (96 sessions, 66 physical columns, 0 differences).
+- Re-executed RF-10, RF-27, RF-28 (cap 600) and RF-29's independent sessions under `keep_line`
+  (`runs/*_keep_line/`, 17 MB each, no LLM call). Resolved: RF-10 35, RF-27 27, RF-28 21, RF-29
+  27 of 64. Paired against RF-10 under `keep_line`: p = 0.22, 0.024 (worse), 0.22. RF-10 under
+  `keep_line` against as run: 13 gained, 0 lost, p = 0.0002. Collisions under `keep_line` are
+  mostly the pavement dance (RF-10 16 of 27, RF-29 25 of 32).
+- Wrote `comparison_report.md` (two figures corrected against `gate.md` and the counts before
+  committing); dated addenda in RF-10's `screen_report.md` and RF-27 and RF-28's reports; README;
+  `CLAUDE.md` balance **USD 0.86**.
+
 ## Open questions / risks
 - The 30° default and the 3 m limit are placeholders (the issue says so).
-- **Execution of a plain step after a sidestep or a turn** (above): the user's decision.
+- `keep_line` is one reading of the prompt, decided by the user; not a sourced fact about walking.
+- **For the user:** whether later rounds use `keep_line` (recommended); redoing head-on's three
+  conditions under it (paid, a lean round), since RF-10's "signalling and talk do not help" was
+  measured under the rule that undid sidesteps; keeping `resolve_v6`.
+- **For the supervisor:** the gate is not re-decided here; independent under `keep_line` is 0.55
+  (CI 0.43 to 0.66).
 
-## Summary (fill in at the end)
+## Summary
+**What changed.** `resolve_v8` (the sidestep option, turning kept) with its parser, executor,
+coding and tests; RF-29's config and paid run; `protocol.execution: keep_line`;
+`negsim.resolution.reexecute`; four re-executed runs; the report and the addenda; README;
+`CLAUDE.md` (approval and balance).
+
+**Result.** As run, the sidestep made head-on worse (4 of 64), because the executor undid it.
+With the line kept, RF-10's own plans resolve 35 of 64; neither `resolve_v7`, the sidestep, nor
+v4-pro beats that (v4-pro is worse). The remaining failure is coordination: the pavement dance.
+
+**How it was verified.** Parser, executor and template tests (28), the session test, the
+re-execution tests (6); a mock rehearsal matching RF-10's sessions; the pricing check and the
+balance before paying; a paid batch of 6 read before the rest; the re-execution tool checked to
+reproduce RF-29 exactly under its own execution; every number in the report checked against its
+file.
