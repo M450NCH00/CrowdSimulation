@@ -48,8 +48,57 @@ for this issue only, cap USD 0.30, recorded in `CLAUDE.md`.
   whether to raise the cap (a ceiling only: it changes no reply that fits, and costs only the
   tokens written).
 
-## Open questions / risks
-- v4-pro's replies may be longer: the reply cap stays 300 (RF-9's), so a truncated reply would
-  show as unreadable. Watched in the first batch.
+### 2026-10-25 — The run of record at a reply cap of 600
+- **The user chose (AskUserQuestion): raise the cap to 600 in a fresh run.** A resumed run must
+  keep its config, so `round1_head_on_v4pro_cap600.yaml` is the first config with
+  `max_tokens: 600` under `rf28_round1_head_on_v4pro_cap600`, its own cap USD 0.28 so that the
+  issue stays within USD 0.30. `CLAUDE.md`'s approval note names both experiments. The first
+  config and its 6 sessions are kept (`runs/rf28_round1_head_on_v4pro/NOTE.md`). Mock run of 6:
+  the first prompts are still RF-10's word for word (the cap is not in the prompt).
+- Paid batch of 6: nothing cut off (longest 247 tokens), but 3 of 12 decision points unreadable
+  for formats the unchanged parser refuses (`"until": {"event": "other_passes"}`, `"until":
+  {"seconds": 0}`). The parser stays unchanged (the user's decision for RF-27 and this issue), so
+  I went on and added `analysis.compare --readable-only` (with a test) so that the report can
+  show the comparison without them.
+- The other 90: 96 of 96 completed. USD 0.164082 (385 calls, off-peak, no error; one transport
+  retry costed as an upper bound, USD 0.0048). Issue total **USD 0.176** of USD 0.30. Balance
+  **USD 0.91**. Largest reply 325 tokens (so the raise mattered), none cut off.
+- **Result:** 18 of 64 resolved against flash's 22 (McNemar p = 0.57); readable only (48), 15
+  against 18 (p = 0.68). Fails the gate. Unreadable 18 of 192 (flash 5).
+- **How it fails, read further** (scratch script; numbers in the report): same-wall collisions
+  2 against 18; one of the two aside in 37 of 64 sessions (flash 11); 40 of 113 readable first
+  plans without a turn (flash 6 of 123), 22 of them giving holding the line as the reason; near
+  misses 24 against 5; median closest gap 0.003 m against -0.029 m. **Exploratory, chosen after
+  seeing the near misses:** no contact 42 against 27 of 64, paired McNemar p = 0.014. The gate is
+  not moved.
+- Wrote `comparison_report.md`; README row; `CLAUDE.md` balance. Every number checked against its
+  file; two first drafts corrected (quotes taken from the first, 300-cap run; "the longest reply
+  was within" a cap it had in fact exceeded at 300).
 
-## Summary (fill in at the end)
+## Open questions / risks
+- **Cap and parser:** the comparison differs from RF-10's in the reply cap as well as the model
+  (flash's replies stayed under 300, so not for flash); v4-pro writes more formats the parser
+  refuses. The readable-only comparison gives the same answer.
+- **For the user:** the common failure across RF-10, RF-27 and RF-28 is the sidestep's size. The
+  next test I would suggest is a step format in metres sideways (RF-27's option 2), on flash.
+  A model of another family (`gpt-6-astra`) or thinking mode is the other route; both are the
+  user's decision, each in its own issue.
+- **For the supervisor (RF-11):** head-on fails the gate on every setup; v4-pro's "one holds the
+  line, the other gives way" is a side-choice pattern that could still be extracted.
+
+## Summary
+**What changed.** `configs/resolution/round1_head_on_v4pro.yaml` (the first 6 sessions) and
+`round1_head_on_v4pro_cap600.yaml` (the run of record): RF-10's independent sessions on
+`deepseek-v4-pro`, the prompts word for word RF-10's; tests pinning both to RF-10's sessions;
+`analysis.compare --readable-only`; the paid runs with the analysis and `comparison_report.md`;
+the pricing check; `CLAUDE.md` (approval and balance); README.
+
+**Result.** The stronger model does not resolve head-on more often (18 against 22 of 64,
+p = 0.57). It coordinates differently (one holds the line, the other gives way: almost no
+same-wall collisions, contact rarer, exploratory p = 0.014) but the lone sidestep is too small,
+leaving near misses. Head-on fails the gate on every setup tried.
+
+**How it was verified.** Config tests against RF-10's sessions; the mock rehearsal (96 of 96, the
+same ids, cells, people; every first prompt word for word RF-10's); the pricing page re-read and
+the balance before paying; a paid batch of 6 read before the rest (twice); the ledger against the
+balance; the comparison tests (9); every number in the report checked against its file.

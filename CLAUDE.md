@@ -101,6 +101,8 @@ Budget:
   2026-10-24. After issue #65's screen (USD 0.290 in the ledger, cap 0.35):
   **USD 1.13**, checked 2026-10-24. After issue #98's comparison (USD 0.050 in the
   ledger, cap 0.08): **USD 1.08**, checked 2026-10-25.
+  After issue #100's run on deepseek-v4-pro (USD 0.176 in the ledger, cap
+  0.30): **USD 0.91**, checked 2026-10-25.
 
 ### Phase 1 (on hold): the behaviour dataset
 The task from the first supervisor meeting, on hold since the second meeting.
