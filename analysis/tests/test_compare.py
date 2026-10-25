@@ -84,6 +84,15 @@ def test_mcnemar_is_the_two_sided_exact_binomial(b, c):
     assert compare.mcnemar_exact(b, c) == compare.mcnemar_exact(c, b)
 
 
+def test_readable_only_leaves_out_a_session_unreadable_in_either_run(pair):
+    result = compare.compare(*pair, "independent", readable_only=True)
+    assert result["readable_only"] and result["dropped_unreadable"] == 1  # I_c0_r1, unreadable in the first run
+    assert result["sessions_in_common"] == 8 and result["design_sessions"] == 6
+    assert result["paired"]["both"] == 2 and result["paired"]["only_new"] == 3
+    assert "Readable only:** 1 session(s)" in compare.markdown(result)
+    assert not compare.compare(*pair, "independent")["readable_only"]
+
+
 def test_two_experiments_with_nothing_in_common_are_refused(pair, tmp_path):
     other = experiment(tmp_path / "other", {"I_x_r1": (True, "independent", 1, False)})
     with pytest.raises(compare.CompareError):
