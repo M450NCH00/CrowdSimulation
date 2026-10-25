@@ -211,7 +211,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     text = markdown(result)
     out = args.new / "analysis"
     out.mkdir(parents=True, exist_ok=True)
-    name = f"compare_{args.base.name}" + ("_readable_only" if args.readable_only else "")
+    # Issue #104: a condition other than the default is named, so two conditions do not overwrite each other.
+    name = (f"compare_{args.base.name}" + ("" if args.condition == "independent" else f"_{args.condition}")
+            + ("_readable_only" if args.readable_only else ""))
     (out / f"{name}.md").write_text(text, encoding="utf-8", newline="\n")
     (out / f"{name}.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8", newline="\n")
     print(text)

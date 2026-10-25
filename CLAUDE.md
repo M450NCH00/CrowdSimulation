@@ -105,6 +105,8 @@ Budget:
   0.30): **USD 0.91**, checked 2026-10-25.
   After issue #101's run (USD 0.049 in the ledger, cap 0.08): **USD 0.86**,
   checked 2026-10-25.
+  After issue #104's run (USD 0.221 in the ledger, cap 0.30): **USD 0.65**,
+  checked 2026-10-25.
 
 ### Phase 1 (on hold): the behaviour dataset
 The task from the first supervisor meeting, on hold since the second meeting.
@@ -176,7 +178,7 @@ The user's notes from the meeting, word for word:
   each simulator. Rules may be more specific, for example "keep left".
 
 ## Pending sign-offs
-Items 1, 5 and 6 are still pending (item 1 was approved for issues #64, #65, #98, #100 and #101 only).
+Items 1, 5 and 6 are still pending (item 1 was approved for issues #64, #65, #98, #100, #101 and #104 only).
 **Do not treat any of them as approved** until the user records the
 supervisor's answer in this file, with a date. Items 2 and 3, the ethics
 sign-offs for perceived attractiveness and real ethnicity, were recorded by the
@@ -222,6 +224,12 @@ used in this track). Numbers in brackets are the decisions of track issue #55.
      it, with a cap of **USD 0.08** on that experiment's own calls
      (`experiment_name: rf29_round1_head_on_sidestep`; 96 sessions, independent
      condition only, about USD 0.05 off-peak, `WORK_LOG-101.md`).
+   - **Approved for issue #104 only, 2026-10-25:** the user approved paid runs for
+     RF-30's rerun of head-on's non-verbal and talk conditions under
+     `protocol.execution: keep_line` (#104), and only for it, with a cap of
+     **USD 0.30** on that experiment's own calls (`experiment_name:
+     rf30_round1_head_on_keep_line`; RF-10's design, 192 sessions, about USD 0.24
+     off-peak, `WORK_LOG-104.md`).
 2. **Approved by the supervisor, 2026-10-24** — Ethics sign-off for perceived
    attractiveness as a factor (#55, 3). *The user decided on 2026-10-24* that
    attractiveness (both directions) is **in** RF-10's design, because bias can

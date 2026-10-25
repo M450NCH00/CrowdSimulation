@@ -41,6 +41,22 @@ def test_keep_line_changes_nothing_for_a_plan_without_a_move_aside():
     assert [(r.bodies[0].x, r.bodies[0].y) for r in a] == pytest.approx([(r.bodies[0].x, r.bodies[0].y) for r in b])
 
 
+def test_rf30s_config_is_rf10s_non_verbal_and_talk_sessions_under_keep_line():
+    # Issue #104 (RF-30): the user's decisions of 2026-10-25; only the execution changes.
+    old = E.ResolutionConfig.load("configs/resolution/round1_head_on_screening.yaml")
+    new = E.ResolutionConfig.load("configs/resolution/round1_head_on_keep_line.yaml")
+    assert new.experiment_name == "rf30_round1_head_on_keep_line" and new.conditions == ("non_verbal", "talk")
+    assert new.protocol.execution == X.EXECUTION_KEEP_LINE and old.protocol.execution == X.EXECUTION_AS_PROMPTED
+    assert {k: v for k, v in new.protocol.as_dict().items() if k != "execution"} == {k: v for k, v in old.protocol.as_dict().items() if k != "execution"}
+    assert new.templates == old.templates and new.llm == old.llm and new.resolution_gate == old.resolution_gate
+    assert new.budget["cap_usd"] == 0.30 and new.budget["over_cap"] == "stop_at_cap"
+    old_sessions = {s.session_id: s for s in E.plan(old).sessions if s.condition in ("non_verbal", "talk")}
+    new_sessions = {s.session_id: s for s in E.plan(new).sessions}
+    assert set(new_sessions) == set(old_sessions) and len(new_sessions) == 192
+    for session_id, session in new_sessions.items():
+        assert session.personas == old_sessions[session_id].personas, session_id
+
+
 @pytest.fixture(scope="module")
 def source(tmp_path_factory):
     out = tmp_path_factory.mktemp("reexecute")

@@ -60,6 +60,23 @@ def test_without_a_gate_fixed_before_the_run_there_is_nothing_to_apply(tmp_path)
         gate.gate(folder(tmp_path, DESIGN, fixed=None))
 
 
+def test_two_experiments_with_the_same_gate_are_pooled_and_never_count_a_session_twice(tmp_path):
+    for name in ("a", "b", "c"):
+        (tmp_path / name).mkdir()
+    first = folder(tmp_path / "a", [row("I1", "independent", True), row("I2", "independent", True)])
+    second = folder(tmp_path / "b", [row("T1", "talk", False), row("N1", "non_verbal", False, repeat=2)])
+    result = gate.gate(first, [second])
+    assert result["plan_only"]["resolved"] == 2 and result["plan_only"]["n"] == 3 and result["passes"]
+    assert set(result["by_condition"]) == {"independent", "talk"} and result["pooled_with"] == [str(second)]
+    assert "Pooled with" in gate.markdown(result)
+    assert gate.main([str(first), "--with", str(second)]) == 0 and (first / "analysis" / "gate_pooled.md").is_file()
+    with pytest.raises(gate.GateError, match="more than one"):
+        gate.gate(first, [first])
+    other = folder(tmp_path / "c", [row("T9", "talk", True)], fixed={"plan_only_resolved_min": 0.6, "reason": "x"})
+    with pytest.raises(gate.GateError, match="another gate"):
+        gate.gate(first, [other])
+
+
 def test_the_command_writes_gate_json_and_gate_md(tmp_path):
     path = folder(tmp_path, DESIGN)
     assert gate.main([str(path)]) == 0

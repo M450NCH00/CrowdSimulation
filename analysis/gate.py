@@ -54,10 +54,20 @@ def _rate(rows: Sequence[Mapping[str, str]], mode: str) -> dict[str, Any]:
             "ci95": None if n == 0 else [round(low, 4), round(high, 4)]}
 
 
-def gate(experiment: Path) -> dict[str, Any]:
+def gate(experiment: Path, pooled_with: Sequence[Path] = ()) -> dict[str, Any]:
+    """The gate over ``experiment``'s design sessions and, pooled, those of ``pooled_with`` (issue
+    #104: one encounter type's conditions run in two experiments). Each must have fixed the same
+    gate before its run, and no session may be in two of them."""
     fixed = threshold(experiment)
-    with (experiment / "outcomes.csv").open(encoding="utf-8", newline="") as handle:
-        rows = design_rows(list(csv.DictReader(handle)))
+    rows: list[Mapping[str, str]] = []
+    for folder in (experiment, *pooled_with):
+        if threshold(folder) != fixed:
+            raise GateError(f"{folder}: its config fixed another gate than {experiment}'s")
+        with (folder / "outcomes.csv").open(encoding="utf-8", newline="") as handle:
+            rows += design_rows(list(csv.DictReader(handle)))
+    ids = [row["session_id"] for row in rows]
+    if len(ids) != len(set(ids)):
+        raise GateError("a session is in more than one of the pooled experiments")
     completed = [row for row in rows if row["outcome"] == COMPLETED]
     if not completed:
         raise GateError(f"{experiment}: no completed session of the design")
@@ -81,6 +91,7 @@ def gate(experiment: Path) -> dict[str, Any]:
         "by_geometry": by["geometry"],
         "baselines": {mode: _rate(completed, mode) for mode in MODES[1:]},
         "design_sessions_not_completed": dict(skipped),
+        "pooled_with": [str(folder) for folder in pooled_with],
     }
 
 
@@ -112,6 +123,9 @@ def markdown(result: Mapping[str, Any]) -> str:
     if result["design_sessions_not_completed"]:
         lines.append(f"Design sessions not counted: {result['design_sessions_not_completed']}.")
         lines.append("")
+    if result.get("pooled_with"):
+        lines.append("Pooled with the design sessions of: " + ", ".join(f"`{path}`" for path in result["pooled_with"]) + " (same gate, no session twice).")
+        lines.append("")
     return "\n".join(lines)
 
 
@@ -119,12 +133,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m analysis.gate", description=__doc__.split("\n\n")[0])
     parser.add_argument("experiment", type=Path, help="the experiment's folder (config.json and outcomes.csv)")
     parser.add_argument("--out", type=Path, help="folder for gate.json and gate.md (default: <experiment>/analysis)")
+    parser.add_argument("--with", dest="pooled_with", type=Path, action="append", default=[],
+                        help="another experiment folder whose design sessions are pooled in (issue #104); repeatable")
     args = parser.parse_args(argv)
-    result = gate(args.experiment)
+    result = gate(args.experiment, args.pooled_with)
     out = args.out or args.experiment / "analysis"
     out.mkdir(parents=True, exist_ok=True)
-    (out / "gate.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8", newline="\n")
-    (out / "gate.md").write_text(markdown(result), encoding="utf-8", newline="\n")
+    name = "gate_pooled" if args.pooled_with else "gate"
+    (out / f"{name}.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8", newline="\n")
+    (out / f"{name}.md").write_text(markdown(result), encoding="utf-8", newline="\n")
     print(markdown(result))
     return 0
 
