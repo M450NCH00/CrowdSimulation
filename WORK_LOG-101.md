@@ -53,7 +53,45 @@ USD 0.08; recorded in `CLAUDE.md`, pending item 1.
   The first draft of the angle check was off by one row (a track row is the state after its
   step's move); fixed in the test, not the code.
 
+### 2026-10-25 — Rehearsed, priced, first paid batch
+- A session test: under `resolve_v8` a mock session reads and carries out a sidestep (coded side
+  right); under `resolve_v6` the same reply is unreadable (`missing_until`), as before.
+- Mock rehearsal (`runs_mock/rf29/`, 96 of 96): the same 96 session ids, cells, people and weights
+  as RF-10's; **every first user message identical**; the system message differs only by the
+  sidestep line and the `until` exception.
+- Pricing page re-read at 06:38 UTC: identical to the morning's; recorded. Balance USD 0.91.
+- Paid batch of 6 (USD 0.003309): 12 of 12 readable; the sidestep used in 11 of 12 plans,
+  mostly 0.3 m (0.3 to 0.6); every sidestep step ended at its distance or at its `until`. All 6
+  collided, 5 of them with one agent sidestepping to its own right and the other to its own left
+  (towards the same wall). A first sign only; running the other 90.
+
+### 2026-10-25 — The paid run, and an executor rule that undoes sidesteps
+- 96 of 96. USD 0.048995 (384 calls, off-peak, no error; the batch of 6 included), cap USD 0.08.
+  Balance **USD 0.86**. 2 of 192 decision points unreadable. Model and fingerprint as RF-10's.
+- The agents used the option: 117 of 127 readable first plans sidestep (5 more with a separate
+  turn as well); metres asked median 0.4 (IQR 0.4 to 0.5); 107 sidestep steps ended at their
+  distance. First-plan sides: 34 pairs the same own side, 26 opposite (same wall).
+- `plan_only`: **4 of 64 resolved** against RF-10's 22 (McNemar p = 0.0003; readable only
+  p = 0.0005). Collisions 54 (RF-10 37); compatible-but-narrow collisions 20 (RF-10 9);
+  same-wall 17 (RF-10 18); colliding pairs a median 0.18 m apart sideways when level.
+- **Why, found by tracing a replay:** a step with no `turn` (the usual follow-up, "walk at 1.3
+  m/s until 0.9 m away") steers towards the path's lookahead point, which pulls the agent back to
+  its **original** line. Under `as_prompted` (issue #64) the line is kept only between steps and
+  after the last, not during a later plain step. Agent 1 of `I_head_on_de176842_0f57f8a5_r1`
+  sidestepped 0.37 m and was 0.06 m aside by the meeting. Over the run, 53 of 108 colliding
+  agents kept less than half their largest move aside when level (RF-10: 5 of 74).
+- **My error:** decision 2 says the agent keeps the new line after a sidestep. I implemented the
+  sidestep step but did not test a sidestep followed by a plain step, so the run does not carry
+  out decision 2 whenever a plain step follows, which is most plans. The rule is RF-4's, kept by
+  #64 for plain steps; it affected RF-10, RF-27 and RF-28 as well, less (their turns ran longer).
+- **Every decision point of the independent runs (RF-10, 27, 28, 29) came at the trigger,
+  before any plan moved** (checked: 0 of 192 each after it). So their replays can be rebuilt from
+  the recorded plans under corrected execution, exactly, with no paid call.
+- Stopped here and asked the user how to correct it (a new execution setting, off for every
+  earlier config, and re-replays of the four runs).
+
 ## Open questions / risks
 - The 30° default and the 3 m limit are placeholders (the issue says so).
+- **Execution of a plain step after a sidestep or a turn** (above): the user's decision.
 
 ## Summary (fill in at the end)
