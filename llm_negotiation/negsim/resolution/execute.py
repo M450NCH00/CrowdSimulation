@@ -94,9 +94,14 @@ MODES = (MODE_PLAN_ONLY, MODE_PLAN_ORCA)
 #: to its path. ``as_prompted``, as the prompt describes a plan: a ``turn`` walks at its angle off
 #: the path's direction where the step began ("walk at this angle to your left or right of the
 #: direction you are going"); and between steps and after the last, until the encounter is over,
-#: the agent keeps the line a step took it to, walking parallel to its path.
-EXECUTION_RF4, EXECUTION_AS_PROMPTED = "rf4", "as_prompted"
-EXECUTIONS = (EXECUTION_RF4, EXECUTION_AS_PROMPTED)
+#: the agent keeps the line a step took it to, walking parallel to its path. ``keep_line`` (issue
+#: #101, the user's decision of 2026-10-25) is ``as_prompted`` and, besides, a step with no
+#: ``turn`` (and no sidestep, not backing) also keeps the agent's line, walking parallel to its path
+#: from where it is, where ``as_prompted`` steers it towards the path's lookahead point, back to the
+#: line it started on. Under ``as_prompted`` a sidestep followed by such a step was undone (RF-29:
+#: 53 of 108 colliding agents gave back over half of it before the two were level).
+EXECUTION_RF4, EXECUTION_AS_PROMPTED, EXECUTION_KEEP_LINE = "rf4", "as_prompted", "keep_line"
+EXECUTIONS = (EXECUTION_RF4, EXECUTION_AS_PROMPTED, EXECUTION_KEEP_LINE)
 
 # The states of a plan.
 WAITING = "waiting"  # given, its first step not yet started; or (resolve_v5) a later step's start not yet come
@@ -280,6 +285,9 @@ class PlanDriver:
         if len(agents) < 2 or len(set(agents)) != len(agents):
             raise ValueError(f"an encounter has at least two different agents (D11), got {agents}")
         self.mode, self.scenario, self.agents, self.execution = mode, scenario, agents, execution
+        #: Whether a turn walks at its angle off the step's start direction and the line is kept
+        #: between steps (issue #64), as both ``as_prompted`` and ``keep_line`` do.
+        self._as_prompted = execution in (EXECUTION_AS_PROMPTED, EXECUTION_KEEP_LINE)
         self.plans: dict[int, Plan] = {}
         self.decisions: list[Plan] = []
         self._pending: dict[int, list[tuple[int, tuple[Step, ...], int]]] = {}
@@ -396,7 +404,7 @@ class PlanDriver:
         step = None if plan is None else plan.step
         if step is not None:
             velocity = self._step_velocity(simulation, agent, plan, step, own_speed)
-        elif self.execution == EXECUTION_AS_PROMPTED and self.active and plan is not None and plan.records:
+        elif self._as_prompted and self.active and plan is not None and plan.records:
             # Issue #64: between steps and after the last, until the encounter is over, keep the
             # line a step took the agent to: walk parallel to the path, at its own speed.
             heading = agent.spec.path.heading_at(agent.path_s)
@@ -564,8 +572,12 @@ class PlanDriver:
             return (0.0, 0.0)
         if step.sidestep is not None:
             return self._sidestep_velocity(simulation, plan, step, speed)
-        if step.turn is not None and self.execution == EXECUTION_AS_PROMPTED:
+        if step.turn is not None and self._as_prompted:
             ux, uy = plan._tangent  # the path's direction where the step began (issue #64)
+        elif step.turn is None and self.execution == EXECUTION_KEEP_LINE:
+            # Issue #101: a step without a turn keeps the agent's line, parallel to its path.
+            heading = agent.spec.path.heading_at(agent.path_s)
+            ux, uy = math.cos(heading), math.sin(heading)
         else:
             ux, uy = simulation._preferred_velocity(agent, 1.0)
         if step.turn is not None:
