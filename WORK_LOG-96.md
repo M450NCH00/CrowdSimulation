@@ -1,0 +1,37 @@
+# Work Log — Issue #96: [Feature] Viewer: the LLM's decisions, each agent's factors and its view cone in resolution replays
+
+**Issue:** https://github.com/M450NCH00/CrowdSimulation/issues/96
+**Branch:** feat/96-viewer-decisions-factors-view-cone (stacked on `feat/65-rf10-round1-head-on-screening`,
+as the RF issues are)
+**Started:** 2026-10-25
+
+## Understanding the issue
+The user asked (2026-10-25) for the viewer to show, in a replay of a resolution session: the
+decision the LLM gave while the agent carries it out (what it wanted and why); every factor of an
+agent when it is clicked (age, gender, ethnicity, ...); and each agent's view (the 75° either side,
+10 m) shaded in a lighter tone of its colour, with a switch to show or hide it.
+
+A replay folder is an avoidance run (issue #26) whose `config.json` names its session
+(`plans.session_id`). The session record (`sessions/<id>.json`) holds the decision points, replies,
+debriefs, personas, pairwise factors and `llm_view`; the replay's `outcome.json`
+(`plans.driver.decisions`) holds when each plan and each of its steps started and ended, for that
+replay's mode. The viewer only reads logs, so nothing about any experiment changes.
+
+## Plan
+1. `viewer.py`: find the record from a replay; build `run.llm` (decisions with their step timing
+   from the replay, signals, messages, debriefs, view settings) and add factor rows to each
+   agent's details; decision and signal events; messages into `run.conversation`.
+2. `viewer.html`: an "LLM decisions" panel (in force highlighted); a caption by each agent (intent
+   and current step); check boxes for decisions, view cones and hearing range; the cone cut at
+   walls by ray casting; the agent's facing as `perceive.py` defines it.
+3. Tests on a mock experiment (`run_resolution` with the mock client) in `tests/test_viz.py`.
+4. README viewer section and the docstring.
+5. Check in a headless browser that the page draws without an error (the self-test), on the
+   mock experiment and on a real RF-10 replay.
+
+## Progress log
+
+## Open questions / risks
+- The cone is cut by walls only, not by other people (two-person scenes). Said on the page.
+
+## Summary (fill in at the end)
