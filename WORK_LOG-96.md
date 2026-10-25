@@ -31,7 +31,32 @@ replay's mode. The viewer only reads logs, so nothing about any experiment chang
 
 ## Progress log
 
+### 2026-10-25 — Built and checked
+- What I did: `viewer.py` reads the session record beside a replay (`session_record`) and adds
+  `run.llm` (decisions with each step's start and end from the replay's driver, debriefs, the
+  view settings), factor rows to each agent (the replay's "Persona: none" row is dropped for
+  them), LLM rows to the run summary, and decision, signal, message and plan-end events;
+  messages also go in the Conversation panel. `viewer.html`: the "LLM decisions" panel, a
+  caption by each agent (decision in force, step now, a fresh signal), the agent panel's
+  decision, step and private reason, and check boxes for captions, view cones (on by default)
+  and hearing range (off). The cone is a fan of rays cut at walls (slab test against each wall
+  box), 1 ray per degree.
+- Decisions I made (small, the user can change them): view cones on by default because the user
+  asked to see them; the decision events are moments on the timeline (a span per plan filled the
+  whole bar); the "Design cell" row was dropped from the run summary because it pushed the panel
+  far down and the factor rows say the same per agent; "plans stop steering" is shown when the
+  pair passed or one arrived, and "ORCA takes over" only for a release the protocol asked for
+  (none in RF-10).
+- Checks: `tests/test_viz_resolution.py` (13 tests, on a mock talk experiment: the record found
+  in both modes, step timing from that mode's driver, view settings, events, factor rows, the
+  `</script>` escape, a replay without its record unchanged, step wording, trigger wording);
+  `tests/test_viz.py` unchanged and passing. Headless Chrome self-test (the page's own
+  `#selftest`): an RF-10 talk session (both replays), a mock resolution session, and the older
+  avoidance, crowd (100 agents) and negotiation runs, all "ok". Screenshots read by eye.
+
 ## Open questions / risks
 - The cone is cut by walls only, not by other people (two-person scenes). Said on the page.
+- A whole experiment's `replay/` folder cannot be given in one go (it holds session folders, not
+  run folders; 576 replays would make a very large page). One session folder at a time.
 
 ## Summary (fill in at the end)
