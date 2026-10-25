@@ -93,6 +93,13 @@ def test_readable_only_leaves_out_a_session_unreadable_in_either_run(pair):
     assert not compare.compare(*pair, "independent")["readable_only"]
 
 
+def test_the_command_names_a_condition_other_than_independent_in_its_file(pair):
+    base, new = pair
+    assert compare.main([str(base), str(new)]) == 0 and compare.main([str(base), str(new), "--condition", "talk"]) == 0
+    written = sorted(path.name for path in (new / "analysis").glob("*.md"))
+    assert written == ["compare_base.md", "compare_base_talk.md"]
+
+
 def test_two_experiments_with_nothing_in_common_are_refused(pair, tmp_path):
     other = experiment(tmp_path / "other", {"I_x_r1": (True, "independent", 1, False)})
     with pytest.raises(compare.CompareError):
