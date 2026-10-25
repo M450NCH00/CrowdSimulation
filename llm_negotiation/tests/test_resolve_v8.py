@@ -20,6 +20,7 @@ from negsim.resolution import experiment as E
 from negsim.resolution.prompt import CoreTemplate
 from negsim.resolution.protocol import code_plan
 from negsim.resolution.reply import ReplyContext, Sidestep, parse_reply
+from test_encounter_protocol import HEAD_ON, session_on
 from test_execute import EVENTS, records, run_plans
 from test_perceive import PASSING
 
@@ -146,6 +147,17 @@ def test_an_until_that_comes_sooner_ends_the_sidestep_part_way():
 def test_a_step_without_a_sidestep_records_no_aside():
     run, _, _ = run_plans(X.MODE_PLAN_ONLY, {0: [{"speed_mps": 1.3, "until": {"seconds": 1}}], 1: []}, execution=X.EXECUTION_AS_PROMPTED)
     assert "aside_m" not in records(run, 0)[0]
+
+
+def test_a_session_under_resolve_v8_reads_and_carries_out_a_sidestep_and_resolve_v6_does_not():
+    answer = raw({"speed_mps": 1.3, "sidestep": {"to": "right", "metres": 0.5}})
+    _, record, _ = session_on(HEAD_ON, "independent", {0: answer, 1: answer}, core=V8)
+    for point in record["decision_points"]:
+        assert point["parse_error"] is None and point["plan_given"] == [{"speed_mps": 1.3, "sidestep": {"to": "right", "metres": 0.5}}]
+        assert point["coded"]["side"] == "right"
+    assert '"sidestep"' in record["decision_points"][0]["prompt"]["messages"][0]["content"]
+    _, old, _ = session_on(HEAD_ON, "independent", {0: answer, 1: answer}, core=V6)
+    assert all(point["parse_error"].startswith("missing_until") for point in old["decision_points"])
 
 
 # --- the config ----------------------------------------------------------------------------------------
