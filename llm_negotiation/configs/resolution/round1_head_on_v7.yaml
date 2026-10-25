@@ -1,0 +1,149 @@
+# Issue #98 (RF-27): round 1, head-on in a corridor: is RF-10's failure the model or the description?
+#
+#   python run_experiment.py configs/resolution/round1_head_on_v7.yaml --plan
+#   python run_experiment.py configs/resolution/round1_head_on_v7.yaml --out runs_mock/rf27   # mock rehearsal
+#
+# PAID RUN: approved by the user for issue #98 only, 2026-10-25, cap USD 0.08 (CLAUDE.md, pending
+# item 1). This config names the mock client; the paid run is
+#   python run_experiment.py configs/resolution/round1_head_on_v7.yaml --client deepseek --confirm
+# off-peak. The cap: 96 sessions x USD 0.00056 (RF-10's measured independent cost) is about
+# USD 0.054, with headroom for the longer descriptions and retries.
+#
+# RF-10's config (configs/resolution/round1_head_on_screening.yaml) with three changes, so that
+# the comparison is RF-10's independent sessions against these, cell for cell:
+# - conditions: independent only;
+# - RF-10's counterfactual pairs are kept, though RF-27 compares templates: the balanced
+#   ethnicity draw rotates over every unit, pairs included, so leaving them out gave 29 of the
+#   80 sessions different people (checked in the mock rehearsal, WORK_LOG-98.md);
+# - templates.core: resolve_v7 (the user's decisions of 2026-10-25, issue #98).
+# Everything else is RF-10's: the seed, the 32-cell fraction, the two geometries, the exact-repeat
+# set, the people (ethnicity drawn balanced), the protocol, the view, the reply cap and the gate.
+# Perceived attractiveness and real ethnicity are on, as in RF-10: both ethics sign-offs are
+# recorded in CLAUDE.md (2026-10-24). No rule may read either.
+schema_version: 1
+layer: resolution
+experiment_name: rf27_round1_head_on_v7
+description: >-
+  RF-27, round 1 (head-on): RF-10's design in the independent condition only, with core
+  template resolve_v7 (where the other's centre is against the line ahead, the other's width
+  from 10 m, straight ahead only within 1 degree) in place of resolve_v6; the same 32 cells, 2
+  geometries, exact-repeat set and counterfactual pairs; the gate unchanged at 0.50.
+
+conditions: [independent]   # the cheapest; RF-10 found no difference between conditions
+
+design:
+  kind: fractional
+  cells: 32
+  seed: 65
+  base_age: 25
+  age_difference: 45
+  ethnicity_draw: balanced
+  geometries:
+    - head_on_de176842@2   # wide_corridor_head_on, walking lines aligned (0 cm apart)
+    - head_on_02dfbadb@2   # the same, walking lines 20 cm apart
+  exact_repeats:
+    cells: 8
+    times: 3
+  factors:
+    age_pair: [same, p1_older]
+    gender_pair: [p1_female, p1_male]
+    urgency: [neither, p1]
+    mobility_aid: [neither, p1]
+    load: [neither, p1]
+    distraction: [neither, p1]
+    assertiveness: [neither, p1]
+    residence: [neither, p1]
+    memory_note: [neither, p1]
+    attractiveness_0_sees_1: [unremarkable, attractive]   # how person 1 sees person 2
+    attractiveness_1_sees_0: [unremarkable, attractive]   # how person 2 sees person 1
+    familiarity: [strangers, acquaintances]
+    ethnicity_pair: [same, different]
+    surroundings: [quiet, busy]
+    time_of_day: [daytime, late_night]
+    mapping: [p1_lower, p1_higher]
+    demographics_visible: [true]
+    ethnicity_visible: [true]
+    attractiveness_visible: [true]
+  # RF-10's four pairs, kept so that the balanced ethnicity draw, which rotates the groups over
+  # every unit of the design, pairs included, gives every session RF-10's people.
+  counterfactual_pairs:
+    # The same session but person 2's group differs (same to different), person 1's kept.
+    - base: &base
+        age_pair: same
+        gender_pair: p1_female
+        urgency: neither
+        mobility_aid: neither
+        load: neither
+        distraction: neither
+        assertiveness: neither
+        residence: neither
+        memory_note: neither
+        attractiveness_0_sees_1: unremarkable
+        attractiveness_1_sees_0: unremarkable
+        familiarity: strangers
+        ethnicity_pair: same
+        surroundings: quiet
+        time_of_day: daytime
+        mapping: p1_lower
+      factor: ethnicity_pair
+    # Behaviour towards someone the agent is told is Indian (RF-26): both groups fixed, only
+    # person 2's flips.
+    - base: *base
+      factor: p2_ethnicity
+      ethnicity: {p1: chinese, p2: chinese}
+      to: indian
+    - base:
+        <<: *base
+        ethnicity_pair: different
+      factor: p2_ethnicity
+      ethnicity: {p1: chinese, p2: malay}
+      to: indian
+    # Person 1 told that it finds person 2 attractive, against unremarkable.
+    - base: *base
+      factor: attractiveness_0_sees_1
+
+# RF-10's gate, unchanged, so the two templates are judged alike (its reason speaks of RF-10's
+# 192 sessions; here the design is the 64 independent ones).
+resolution_gate:
+  plan_only_resolved_min: 0.50
+  reason: >-
+    Step 1 asks whether LLM agents can resolve the conflict on their own plans, so the gate is the
+    plan_only rate (ORCA does not steer the pair apart), pooled over the design's 192 sessions of
+    32 cells x 2 geometries x 3 conditions (exact repeats and counterfactual pairs left out, so
+    each cell counts once per geometry and condition). 0.50 means the plans resolve the meeting
+    more often than not; it is a judgement, not a sourced number. Head-on walkers in life almost
+    never collide, so 0.50 is lenient against people, and strict against plain ORCA here, which
+    passes within the near-miss distance and never counts as resolved (RF-9: 0 of 72). RF-9's
+    pilot resolved 0.24 before resolve_v6's fixes, so failing the gate is a possible Step 1 result.
+
+protocol:
+  max_decision_points: 3            # D5
+  min_gap_s: 1.0                    # D5
+  no_conflict_end_s: 1.0            # [placeholder] the encounter ends after this long with no conflict predicted
+  max_prompted: 4                   # D11, D12: the cap on prompted people per encounter (a cost limit)
+  speech_words_per_second: 2.5      # [placeholder] how fast a message is said
+  execution: as_prompted            # issue #64: a turn holds its angle; after its steps an agent keeps its line
+  no_conflict_waits_for_plans: true # issue #65: no_conflict does not end the encounter while a plan runs
+
+templates:
+  core: resolve_v7                  # issue #98: resolve_v6 with the line offset, the width from 10 m, 1 degree
+  debrief: resolve_debrief_v1
+  factors: resolve_factors_v2       # the ethnicity lines (issue #92)
+  pairwise: resolve_pairwise_v1
+
+llm_view: configs/resolution/llm_view_v1.yaml
+factor_values: configs/resolution/factors_v1.yaml
+
+llm:
+  client: mock
+  mock_policy: resolution_rehearsal_v1
+  model: deepseek-flash   # what the preview prices; the mock answers
+  temperature: 1.0        # the experiment's one sampling setting, unchanged (llm-backend.md, section 2)
+  max_tokens: 300         # RF-9's recommended reply cap (largest reply 214 tokens)
+  thinking: disabled
+  transport_retries: 2
+
+budget:
+  cap_usd: 0.08           # the cap CLAUDE.md records for #98 (approved by the user, 2026-10-25)
+  ledger: spend_ledger.jsonl
+  over_cap: stop_at_cap
