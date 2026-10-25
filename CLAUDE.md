@@ -172,7 +172,7 @@ The user's notes from the meeting, word for word:
   each simulator. Rules may be more specific, for example "keep left".
 
 ## Pending sign-offs
-Items 1, 5 and 6 are still pending (item 1 was approved for issues #64, #65 and #98 only).
+Items 1, 5 and 6 are still pending (item 1 was approved for issues #64, #65, #98 and #100 only).
 **Do not treat any of them as approved** until the user records the
 supervisor's answer in this file, with a date. Items 2 and 3, the ethics
 sign-offs for perceived attractiveness and real ethnicity, were recorded by the
@@ -202,8 +202,13 @@ used in this track). Numbers in brackets are the decisions of track issue #55.
    - **Approved for issue #98 only, 2026-10-25:** the user approved paid runs for
      RF-27's comparison of `resolve_v7` with `resolve_v6` (#98), and only for it,
      with a cap of **USD 0.08** on that experiment's own calls
-     (`experiment_name: rf27_round1_head_on_v7`; 88 sessions, independent
-     condition only, about USD 0.05 off-peak, `WORK_LOG-98.md`).
+     (`experiment_name: rf27_round1_head_on_v7`; 88 sessions estimated, 96
+     run, independent condition only, USD 0.050 off-peak, `WORK_LOG-98.md`).
+   - **Approved for issue #100 only, 2026-10-25:** the user approved paid runs for
+     RF-28's run of the same head-on sessions on `deepseek-v4-pro` (#100), and
+     only for it, with a cap of **USD 0.30** on that experiment's own calls
+     (`experiment_name: rf28_round1_head_on_v4pro`; 96 sessions, independent
+     condition only, about USD 0.19 off-peak, `WORK_LOG-100.md`).
 2. **Approved by the supervisor, 2026-10-24** — Ethics sign-off for perceived
    attractiveness as a factor (#55, 3). *The user decided on 2026-10-24* that
    attractiveness (both directions) is **in** RF-10's design, because bias can
