@@ -59,4 +59,15 @@ replay's mode. The viewer only reads logs, so nothing about any experiment chang
 - A whole experiment's `replay/` folder cannot be given in one go (it holds session folders, not
   run folders; 576 replays would make a very large page). One session folder at a time.
 
-## Summary (fill in at the end)
+## Summary
+**What changed.** `negsim/viz/viewer.py` and `viewer.html`: a replay of a resolution session
+shows the LLM's decisions (a caption by each agent and an "LLM decisions" panel, with when each
+step ran in that replay), each agent's factors and debrief when clicked, decision, signal and
+message events, and check boxes for captions, view cones (cut at walls) and hearing range.
+Runs without a session record are shown as before. `tests/test_viz_resolution.py` (13 tests),
+README's viewer section.
+
+**How it was verified.** The new tests and `tests/test_viz.py`; the full `llm_negotiation` suite,
+1892 passed and 5 skipped (RF-10 recorded 1879 passed and 4 skipped; the 13 new tests account for
+the passes; I did not trace which test the fifth skip is); the page's self-test in headless Chrome
+on RF-10 and mock resolution replays and on older run kinds; screenshots read by eye.
