@@ -161,6 +161,11 @@ class CoreTemplate:
         return bool(self.data.get("until_event_as_object", False))
 
     @property
+    def sidestep(self) -> bool:
+        """Whether a step may sidestep by an amount in metres (``resolve_v8``, issue #101)."""
+        return bool(self.data.get("sidestep", False))
+
+    @property
     def direction_ahead_deg(self) -> Optional[float]:
         """Within how many degrees someone is "straight ahead" (``resolve_v7``, issue #98); None
         for the earlier templates, which keep ``negsim.rulegen.describe``'s 5°."""

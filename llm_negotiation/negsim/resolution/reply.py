@@ -32,6 +32,15 @@ step ending when the person the agent would meet is that close (checked as a sta
 event written as an object, ``{"other_passes": true}``, is read as the event and flagged
 (``until_event_as_object``), unless its value is ``false``. RF-9's pilot (issue #64) lost 58 of
 63 unreadable sends to these two forms. Earlier templates read an ``until`` as before.
+
+**Under ``resolve_v8``** (issue #101; the template's ``sidestep`` flag) a step may also have
+``"sidestep": {"to": "left" | "right", "metres": <number>}``: move that far to that side of the
+line walked along, then walk on parallel to it. ``metres`` is more than 0 and at most
+``MAX_SIDESTEP_M`` **[placeholder]**; a ``turn`` in the same step gives the angle and must be to
+the same side; a sidestep cannot walk backwards nor stand still (``speed_mps`` 0); and its
+``until`` is optional (the step ends when the agent is that far aside, or at the ``until`` if that
+comes first). Under every earlier template a ``sidestep`` key is an unknown step key, flagged and
+ignored, as before.
 """
 
 from __future__ import annotations
@@ -45,8 +54,11 @@ from .view import CONDITION_INDEPENDENT, CONDITION_TALK, CONDITIONS, SIGNALS, Vi
 
 #: The largest turn a step may ask for, in degrees. **[placeholder]**
 MAX_TURN_DEGREES = 90.0
+#: The largest sidestep a step may ask for, in metres (``resolve_v8``, issue #101). **[placeholder]**
+MAX_SIDESTEP_M = 3.0
 SIDES = ("left", "right")
 STEP_KEYS = ("start", "speed_mps", "turn", "back_up_m", "until")
+SIDESTEP_KEY = "sidestep"  # a step key only under a template with the sidestep flag (resolve_v8)
 START_NOW = "now"
 START_AT_DISTANCE = "at_distance_m"
 START_AFTER_SECONDS = "after_seconds"
@@ -75,6 +87,14 @@ class Turn:
 
 
 @dataclass(frozen=True)
+class Sidestep:
+    """Move ``metres`` to the ``to`` side of the line walked along (``resolve_v8``, issue #101)."""
+
+    to: str
+    metres: float
+
+
+@dataclass(frozen=True)
 class Until:
     seconds: Optional[float] = None
     event: Optional[str] = None
@@ -95,6 +115,7 @@ class Step:
     turn: Optional[Turn] = None
     back_up_m: Optional[float] = None
     until: Optional[Until] = None
+    sidestep: Optional[Sidestep] = None  # resolve_v8 (issue #101)
 
     def as_dict(self) -> dict[str, Any]:
         """The step in the reply format, without the keys it leaves out."""
@@ -105,6 +126,8 @@ class Step:
             out["speed_mps"] = self.speed_mps
         if self.turn is not None:
             out["turn"] = {"to": self.turn.to, "degrees": self.turn.degrees}
+        if self.sidestep is not None:
+            out[SIDESTEP_KEY] = {"to": self.sidestep.to, "metres": self.sidestep.metres}
         if self.back_up_m is not None:
             out["back_up_m"] = self.back_up_m
         if self.until is not None:
@@ -139,8 +162,8 @@ class ReplyContext:
     """What a reply is read against: the condition, the agent's top speed, the scenario's events,
     the current distance to the person the agent would meet (``None``: nobody in view), whether a
     later step may have a ``start`` (``resolve_v5``, issue #64; before it, only the opening step
-    may), and whether an ``until`` may be a distance or an event written as an object
-    (``resolve_v6``, issue #65)."""
+    may), whether an ``until`` may be a distance or an event written as an object
+    (``resolve_v6``, issue #65), and whether a step may sidestep (``resolve_v8``, issue #101)."""
 
     condition: str
     max_speed_mps: float
@@ -149,6 +172,7 @@ class ReplyContext:
     later_step_start: bool = False
     until_at_distance: bool = False
     until_event_as_object: bool = False
+    sidestep: bool = False
 
     def __post_init__(self) -> None:
         if self.condition not in CONDITIONS:
@@ -157,11 +181,11 @@ class ReplyContext:
     @classmethod
     def of(
         cls, view: View, condition: str, events: Mapping[str, str] | tuple[str, ...], later_step_start: bool = False,
-        until_at_distance: bool = False, until_event_as_object: bool = False,
+        until_at_distance: bool = False, until_event_as_object: bool = False, sidestep: bool = False,
     ) -> "ReplyContext":
         return cls(
             condition, view.me.max_speed_mps, tuple(events), view.meeting_distance_m(), later_step_start,
-            until_at_distance, until_event_as_object,
+            until_at_distance, until_event_as_object, sidestep,
         )
 
 
@@ -267,7 +291,8 @@ def _step(index: int, data: Any, context: ReplyContext, flags: list[str]) -> Ste
     where = f"steps[{index}]"
     if not isinstance(data, dict):
         raise _fail("step_not_an_object", f"{where}: got {type(data).__name__}")
-    flags.extend(f"unknown_step_key:{where}.{key}" for key in data if key not in STEP_KEYS)
+    known = STEP_KEYS + ((SIDESTEP_KEY,) if context.sidestep else ())
+    flags.extend(f"unknown_step_key:{where}.{key}" for key in data if key not in known)
     start = None
     if "start" in data:
         if index > 0 and not context.later_step_start:
@@ -293,10 +318,19 @@ def _step(index: int, data: Any, context: ReplyContext, flags: list[str]) -> Ste
         if not 0.0 <= angle <= MAX_TURN_DEGREES:
             raise _fail("turn_degrees_out_of_range", f"{where}.turn.degrees: {angle}, allowed 0 to {MAX_TURN_DEGREES:g}")
         turn = Turn(side, angle)
+    sidestep = None
+    if context.sidestep and data.get(SIDESTEP_KEY) is not None:  # resolve_v8 (issue #101)
+        sidestep = _sidestep(data[SIDESTEP_KEY], f"{where}.{SIDESTEP_KEY}")
+        if back_up is not None:
+            raise _fail("sidestep_with_back_up", where)
+        if speed == 0.0:
+            raise _fail("sidestep_standing_still", f"{where}: a sidestep needs a speed above 0")
+        if turn is not None and turn.degrees > 0.0 and turn.to != sidestep.to:
+            raise _fail("sidestep_turn_other_side", f"{where}: turn to the {turn.to}, sidestep to the {sidestep.to}")
     until = None
     if data.get("until") is not None:
         until = _until(data["until"], context, f"{where}.until", flags)
-    elif back_up is None:
+    elif back_up is None and sidestep is None:
         raise _fail("missing_until", where)
     if back_up is not None:
         if speed is not None:
@@ -305,7 +339,17 @@ def _step(index: int, data: Any, context: ReplyContext, flags: list[str]) -> Ste
         if turn is not None:
             flags.append(f"turn_ignored_on_back_up:{where}")
             turn = None
-    return Step(start, speed, turn, back_up, until)
+    return Step(start, speed, turn, back_up, until, sidestep)
+
+
+def _sidestep(raw: Any, where: str) -> Sidestep:
+    if not isinstance(raw, dict) or set(raw) != {"to", "metres"}:
+        raise _fail("unknown_sidestep", f"{where}: got {raw!r}")
+    side = _enum(raw["to"], SIDES, "unknown_sidestep_side", f"{where}.to")
+    metres = _number(raw["metres"], "sidestep_not_a_number", f"{where}.metres")
+    if not 0.0 < metres <= MAX_SIDESTEP_M:
+        raise _fail("sidestep_out_of_range", f"{where}.metres: {metres}, allowed more than 0 up to {MAX_SIDESTEP_M:g}")
+    return Sidestep(side, metres)
 
 
 def parse_reply(raw: Optional[str], context: ReplyContext) -> ParsedReply:

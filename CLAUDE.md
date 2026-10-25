@@ -174,7 +174,7 @@ The user's notes from the meeting, word for word:
   each simulator. Rules may be more specific, for example "keep left".
 
 ## Pending sign-offs
-Items 1, 5 and 6 are still pending (item 1 was approved for issues #64, #65, #98 and #100 only).
+Items 1, 5 and 6 are still pending (item 1 was approved for issues #64, #65, #98, #100 and #101 only).
 **Do not treat any of them as approved** until the user records the
 supervisor's answer in this file, with a date. Items 2 and 3, the ethics
 sign-offs for perceived attractiveness and real ethnicity, were recorded by the
@@ -214,6 +214,12 @@ used in this track). Numbers in brackets are the decisions of track issue #55.
      (6 sessions at a reply cap of 300, USD 0.0116) and, by the user's decision
      the same day, `rf28_round1_head_on_v4pro_cap600` (the run of record, reply
      cap 600, its own cap USD 0.28).
+   - **Approved for issue #101 only, 2026-10-25:** the user answered "Yes" to
+     recording paid-run approval for RF-29's run of the head-on sessions under
+     `resolve_v8` (the sidestep option) on `deepseek-flash` (#101), and only for
+     it, with a cap of **USD 0.08** on that experiment's own calls
+     (`experiment_name: rf29_round1_head_on_sidestep`; 96 sessions, independent
+     condition only, about USD 0.05 off-peak, `WORK_LOG-101.md`).
 2. **Approved by the supervisor, 2026-10-24** — Ethics sign-off for perceived
    attractiveness as a factor (#55, 3). *The user decided on 2026-10-24* that
    attractiveness (both directions) is **in** RF-10's design, because bias can

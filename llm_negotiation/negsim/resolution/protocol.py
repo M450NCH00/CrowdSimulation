@@ -182,11 +182,12 @@ class ProtocolSettings:
 
 
 def code_plan(steps: Sequence[Step], current_speed_mps: float) -> dict[str, Any]:
-    """A plan coded mechanically: the side of its turns, whether it slows (a speed below the
+    """A plan coded mechanically: the side of its turns (and sidesteps), whether it slows (a speed below the
     current one, as the agent was told it: to 0.01 m/s, issue #64), stops, or backs up, and when
     it starts."""
     told = round(current_speed_mps, 2)  # issue #64: 1.3 against 1.30005 is not slowing down
     sides = {step.turn.to for step in steps if step.turn is not None and step.turn.degrees > 0.0}
+    sides |= {step.sidestep.to for step in steps if step.sidestep is not None}  # resolve_v8 (issue #101)
     start = steps[0].start if steps else None
     return {
         "carry_on": not steps,
@@ -511,7 +512,7 @@ class EncounterSession:
             prompt = render(view, self.condition, self.scenario, self.core)
             context = ReplyContext.of(
                 view, self.condition, self.scenario.events, self.core.later_step_start,
-                self.core.until_at_distance, self.core.until_event_as_object,
+                self.core.until_at_distance, self.core.until_event_as_object, self.core.sidestep,
             )
             metadata = {
                 **self.labels, "kind": "decision", "agent_id": agent, "agent_slot": member.slot,

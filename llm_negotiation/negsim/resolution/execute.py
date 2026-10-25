@@ -25,7 +25,13 @@ after another, in a running :class:`~negsim.avoidance.simulation.AvoidanceSimula
 - ``until`` ends a step after its ``seconds``, or when its event has happened. **The executor
   knows no event**: it asks the scenario plug-in (:meth:`Scenario.happened`, D16). Under
   ``resolve_v6`` (issue #65) it may also end the step at ``at_distance_m``, read as a start at a
-  distance is.
+  distance is;
+- ``sidestep`` (``resolve_v8``, issue #101; the user's decisions of 2026-10-25) moves the agent
+  ``metres`` to its left or right of the path's direction where the step began: it walks at the
+  step's speed at the step's ``turn`` angle, or at ``DEFAULT_SIDESTEP_DEGREES`` without one,
+  until it is that far aside (the last move clipped so as not to overshoot), and the step ends
+  there unless its ``until`` comes first. The step record keeps how far aside it got
+  (``aside_m``). Afterwards the agent keeps its new line, as ``as_prompted`` does after any step.
 
 After the last step the agent steers back towards its goal as usual. An empty plan (``[]``)
 changes nothing. Bodies never change size. A later decision of the same agent replaces what is
@@ -102,6 +108,7 @@ REPLACED = "replaced"
 ENDED_SECONDS = "seconds"
 ENDED_AT_DISTANCE = "at_distance"  # resolve_v6 (issue #65): an until at a distance
 ENDED_BACKED_UP = "backed_up"
+ENDED_SIDESTEPPED = "sidestepped"  # resolve_v8 (issue #101): as far aside as the sidestep asked
 ENDED_REPLACED = "replaced"
 ENDED_ARRIVED = "arrived"
 ENDED_RUN_ENDED = "run_ended"
@@ -114,6 +121,11 @@ RELEASE_RUN_ENDED = "run_ended"
 #: A back-up step has backed far enough within this much of its distance (m), as the simulator's
 #: own back-up manoeuvre counts reaching its point (``simulation.BACK_UP_REACHED_M``).
 BACKED_UP_EPS_M = 1e-3
+#: The angle a sidestep moves aside at when its step has no ``turn`` (``resolve_v8``, issue #101;
+#: the user's decision of 2026-10-25). **[placeholder]**, not a sourced number.
+DEFAULT_SIDESTEP_DEGREES = 30.0
+#: A sidestep is done within this much of its distance (m), as a back-up step is.
+SIDESTEP_DONE_EPS_M = 1e-3
 _EPS = 1e-9
 
 Vec = tuple[float, float]
@@ -125,9 +137,12 @@ def steps_from_dicts(steps: Sequence[Mapping[str, Any]], max_speed_mps: float, e
     A recorded ``start.at_distance_m`` (or ``until.at_distance_m``) was checked against the
     distance when it was given; it is not checked again here. Nor is whether a later step may have
     a ``start``, or an ``until`` be a distance: the parser decided that from the session's core
-    template when the reply came. An event written as an object was recorded as its name.
+    template when the reply came. An event written as an object was recorded as its name. A
+    recorded ``sidestep`` (``resolve_v8``) is read back; earlier records have none.
     """
-    context = ReplyContext(CONDITION_TALK, max_speed_mps, tuple(events), math.inf, later_step_start=True, until_at_distance=True)
+    context = ReplyContext(
+        CONDITION_TALK, max_speed_mps, tuple(events), math.inf, later_step_start=True, until_at_distance=True, sidestep=True,
+    )
     flags: list[str] = []
     parsed = tuple(_step(index, dict(data), context, flags) for index, data in enumerate(steps))
     if flags:
@@ -148,9 +163,10 @@ class StepRecord:
     end_step: Optional[int] = None
     end_time_s: Optional[float] = None
     ended_by: Optional[str] = None
+    aside_m: Optional[float] = None  # resolve_v8 (issue #101): how far aside a sidestep step got
 
     def as_dict(self) -> dict[str, Any]:
-        return {
+        out = {
             "index": self.index,
             "start_step": self.start_step,
             "start_time_s": round(self.start_time_s, 6),
@@ -158,6 +174,9 @@ class StepRecord:
             "end_time_s": None if self.end_time_s is None else round(self.end_time_s, 6),
             "ended_by": self.ended_by,
         }
+        if self.aside_m is not None:  # only a sidestep step: earlier records read as before
+            out["aside_m"] = round(self.aside_m, 4)
+        return out
 
 
 @dataclass
@@ -354,7 +373,7 @@ class PlanDriver:
         world = simulation.world
         step, now = world.step_index, world.time
         for agent, steps, partner in self._pending.pop(step, []):
-            self._take_up(agent, steps, partner, step, now)
+            self._take_up(agent, steps, partner, step, now, simulation)
         for agent in self.agents:
             plan = self.plans.get(agent)
             if plan is not None and plan.state in (WAITING, RUNNING):
@@ -419,17 +438,17 @@ class PlanDriver:
         world = simulation.world
         for plan in self.plans.values():
             if plan.state in (WAITING, RUNNING) and plan.ended_step is None:
-                self._end_step(plan, world.step_index, world.time, ENDED_RUN_ENDED)
+                self._end_step(plan, world.step_index, world.time, ENDED_RUN_ENDED, simulation)
                 plan.ended_step, plan.ended_time_s = world.step_index, world.time
         if self.active:
             self.released_step, self.released_time_s, self.release_reason = world.step_index, world.time, RELEASE_RUN_ENDED
 
     # --- inside -----------------------------------------------------------------------------
 
-    def _take_up(self, agent: int, steps: tuple[Step, ...], partner: int, step: int, now: float) -> None:
+    def _take_up(self, agent: int, steps: tuple[Step, ...], partner: int, step: int, now: float, simulation: Any = None) -> None:
         old = self.plans.get(agent)
         if old is not None and old.state in (WAITING, RUNNING):
-            self._end_step(old, step, now, ENDED_REPLACED)
+            self._end_step(old, step, now, ENDED_REPLACED, simulation)
             old.state, old.ended_step, old.ended_time_s = REPLACED, step, now
         number = 1 + sum(1 for plan in self.decisions if plan.agent_id == agent)
         plan = Plan(agent, partner, number, step, now, steps)
@@ -445,7 +464,7 @@ class PlanDriver:
         step, now = world.step_index, world.time
         agent = world.agents[plan.agent_id]
         if agent.goal_time is not None:
-            self._end_step(plan, step, now, ENDED_ARRIVED)
+            self._end_step(plan, step, now, ENDED_ARRIVED, simulation)
             plan.state, plan.ended_step, plan.ended_time_s = COMPLETED, step, now
             return
         if plan.state == WAITING:
@@ -456,7 +475,7 @@ class PlanDriver:
             ended_by = self._ended(simulation, plan)
             if ended_by is None:
                 return
-            self._end_step(plan, step, now, ended_by)
+            self._end_step(plan, step, now, ended_by, simulation)
             following = plan.current + 1
             if following < len(plan.steps):
                 # resolve_v5 (issue #64): a later step with a start waits for it, the agent walking
@@ -496,11 +515,21 @@ class PlanDriver:
         plan._origin, plan._tangent, plan._memory = agent.pose.xy, (math.cos(heading), math.sin(heading)), {}
         plan.records.append(StepRecord(index, world.step_index, world.time))
 
-    @staticmethod
-    def _end_step(plan: Plan, step: int, now: float, reason: str) -> None:
+    def _end_step(self, plan: Plan, step: int, now: float, reason: str, simulation: Any = None) -> None:
         if plan.state == RUNNING and plan.records and plan.records[-1].ended_by is None:
             record = plan.records[-1]
             record.end_step, record.end_time_s, record.ended_by = step, now, reason
+            sidestep = plan.steps[plan.current].sidestep
+            if sidestep is not None and simulation is not None:  # resolve_v8 (issue #101)
+                record.aside_m = self._aside(simulation, plan, sidestep.to)
+
+    @staticmethod
+    def _aside(simulation: Any, plan: Plan, side: str) -> float:
+        """How far the agent is to ``side`` of the path's direction where its step began."""
+        agent = simulation.world.agents[plan.agent_id]
+        dx, dy = agent.pose.x - plan._origin[0], agent.pose.y - plan._origin[1]
+        left = dx * -plan._tangent[1] + dy * plan._tangent[0]
+        return left if side == "left" else -left
 
     def _backed(self, simulation: Any, plan: Plan) -> float:
         agent = simulation.world.agents[plan.agent_id]
@@ -511,6 +540,9 @@ class PlanDriver:
         step = plan.steps[plan.current]
         if step.back_up_m is not None and self._backed(simulation, plan) >= step.back_up_m - BACKED_UP_EPS_M:
             return ENDED_BACKED_UP
+        sidestep = step.sidestep  # resolve_v8 (issue #101): done when that far aside
+        if sidestep is not None and self._aside(simulation, plan, sidestep.to) >= sidestep.metres - SIDESTEP_DONE_EPS_M:
+            return ENDED_SIDESTEPPED
         until = step.until
         if until is None:
             return None
@@ -530,6 +562,8 @@ class PlanDriver:
         speed = own_speed if step.speed_mps is None else min(step.speed_mps, agent.spec.max_speed)
         if speed <= 0.0:
             return (0.0, 0.0)
+        if step.sidestep is not None:
+            return self._sidestep_velocity(simulation, plan, step, speed)
         if step.turn is not None and self.execution == EXECUTION_AS_PROMPTED:
             ux, uy = plan._tangent  # the path's direction where the step began (issue #64)
         else:
@@ -538,6 +572,21 @@ class PlanDriver:
             angle = math.radians(step.turn.degrees) * (1.0 if step.turn.to == "left" else -1.0)
             ux, uy = ux * math.cos(angle) - uy * math.sin(angle), ux * math.sin(angle) + uy * math.cos(angle)
         return (speed * ux, speed * uy)
+
+    def _sidestep_velocity(self, simulation: Any, plan: Plan, step: Step, speed: float) -> Vec:
+        """``resolve_v8`` (issue #101): along the path's direction where the step began, at the
+        step's ``turn`` angle (``DEFAULT_SIDESTEP_DEGREES`` without one) to the sidestep's side; the
+        sideways part clipped so that this move does not take the agent past its distance."""
+        sidestep = step.sidestep
+        degrees = step.turn.degrees if step.turn is not None and step.turn.degrees > 0.0 else DEFAULT_SIDESTEP_DEGREES
+        angle = math.radians(degrees)
+        tx, ty = plan._tangent
+        sign = 1.0 if sidestep.to == "left" else -1.0
+        nx, ny = -ty * sign, tx * sign  # the unit vector to the sidestep's side
+        forward, sideways = speed * math.cos(angle), speed * math.sin(angle)
+        remaining = max(0.0, sidestep.metres - self._aside(simulation, plan, sidestep.to))
+        sideways = min(sideways, remaining / simulation.world.dt)
+        return (forward * tx + sideways * nx, forward * ty + sideways * ny)
 
     def _over(self, simulation: Any) -> Optional[str]:
         agents = simulation.world.agents
