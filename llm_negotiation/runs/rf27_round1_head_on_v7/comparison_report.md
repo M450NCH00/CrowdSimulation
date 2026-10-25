@@ -120,3 +120,7 @@ of 74 under `resolve_v6`, kept less than half of their largest move aside when l
   ahead of you". Another wording, or the passing distance (option b in the issue), might do
   differently.
 - **Same sessions, a day apart.** The model string and fingerprint were the same in both runs.
+
+## Addendum, 2026-10-25: an executor rule (issue #101)
+
+Found in RF-29 (issue #101, `runs/rf29_round1_head_on_sidestep/comparison_report.md`): under `protocol.execution: as_prompted` a step with no `turn` steered the agent back to the path it started on, so a move aside followed by a plain step ("walk on until the other passes") was partly undone before the meeting. The prompt says the agent keeps its line. The independent sessions were carried out again from their recorded plans under `keep_line` (the line kept; no LLM call, exact because every independent decision came at the trigger). Under `keep_line`: `resolve_v6` 35 of 64, `resolve_v7` 27 of 64 (paired p = 0.22). The conclusion stands that `resolve_v7` does not help; the conclusion that the failures are the model's sizing does not: with the line kept, the failures are mostly the pavement dance. (`runs/rf27_round1_head_on_v7_keep_line/`.)

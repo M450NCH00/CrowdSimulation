@@ -313,6 +313,12 @@ def _row(result, agent, step):
     return next(r for r in result.trajectory if r["agent_id"] == agent and r["step"] == step)
 
 
+#: The executions under which a turn holds its angle and the line is kept after the last step:
+#: ``as_prompted`` (issue #64) and ``keep_line`` (issue #101, which differs only for a later step
+#: without a turn).
+AS_PROMPTED_TURNS = (X.EXECUTION_AS_PROMPTED, X.EXECUTION_KEEP_LINE)
+
+
 def test_a_turn_holds_its_angle_as_prompted_and_settles_near_the_path_under_rf4():
     """Agent 0 walks along +x (its right is -y), and turns right 8 degrees for 2.5 s from 3 s. As
     the prompt describes a turn, it moves 1.3 x 2.5 x sin 8 = 0.45 m aside; under RF-4's offset it
@@ -326,11 +332,12 @@ def test_a_turn_holds_its_angle_as_prompted_and_settles_near_the_path_under_rf4(
         last = _row(result, 0, end - 1)
         heading = math.degrees(math.atan2(last["pref_vy_mps"], last["pref_vx_mps"]))
         aside[execution] = _row(result, 0, start)["y_m"] - _row(result, 0, end)["y_m"]
-        if execution == X.EXECUTION_AS_PROMPTED:
+        if execution in AS_PROMPTED_TURNS:
             assert heading == pytest.approx(-8.0, abs=1e-4)  # the trajectory rounds its velocities
         else:
             assert -8.0 + 1.0 < heading < 0.0
     assert aside[X.EXECUTION_AS_PROMPTED] == pytest.approx(1.3 * 2.5 * math.sin(math.radians(8)), abs=0.03)
+    assert aside[X.EXECUTION_KEEP_LINE] == aside[X.EXECUTION_AS_PROMPTED]  # issue #101: a turn as as_prompted
     assert aside[X.EXECUTION_RF4] < 0.30 < 0.40 < aside[X.EXECUTION_AS_PROMPTED]
 
 
@@ -344,7 +351,7 @@ def test_after_its_steps_the_agent_keeps_its_line_as_prompted_and_steers_back_un
         end = records(run, 0)[0]["end_step"]
         later_ = _row(result, 0, end + 10)
         assert run.driver.released_step is None or run.driver.released_step > end + 10
-        if execution == X.EXECUTION_AS_PROMPTED:
+        if execution in AS_PROMPTED_TURNS:
             assert later_["pref_vy_mps"] == pytest.approx(0.0, abs=1e-6) and later_["y_m"] == pytest.approx(_row(result, 0, end)["y_m"], abs=1e-3)
         else:
             assert later_["pref_vy_mps"] > 0.05  # back toward its path, at +y

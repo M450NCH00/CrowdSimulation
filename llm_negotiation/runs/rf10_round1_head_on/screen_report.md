@@ -218,3 +218,7 @@ per factor than here (6 is too few against a noise floor of 0.4 to 0.9).
 - **The model's randomness** (temperature 1.0, unchanged) dominates repeated behaviour; a lower
   temperature is the user's or the supervisor's decision (`llm-backend.md`, section 2).
 - **One scenario.** These are head-on findings only (D15).
+
+## Addendum, 2026-10-25: an executor rule (issue #101)
+
+Found in RF-29 (issue #101, `runs/rf29_round1_head_on_sidestep/comparison_report.md`): under `protocol.execution: as_prompted` a step with no `turn` steered the agent back to the path it started on, so a move aside followed by a plain step ("walk on until the other passes") was partly undone before the meeting. The prompt says the agent keeps its line. The independent sessions were carried out again from their recorded plans under `keep_line` (the line kept; no LLM call, exact because every independent decision came at the trigger). **This screen's independent sessions then resolve 35 of 64 (0.55, CI 0.43 to 0.66), against 22**: 13 gained, none lost (p = 0.0002). So the finding that the agents sidestep too little (section 2) was largely the executor; what remains is mostly the pavement dance (16 of 27 collisions). The gate (fixed over all three conditions) is not re-decided: non-verbal and talk cannot be carried out again without new calls. (`runs/rf10_round1_head_on_keep_line/`.)

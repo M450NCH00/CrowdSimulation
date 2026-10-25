@@ -438,7 +438,8 @@ def test_configs_written_before_have_no_ethnicity_anywhere(path):
                       "round1_head_on_screening.yaml",  # issue #65: RF-10's screen, written after #92, varies ethnicity
                       "round1_head_on_v7.yaml",  # issue #98: RF-27, RF-10's independent sessions under resolve_v7
                       "round1_head_on_v4pro.yaml",  # issue #100: RF-28, the same sessions on deepseek-v4-pro
-                      "round1_head_on_v4pro_cap600.yaml")):  # issue #100: the same, reply cap 600 (the run of record)
+                      "round1_head_on_v4pro_cap600.yaml",  # issue #100: the same, reply cap 600 (the run of record)
+                      "round1_head_on_sidestep.yaml")):  # issue #101: RF-29, the same sessions under resolve_v8
         pytest.skip("not an experiment config written before issue #92")
     c = E.ResolutionConfig.load(path)
     assert not c.design.uses_ethnicity and c.design.ethnicity_shares is None and "ethnicity_shares" not in c.design.as_dict()
