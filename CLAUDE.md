@@ -206,9 +206,12 @@ used in this track). Numbers in brackets are the decisions of track issue #55.
      run, independent condition only, USD 0.050 off-peak, `WORK_LOG-98.md`).
    - **Approved for issue #100 only, 2026-10-25:** the user approved paid runs for
      RF-28's run of the same head-on sessions on `deepseek-v4-pro` (#100), and
-     only for it, with a cap of **USD 0.30** on that experiment's own calls
-     (`experiment_name: rf28_round1_head_on_v4pro`; 96 sessions, independent
-     condition only, about USD 0.19 off-peak, `WORK_LOG-100.md`).
+     only for it, with a cap of **USD 0.30** on its own calls (96 sessions,
+     independent condition only, about USD 0.19 off-peak, `WORK_LOG-100.md`). The
+     cap covers both of its experiments together: `rf28_round1_head_on_v4pro`
+     (6 sessions at a reply cap of 300, USD 0.0116) and, by the user's decision
+     the same day, `rf28_round1_head_on_v4pro_cap600` (the run of record, reply
+     cap 600, its own cap USD 0.28).
 2. **Approved by the supervisor, 2026-10-24** — Ethics sign-off for perceived
    attractiveness as a factor (#55, 3). *The user decided on 2026-10-24* that
    attractiveness (both directions) is **in** RF-10's design, because bias can
