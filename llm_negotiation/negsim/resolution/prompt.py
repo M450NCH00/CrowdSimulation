@@ -76,6 +76,22 @@ def _walking_heading(relative: float, headings: Mapping[str, str]) -> str:
     return _heading(relative, headings)
 
 
+def _direction_within(bearing: float, phrases: Mapping[str, str], ahead_deg: float) -> str:
+    """``negsim.rulegen.describe._direction`` with "straight ahead" only within ``ahead_deg``
+    rather than 5° (``resolve_v7``, issue #98); everything else as there."""
+    angle = abs(math.degrees(bearing))
+    side = "left" if bearing > 0 else "right"
+    if angle <= ahead_deg:
+        return phrases["ahead"]
+    if angle >= 180.0 - ahead_deg:
+        return phrases["behind"]
+    if 85.0 <= angle <= 95.0:
+        return fill(phrases["side"], side=side)
+    if angle < 85.0:
+        return fill(phrases["ahead_side"], angle=int(round(angle)), side=side)
+    return fill(phrases["behind_side"], angle=int(round(180.0 - angle)), side=side)
+
+
 def _check_condition(condition: str) -> None:
     if condition not in CONDITIONS:
         raise ConfigError(f"condition: one of {CONDITIONS}, got {condition!r}")
@@ -143,6 +159,13 @@ class CoreTemplate:
     def until_event_as_object(self) -> bool:
         """Whether an ``until`` event written as an object is read as the event (``resolve_v6``)."""
         return bool(self.data.get("until_event_as_object", False))
+
+    @property
+    def direction_ahead_deg(self) -> Optional[float]:
+        """Within how many degrees someone is "straight ahead" (``resolve_v7``, issue #98); None
+        for the earlier templates, which keep ``negsim.rulegen.describe``'s 5°."""
+        value = self.data.get("direction_ahead_deg")
+        return None if value is None else float(value)
 
     def prints_demographics(self, detail: str) -> bool:
         """Whether the other's age and gender are printed at this detail level (when visible):
@@ -212,14 +235,21 @@ class CoreTemplate:
         lines = [v["seen_header"]]
         if not view.seen:
             return lines + [v["seen_nobody"]]
+        ahead_deg = self.direction_ahead_deg
         for person in view.seen:
-            direction = _direction(person.bearing_rad, v["directions"])
+            if ahead_deg is None:
+                direction = _direction(person.bearing_rad, v["directions"])
+            else:
+                direction = _direction_within(person.bearing_rad, v["directions"], ahead_deg)
             # A drift is a way of walking, not of facing: someone standing still keeps the old words.
             describe = _heading if person.motion == MOTION_STILL else _walking_heading
             heading = describe(person.heading_relative_rad, v["headings"])
             if person.detail != DETAIL_FULL:
                 motion = fill(v["short_motion"][person.motion], heading=heading)
                 lines.append(fill(v["seen_short"], n=person.label, distance=along(person.distance_m), direction=direction, motion=motion))
+                lines += self._line_offset(person)
+                if "seen_short_body" in v:  # resolve_v7 (issue #98): the other's width from 10 m
+                    lines.append(fill(v["seen_short_body"], width=across(person.width_m)))
                 if person.age is not None and "seen_short_age" in v:  # resolve_v4 (issue #64): age and gender on a short line too
                     lines.append(fill(v["seen_short_age"], age=person.age))
                 if person.gender is not None and "seen_short_gender" in v:
@@ -236,6 +266,7 @@ class CoreTemplate:
                 change = v["changes"]["shrinking" if (person.closing_speed_mps or 0.0) > 0.0 else "not_shrinking"]
                 key = "seen_backing" if person.motion == MOTION_BACKING else "seen_motion"
                 lines.append(fill(v[key], speed=speed(person.speed_mps), heading=heading, change=change))
+            lines += self._line_offset(person)
             lines.append(fill(v["seen_body"], width=across(person.width_m)))
             if person.age is not None:
                 lines.append(fill(v["seen_age"], age=person.age))
@@ -249,6 +280,19 @@ class CoreTemplate:
                 lines.append(fill(v["seen_changes"], changes=joined))
             lines += [fill(v["seen_extra"], line=line) for line in (*person.factor_lines, *person.pairwise_lines)]
         return lines
+
+    def _line_offset(self, person: Any) -> list[str]:
+        """Where the centre of someone ahead is against the straight line ahead of the agent
+        (``resolve_v7``, issue #98): the distance times the sine of their bearing, positive to the
+        left, to 0.1 m. Nothing for someone level with or behind the agent, or under a template
+        without the lines."""
+        v = self.data["view"]
+        if "seen_line_offset" not in v or abs(person.bearing_rad) >= math.pi / 2:
+            return []
+        offset = person.distance_m * math.sin(person.bearing_rad)
+        if along(abs(offset)) == along(0.0):
+            return [v["seen_on_line"]]
+        return [fill(v["seen_line_offset"], offset=along(abs(offset)), side="left" if offset > 0 else "right")]
 
     def _heard(self, view: View) -> list[str]:
         v = self.data["view"]
