@@ -217,6 +217,27 @@ about 790 sessions): about USD 0.70 off-peak. Balance USD 1.41 (2026-10-24).
   how it fails, conditions, factors, the shortlist, caveats). Every number in it was checked
   against a file; two were corrected (the unreadable count and the body width).
 
+### 2026-10-25 — Correction: "compatible sides" was an artefact of the measure
+- What I did: the user asked why agents collide when level. Re-reading the replays, I found
+  that the entry above ("every pair ended on compatible sides") is wrong. `passing_side_*` is the
+  side each went by on at the closest approach, in its own frame; for two people walking towards
+  each other the two always agree, whoever moved. So 192 of 192 was guaranteed.
+- Measured instead which way each agent moved from its own starting line when level
+  (`analysis/lateral.py`, `sidestep()`, with tests; a move under 5 cm counts as none, my
+  judgement). Design sessions: of 116 collisions, **49 stepped towards the same wall** (one to its
+  left, the other to its right), 40 had one or both not aside, 27 made room too narrowly; of 59
+  resolved, 55 made room, 0 stepped towards the same wall, 4 had one not aside.
+- Also measured, on all 288 sessions: 6 of 166 first contacts after level; the other a median 35°
+  off straight ahead at contact, outside the 75° cone for 36 of 332 agents; decision points at a
+  median 9.8 m (independent, the only one), and 9.8, 7.2, 4.8 m in non-verbal and talk, where
+  most agents used all three. The description calls any bearing within 5° "straight ahead" and
+  gives the other's body width only within 5 m.
+- Result: corrected `screen_report.md` (in short, section 2), `analysis/lateral.md`, `README.md`,
+  this log's open question 6 and summary, and PR #95's description. The sideways gaps (0.29 m
+  against 0.88 m) stand. `passing_side_*` still says on which side they went by (both kept right
+  in 123), so RF-9's "the model keeps right" (`WORK_LOG-64.md`) stands as a count of passings.
+- Next step: the viewer work the user asked for, in its own issue.
+
 ## Advice for later rounds (task 8, D15)
 1. **Conditions.** No condition differed in resolution, and non-verbal costs most (USD 0.00133 a
    session). For the lean rounds: **independent and talk**, dropping non-verbal; round 3 ("excuse
@@ -259,8 +280,10 @@ about 790 sessions): about USD 0.70 off-peak. Balance USD 1.41 (2026-10-24).
    the USD 0.35 cap recorded in `CLAUDE.md`.
 6. **Head-on failed the gate.** By the issue's rule no rule is extracted from round 1 in RF-11
    unless the supervisor says otherwise. That is the supervisor's call, and it affects RF-11 (#66)
-   directly: the agents choose a side reliably (compatible in 192 of 192), so a side-choice rule
-   could still be extracted even though the sidesteps fail physically.
+   directly. ~~The agents choose a side reliably (compatible in 192 of 192), so a side-choice rule
+   could still be extracted even though the sidesteps fail physically.~~ *Corrected 2026-10-25:*
+   that count cannot show compatibility; in 49 of the 116 collisions the two stepped towards the
+   same wall. They do pass mostly keeping right (123 of 192), which a side rule could still use.
 7. **Sidestep size: model or description?** (advice 4). Open; not tested here.
 8. **The run folder is 73 MB**, committed as RF-9's was (`.gitignore`: paid runs are research
    data), mostly replays (35 MB) and session records (33 MB).
@@ -274,7 +297,9 @@ conditions, exact repeats and 4 counterfactual pairs: 288 sessions); `analysis.g
 `screen_report.md`; `CLAUDE.md` records the approval (#65 only, USD 0.35) and the balance.
 
 **Result.** Step 1 for head-on: the LLM agents' own plans resolve 0.31 of meetings (CI 0.25 to
-0.38): **fails the 0.50 gate**. They agree on sides but sidestep too little; signalling and
+0.38): **fails the 0.50 gate**. Most collisions are the two stepping towards the same wall (49 of
+116) or not stepping aside (40), fewer making room too narrowly (27; corrected 2026-10-25, the
+first version said they always agreed on sides); signalling and
 talking do not help. Phase B shortlist: assertiveness, familiarity, residence, the other's age,
 perceived attractiveness (never readable by a rule).
 

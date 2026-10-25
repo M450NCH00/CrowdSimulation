@@ -11,10 +11,13 @@ in `WORK_LOG-65.md`.
   not.** 59 of the design's 192 sessions resolved in `plan_only` (0.31, 95% CI 0.25 to 0.38),
   against a gate of 0.50 fixed in the config before the run. **Head-on fails the gate.** By the
   issue's rule, no rule is extracted from round 1 in RF-11 unless the supervisor says otherwise.
-- **They pick compatible sides but sidestep too little.** At the meeting the two were on
-  compatible sides in every session (both kept right in 123, both left in 69), but 116 of the
-  192 collided: when level, they were a median 0.29 m apart sideways, for bodies 0.5 m wide
-  (0.7 m with a load). In the sessions that resolved they were 0.88 m apart.
+- **Most collisions are a "pavement dance" or no sidestep at all.** Of the 116 collisions, in
+  49 the two stepped towards the same wall (one to its own left, the other to its own right), in
+  40 one or both did not step aside, and in 27 both made room but too little. None of the 59
+  resolved sessions stepped towards the same wall. When level, colliding pairs were a median
+  0.29 m apart sideways, for bodies 0.5 m wide (0.7 m with a load); resolved pairs 0.88 m.
+  *(Corrected on 2026-10-25: the first version said every pair chose compatible sides. That
+  count cannot show it; see section 2.)*
 - **Signalling and talking did not help**: independent 0.34, non-verbal 0.27, talk 0.31; the
   intervals overlap widely.
 - **Factors**: after Holm's correction over the whole report, four effects survive, all on *how*
@@ -74,9 +77,23 @@ with it: a judgement, not a sourced number.
   rate up a little but not near the gate.
 
 **How it fails.** Of the 133 unresolved sessions, 116 collided, 17 were near misses, and none
-deadlocked. The sides are not the problem: at the closest approach both agents kept right (in
-their own frames) in 123 sessions and both kept left in 69, so every pair chose compatible sides.
-The size of the sidestep is the problem:
+deadlocked. At the closest approach both agents kept right (in their own frames) in 123 sessions
+and both kept left in 69. That says on which side they went by, not that they chose compatible
+sides: for two people walking towards each other the two always agree, whoever moved. *(The first
+version of this report read it as "every pair chose compatible sides"; corrected on 2026-10-25.)*
+
+Which way each agent moved from its own starting line, when level (`analysis/lateral.md`; a move
+under 5 cm counts as none, a judgement):
+
+| `plan_only` outcome | Both to their own same side (making room) | Towards the same wall | One or both not aside |
+| --- | --- | --- | --- |
+| collision (116) | 27 | **49** | 40 |
+| near miss (17) | 13 | 1 | 3 |
+| resolved (59) | 55 | **0** | 4 |
+
+So the commonest failure is the "pavement dance": each steps aside, but towards the same wall as
+the other. The next is no sidestep from one or both. And where they did make room, the sidestep
+was often too small:
 
 | `plan_only` outcome | Sessions | Lateral separation when level, median (IQR) | Each agent's move aside, median |
 | --- | --- | --- | --- |
@@ -88,10 +105,23 @@ Each agent is told its body's width: 0.5 m, or 0.7 m when it carries a load (RF-
 centres less than 0.5 to 0.7 m apart sideways collide. The first plans of unresolved sessions turn less (median
 largest turn 12°, against 15°), and 19 of them do not turn at all (1 among the resolved). Delayed
 starts are rare (3) and plans that step aside and back are not more common among the failures
-(28% against 37% of first plans). So the agents agree on a side but under-size the sidestep.
-Whether that is the model's spatial judgement or what the description leaves out (it gives the
-other's distance and bearing, not how far their walking line is from one's own) is open; it
-matters for any rule taken from these plans.
+(28% against 37% of first plans).
+
+**Nothing corrects a bad sidestep late.** In `plan_only` nothing steers the two apart between
+decision points. In independent each agent decides once, 9.8 m away (about 3.8 s before
+meeting). In non-verbal and talk the agents mostly used all three of their decision points (all
+288 sessions: at a median 9.8, 7.2 and 4.8 m), prompted mostly by the other turning or
+signalling, so the last 4.8 m (about 1.8 s) are walked on the plan alone. It is not mainly the
+view cone: of all 166 contacts in the 288 sessions, 6 came after the two were level; at first
+contact the other was a median 35° off straight ahead, and outside the 75° each side for 36 of
+the 332 agents involved. By then most agents had no decision point left, so seeing the other
+would not have changed their plan.
+
+Whether the failures are the model's spatial judgement or what the description leaves out is
+open, and it matters for any rule taken from these plans. The description gives the other's
+distance and bearing, but any bearing within 5° is "straight ahead" (at 9.8 m that hides up to
+0.86 m sideways), it never says how far the other's walking line is from one's own, and it gives
+the other's body width only within 5 m.
 
 ## 3. Independent, non-verbal, talk (task 6)
 

@@ -47,3 +47,25 @@ def test_it_measures_when_level_and_groups_the_designs_sessions_by_outcome(exper
     assert summary["resolved"]["aside_median_m"] == pytest.approx(0.2, abs=0.03)
     assert summary["collision"]["separation_median_m"] == pytest.approx(0.2) and summary["collision"]["aside_median_m"] == 0.0
     assert "| collision | 1 |" in lateral.markdown(summary)
+
+
+def test_it_tells_making_room_from_both_stepping_towards_the_same_wall(experiment):
+    rows = list(csv.DictReader((experiment / "outcomes.csv").open(encoding="utf-8", newline="")))
+    rows.append({"session_id": "D", "outcome": "completed", "repeat": "1", "pair_id": "", "resolved_plan_only": "False", "collision_plan_only": "True"})
+    with (experiment / "outcomes.csv").open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, COLUMNS)
+        writer.writeheader()
+        writer.writerows(rows)
+    replay(experiment, "D", 0.5, 0.3)  # agent 0 to its left (+y), agent 1 to its right (+y): the same wall
+    summary = lateral.summarise(experiment)
+    assert summary["resolved"]["sidesteps"] == {"same_own_side": 1, "towards_same_wall": 0, "not_both_aside": 0}
+    assert summary["collision"]["sidesteps"] == {"same_own_side": 0, "towards_same_wall": 1, "not_both_aside": 1}
+    assert "| collision | 0 | 1 | 1 |" in lateral.markdown(summary)
+
+
+@pytest.mark.parametrize(
+    ("own_0", "own_1", "kind"),
+    [(0.3, 0.3, "same_own_side"), (-0.3, -0.2, "same_own_side"), (0.3, -0.3, "towards_same_wall"), (0.3, 0.04, "not_both_aside")],
+)
+def test_sidestep(own_0, own_1, kind):
+    assert lateral.sidestep(own_0, own_1) == kind
