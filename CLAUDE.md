@@ -99,7 +99,8 @@ Budget:
   Plan caps against the balance, not against USD 2.00 (`WORK_LOG-64.md`).
   After issue #64's pilot (USD 0.075 in the ledger): **USD 1.41**, checked
   2026-10-24. After issue #65's screen (USD 0.290 in the ledger, cap 0.35):
-  **USD 1.13**, checked 2026-10-24.
+  **USD 1.13**, checked 2026-10-24. After issue #98's comparison (USD 0.050 in the
+  ledger, cap 0.08): **USD 1.08**, checked 2026-10-25.
 
 ### Phase 1 (on hold): the behaviour dataset
 The task from the first supervisor meeting, on hold since the second meeting.
