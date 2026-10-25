@@ -125,3 +125,18 @@ def test_rf27s_config_is_rf10s_independent_sessions_under_resolve_v7():
     assert set(new_sessions) == set(old_sessions) and len(new_sessions) == 96
     for session_id, session in new_sessions.items():
         assert session.personas == old_sessions[session_id].personas, session_id
+
+
+def test_rf28s_config_is_rf10s_independent_sessions_on_deepseek_v4_pro():
+    # Issue #100 (RF-28): the same sessions, resolve_v6 as in RF-10, only the model changed.
+    old = E.ResolutionConfig.load("configs/resolution/round1_head_on_screening.yaml")
+    new = E.ResolutionConfig.load("configs/resolution/round1_head_on_v4pro.yaml")
+    assert new.experiment_name == "rf28_round1_head_on_v4pro" and new.conditions == ("independent",)
+    assert new.templates == old.templates and new.llm["model"] == "deepseek-v4-pro" and old.llm["model"] == "deepseek-flash"
+    assert {k: v for k, v in new.llm.items() if k != "model"} == {k: v for k, v in old.llm.items() if k != "model"}
+    assert new.budget["cap_usd"] == 0.30 and new.budget["over_cap"] == "stop_at_cap"
+    old_sessions = {s.session_id: s for s in E.plan(old).sessions if s.condition == "independent"}
+    new_sessions = {s.session_id: s for s in E.plan(new).sessions}
+    assert set(new_sessions) == set(old_sessions) and len(new_sessions) == 96
+    for session_id, session in new_sessions.items():
+        assert session.personas == old_sessions[session_id].personas, session_id
