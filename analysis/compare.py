@@ -18,6 +18,9 @@ condition that completed in both, it reports:
 - the **model string and fingerprint** the API returned in each, since a model name can be
   re-pointed between two runs (``docs/llm-backend.md``, section 3).
 
+``--readable-only`` (issue #100) keeps only the sessions whose every reply was readable in both
+runs, so that a reply format one model writes and the parser refuses does not count as a decision.
+
     python -m analysis.compare llm_negotiation/runs/rf10_round1_head_on llm_negotiation/runs/rf27_round1_head_on_v7 --condition independent
 """
 
@@ -101,9 +104,21 @@ def _sessions(experiment: Path, ids: Sequence[str]) -> dict[str, Any]:
     return {"decision_points": points, "unreadable": unreadable, "models": dict(models)}
 
 
-def compare(base: Path, new: Path, condition: str) -> dict[str, Any]:
+def readable(experiment: Path, session_id: str) -> bool:
+    """Whether every decision point of the session had a readable reply (after the retry)."""
+    record = json.loads((experiment / "sessions" / f"{session_id}.json").read_text(encoding="utf-8"))
+    return all(point.get("parse_error") is None for point in record.get("decision_points") or [])
+
+
+def compare(base: Path, new: Path, condition: str, readable_only: bool = False) -> dict[str, Any]:
+    """``readable_only`` keeps only the sessions whose every reply was readable in both runs, so
+    that a reply format one model writes and the parser refuses does not count as a decision."""
     a, b = outcome_rows(base, condition), outcome_rows(new, condition)
     shared = sorted(set(a) & set(b))
+    dropped = 0
+    if readable_only:
+        kept = [s for s in shared if readable(base, s) and readable(new, s)]
+        dropped, shared = len(shared) - len(kept), kept
     if not shared:
         raise CompareError(f"{base} and {new} have no completed {condition} session in common")
     design = [row["session_id"] for row in design_rows([b[s] for s in shared])]
@@ -119,6 +134,7 @@ def compare(base: Path, new: Path, condition: str) -> dict[str, Any]:
         "condition": condition,
         "base": str(base), "new": str(new),
         "sessions_in_common": len(shared),
+        "readable_only": readable_only, "dropped_unreadable": dropped,
         "only_in_base": len(set(a) - set(b)), "only_in_new": len(set(b) - set(a)),
         "design_sessions": len(design),
         "rate": {"base": _rate([a[s] for s in design]), "new": _rate([b[s] for s in design])},
@@ -144,7 +160,9 @@ def markdown(result: Mapping[str, Any]) -> str:
         f"# {Path(result['new']).name} against {Path(result['base']).name}, condition {result['condition']}",
         "",
         f"Sessions completed in both: {result['sessions_in_common']} (only in the first: {result['only_in_base']}, "
-        f"only in the second: {result['only_in_new']}); of them, the design's: {result['design_sessions']}.",
+        f"only in the second: {result['only_in_new']}); of them, the design's: {result['design_sessions']}."
+        + (f" **Readable only:** {result['dropped_unreadable']} session(s) with an unreadable reply in either run left out."
+           if result.get("readable_only") else ""),
         "",
         "## Resolved in `plan_only` (the design's sessions; 95% Wilson intervals)",
         "",
@@ -186,13 +204,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("base", type=Path, help="the first experiment's folder (outcomes.csv, sessions/, replay/)")
     parser.add_argument("new", type=Path, help="the second experiment's folder")
     parser.add_argument("--condition", default="independent", help="the condition to compare (default: independent)")
+    parser.add_argument("--readable-only", action="store_true",
+                        help="keep only the sessions whose every reply was readable in both runs")
     args = parser.parse_args(argv)
-    result = compare(args.base, args.new, args.condition)
+    result = compare(args.base, args.new, args.condition, readable_only=args.readable_only)
     text = markdown(result)
     out = args.new / "analysis"
     out.mkdir(parents=True, exist_ok=True)
-    (out / f"compare_{args.base.name}.md").write_text(text, encoding="utf-8", newline="\n")
-    (out / f"compare_{args.base.name}.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8", newline="\n")
+    name = f"compare_{args.base.name}" + ("_readable_only" if args.readable_only else "")
+    (out / f"{name}.md").write_text(text, encoding="utf-8", newline="\n")
+    (out / f"{name}.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8", newline="\n")
     print(text)
     return 0
 
