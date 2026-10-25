@@ -31,6 +31,7 @@
     --ev-collision: #e00000; --ev-wall_collision: #9b0000; --ev-near_miss: #e0a100; --ev-yield: #8a93a5;
     --ev-handoff: #6f42c1; --ev-reciprocity_violation: #e0681e; --ev-arrival: #2f9e5b; --ev-region: #2f6fde;
     --ev-dialogue: #149aa8; --ev-rule: #0f7b6c; --ev-ambiguous_match: #b8326b; --ev-cross_pair_conflict: #7a5af8;
+    --ev-decision: #2f6fde; --ev-signal: #0f7b6c; --ev-message: #149aa8; --ev-release: #5f687a;
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -131,6 +132,15 @@
   .stance { font-size: 11px; font-weight: 600; color: var(--muted); }
   .empty { color: var(--muted); font-size: 13px; }
   .agent-head { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-bottom: 4px; }
+  ol.decisions { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  ol.decisions > li { padding: 4px 8px; border-radius: 4px; font-size: 13px; border-left: 3px solid var(--border); }
+  ol.decisions > li.future { opacity: 0.45; }
+  ol.decisions > li.now { background: var(--bg); }
+  ol.decisions .head { font-size: 11px; font-weight: 600; color: var(--muted); }
+  ol.decisions .intent { font-weight: 600; }
+  ol.decisions ol { margin: 2px 0; padding-left: 18px; }
+  ol.decisions ol li.now { font-weight: 600; }
+  ol.decisions .what { color: var(--muted); }
   @media (max-width: 900px) {
     main { grid-template-columns: 1fr; }
     .stage { min-height: 70vh; }
@@ -181,6 +191,9 @@
         <label><input type="checkbox" id="opt-velocity"> Velocity</label>
         <label id="wanted-wrap"><input type="checkbox" id="opt-wanted"> Wanted velocity</label>
         <label id="sensing-wrap"><input type="checkbox" id="opt-sensing"> Sensing radius</label>
+        <label id="decisions-wrap"><input type="checkbox" id="opt-decisions" checked> LLM decisions</label>
+        <label id="cones-wrap" title="What each agent can see: its view cone, stronger where it sees detail; cut by walls, not by people"><input type="checkbox" id="opt-cones" checked> View cones</label>
+        <label id="hearing-wrap"><input type="checkbox" id="opt-hearing"> Hearing range</label>
         <label><input type="checkbox" id="opt-arrived" checked> Arrived agents</label>
         <label><input type="checkbox" id="opt-follow"> Follow selected</label>
         <button id="fit" title="Fit the scene (F)">Fit view</button>
@@ -194,6 +207,10 @@
     <ul class="legend" id="legend"></ul>
     <h2>Selected agent</h2>
     <div id="agent"><p class="empty">Click an agent to see what it knows and does.</p></div>
+    <div id="decisions-section" hidden>
+      <h2>LLM decisions</h2>
+      <ol class="decisions" id="decisions"></ol>
+    </div>
     <h2 id="events-title">Events</h2>
     <div class="chips" id="filters"></div>
     <ol class="events" id="events"></ol>
@@ -226,6 +243,7 @@
     collision: "Collision", wall_collision: "Wall collision", near_miss: "Near miss", yield: "Yield",
     handoff: "Handoff", reciprocity_violation: "Violation", arrival: "Arrival", region: "Enters region",
     dialogue: "Dialogue", rule: "Rule fires", ambiguous_match: "Ambiguous match", cross_pair_conflict: "Rules disagree",
+    decision: "LLM decision", signal: "Signal", message: "Message", release: "Plans end",
   };
   const CROWD = 12;
 
@@ -240,7 +258,7 @@
     hidden: new Set(), dirty: true, colours: {}, width: 0, height: 0,
   };
   const opt = {};
-  ["trails", "paths", "labels", "velocity", "wanted", "sensing", "arrived", "follow"].forEach((name) => {
+  ["trails", "paths", "labels", "velocity", "wanted", "sensing", "decisions", "cones", "hearing", "arrived", "follow"].forEach((name) => {
     const box = $("opt-" + name);
     opt[name] = box.checked;
     box.addEventListener("change", () => { opt[name] = box.checked; state.dirty = true; });
@@ -318,6 +336,206 @@
     };
   }
 
+  // --- what an LLM agent decided and can see (a replay of a resolution session, issue #96) ----------
+  // The decision in force for an agent at time t: its latest decision point at or before t.
+  function decisionAt(agentId, t) {
+    const llm = state.run.llm;
+    if (!llm) return null;
+    let found = null;
+    llm.decisions.forEach((d) => { if (d.agent === agentId && d.t <= t + 1e-9) found = d; });
+    return found;
+  }
+  function inForce(d, t) { return d.t <= t + 1e-9 && (d.t_end == null || t < d.t_end - 1e-9); }
+  // Which of a decision's steps runs at t, in words.
+  function stepNow(d, t) {
+    if (!d.readable) return "its reply could not be read: it carries on";
+    if (!d.steps.length) return "carries on as it was";
+    if (!inForce(d, t)) return "plan over (" + d.outcome + "): walks on";
+    for (let k = 0; k < d.steps.length; k++) {
+      const span = d.step_times[k];
+      if (span && span[0] <= t + 1e-9 && (span[1] == null || t < span[1] - 1e-9)) return "step " + (k + 1) + " of " + d.steps.length + ": " + d.steps[k];
+    }
+    const next = d.step_times.findIndex((span) => !span || span[0] > t);
+    if (next >= 0) return "waiting for step " + (next + 1) + ": " + d.steps[next];
+    return "steps done: walks on to its goal";
+  }
+  // Where an agent faces, as perceive.py has it: its direction of travel, or its path's direction
+  // when it stands still (a speed that reads 0.00 m/s) or walks backwards.
+  function pathHeading(agent, x, y) {
+    const p = agent.path;
+    if (p.length < 2) return agent.h[0] || 0;
+    let best = 0, bestDistance = Infinity;
+    for (let k = 0; k < p.length - 1; k++) {
+      const ax = p[k][0], ay = p[k][1], bx = p[k + 1][0], by = p[k + 1][1];
+      const len2 = (bx - ax) ** 2 + (by - ay) ** 2 || 1e-12;
+      const f = Math.max(0, Math.min(1, ((x - ax) * (bx - ax) + (y - ay) * (by - ay)) / len2));
+      const distance = Math.hypot(x - ax - f * (bx - ax), y - ay - f * (by - ay));
+      if (distance < bestDistance) { bestDistance = distance; best = k; }
+    }
+    return Math.atan2(p[best + 1][1] - p[best][1], p[best + 1][0] - p[best][0]);
+  }
+  function facingOf(agent, now) {
+    const path = pathHeading(agent, now.x, now.y);
+    const moving = Math.round(Math.hypot(now.vx, now.vy) * 100) !== 0;
+    const backing = moving && now.vx * Math.cos(path) + now.vy * Math.sin(path) < 0;
+    return moving && !backing ? Math.atan2(now.vy, now.vx) : path;
+  }
+  // How far a ray from (x, y) goes before a wall, up to range (walls are boxes: the slab test).
+  function rayLength(x, y, angle, range) {
+    const dx = Math.cos(angle), dy = Math.sin(angle);
+    let best = range;
+    state.run.walls.forEach((w) => {
+      let t0 = 0, t1 = best;
+      const axes = [[x, dx, w[0], w[2]], [y, dy, w[1], w[3]]];
+      for (const [origin, d, lo, hi] of axes) {
+        if (Math.abs(d) < 1e-12) { if (origin < lo || origin > hi) return; continue; }
+        let a = (lo - origin) / d, b = (hi - origin) / d;
+        if (a > b) [a, b] = [b, a];
+        t0 = Math.max(t0, a); t1 = Math.min(t1, b);
+        if (t0 > t1) return;
+      }
+      if (t0 < best) best = t0;
+    });
+    return best;
+  }
+  function cone(agent, now, range, blocked) {
+    const v = state.run.llm.view;
+    const half = (v.half_angle_deg * Math.PI) / 180;
+    const facing = facingOf(agent, now);
+    const rays = Math.max(12, Math.round(v.half_angle_deg * 2));
+    const [sx, sy] = toScreen(now.x, now.y);
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    for (let k = 0; k <= rays; k++) {
+      const angle = facing - half + (2 * half * k) / rays;
+      const length = blocked ? rayLength(now.x, now.y, angle, range) : range;
+      const [px, py] = toScreen(now.x + length * Math.cos(angle), now.y + length * Math.sin(angle));
+      ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+  }
+  function drawCones(positions) {
+    const run = state.run, v = run.llm.view;
+    run.agents.forEach((a, k) => {
+      const now = positions[k];
+      if (now.arrived) return;
+      if (run.crowd && a.id !== state.selected) return;
+      const colour = colourOf(a);
+      ctx.save();
+      ctx.fillStyle = colour;
+      ctx.globalAlpha = 0.09;
+      cone(a, now, v.range_m, v.walls_block_sight);
+      ctx.fill();
+      ctx.globalAlpha = 0.35; ctx.strokeStyle = colour; ctx.lineWidth = 1;
+      ctx.stroke();
+      if (v.detail_range_m) {
+        ctx.globalAlpha = 0.11;
+        cone(a, now, v.detail_range_m, v.walls_block_sight);
+        ctx.fill();
+      }
+      ctx.restore();
+    });
+  }
+  function drawHearing(positions) {
+    const run = state.run, range = run.llm.view.hearing_range_m;
+    if (!range) return;
+    run.agents.forEach((a, k) => {
+      const now = positions[k];
+      if (now.arrived || (run.crowd && a.id !== state.selected)) return;
+      const [sx, sy] = toScreen(now.x, now.y);
+      ctx.save(); ctx.strokeStyle = colourOf(a); ctx.globalAlpha = 0.55; ctx.setLineDash([2, 4]); ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(sx, sy, range * state.view.scale, 0, 2 * Math.PI); ctx.stroke(); ctx.restore();
+    });
+  }
+  const clip = (text, n) => (text.length > n ? text.slice(0, n - 1) + "…" : text);
+  // A caption by each agent: the decision in force and the step it is on.
+  function drawCaptions(positions) {
+    const run = state.run;
+    ctx.save();
+    ctx.font = "12px system-ui, -apple-system, 'Segoe UI', sans-serif";
+    ctx.textBaseline = "top";
+    run.agents.forEach((a, k) => {
+      const now = positions[k];
+      if (now.arrived) return;
+      const d = decisionAt(a.id, state.t);
+      if (!d) return;
+      const lines = [clip("#" + d.number + " " + (d.readable ? d.intent : "(reply unreadable)"), 64), clip(stepNow(d, state.t), 64)];
+      if (d.signal && state.t - d.t < 1.5) lines.push(clip("signal: " + d.signal, 64));
+      const widths = lines.map((line, n) => {
+        ctx.font = (n ? "" : "600 ") + "12px system-ui, -apple-system, 'Segoe UI', sans-serif";
+        return ctx.measureText(line).width;
+      });
+      const w = Math.max(...widths) + 12, h = lines.length * 15 + 6;
+      const [sx, sy] = toScreen(now.x, now.y);
+      const r = Math.max(2.5, a.radius * state.view.scale);
+      const above = k % 2 === 0;
+      const x = Math.max(4, Math.min(state.width - w - 4, sx - w / 2));
+      const y = above ? sy - r - 22 - h : sy + r + 22;
+      ctx.globalAlpha = 0.92; ctx.fillStyle = state.colours.stage;
+      ctx.fillRect(x, y, w, h);
+      ctx.globalAlpha = 1; ctx.strokeStyle = colourOf(a); ctx.lineWidth = 1.5;
+      ctx.strokeRect(x, y, w, h);
+      ctx.beginPath(); ctx.moveTo(sx, above ? y + h : y); ctx.lineTo(sx, above ? sy - r - 2 : sy + r + 2); ctx.stroke();
+      lines.forEach((line, n) => {
+        ctx.fillStyle = n ? state.colours.muted : state.colours.text;
+        ctx.font = (n ? "" : "600 ") + "12px system-ui, -apple-system, 'Segoe UI', sans-serif";
+        ctx.fillText(line, x + 6, y + 4 + n * 15);
+      });
+    });
+    ctx.restore();
+  }
+
+  function buildDecisions() {
+    const run = state.run;
+    const section = $("decisions-section");
+    const list = $("decisions");
+    list.replaceChildren();
+    section.hidden = !run.llm;
+    if (!run.llm) return;
+    if (!run.llm.decisions.length) list.append(el("li", { class: "empty" }, "Nobody was prompted in this session."));
+    run.llm.decisions.forEach((d, index) => {
+      const agent = run.byId.get(d.agent);
+      const li = el("li", { style: "border-left-color:" + (agent ? colourOf(agent) : state.colours.muted) });
+      li.dataset.index = String(index);
+      const where = d.distance_m != null ? " · " + fmt(d.distance_m, 1) + " m away" : "";
+      li.append(el("div", { class: "head" }, "agent " + d.agent + " · decision " + d.number + " of " + d.cap + " · " + fmt(d.t, 1) + " s" + where));
+      li.append(el("div", { class: "what" }, "Why now: " + d.why));
+      if (!d.readable) { li.append(el("div", null, "Its reply could not be read; it carries on.")); list.append(li); return; }
+      li.append(el("div", { class: "intent" }, d.intent));
+      const steps = el("ol");
+      (d.steps.length ? d.steps : ["carry on as it is"]).forEach((text) => steps.append(el("li", null, text)));
+      li.append(steps);
+      if (d.signal) li.append(el("div", null, "Signal: " + d.signal));
+      if (d.message) li.append(el("div", null, "Says: “" + d.message + "”"));
+      li.append(el("div", { class: "what" }, "Reason (private): " + d.reason));
+      li.append(el("div", { class: "what" }, "What came of the plan: " + d.outcome));
+      li.addEventListener("click", () => { setPlaying(false); seek(d.t); state.selected = d.agent; updateAgentPanel(); state.dirty = true; });
+      list.append(li);
+    });
+    Object.entries(run.llm.debriefs).forEach(([id, b]) => {
+      const agent = run.byId.get(Number(id));
+      const li = el("li", { style: "border-left-color:" + (agent ? colourOf(agent) : state.colours.muted) });
+      li.append(el("div", { class: "head" }, "agent " + id + " · debrief, after the encounter"), el("div", null, b.basis),
+        el("div", { class: "what" }, "Kind: " + b.kind + " · source: " + b.source));
+      list.append(li);
+    });
+    markDecisions();
+  }
+  function markDecisions() {
+    const run = state.run;
+    if (!run.llm) return;
+    $("decisions").querySelectorAll("li[data-index]").forEach((li) => {
+      const d = run.llm.decisions[Number(li.dataset.index)];
+      const now = inForce(d, state.t);
+      li.classList.toggle("future", d.t > state.t + 1e-9);
+      li.classList.toggle("now", now);
+      li.querySelectorAll("ol > li").forEach((step, k) => {
+        const span = d.step_times[k];
+        step.classList.toggle("now", now && !!span && span[0] <= state.t + 1e-9 && (span[1] == null || state.t < span[1] - 1e-9));
+      });
+    });
+  }
+
   // --- choosing a run ------------------------------------------------------------------------------
   function selectRun(index) {
     const run = DATA.runs[index];
@@ -335,6 +553,7 @@
     $("opt-labels").checked = opt.labels = !run.crowd;
     $("wanted-wrap").hidden = run.kind !== "avoidance";
     $("sensing-wrap").hidden = !run.agents.some((a) => a.sensing);
+    ["decisions", "cones", "hearing"].forEach((name) => { $(name + "-wrap").hidden = !run.llm; });
     $("title").textContent = run.experiment + " / " + run.run_id;
     $("subtitle").textContent = (run.kind === "avoidance" ? "Avoidance run (issue #26)" : "Negotiation run (issue #24)") +
       " · " + run.scenario + " · " + run.agents.length + " agents" + (run.description ? " · " + run.description : "");
@@ -343,6 +562,7 @@
     buildLegend();
     buildEvents();
     buildConversation();
+    buildDecisions();
     state.userView = false;
     fitView();
     buildTicks();
@@ -400,6 +620,13 @@
       if (run.back_ups) list.append(legendItem(el("span", { class: "sw" }), "B backing out of the passage, W waiting outside it"));
     } else {
       list.append(legendItem(el("span", { class: "sw ring", style: "border-color:" + c["ring-arbiter"] }), "in a conflict the arbiter is managing (L leader, F follower)"));
+    }
+    if (run.llm) {
+      const v = run.llm.view;
+      list.append(legendItem(el("span", { class: "sw square", style: "background:" + c.palette[0] + ";opacity:0.25" }),
+        "view cone: " + fmt(v.half_angle_deg, 0) + "° either side of where it faces, to " + fmt(v.range_m, 0) + " m; stronger within " + fmt(v.detail_range_m, 0) +
+        " m, where it sees detail" + (v.walls_block_sight ? "; cut by walls (not by people)" : "")));
+      list.append(legendItem(el("span", { class: "sw square", style: "border:1.5px solid " + c.palette[0] }), "caption: the LLM decision in force (#n) and the step it is on"));
     }
     list.append(legendItem(el("span", { class: "sw ring", style: "border-color:" + c.overlap + ";border-style:dashed" }), "bodies overlapping (a collision)"));
     list.append(legendItem(el("span", { class: "sw", style: "background:" + c.muted + ";opacity:0.3" }), "arrived" + (run.kind === "avoidance" ? " (has left the scene)" : "")));
@@ -506,6 +733,12 @@
     if (now.f & FLAG.proceeding) flags.push("going on while the other backs out");
     live.push(["Now", now.arrived ? "arrived at " + fmt(agent.arrival, 1) + " s" : (flags.join("; ") || "walking freely")]);
     if (now.n != null && !now.arrived) live.push(["Neighbours perceived", String(now.n)]);
+    if (run.llm) {
+      const d = decisionAt(agent.id, state.t);
+      live.push(["LLM decision", d ? "#" + d.number + " (" + fmt(d.t, 1) + " s): " + (d.readable ? d.intent : "reply unreadable") : "none yet"]);
+      if (d) live.push(["Doing now", stepNow(d, state.t)]);
+      if (d && d.readable) live.push(["Why (private)", d.reason]);
+    }
     const liveDl = el("dl");
     fillDl(liveDl, live);
     const fixed = el("dl");
@@ -521,6 +754,7 @@
     $("scrub").value = String(Math.round((state.t / Math.max(run.end_time, 1e-9)) * 10000));
     markPastEvents();
     markConversation();
+    markDecisions();
     state.dirty = true;
   }
   function markConversation() {
@@ -610,6 +844,9 @@
       for (let gy = Math.ceil(wy0); gy <= wy1; gy++) { const [, sy] = toScreen(0, gy); ctx.moveTo(0, sy); ctx.lineTo(state.width, sy); }
       ctx.stroke();
     }
+
+    if (run.llm && opt.cones) drawCones(positions);
+    if (run.llm && opt.hearing) drawHearing(positions);
 
     run.segments.forEach((s) => {
       const [x0, y0] = toScreen(s[0], s[3]), [x1, y1] = toScreen(s[2], s[1]);
@@ -749,6 +986,7 @@
       });
       ctx.restore();
     }
+    if (run.llm && opt.decisions) drawCaptions(positions);
 
     // Scale bar, bottom left.
     const length = niceLength(90 / scale);

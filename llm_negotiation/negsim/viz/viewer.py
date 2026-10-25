@@ -14,6 +14,15 @@ issue #26. Nothing is simulated again; everything on screen is read from the log
 A run that follows rules (issue #28) shows which rule fired for each pair, when, with the
 role and directive each agent got, read from ``pair_interactions.jsonl`` (issue #30).
 
+A replay of a resolution session (``runs/<experiment>/replay/<session_id>/plan_only`` or
+``plan_orca``) is shown with its session record, ``sessions/<session_id>.json`` (issue #96):
+every decision point with what the LLM replied (intent, steps, signal, message, private
+reason), when each step ran in this replay (from its ``outcome.json``), each agent's factors
+and debrief, and its view cone and hearing range from the session's ``llm_view``. Give the
+session's replay folder to see both modes, with a picker:
+
+    python -m negsim.viz.viewer runs/rf10_round1_head_on/replay/<session_id>
+
 A row of ``trajectory.csv`` gives an agent's position at the start of a step and the
 velocity it moved with during that step, so between two consecutive steps an agent moves in
 a straight line and drawing it that way is exact. Where a run logged only every n-th step
@@ -31,7 +40,7 @@ import sys
 import webbrowser
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable, Optional
+from typing import Any, Iterable, Mapping, Optional, Sequence
 
 from .. import __version__
 from ..configutil import PACKAGE_ROOT
@@ -49,6 +58,7 @@ from ..runlog.schema import (
 TEMPLATE = Path(__file__).with_name("viewer.html")
 VIEWS_DIR = PACKAGE_ROOT / "views"
 DATA_PLACEHOLDER = "__NEGSIM_RUN_DATA__"
+SESSIONS_DIR = "sessions"
 TITLE_PLACEHOLDER = "__NEGSIM_TITLE__"
 
 # What an agent was doing on a step, one bit each. viewer.html reads the same values.
@@ -451,6 +461,7 @@ def _avoidance_run(run_dir: Path, config: dict, outcome: dict) -> dict[str, Any]
         summary.append(["Logged", f"every {run['stride']} steps; positions in between are interpolated"])
     run["summary"] = summary
     run["events"] = _avoidance_events(_read_jsonl(run_dir / EVENTS_FILE), goal_times, len(agents), pairs)
+    _add_resolution(run_dir, config, outcome, run)
     return run
 
 
@@ -465,6 +476,271 @@ def _provider_text(config: dict) -> str:
     if provider == "static":
         return "static: written in the experiment config"
     return "none: plain ORCA"
+
+
+# --- a replay of a resolution session (issue #96) ----------------------------------------------------
+
+
+def session_record(run_dir: Path, config: dict) -> Optional[dict[str, Any]]:
+    """The session record a replay was made from, or None.
+
+    A replay is ``<experiment>/replay/<session_id>/<mode>`` and names its session in
+    ``plans.session_id``; the record is ``<experiment>/sessions/<session_id>.json``."""
+    session_id = (config.get("plans") or {}).get("session_id")
+    if not session_id:
+        return None
+    path = run_dir.parent.parent.parent / SESSIONS_DIR / f"{session_id}.json"
+    if not path.is_file():
+        return None
+    record = _read_json(path)
+    return record if record.get("session_id") == session_id else None
+
+
+def _words(value: Any) -> str:
+    if value is None or value == "":
+        return "–"
+    return str(value).replace("_", " ")
+
+
+def _metres(value: float) -> str:
+    return f"{value:g} m"
+
+
+#: The events a step can start or end on, in words (``reply.py``; the scenario plug-ins add their own).
+_STEP_EVENTS = {
+    "other_passes": "the other has passed",
+    "other_stops": "the other stops",
+    "i_am_out_of_the_stretch": "out of the narrow stretch",
+}
+_SIGNALS = {
+    "eye_contact": "makes eye contact", "nod": "nods", "wave_on": "waves the other on",
+    "hold_up_hand": "holds up a hand", "point": "points", "other": "makes a gesture",
+}
+
+
+def step_text(step: Mapping[str, Any]) -> str:
+    """One step of a plan, in words: when it starts, what the agent does, and until when."""
+    parts = []
+    start = step.get("start")
+    if isinstance(start, Mapping) and "at_distance_m" in start:
+        parts.append(f"from {_metres(start['at_distance_m'])} away:")
+    elif isinstance(start, Mapping) and "after_seconds" in start:
+        parts.append(f"after {start['after_seconds']:g} s:")
+    elif isinstance(start, str) and start != "now":
+        parts.append(f"once {_STEP_EVENTS.get(start, _words(start))}:")
+    if step.get("back_up_m") is not None:
+        parts.append(f"walk backwards {_metres(step['back_up_m'])}")
+    speed = step.get("speed_mps")
+    if speed is not None:
+        parts.append("stand still" if speed == 0 else f"walk at {speed:g} m/s")
+    turn = step.get("turn")
+    if isinstance(turn, Mapping) and turn.get("degrees"):
+        parts.append(f"{turn['degrees']:g}° to the {turn.get('to', '?')}")
+    until = step.get("until")
+    if isinstance(until, Mapping) and "seconds" in until:
+        parts.append(f"for {until['seconds']:g} s")
+    elif isinstance(until, Mapping) and "at_distance_m" in until:
+        parts.append(f"until {_metres(until['at_distance_m'])} away")
+    elif isinstance(until, str):
+        parts.append(f"until {_STEP_EVENTS.get(until, _words(until))}")
+    return " ".join(parts) or "carry on"
+
+
+def _why(reasons: Iterable[Any]) -> str:
+    """Why a decision point fired (``protocol.py``, D5), in words."""
+    shown = []
+    for reason in reasons:
+        name, _, who = str(reason).partition(":")
+        if name == "trigger":
+            shown.append("the encounter begins")
+        elif name == "perceives":
+            continue
+        elif name == "plan_failing":
+            shown.append("its plan is failing")
+        elif name == "plan_ended":
+            shown.append("its plan has ended")
+        elif name == "came_into_view":
+            shown.append(f"agent {who} came into view")
+        elif name == "signalled":
+            shown.append(f"agent {who} signalled")
+        elif name == "heard":
+            shown.append(f"heard agent {who}")
+        elif name.startswith("other_"):
+            shown.append(f"agent {who} {_words(name[len('other_'):])}")
+        else:
+            shown.append(_words(reason))
+    return ", ".join(dict.fromkeys(shown)) or "–"
+
+
+def _distance_to_partner(point: Mapping[str, Any]) -> Optional[float]:
+    view = point.get("view") or {}
+    label = ((view.get("labels") or {}).get("label_of_agent") or {}).get(str(point.get("partner_id")))
+    for person in view.get("seen") or []:
+        if label is not None and person.get("label") == label:
+            return _r(person.get("distance_m"), 2)
+    return None
+
+
+def _decisions(record: Mapping[str, Any], driver: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """Every decision point, with what the replay made of its plan: when each step ran."""
+    played = {(entry["agent_id"], entry["decision_point"]): entry for entry in driver.get("decisions") or []}
+    cap = record.get("max_decision_points_per_agent")
+    shown = []
+    for point in record.get("decision_points") or []:
+        agent, number = point["agent_id"], point["number"]
+        parsed = point.get("parsed") or {}
+        steps = point.get("plan_given") or parsed.get("steps") or []
+        entry = played.get((agent, number)) or {}
+        times: list[Optional[list[Optional[float]]]] = [None] * len(steps)
+        for step in entry.get("step_records") or []:
+            if 0 <= step["index"] < len(times):
+                times[step["index"]] = [step.get("start_time_s"), step.get("end_time_s")]
+        shown.append(
+            {
+                "agent": agent,
+                "number": number,
+                "cap": cap,
+                "t": point["time_s"],
+                "t_end": entry.get("ended_time_s"),
+                "distance_m": _distance_to_partner(point),
+                "why": _why(point.get("trigger_reasons") or []),
+                "readable": point.get("parse_error") is None and bool(parsed),
+                "intent": parsed.get("intent") or "",
+                "steps": [step_text(step) for step in steps],
+                "step_times": times,
+                "signal": _SIGNALS.get(parsed.get("signal") or "none", ""),
+                "message": parsed.get("message") or "",
+                "reason": parsed.get("reason") or "",
+                "outcome": _words(entry.get("outcome") or entry.get("state")),
+            }
+        )
+    shown.sort(key=lambda item: (item["t"], item["agent"]))
+    return shown
+
+
+def _debriefs(record: Mapping[str, Any]) -> dict[str, dict[str, str]]:
+    shown = {}
+    for debrief in record.get("debriefs") or []:
+        parsed = debrief.get("parsed") or {}
+        if parsed:
+            shown[str(debrief["agent_id"])] = {
+                "basis": parsed.get("basis") or "", "kind": _words(parsed.get("kind")),
+                "source": parsed.get("source") or "none given", "applies_to": parsed.get("applies_to") or "",
+            }
+    return shown
+
+
+#: An agent's own factors, in the order the panel lists them (``session.personas``).
+_PERSON_ROWS = (
+    ("age", "Age"), ("gender", "Gender"), ("ethnicity", "Ethnicity"), ("task", "Errand"), ("urgency", "Urgency"),
+    ("mobility_aid", "Mobility aid"), ("load", "Load"), ("distraction", "Distraction"),
+    ("assertiveness", "Assertiveness"), ("residence", "Residence"), ("memory_note", "Memory note"),
+)
+#: Lines of a person that the other may be shown (``session.visibility``).
+_SHOWN = ("age", "gender", "ethnicity", "mobility_aid", "load", "distraction", "perceived_attractiveness", "familiarity")
+
+
+def _person_rows(record: Mapping[str, Any], agent_id: int, others: Sequence[int], radius_m: float) -> list[list[str]]:
+    session = record["session"]
+    person = (session.get("personas") or {}).get(str(agent_id)) or {}
+    rows = [[label, _words(person[key])] for key, label in _PERSON_ROWS if key in person]
+    pairwise = session.get("pairwise") or {}
+    order, matrix = pairwise.get("agents") or [], pairwise.get("perceived_attractiveness")
+    for other in others:
+        if matrix and agent_id in order and other in order:  # a row is who looks (pairwise.py)
+            rows.append([f"Finds agent {other}", _words(matrix[order.index(agent_id)][order.index(other)])])
+    if pairwise.get("familiarity"):
+        rows.append(["Familiarity", _words(pairwise["familiarity"])])
+    body = (record.get("bodies") or {}).get(str(agent_id))
+    width = _metres(round(2 * (body["radius_m"] if body else radius_m), 3))
+    rows.append(["Body width", width + (f" ({_words(body['because'])})" if body and body.get("because") else "")])
+    visibility = session.get("visibility") or {}
+    rows.append(["The other may be shown", ", ".join(_words(key) for key in _SHOWN if visibility.get(key)) or "none of these"])
+    return rows
+
+
+def _add_resolution(run_dir: Path, config: dict, outcome: dict, run: dict[str, Any]) -> None:
+    """Add what the LLM agents decided, who they were and what they could see (issue #96).
+
+    Nothing is added to a run that is not the replay of a session with its record beside it."""
+    record = session_record(run_dir, config)
+    if record is None:
+        return
+    plans = outcome.get("plans") or {}
+    driver = plans.get("driver") or {}
+    view = record.get("llm_view") or {}
+    llm = record.get("llm") or {}
+    decisions = _decisions(record, driver)
+    debriefs = _debriefs(record)
+    run["llm"] = {
+        "session_id": record["session_id"],
+        "condition": record.get("condition"),
+        "mode": plans.get("mode") or (config.get("plans") or {}).get("mode"),
+        "view": {key: view.get(key) for key in ("half_angle_deg", "range_m", "detail_range_m", "hearing_range_m", "walls_block_sight")},
+        "decisions": decisions,
+        "debriefs": debriefs,
+    }
+
+    ids = [agent["id"] for agent in run["agents"]]
+    members = set((record.get("encounter") or {}).get("agents") or [])
+    for agent in run["agents"]:
+        if agent["id"] in members or str(agent["id"]) in (record["session"].get("personas") or {}):
+            others = [other for other in ids if other != agent["id"]]
+            # The replay's population has no persona; the session's people are the agents.
+            agent["details"] = [row for row in agent["details"] if row[0] != "Persona"]
+            agent["details"] += _person_rows(record, agent["id"], others, agent["radius"])
+            debrief = debriefs.get(str(agent["id"]))
+            if debrief:
+                agent["details"].append(["Debrief", f"{debrief['basis']} ({debrief['kind']}; source: {debrief['source']})"])
+
+    session, encounter = record["session"], record.get("encounter") or {}
+    end = encounter.get("end") or {}
+    situation = (record.get("factors") or {}).get("situation") or {}
+    run["summary"] += [
+        ["LLM session", f"{record['session_id']}, {run['llm']['condition']} condition, replayed {_words(run['llm']['mode'])}"],
+        ["Model", f"{llm.get('model', '–')}, temperature {llm.get('temperature', '–')}, template {((record.get('templates') or {}).get('core') or {}).get('key', '–')}"],
+        ["Encounter", (
+            f"from {(encounter.get('trigger') or {}).get('time_s', '–')} s, ended at {end.get('time_s', '–')} s ({_words(end.get('reason'))})"
+            + ("; not resolved by the LLM" if end.get("not_resolved_by_llm") else "")
+        ) if encounter else "none"],
+        ["Decision points", f"{len(decisions)}, at most {record.get('max_decision_points_per_agent', '–')} per agent"],
+        ["Situation", ", ".join(_words(value) for value in situation.values()) or "–"],
+    ]
+
+    events = []
+    for item in decisions:
+        distance = f", {item['distance_m']:.1f} m away" if item["distance_m"] is not None else ""
+        said = item["intent"] if item["readable"] else "(its reply could not be read)"
+        events.append({  # a moment on the timeline; how long the plan ran is in run["llm"]
+            "type": "decision", "t": item["t"], "t_end": None, "agents": [item["agent"]],
+            "text": f"Agent {item['agent']} decides ({item['number']} of {item['cap']}{distance}; {item['why']}): {said}",
+        })
+    for made in record.get("signals") or []:
+        seen = ", ".join(str(who) for who in made.get("seen_by") or [])
+        events.append({
+            "type": "signal", "t": made["time_s"], "t_end": None, "agents": [made["signaller_id"], *(made.get("seen_by") or [])],
+            "text": f"Agent {made['signaller_id']} {_SIGNALS.get(made['signal'], _words(made['signal']))}" + (f" (seen by agent {seen})" if seen else " (nobody saw it)"),
+        })
+    for said in record.get("utterances") or []:
+        events.append({
+            "type": "message", "t": said["time_s"], "t_end": None, "agents": [said["speaker_id"]],
+            "text": f"Agent {said['speaker_id']} says: {said['message']}",
+        })
+        run["conversation"].append({"t": said["time_s"], "speaker": said["speaker_id"], "stance": "says", "message": said["message"]})
+    # A release asked for (protocol.py, point 6) hands the encounter to ORCA; one that follows
+    # from the run (passed, arrived, run ended) only ends the plans' control.
+    if record.get("release") and driver.get("released_time_s") is not None:
+        events.append({
+            "type": "release", "t": driver["released_time_s"], "t_end": None, "agents": sorted(members),
+            "text": f"Not resolved by the LLM: every plan is used up and ORCA takes over ({_words(record['release'].get('reason'))})",
+        })
+    elif driver.get("released_time_s") is not None and driver.get("release_reason") != "run_ended":
+        events.append({
+            "type": "release", "t": driver["released_time_s"], "t_end": None, "agents": sorted(members),
+            "text": f"The plans stop steering ({_words(driver.get('release_reason'))})",
+        })
+    run["events"] = sorted(run["events"] + events, key=lambda item: item["t"])
+    run["conversation"].sort(key=lambda turn: turn["t"])
 
 
 # --- a negotiation run (issue #24) -----------------------------------------------------------------

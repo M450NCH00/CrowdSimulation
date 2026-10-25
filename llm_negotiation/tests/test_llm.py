@@ -242,7 +242,7 @@ def test_missing_key_is_a_clear_fatal_error(tmp_path):
 def test_price_table_records_its_source_and_date():
     prices = PriceTable.from_yaml()
     assert prices.source_url == "https://api-docs.deepseek.com/quick_start/pricing"
-    assert prices.date_checked == "2026-10-24"  # the pricing check of issue #64 (docs/pricing-check.md)
+    assert prices.date_checked == "2026-10-25"  # the pricing check of issue #98 (docs/pricing-check.md)
     assert sorted(prices.models) == ["deepseek-flash", "deepseek-v4-pro"]
 
 

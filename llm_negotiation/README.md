@@ -216,6 +216,7 @@ then it can be watched or drawn from there, as often as you like and at no cost.
 python -m negsim.viz.viewer runs\si1_head_on_side_preference                         # every run of an experiment
 python -m negsim.viz.viewer runs\si1_bottleneck_handoff\001_opposing_no_directive     # one run
 python -m negsim.viz.viewer runs_mock\c1_smoke                                        # your own mock runs
+python -m negsim.viz.viewer runs\rf10_round1_head_on\replay\T_head_on_02dfbadb_02604456_r1   # one resolution session, both replays
 ```
 
 It writes one HTML file to `views\` (git ignores the folder; `--out FILE` puts it somewhere
@@ -229,11 +230,21 @@ and the avoidance runs of issue #26.
 | ▶ Play, ◀ ▶, the slider | play, step one time step, jump to any moment. Keys: space, ← →, Shift+← → for a second, Home, End |
 | Speed | 0.1× to 16× real time |
 | Run | choose a run, when the file holds an experiment |
-| Click an agent | its details: persona, directive, speed, what ORCA or the arbiter is doing to it |
+| Click an agent | its details: persona, directive, speed, what ORCA or the arbiter is doing to it; in a resolution replay also its factors (age, gender, ethnicity, errand, urgency, mobility aid, load, distraction, assertiveness, residence, memory note, how it sees the other, familiarity, body width), the LLM decision in force, the step it is on, its private reason and its debrief |
 | Drag, wheel, double-click | pan, zoom, fit the scene |
-| Events | collisions, near misses, yields, handoffs, violations, arrivals; click one to jump to it |
-| Conversation | for a negotiation run, what each agent said and the stance it took |
-| Check boxes | trails, intended paths, labels, velocity arrows, the velocity an agent *wanted* (dashed), its sensing radius |
+| Events | collisions, near misses, yields, handoffs, violations, arrivals; in a resolution replay also each LLM decision, signal and message; click one to jump to it |
+| LLM decisions | in a resolution replay, every decision point: when, how far from the other, why it fired, the intent, the steps (the one running in bold), signal, message, private reason and what came of the plan; then the debriefs |
+| Conversation | for a negotiation run, what each agent said and the stance it took; in a resolution replay, the messages of the talk condition |
+| Check boxes | trails, intended paths, labels, velocity arrows, the velocity an agent *wanted* (dashed), its sensing radius; in a resolution replay, the decision captions, the view cones and the hearing range |
+
+**A resolution replay** (issue #96) is shown with its session record (`sessions\<id>.json`),
+found from the replay's `config.json`. A caption by each agent gives the decision in force
+and the step it is on. Its view cone is shaded in a lighter tone of its colour: the session's
+`llm_view` (75° either side of where it faces, to 10 m, stronger within the 5 m in which it
+sees detail), cut off where walls block sight but not by other people. Where it faces follows
+`perceive.py`: its direction of travel, or its path's direction when it stands still or walks
+backwards. The page shows ethnicity and perceived attractiveness as the record holds them; a
+viewer file sent to someone carries them.
 
 A ring round an agent says what is happening to it: amber, ORCA is changing the velocity it
 wants; pink dashed, no velocity was allowed and ORCA's fallback chose; dark, the arbiter
