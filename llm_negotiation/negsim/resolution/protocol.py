@@ -31,8 +31,9 @@ condition, and records everything they were told and replied:
    message takes time to say (``speech_words_per_second``) and is heard, when it has been said,
    by everyone within hearing range: an event for each listener.
 6. **The end.** The encounter ends when every conflict pair has passed (or one of the pair has
-   arrived), when no conflict between members has been predicted for ``no_conflict_end_s``,
-   on deadlock, when the run stops on a collision, or at the run's time limit. If every prompted agent has used its decision
+   arrived), when no conflict between members has been predicted for ``no_conflict_end_s``
+   (with ``no_conflict_waits_for_plans``, issue #65: and no member's plan is still waiting or
+   running), on deadlock, when the run stops on a collision, or at the run's time limit. If every prompted agent has used its decision
    points and has no plan left to carry out while the conflict is still predicted, the
    encounter is **not resolved by the LLM**: it is handed to ORCA (``PlanDriver.release``),
    and what ORCA does after that is in the ``plan_only`` replay, recorded separately.
@@ -129,8 +130,14 @@ class ProtocolSettings:
     max_prompted: Optional[int] = None  # the cap on prompted people per encounter (D11, D12); None: no cap
     speech_words_per_second: float = 2.5  # [placeholder]
     execution: str = EXECUTION_RF4  # issue #64: how a plan is carried out (execute.EXECUTIONS)
+    #: Issue #65: the encounter does not end on ``no_conflict`` while a member's plan is still
+    #: waiting or running (RF-9: 3 of 16 such sessions collided afterwards, nobody asked again).
+    no_conflict_waits_for_plans: bool = False
 
-    KEYS = ("max_decision_points", "min_gap_s", "no_conflict_end_s", "max_prompted", "speech_words_per_second", "execution")
+    KEYS = (
+        "max_decision_points", "min_gap_s", "no_conflict_end_s", "max_prompted", "speech_words_per_second", "execution",
+        "no_conflict_waits_for_plans",
+    )
 
     def __post_init__(self) -> None:
         if self.max_decision_points < 1:
@@ -141,6 +148,8 @@ class ProtocolSettings:
             raise ConfigError("protocol.speech_words_per_second: more than 0")
         if self.execution not in EXECUTIONS:
             raise ConfigError(f"protocol.execution: one of {EXECUTIONS}, got {self.execution!r}")
+        if not isinstance(self.no_conflict_waits_for_plans, bool):
+            raise ConfigError(f"protocol.no_conflict_waits_for_plans: true or false, got {self.no_conflict_waits_for_plans!r}")
 
     @classmethod
     def from_mapping(cls, raw: Any, where: str = "protocol") -> "ProtocolSettings":
@@ -153,6 +162,7 @@ class ProtocolSettings:
             max_prompted=block.get("max_prompted", default.max_prompted),
             speech_words_per_second=as_number(block.get("speech_words_per_second", default.speech_words_per_second), f"{where}.speech_words_per_second", minimum=0.0, strict_minimum=True),
             execution=as_choice(block.get("execution", default.execution), f"{where}.execution", EXECUTIONS),
+            no_conflict_waits_for_plans=block.get("no_conflict_waits_for_plans", default.no_conflict_waits_for_plans),
         )
 
     def decision_points_for(self, condition: str) -> int:
@@ -163,6 +173,8 @@ class ProtocolSettings:
         described = asdict(self)
         if self.execution == EXECUTION_RF4:  # issue #64: named only when not the default, so older records read as before
             del described["execution"]
+        if not self.no_conflict_waits_for_plans:  # issue #65: likewise
+            del described["no_conflict_waits_for_plans"]
         return described
 
 
@@ -497,7 +509,10 @@ class EncounterSession:
             outcomes = self.run.driver.outcomes(agent)
             view = view_in(sim, member.perceiver, self.exchange, outcomes=[outcomes[k] for k in member.driver_decisions], **self._factor_lines(agent))
             prompt = render(view, self.condition, self.scenario, self.core)
-            context = ReplyContext.of(view, self.condition, self.scenario.events, self.core.later_step_start)
+            context = ReplyContext.of(
+                view, self.condition, self.scenario.events, self.core.later_step_start,
+                self.core.until_at_distance, self.core.until_event_as_object,
+            )
             metadata = {
                 **self.labels, "kind": "decision", "agent_id": agent, "agent_slot": member.slot,
                 "decision_point": member.prompts + 1, "step": step,
@@ -668,8 +683,14 @@ class EncounterSession:
         ):
             return END_PASSED
         if self.sim.world.time - self._last_conflict_s >= self.settings.no_conflict_end_s - _EPS:
+            if self.settings.no_conflict_waits_for_plans and self._plans_running():
+                return None
             return END_NO_CONFLICT
         return None
+
+    def _plans_running(self) -> bool:
+        """A member's plan is still waiting for a start or running a step (issue #65)."""
+        return any(plan.state in (WAITING, RUNNING) for plan in self.run.driver.plans.values())
 
     def _end_record(self, reason: str) -> dict[str, Any]:
         sim = self.sim

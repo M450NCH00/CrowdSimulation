@@ -23,7 +23,9 @@ after another, in a running :class:`~negsim.avoidance.simulation.AvoidanceSimula
   it ends, the plan waits for it (``after_seconds`` still counted from the decision), the agent
   walking its path meanwhile, as between steps;
 - ``until`` ends a step after its ``seconds``, or when its event has happened. **The executor
-  knows no event**: it asks the scenario plug-in (:meth:`Scenario.happened`, D16).
+  knows no event**: it asks the scenario plug-in (:meth:`Scenario.happened`, D16). Under
+  ``resolve_v6`` (issue #65) it may also end the step at ``at_distance_m``, read as a start at a
+  distance is.
 
 After the last step the agent steers back towards its goal as usual. An empty plan (``[]``)
 changes nothing. Bodies never change size. A later decision of the same agent replaces what is
@@ -98,6 +100,7 @@ REPLACED = "replaced"
 
 # Why a step ended (besides the name of its event).
 ENDED_SECONDS = "seconds"
+ENDED_AT_DISTANCE = "at_distance"  # resolve_v6 (issue #65): an until at a distance
 ENDED_BACKED_UP = "backed_up"
 ENDED_REPLACED = "replaced"
 ENDED_ARRIVED = "arrived"
@@ -119,11 +122,12 @@ Vec = tuple[float, float]
 def steps_from_dicts(steps: Sequence[Mapping[str, Any]], max_speed_mps: float, events: Sequence[str]) -> tuple[Step, ...]:
     """Steps in the reply format (``Step.as_dict``), read back with the reply parser's own checks.
 
-    A recorded ``start.at_distance_m`` was checked against the distance when it was given; it is
-    not checked again here. Nor is whether a later step may have a ``start``: the parser decided
-    that from the session's core template when the reply came.
+    A recorded ``start.at_distance_m`` (or ``until.at_distance_m``) was checked against the
+    distance when it was given; it is not checked again here. Nor is whether a later step may have
+    a ``start``, or an ``until`` be a distance: the parser decided that from the session's core
+    template when the reply came. An event written as an object was recorded as its name.
     """
-    context = ReplyContext(CONDITION_TALK, max_speed_mps, tuple(events), math.inf, later_step_start=True)
+    context = ReplyContext(CONDITION_TALK, max_speed_mps, tuple(events), math.inf, later_step_start=True, until_at_distance=True)
     flags: list[str] = []
     parsed = tuple(_step(index, dict(data), context, flags) for index, data in enumerate(steps))
     if flags:
@@ -474,9 +478,15 @@ class PlanDriver:
         if start.kind == START_AFTER_SECONDS:
             return world.time - plan.given_time_s >= start.value - _EPS
         if start.kind == START_AT_DISTANCE:
-            me, other = world.agents[plan.agent_id], world.agents[plan.partner_id]
-            return other.goal_time is not None or math.dist(me.pose.xy, other.pose.xy) <= start.value + _EPS
+            return self._within(simulation, plan, start.value)
         raise ValueError(f"unknown start {start.kind!r}")
+
+    @staticmethod
+    def _within(simulation: Any, plan: Plan, metres: float) -> bool:
+        """The partner is no further than ``metres`` (centre to centre), or has arrived."""
+        agents = simulation.world.agents
+        me, other = agents[plan.agent_id], agents[plan.partner_id]
+        return other.goal_time is not None or math.dist(me.pose.xy, other.pose.xy) <= metres + _EPS
 
     def _begin(self, simulation: Any, plan: Plan, index: int) -> None:
         world = simulation.world
@@ -507,6 +517,8 @@ class PlanDriver:
         if until.seconds is not None:
             started = plan.records[-1].start_time_s
             return ENDED_SECONDS if simulation.world.time - started >= until.seconds - _EPS else None
+        if until.at_distance_m is not None:  # resolve_v6 (issue #65): as a start at a distance is read
+            return ENDED_AT_DISTANCE if self._within(simulation, plan, until.at_distance_m) else None
         context = EventContext(simulation, plan.agent_id, plan.partner_id, plan.records[-1].start_time_s, plan._memory)
         return until.event if self.scenario.happened(until.event, context) else None
 
