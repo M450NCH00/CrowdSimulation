@@ -111,7 +111,8 @@ USD 0.08; recorded in `CLAUDE.md`, pending item 1.
 ## Open questions / risks
 - The 30° default and the 3 m limit are placeholders (the issue says so).
 - `keep_line` is one reading of the prompt, decided by the user; not a sourced fact about walking.
-- **For the user:** whether later rounds use `keep_line` (recommended); redoing head-on's three
+- **Decided by the user, 2026-10-25: later rounds use `keep_line`** (recorded in #55's decisions).
+- **For the user:** redoing head-on's three
   conditions under it (paid, a lean round), since RF-10's "signalling and talk do not help" was
   measured under the rule that undid sidesteps; keeping `resolve_v6`.
 - **For the supervisor:** the gate is not re-decided here; independent under `keep_line` is 0.55
