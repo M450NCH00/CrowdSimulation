@@ -140,6 +140,14 @@ pooled their **design** sessions (192: first run of each cell, no counterfactual
   "always right" on the first plan's side; 62% of resolved pairs passed on their right. 66 of 384
   debriefs say "keep left"; those agents passed left 33 and right 33.
 
+### 2026-10-26 — The reply cap raised (the user's decision)
+- The user agreed to raise the 4,000-token reply cap. DeepSeek's page gives a maximum output of
+  384K, so the cap is ours alone. **8,000 is now the extractor's default** (`DEFAULT_MAX_TOKENS`;
+  twice the reply that was cut off). Round 1's config keeps 4,000, as run: its records are that
+  config's, and a resume refuses a changed `max_tokens`. RF-3's mock rehearsal config uses 8,000.
+  Guard bound for round 1's prompts: largest call USD 0.025 (was 0.019), whole worst case USD 0.140
+  (was 0.107). Test added. No rerun of round 1 (it would be a new paid run, needing approval).
+
 ## Open questions / risks
 - The 95% matching threshold is a `[placeholder]` (the issue says so). It split three keep-right
   rules worded alike.

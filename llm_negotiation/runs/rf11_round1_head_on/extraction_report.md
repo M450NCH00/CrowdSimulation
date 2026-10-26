@@ -117,9 +117,10 @@ on a side) shows in the data as a majority, not as a rule the agents follow from
 ## 7. For the user to decide
 
 1. **`extract_v2` for later rounds** (a template change, so a new version): ask for every text
-   value in quotes, since two first replies failed on an unquoted colon; ask for fewer, shorter
-   rules or raise the reply cap (4,000 tokens cut run 3's first reply off; a config change, no new
-   template); and say plainly that `predict` may not read the agent's own plan (4 rules did).
+   value in quotes, since two first replies failed on an unquoted colon; and say plainly that
+   `predict` may not read the agent's own plan (4 rules did). *The reply cap is decided (the user,
+   2026-10-26): 8,000 tokens for later rounds, the extractor's default now; this run stays at
+   4,000, as run.*
 2. **Whether to add a pair-level target** (the pair's passing side, or "settled on one side"), so
    that a convention like keep right can be scored as what it is: a property of the pair.
 3. **Whether 95% stays the matching threshold** (`[placeholder]`), or rules are also matched on

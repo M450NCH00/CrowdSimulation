@@ -510,3 +510,8 @@ def test_once_a_run_has_a_record_another_config_is_refused_but_a_new_cap_is_not(
         X.run_extraction(config_for([source], held_out={"share": 0.5, "seed": 66}), out_root=tmp_path / "out", report=lambda _: None, git=GIT)
     again = X.run_extraction(config_for([source], budget={"cap_usd": 0.5}), out_root=tmp_path / "out", report=lambda _: None, git=GIT)
     assert again.executed == [] and len(again.skipped) == 3
+
+
+def test_the_reply_cap_defaults_to_8000_and_round_1_keeps_the_4000_it_ran_at():
+    assert config_for(["x"]).llm["max_tokens"] == X.DEFAULT_MAX_TOKENS == 8000
+    assert X.ExtractionConfig.load("configs/extraction/round1_head_on.yaml").llm["max_tokens"] == 4000

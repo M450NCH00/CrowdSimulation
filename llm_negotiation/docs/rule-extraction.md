@@ -106,6 +106,13 @@ number column.
 An unreadable reply is asked again once (`retry` of the template); a second unreadable reply makes
 the run `unreadable`.
 
+**The reply cap** (`llm.max_tokens`) is 8,000 tokens unless a config says otherwise (the user's
+decision, 2026-10-26). Round 1 ran at 4,000, and run 3's first reply was cut off there (the
+others used 3,300 to 3,993 tokens); the model allows far more (384K). A larger cap costs only
+what the model writes, but raises the budget guard's bound per call: for round 1's prompts, its largest call (a retry) is
+bounded at USD 0.025 at 8,000 against 0.019 at 4,000, and the whole worst case at USD 0.140
+against 0.107.
+
 ## 5. The checks
 
 In this order (`negsim/extraction/rules.py`; the categories are `negsim.rulegen.validate`'s):

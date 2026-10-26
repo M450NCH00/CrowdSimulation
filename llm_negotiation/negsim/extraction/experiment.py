@@ -57,6 +57,9 @@ RUNS_DIR, MOCK_RUNS_DIR = PACKAGE_ROOT / "runs", PACKAGE_ROOT / "runs_mock"
 #: Most attempts at one extraction: a first reply, and one retry if it cannot be read.
 MAX_ATTEMPTS = 2
 SAMPLE_MIN, SAMPLE_MAX = 10, 20  # the issue's 10 to 20 sessions shown in full
+#: The reply cap when a config gives none. RF-11's round 1 ran at 4,000 and one reply was cut off
+#: there (the others used 3,300 to 3,993); twice that, by the user's decision of 2026-10-26.
+DEFAULT_MAX_TOKENS = 8000
 
 RUN_COMPLETED, RUN_UNREADABLE, RUN_ABORTED = "completed", "unreadable", "aborted"
 STATUS_COMPLETED, STATUS_PARTIAL, STATUS_AWAITING = "completed", "partial", "awaiting_confirmation"
@@ -172,7 +175,7 @@ class ExtractionConfig:
                 "mock_policy": policy,
                 "model": str(llm.get("model", "deepseek-flash")),
                 "temperature": as_number(llm.get("temperature", 1.0), f"{where}.llm.temperature", minimum=0.0),
-                "max_tokens": int(as_number(llm.get("max_tokens", 4000), f"{where}.llm.max_tokens", minimum=1)),
+                "max_tokens": int(as_number(llm.get("max_tokens", DEFAULT_MAX_TOKENS), f"{where}.llm.max_tokens", minimum=1)),
                 "thinking": as_choice(llm.get("thinking", "disabled"), f"{where}.llm.thinking", ("disabled", "enabled")),
                 "transport_retries": int(as_number(llm.get("transport_retries", 1), f"{where}.llm.transport_retries", minimum=0)),
             },
