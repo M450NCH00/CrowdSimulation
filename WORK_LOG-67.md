@@ -84,6 +84,35 @@ lost" will be the main findings, as the issue expects.
 - Next step: read `resolution.md` D1/D9, `rule-format.md`, `rulegen_common_v2`, `validate.py`,
   `writer.py`, `replay.py`, and RF-11's stored rules; then write the plan.
 
+### 2026-10-26 — Built on the mock (commit b64871d)
+- What I did: template `translate_v1` (new kind `rule_translation`; `uses: rulegen_common_v2`, so
+  the format text is #32's word for word and its glossary hash is checked on load). I read one
+  rendered prompt before freezing it and made two changes: renamed the `yes`/`no` keys (YAML 1.1
+  reads them as booleans) and added the meaning of the predicted column, which was missing.
+  Frozen before any use. Package `negsim/translation/` (`prompt`, `reply`, `losses`, `identity`,
+  `experiment`, `mock`), layer `rule_translation` in `run_experiment.py`, configs
+  `configs/translation/round1_head_on.yaml` (cap 0) and `rf12_mock_rehearsal.yaml`.
+- Found while building:
+  - Plain ORCA in my replay reproduces the source's recorded `*_plain_orca` columns (checked on
+    the first session, then on all 76 in the rehearsal: 0 mismatches).
+  - **Plain ORCA never "resolves" round 1's head-on**: in all 288 source sessions
+    `resolved_plain_orca` is False, with no collision but always a near miss. So the identity
+    check is about who went first and on which side, not about resolving.
+  - A bug the rehearsal showed: the `validation_evidence` entry's own `kind` was overwritten by
+    the reference's `kind`. Renamed to `from: extraction` and `source_kind`.
+  - Building a case's run plan takes about 2 s (it scans every config); a replay 0.05 s. The
+    plan is cached per case.
+- Mock rehearsal on all 16 RF-11 rules (candidate and unstable): 30 s, every category reached;
+  the identity check of the mock's rules equals plain ORCA's share (0.36), as expected of a
+  symmetric slow-down. Nothing in it is a finding.
+- Tests: `tests/test_translation.py`, 36 passed (14.8 s), including the identity check on two
+  real RF-30 sessions (one with a suitcase-widened body): a rule that never matches changes
+  nothing; a symmetric keep-right rule matches and both pass on their right.
+- Worst case for round 1's 4 candidates: **USD 0.028** (`--plan`). DeepSeek balance
+  **USD 0.63** at 09:43 UTC (CLAUDE.md recorded 0.64 after #66; 0.01 unexplained, possibly
+  rounding). Peak hours until 10:00 UTC.
+- Next: the full test suite, docs, then ask the user for the paid run's approval and cap.
+
 ## Open questions / risks
 
 ## Summary (fill in at the end)
