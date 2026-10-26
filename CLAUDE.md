@@ -180,7 +180,7 @@ The user's notes from the meeting, word for word:
   each simulator. Rules may be more specific, for example "keep left".
 
 ## Pending sign-offs
-Items 1, 5 and 6 are still pending (item 1 was approved for issues #64, #65, #98, #100, #101, #104 and #66 only).
+Items 1, 5 and 6 are still pending (item 1 was approved for issues #64, #65, #98, #100, #101, #104, #66 and #67 only).
 **Do not treat any of them as approved** until the user records the
 supervisor's answer in this file, with a date. Items 2 and 3, the ethics
 sign-offs for perceived attractiveness and real ethnicity, were recorded by the
@@ -238,6 +238,11 @@ used in this track). Numbers in brackets are the decisions of track issue #55.
      (`experiment_name: rf11_round1_head_on`; three extraction calls, about
      USD 0.006 each off-peak, `WORK_LOG-66.md`). The user also decided the same
      day that head-on goes on to extraction although its gate passed narrowly.
+   - **Approved for issue #67 only, 2026-10-26:** the user approved paid runs for
+     RF-12's translation of RF-11's four candidate rules into rule format 3 (#67), and
+     only for it, with a cap of **USD 0.03** on that experiment's own calls
+     (`experiment_name: rf12_round1_head_on`; four calls, worst case USD 0.028,
+     `WORK_LOG-67.md`).
 2. **Approved by the supervisor, 2026-10-24** — Ethics sign-off for perceived
    attractiveness as a factor (#55, 3). *The user decided on 2026-10-24* that
    attractiveness (both directions) is **in** RF-10's design, because bias can

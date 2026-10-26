@@ -419,10 +419,10 @@ def test_the_config_refuses_unknown_statuses_and_bad_crowd_people():
             config_for("x", **bad)
 
 
-def test_round_1s_config_translates_rf11s_candidates_with_no_paid_call_approved_yet():
+def test_round_1s_config_translates_rf11s_candidates_under_the_cap_claude_md_records():
     config = T.TranslationConfig.load(PACKAGE_ROOT / "configs/translation/round1_head_on.yaml")
     assert config.extraction == "runs/rf11_round1_head_on" and config.statuses == ("candidate",)
-    assert config.budget["cap_usd"] == 0.0 and config.llm["client"] == "mock" and config.template == "translate_v1"
+    assert config.budget["cap_usd"] == 0.03 and config.llm["client"] == "mock" and config.template == "translate_v1"
     assert config.screening is not None and config.screening.repeats == 2 and config.crowd_ages == (25, 70)
 
 
