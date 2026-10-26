@@ -68,7 +68,8 @@ def test_a_staging_database_is_laid_out_as_the_rule_database_and_only_grows(tmp_
     name, written = staging.write(rule, "a note")
     assert written and (staging.root / name).is_file() and name == f"rules/{rule['rule_id']}.v1.yaml"
     manifest = json.loads(staging.manifest_path.read_text(encoding="utf-8"))
-    assert set(manifest["files"]) == {"schema/rule.v1.schema.json", "schema/rule.v2.schema.json", "schema/rule.v3.schema.json", name}
+    # every version's schema, version 4 since issue #108
+    assert set(manifest["files"]) == {"schema/rule.v1.schema.json", "schema/rule.v2.schema.json", "schema/rule.v3.schema.json", "schema/rule.v4.schema.json", name}
     loaded = staging.load().get(rule["rule_id"], 1)
     assert loaded.status == "candidate" and loaded.provenance["generation"]["case_id"] == "head_on_de176842"
     assert staging.write(rule, "again") == (name, False)
