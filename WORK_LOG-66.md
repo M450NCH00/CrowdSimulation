@@ -109,8 +109,69 @@ pooled their **design** sessions (192: first run of each cell, no counterfactual
   extractor's tables agree with RF-8's `agents_table` on every agent row of round 1, and its
   coin-flip cells with `analysis.noise.stability`).
 
-## Open questions / risks
-- The 95% matching threshold is a `[placeholder]` (the issue says so).
-- The narrow gate pass (lower bound 0.46) is a caveat on everything extracted from head-on.
+### 2026-10-26 — Full suite, pricing, approval recorded
+- Full suite: 1992 passed, 2 failed, 10 skipped (negsim); 84 passed (analysis). The failures:
+  - `test_price_table_records_its_source_and_date`: mine, the pricing check moved
+    `date_checked` to 2026-10-26; test and `docs/pricing-check.md` updated.
+  - `test_stop_at_cap_runs_until_the_guard_stops_it_...` (resolution layer, #64): **not caused by
+    this branch, and time-dependent.** It failed at 02:xx UTC (peak) and passes at 04:01 UTC
+    (off-peak). Cause: on the invocation where a session is aborted, `cost.json`'s
+    `actual_usd` leaves out that session's partial spend (its record is neither among the
+    completed ones nor yet set aside as `.aborted<n>.json`). Off-peak the abort comes before the
+    session's first call, so nothing is missed; at peak the mock's charges double and the abort
+    lands mid-session. The ledger, which the cap reads, is right. **Not fixed here** (another
+    issue's code); flagged for the user. The extractor had the same gap and is fixed: its actual
+    cost sums every run record, aborted and set aside included (test).
+- Pricing page re-read 02:15 UTC: unchanged. Balance USD 0.65 (free `GET /user/balance`, key not
+  printed). The user's approval recorded in `CLAUDE.md` (#66 only, cap USD 0.05).
 
-## Summary (fill in at the end)
+### 2026-10-26 — The paid run (off-peak, 04:01 to 04:04 UTC)
+- `--client deepseek` without `--confirm`: nothing sent. Then `--confirm --limit 1`: run 1, USD
+  0.0092 (two attempts: the first reply was YAML with an unquoted colon; the retry was read, and
+  its prompt came mostly from the cache). Read its rules before the rest. Then runs 2 and 3.
+- **Spent USD 0.022513** (6 calls, all off-peak, no transport error). Balance **USD 0.64**.
+- **Every first reply was unreadable** (runs 1 and 2: an unquoted colon; run 3: cut off at the
+  4,000-token reply cap). Every retry was read. A template v2 should ask for quoted text, and the
+  cap should be raised (recommendation, not done).
+- Results (`runs/rf11_round1_head_on/extraction_report.md`): 25 rules, 0 protected, 4 schema
+  errors, 6 needs communication. Kept (2/3 or 3/3): 4. **Only one is a non-trivial rule that beats
+  its baseline: holds-ground people do not slow at the first decision (held out 0.83 vs 0.75).**
+  Keep right is worded in every run but no predict list matches another at 95%, and none beats
+  "always right" on the first plan's side; 62% of resolved pairs passed on their right. 66 of 384
+  debriefs say "keep left"; those agents passed left 33 and right 33.
+
+## Open questions / risks
+- The 95% matching threshold is a `[placeholder]` (the issue says so). It split three keep-right
+  rules worded alike.
+- The narrow gate pass (lower bound 0.46) is a caveat on everything extracted from head-on.
+- The held-out set is small (26 sessions, 52 rows): the holds-ground rule's margin is 4 rows.
+- The resolution layer's `cost.json` misses an aborted session's partial spend on the invocation
+  that aborts it (above): for the user to decide whether to fix it in its own issue.
+- For the user: `extract_v2` (quoted text, a larger reply cap, `predict` never reads the agent's
+  own plan); a pair-level target for conventions such as keep right; the matching threshold.
+
+## Summary
+**What changed.** `negsim/extraction/`, Step 2's extractor: pooled design sessions with their gate
+recomputed; an agent table (the other's factors as told, checked against RF-8's analysis on every
+row of round 1); a seeded 25% held out by session; 10 to 20 sessions in full per run; template
+`extract_v1` (new kind `rule_extraction`, frozen); each rule checked (protected attribute first,
+counted and never stored; schema; needs communication), scored on the held-out rows against the
+majority class, matched across three runs at 95% agreement, kept if found in 2 of 3, stored
+write-once with provenance (`extracted_rules/`). Paid runs behind `--confirm`, the gate, the ethics
+sign-offs and the budget guard. Configs `configs/extraction/round1_head_on.yaml` and
+`rf3_mock_rehearsal.yaml`; `docs/rule-extraction.md`; `log-schema.md`, `resolution.md`, the
+READMEs, `pricing-check.md` and `CLAUDE.md` (approval and balance) updated.
+
+**Why.** Issue #66: the hidden rule behind how the LLM agents resolved head-on, with references,
+debrief support and a held-out fidelity check.
+
+**How it was verified.**
+- `tests/test_extraction.py` (41 tests): the scorer exact on hand-made tables, every field parsed,
+  the split reproducible and by session, failed sessions never in the main or held-out tables,
+  matching exact on hand-made rules, protected rules never stored, the gate skip, retry and
+  unreadable runs, resume and set-aside, no paid call without `--confirm`, the gate and sign-off
+  refusals, the budget guard stopping a run at the cap.
+- `analysis/tests/test_extraction_tables.py` (3): the tables and coin-flip cells agree with RF-8's.
+- Acceptance criterion: three runs on RF-3's mock rehearsal, rules with fidelity and stability.
+- Full suites as above (the one remaining failure is time-dependent and not this branch's).
+- The paid run: every number in `extraction_report.md` re-read from the run records and tables.

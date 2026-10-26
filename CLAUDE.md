@@ -107,6 +107,8 @@ Budget:
   checked 2026-10-25.
   After issue #104's run (USD 0.221 in the ledger, cap 0.30): **USD 0.65**,
   checked 2026-10-25.
+  After issue #66's extraction (USD 0.023 in the ledger, cap 0.05): **USD 0.64**,
+  checked 2026-10-26.
 
 ### Phase 1 (on hold): the behaviour dataset
 The task from the first supervisor meeting, on hold since the second meeting.
