@@ -193,9 +193,22 @@ outcome rows (section 5), in RF-8's factor analysis, and in the factor-to-decisi
 mapping is what the supervisor asked for: which factors drive the decision. Whether an extracted
 rule may later read it is the supervisor's decision.
 
+**Decided on 2026-10-26: readable from rule format 4, own view only** (issue #108, RF-31). The
+user reported that the supervisor agreed that rules may read perceived attractiveness, "since we
+want to research on whether it affects decision in real time"; `CLAUDE.md` records it under the
+supervisor's decisions. From rule format 4 a rule may read it as **one person's own view of the
+other**, `self.finds_other_attractive` (true for `attractive`, false for `unremarkable`, missing
+when the design did not set it), and only in an own-only condition (`own_when`), which may switch
+on nothing but that person's own movement (`rule-format.md`, section 15). Everything above still
+holds for rule formats 1 to 3, and for format 4 anywhere else: a condition, a role assignment, or
+`either.`/`both.`/`agent.` naming it is refused as `protected_attribute`. Real ethnicity stays
+unreadable in every version (`ethnicity.md`, section 7). The ethics gate of section 6 is unchanged.
+
 **Familiarity is not protected.** A rule naming it is `unknown_field` (`schema_error`) because no
 perception record holds it, like RF-5's observable factors (`WORK_LOG-60.md`, open question 5).
-Whether it becomes a rule field is for RF-11 and RF-12.
+Whether it becomes a rule field is for RF-11 and RF-12. *From rule format 4 (issue #108):* a
+person's own knowledge of whether they know the other is `self.knows_other`, readable in an
+own-only condition only.
 
 ## 8. A crowd of 10,000 (documented, not built)
 

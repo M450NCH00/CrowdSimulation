@@ -78,7 +78,11 @@ Constraints for every RF issue (from #55):
   either switched on until this file records that factor's own ethics sign-off.
   (Since 2026-10-24 real ethnicity replaces the fictional group in this track;
   see "Pending sign-offs", item 3.)
-- No rule may read a person's ethnicity (or group) or perceived attractiveness.
+- No rule may read a person's ethnicity (or group), in any version of the rule format.
+  *Amended 2026-10-26 (issue #108, RF-31), agreed by the supervisor (see "Supervisor
+  decisions"):* perceived attractiveness is readable from rule format 4 only, as a person's
+  own view of the other (`self.finds_other_attractive`, inside `own_when`). Rule formats 1 to 3
+  still refuse it, and so does format 4 anywhere else.
 - Prompt templates are frozen: a wording change means a new template version,
   never an edit.
 - Every feature is built and tested on the mock client first.
@@ -142,6 +146,13 @@ in `README.md`, "Order of work (from the plan) and current status".
 Ethics sign-off for the perceived-attractiveness factor (issue #61): approved by the supervisor on 2026-10-24
 
 Ethics sign-off for the real-ethnicity factor (issue #92): approved by the supervisor on 2026-10-24
+
+Rules may read perceived attractiveness (issue #108, RF-31): agreed by the supervisor, reported by
+the user on 2026-10-26, "since we want to research on whether it affects decision in real time".
+As `docs/pairwise-factors.md` section 7 required, this was the supervisor's decision. It applies
+from rule format 4, and only as a person's own view of the other (`self.finds_other_attractive`,
+in an own-only condition). Real ethnicity stays unreadable by every rule, in every version. The
+ethics-gate sentences for paid runs above are unchanged.
 
 ### Meeting of Tuesday 2026-10-20
 The user's notes from the meeting, word for word:
