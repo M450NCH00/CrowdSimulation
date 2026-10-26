@@ -74,6 +74,35 @@ The left turn neither gridlocks nor adds collisions on the whole; throughput fel
 on the other. RF-12's slow-down rule, which gridlocked the crowd, did not come back in format 4 (its
 translation is the unreadable one).
 
+## After the run: the user's three answers (2026-10-26)
+
+The user answered "Yes" to the three questions this run left open.
+
+1. **Retry the unreadable translation** (paid, inside #108's cap). A reader tolerance was built
+   first (`reader.repair_one_brace`, `docs/rule-translation.md`, section 13): a reply one closing brace
+   short is repaired only if exactly one placement of the brace gives a rule the loader reads whole.
+   On this run's two stored replies it finds exactly that one placement (the brace closing the giver's
+   own-only condition, 1 of 81 to 83 tried). The rule was then translated again as
+   `runs/rf31_round1_head_on_retry/` (USD 0.0004, the first run's prompts word for word). **That reply
+   was valid JSON** (a different reply from either of the first run's, at temperature 0), so the repair
+   was not used. The rule: the person facing someone with a cane slows to 0.75 of their speed, and if
+   they tend to give way also follows a plan (0.95 m/s from 9.8 m until the other passes). It matched
+   32 of the 76 sessions; reproduced 0.34 (plain ORCA 0.36; among the 32 matched, 0.22 against 0.25);
+   resolved none. **In the crowd it fails**: on one seed the flow gridlocks (93 of 100 arrived by the
+   time limit), and it has 396 and 1,231 collision episodes against the baseline's 86 and 68 (half the
+   crowd carries a cane, so the slowing applies widely). The same failure as RF-12's slow-down rule.
+2. **A role condition that can never give two different roles is refused** (`constant_roles`,
+   `rule-format.md`, section 15.2). `ext_head_on_aacce0961b` (roles by `agent.speed_mps >= 0`) is now
+   refused by the loader. Its staged files stay, as the record of this run (a rule version is never
+   edited), so this run's staging database no longer loads strictly, and `summary.json` keeps the
+   category it had when written (`valid`).
+3. **A translator may pick a side** when the extracted rule says each keeps their own. The left-turn
+   translation stands; the identity check reports what the choice costs (0.20 against 0.36).
+
+With these, round 1 in format 4 has one runnable rule that changes the outcome and passes the crowd
+(`ext_head_on_0ecc2d1a6e`), one that gridlocks the crowd (`ext_head_on_6455ca5589`, the retry), one now
+refused, and one not expressible.
+
 ## What this means for the track
 
 - Format 4 can say what format 3 could not (a plan in time, who gives way by what one sees, what only

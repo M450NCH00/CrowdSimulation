@@ -175,6 +175,25 @@ until the user gives one.
   record; then translate the one rule again as a new experiment (`rf31_round1_head_on_retry`,
   `translate_v2` unchanged, so the prompts are the first run's word for word); (3) recorded in the docs.
 
+### 2026-10-26 13:40 to 14:20 UTC — The three answers carried out
+- **Constant role conditions** refused (`constant_roles`, rule generation `inconsistent`): the loader
+  tries the condition on every value a person can have (names, each constant and either side of it,
+  0; numbers at 0 or above; no missing value). RF-31's `agent.speed_mps >= 0` is refused; the
+  left-turn rule still loads. Its staged files stay as the run's record, so that staging database no
+  longer loads strictly (noted in the report). Tests: 10 more in `test_rules_schema_v4.py`.
+- **The one-brace repair**: my first accept test (anything but `schema_error`) also took placements
+  that pushed `priority` and `intent` among the roles (`format_limit`); tightened to `valid`,
+  `needs_communication` or `inconsistent`. Then exactly one placement of 81 to 83 is accepted on each
+  stored reply, the brace closing the own-only condition. Config keys `reader.repair_one_brace` and
+  `rules`, written to `config.json` only when set.
+- **The retry** (`rf31_round1_head_on_retry`, cap 0.0475, the rest of #108's 0.05): pricing check
+  again (no change), 14:10 UTC Monday, off-peak. One call, **USD 0.0004** (prompt cache hit). The reply
+  was valid JSON, unlike the first run's two (a different reply at temperature 0), so the repair was not
+  used. The rule matched 32 of 76 sessions, reproduced 0.34 (plain 0.36), resolved none, and **failed
+  crowd screening**: gridlock on seed 30902 (93 of 100 arrived), 396 and 1,231 collision episodes
+  against 86 and 68. Balance afterwards: USD 0.62 (two decimals).
+- **Picking a side**: recorded in `rule-translation.md`, section 13; no code change.
+
 ## Design decisions in this issue (mine, for the user to check)
 
 Marked as decisions, not instructions: each is an assumption where the issue leaves room.
@@ -218,12 +237,14 @@ Marked as decisions, not instructions: each is an assumption where the issue lea
   for RF-31, a cane, a suitcase, a phone and assertiveness each on half the people [design]. Nobody
   in the crowd has a view of another, so an own-only condition on `knows_other` or
   `finds_other_attractive` never holds there; and a suitcase does not widen anyone in a crowd.
+- **D-L, rule generation's category for `constant_roles`**: `inconsistent` (the rule names two roles
+  it can never give). A missing value is not tried, and agent numbers only at 0 or above [design].
 - **D-K, the reply cap for `translate_v2`**: 2,500 tokens [placeholder] (RF-12: 1,500), since a
   rule with steps is longer.
 
 ## Open questions / risks
 
-For the user:
+*Answered by the user on 2026-10-26 ("Yes" to all three), carried out above:*
 1. **The unreadable translation** (`6455ca5589`). Options: leave it (the record stands, as RF-12's
    design says); or a further paid retry, possibly with a `translate_v3` whose retry message names the
    unclosed brace, or a reader that repairs a reply only one closing brace short (a tolerance, logged).

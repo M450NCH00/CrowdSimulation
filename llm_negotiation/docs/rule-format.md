@@ -309,6 +309,7 @@ what and where. `python ruledb.py validate --file <path>` checks any rule file t
 | `side` | Two roles told to pass on opposite sides: both would step the same way (`derivations.md`, section 10) |
 | `own_only_scope` | Version 4. An own-only condition that would switch on anything but the person's own movement (checked before the schema, section 15) |
 | `steps` | Version 4. A plan outside Step 1's step vocabulary, as Step 1's parser reads it (section 15) |
+| `constant_roles` | Version 4. A role condition that holds for both people or for neither in every situation (section 15.2) |
 
 In the database, also: `manifest` and `history` (section 8). When an experiment switches
 rules on: `ruleset` (a rule or version not in the database), `status` (a rejected or retired
@@ -609,6 +610,16 @@ field (`roles`). **When it holds for both or for neither, the rule does not appl
 required: `no_tie_policy`), and a missing value makes it not hold, as any comparison on a missing
 value is false. Format 3 could give roles only by ordering two numbers; a category such as a cane
 could not decide them.
+
+**A condition that can never give two different roles is refused** (`constant_roles`; the user's
+decision of 2026-10-26, after RF-31's translator wrote roles by `agent.speed_mps >= 0`, which holds for
+everyone). The loader tries the condition on every combination of values a person can have, as the
+ambiguity grid does (section 8 of `rule-matching.md`): every name or true/false, each constant with a
+value just either side of it, and 0; numbers of agent-level fields only at 0 or above (no age, speed,
+size, distance or time is negative); never a missing value (a condition that differs only between
+someone seen and someone unseen still gives everyone seen the same role). If no combination gives the
+two people different answers, the rule is refused. Above 200,000 combinations it is not checked. Rule
+generation counts it `inconsistent`: the rule names two roles it can never give.
 
 ### 15.3 Own-only conditions (option 3b)
 

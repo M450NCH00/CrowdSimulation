@@ -238,6 +238,17 @@ python run_experiment.py configs/translation/rf31_round1_head_on.yaml --client d
   a cane, a suitcase, a phone and assertiveness, each on half the people. Nobody in the crowd has a
   view of anyone else (`knows_other`, `finds_other_attractive` missing), so an own-only condition on
   them never holds there; and a suitcase is a label only (no one is widened).
+- **Picking a side** (the user's decision of 2026-10-26): where the extracted rule says each person
+  keeps their own side, a translator may write one side for everyone; the identity check reports what
+  that costs. Not an instruction of the template, which is unchanged.
+- **A reply one closing brace short** (the user's decision of 2026-10-26; `reader.repair_one_brace`,
+  off unless a config asks; `negsim/translation/reply.py`): a reply that is not JSON and has exactly
+  one more `{` than `}` outside its strings is tried with a `}` at every place one can go. It is
+  repaired only if exactly one placement gives a rule the loader reads whole (`valid`,
+  `needs_communication` or `inconsistent`; not a schema error, a format limit or a protected
+  attribute), and then without asking again; the attempt keeps its raw reply and its `parse_error`,
+  and says where the brace went (`repaired`). Otherwise the reply is unreadable, as before. A config
+  may also name the extracted rules to translate (`rules`), for a retry of one.
 - **Money.** Four calls, as RF-12; the reply cap is 2,500 tokens (a format 4 rule with steps is
   longer), and the worst case for round 1's four candidates is **USD 0.043**
   (`--plan`; peak prices, nothing cached, every reply at the cap, every retry taken). A paid run needs
@@ -252,3 +263,10 @@ the model left a nested own-only condition unclosed, so the reply was one brace 
 which plain ORCA never does, but reproduces the agents' own outcome less often (0.20 against 0.36),
 because it sends every pair left where the agents mostly passed right. The other never matches (roles
 by a condition that holds for both). Both pass crowd screening.
+
+**The retry** (`runs/rf31_round1_head_on_retry/`, paid, USD 0.0004): the unreadable rule translated
+again with the repair available. The reply was valid JSON, so the repair was not used (it does recover
+the first run's two replies, uniquely). The rule (slow to 0.75 when facing a cane; a slower plan for
+one who gives way) matched 32 of 76 sessions, reproduced 0.34 against plain ORCA's 0.36, and gridlocks
+the crowd on one seed. Under the loader's new check (`constant_roles`) the first run's
+never-matching rule is refused.

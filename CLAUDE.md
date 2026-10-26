@@ -115,8 +115,8 @@ Budget:
   checked 2026-10-26.
   After issue #67's translation (USD 0.0017 in the ledger, cap 0.03): **USD 0.62**,
   checked 2026-10-26 (0.63 just before it).
-  After issue #108's translation (USD 0.0025 in the ledger, cap 0.05): **USD 0.62**,
-  checked 2026-10-26 (the endpoint shows two decimals; 0.62 just before it too).
+  After issue #108's translation and its retry (USD 0.0029 in the ledger, cap 0.05):
+  **USD 0.62**, checked 2026-10-26 (the endpoint shows two decimals; 0.62 just before it too).
 
 ### Phase 1 (on hold): the behaviour dataset
 The task from the first supervisor meeting, on hold since the second meeting.
