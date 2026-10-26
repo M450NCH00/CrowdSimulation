@@ -662,6 +662,23 @@ LLM and in plain ORCA, how many were not resolved by the LLM, the mean decision 
 calls per session and how often the cap was reached; the end reasons, the debrief kinds, tokens
 per session, the largest share of a preview used, the cost and the failure modes.
 
+## Rule-extraction experiments (issue #66)
+
+A rule-extraction experiment (`rule-extraction.md`) reads resolution experiments' results and asks
+an LLM for the rules behind the resolved sessions (Step 2 of track #55). Its folder,
+`runs/<experiment_name>/` (`runs_mock/` with the mock client), is **version 1** of the extraction
+log (`extraction_log_version` in `config.json` and in every run record). The layout and what each
+file holds are in `rule-extraction.md`, section 8. A run record (`<type>/runs/run_<k>.json`) has
+`extraction_log_version`, `experiment`, `encounter_type`, `run`, `seed`, `started_utc`,
+`ended_utc`, `template`, `llm`, `sampled_sessions` and `sampled_labels`, `messages` (exactly as
+sent), `attempts` (each with `messages_sent`, `appended` for a retry, `raw`, `model`,
+`system_fingerprint`, `response_id`, `finish_reason`, `usage`, `cost_usd`, `price_tier`,
+`latency_s`, `parse_error` or `error`), `outcome` (`completed`, `unreadable` or `aborted`),
+`error`, `rules` (each `index`, `category`, `message`, `reads_communication`, `predict`,
+`references`, `raw`, and for a stored category `fidelity`), `counts` and `totals`. It is written
+once and never rewritten; an aborted one is set aside as `run_<k>.aborted<n>.json` when the run is
+redone.
+
 ## `spend_ledger.jsonl`
 
 One line per paid call: `utc`, `experiment`, `run_id`, `turn_index`, `speaker`, `attempt`,
@@ -670,7 +687,8 @@ One line per paid call: `utc`, `experiment`, `run_id`, `turn_index`, `speaker`, 
 `prices_date_checked`, `error`, and `cumulative_usd`. See `llm-backend.md`, section 5.
 A call of a rule-generation experiment (issue #30) has, instead of `run_id`, `session_id`,
 `condition`, `case_id`, `repeat`, `speaker_role` (condition A) and `path_index` (read only by
-the mock client; never sent to a provider). A budget cap scoped to one experiment counts the
+the mock client; never sent to a provider). A call of a rule-extraction experiment (issue #66) has
+`encounter_type`, `run` and `attempt`. A budget cap scoped to one experiment counts the
 lines whose `experiment` is that experiment's name.
 
 ## Change log
@@ -749,3 +767,6 @@ lines whose `experiment` is that experiment's name.
   that flips one person's group adds `pair_change` to its sessions and rows; its factor template is
   `resolve_factors_v2`; `invocations.jsonl` may say `refused_no_sign_off`. Without it every file
   is as before.
+- (2026-10-26, issue #66; not a run format, the run schema is unchanged.) The folder of a
+  rule-extraction experiment, version 1 of its own (`extraction_log_version`), section
+  "Rule-extraction experiments"; and the spend ledger's labels for its calls.

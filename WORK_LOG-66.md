@@ -71,6 +71,44 @@ pooled their **design** sessions (192: first run of each cell, no counterfactual
     files, SHA-256 manifest, ids from a hash) but not checked against the rule schemas.
 - Next step: build the tables and the split.
 
+### 2026-10-26 — The extractor, built and tested on the mock
+- What I did: `negsim/extraction/` (`table.py`, `prompt.py`, `rules.py`, `experiment.py`,
+  `mock.py`); template `extract_v1` (new kind `rule_extraction`), frozen; configs
+  `configs/extraction/round1_head_on.yaml` and `rf3_mock_rehearsal.yaml`; layer dispatch in
+  `run_experiment.py`; `docs/rule-extraction.md`; `log-schema.md` and `resolution.md` updated.
+- **Round 1's tables:** 192 pooled design sessions, gate recomputed as RF-30's (102 of 192, CI
+  0.46 to 0.60, passes); main 76 sessions (152 agent rows), held out 26 (52 rows), failed 90. The
+  user message is about 86k to 91k characters (about 27k tokens), the system message 4.5k.
+- **Found:** 23 of the 24 exact-repeat cells are coin flips (only 18 main-table rows are in a
+  repeated cell). Consistent with RF-9's 77% flip rate on identical prompts.
+- **Wording fixed before freezing** (the template had not been used): each agent calls the other
+  "Person 1" in its own words (its view's label), so the sampled sessions' header says so; the
+  trigger reasons' agent numbers (`perceives:0`) are dropped; the failed table's header says the
+  sides are each person's own.
+- **Acceptance criterion:** `rf3_mock_rehearsal.yaml` runs three times on RF-3's mock rehearsal
+  (rebuilt from its records first: its `outcomes.csv` predated RF-8's columns). Head-on and
+  single-file had no resolved session and are skipped and said so; overtaking (6 resolved, 4 main)
+  gives 2 rules stored 3/3 with fidelity, 1 protected rule counted and not stored. On round 1's
+  data the mock gives 3 stored rules (3/3, 2/3, 3/3) and is reproducible byte for byte.
+- **Bugs found by the tests:** `any()` over `glob()` generators was always true (every resumed run
+  was refused); fixed. YAML aliases (`&id001`) in rule files; written through JSON now.
+- **Decisions of mine (to check):**
+  - A resume refuses any change of config, client or source data once a run has a record,
+    **except the budget**, which changes nothing that is sent (the resolution layer compares the
+    budget too). So a cap raised with your approval can finish an aborted run.
+  - A worst case above the cap does not stop a confirmed run (as `stop_at_cap`); the guard stops
+    any call that could pass the cap.
+  - `transport_retries: 0` for round 1, so that the guard's bound per call (USD 0.019) lets the
+    three runs and a retry fit under USD 0.05. Worst case of the whole experiment: USD 0.107 (peak,
+    no cache, full replies, every retry). Expected: about USD 0.006 a run off-peak.
+  - `predict` may not read an outcome, the debrief kind or the cell's stability; it may read
+    `signalled` and `spoke`, which makes the rule `needs_communication`.
+  - "pretty" alone in prose ("pretty much") is not taken for attractiveness, unlike
+    `protected_reference`, which would discard a valid rule for a figure of speech.
+- Tests: `tests/test_extraction.py` (41) and `analysis/tests/test_extraction_tables.py` (3: the
+  extractor's tables agree with RF-8's `agents_table` on every agent row of round 1, and its
+  coin-flip cells with `analysis.noise.stability`).
+
 ## Open questions / risks
 - The 95% matching threshold is a `[placeholder]` (the issue says so).
 - The narrow gate pass (lower bound 0.46) is a caveat on everything extracted from head-on.
