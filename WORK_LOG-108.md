@@ -79,7 +79,7 @@ until the user gives one.
     rule's steps driver must combine with it.
 - Next step: design decisions below, then build task by task.
 
-### 2026-10-26 13:30 UTC — Tasks 1 to 6 built on the mock
+### 2026-10-26 about 12:50 UTC — Tasks 1 to 6 built on the mock
 - What I did: task 1 (CLAUDE.md supervisor decision and track constraint, `pairwise-factors.md`
   section 7, #55's constraint line); the version 4 schema, frozen; the three visible attributes;
   roles by a condition; own-only conditions with `self.` fields and the scope check; steps parsed
@@ -103,7 +103,7 @@ until the user gives one.
   from its own record (the formation check). No persona of a run before this issue has them, so
   every earlier record is unchanged; the perception schema version stays 3.
 
-### 2026-10-26 13:50 UTC — Task 6: the cost of steps in a crowd
+### 2026-10-26 about 13:00 UTC — Task 6: the cost of steps in a crowd
 - What I did: the two-way flow (50 + 50, `configs/scenarios/bidirectional_flow.yaml`, no
   perturbation), people given ages, genders, canes (one in three) and assertiveness in turn; best of
   3 runs each, trajectory not recorded; then a profile of one run.
@@ -124,7 +124,7 @@ until the user gives one.
     then keeping that line): a property of that rule, which crowd screening exists to catch.
 - Next step: templates, translation, tests, docs; then ask the user about the paid run.
 
-### 2026-10-26 14:30 UTC — Tasks 7, 8, 10 and 11 on the mock
+### 2026-10-26 about 13:10 UTC — Tasks 7, 8, 10 and 11 on the mock
 - What I did: `rulegen_common_v3` (format 4; its glossary generated from the catalogue and the
   version 4 schema, pinned) and `translate_v2` (translate_v1 for format 4; reply format, kinds, user
   message and retry word for word), both frozen. `negsim.translation` takes the format from the
@@ -139,6 +139,13 @@ until the user gives one.
   config reader reused the name `name`, so `--plan` printed a factor as the experiment name; fixed
   before anything ran under it.
 - Worst case of the paid run (`--plan`): **USD 0.043** (4 calls, reply cap 2,500, peak, no cache).
+
+### 2026-10-26 13:20 UTC — Approval, balance, pricing check
+- The user approved paid runs for #108 only, cap USD 0.05 (recorded in `CLAUDE.md` and the config).
+- Balance (DeepSeek's free `GET /user/balance`): **USD 0.62**, as last recorded. 13:15 UTC Monday: off-peak.
+- Pricing check: no change (`docs/pricing-check.md`).
+- (The times of the three entries above were first written ahead of the clock; corrected to about
+  when they happened.)
 
 ## Design decisions in this issue (mine, for the user to check)
 
@@ -160,7 +167,7 @@ Marked as decisions, not instructions: each is an assumption where the issue lea
   read only by `own_when` and never by `when` or roles. The two agents' shared snapshot still
   equals what each builds from its own record in everything public; each agent's own
   `own_when` reads only its own private values, so its directive is the same either way.
-- **D-E, perception record** (as built; see the progress entry of 13:30). The observer's own core
+- **D-E, perception record** (as built; see the progress entry of about 12:50). The observer's own core
   factors are in its record's `attributes` when its persona has them; no earlier persona has any,
   so every earlier record is byte for byte as before and `PERCEPTION_SCHEMA_VERSION` stays 3.
 - **D-F, visibility switches.** The avoidance config accepts the three new switch names besides
