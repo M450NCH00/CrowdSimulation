@@ -189,8 +189,11 @@ def test_the_crowd_factors_are_checked():
     assert "factors" not in config_v4("x", screening={"enabled": True}).as_dict()["screening"]  # a format 3 config records as before
 
 
-def test_rf31s_config_translates_rf11s_candidates_with_translate_v2():
+def test_rf31s_config_translates_rf11s_candidates_with_translate_v2_under_the_cap_claude_md_records():
     config = T.TranslationConfig.load("configs/translation/rf31_round1_head_on.yaml")
     plan_ = T.plan(config)
     assert config.template == "translate_v2" and config.statuses == ("candidate",) and plan_.rule_schema_version == 4
+    assert config.budget["cap_usd"] == 0.05 and config.llm["client"] == "mock" and plan_.preview["fits_the_cap"]
+    claude = (PACKAGE_ROOT.parent / "CLAUDE.md").read_text(encoding="utf-8")
+    assert "Approved for issue #108 only, 2026-10-26" in claude and "**USD 0.05**" in claude
     assert [item.extracted.rule_id for item in plan_.items] == ["x_head_on_0ecc2d1a6e", "x_head_on_4eb7a97c8d", "x_head_on_6455ca5589", "x_head_on_aacce0961b"]
