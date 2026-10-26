@@ -147,6 +147,21 @@ until the user gives one.
 - (The times of the three entries above were first written ahead of the clock; corrected to about
   when they happened.)
 
+### 2026-10-26 13:16 to 13:30 UTC — Task 9: the paid re-translation
+- What I did: one rule first (`--limit 1`, USD 0.00075), read its translation (sensible: steps, every
+  approximation listed), then the other three. Five calls in all, **USD 0.0025** of the 0.05 cap;
+  balance afterwards still shows USD 0.62 (two decimals). Then the identity check and crowd screening
+  (free). Report: `runs/rf31_round1_head_on/translation_report.md`.
+- Result:
+  - 2 valid, 1 not expressible (signalling, as in RF-12), 1 **unreadable twice**: `6455ca5589`, the one
+    translation that used every part of format 4, left its own-only condition unclosed both times (one
+    `}` short). Not retried further without the user.
+  - `0ecc2d1a6e` (both turn 10° left from 9.8 m until the other passes) **resolves all 76 Step 1
+    sessions** (plain ORCA 0) but reproduces the agents less (0.20 against 0.36): every pair passes left
+    to left, the agents passed right to right in 47 of 76. Crowd: passed.
+  - `aacce0961b`: roles by `agent.speed_mps >= 0`, which holds for both, so it never matches (0 of 76).
+    Valid to the loader, empty in effect. Crowd: the baseline's runs.
+
 ## Design decisions in this issue (mine, for the user to check)
 
 Marked as decisions, not instructions: each is an assumption where the issue leaves room.
@@ -195,6 +210,18 @@ Marked as decisions, not instructions: each is an assumption where the issue lea
 
 ## Open questions / risks
 
+For the user:
+1. **The unreadable translation** (`6455ca5589`). Options: leave it (the record stands, as RF-12's
+   design says); or a further paid retry, possibly with a `translate_v3` whose retry message names the
+   unclosed brace, or a reader that repairs a reply only one closing brace short (a tolerance, logged).
+2. **An always-true role condition** passes the loader (`agent.speed_mps >= 0`). A check that a role
+   condition can be false for some value (a dead condition) could be added; not done, since it is a
+   judgement about what the model meant.
+3. **Left against right.** The one working translation fixes "left" where the agents mostly passed
+   right; whether a translator should pick a side when the rule says "each keeps their own" is the same
+   kind of judgement RF-12 left open.
+
+
 - Paid task 9 needs the user's approval and cap recorded in `CLAUDE.md` first.
 - Step 1 printed a cane, suitcase or phone only within 5 m (D2); a format 4 rule reads them at any
   distance. A rule conditioned on them may therefore fire earlier than the agents could have seen
@@ -204,3 +231,20 @@ Marked as decisions, not instructions: each is an assumption where the issue lea
   asks.
 
 ## Summary (fill in at the end)
+
+**What changed.** Rule format 4 (schema version 4, frozen): what one person can see of the other
+(`mobility_aid`, `load`, `distraction`, each under its own switch), roles by a condition, own-only
+conditions on a person's own private factors (`self.`, with the `own_only_scope` check), and a plan of
+steps in Step 1's vocabulary, carried out in a crowd by `negsim/rules/plans.py` with ORCA avoiding
+underneath. Perceived attractiveness is readable only as `self.finds_other_attractive` in an own-only
+condition (the supervisor's agreement, recorded in `CLAUDE.md`); ethnicity is refused everywhere.
+Templates `rulegen_common_v3` and `translate_v2`; translation, losses, identity check and crowd
+screening for format 4. Round 1 re-translated (paid, USD 0.0025).
+
+**Why.** RF-12 showed format 3 could not say what made the agents differ from ORCA (#108).
+
+**How it was verified.** The existing suite with only the catalogue's and version list's own tests
+updated (noted in each); `tests/test_rules_schema_v4.py` (39) and `tests/test_translation_v4.py` (17),
+including a head-on run where a sidestep is followed by a plain step (the sidestep holds until the two
+have passed), a crowd run, the formation check with private values, and the refusals; a mock rehearsal
+on RF-11's 16 rules; the full suite (result in the PR); a profile of the steps driver in a crowd.

@@ -242,3 +242,13 @@ python run_experiment.py configs/translation/rf31_round1_head_on.yaml --client d
   longer), and the worst case for round 1's four candidates is **USD 0.043**
   (`--plan`; peak prices, nothing cached, every reply at the cap, every retry taken). A paid run needs
   its own approval and cap in `CLAUDE.md` (pending item 1).
+
+## 14. Round 1 in format 4
+
+`runs/rf31_round1_head_on/translation_report.md` (paid, 2026-10-26, USD 0.0025). Of RF-11's four kept
+rules, two translations are valid, one (signalling) is not expressible, and one was unreadable twice:
+the model left a nested own-only condition unclosed, so the reply was one brace short. One valid rule
+(both people turn 10° to their left from 9.8 m until the other passes) resolves all 76 Step 1 sessions,
+which plain ORCA never does, but reproduces the agents' own outcome less often (0.20 against 0.36),
+because it sends every pair left where the agents mostly passed right. The other never matches (roles
+by a condition that holds for both). Both pass crowd screening.
