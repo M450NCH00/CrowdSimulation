@@ -12,7 +12,11 @@ themselves. The grid is documented in ``docs/rule-matching.md``; in short:
   the two agents in either order and within any tie tolerance, for each of the two agents
   independently, and "missing";
 * for a field that is a name or is true or false (issue #32), every value it can take, and
-  "missing".
+  "missing";
+* (version 4, issue #108) the comparisons of a role by a condition and of every own-only
+  condition count like the rule's own, and a person's own private factors (``self.``) are varied
+  for each of the two independently, as an agent-level field is. Two matches differ if they give
+  either agent a different directive or a different plan.
 
 **Why the grid is enough.** Every comparison is between one field and a constant, so
 whether it holds can change only at that constant. Between two consecutive constants of a
@@ -39,8 +43,8 @@ from dataclasses import dataclass
 from typing import Any, Iterator, Optional, Sequence
 
 from ..avoidance.perception import ENCOUNTER_CLASSES
-from .fields import BOOLEAN, CATEGORY, PAIR
-from .model import Match, Rule
+from .fields import BOOLEAN, CATEGORY, PAIR, SELF
+from .model import Match, RoleAssignment, Rule
 from .snapshot import PairSnapshot
 
 #: The encounter classes a rule can apply to (``none`` is not one of them).
@@ -103,7 +107,7 @@ def find_clash(first: Rule, second: Rule) -> Optional[Clash]:
 
 def different(a: Match, b: Match) -> bool:
     """Whether two matches of one snapshot tell either agent something different."""
-    return a.directives != b.directives
+    return a.directives != b.directives or a.steps != b.steps
 
 
 class Grid:
@@ -115,17 +119,23 @@ class Grid:
         self.classes = sorted(specific) if specific else list(RULE_CLASSES)
         pair_fields: dict[str, list[Any]] = {}
         agent_fields: dict[str, list[Any]] = {}
+        self_fields: dict[str, list[Any]] = {}
         tolerances: dict[str, float] = {}
         kinds: dict[str, Any] = {}
+        selves: dict[str, Any] = {}
         for rule in rules:
-            for comparison in rule.when.comparisons():
+            for comparison in rule.comparisons():
                 spec = comparison.ref.spec
                 if spec.level == PAIR and spec.name == "encounter_class":
                     continue  # the classes are a dimension of their own
+                if spec.level == SELF:  # version 4: a person's own private factor
+                    self_fields.setdefault(spec.name, []).extend(comparison.thresholds())
+                    selves[spec.name] = spec
+                    continue
                 table = pair_fields if spec.level == PAIR else agent_fields
                 table.setdefault(spec.name, []).extend(comparison.thresholds())
                 kinds[spec.name] = spec
-            if rule.roles is not None:
+            if isinstance(rule.roles, RoleAssignment):
                 spec = rule.roles.ref.spec
                 agent_fields.setdefault(spec.name, [])
                 kinds[spec.name] = spec
@@ -134,27 +144,35 @@ class Grid:
         self.agent_values = {
             name: _candidates(kinds[name], values, tolerances.get(name)) for name, values in agent_fields.items()
         }
+        self.self_values = {name: _candidates(selves[name], values) for name, values in self_fields.items()}
 
     @property
     def size(self) -> int:
         count = len(self.classes)
         for values in self.pair_values.values():
             count *= len(values)
-        for values in self.agent_values.values():
+        for values in [*self.agent_values.values(), *self.self_values.values()]:
             count *= len(values) ** 2
         return count
 
     def __iter__(self) -> Iterator[PairSnapshot]:
-        pair_names, agent_names = list(self.pair_values), list(self.agent_values)
+        pair_names, agent_names, self_names = list(self.pair_values), list(self.agent_values), list(self.self_values)
         pair_choices = [self.pair_values[name] for name in pair_names]
         agent_choices = [list(itertools.product(self.agent_values[name], repeat=2)) for name in agent_names]
+        self_choices = [list(itertools.product(self.self_values[name], repeat=2)) for name in self_names]
         for encounter in self.classes:
             for pair_combo in itertools.product(*pair_choices):
                 pair = {"encounter_class": encounter, **dict(zip(pair_names, pair_combo))}
                 for agent_combo in itertools.product(*agent_choices):
                     first = {name: values[0] for name, values in zip(agent_names, agent_combo)}
                     second = {name: values[1] for name, values in zip(agent_names, agent_combo)}
-                    yield PairSnapshot(0, 0.0, (0, 1), pair, (first, second))
+                    if not self_names:
+                        yield PairSnapshot(0, 0.0, (0, 1), pair, (first, second))
+                        continue
+                    for self_combo in itertools.product(*self_choices):
+                        mine = {name: values[0] for name, values in zip(self_names, self_combo)}
+                        theirs = {name: values[1] for name, values in zip(self_names, self_combo)}
+                        yield PairSnapshot(0, 0.0, (0, 1), pair, (first, second), (mine, theirs))
 
 
 def _candidates(spec: Any, thresholds: list[Any], tolerance: Optional[float] = None) -> list[Any]:

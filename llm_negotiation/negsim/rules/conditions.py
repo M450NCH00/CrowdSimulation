@@ -53,6 +53,13 @@ class Condition(ABC):
         """Whether the condition holds on ``snapshot``."""
 
     @abstractmethod
+    def evaluate_for(self, snapshot: PairSnapshot, index: int) -> bool:
+        """Whether the condition holds for the person at ``index`` (version 4, issue #108): an
+        ``agent.`` field reads that person's value, a ``self.`` field that person's own private
+        value, and the other prefixes read as in :meth:`evaluate`. A role by a condition and an
+        own-only condition are read this way."""
+
+    @abstractmethod
     def comparisons(self) -> Iterator["Comparison"]:
         """Every comparison in the condition."""
 
@@ -71,6 +78,14 @@ class Comparison(Condition):
             return compare(snapshot.pair.get(name), self.op, self.value)
         results = [compare(snapshot.agent_value(index, name), self.op, self.value) for index in (0, 1)]
         return any(results) if self.ref.prefix == "either" else all(results)
+
+    def evaluate_for(self, snapshot: PairSnapshot, index: int) -> bool:
+        name = self.ref.spec.name
+        if self.ref.prefix == "agent":
+            return compare(snapshot.agent_value(index, name), self.op, self.value)
+        if self.ref.prefix == "self":
+            return compare(snapshot.private_value(index, name), self.op, self.value)
+        return self.evaluate(snapshot)
 
     def comparisons(self) -> Iterator["Comparison"]:
         yield self
@@ -92,16 +107,25 @@ class Group(Condition):
             return all(item.evaluate(snapshot) for item in self.items)
         return any(item.evaluate(snapshot) for item in self.items)
 
+    def evaluate_for(self, snapshot: PairSnapshot, index: int) -> bool:
+        if self.kind == "all":
+            return all(item.evaluate_for(snapshot, index) for item in self.items)
+        return any(item.evaluate_for(snapshot, index) for item in self.items)
+
     def comparisons(self) -> Iterator[Comparison]:
         for item in self.items:
             yield from item.comparisons()
 
 
-def parse_condition(raw: Any, where: str, schema_version: Optional[int] = None, terms: Iterable[str] = ()) -> Condition:
+def parse_condition(
+    raw: Any, where: str, schema_version: Optional[int] = None, terms: Iterable[str] = (), prefixes: tuple[str, ...] = CONDITION_PREFIXES
+) -> Condition:
     """A condition from its written form (already checked against the JSON Schema).
 
     ``schema_version`` is the rule's: it may read only the fields of its version.
     ``terms`` are more words that name a person's group (``fields.protected_reference``).
+    ``prefixes`` are those allowed where the condition is: a rule's ``when`` by default; a role by
+    a condition or an own-only condition (version 4) has its own.
     """
     if not isinstance(raw, Mapping):
         raise RuleError("schema", f"{where}: a condition is a comparison, or a mapping with 'all' or 'any'")
@@ -112,13 +136,15 @@ def parse_condition(raw: Any, where: str, schema_version: Optional[int] = None, 
                 raise RuleError("schema", f"{where}.any: must have at least one item")
             return Group(
                 kind,
-                tuple(parse_condition(item, f"{where}.{kind}[{index}]", schema_version, terms) for index, item in enumerate(items)),
+                tuple(parse_condition(item, f"{where}.{kind}[{index}]", schema_version, terms, prefixes) for index, item in enumerate(items)),
             )
-    return _comparison(raw, where, schema_version, terms)
+    return _comparison(raw, where, schema_version, terms, prefixes)
 
 
-def _comparison(raw: Mapping[str, Any], where: str, schema_version: Optional[int] = None, terms: Iterable[str] = ()) -> Comparison:
-    ref = resolve(raw.get("field"), f"{where}.field", CONDITION_PREFIXES, schema_version, terms)
+def _comparison(
+    raw: Mapping[str, Any], where: str, schema_version: Optional[int] = None, terms: Iterable[str] = (), prefixes: tuple[str, ...] = CONDITION_PREFIXES
+) -> Comparison:
+    ref = resolve(raw.get("field"), f"{where}.field", prefixes, schema_version, terms)
     op, unit, value = raw.get("op"), raw.get("unit"), raw.get("value")
     if op not in OPERATORS:
         raise RuleError("operator", f"{where}.op: expected one of {list(OPERATORS)}, got {op!r}")

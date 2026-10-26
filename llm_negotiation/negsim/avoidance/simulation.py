@@ -461,6 +461,7 @@ class AvoidanceSimulation:
         trajectory_stride: int = 1,
         perturbation: Optional[Perturbation] = None,
         plans: Optional[Any] = None,
+        pairwise: Optional[Mapping[tuple[int, int], Mapping[str, Any]]] = None,
     ):
         self.spec = spec
         #: A plan driver (issue #59: ``PlanDriver``, the plan executor of track #55), or ``None``: then
@@ -469,6 +470,18 @@ class AvoidanceSimulation:
         self.world = spec.build_world()
         self.provider = provider or NullProvider()
         self.attributes = dict(attributes or {})
+        #: Issue #108: each person's own view of another, by (observer, neighbour): whether they know
+        #: them, whether they find them attractive. Only a version 4 rule's own-only condition reads it.
+        self.pairwise = dict(pairwise or {})
+        # Issue #108: a rule provider whose rules give plans brings a driver for them; it joins the
+        # run's own driver, if any. A provider without one leaves every step as it was.
+        steps = getattr(self.provider, "step_driver", None)
+        if steps is not None:
+            from ..rules.plans import Drivers
+
+            self.plans = steps if plans is None else Drivers(plans, steps)
+        if hasattr(self.provider, "pairwise"):
+            self.provider.pairwise = self.pairwise
         self.visibility = dict(visibility) if visibility is not None else default_visibility()
         self.arbitration = arbitration or ArbitrationSettings()
         self.share_policy = share_policy
@@ -1347,6 +1360,7 @@ class _StepView:
         self._simulation = simulation
         self.step, self.time_s = step, time_s
         self.visibility, self.attributes = simulation.visibility, simulation.attributes
+        self.pairwise = simulation.pairwise
         self.pairs = [simulation.open_pairs[key] for key in sorted(simulation.open_pairs)]
 
     def agent(self, agent_id: int):
