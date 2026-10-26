@@ -20,6 +20,8 @@ A config that says ``layer: resolution`` is a resolution experiment (issue #58):
 meet in conflict cases and are asked what they do.
 A config that says ``layer: rule_extraction`` extracts rules from resolution experiments'
 results (issue #66, Step 2).
+A config that says ``layer: rule_translation`` translates extracted rules into rule format 3,
+then replays and screens them (issue #67, RF-12).
 ``--plan`` prints its sessions and worst-case cost; with ``--client deepseek`` it writes the
 preview and sends nothing unless ``--confirm`` is given too. ``--limit N`` runs at most N
 sessions that have no record yet; running it again resumes it.
@@ -42,6 +44,8 @@ from ..resolution.experiment import cli_run as run_resolution
 from ..resolution.experiment import is_resolution_config
 from ..rulegen.experiment import cli_run as run_rule_generation
 from ..rulegen.experiment import is_rule_generation_config
+from ..translation.experiment import cli_run as run_rule_translation
+from ..translation.experiment import is_translation_config
 from .avoidance import AvoidanceExperiment, is_avoidance_config, run_avoidance_experiment
 from .batch import make_client, run_experiment, worst_case_cost
 from .config import ExperimentConfig
@@ -95,8 +99,12 @@ def main(argv: Optional[list[str]] = None) -> int:
             if args.overwrite:
                 raise ConfigError("--overwrite does not apply to a rule extraction, which resumes and never rewrites a run")
             return run_rule_extraction(args)
+        if is_translation_config(raw):
+            if args.overwrite:
+                raise ConfigError("--overwrite does not apply to a rule translation, which resumes and never rewrites a translation")
+            return run_rule_translation(args)
         if args.confirm:
-            raise ConfigError("--confirm applies only to rule-generation, resolution and rule-extraction experiments")
+            raise ConfigError("--confirm applies only to rule-generation, resolution, rule-extraction and rule-translation experiments")
         if is_avoidance_config(raw):
             return run_avoidance(args)
 
