@@ -162,6 +162,19 @@ until the user gives one.
   - `aacce0961b`: roles by `agent.speed_mps >= 0`, which holds for both, so it never matches (0 of 76).
     Valid to the loader, empty in effect. Crowd: the baseline's runs.
 
+### 2026-10-26 (after PR #109 opened) — The user's answers to the three open questions
+- The user answered "Yes" to all three:
+  1. **Retry the unreadable translation** (a further paid call, approved inside #108's cap; recorded
+     in `CLAUDE.md`), possibly with a reader that fixes a single missing closing brace.
+  2. **Refuse a role condition that can never be false** (more exactly, one that can never give the
+     two different roles: it holds for both, or for neither, in every situation).
+  3. **A translator may pick a side** when the extracted rule says each keeps their own. No code
+     change: the left-turn translation stands, and the identity check reports what the choice costs.
+- Plan: (2) in the loader, with tests; (1) a reader tolerance that repairs a reply one closing brace
+  short only when exactly one place for the brace gives a rule the loader accepts, flagged in the
+  record; then translate the one rule again as a new experiment (`rf31_round1_head_on_retry`,
+  `translate_v2` unchanged, so the prompts are the first run's word for word); (3) recorded in the docs.
+
 ## Design decisions in this issue (mine, for the user to check)
 
 Marked as decisions, not instructions: each is an assumption where the issue leaves room.

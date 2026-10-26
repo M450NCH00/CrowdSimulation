@@ -197,3 +197,65 @@ def test_rf31s_config_translates_rf11s_candidates_with_translate_v2_under_the_ca
     claude = (PACKAGE_ROOT.parent / "CLAUDE.md").read_text(encoding="utf-8")
     assert "Approved for issue #108 only, 2026-10-26" in claude and "**USD 0.05**" in claude
     assert [item.extracted.rule_id for item in plan_.items] == ["x_head_on_0ecc2d1a6e", "x_head_on_4eb7a97c8d", "x_head_on_6455ca5589", "x_head_on_aacce0961b"]
+
+
+# --- the one-brace repair (the user's decision of 2026-10-26) ------------------------------------------
+
+
+STORED = PACKAGE_ROOT / "runs/rf31_round1_head_on/translations/x_head_on_6455ca5589.json"
+
+
+def stored_replies():
+    return [attempt["raw"] for attempt in json.loads(STORED.read_text(encoding="utf-8"))["attempts"]]
+
+
+def test_rf31s_unreadable_replies_are_repaired_where_exactly_one_placement_loads():
+    from negsim.translation.reply import parse_translation, repair_one_brace
+
+    for raw in stored_replies():
+        with pytest.raises(Exception):
+            parse_translation(raw)
+        repaired = repair_one_brace(raw, T.accepts_structure(4))
+        assert repaired is not None and repaired.placements_accepted == 1
+        directive = repaired.translation.rule["directive"]
+        assert set(directive) == {"giver", "other"} and set(directive["giver"]) == {"own_when"}
+        assert repaired.translation.rule["priority"] == 500
+
+
+def test_the_repair_leaves_alone_a_reply_that_reads_is_two_braces_short_or_could_be_repaired_two_ways():
+    from negsim.translation.reply import repair_one_brace
+
+    raw = stored_replies()[0]
+    assert repair_one_brace(raw + "}", T.accepts_structure(4)) is None  # reads already
+    assert repair_one_brace(raw[:-1], T.accepts_structure(4)) is None  # two short
+    assert repair_one_brace(raw, lambda translation: True) is None  # many placements read: not one
+
+
+
+def test_a_config_asks_for_the_repair_and_names_its_rules(tmp_path):
+    raw = stored_replies()[0]
+    folder = make_extraction(tmp_path / "x", [extracted("x_head_on_a", sentence_v4("valid_condition_steps")),
+                                              extracted("x_head_on_b", sentence_v4("valid_own_when"))])
+    config = config_v4(folder, rules=["x_head_on_b"], reader={"repair_one_brace": True})
+    plan_ = T.plan(config)
+    assert [item.extracted.rule_id for item in plan_.items] == ["x_head_on_b"]
+    record = T.translate_once(config, plan_.extraction, plan_.items[0], plan_.templates, MockClient(policy=lambda request: raw), 4)
+    assert record["outcome"] == T.RUN_COMPLETED and len(record["attempts"]) == 1  # repaired, nothing asked again
+    assert record["attempts"][0]["repaired"]["kind"] == "one_closing_brace" and record["attempts"][0]["parse_error"]
+    assert T.assess(plan_.items[0].extracted, record, 4)["category"] == "valid"
+    plain = config_v4(folder)
+    unrepaired = T.translate_once(plain, plan_.extraction, plan_.items[0], plan_.templates, MockClient(policy=lambda request: raw), 4)
+    assert unrepaired["outcome"] == T.RUN_UNREADABLE  # without the key: as RF-31's first run
+    assert "reader" not in plain.as_dict() and "rules" not in plain.as_dict()
+    with pytest.raises(ConfigError, match="not among"):
+        T.plan(config_v4(folder, rules=["x_head_on_c"]))
+
+
+def test_rf31s_retry_config_translates_the_one_rule_with_the_repair_under_the_rest_of_the_cap():
+    config = T.TranslationConfig.load("configs/translation/rf31_round1_head_on_retry.yaml")
+    plan_ = T.plan(config)
+    assert [item.extracted.rule_id for item in plan_.items] == ["x_head_on_6455ca5589"]
+    assert config.repair_one_brace and config.template == "translate_v2" and config.budget["cap_usd"] == 0.0475
+    first = T.plan(T.TranslationConfig.load("configs/translation/rf31_round1_head_on.yaml"))
+    same = next(item for item in first.items if item.extracted.rule_id == "x_head_on_6455ca5589")
+    assert plan_.items[0].rendered.messages == same.rendered.messages  # the prompts are the first run's

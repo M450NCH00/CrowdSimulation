@@ -262,7 +262,10 @@ used in this track). Numbers in brackets are the decisions of track issue #55.
      RF-31's re-translation of round 1's four candidate rules into rule format 4 (#108),
      and only for it, with a cap of **USD 0.05** on that experiment's own calls
      (`experiment_name: rf31_round1_head_on`; four calls, worst case USD 0.043,
-     `WORK_LOG-108.md`).
+     `WORK_LOG-108.md`). *The same day* the user answered "Yes" to retrying the one
+     unreadable translation (`x_head_on_6455ca5589`) as a further paid call, inside the
+     same cap: USD 0.05 for #108's calls together, of which USD 0.0025 was spent before
+     the retry (`experiment_name: rf31_round1_head_on_retry`, its own cap the rest).
 2. **Approved by the supervisor, 2026-10-24** — Ethics sign-off for perceived
    attractiveness as a factor (#55, 3). *The user decided on 2026-10-24* that
    attractiveness (both directions) is **in** RF-10's design, because bias can

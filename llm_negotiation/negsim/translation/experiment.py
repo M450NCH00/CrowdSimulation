@@ -60,7 +60,7 @@ from . import identity as I
 from .losses import action_flags, counted, factor_losses
 from .mock import POLICIES as MOCK_POLICIES
 from .prompt import DEFAULT_TEMPLATE, RenderedTranslation, load as load_template, render, retry_message
-from .reply import parse_translation
+from .reply import parse_translation, repair_one_brace
 
 LAYER = "rule_translation"
 SCHEMA_VERSION = 1
@@ -139,6 +139,10 @@ class TranslationConfig:
     #: Issue #108: core factors the screening crowd is given in turn (``mixed_population``), so that a
     #: format 4 rule that reads them can apply. Empty: ages and genders only, as before.
     crowd_factors: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
+    #: Issue #108: only these extracted rules (by id), or every one of the statuses (``None``).
+    rules: Optional[tuple[str, ...]] = None
+    #: Issue #108: read a reply one closing brace short, where exactly one placement loads (``reply.py``).
+    repair_one_brace: bool = False
 
     @classmethod
     def load(cls, path: Path | str) -> "TranslationConfig":
@@ -148,7 +152,7 @@ class TranslationConfig:
     def from_raw(cls, raw: Any, source: str = "<config>") -> "TranslationConfig":
         where = f"rule-translation config {source}"
         check_keys(raw, where, ("layer", "experiment_name", "extraction", "llm"),
-                   ("schema_version", "description", "statuses", "encounter_types", "template", "budget", "identity", "screening"))
+                   ("schema_version", "description", "statuses", "encounter_types", "template", "budget", "identity", "screening", "rules", "reader"))
         if raw["layer"] != LAYER:
             raise ConfigError(f"{where}.layer: expected {LAYER!r}")
         if raw.get("schema_version", SCHEMA_VERSION) != SCHEMA_VERSION:
@@ -167,6 +171,10 @@ class TranslationConfig:
         if policy not in MOCK_POLICIES:
             raise ConfigError(f"{where}.llm.mock_policy: one of {sorted(MOCK_POLICIES)}, got {policy!r}")
         budget = check_keys(raw.get("budget") or {}, f"{where}.budget", (), ("cap_usd", "ledger"))
+        reader = check_keys(raw.get("reader") or {}, f"{where}.reader", (), ("repair_one_brace",))
+        only = raw.get("rules")
+        if only is not None and (not isinstance(only, list) or not only or not all(isinstance(r, str) for r in only)):
+            raise ConfigError(f"{where}.rules: a list of extracted rule ids, or leave it out for every rule of the statuses")
         identity = check_keys(raw.get("identity") or {}, f"{where}.identity", (), ("enabled",))
         screening_raw = dict(raw.get("screening") or {})
         ages = screening_raw.pop("ages", [25, 70])
@@ -209,6 +217,8 @@ class TranslationConfig:
             crowd_ages=tuple(int(a) for a in ages),
             crowd_genders=tuple(str(g) for g in genders),
             crowd_factors={str(name): tuple(str(level) for level in levels) for name, levels in factors.items()},
+            rules=None if only is None else tuple(only),
+            repair_one_brace=bool(reader.get("repair_one_brace", False)),
         )
 
     def as_dict(self) -> dict[str, Any]:
@@ -221,6 +231,9 @@ class TranslationConfig:
                 **self.screening.as_dict(), "ages": list(self.crowd_ages), "genders": list(self.crowd_genders),
                 **({"factors": {name: list(levels) for name, levels in self.crowd_factors.items()}} if self.crowd_factors else {}),
             },
+            # Issue #108: written only when set, so that an earlier config records what it did.
+            **({"rules": list(self.rules)} if self.rules is not None else {}),
+            **({"reader": {"repair_one_brace": True}} if self.repair_one_brace else {}),
         }
 
 
@@ -347,6 +360,11 @@ def preview_cost(config: TranslationConfig, items: Sequence[Item], templates: An
 
 def plan(config: TranslationConfig) -> Plan:
     extraction = read_extraction(resolve_path(config.extraction), config.statuses, config.encounter_types)
+    if config.rules is not None:
+        missing = sorted(set(config.rules) - {rule.rule_id for rule in extraction.rules})
+        if missing:
+            raise ConfigError(f"rules {missing} are not among the extraction's {list(config.statuses)} rules")
+        extraction = Extraction(extraction.folder, extraction.config, [rule for rule in extraction.rules if rule.rule_id in config.rules])
     templates = load_template(config.template)
     meanings = ExtractTemplate(extraction.config["template"]["key"])["columns"]
     descriptions = extraction.config["experiment"]["encounter_descriptions"]
@@ -373,8 +391,25 @@ def make_client(config: TranslationConfig, client_name: Optional[str] = None) ->
 # --- one translation -----------------------------------------------------------------------------
 
 
-def translate_once(config: TranslationConfig, extraction: Extraction, item: Item, templates: Any, client: LLMClient) -> dict[str, Any]:
-    """One rule's call (and a retry if its reply cannot be read). Returns its record; an aborted one says why."""
+def accepts_structure(schema_version: int) -> Callable[[Any], bool]:
+    """What a repaired reply must give (issue #108): null, or a rule the loader reads whole, in the rule
+    format ``schema_version``: ``valid``, ``needs_communication`` or ``inconsistent``. Not a schema error
+    or a format limit (a brace in the wrong place puts keys where they do not belong, such as a priority
+    among the roles), nor a protected attribute (checked before the structure)."""
+    def accept(translation: Any) -> bool:
+        if translation.rule is None:
+            return True
+        category = V.validate_proposal(translation.rule, visible_for(schema_version), schema_version=schema_version).category
+        return category in (V.VALID, V.NEEDS_COMMUNICATION, V.INCONSISTENT)
+    return accept
+
+
+def translate_once(
+    config: TranslationConfig, extraction: Extraction, item: Item, templates: Any, client: LLMClient, schema_version: int = RULE_SCHEMA_VERSION,
+) -> dict[str, Any]:
+    """One rule's call (and a retry if its reply cannot be read). Returns its record; an aborted one says why.
+    With ``config.repair_one_brace`` (issue #108) a reply one closing brace short is repaired, where
+    exactly one placement loads, before anything is asked again."""
     rule = item.extracted
     messages = [dict(m) for m in item.rendered.messages]
     record: dict[str, Any] = {
@@ -412,6 +447,12 @@ def translate_once(config: TranslationConfig, extraction: Extraction, item: Item
             break
         except TurnParseError as exc:
             entry["parse_error"] = str(exc)
+            repaired = repair_one_brace(response.content, accepts_structure(schema_version)) if config.repair_one_brace else None
+            if repaired is not None:
+                entry["repaired"] = repaired.as_dict()
+                record["translation"] = repaired.translation.as_dict()
+                record["attempts"].append(entry)
+                break
             record["attempts"].append(entry)
             if attempt < MAX_ATTEMPTS:
                 messages = [*messages, {"role": "assistant", "content": response.content or ""}, retry_message(templates, str(exc))]
@@ -669,7 +710,7 @@ def run_translation(
             continue
         if previous is not None:
             _set_aside(path)
-        record = translate_once(config, plan_.extraction, item, plan_.templates, client)
+        record = translate_once(config, plan_.extraction, item, plan_.templates, client, plan_.rule_schema_version)
         _write_json(path, record)
         result.executed.append(item.extracted.rule_id)
         report(f"  {item.extracted.rule_id}: {record['outcome']}, USD {record['totals']['cost_usd']:.6f}")

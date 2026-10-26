@@ -48,7 +48,8 @@ formula is ``format_limit`` though the loader would call it a schema error. Whet
 **Version 4** (issue #108). The loader's ``own_only_scope`` (an own-only condition that would
 switch on a side, a share, an order or backing up) is ``needs_communication``: what both must
 agree on would depend on what only one of them knows. Its ``steps`` (a plan outside Step 1's
-vocabulary) is ``schema_error``. A proposal of an earlier version's session that uses what version
+vocabulary) is ``schema_error``, and its ``constant_roles`` (a role condition that holds for both or
+for neither in every situation, so the rule names two roles it can never give) ``inconsistent``. A proposal of an earlier version's session that uses what version
 4 added (a role by a condition, an own-only condition, steps, a visible attribute) is
 ``format_limit``, as for version 3's additions. The comparisons of a role by a condition and of an
 own-only condition count as the rule's own fields. Perceived attractiveness is ``protected``
@@ -108,6 +109,7 @@ LOADER_CATEGORIES = {
     "no_tie_policy": SCHEMA_ERROR,
     "own_only_scope": NEEDS_COMMUNICATION,  # issue #108
     "steps": SCHEMA_ERROR,  # issue #108
+    "constant_roles": INCONSISTENT,  # issue #108: a role condition that names two roles it can never give
 }
 #: Words that, in an unknown field's name, name private information: the session's errand
 #: and its urgency, and what an errand implies about a person.

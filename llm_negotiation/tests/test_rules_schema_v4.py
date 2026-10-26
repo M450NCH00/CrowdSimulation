@@ -365,3 +365,32 @@ def test_a_crowd_can_be_given_core_factors_without_changing_ages_and_genders():
     persons = population_of(after, "crowd")
     assert persons[4]["attributes"] == {"age": 25, "gender": "female", "mobility_aid": "cane", "assertiveness": "gives_way"}
     assert population_of(before, "crowd")[0]["attributes"] == {"age": 25, "gender": "female"}  # as before
+
+
+# --- a role condition that can never give two different roles (the user's decision of 2026-10-26) ----
+
+
+@pytest.mark.parametrize("condition", [
+    {"field": "agent.speed_mps", "op": ">=", "value": 0, "unit": "m/s"},  # RF-31's x_head_on_aacce0961b
+    {"field": "agent.age", "op": ">=", "value": 0, "unit": "years"},
+    {"field": "agent.speed_mps", "op": "<", "value": 0, "unit": "m/s"},  # never true
+    {"field": "agent.mobility_aid", "op": "in", "value": ["none", "cane"]},
+    {"any": [{"field": "agent.load", "op": "==", "value": "none"}, {"field": "agent.load", "op": "==", "value": "large_suitcase"}]},
+    {"all": [{"field": "agent.radius_m", "op": ">", "value": 0.2, "unit": "m"}, {"field": "agent.radius_m", "op": "<", "value": 0.1, "unit": "m"}]},
+])
+def test_a_role_condition_that_holds_for_both_or_neither_in_every_situation_is_refused(condition):
+    raw = written(roles={"by_condition": {"when": condition, "assign": ["a", "b"], "tie": "no_match"}}, directive={"a": {}, "b": {}})
+    error = refused(raw)
+    assert error.category == "constant_roles"
+    assert V.validate_proposal(body(raw), SEE, schema_version=4).category == V.INCONSISTENT
+
+
+@pytest.mark.parametrize("condition", [
+    {"field": "agent.speed_mps", "op": ">", "value": 1.0, "unit": "m/s"},
+    {"field": "agent.age", "op": ">=", "value": 60, "unit": "years"},
+    {"field": "agent.distraction", "op": "==", "value": "phone"},
+    {"all": [{"field": "agent.mobility_aid", "op": "==", "value": "cane"}, {"field": "pair.distance_m", "op": "<", "value": 5, "unit": "m"}]},
+])
+def test_a_role_condition_that_can_differ_loads(condition):
+    raw = written(roles={"by_condition": {"when": condition, "assign": ["a", "b"], "tie": "no_match"}}, directive={"a": {}, "b": {}})
+    assert isinstance(load(raw).roles, ConditionRoles)

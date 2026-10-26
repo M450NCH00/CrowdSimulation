@@ -35,6 +35,7 @@ version 1, 2 or 3 rule is read exactly as before.
 from __future__ import annotations
 
 import datetime as _dt
+import math
 from dataclasses import dataclass, field, replace
 from typing import Any, Iterable, Iterator, Mapping, Optional
 
@@ -455,7 +456,64 @@ def _condition_roles(raw: Mapping[str, Any], where: str, schema_version: int, te
             f"{where}.when: reads no agent. field, so it holds for both people or for neither and can never give them "
             "different roles",
         )
+    if differs_somewhere(when) is False:
+        raise RuleError(
+            "constant_roles",
+            f"{where}.when: holds for both people or for neither in every situation (every value a person can have: each "
+            "constant, a value either side of it, every name), so it can never give them different roles and the rule could "
+            "never apply (the user's decision of 2026-10-26, issue #108; docs/rule-format.md, section 15.2)",
+        )
     return ConditionRoles(when, (raw["assign"][0], raw["assign"][1]), raw["tie"])
+
+
+#: Above this many test situations a role condition is not checked for being constant (accepted).
+MAX_ROLE_SITUATIONS = 200_000
+
+
+def _values_to_try(spec: Any, thresholds: list[Any], non_negative: bool) -> list[Any]:
+    """The values a role condition is tried on for one field: every name or true/false, or each
+    constant and a value just either side of it, and 0. A missing value is not tried: a condition
+    that differs only between someone seen and someone unseen still gives everyone seen one role."""
+    if spec.kind == CATEGORY:
+        return list(spec.categories)
+    if spec.kind == BOOLEAN:
+        return [True, False]
+    points = sorted({float(value) for value in thresholds} | {0.0})
+    gaps = [b - a for a, b in zip(points, points[1:])]
+    step = min([1e-6 * max([1.0] + [abs(p) for p in points])] + [gap / 3.0 for gap in gaps])
+    values = {value for point in points for value in (point - step, point, point + step)}
+    return sorted(value for value in values if value >= 0.0 or not non_negative)
+
+
+def differs_somewhere(condition: Condition) -> Optional[bool]:
+    """Whether a role condition holds for one person and not the other in at least one situation
+    (issue #108): ``True``, ``False``, or ``None`` if there are too many situations to try. Every
+    agent-level number a rule reads (an age, a speed, a size, a distance or time to a segment) is
+    zero or more, so only such values are tried for it."""
+    import itertools
+
+    pair_values: dict[str, list[Any]] = {}
+    agent_values: dict[str, list[Any]] = {}
+    specs: dict[tuple[str, str], Any] = {}
+    for comparison in condition.comparisons():
+        level = "pair" if comparison.ref.prefix == "pair" else "agent"
+        table = pair_values if level == "pair" else agent_values
+        table.setdefault(comparison.ref.spec.name, []).extend(comparison.thresholds())
+        specs[(level, comparison.ref.spec.name)] = comparison.ref.spec
+    pair_choices = {name: _values_to_try(specs[("pair", name)], values, False) for name, values in pair_values.items()}
+    agent_choices = {name: _values_to_try(specs[("agent", name)], values, True) for name, values in agent_values.items()}
+    size = math.prod(len(v) for v in pair_choices.values()) * math.prod(len(v) for v in agent_choices.values()) ** 2
+    if size > MAX_ROLE_SITUATIONS:
+        return None
+    names = list(agent_choices)
+    people = list(itertools.product(*(agent_choices[name] for name in names)))
+    for pair_combo in itertools.product(*pair_choices.values()):
+        pair = {"encounter_class": "head_on", **dict(zip(pair_choices, pair_combo))}
+        for first, second in itertools.product(people, repeat=2):
+            snapshot = PairSnapshot(0, 0.0, (0, 1), pair, (dict(zip(names, first)), dict(zip(names, second))))
+            if condition.evaluate_for(snapshot, 0) != condition.evaluate_for(snapshot, 1):
+                return True
+    return False
 
 
 def _own_when(raw: Mapping[str, Any], where: str, schema_version: int, terms: Iterable[str] = ()) -> OwnWhen:

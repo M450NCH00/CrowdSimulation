@@ -26,6 +26,7 @@ CATEGORIES = (
     "ruleset",  # a rule set names a rule or version that is not in the database
     "own_only_scope",  # version 4: an own-only condition that switches on more than the person's own movement (issue #108)
     "steps",  # version 4: a plan that is not in Step 1's step vocabulary (issue #108)
+    "constant_roles",  # version 4: a role condition that can never give the two different roles (issue #108)
 )
 
 
