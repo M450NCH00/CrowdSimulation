@@ -178,7 +178,14 @@ goes through the budget guard on the experiment's own calls. For round 1's four 
 worst case is **USD 0.028**. The translator sees no ethnicity or attractiveness, so no ethics
 sign-off is needed.
 
-## 11. Not done here
+## 11. Round 1
+
+`runs/rf12_round1_head_on/translation_report.md` (paid, 2026-10-26, USD 0.0017). Of RF-11's four
+kept rules, three translations are valid and one (signalling) is not expressible. Two of the
+valid ones are the same as plain ORCA, and the third (both people slow in every head-on)
+gridlocks the crowd. None changes the Step 1 outcome: 0.36 reproduced, plain ORCA's own share.
+
+## 12. Not done here
 
 - Promotion into `rule_db/` (RF-14), and running the whole rule set together (RF-18).
 - Extending format 3.

@@ -104,8 +104,8 @@ of paid runs and a cap for its round, recorded in `CLAUDE.md`.
   screening of up to 16 factors; RF-11 (#66) Step 2 rule extractor, three runs, with references
   and held-out fidelity (*done*: `negsim/extraction/`, `docs/rule-extraction.md`,
   `runs/rf11_round1_head_on/extraction_report.md`); RF-12 (#67) translation to rule format 3, with
-  the identity check and crowd screening (low priority; *built on the mock*: `negsim/translation/`,
-  `docs/rule-translation.md`); RF-13 (#68)
+  the identity check and crowd screening (low priority; *done*: `negsim/translation/`,
+  `docs/rule-translation.md`, `runs/rf12_round1_head_on/translation_report.md`); RF-13 (#68)
   Phase B (optional); RF-14 (#69) Step 3, verification against human evidence; RF-18 (#74) all
   rules so far with ORCA on crowds and an unseen scenario, against plain ORCA, rerun after every
   round; RF-15 (#70) results summary for the interim report (25 January 2027).

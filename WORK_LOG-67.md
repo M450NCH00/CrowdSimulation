@@ -113,6 +113,76 @@ lost" will be the main findings, as the issue expects.
   rounding). Peak hours until 10:00 UTC.
 - Next: the full test suite, docs, then ask the user for the paid run's approval and cap.
 
-## Open questions / risks
+### 2026-10-26 — The user's answers; the paid run
+- The user approved paid runs for #67 only, cap **USD 0.03** (my recommendation: above the worst
+  case of 0.028, so the guard cannot abort a translation), and kept D-A as built (no schema
+  version 4). Recorded in `CLAUDE.md` and the config; pricing re-read (no change), recorded in
+  `pricing-check.md`.
+- Tests: related suites 199 passed. The full suite: 2029 passed, 10 skipped, 2 failed:
+  `test_stop_at_cap_...` (the known peak-hour flake, `WORK_LOG-66.md`; the suite started at
+  09:4x UTC, peak) and my own config test, which read the config before its cap was raised.
+  Both pass on a rerun off-peak (37 passed, 10:11 UTC).
+- Waited for off-peak (10:00 UTC). `--client deepseek` without `--confirm`: nothing sent. Then
+  `--limit 1` (10:01): `x_head_on_0ecc2d1a6e`, USD 0.0006. I read the reply before going on: a
+  careful translation, a no-op rule with every dropped part listed. Then the other three
+  (10:05). **Total USD 0.0017**, 4 calls, none retried, all off-peak. Balance USD 0.62 after.
+- **Decision (mine, flagged):** the crowd runs are about 24 MB each (432 MB in all), almost all
+  `interactions.jsonl` and `pair_interactions.jsonl`. Those and `trajectory.csv` are gitignored
+  under `runs/rf12_*/screening/`; each run's `config.json`, `outcome.json` and `events.jsonl`
+  are committed (3.4 MB for the experiment). The screening numbers come from `outcome.json`.
+  The simulator is deterministic: my replays of plain ORCA reproduced the source's recorded runs
+  in 76 of 76 sessions.
+- **Results** (`runs/rf12_round1_head_on/translation_report.md`):
+  - 3 valid, 1 `not_expressible` (the signalling rule; the translator: "entirely about
+    signalling and speaking"). No `format_limit`: the translator dropped what the format could
+    not say rather than writing it badly.
+  - Two valid translations (`0ecc2d1a6e`, `aacce0961b`) are speed scale 1, no side: **plain
+    ORCA**. The third (`6455ca5589`) is "both slow to 0.73 in every head-on": its condition
+    (who gives way, facing an older or encumbered other) is gone.
+  - Identity check, 76 Step 1 sessions each: every rule matched all 76 and reproduced 0.36 of
+    them, **the same as plain ORCA** (same first 0.67, same sides 0.55). No translation changes
+    the outcome.
+  - Crowd: the two no-ops equal the baseline exactly; **the slow-down gridlocks the flow on both
+    seeds** (timeout, 80 and 34 of 100 arrived; 1,518 and 2,262 collision episodes against 86
+    and 68).
+- Optional task 8 (a second simulator): not done. With nothing of round 1's rules left in
+  format 3, a second target is better tried on a later round's rules, or with a richer format.
 
-## Summary (fill in at the end)
+## Open questions / risks
+1. **Format 3 is too narrow for what the agents did.** Who gives way, what each sees of the
+   other (a cane, a suitcase, a phone), when they start and how far they turn are what made the
+   LLM agents differ from ORCA, and format 3 can read or say none of it. RF-18 (#74) would have
+   nothing useful from round 1 to run. Whether to extend the format (a new schema version, its own
+   issue), run extracted rules another way, or accept this as the finding is for the user and
+   the supervisor.
+2. **Should a translator make the "younger slows" step?** `6455ca5589`'s age branch could be
+   written as roles by `agent.age`. The template says to add nothing, and the model didn't. A
+   `translate_v2` that allows the nearest readable stand-in, with that step listed under
+   `lost` as `approximated`, is an option.
+3. **One translation per rule, temperature 0** (`[placeholder]`, D-B). Not checked for
+   stability.
+4. **The identity check cannot tell** a lost translation apart from ORCA behaving unlike the
+   plans under any rule. Plain ORCA's share (0.36) is reported beside it for that reason.
+5. Crowd screening used two seeds of one flow, as #30 did.
+6. Balance: CLAUDE.md recorded USD 0.64 after #66; the endpoint said 0.63 before this run, with
+   no ledger line between. Likely rounding of 0.6x; not investigated.
+
+## Summary
+**What changed.** A translation step from RF-11's extracted rules to rule format 3:
+`negsim/translation/` (prompt, reply, losses, identity check, experiment, mock), frozen template
+`translate_v1` (uses `rulegen_common_v2`'s format text word for word), layer `rule_translation`
+in `run_experiment.py`, configs `configs/translation/`, `docs/rule-translation.md`, a
+`log-schema.md` section, and round 1's paid run `runs/rf12_round1_head_on/` with its report.
+Rule format 3 and every earlier config and template are unchanged.
+
+**Why.** Issue #67's tasks 1 to 7 and 9: translate, validate, record what is lost, mark rules
+that need communication, write with provenance, check identity on the Step 1 sessions, screen in
+a crowd. Task 8 (optional) is not done.
+
+**How it was verified.** `tests/test_translation.py` (36 tests: the template and its glossary,
+the reply reader, the column map against every RF-11 column, every mock path's category, the
+writer and loader, the identity check on real RF-30 sessions with a no-match rule and a keep-right
+rule, the experiment end to end with resume, refusal of a changed config, the paid path
+unconfirmed, the budget guard and a rerun, the configs and the command line). The full suite as
+above. A mock rehearsal on all 16 RF-11 rules. Plain ORCA's replay checked against the recorded
+runs (76 of 76).
