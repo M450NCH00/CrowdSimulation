@@ -474,6 +474,7 @@ def test_the_budget_guard_stops_a_paid_extraction_at_the_cap_and_a_rerun_redoes_
     entries = [json.loads(line) for line in ledger.read_text(encoding="utf-8").splitlines()]
     assert len(entries) == 1 and entries[0]["cost_usd"] <= config.budget["cap_usd"] and entries[0]["experiment"] == "ext"
     assert first.status == X.STATUS_PARTIAL and "budget" in first.aborted
+    assert first.summary["cost"]["actual_usd"] == pytest.approx(entries[0]["cost_usd"])  # the ledger's spend, all of it
     runs = tmp_path / "out" / "ext" / "head_on" / "runs"
     outcomes = {path.name: json.loads(path.read_text(encoding="utf-8"))["outcome"] for path in runs.glob("run_*.json")}
     assert outcomes == {"run_1.json": X.RUN_COMPLETED, "run_2.json": X.RUN_ABORTED}
@@ -483,6 +484,8 @@ def test_the_budget_guard_stops_a_paid_extraction_at_the_cap_and_a_rerun_redoes_
                              report=lambda _: None, git=GIT, sign_off_file=sign)
     assert again.skipped == ["head_on/run_1"] and again.executed == ["head_on/run_2", "head_on/run_3"]
     assert (runs / "run_2.aborted1.json").is_file() and again.status == X.STATUS_COMPLETED
+    ledger_total = math.fsum(json.loads(line)["cost_usd"] for line in ledger.read_text(encoding="utf-8").splitlines())
+    assert again.summary["cost"]["actual_usd"] == pytest.approx(ledger_total)
 
 
 def test_the_config_refuses_a_sample_outside_10_to_20_and_min_runs_above_the_runs():

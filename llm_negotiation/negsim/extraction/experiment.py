@@ -720,7 +720,12 @@ def run_extraction(
         types_out.append(entry)
     complete = all(t.get("skipped") or "rules" in t for t in types_out)
     result.status = STATUS_COMPLETED if complete and result.aborted is None else STATUS_PARTIAL
-    cost = math.fsum((run or {}).get("cost_usd") or 0.0 for t in types_out for run in t.get("runs", []) if run)
+    # Every run record counts, an aborted one and those set aside included: what it spent before it
+    # stopped was charged.
+    cost = math.fsum(
+        json.loads(path.read_text(encoding="utf-8"))["totals"]["cost_usd"]
+        for t in plan_.types for path in sorted((experiment_dir / t.encounter_type / "runs").glob("run_*.json"))
+    )
     summary = {"experiment": config.experiment_name, "status": result.status, "client": name, "types": types_out,
                "cost": {"preview_usd": preview["usd_total"], "actual_usd": round(cost, 10), "cap_usd": config.budget["cap_usd"]}}
     _write_json(experiment_dir / "summary.json", summary)
