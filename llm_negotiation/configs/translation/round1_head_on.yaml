@@ -1,0 +1,48 @@
+# Issue #67 (RF-12): translate round 1's extracted rules (head-on) into rule format 3, then replay
+# them on their Step 1 sessions and screen them in a crowd.
+#
+#   python run_experiment.py configs/translation/round1_head_on.yaml --plan
+#   python run_experiment.py configs/translation/round1_head_on.yaml --out runs_mock/rf12   # mock rehearsal
+#
+# PAID RUN: approved by the user for issue #67 only, 2026-10-26, cap USD 0.03 (CLAUDE.md, pending
+# item 1). This config names the mock client; the paid run is
+#   python run_experiment.py configs/translation/round1_head_on.yaml --client deepseek --confirm
+# off-peak.
+schema_version: 1
+layer: rule_translation
+experiment_name: rf12_round1_head_on
+description: >-
+  RF-12, round 1 (head-on): RF-11's kept rules (candidate, found in 2 or 3 of 3 extraction runs),
+  each translated once into rule format 3, validated, written with its references unchecked, run
+  alone in ORCA on the Step 1 sessions it was extracted from (the identity check), and screened
+  alone in the two-way flow.
+
+extraction: runs/rf11_round1_head_on
+statuses: [candidate]        # RF-11 passes no unstable rule to RF-12
+
+template: translate_v1
+
+llm:
+  client: mock
+  mock_policy: translate_rehearsal_v1
+  model: deepseek-flash      # the extractor's model (RF-11)
+  temperature: 0.0           # [placeholder] one translation per rule: the model's most likely, not a random sample
+  max_tokens: 1500           # [placeholder] a format 3 rule, the parts lost and a note
+  thinking: disabled
+  transport_retries: 0       # one send per attempt; a transport failure aborts the translation, which a rerun redoes
+
+budget:
+  cap_usd: 0.03              # the cap CLAUDE.md records for #67 (approved by the user, 2026-10-26); the worst case is 0.028
+  ledger: spend_ledger.jsonl
+
+identity:
+  enabled: true              # task 6: on the Step 1 sessions each rule was extracted from
+
+screening:
+  enabled: true              # task 7: one rule at a time, as in #30 section 8
+  scenario: configs/scenarios/bidirectional_flow.yaml
+  baseline: orca_perturbed_v1
+  seed: 30900
+  repeats: 2
+  ages: [25, 70]             # round 1's two ages (RF-10's design)
+  genders: [female, male]

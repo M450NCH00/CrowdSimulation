@@ -679,6 +679,24 @@ sent), `attempts` (each with `messages_sent`, `appended` for a retry, `raw`, `mo
 once and never rewritten; an aborted one is set aside as `run_<k>.aborted<n>.json` when the run is
 redone.
 
+## Rule-translation experiments (issue #67)
+
+A rule-translation experiment (`rule-translation.md`) translates the rules a rule extraction kept
+into rule format 3, then replays and screens them (RF-12). Its folder, `runs/<experiment_name>/`
+(`runs_mock/` with the mock client), is **version 1** of the translation log
+(`translation_log_version` in `config.json` and in every translation record). The layout and what
+each file holds are in `rule-translation.md`, section 9. A translation record
+(`translations/<x_rule_id>.json`) has `translation_log_version`, `experiment`, `extraction` (the
+extracted rule: its experiment, `rule_id`, `version`, `file`, `sha256`, `status`, `category`,
+`extraction_stability`, `target`, `held_out_accuracy`, `baseline_accuracy`, `beats_baseline`),
+`started_utc`, `ended_utc`, `template`, `llm`, `messages` (exactly as sent), `attempts` (as an
+extraction run's), `outcome` (`completed`, `unreadable` or `aborted`), `error`, `translation` (the
+reply as read: `rule`, `lost`, `note`; null if unreadable) and `totals`. It is written once and
+never rewritten; an aborted one is set aside as `<x_rule_id>.aborted<n>.json` when it is redone.
+The staging database's rules are rule files of schema version 3 (`rule-format.md`); their
+`screening` entries are a `replay` (the identity check, its rows in `identity/<rule_id>.csv`) and
+a `crowd` entry.
+
 ## `spend_ledger.jsonl`
 
 One line per paid call: `utc`, `experiment`, `run_id`, `turn_index`, `speaker`, `attempt`,
@@ -688,7 +706,8 @@ One line per paid call: `utc`, `experiment`, `run_id`, `turn_index`, `speaker`, 
 A call of a rule-generation experiment (issue #30) has, instead of `run_id`, `session_id`,
 `condition`, `case_id`, `repeat`, `speaker_role` (condition A) and `path_index` (read only by
 the mock client; never sent to a provider). A call of a rule-extraction experiment (issue #66) has
-`encounter_type`, `run` and `attempt`. A budget cap scoped to one experiment counts the
+`encounter_type`, `run` and `attempt`; of a rule-translation experiment (issue #67), `rule_id` and
+`attempt`. A budget cap scoped to one experiment counts the
 lines whose `experiment` is that experiment's name.
 
 ## Change log

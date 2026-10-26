@@ -225,6 +225,11 @@ TEMPLATE_KINDS: dict[str, tuple[str, ...]] = {
         "template_id", "version", "kind", "description", "system", "columns", "user", "coin_flips", "no_coin_flips", "session",
         "outcome", "person", "decision", "said", "signal", "reason", "unreadable", "debrief", "no_debrief", "reply_format", "retry",
     ),
+    # Issue #67 (RF-12): the translator of an extracted rule into rule format 3, rendered by ``negsim.translation``.
+    "rule_translation": (
+        "template_id", "version", "kind", "description", "uses", "system", "reply_format", "user", "factor_line",
+        "exception_line", "no_exceptions", "answer_yes", "answer_no", "retry",
+    ),
 }
 
 
