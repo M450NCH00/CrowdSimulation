@@ -31,6 +31,7 @@ from typing import Any, Mapping, Optional, Sequence
 from ..configutil import PACKAGE_ROOT, ConfigError, as_number, check_keys, load_yaml
 from ..experiment.avoidance import AvoidanceExperiment, AvoidanceRunPlan, execute_avoidance_run, forget_rule_database
 from ..rules.canonical import canonical_hash
+from ..personas.schema import FACTOR_ATTRIBUTES
 from ..rules.model import Rule
 from ..runlog.schema import PAIR_INTERACTIONS_FILE
 from .cases import text_sha256
@@ -98,9 +99,17 @@ def source_plan(case: Mapping[str, Any]) -> AvoidanceRunPlan:
 
 
 def population_of(personas: Mapping[int, Mapping[str, Any]], label: str) -> dict[int, dict[str, Any]]:
-    """Personas for an avoidance run: age and gender, nothing else (a task is never seen)."""
+    """Personas for an avoidance run: age and gender, nothing else (a task is never seen). Since
+    issue #108 also any of track #55's core factors a person is given (a cane, their assertiveness),
+    which a version 4 rule reads; no persona before it has any, so their runs are as before."""
     return {
-        int(agent): {"persona_id": f"{label}:{agent}", "attributes": {"age": person["age"], "gender": person["gender"]}}
+        int(agent): {
+            "persona_id": f"{label}:{agent}",
+            "attributes": {
+                "age": person["age"], "gender": person["gender"],
+                **{name: person[name] for name in FACTOR_ATTRIBUTES if person.get(name) not in (None, "")},
+            },
+        }
         for agent, person in personas.items()
     }
 
@@ -249,13 +258,22 @@ def crowd_plans(settings: ScreeningSettings, experiment: str) -> list[AvoidanceR
     return config.plans()
 
 
-def mixed_population(n_agents: int, ages: Sequence[int], genders: Sequence[str]) -> dict[int, dict[str, Any]]:
+def mixed_population(
+    n_agents: int, ages: Sequence[int], genders: Sequence[str], factors: Optional[Mapping[str, Sequence[str]]] = None
+) -> dict[int, dict[str, Any]]:
     """Ages and genders for a crowd, so that a rule that reads them can apply: agent ``k`` gets
-    ``ages[k % len(ages)]`` and ``genders[(k // len(ages)) % len(genders)]``."""
-    return {
-        agent: {"age": ages[agent % len(ages)], "gender": genders[(agent // len(ages)) % len(genders)]}
-        for agent in range(n_agents)
-    }
+    ``ages[k % len(ages)]`` and ``genders[(k // len(ages)) % len(genders)]``. ``factors`` (issue
+    #108) gives core factors the same way, each cycling more slowly than the ones before it: the
+    first gets ``levels[(k // (len(ages) * len(genders))) % len(levels)]``, and so on."""
+    out = {}
+    for agent in range(n_agents):
+        person: dict[str, Any] = {"age": ages[agent % len(ages)], "gender": genders[(agent // len(ages)) % len(genders)]}
+        stride = len(ages) * len(genders)
+        for name, levels in (factors or {}).items():
+            person[name] = levels[(agent // stride) % len(levels)]
+            stride *= len(levels)
+        out[agent] = person
+    return out
 
 
 def crowd_size(settings: ScreeningSettings) -> int:

@@ -36,7 +36,7 @@ from typing import Any, Mapping, Optional
 
 from ..negotiation.prompts import TemplateIntegrityError, load_template_data
 from ..rules.database import RULE_DB_ROOT, schema_path
-from ..rules.fields import BOOLEAN, CATEGORY, FieldSpec, fields_of
+from ..rules.fields import BOOLEAN, CATEGORY, FieldSpec, fields_of, self_fields_of
 from .design import Session
 
 KIND_COMMON = "rule_generation_common"
@@ -156,7 +156,10 @@ def glossary_text(common: Mapping[str, Any], demographics_visible: bool) -> str:
     lines += [f"- {g['encounters'][name]}" for name in properties["encounter"]["enum"]]
     lines += ["", fill(" ".join(g["comparison"].split()), operators=listing(defs["comparison"]["properties"]["op"]["enum"], quote=True), units=listing(units, quote=False))]
     lines += ["", " ".join(g["prefixes"].split())]
-    for header, table, prefix in ((g["pair_fields_header"], pair_fields, "pair."), (g["agent_fields_header"], agent_fields, "")):
+    tables = [(g["pair_fields_header"], pair_fields, "pair."), (g["agent_fields_header"], agent_fields, "")]
+    if version >= 4:  # issue #108: a person's own private factors, for an own-only condition
+        tables.append((g["self_fields_header"], self_fields_of(version), "self."))
+    for header, table, prefix in tables:
         lines += ["", header]
         for spec in shown_fields(table, demographics_visible):
             meaning = meaning_of(spec)
@@ -169,12 +172,28 @@ def glossary_text(common: Mapping[str, Any], demographics_visible: bool) -> str:
             lines.append("- " + (fill(line, meaning=meaning) if meaning else line.split(": {meaning}")[0]))
     order = defs["role_assignment"]["properties"]["by"]["properties"]["order"]["enum"]
     lines += ["", g["roles_header"], fill(" ".join(g["roles"].split()), orders=listing(order))]
+    if version >= 4:  # issue #108: roles by a condition
+        lines += [" ".join(g["roles_condition"].split())]
     lines += ["", g["directive_header"]]
     for name, words in g["directive_fields"].items():
         spec = directive[name]
         lines.append("- " + fill(words, values=listing(spec.get("enum", [])) if "enum" in spec else "", minimum=spec.get("minimum", ""), maximum=spec.get("maximum", "")))
+    if version >= 4:  # issue #108: the step vocabulary, and own-only conditions, from the schema
+        step = defs["step"]["properties"]
+        until = [option["const"] for option in step["until"]["oneOf"] if "const" in option]
+        lines += ["", g["steps_header"], fill(
+            " ".join(g["steps"].split()),
+            max_degrees=_number_text(step["turn"]["properties"]["degrees"]["maximum"]),
+            max_sidestep=_number_text(step["sidestep"]["properties"]["metres"]["maximum"]),
+            events=listing(until),
+        )]
+        lines += ["", g["own_when_header"], fill(" ".join(g["own_when"].split()), fields=listing(defs["own_movement"]["properties"], quote=False)), ""]
     lines += [" ".join(g["consistency"].split())]
     return "\n".join(lines)
+
+
+def _number_text(value: Any) -> str:
+    return f"{value:g}" if isinstance(value, (int, float)) else str(value)
 
 
 def glossary_sha256(common: Mapping[str, Any], demographics_visible: bool) -> str:

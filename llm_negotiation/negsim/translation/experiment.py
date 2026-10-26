@@ -6,7 +6,8 @@
     python run_experiment.py configs/translation/round1_head_on.yaml --client deepseek --confirm
 
 For each rule a rule extraction kept (RF-11, ``status: candidate``): one call translates it into
-rule format 3 (template ``translate_v1``), the rule loader's checks give it a category
+rule format 3 (template ``translate_v1``), or since issue #108 (RF-31) into rule format 4
+(``translate_v2``; the format is the one its common template describes), the rule loader's checks give it a category
 (``negsim.rulegen.validate``), and what the format could not say is recorded, by the translator and
 mechanically (``negsim.translation.losses``). A valid translation is written into the experiment's
 staging database, then switched on alone and run on the Step 1 sessions it was extracted from (the
@@ -50,8 +51,11 @@ from ..llm.pricing import PriceTable
 from ..negotiation.parsing import TurnParseError
 from ..rules.database import MANIFEST_FILE, file_sha256
 from ..rulegen import validate as V
+from ..rulegen.describe import rule_schema_version_of
+from ..rules.fields import VISIBLE_FACTOR_SWITCHES
 from ..rulegen.replay import CrowdScreen, ScreeningSettings, crowd_size, mixed_population
 from ..rulegen.writer import StagingDatabase, with_screening
+from ..personas.schema import ATTRIBUTES
 from . import identity as I
 from .losses import action_flags, counted, factor_losses
 from .mock import POLICIES as MOCK_POLICIES
@@ -68,7 +72,8 @@ MAX_ATTEMPTS = 2
 #: The reply cap when a config gives none: a format 3 rule, the parts lost and a note.
 DEFAULT_MAX_TOKENS = 1500
 STATUSES = ("candidate", "unstable")
-#: The rule format the translations are written in (``rulegen_common_v2`` describes it).
+#: The rule format the translations of ``translate_v1`` are written in (``rulegen_common_v2``
+#: describes it). A later template's common template says its own (issue #108: ``translate_v2``, 4).
 RULE_SCHEMA_VERSION = 3
 STAGING_DIR = "rule_db_staging/extracted"
 TRANSLATIONS_DIR = "translations"
@@ -81,6 +86,12 @@ RUN_COMPLETED, RUN_UNREADABLE, RUN_ABORTED = "completed", "unreadable", "aborted
 STATUS_COMPLETED, STATUS_PARTIAL, STATUS_AWAITING = "completed", "partial", "awaiting_confirmation"
 #: What both people can see in the crowd and in the validation: a format 3 rule may read age and gender.
 ALL_VISIBLE = {"speed": True, "size": True, "age": True, "gender": True}
+
+
+def visible_for(schema_version: int) -> dict[str, bool]:
+    """What both people can see, for a rule of ``schema_version``: from format 4 (issue #108) also a
+    cane, a suitcase and a phone. A format 3 translation is checked and screened exactly as before."""
+    return {**ALL_VISIBLE, **({name: True for name in VISIBLE_FACTOR_SWITCHES} if schema_version >= 4 else {})}
 
 
 def is_translation_config(raw: Any) -> bool:
@@ -125,6 +136,9 @@ class TranslationConfig:
     screening: Optional[ScreeningSettings]
     crowd_ages: tuple[int, ...]
     crowd_genders: tuple[str, ...]
+    #: Issue #108: core factors the screening crowd is given in turn (``mixed_population``), so that a
+    #: format 4 rule that reads them can apply. Empty: ages and genders only, as before.
+    crowd_factors: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
 
     @classmethod
     def load(cls, path: Path | str) -> "TranslationConfig":
@@ -157,6 +171,13 @@ class TranslationConfig:
         screening_raw = dict(raw.get("screening") or {})
         ages = screening_raw.pop("ages", [25, 70])
         genders = screening_raw.pop("genders", ["female", "male"])
+        factors = screening_raw.pop("factors", {}) or {}
+        if not isinstance(factors, Mapping) or not all(isinstance(levels, list) and levels for levels in factors.values()):
+            raise ConfigError(f"{where}.screening.factors: a mapping from a core factor to a list of its levels")
+        for factor, levels in factors.items():
+            known = ATTRIBUTES.get(factor)
+            if known is None or not known.levels or not set(levels) <= set(known.levels):
+                raise ConfigError(f"{where}.screening.factors.{factor}: a core factor and its levels {list(known.levels) if known and known.levels else ''}")
         if not isinstance(ages, list) or not ages or not all(isinstance(a, int) and a > 0 for a in ages):
             raise ConfigError(f"{where}.screening.ages: a list of whole numbers of years")
         if not isinstance(genders, list) or not genders or not set(genders) <= {"female", "male", "nonbinary"}:
@@ -187,6 +208,7 @@ class TranslationConfig:
             screening=settings if screening_raw.get("enabled", True) else None,
             crowd_ages=tuple(int(a) for a in ages),
             crowd_genders=tuple(str(g) for g in genders),
+            crowd_factors={str(name): tuple(str(level) for level in levels) for name, levels in factors.items()},
         )
 
     def as_dict(self) -> dict[str, Any]:
@@ -195,7 +217,10 @@ class TranslationConfig:
             "extraction": self.extraction, "statuses": list(self.statuses),
             "encounter_types": None if self.encounter_types is None else list(self.encounter_types),
             "template": self.template, "llm": dict(self.llm), "budget": dict(self.budget), "identity": {"enabled": self.identity},
-            "screening": None if self.screening is None else {**self.screening.as_dict(), "ages": list(self.crowd_ages), "genders": list(self.crowd_genders)},
+            "screening": None if self.screening is None else {
+                **self.screening.as_dict(), "ages": list(self.crowd_ages), "genders": list(self.crowd_genders),
+                **({"factors": {name: list(levels) for name, levels in self.crowd_factors.items()}} if self.crowd_factors else {}),
+            },
         }
 
 
@@ -287,6 +312,11 @@ class Plan:
     items: list[Item]
     templates: Any
     preview: dict[str, Any]
+
+    @property
+    def rule_schema_version(self) -> int:
+        """The rule format the translations are written in: the one the template's common template describes."""
+        return rule_schema_version_of(self.templates.common)
 
 
 def sends_per_attempt(config: TranslationConfig) -> int:
@@ -398,17 +428,18 @@ def translate_once(config: TranslationConfig, extraction: Extraction, item: Item
     return record
 
 
-def assess(extracted: ExtractedRule, record: Mapping[str, Any]) -> dict[str, Any]:
-    """A translation's category (``negsim.rulegen.validate``, format 3), and what was lost: the
-    translator's list and the mechanical checks of the extracted rule's factors and words."""
+def assess(extracted: ExtractedRule, record: Mapping[str, Any], schema_version: int = RULE_SCHEMA_VERSION) -> dict[str, Any]:
+    """A translation's category (``negsim.rulegen.validate``, in the rule format ``schema_version``),
+    and what was lost: the translator's list and the mechanical checks of the extracted rule's
+    factors and words."""
     data = extracted.data
     out: dict[str, Any] = {
         "extracted_rule_id": extracted.rule_id, "encounter_type": extracted.encounter_type, "rule": data.get("rule"),
         "extracted_status": data.get("status"), "extracted_category": data.get("category"),
         "extraction_stability": data.get("extraction_stability"), "target": (data.get("predict") or {}).get("target"),
         "needs_communication": data.get("category") == "needs_communication",
-        "factor_losses": factor_losses(data.get("factors_used")),
-        "action_flags": action_flags([data.get("rule"), data.get("action")]),
+        "factor_losses": factor_losses(data.get("factors_used"), schema_version),
+        "action_flags": action_flags([data.get("rule"), data.get("action")], schema_version),
         "outcome": record["outcome"], "category": None, "message": None, "lost": [], "note": None, "review_flags": [],
     }
     translation = record.get("translation")
@@ -416,10 +447,10 @@ def assess(extracted: ExtractedRule, record: Mapping[str, Any]) -> dict[str, Any
         return out
     out.update(lost=translation["lost"], note=translation["note"])
     if translation["rule"] is None:
-        out.update(category=NOT_EXPRESSIBLE, message="the translator said no part of the rule can be written in format 3")
+        out.update(category=NOT_EXPRESSIBLE, message=f"the translator said no part of the rule can be written in format {schema_version}")
         return out
     texts = [translation["note"], *(item["part"] for item in translation["lost"])]
-    checked = V.validate_proposal(translation["rule"], ALL_VISIBLE, texts, schema_version=RULE_SCHEMA_VERSION)
+    checked = V.validate_proposal(translation["rule"], visible_for(schema_version), texts, schema_version=schema_version)
     out.update(category=checked.category, message=checked.message, loader_category=checked.loader_category,
                fields=checked.fields, review_flags=checked.review_flags, ignored_metadata=checked.ignored_metadata)
     return out
@@ -433,19 +464,23 @@ def rule_id_for(extracted: ExtractedRule) -> str:
     return "ext_" + extracted.rule_id.removeprefix("x_")
 
 
-def build_rule(config: TranslationConfig, extraction: Extraction, extracted: ExtractedRule, record: Mapping[str, Any], runnable: bool) -> dict[str, Any]:
-    """The format 3 rule file of a valid translation: the translator's body, and the code's own
-    metadata (never the model's). The extracted rule's references become its
+def build_rule(
+    config: TranslationConfig, extraction: Extraction, extracted: ExtractedRule, record: Mapping[str, Any], runnable: bool,
+    schema_version: int = RULE_SCHEMA_VERSION,
+) -> dict[str, Any]:
+    """The rule file (format ``schema_version``) of a valid translation: the translator's body, and the
+    code's own metadata (never the model's). The extracted rule's references become its
     ``validation_evidence``, each ``unchecked`` (RF-14 checks them)."""
     body = record["translation"]["rule"]
     models = sorted({a.get("model") for a in record["attempts"] if a.get("model")})
-    notes = ("Extracted by a language model from Step 1's resolved sessions (RF-11) and translated into rule format 3 "
-             "(RF-12, issue #67); its id and provenance are the code's, never a model's. A candidate, not checked against "
+    step = "(RF-12, issue #67)" if schema_version == 3 else "(RF-31, issue #108)"
+    notes = (f"Extracted by a language model from Step 1's resolved sessions (RF-11) and translated into rule format {schema_version} "
+             f"{step}; its id and provenance are the code's, never a model's. A candidate, not checked against "
              "evidence about people (RF-14).")
     if not runnable:
         notes += (" NOT RUNNABLE IN ORCA: the extracted rule needs communication (it held only when a signal or words were "
                   "used, D9), and nobody signals or talks in ORCA. Not replayed and not screened.")
-    rule: dict[str, Any] = {"schema_version": RULE_SCHEMA_VERSION, "rule_id": rule_id_for(extracted), "version": 1, "status": "candidate"}
+    rule: dict[str, Any] = {"schema_version": schema_version, "rule_id": rule_id_for(extracted), "version": 1, "status": "candidate"}
     if extracted.data.get("rule"):
         rule["description"] = " ".join(str(extracted.data["rule"]).split())
     if isinstance(body.get("intent"), str):
@@ -470,13 +505,14 @@ def build_rule(config: TranslationConfig, extraction: Extraction, extracted: Ext
     return rule
 
 
-def staging(experiment_dir: Path) -> StagingDatabase:
+def staging(experiment_dir: Path, schema_version: int = RULE_SCHEMA_VERSION) -> StagingDatabase:
     """The experiment's staging database, laid out as the writer's, with its own note of what it holds."""
     database = StagingDatabase(experiment_dir / STAGING_DIR)
     if not database.manifest_path.is_file():
+        issue = "issue #67, RF-12" if schema_version == 3 else "issue #108, RF-31"
         _write_json(database.manifest_path, {
-            "about": ("A staging rule database of a rule-translation experiment (issue #67, RF-12): extracted rules translated "
-                      "into rule format 3, status candidate, written by negsim.translation only. SHA-256 of every file, line endings "
+            "about": (f"A staging rule database of a rule-translation experiment ({issue}): extracted rules translated "
+                      f"into rule format {schema_version}, status candidate, written by negsim.translation only. SHA-256 of every file, line endings "
                       "normalised to LF; a file is frozen once listed, and a change is the next version. Nothing here is in "
                       "rule_db/ unless it is promoted, with a reason."),
             "files": {},
@@ -547,12 +583,12 @@ def evaluate(
         report(f"  {rule.rule_id}: identity {summary['all']['rule_reproduces']} (plain ORCA {summary['all']['plain_reproduces']}), "
                f"matched {summary['rule_matched']} of {summary['trusted']}")
     if crowd is not None:
-        screened = crowd.screen(rule, database.root, ALL_VISIBLE)
+        screened = crowd.screen(rule, database.root, visible_for(rule.schema_version))
         entries.append(screened)
         report(f"  {rule.rule_id}: crowd {screened['verdict']}")
     if entries:
         newer = with_screening(rule.written, entries)
-        database.write(newer, "with the identity check and crowd screening (RF-12)")
+        database.write(newer, "with the identity check and crowd screening (RF-12)" if rule.schema_version == 3 else "with the identity check and crowd screening (RF-31)")
         entry["screening_version"] = newer["version"]
         entry["screening"] = entries
 
@@ -644,7 +680,8 @@ def run_translation(
             continue
         records.append(record)
 
-    database = staging(experiment_dir)
+    version = plan_.rule_schema_version
+    database = staging(experiment_dir, version)
     checker = None
     if config.identity:
         sources = sorted({source for r in plan_.extraction.rules for source in r.data["provenance"]["sources"]})
@@ -652,19 +689,19 @@ def run_translation(
     crowd = None
     if config.screening is not None:
         crowd = CrowdScreen(config.screening, experiment_dir / SCREENING_DIR, config.experiment_name, git,
-                            mixed_population(crowd_size(config.screening), config.crowd_ages, config.crowd_genders), where=SCREENING_DIR)
+                            mixed_population(crowd_size(config.screening), config.crowd_ages, config.crowd_genders, config.crowd_factors), where=SCREENING_DIR)
     rules_out = []
     for item, record in zip(plan_.items, records):
         if record is None:
             rules_out.append({"extracted_rule_id": item.extracted.rule_id, "outcome": "not_run"})
             continue
-        entry = assess(item.extracted, record)
+        entry = assess(item.extracted, record, version)
         entry["extraction"] = record["extraction"]
         entry["cost_usd"] = record["totals"]["cost_usd"]
         entry["runnable_in_orca"] = entry["category"] == V.VALID and not entry["needs_communication"]
         if entry["category"] == V.VALID:
-            rule = build_rule(config, plan_.extraction, item.extracted, record, entry["runnable_in_orca"])
-            name_, _ = database.write(rule, f"translated from {item.extracted.rule_id} (RF-12)")
+            rule = build_rule(config, plan_.extraction, item.extracted, record, entry["runnable_in_orca"], version)
+            name_, _ = database.write(rule, f"translated from {item.extracted.rule_id} ({'RF-12' if version == 3 else 'RF-31'})")
             entry.update(staged_rule_id=rule["rule_id"], staged_file=f"{STAGING_DIR}/{name_}", translated_rule=record["translation"]["rule"])
             if entry["runnable_in_orca"]:
                 evaluate(config, plan_, experiment_dir, database, entry, item.extracted, checker, crowd, git, report)
@@ -677,6 +714,7 @@ def run_translation(
                      for path in sorted((experiment_dir / TRANSLATIONS_DIR).glob("*.json")))
     summary = {
         "experiment": config.experiment_name, "status": result.status, "client": name,
+        **({"rule_schema_version": version} if version != RULE_SCHEMA_VERSION else {}),
         "extraction": {"folder": _relative(plan_.extraction.folder), "experiment": plan_.extraction.name, "statuses": list(config.statuses)},
         "rules": rules_out,
         "counts": {
@@ -724,6 +762,7 @@ def _crowd(entry: Mapping[str, Any]) -> str:
 
 def report_markdown(config: TranslationConfig, summary: Mapping[str, Any]) -> str:
     counts = summary["counts"]
+    version = summary.get("rule_schema_version", RULE_SCHEMA_VERSION)
     lines = [f"# Rule translation: {config.experiment_name}", "", config.description, "",
              f"Status: {summary['status']}; client {summary['client']}; cost USD {summary['cost']['actual_usd']:.6f} "
              f"(worst case USD {summary['cost']['preview_usd']:.6f}, cap USD {summary['cost']['cap_usd']:.2f}).", "",
@@ -731,8 +770,8 @@ def report_markdown(config: TranslationConfig, summary: Mapping[str, Any]) -> st
              f"{counts['translated']} translated; categories {counts['categories']}; written {counts['written']}; "
              f"runnable in ORCA {counts['runnable_in_orca']}; extracted as needing communication {counts['needs_communication_extracted']} "
              f"(written but not runnable: {counts['needs_communication_written_not_runnable']}).", "",
-             "A `format_limit` or `not_expressible` translation is a finding about rule format 3, not about the model.", "",
-             "| Extracted rule | Category | Lost (translator) | Factors format 3 cannot read | Action words with no directive | Identity check | Crowd |",
+             f"A `format_limit` or `not_expressible` translation is a finding about rule format {version}, not about the model.", "",
+             f"| Extracted rule | Category | Lost (translator) | Factors format {version} cannot read | Action words with no directive | Identity check | Crowd |",
              "| --- | --- | --- | --- | --- | --- | --- |"]
     for entry in summary["rules"]:
         if entry.get("outcome") == "not_run":

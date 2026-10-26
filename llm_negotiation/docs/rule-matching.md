@@ -30,7 +30,11 @@ complementary roles as the other, because:
    world, at the start of the same step, without error or delay.
 
 Under 1 to 3, the snapshot agent A builds from its own record equals the one agent B builds
-from its own, value for value, and equals the shared one. Every rule therefore matches or
+from its own, value for value, and equals the shared one. *Version 4 (issue #108)* adds a part
+the two do not share: each person's own private factors, read only by that person's own-only
+condition (`rule-format.md`, section 15). The shared snapshot holds both people's, the one an agent
+builds from its record only its own; each agent's directive depends on the shared part and its own
+private values only, so it is the same either way, and the formation check below covers it. Every rule therefore matches or
 fails the same way for both, they pick the same rule by the same priority, and a role
 assignment, which orders the same two values, gives them complementary roles.
 
@@ -162,6 +166,13 @@ follows:
 
 Shares and clearance margins are per pair and cannot conflict.
 
+**Plans (issue #108).** A match of a version 4 rule whose role has `steps` gives that person a plan,
+once for that match (`rule-format.md`, section 15.4). A person runs **one plan at a time**: a match
+that would start another while one is in force is not started, and is counted
+(`plans_skipped_busy`, in the provider's summary) and marked in the match's `plans`
+(`started: false`), as for back-ups: the first plan to start runs to its end. The plan is the
+person's own; the pair's match can expire, or be replaced, while it runs.
+
 ## 8. The grid of test situations
 
 Used to find, before any run, two rules at one priority that could tell one pair different
@@ -174,7 +185,11 @@ things (`negsim/rules/ambiguity.py`). For two rules it tries every combination o
   constant), and "missing";
 - for every agent-level field either rule reads, for each of the two agents independently:
   the same values, plus, for a field used in a role assignment, values that put the two
-  agents in either order beyond the tie tolerance and within it; and "missing".
+  agents in either order beyond the tie tolerance and within it; and "missing";
+- (version 4, issue #108) the comparisons of a role by a condition and of each own-only condition
+  count as the rule's own, and each person's own private factors (`self.`) are varied for the two
+  independently, as an agent-level field is. Two matches differ if they give anyone a different
+  directive **or a different plan**.
 
 **Why it is enough.** A comparison is between one field and one constant, so whether it
 holds can change only at that constant; one value in each interval between constants, and

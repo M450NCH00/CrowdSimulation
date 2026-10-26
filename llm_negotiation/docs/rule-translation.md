@@ -1,4 +1,4 @@
-# Rule translation (track #55; issue #67, RF-12)
+# Rule translation (track #55; issue #67, RF-12; issue #108, RF-31)
 
 RF-11 (`rule-extraction.md`) extracts rules in plain words: a condition, an action, exceptions,
 factors (columns of its table), references and a `predict` list. negsim cannot run such a rule.
@@ -10,7 +10,9 @@ section 8).
 
 The supervisor said the format is not important (meeting of 2026-10-20), so this step is kept to
 what negsim needs to run a rule. **Format 3 is not extended here**: what it cannot express is a
-finding about the format, not about the model.
+finding about the format, not about the model. *RF-31 (issue #108) extended it afterwards as rule
+format 4, and translates into it with `translate_v2` (section 13); sections 1 to 12 describe
+RF-12's run, and hold for RF-31's except where section 13 says otherwise.*
 
 ```
 python run_experiment.py configs/translation/round1_head_on.yaml --plan
@@ -188,5 +190,55 @@ gridlocks the crowd. None changes the Step 1 outcome: 0.36 reproduced, plain ORC
 ## 12. Not done here
 
 - Promotion into `rule_db/` (RF-14), and running the whole rule set together (RF-18).
-- Extending format 3.
+- Extending format 3 (done afterwards, as format 4, in RF-31: section 13).
 - **Optional task 8, a second simulator**: not done in this issue.
+
+## 13. Rule format 4 (issue #108, RF-31)
+
+RF-12 found that format 3 keeps almost nothing of round 1's rules (section 11). RF-31 extends the
+format (`rule-format.md`, section 15) and translates the same rules again, **with nothing else
+changed**, so that the two runs compare rule for rule:
+
+```
+python run_experiment.py configs/translation/rf31_round1_head_on.yaml --plan
+python run_experiment.py configs/translation/rf31_mock_rehearsal.yaml                # mock, runs_mock/
+python run_experiment.py configs/translation/rf31_round1_head_on.yaml --client deepseek --confirm
+```
+
+- **The template** is `translate_v2` (frozen), which shows the format as `rulegen_common_v3`
+  describes version 4 (its glossary generated from the catalogue and the version 4 schema, and
+  pinned). Its task names the two places a part of a rule can now go: steps, for what a person does
+  over time, and an own-only condition, for what depends on a person's own private factors. What the
+  format still cannot say is a condition it has no field for, and a signal or words. The reply
+  format, its kinds of lost part, the user message and the retry are `translate_v1`'s word for word.
+  The format is the one the template's common template describes (`rule_schema_version`), so the
+  experiment code serves both.
+- **The category** is rule generation's, in format 4 (`rule-generation.md`, section 6;
+  `negsim.rulegen.validate`), with the cane, suitcase and phone visible as well as age, gender, speed
+  and size. An own-only condition that tries to set a side, a share, an order or backing up is
+  `needs_communication` (the loader's `own_only_scope`); perceived attractiveness anywhere but
+  `self.finds_other_attractive` in an own-only condition, and ethnicity anywhere, are
+  `protected_attribute`.
+- **What was lost**, mechanically (`losses.py`, `schema_version` 4): a cane, a suitcase and a phone
+  (either person's), a person's own private factors and their own view of the other (whether they
+  know them, whether they find them attractive) are `readable`; the layout, the surroundings, the
+  time of day and how many decisions a person made are still `no_field`; signals and words are still
+  `communication`; ethnicity is still `protected`. Of the action's words only a signal or words is
+  beyond format 4 (a start, speed, turn, step aside, duration, stop and back-up are steps).
+- **The writer** writes `schema_version: 4`, `RF-31` in its notes; everything else as section 6.
+- **The identity check** gives each person, for a format 4 rule, what the session gave them that
+  format 4 reads: the cane, suitcase and phone (visible as the design showed them: on unless the
+  design switched one off), their own private factors, and their own view of the other as they
+  were told it (left out where the design's switch was off). A rule with steps has them carried out
+  as in a crowd (`negsim/rules/plans.py`), with ORCA still avoiding underneath, beside the watcher
+  that measures the session. A format 3 rule's run is exactly as RF-12's. Step 1 printed a cane,
+  suitcase or phone only within 5 m (D2); a rule reads them at any distance.
+- **Crowd screening** gives the crowd core factors in turn as well as ages and genders
+  (`screening.factors`, `mixed_population`), so that a rule reading them can apply: in RF-31's config,
+  a cane, a suitcase, a phone and assertiveness, each on half the people. Nobody in the crowd has a
+  view of anyone else (`knows_other`, `finds_other_attractive` missing), so an own-only condition on
+  them never holds there; and a suitcase is a label only (no one is widened).
+- **Money.** Four calls, as RF-12; the reply cap is 2,500 tokens (a format 4 rule with steps is
+  longer), and the worst case for round 1's four candidates is **USD 0.043**
+  (`--plan`; peak prices, nothing cached, every reply at the cap, every retry taken). A paid run needs
+  its own approval and cap in `CLAUDE.md` (pending item 1).

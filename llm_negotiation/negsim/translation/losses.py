@@ -23,6 +23,16 @@ only which side), a start distance or moment, a duration or "until", a walking s
 scale can only approximate it), stopping or backing up (format 3 backs up only inside a
 single-file stretch), and a signal or words. These are flags, read from words, for comparison with
 the translator's own list; they never change a rule's category.
+
+**Rule format 4** (issue #108, RF-31) reads more, and says more. A cane, a suitcase and a phone,
+the person's own or the other's, are ``readable`` (``agent.`` in a role by a condition,
+``either.``/``both.`` in a condition); a person's own private factors (assertiveness, urgency,
+residence, a memory) and their own view of the other (whether they know them, whether they find
+them attractive) are ``readable`` as ``self.`` fields in that person's own-only condition. The
+layout, the surroundings, the time of day and how many decisions a person made still have no
+field; signals and words are still ``communication``; ethnicity is still ``protected``. Of the
+action's words, only a signal or words is beyond format 4's directives: a start, a speed, a turn
+or step aside, a duration, stopping and backing up are steps. ``schema_version`` chooses the map.
 """
 
 from __future__ import annotations
@@ -84,12 +94,36 @@ def _column_fields() -> dict[str, tuple[str, str]]:
 COLUMN_FIELDS = _column_fields()
 
 
-def factor_losses(factors_used: Any) -> list[dict[str, str]]:
-    """Each column the extracted rule names, with its status and field (or reason), in its order."""
+def _column_fields_v4() -> dict[str, tuple[str, str]]:
+    """The same, for rule format 4 (issue #108): what it made readable, and nothing else changed."""
+    out = dict(COLUMN_FIELDS)
+    for name in PERSON:
+        if name in OBSERVABLE:
+            for side in ("own", "other"):
+                out[f"{side}_{name}"] = (READABLE, f"{name} (agent. in a role by a condition; either., both. in a condition)")
+        else:
+            out[f"own_{name}"] = (READABLE, f"self.{name}, in the person's own-only condition")
+    for name in PAIRWISE:
+        out[name] = (READABLE, f"self.{name}, in the person's own-only condition (their own view of the other)")
+    return out
+
+
+#: RF-11's table columns for rule format 4 (issue #108).
+COLUMN_FIELDS_V4 = _column_fields_v4()
+
+
+def column_fields(schema_version: int = 3) -> dict[str, tuple[str, str]]:
+    return COLUMN_FIELDS_V4 if schema_version >= 4 else COLUMN_FIELDS
+
+
+def factor_losses(factors_used: Any, schema_version: int = 3) -> list[dict[str, str]]:
+    """Each column the extracted rule names, with its status and field (or reason), in its order,
+    for rule format ``schema_version`` (3 unless said)."""
     names = factors_used if isinstance(factors_used, list) else [factors_used] if factors_used else []
+    table = column_fields(schema_version)
     out = []
     for name in names:
-        status, field = COLUMN_FIELDS.get(str(name), (UNKNOWN, "not a column of the table"))
+        status, field = table.get(str(name), (UNKNOWN, "not a column of the table"))
         out.append({"column": str(name), "status": status, "field": field})
     return out
 
@@ -105,12 +139,16 @@ ACTION_PATTERNS = (
     ("signal_or_talk", re.compile(r"\b(signal\w*|nod\w*|wave\w*|waving|eye contact|speak\w*|spoke|say\w*|said|talk\w*|utter\w*|greet\w*|excuse)\b")),
 )
 FLAGS = tuple(name for name, _ in ACTION_PATTERNS)
+#: The flags that rule format 4 still has no directive for (issue #108): the rest are steps.
+FLAGS_BEYOND_V4 = ("signal_or_talk",)
 
 
-def action_flags(texts: Iterable[Any]) -> list[str]:
-    """The :data:`ACTION_PATTERNS` found in any of ``texts`` (the extracted rule's words)."""
+def action_flags(texts: Iterable[Any], schema_version: int = 3) -> list[str]:
+    """The :data:`ACTION_PATTERNS` found in any of ``texts`` (the extracted rule's words) that rule
+    format ``schema_version`` has no directive for: every one for format 3, a signal or words for 4."""
     lowered = " ".join(" ".join(str(text).lower().split()) for text in texts if text)
-    return [name for name, pattern in ACTION_PATTERNS if pattern.search(lowered)]
+    beyond = FLAGS if schema_version < 4 else FLAGS_BEYOND_V4
+    return [name for name, pattern in ACTION_PATTERNS if name in beyond and pattern.search(lowered)]
 
 
 def counted(entries: Sequence[Mapping[str, Any]]) -> dict[str, Any]:

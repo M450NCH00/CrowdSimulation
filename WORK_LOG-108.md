@@ -79,6 +79,67 @@ until the user gives one.
     rule's steps driver must combine with it.
 - Next step: design decisions below, then build task by task.
 
+### 2026-10-26 13:30 UTC — Tasks 1 to 6 built on the mock
+- What I did: task 1 (CLAUDE.md supervisor decision and track constraint, `pairwise-factors.md`
+  section 7, #55's constraint line); the version 4 schema, frozen; the three visible attributes;
+  roles by a condition; own-only conditions with `self.` fields and the scope check; steps parsed
+  with Step 1's parser and run by `negsim/rules/plans.py` (`RuleStepDriver`, a `PlanDriver` without
+  a fixed encounter, under `plan_orca` and `keep_line`), attached by the simulation only when the
+  rule provider has one (`Drivers` joins it to a run's own driver). Rule generation's validator
+  follows.
+- Result: a head-on trial in the shipped corridor: plain ORCA deadlocks (the two are exactly
+  symmetric); under a version 4 rule (roles by a cane, the other sidesteps 0.6 m at 5 m, then walks
+  until the other passes) the sidestep holds through the plain step, the person goes back to their
+  path after passing, nobody touches.
+- Five existing tests failed after the build, all enumerations of the catalogue or of the schema
+  versions (`test_rules_format`, two in `test_rules_schema_v2`, the documented field table) and one
+  loader reason (`either.urgency`: `unknown_field` became `unobservable_field`). I gated the two new
+  "unobservable" names (`urgency`, `knows_other`) to version 4 rules, so a version 1 to 3 rule is
+  refused exactly as before and that test passes unchanged; the catalogue tests gained lines for
+  version 4 (noted in each); the table is documented.
+- Changed from the plan (D-E): the observer's own **core factors** (all seven, not only the three
+  visible ones, and not gated by their switches) are in its record's `attributes` when its persona
+  has them, because its own-only condition needs its own private factors in the snapshot it builds
+  from its own record (the formation check). No persona of a run before this issue has them, so
+  every earlier record is unchanged; the perception schema version stays 3.
+
+### 2026-10-26 13:50 UTC — Task 6: the cost of steps in a crowd
+- What I did: the two-way flow (50 + 50, `configs/scenarios/bidirectional_flow.yaml`, no
+  perturbation), people given ages, genders, canes (one in three) and assertiveness in turn; best of
+  3 runs each, trajectory not recorded; then a profile of one run.
+- Result:
+  | Run | Steps | Wall time (s) | Steps per second | Collision episodes |
+  | --- | --- | --- | --- | --- |
+  | plain ORCA | 877 | 12.3 | 71.2 | 512 |
+  | format 3 rule (the younger slows and gives way) | 1,032 | 22.3 | 46.3 | 498 |
+  | format 4 rule, same matching, no steps | 1,200 (timeout, 99 of 100 arrived) | 23.7 | 50.7 | 694 |
+  | format 4 rule with steps and an own-only condition | 1,113 | 29.8 to 31.5 | 35.3 to 37.4 | 972 |
+  - Per step, the steps rule took 1.36 times as long as the same rule without steps, and 1.31 times
+    the format 3 rule. **The driver's own code is about 0.7% of the run** (profile: `plans.py`
+    0.18 s, `execute.py` 0.19 s, the passing scenario's events 0.01 s, of 53.5 s); the rest of the
+    difference is the motion the plans cause (more steps, more pairs to match, harder ORCA problems).
+    Matching itself is about 15% of a rule run (`rules/matching.py`), the larger cost towards 10,000
+    agents.
+  - The trial rule doubled collision episodes in this dense flow (a sidestep into the other stream,
+    then keeping that line): a property of that rule, which crowd screening exists to catch.
+- Next step: templates, translation, tests, docs; then ask the user about the paid run.
+
+### 2026-10-26 14:30 UTC — Tasks 7, 8, 10 and 11 on the mock
+- What I did: `rulegen_common_v3` (format 4; its glossary generated from the catalogue and the
+  version 4 schema, pinned) and `translate_v2` (translate_v1 for format 4; reply format, kinds, user
+  message and retry word for word), both frozen. `negsim.translation` takes the format from the
+  template's common template; losses map, identity check (each person's factors, own view and what
+  the design showed) and crowd factors (`screening.factors`) for format 4; a mock policy
+  `translate_rehearsal_v2` with a path for each new form and refusal. Configs
+  `rf31_round1_head_on.yaml` (mock until approved, cap 0) and `rf31_mock_rehearsal.yaml`. Tests:
+  `test_rules_schema_v4.py` (39), `test_translation_v4.py` (17). Docs: `rule-format.md` section 15,
+  `rule-matching.md`, `rule-translation.md` section 13, `log-schema.md`, `perception.md`.
+- Result: the mock rehearsal on RF-11's 16 stored rules completes: 4 valid (2 runnable, 2 extracted
+  as needing communication), and each refusal in its category. A bug found on the way: a loop in the
+  config reader reused the name `name`, so `--plan` printed a factor as the experiment name; fixed
+  before anything ran under it.
+- Worst case of the paid run (`--plan`): **USD 0.043** (4 calls, reply cap 2,500, peak, no cache).
+
 ## Design decisions in this issue (mine, for the user to check)
 
 Marked as decisions, not instructions: each is an assumption where the issue leaves room.
@@ -99,9 +160,9 @@ Marked as decisions, not instructions: each is an assumption where the issue lea
   read only by `own_when` and never by `when` or roles. The two agents' shared snapshot still
   equals what each builds from its own record in everything public; each agent's own
   `own_when` reads only its own private values, so its directive is the same either way.
-- **D-E, perception record.** The observer's own `mobility_aid`, `load`, `distraction` are added
-  to its record only when their switch is on; with every switch off (every run before this issue)
-  the record is byte for byte as before, so `PERCEPTION_SCHEMA_VERSION` stays 3.
+- **D-E, perception record** (as built; see the progress entry of 13:30). The observer's own core
+  factors are in its record's `attributes` when its persona has them; no earlier persona has any,
+  so every earlier record is byte for byte as before and `PERCEPTION_SCHEMA_VERSION` stays 3.
 - **D-F, visibility switches.** The avoidance config accepts the three new switch names besides
   `default_visibility()`'s; the default dict does not gain them, so earlier configs' recorded
   visibility is unchanged. Unset means off.
@@ -115,8 +176,24 @@ Marked as decisions, not instructions: each is an assumption where the issue lea
   `until: other_passes | {seconds} | {at_distance_m}`; checked with Step 1's own step parser
   (`reply._step`), so the limits are Step 1's (turn 0 to 90 degrees, sidestep up to 3 m).
 
+- **D-I, rule generation's category for `own_only_scope`**: `needs_communication`. A side, share,
+  order or back-up switched on by one person's private factor would need the other to be told it.
+  A loader `steps` refusal is `schema_error`.
+- **D-J, crowd screening for format 4** gives the crowd core factors in turn (`screening.factors`):
+  for RF-31, a cane, a suitcase, a phone and assertiveness each on half the people [design]. Nobody
+  in the crowd has a view of another, so an own-only condition on `knows_other` or
+  `finds_other_attractive` never holds there; and a suitcase does not widen anyone in a crowd.
+- **D-K, the reply cap for `translate_v2`**: 2,500 tokens [placeholder] (RF-12: 1,500), since a
+  rule with steps is longer.
+
 ## Open questions / risks
 
 - Paid task 9 needs the user's approval and cap recorded in `CLAUDE.md` first.
+- Step 1 printed a cane, suitcase or phone only within 5 m (D2); a format 4 rule reads them at any
+  distance. A rule conditioned on them may therefore fire earlier than the agents could have seen
+  them.
+- A step's speed is in m/s, as Step 1's; in a crowd of people with other preferred speeds, an
+  absolute speed means something different for each. Kept as Step 1's vocabulary, as the issue
+  asks.
 
 ## Summary (fill in at the end)

@@ -1,4 +1,4 @@
-# The rule format, schema versions 1 to 3
+# The rule format, schema versions 1 to 4
 
 A rule says: **when** two agents meet in a certain way, **give them roles**, and **tell each
 role what to do**. Rules are stored in the rule database (`rule_db/`), one file per version
@@ -19,8 +19,11 @@ the checks of section 9 say the rest. Sections 1 to 11 describe version 1. **Ver
 Section 13 defines the **canonical form** of a rule, by which two rules are the same.
 **Version 3** (issue #32, section 14) adds what a meeting inside a single-file passage needs:
 the directive field `back_up`, `true` or `false` as the value of a comparison, and four
-passage fields; versions 1 and 2 load exactly as before. In every version, a rule that reads
-a person's group is refused (`protected_attribute`, section 14).
+passage fields; versions 1 and 2 load exactly as before. **Version 4** (issue #108, RF-31,
+section 15) adds what one person can see of the other (a cane, a suitcase, a phone), roles by a
+condition, own-only conditions on a person's own private factors, and a plan of `steps` in Step
+1's vocabulary; versions 1 to 3 load exactly as before. In every version, a rule that reads a
+person's group or ethnicity is refused (`protected_attribute`, section 14).
 
 ## 1. An example
 
@@ -171,6 +174,9 @@ Agent-level fields (`either.`, `both.`, `agent.`):
 | `segment_distance_travelled` | m | **Version 3.** How far this person has walked into the segment; missing unless inside it | `speed`, `size` |
 | `segment_distance_ahead` | m | **Version 3.** Distance to the segment's end in front of this person; missing unless inside it | `speed`, `size` |
 | `segment_distance_behind` | m | **Version 3.** Distance to the segment's end behind this person; missing unless inside it | `speed`, `size` |
+| `mobility_aid` | name: `none`, `cane` | **Version 4.** Whether this person walks with a cane | `mobility_aid` |
+| `load` | name: `none`, `large_suitcase` | **Version 4.** Whether this person pulls a large suitcase | `load` |
+| `distraction` | name: `none`, `phone` | **Version 4.** Whether this person is looking at a phone | `distraction` |
 
 The four version 3 fields (issue #32, `perception.md`, "Passage fields") are computed once per
 pair from the two positions and the passage: "ahead" is the end on the other person's side,
@@ -179,6 +185,11 @@ pair from the two positions and the passage: "ahead" is the end on the other per
 rule of version 1 or 2 the four are `unknown_field`, so such a rule reads what it always could.
 `in_segment` is true or false: it is compared with `==`, `!=` or `in`, with `true` or `false` and
 no unit, and cannot order two agents.
+
+The three version 4 fields (issue #108) are track #55's observable core factors (`resolution.md`,
+D1), each under a visibility switch of its own, named as the field; a run that does not name the
+switch has it off. A person's **own private factors** are not on this list: from version 4 they
+are `self.` fields, readable only in an own-only condition (section 15).
 
 Every rule also reads the encounter class, so every rule needs `speed` and `size` visible.
 A run whose visibility settings hide something one of its rules reads is refused before it
@@ -207,8 +218,9 @@ A rule whose condition or role assignment, its tie policy and role names include
 anything derived from it (any name containing `ethnic`, such as `pair.same_ethnic_group`), or a
 group label, is refused as `protected_attribute`, **before every other check**: whatever else is
 wrong with such a rule, that is what it is counted as. Section 14 has the details. **Since issue
-#61 so is perceived attractiveness**, how one person sees another, until the supervisor decides
-(`pairwise-factors.md`, section 7).
+#61 so is perceived attractiveness**, how one person sees another (`pairwise-factors.md`, section 7);
+*since issue #108* a version 4 rule may read it only as a person's own view in an own-only condition
+(section 15), which the supervisor agreed on 2026-10-26.
 
 ## 6. Roles
 
@@ -295,13 +307,16 @@ what and where. `python ruledb.py validate --file <path>` checks any rule file t
 | `passage_order` | Passage orders that are not one `leader` and one `follower` (or neither set) |
 | `back_up` | Version 3. A rule that sets `back_up` for any role does not make exactly one of two roles back up, or makes the role that backs up go first (section 14) |
 | `side` | Two roles told to pass on opposite sides: both would step the same way (`derivations.md`, section 10) |
+| `own_only_scope` | Version 4. An own-only condition that would switch on anything but the person's own movement (checked before the schema, section 15) |
+| `steps` | Version 4. A plan outside Step 1's step vocabulary, as Step 1's parser reads it (section 15) |
 
 In the database, also: `manifest` and `history` (section 8). When an experiment switches
 rules on: `ruleset` (a rule or version not in the database), `status` (a rejected or retired
 rule), `ambiguous` (two rules that could tell one pair different things at one priority:
 `rule-matching.md`, section 4), and `visibility` (section 5).
 
-The test fixtures under `tests/fixtures/rules/` hold one refused rule for each category.
+The test fixtures under `tests/fixtures/rules/` hold one refused rule for each category of versions
+1 to 3; version 4's refusals are tested in `tests/test_rules_schema_v4.py`.
 
 ## 10. Rule sets: which rules an experiment follows
 
@@ -521,8 +536,9 @@ another's fictional group when a run shows it (`perception.md`, "The group";
   (`negsim.rulegen.validate`).
 
 **Nor perceived attractiveness** (issue #61, `protected_attribute`). An agent may be told its
-own view of someone ("You find them attractive.", `pairwise-factors.md`), but until the
-supervisor decides no rule may read it. A rule is refused in the same way, before every other
+own view of someone ("You find them attractive.", `pairwise-factors.md`), but no rule of versions 1
+to 3 may read it. (*Since issue #108*, the supervisor agreeing on 2026-10-26: a version 4 rule may
+read it as `self.finds_other_attractive` in an own-only condition, and nowhere else; section 15.) A rule is refused in the same way, before every other
 check, if its condition or role assignment (the same parts) contains `attract` (`attractive`,
 `attractiveness`, `attraction`), `beaut`, `handsome` or `pretty`, or "good looking" however it
 is joined (`fields.py`, `ATTRACTIVENESS_PATTERN`). The refusal says which of the two it read; the
@@ -550,3 +566,161 @@ to read a passage field, is written as its next version with `schema_version: 3`
 writer generates from sessions of the second prompt version (issue #32) are version 3
 (`rule-generation.md`, section 3); those of the first stay version 2.
 *Tested:* `tests/test_rules_schema_v3.py`, `tests/test_protected_attribute.py`.
+
+## 15. Schema version 4 (issue #108, RF-31)
+
+RF-12 (`rule-translation.md`, `runs/rf12_round1_head_on/translation_report.md`) found that format 3
+keeps almost nothing of the rules round 1's agents followed: who gives way, what each sees of the
+other, and when they start, how far they turn and until when. Version 4 adds four things for that
+(the user's decision of 2026-10-26, issue #108). Everything of version 3 is in version 4 and means
+the same; the schema is `rule_db/schema/rule.v4.schema.json`.
+
+| What | Where | Value |
+|---|---|---|
+| `schema_version` | top | `4` |
+| `mobility_aid`, `load`, `distraction` | agent-level fields (`either.`, `both.`, `agent.`) | What one person can see of the other (section 5), each under its own visibility switch |
+| `by_condition` | `roles` | Roles by a condition (below) |
+| `own_when` | a directive entry | An own-only condition (below) |
+| `steps` | a directive entry, or an own-only condition's `then` | A plan (below) |
+
+### 15.1 What one person can see of the other
+
+Track #55's three observable core factors are agent-level fields, like age: `mobility_aid` (`none`,
+`cane`), `load` (`none`, `large_suitcase`), `distraction` (`none`, `phone`). Each needs its own
+visibility switch on (`visibility: {mobility_aid: true}`), which no run before version 4 names, so a
+run without it refuses a rule that reads one (`visibility`). They reach the rule through the
+avoidance layer's people (a persona's attributes; `population` in a crowd experiment, `screening.factors`
+in a translation's crowd), the perception record (the neighbour's under its switch; the observer's
+own among its own attributes, `perception.md`) and the snapshot. **In the avoidance layer they are
+labels only**: a crowd's suitcase does not widen anyone (Step 1's sessions widen a person with a
+suitcase, `resolution.md`; the identity check runs their bodies). Step 1 prints them only within 5 m
+(D2); a rule reads them at any distance.
+
+### 15.2 Roles by a condition
+
+```yaml
+roles:
+  by_condition: {when: {field: agent.mobility_aid, op: "==", value: cane}, assign: [aided, gives_way], tie: no_match}
+```
+
+The person for whom `when` holds gets the first role, the other the second. `agent.` reads each
+person's own value, and `pair.` may be used as well; the condition must read at least one `agent.`
+field (`roles`). **When it holds for both or for neither, the rule does not apply** (`tie: no_match`,
+required: `no_tie_policy`), and a missing value makes it not hold, as any comparison on a missing
+value is false. Format 3 could give roles only by ordering two numbers; a category such as a cane
+could not decide them.
+
+### 15.3 Own-only conditions (option 3b)
+
+```yaml
+directive:
+  gives_way:
+    responsibility_share: 1.0
+    own_when:
+      when: {field: self.assertiveness, op: "==", value: gives_way}
+      then: {speed_scale: 0.8, steps: [...]}
+```
+
+While `when` holds **for that person**, the fields under `then` replace the role's own; the rest of
+the entry applies as always. `when` reads `self.` fields (the person's own private factors) and
+`pair.` fields, nothing else:
+
+| `self.` field | Values | Where it comes from |
+|---|---|---|
+| `assertiveness` | `gives_way`, `holds_ground` | the person's attributes |
+| `urgency` | `routine`, `urgent` | the person's attributes |
+| `residence` | `local`, `visitor` | the person's attributes |
+| `memory_note` | `none`, `bad_experience` | the person's attributes |
+| `knows_other` | true/false | the person's own view of the other (a run's `pairwise`; RF-6's familiarity) |
+| `finds_other_attractive` | true/false | the person's own view of the other (RF-6's matrix entry for this person looking at the other) |
+
+**Scope** (`own_only_scope`, checked before the schema so that the reason is plain): `then` may hold
+only `speed_scale`, `clearance_margin` and `steps`, the person's own movement. It may never set
+`side_preference`, `responsibility_share`, `passage_order` or `back_up`, which both people must agree
+on and which would then depend on what only one of them knows. Read through `either.`, `both.` or
+`agent.`, the private factors stay refused (`unobservable_field`; rule generation counts it
+`needs_communication`); `self.` anywhere but an own-only condition is refused the same way. To a rule
+of versions 1 to 3, `urgency` and `knows_other` stay `unknown_field`, as before.
+
+**Why this keeps the shared snapshot sound** (`rule-matching.md`, section 1). The private values are
+a part of the snapshot of their own (`PairSnapshot.private`), read only by an own-only condition and
+only for its own person. Each agent's own directive depends only on the shared part and its own
+private values, which it knows; so the directive it would reach alone equals the one the shared
+evaluation gives it. The run checks this at every pair's formation (`formation_mismatches`).
+
+**Perceived attractiveness** (`pairwise-factors.md`, section 7; `CLAUDE.md`, the supervisor's
+decision of 2026-10-26): readable **only** as `self.finds_other_attractive` in an own-only condition.
+Anywhere else, and under any other name, it is `protected_attribute`, as in versions 1 to 3, which
+cannot hold it at all. From version 4 the protected check reads the directive too, since own-only
+conditions live there. **Real ethnicity** stays `protected_attribute` everywhere, `self.` included.
+
+### 15.4 Steps
+
+```yaml
+steps:
+  - {start: {at_distance_m: 4}, sidestep: {to: right, metres: 0.4}, speed_mps: 1.0}
+  - {speed_mps: 1.1, until: other_passes}
+```
+
+A plan in Step 1's own step vocabulary (`negsim/resolution/reply.py`): `start: {at_distance_m}`,
+`speed_mps`, `turn: {to, degrees}`, `sidestep: {to, metres}`, `back_up_m`, `until` (`other_passes`,
+`{seconds}`, `{at_distance_m}`). The loader reads it with Step 1's parser, so the limits are Step 1's:
+a turn of 0 to 90 degrees, a sidestep of more than 0 and up to 3 m and with a turn (if any) to the
+same side, a positive back-up, and an `until` on every step that does not step aside or walk
+backwards (`steps`, or `schema` for what the schema already refuses). A start or end at a distance
+is read against the person the rule matched them with; speeds are clipped to each person's own
+maximum. A start after some seconds, and Step 1's other events, are not in version 4.
+
+**How a plan is carried out** (`negsim/rules/plans.py`). When a pair's match begins, each of its two
+people whose role (or own-only condition) has steps gets them as a plan, **once for that match**. The
+plan executor's own mechanics run it (`resolution.md`; `negsim/resolution/execute.py`), as
+`plan_orca` under the `keep_line` execution: the plan sets the person's preferred velocity and **ORCA
+still avoids everyone underneath**, the partner included. After the last step the person keeps the
+line the plan took them to until the two have passed each other (or the partner arrived), then
+steers back to their path. **One plan per person at a time**: a match that would start another
+while one is in force is skipped and counted (`plans_skipped_busy`), as for back-ups
+(`rule-matching.md`, section 7). Signals and talk are not added: nobody signals in ORCA.
+
+Nothing of this runs unless an enabled rule has steps: only then does the rule provider build the
+driver, and the simulation attaches it (beside a run's own plan driver, if any). **Its cost** (issue
+#108, task 6; `WORK_LOG-108.md`): in the two-way flow (50 + 50), the driver's own code took about 0.7%
+of the run's time; a rule with steps ran 1.36 times as long per step as the same rule without them,
+because of the motion the plans cause (more steps, more pairs to match, more for ORCA to solve), and
+matching itself is the larger cost of any rule (about 15% of the run).
+
+**What a version 4 rule looks like**, shortened (the tests' head-on rule):
+
+```yaml
+schema_version: 4
+rule_id: aided_goes_on
+encounter: head_on
+when: {all: []}
+roles:
+  by_condition: {when: {field: agent.mobility_aid, op: "==", value: cane}, assign: [aided, gives_way], tie: no_match}
+directive:
+  aided: {}
+  gives_way:
+    steps:
+      - {start: {at_distance_m: 5}, sidestep: {to: right, metres: 0.6}, speed_mps: 1.0}
+      - {speed_mps: 1.2, until: other_passes}
+priority: 50
+```
+
+In the shipped head-on corridor plain ORCA deadlocks (the two are exactly symmetric); under this rule
+the person without a cane steps 0.6 m to their right at 5 m, keeps that line until the other has
+passed, and goes back to their path; nobody touches. **It is a test fixture, not a claim about how
+people behave.**
+
+**Reading four versions.** As in sections 12 and 14: a rule is checked against the schema of its own
+version and reads only that version's fields, so a rule of versions 1 to 3 is read, matched and
+followed exactly as before (`tests/test_rules_*.py`, unchanged but for the catalogue's and the
+version list's own tests). The ambiguity grid (`rule-matching.md`, section 8) also varies the fields
+of a role by a condition and each person's own private factors, and two matches differ if they give
+anyone a different plan.
+
+**Migration notes.** Nothing is rewritten. A rule that is to read a visible attribute, give roles by a
+condition, read a private factor or carry a plan is written as its next version with
+`schema_version: 4`. Rule generation (#30, #32) is unchanged: its templates describe version 2 or 3;
+`translate_v2` (`rule-translation.md`, section 13) is the first to describe version 4, in
+`rulegen_common_v3`.
+*Tested:* `tests/test_rules_schema_v4.py`.

@@ -40,7 +40,7 @@ def test_phase_1_code_is_not_imported():
 def test_only_pinned_third_party_packages_are_imported():
     import sys
 
-    local = {"negsim", "helpers", "test_llm", "test_resolution", "conftest", "test_encounter_protocol", "test_perceive", "test_rulegen_validate", "test_execute"}
+    local = {"negsim", "helpers", "test_llm", "test_resolution", "conftest", "test_encounter_protocol", "test_perceive", "test_rulegen_validate", "test_execute", "test_translation"}
     for path in SOURCE_FILES:
         third_party = {
             module for module in imported_modules(path) if module not in sys.stdlib_module_names and module not in local
