@@ -1,0 +1,129 @@
+{
+  "translation_log_version": 1,
+  "experiment": "rf12_round1_head_on",
+  "extraction": {
+    "experiment": "rf11_round1_head_on",
+    "rule_id": "x_head_on_0ecc2d1a6e",
+    "version": 1,
+    "file": "runs/rf11_round1_head_on/head_on/extracted_rules/rules/x_head_on_0ecc2d1a6e.v1.yaml",
+    "sha256": "7056601e016ffc50727e8ef1d7c909b73402230dafef1fc71868f8d0b9638a3a",
+    "status": "candidate",
+    "category": "valid",
+    "extraction_stability": "2/3",
+    "target": "stopped",
+    "held_out_accuracy": 1.0,
+    "baseline_accuracy": 1.0,
+    "beats_baseline": false
+  },
+  "started_utc": "2026-10-26T10:01:39+00:00",
+  "template": {
+    "key": "translate_v1",
+    "sha256": "87855be17fadeeecb924d5dfa0b2848bcaf05c8783c382f382b588bf6f199306",
+    "uses": {
+      "key": "rulegen_common_v2",
+      "sha256": "db162232dca7010a67a30ced5cdd01e4fb3bf4fb68d584a57d08ad8e04688bd1"
+    }
+  },
+  "llm": {
+    "model": "deepseek-flash",
+    "temperature": 0.0,
+    "max_tokens": 1500,
+    "thinking": "disabled"
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "You translate rules about how people behave when they meet on foot into the rule format of a crowd simulator.\n\nThe rule you are given was found by studying recorded encounters. It describes what people did, in plain words, with the factors it depends on and a mechanical form of it over the columns of a table. The simulator moves each person towards where they are going and keeps them from walking into each other. A rule in its format changes only what each of two people does when they meet, as the directive fields below say, under a condition on what both of them can see.\n\nYOUR TASK\n1. Write the one rule in the format below that comes closest to the rule you are given. Use only the keys, fields and values the format lists.\n2. Do not add anything the rule you are given does not say.\n3. Where the format cannot say a part of the rule (a condition it has no field for, when an action starts, a turn by some angle, how long it lasts, a signal or words), leave that part out or write the nearest thing the format can say, and list the part under \"lost\".\n4. If no part of the rule can be written in the format, give null as the rule, and list what was lost.\n5. No rule may read a person's ethnicity, or whether one person finds the other attractive.\n\nTHE RULE FORMAT\nA rule is a JSON object. It says when it applies, gives each of the two people a role, and says what each role does. It may use only the fields listed below, which both people can see; nothing else can be written into a rule.\n\nKeys of a rule:\n- \"encounter\": the kind of meeting the rule is for, one of \"head_on\", \"crossing\", \"overtaking\", \"single_file_segment\" or \"any\".\n- \"when\": the condition under which the rule applies: a comparison, or {\"all\": [...]} (every item holds; an empty list always holds) or {\"any\": [...]} (at least one item holds), nested as needed.\n- \"roles\": either \"symmetric\" (both people get the same instructions, under the single role name \"both\"), or {\"by\": {...}}, which orders the two people by a number field and gives them two roles in turn (below).\n- \"directive\": what each role does: one entry per role name, each with any of the directive fields below.\n- \"priority\": a whole number from 0 to 1000.\n- \"expiry\" (optional): \"passed\" or \"out_of_range\"; \"passed\" ends the rule's effect once the two have passed each other, \"out_of_range\" when they are out of sight of each other.\n- \"intent\" (optional): what the rule is meant to do, in one sentence of plain words.\n\nKinds of meeting (\"encounter\"):\n- head_on: approaching each other, directions of travel more than 120° apart\n- crossing: approaching each other, directions of travel 60° to 120° apart\n- overtaking: approaching each other, directions of travel less than 60° apart\n- single_file_segment: a stretch ahead of both, or that they are in, is too narrow for the two to pass in\n- any: every kind of meeting\n\nA comparison is {\"field\": <field>, \"op\": <operator>, \"value\": <a number, a name, or true or false; for \"in\" a list>, \"unit\": <unit>}. The operators are \"<\", \"<=\", \">\", \">=\", \"==\", \"!=\" or \"in\". Every comparison of a number gives its unit, which must be the field's: m, s, m/s, rad or years (an angle may be given in deg instead of rad). A comparison of a name, or of true or false, has no unit. A comparison of a value that is missing is false.\n\nFields are written with a prefix: \"pair.\" for a field of the two together; in a condition, \"either.\" (holds if it holds for at least one of the two) or \"both.\" (holds if it holds for each); in \"roles\", \"agent.\" (the two people's values are compared with each other).\n\nFields of the two together (pair.):\n- pair.encounter_class (one of \"head_on\", \"crossing\", \"overtaking\", \"single_file_segment\" or \"none\")\n- pair.distance_m (m): distance between the two centres\n- pair.closing_speed_mps (m/s): how fast the distance is shrinking; negative if it is growing\n- pair.time_to_collision_s (s): time until the bodies touch at present velocities; null if they would not\n- pair.heading_difference_rad (rad): how far apart the two directions of travel are, 0 to pi\n- pair.min_corridor_width_m (m): narrowest free width of the passage along the line between the two\n- pair.age_difference_years (years): the difference between the two ages, never negative\n\nFields of each person (either., both., agent.):\n- age (years)\n- gender (one of \"female\", \"male\" or \"nonbinary\")\n- speed_mps (m/s): present speed\n- radius_m (m): body radius\n- time_to_segment_s (s): distance to the single-file segment over present speed; null outside that class\n- in_segment (true or false): whether this person is inside the single-file segment; null outside that class\n- segment_distance_travelled (m): how far this person has walked into the single-file segment; null unless inside it\n- segment_distance_ahead (m): distance to the end of the single-file segment in front of this person; null unless inside it\n- segment_distance_behind (m): distance to the end of the single-file segment behind this person; null unless inside it\n\nOrdering the two (\"roles\": {\"by\": ...}):\n{\"by\": {\"field\": <an agent. field that is a number>, \"order\": \"ascending\" or \"descending\", \"assign\": [<first role name>, <second role name>], \"tie\": \"no_match\"}}. With \"ascending\" the person with the smaller value gets the first role. \"tie\": \"no_match\" is required: when the two values are equal the rule does not apply. Optionally \"tie_within\": <a number> and \"unit\": <its unit> make values that close a tie. Role names are lower-case words of your choosing, not \"both\".\n\nDirective fields (each optional; a field left out has its usual value):\n- side_preference (\"left\", \"right\" or \"none\"; usual: none): when the two would otherwise collide, the side this person passes the other on, as this person sees it facing the other; none takes whichever side is nearer.\n- responsibility_share (a number from 0 to 1; usual: 0.5): when the two would otherwise collide, the part of the change of course needed that this person makes. The two people's shares must add up to at least 1.\n- speed_scale (a number, 0 or more; usual: 1): multiplies this person's walking speed while the rule applies.\n- clearance_margin (metres, 0 or more; usual: 0): extra room this person keeps between the two bodies.\n- passage_order (\"leader\", \"follower\" or \"none\"; usual: none): at a stretch too narrow for the two to pass, whether this person goes through first (leader) or waits (follower). One role leader and the other follower, or neither.\n- back_up (true or false; usual: false): when the two meet inside a stretch too narrow for them to pass, whether this person backs out of it at their own backing speed, waits outside until the other has come through, and then goes on. The other goes first.\nThe two roles may not be told to pass on different sides. A rule that says who backs up gives back_up true to exactly one of the two roles, and not to a role that goes first.\n\nTHE FORMAT, WITH PLACEHOLDERS IN ANGLE BRACKETS (not a real rule):\n{\n  \"encounter\": \"<a kind of meeting>\",\n  \"when\": {\"all\": [{\"field\": \"<a field>\", \"op\": \"<an operator>\", \"value\": \"<a value>\", \"unit\": \"<its unit>\"}]},\n  \"roles\": {\"by\": {\"field\": \"<an agent. field>\", \"order\": \"<ascending or descending>\", \"assign\": [\"<role a>\", \"<role b>\"], \"tie\": \"no_match\"}},\n  \"directive\": {\"<role a>\": {\"<a directive field>\": \"<its value>\"}, \"<role b>\": {\"<a directive field>\": \"<its value>\"}},\n  \"priority\": \"<a whole number>\",\n  \"intent\": \"<one sentence>\"\n}\nWith \"roles\": \"symmetric\", \"directive\" has the one entry \"both\". Numbers are written as numbers, without quotes.\n\nHOW TO REPLY\nReply with a single JSON object and nothing else, with these keys:\n\"rule\": the rule in the format above, or null if no part of the rule you were given can be written in it.\n\"lost\": a list with one item for each part of the rule you were given that your rule leaves out or only approximates (an empty list if none). Each item is {\"part\": \"<the part, in the words of the rule you were given>\", \"kind\": \"<its kind>\", \"how\": \"<left_out or approximated>\"}. The kinds are: condition (something the rule depends on that the format cannot read), start (when the action starts: a distance or a time), turn (a turn by some angle, or a step aside), speed (a walking speed), duration (how long the action lasts, or until when), signal_or_talk (a signal or words), other.\n\"note\": how you translated it, in one or two sentences.\nThe format, with placeholders: {\"rule\": <a rule, or null>, \"lost\": [{\"part\": \"<text>\", \"kind\": \"<a kind>\", \"how\": \"<left_out or approximated>\"}], \"note\": \"<one or two sentences>\"}"
+    },
+    {
+      "role": "user",
+      "content": "THE ENCOUNTER\nTwo people walk towards each other along a corridor, on the same line or nearly so (the geometry: their walking lines aligned, or 20 cm apart). Each must get past the other.\n\nTHE RULE TO TRANSLATE\nRule: In the apart_20cm layout the pair keep to the side their final plan already takes and almost never stop or back up.\nApplies when: geometry is apart_20cm\nAction: no stop and no back-up, speeds 0.9-1.3 m/s, turns of 5-15 degrees from about 9.8 m, passing side equal to final_side\nExceptions:\n- apart_20cm sessions still collide (7 independent left/right, 5 non_verbal left/right, 4 talk left/right, 2 non_verbal right/right near_miss)\n- aligned sessions sometimes end on left or right unpredictably after a both plan (rows 23-26, 35-38, 45-46, 61-68)\nNeeds communication (it held only when a signal or words were used): no\nFactors it uses (columns of the table it was found in):\n- geometry: the layout of the place in this session.\n- first_side: which way this person's first plan turns: left, right, both (one way then the other) or none. Left and right are always the person's own.\n- final_side: which way this person's last plan turns (as first_side).\nIts mechanical form, over those columns (\"predict\": a target column, branches tried in order, each a \"when\" whose column values must all hold and a \"then\", and a \"default\"):\n{\"target\": \"stopped\", \"if\": [{\"when\": {\"geometry\": \"apart_20cm\"}, \"then\": \"no\"}], \"default\": \"no\"}\nThe column it predicts:\n- stopped: measured: yes if this person came to a stop."
+    }
+  ],
+  "attempts": [
+    {
+      "attempt": 1,
+      "messages_sent": 2,
+      "raw": "{\"rule\": {\"encounter\": \"head_on\", \"when\": {\"all\": [{\"field\": \"pair.heading_difference_rad\", \"op\": \">=\", \"value\": 120, \"unit\": \"deg\"}]}, \"roles\": \"symmetric\", \"directive\": {\"both\": {\"speed_scale\": 1, \"side_preference\": \"none\"}}, \"priority\": 500, \"intent\": \"Two people meeting head-on keep walking and pass on the side their plan already takes, without stopping or backing up.\"}, \"lost\": [{\"part\": \"geometry is apart_20cm\", \"kind\": \"condition\", \"how\": \"left_out\"}, {\"part\": \"keep to the side their final plan already takes (passing side equal to final_side)\", \"kind\": \"other\", \"how\": \"left_out\"}, {\"part\": \"speeds 0.9-1.3 m/s\", \"kind\": \"speed\", \"how\": \"approximated\"}, {\"part\": \"turns of 5-15 degrees from about 9.8 m\", \"kind\": \"turn\", \"how\": \"left_out\"}, {\"part\": \"no stop and no back-up\", \"kind\": \"other\", \"how\": \"approximated\"}], \"note\": \"The only writable part is the head-on meeting with no stopping or backing up, expressed as symmetric walking with no side preference and no speed change; the layout condition, the planned passing side, the speed range and the small turns cannot be written in the format.\"}",
+      "model": "deepseek-flash",
+      "system_fingerprint": "e72d3c7f663d3e1383b00b3884cb4501",
+      "response_id": "74e307b6-9422-482f-ac85-98633f337f89",
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 2625,
+        "completion_tokens": 329,
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 2625,
+        "reasoning_tokens": 0
+      },
+      "cost_usd": 0.00059115,
+      "price_tier": "off_peak",
+      "latency_s": 2.355975800077431,
+      "started_utc": "2026-10-26T10:01:39.878+00:00",
+      "failed_sends": 0,
+      "parse_error": null
+    }
+  ],
+  "outcome": "completed",
+  "error": null,
+  "translation": {
+    "rule": {
+      "encounter": "head_on",
+      "when": {
+        "all": [
+          {
+            "field": "pair.heading_difference_rad",
+            "op": ">=",
+            "value": 120,
+            "unit": "deg"
+          }
+        ]
+      },
+      "roles": "symmetric",
+      "directive": {
+        "both": {
+          "speed_scale": 1,
+          "side_preference": "none"
+        }
+      },
+      "priority": 500,
+      "intent": "Two people meeting head-on keep walking and pass on the side their plan already takes, without stopping or backing up."
+    },
+    "lost": [
+      {
+        "part": "geometry is apart_20cm",
+        "kind": "condition",
+        "how": "left_out"
+      },
+      {
+        "part": "keep to the side their final plan already takes (passing side equal to final_side)",
+        "kind": "other",
+        "how": "left_out"
+      },
+      {
+        "part": "speeds 0.9-1.3 m/s",
+        "kind": "speed",
+        "how": "approximated"
+      },
+      {
+        "part": "turns of 5-15 degrees from about 9.8 m",
+        "kind": "turn",
+        "how": "left_out"
+      },
+      {
+        "part": "no stop and no back-up",
+        "kind": "other",
+        "how": "approximated"
+      }
+    ],
+    "note": "The only writable part is the head-on meeting with no stopping or backing up, expressed as symmetric walking with no side preference and no speed change; the layout condition, the planned passing side, the speed range and the small turns cannot be written in the format."
+  },
+  "totals": {
+    "calls": 1,
+    "cost_usd": 0.00059115,
+    "prompt_tokens": 2625,
+    "completion_tokens": 329,
+    "cache_hit_tokens": 0
+  },
+  "ended_utc": "2026-10-26T10:01:42+00:00"
+}
