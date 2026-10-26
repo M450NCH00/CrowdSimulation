@@ -220,6 +220,11 @@ TEMPLATE_KINDS: dict[str, tuple[str, ...]] = {
     "resolution_factors": ("template_id", "version", "kind", "description", "attributes", "situations"),
     # Issue #61 (RF-6): the lines of the pairwise perception factors, for one observer's view only.
     "resolution_pairwise": ("template_id", "version", "kind", "description", "lines"),
+    # Issue #66 (RF-11): the rule extractor of Step 2, rendered by ``negsim.extraction``.
+    "rule_extraction": (
+        "template_id", "version", "kind", "description", "system", "columns", "user", "coin_flips", "no_coin_flips", "session",
+        "outcome", "person", "decision", "said", "signal", "reason", "unreadable", "debrief", "no_debrief", "reply_format", "retry",
+    ),
 }
 
 

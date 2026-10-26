@@ -1,0 +1,63 @@
+# Issue #66 (RF-11): Step 2, rule extraction from round 1 (head-on in a corridor).
+#
+#   python run_experiment.py configs/extraction/round1_head_on.yaml --plan
+#   python run_experiment.py configs/extraction/round1_head_on.yaml --out runs_mock/rf11   # mock rehearsal
+#
+# PAID RUN: approved by the user for issue #66 only, 2026-10-26 (CLAUDE.md, pending item 1). This
+# config names the mock client; the paid run is
+#   python run_experiment.py configs/extraction/round1_head_on.yaml --client deepseek --confirm
+# off-peak.
+#
+# The sources are the sessions RF-30's gate pooled (head-on passed it narrowly: 102 of 192, 0.53,
+# CI 0.46 to 0.60; the user decided on 2026-10-26 that head-on goes on to extraction): the
+# independent condition is RF-10's re-executed under keep_line, non-verbal and talk are RF-30's.
+schema_version: 1
+layer: rule_extraction
+experiment_name: rf11_round1_head_on
+description: >-
+  RF-11, round 1 (head-on): the rules behind how LLM agents resolved head-on meetings in a
+  corridor, extracted three times from RF-30's pooled design sessions, each with references,
+  debrief support and a held-out fidelity score.
+
+sources:
+  - runs/rf10_round1_head_on_keep_line   # independent (RF-10's plans, keep_line, no new call)
+  - runs/rf30_round1_head_on_keep_line   # non-verbal and talk (RF-30)
+encounter_types: [head_on]
+encounter_descriptions:
+  head_on: >-
+    Two people walk towards each other along a corridor, on the same line or nearly so (the
+    geometry: their walking lines aligned, or 20 cm apart). Each must get past the other.
+
+gate:
+  require: true              # the type's gate, fixed in its experiments' configs before their runs
+
+held_out:
+  share: 0.25                # the issue's 25%, set aside before extraction
+  seed: 66
+
+runs:
+  seeds: [1101, 1102, 1103]  # three extractions, each its own sample of sessions shown in full
+
+sample:
+  size: 15                   # the issue's 10 to 20
+
+matching:
+  agreement_min: 0.95        # [placeholder] (the issue's): two rules match when they decide alike on 95% of the main table's rows
+  min_runs: 2                # kept when found in at least 2 of the 3 runs
+
+template: extract_v1
+
+llm:
+  client: mock
+  mock_policy: extract_rehearsal_v1
+  model: deepseek-flash      # the agents' model (RF-10, RF-30)
+  temperature: 1.0           # the issue: one extraction is one random sample, no seed
+  max_tokens: 4000           # [placeholder] as run (kept: the records are this config's). Run 3's first reply was
+                             # cut off here; later rounds use 8000 (the default since 2026-10-26, the user's decision)
+  thinking: disabled
+  transport_retries: 0      # one send per attempt: the guard's bound per call (about USD 0.019) then lets the three
+                            # runs and a retry fit under the cap; a transport failure aborts the run, which a rerun redoes
+
+budget:
+  cap_usd: 0.05              # the cap CLAUDE.md records for #66 (approved by the user, 2026-10-26)
+  ledger: spend_ledger.jsonl

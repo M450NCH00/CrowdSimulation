@@ -1,0 +1,49 @@
+# Issue #66 (RF-11), the acceptance criterion: the extraction three times on RF-3's mock rehearsal.
+#
+#   python run_experiment.py configs/resolution/resolve_mock_rehearsal.yaml       # first, if runs_mock/ lacks it
+#   python run_experiment.py configs/extraction/rf3_mock_rehearsal.yaml
+#
+# Mock only. RF-3's rehearsal fixed no resolution gate, so gate.require is false (a paid run is
+# refused without the gate). Its cases are four encounter types with few sessions each, so the
+# tables are tiny and a type with no resolved session is skipped.
+schema_version: 1
+layer: rule_extraction
+experiment_name: rf11_rf3_mock_rehearsal
+description: >-
+  Mock rehearsal of RF-11's extraction on RF-3's mock rehearsal (issue #58): every encounter
+  type, three runs, with the mock extractor.
+
+sources:
+  - runs_mock/resolve_mock_rehearsal
+encounter_descriptions:
+  head_on: Two people walk towards each other along a corridor.
+  overtaking: One person walks behind another and wants to pass.
+  single_file_segment: Two people meet where a passage is only wide enough for one.
+
+gate:
+  require: false
+
+held_out:
+  share: 0.25
+  seed: 66
+
+runs:
+  seeds: [1101, 1102, 1103]
+
+sample:
+  size: 10
+
+template: extract_v1
+
+llm:
+  client: mock
+  mock_policy: extract_rehearsal_v1
+  model: deepseek-flash
+  temperature: 1.0
+  max_tokens: 8000
+  thinking: disabled
+  transport_retries: 1
+
+budget:
+  cap_usd: 0.0
+  ledger: spend_ledger.jsonl

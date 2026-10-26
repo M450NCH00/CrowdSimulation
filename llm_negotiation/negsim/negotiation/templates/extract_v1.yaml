@@ -1,0 +1,159 @@
+# Prompt template extract, version 1.  FROZEN — do not edit.
+# The hash of this file is pinned in MANIFEST.json and checked every time it is loaded.
+# To change any wording, copy the file to extract_v2.yaml, change it there, freeze it,
+# and record the reason in the work log.
+template_id: extract
+version: 1
+kind: rule_extraction
+description: >-
+  RF-11's rule extractor (issue #66; docs/rule-extraction.md): Step 2 of track #55. One call reads
+  one encounter type's results (the resolved sessions as an agent table, the failed ones counted,
+  the factor levels, the cells where behaviour is not stable, and 10 to 20 resolved sessions in
+  full) and writes the rules behind how the people resolved the conflict, each with its
+  references and a predict list over the table's columns. The system message is fixed text, so
+  that the provider's prompt cache can reuse it across the three runs.
+provenance: >-
+  Written for issue #66 (RF-11). The instructions are the issue's task 3, in order; the reply
+  fields are its task 4. It names no scenario: the encounter is described by the config's
+  encounter_description (D16).
+
+system: |-
+  You are analysing the results of an experiment on how people resolve a conflict while walking.
+
+  In each session two people met, each played by a language model. Each was told only what a person in that place would perceive: who they could see within about 10 m in front of them, what they could hear, and what had changed since they last looked. Each said what they would physically do: their intent, then steps (a speed, a turn to their own left or right by some degrees, stopping, or backing up, with when each step starts and until when). In the independent condition each decided once, alone. In the non-verbal condition they could also signal (eye contact, a nod, waving the other on, holding up a hand, pointing), and in the talk condition also speak; there each could decide up to three times. Their plans were then carried out in a simulator and what happened was measured. Afterwards each was asked, outside the role, what its decision was based on.
+
+  YOUR TASK
+  Find the hidden rules or patterns behind how the people resolved the conflict, from the sessions in which they did. You are asked what these people did, not what people should do.
+  1. Write one rule per distinct behaviour.
+  2. Name a concrete condition and a concrete action, including when it starts (the distance) and how much (the speed, the angle), where the data show it.
+  3. Give the exceptions, including where the failed sessions show that the rule does not hold.
+  4. List the factors the rule uses, as column names of the table.
+  5. Say whether the rule needs communication: whether it held only when a signal or a message was used.
+  6. Give references for the rule: a law or official guidance, a published study or a local custom you know of, with where in it the rule is stated. If you know of none, write "no known source". Do not invent a source. Say which people's debrief answers agree with the rule.
+  7. A person's ethnicity (own_ethnicity, other_ethnicity) and whether they find the other attractive (finds_other_attractive) are in the table because the experiment measured them. No rule may use them, name them or depend on them.
+  8. Rows whose cell_stability is coin_flip come from cells where the same prompts, repeated, gave different behaviour. Do not claim certainty there.
+  9. For each rule, write a predict list that a program can apply to the rows of the table, so that the rule can be tested on sessions you have not seen.
+
+  THE PREDICT LIST
+  target is the column the rule predicts, one of: {targets}.
+  if is a list of branches, tried in order. Each has a when (column: value pairs, all of which must hold) and a then (the target's value). The first branch whose when holds gives the prediction; if none does, default gives it. A when may read only these columns: {conditions}, and never the target itself. A value is matched as written in the table; a list of values means any one of them; {{">=": 5}} (or "<", "<=", ">", "==", "!=") compares a number column.
+
+  {reply_format}
+
+columns:
+  row: "the row's number."
+  session: "the session's name; the two rows of a session are its two people."
+  condition: "independent, non_verbal or talk."
+  geometry: "the layout of the place in this session."
+  person: "p1 or p2, the person this row is about."
+  own_age: "this person's age (not_told when the experiment hid it)."
+  own_gender: "this person's gender (not_told when the experiment hid it)."
+  own_urgency: "routine or urgent (urgent means late for something important)."
+  own_mobility_aid: "none, or cane."
+  own_load: "none, or large_suitcase (pulling a large suitcase)."
+  own_distraction: "none, or phone (looking at their phone)."
+  own_assertiveness: "gives_way or holds_ground (how this person usually behaves in a crowd)."
+  own_residence: "local, or visitor (new to the place)."
+  own_memory_note: "none, or bad_experience (earlier today someone walked straight into them in a place like this)."
+  own_ethnicity: "this person's ethnicity. No rule may read it."
+  other_age: "the other person's age as this person was told it, or not_told."
+  other_gender: "the other person's gender as this person was told it, or not_told."
+  other_mobility_aid: "cane if this person was told the other has one, else not_seen."
+  other_load: "large_suitcase if this person was told the other pulls one, else not_seen."
+  other_distraction: "phone if this person was told the other looks at one, else not_seen."
+  other_ethnicity: "the other person's ethnicity as this person was told it, or not_told. No rule may read it."
+  surroundings: "quiet or busy."
+  time_of_day: "daytime or late_night."
+  finds_other_attractive: "yes or no, as this person was told it of their own view, or not_told. No rule may read it."
+  knows_other: "yes (they know each other) or no, or not_told."
+  decision_points: "how many times this person decided."
+  first_decision_distance_m: "how far away the other was when this person first decided, in metres."
+  first_side: "which way this person's first plan turns: left, right, both (one way then the other) or none. Left and right are always the person's own."
+  first_slowed: "yes if this person's first plan slows down below their speed at the time."
+  first_stopped: "yes if this person's first plan stops."
+  first_backed_up: "yes if this person's first plan backs up."
+  first_start_distance_m: "the distance at which this person's first plan starts, when it starts at a distance."
+  final_side: "which way this person's last plan turns (as first_side)."
+  signalled: "yes if this person signalled at least once; n/a in the independent condition."
+  spoke: "yes if this person spoke at least once; n/a outside the talk condition."
+  debrief_kind: "what this person said afterwards their decision was based on: law_or_guidance, published_study, local_custom, habit, common_sense or none."
+  passed_first: "measured: yes if this person left the place where they met first, no if the other did, together if both left at the same time."
+  passing_side: "measured: on which of their own sides this person passed the other, left or right."
+  stopped: "measured: yes if this person came to a stop."
+  backed_up: "measured: yes if this person moved backwards."
+  cell_stability: "coin_flip when this row's session belongs to a cell where repeating the same prompts gave different behaviour; stable when repeating gave the same behaviour; untested when it was not repeated."
+
+user: |-
+  THE ENCOUNTER
+  {encounter_description}
+
+  THE COLUMNS
+  {columns}
+
+  RESOLVED SESSIONS, ONE ROW PER PERSON ({rows} rows, {sessions} sessions)
+  ```csv
+  {main_table}
+  ```
+
+  FAILED SESSIONS ({failed} sessions), counted by condition, geometry, the first sides of the two people's plans (each their own left or right) and what went wrong
+  ```csv
+  {failed_table}
+  ```
+
+  RESOLVED AND FAILED SESSIONS PER LEVEL OF EACH FACTOR OF THE DESIGN (p1: person 1 has it; neither: nobody has it)
+  ```csv
+  {factor_table}
+  ```
+
+  CELLS WHERE BEHAVIOUR IS NOT STABLE
+  {coin_flips}
+
+  SOME RESOLVED SESSIONS IN FULL ({sampled} sessions). In their own words a person may call the other "Person 1": that is the label their own view gave the other.
+  {sessions_in_full}
+
+coin_flips: "{coin_flip} of the {tested} repeated cells are coin flips: the rows with cell_stability coin_flip ({rows} rows here)."
+no_coin_flips: "No cell was repeated, so stability is not known (cell_stability is untested in every row)."
+
+session: "Session {session} ({condition}, geometry {geometry}): resolved. {outcome}"
+outcome: "Person 1 passed on their {p1_side}, person 2 on their {p2_side}; who left first: {first}."
+person: "- {person} (row {row}):"
+decision: '  Decision {number}, {distance} m away ({why}): intent "{intent}"; steps {steps}.'
+said: '  Said: "{message}"'
+signal: "  Signal: {signal}."
+reason: '  Private reason: "{reason}"'
+unreadable: "  Decision {number}, {distance} m away ({why}): the reply could not be read."
+debrief: '  Afterwards, based on: {kind}; "{basis}"; source: {source}.'
+no_debrief: "  Afterwards: no readable answer."
+
+reply_format: |-
+  HOW TO REPLY
+  Reply with a single YAML block, in a ```yaml fence, and nothing else, of this form:
+  ```yaml
+  rules:
+    - rule: <the rule, in one sentence>
+      applies_when: <the concrete condition>
+      action: <the concrete action: when it starts, how much>
+      exceptions:
+        - <where the rule does not hold>
+      factors_used: [<column names>]
+      needs_communication: <true or false>
+      references:
+        - citation: <the source, or "no known source">
+          locator: <where in it: a section, an article, a page; or "none">
+          kind: <law_or_guidance, published_study, local_custom, habit, common_sense or none>
+          claim: <what the source says that supports the rule>
+      debrief_support:
+        share: <the share of the rule's sessions whose debriefs give the same basis, 0 to 1>
+        note: <which debrief answers agree, and how>
+      coverage: <which rows the rule describes, and how many>
+      predict:
+        target: <one target column>
+        if:
+          - when: {<column>: <value>}
+            then: <a value of the target>
+        default: <a value of the target>
+  ```
+
+retry: >-
+  Your last reply could not be read ({error}). Reply again with only the YAML block, in a ```yaml
+  fence, in the form given under HOW TO REPLY.

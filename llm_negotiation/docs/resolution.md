@@ -54,7 +54,9 @@ decision tree, the mapping, D14's noise floor and stability, D8's stated against
 D1's intent against plan. RF-26 (#92), on the mock: real ethnicity as a factor in place of the
 fictional group, Singapore's census groups drawn at their resident shares, D2's lines for oneself
 and for the other, a switch, outcome columns, an ethics gate and its refusal in rules
-(`negsim/resolution/ethnicity.py`; template `resolve_factors_v2`; `docs/ethnicity.md`). Nothing
+(`negsim/resolution/ethnicity.py`; template `resolve_factors_v2`; `docs/ethnicity.md`). RF-11
+(#66), on the mock and on round 1's data: Step 2's extractor, which reads the results of Step 1
+(`negsim/extraction/`; template `extract_v1`; `docs/rule-extraction.md`). Nothing
 else yet. Configs and
 templates from before this track behave exactly as before.
 

@@ -18,6 +18,8 @@ output goes under ``runs/``.
 A config that says ``layer: rule_generation`` is a rule-generation experiment (issue #30).
 A config that says ``layer: resolution`` is a resolution experiment (issue #58): LLM agents
 meet in conflict cases and are asked what they do.
+A config that says ``layer: rule_extraction`` extracts rules from resolution experiments'
+results (issue #66, Step 2).
 ``--plan`` prints its sessions and worst-case cost; with ``--client deepseek`` it writes the
 preview and sends nothing unless ``--confirm`` is given too. ``--limit N`` runs at most N
 sessions that have no record yet; running it again resumes it.
@@ -33,6 +35,8 @@ from pathlib import Path
 from typing import Optional
 
 from ..configutil import ConfigError, load_yaml, resolve_path
+from ..extraction.experiment import cli_run as run_rule_extraction
+from ..extraction.experiment import is_extraction_config
 from ..llm import LLMError
 from ..resolution.experiment import cli_run as run_resolution
 from ..resolution.experiment import is_resolution_config
@@ -87,8 +91,12 @@ def main(argv: Optional[list[str]] = None) -> int:
             if args.overwrite:
                 raise ConfigError("--overwrite does not apply to a resolution experiment, which resumes and never rewrites a session")
             return run_resolution(args)
+        if is_extraction_config(raw):
+            if args.overwrite:
+                raise ConfigError("--overwrite does not apply to a rule extraction, which resumes and never rewrites a run")
+            return run_rule_extraction(args)
         if args.confirm:
-            raise ConfigError("--confirm applies only to rule-generation and resolution experiments")
+            raise ConfigError("--confirm applies only to rule-generation, resolution and rule-extraction experiments")
         if is_avoidance_config(raw):
             return run_avoidance(args)
 

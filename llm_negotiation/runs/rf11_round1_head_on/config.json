@@ -1,0 +1,89 @@
+{
+  "extraction_log_version": 1,
+  "layer": "rule_extraction",
+  "experiment": {
+    "experiment_name": "rf11_round1_head_on",
+    "description": "RF-11, round 1 (head-on): the rules behind how LLM agents resolved head-on meetings in a corridor, extracted three times from RF-30's pooled design sessions, each with references, debrief support and a held-out fidelity score.",
+    "source": "configs/extraction/round1_head_on.yaml",
+    "sources": [
+      "runs/rf10_round1_head_on_keep_line",
+      "runs/rf30_round1_head_on_keep_line"
+    ],
+    "encounter_types": [
+      "head_on"
+    ],
+    "encounter_descriptions": {
+      "head_on": "Two people walk towards each other along a corridor, on the same line or nearly so (the geometry: their walking lines aligned, or 20 cm apart). Each must get past the other."
+    },
+    "gate": {
+      "require": true
+    },
+    "held_out": {
+      "share": 0.25,
+      "seed": 66
+    },
+    "runs": {
+      "seeds": [
+        1101,
+        1102,
+        1103
+      ]
+    },
+    "sample": {
+      "size": 15
+    },
+    "matching": {
+      "agreement_min": 0.95,
+      "min_runs": 2
+    },
+    "template": "extract_v1",
+    "llm": {
+      "client": "mock",
+      "mock_policy": "extract_rehearsal_v1",
+      "model": "deepseek-flash",
+      "temperature": 1.0,
+      "max_tokens": 4000,
+      "thinking": "disabled",
+      "transport_retries": 0
+    },
+    "budget": {
+      "cap_usd": 0.05,
+      "ledger": "spend_ledger.jsonl"
+    }
+  },
+  "client_name": "deepseek",
+  "software": {
+    "negsim": "0.1.0"
+  },
+  "template": {
+    "key": "extract_v1",
+    "id": "extract",
+    "version": 1,
+    "sha256": "5e4b251b92c4f21f148eaff4a4c3ba902fbb27c84ee4cd1f66778cece67d7495"
+  },
+  "sources": [
+    {
+      "folder": "runs/rf10_round1_head_on_keep_line",
+      "client": "deepseek",
+      "outcomes_sha256": "690ae3e9687955732cab0c4f54655de6c878c0763ab7588286de453df5cd9d74",
+      "resolution_gate": {
+        "plan_only_resolved_min": 0.5,
+        "reason": "Step 1 asks whether LLM agents can resolve the conflict on their own plans, so the gate is the plan_only rate (ORCA does not steer the pair apart), pooled over the design's 192 sessions of 32 cells x 2 geometries x 3 conditions (exact repeats and counterfactual pairs left out, so each cell counts once per geometry and condition). 0.50 means the plans resolve the meeting more often than not; it is a judgement, not a sourced number. Head-on walkers in life almost never collide, so 0.50 is lenient against people, and strict against plain ORCA here, which passes within the near-miss distance and never counts as resolved (RF-9: 0 of 72). RF-9's pilot resolved 0.24 before resolve_v6's fixes, so failing the gate is a possible Step 1 result."
+      }
+    },
+    {
+      "folder": "runs/rf30_round1_head_on_keep_line",
+      "client": "deepseek",
+      "outcomes_sha256": "a32c9b924781d38fa3272af7575cac009a0e5cfaa00299205153ee10dab9ecff",
+      "resolution_gate": {
+        "plan_only_resolved_min": 0.5,
+        "reason": "Step 1 asks whether LLM agents can resolve the conflict on their own plans, so the gate is the plan_only rate (ORCA does not steer the pair apart), pooled over the design's 192 sessions of 32 cells x 2 geometries x 3 conditions (exact repeats and counterfactual pairs left out, so each cell counts once per geometry and condition). 0.50 means the plans resolve the meeting more often than not; it is a judgement, not a sourced number. Head-on walkers in life almost never collide, so 0.50 is lenient against people, and strict against plain ORCA here, which passes within the near-miss distance and never counts as resolved (RF-9: 0 of 72). RF-9's pilot resolved 0.24 before resolve_v6's fixes, so failing the gate is a possible Step 1 result."
+      }
+    }
+  ],
+  "created_utc": "2026-10-26T04:01:46+00:00",
+  "git": {
+    "commit": "ec104c1c0a260d0403b6c0197b196e0cce6fa0cb",
+    "dirty": false
+  }
+}
