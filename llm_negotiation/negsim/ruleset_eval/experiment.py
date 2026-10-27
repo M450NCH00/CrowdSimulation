@@ -30,7 +30,7 @@ import json
 import sys
 import time
 from collections import Counter
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Mapping, Optional, Sequence
@@ -108,6 +108,7 @@ class Scenario:
     file: str
     rotate_people: bool
     note: str = ""
+    overrides: Mapping[str, Any] = field(default_factory=dict)  # deep-merged into the scenario, e.g. a smaller crowd
 
 
 @dataclass(frozen=True)
@@ -177,8 +178,11 @@ class RuleSetEvaluationConfig:
         scenarios = []
         for i, entry in enumerate(raw["scenarios"] or []):
             where = f"{source}.scenarios[{i}]"
-            check_keys(entry, where, ("name", "scenario"), ("rotate_people", "note"))
-            scenarios.append(Scenario(str(entry["name"]), str(entry["scenario"]), as_bool(entry.get("rotate_people", False), f"{where}.rotate_people"), str(entry.get("note", ""))))
+            check_keys(entry, where, ("name", "scenario"), ("rotate_people", "note", "scenario_overrides"))
+            scenarios.append(Scenario(
+                str(entry["name"]), str(entry["scenario"]), as_bool(entry.get("rotate_people", False), f"{where}.rotate_people"),
+                str(entry.get("note", "")), dict(entry.get("scenario_overrides") or {}),
+            ))
         if not arms or not scenarios:
             raise ConfigError(f"{source}: at least one arm and one scenario")
         logging = raw.get("logging") or {}
@@ -208,7 +212,8 @@ class RuleSetEvaluationConfig:
                                      **({"priority": rule.priority, "reason": rule.reason} if rule.priority is not None else {})} for rule in self.rules},
             "left_out": [dict(entry) for entry in self.left_out],
             "arms": [{"name": arm.name, "rules": list(arm.rules), "database": arm.database, "ruleset": arm.ruleset, "judged": arm.judged, "description": arm.description} for arm in self.arms],
-            "scenarios": [{"name": s.name, "scenario": s.file, "rotate_people": s.rotate_people, "note": s.note} for s in self.scenarios],
+            "scenarios": [{"name": s.name, "scenario": s.file, "rotate_people": s.rotate_people, "note": s.note,
+                           **({"scenario_overrides": dict(s.overrides)} if s.overrides else {})} for s in self.scenarios],
             "baseline": self.baseline, "seed": self.seed, "seeds": self.seeds, "people": dict(self.people),
             "trajectory_stride": self.trajectory_stride, "alpha": self.alpha,
         }
@@ -275,6 +280,7 @@ def base_plans(config: RuleSetEvaluationConfig, scenario: Scenario) -> list[Avoi
     return AvoidanceExperiment(
         {
             "layer": "avoidance", "experiment_name": config.experiment_name, "scenario": scenario.file, "baseline": config.baseline,
+            "scenario_overrides": dict(scenario.overrides),
             "logging": {"trajectory_stride": config.trajectory_stride, "interactions": True},
             "design": {"seed": config.seed, "seeding": "paired", "repeats": config.seeds},
         },

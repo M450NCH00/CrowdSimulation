@@ -119,6 +119,44 @@ approval needed.
   RF-15; RF-13 in round 2).
 - Next step: the layer (plan step 1).
 
+### 2026-10-27 about 08:30 UTC — The layer, and a clash found before any run
+- What I did: `negsim/ruleset_eval/` (`experiment.py`: config, the run's own staging database, the
+  runs, summary and report; `measures.py`; `verdicts.py`, the rule of task 0), wired into
+  `run_experiment.py`; `StagingDatabase.copy_in` and `write_ruleset` in `negsim/rulegen/writer.py`;
+  config `configs/rule_set_evaluation/rf18_round1.yaml`.
+- Tried the measures on RF-31's screening run (seed 30901) first: plain ORCA 791 severe conflicts,
+  the left-turn rule 566; lanes 50/50 against 63/37 to the left; but throughput 115 against 78 per
+  minute, because one person ended 40 s late and throughput counts arrivals over the whole run, while
+  mean delay improved (1.37 s against 0.77 s). The measure agreed in task 0 stays; the doc and the
+  report say how to read it.
+- **Found before any run: the two rules cannot be switched on together.** Both translations have
+  priority 500 (the translator's default), and the loader's pre-run check finds a head-on in which one
+  person has a cane where both match with different directives, so it refuses set 2 as `ambiguous`
+  (`rule-matching.md`, section 4). That is task 4's first answer: the rule set of round 1 clashes.
+- **Asked the user, who chose "the cane rule wins" (the narrower rule where both match).** Built as a
+  config `priority` (with a required `reason`): the run's staging database gets one more version, v3,
+  the same rule with priority 600 and the reason in its provenance notes; the staged original is
+  untouched; v3 is switched on in every arm.
+- **A bug found in the smoke run:** two-person scenarios moved the mix of people on by two per seed,
+  but the mix gives a cane to four people in a row, so every pair was two cane users or none, and the
+  cane rule (roles by a condition, `tie: no_match`) could never match. Changed to one person per seed
+  (canes in mixed pairs on 2 of the 10 seeds), with a test.
+- Smoke result (2 seeds): in the narrow passage, plain ORCA deadlocks on every seed (they start face to
+  face) and neither rule matches: the pair's class is `single_file_segment`, not `head_on`.
+- Committed the build (159cf715) before the run of record, so its runs record a clean commit.
+- Next step: the run of record (150 runs), tests, the benchmark, docs.
+
+### 2026-10-27 about 08:40 UTC — Tests, the benchmark option, the doc (while the run goes)
+- Tests: `tests/test_ruleset_eval.py`, 21 passed (the sign test; every verdict; the config's
+  refusals; the byte-for-byte copy and its refusal; a rule set frozen once; two clashing rules refused
+  unless one gets a priority, with the canonical form unchanged; people moving on by one; **task 8**:
+  `keep_left_head_on` and `younger_yields_head_on` together, where the higher priority wins as
+  documented, and an overtaking rule in a head-on, not used, with the head-on logged as uncovered;
+  resume; lanes only in the flow; delay; the command).
+- `scenario_overrides` added to a scenario entry (a smaller crowd in the tests; other crowd sizes later).
+- `negsim.rules.benchmark`: `--database`, `--ruleset`, `--people-from`; the defaults as before.
+- Doc: `docs/rule-set-evaluation.md`.
+
 ## Open questions / risks
 
 1. ~~**The definition of "helps"**~~ fixed with the user before any run (entry above).
