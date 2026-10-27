@@ -65,6 +65,34 @@ Session 2 (build and run):
   seed. Age does not change speed in the avoidance simulator.
 - Next step: sources (plan step 1).
 
+### 2026-10-27 10:15 to 10:22 UTC — Task 1: the sources (draft `docs/population-profiles.md`)
+- What I did: searched and read the sources for each share; cached seven files as `refs/rf33_*`.
+  Written up in `llm_negotiation/docs/population-profiles.md`, section 2.
+- Found:
+  - **Age and gender:** SingStat M810011, residents at end-June 2026 (Table Builder API, data
+    updated 2026-09-25): five-year bands by sex. 65 and over: 19.5% of residents, 21.3% of those
+    aged 10 and over.
+  - **A cane:** Gell et al. 2015 (NHATS 2011, US, community-dwelling 65+, n = 7,609, "a cane in the
+    last month"), by five-year band, 8.6% at 65–69 to 36.6% at 90+. At Singapore's age mix: 14.8%
+    of those 65+, **3.2% of the crowd**. No Singapore figure found. Under 65: **[placeholder]**
+    (NHIS 1994 gives counts, not rates; its rate table is not archived).
+  - **A phone:** Fernández et al. 2020 (Elche, Spain, 2019, 3,301 pedestrians walking on the
+    street, observed at rush hours): "smombie" (looking at the screen) 14.6% at 10–18, 19.3% at
+    18–35, 6.4% at 35–65, 1.7% over 65. At Singapore's age mix: **8.9% of the crowd**. Cross-check
+    Hao et al. 2022 (four Chinese cities, crossing, any use 32.8%): wider category, not used.
+    Chen and Pai 2018 (Taipei) rejected: a case-control sample gives no share.
+  - **A large suitcase:** no count found anywhere: **[placeholder]**.
+  - **Assertiveness and the other unobservable factors:** designed contrasts, not counted traits:
+    **[placeholder]**.
+- Dead ends (for the record): PMC's web pages (bot check), Europe PMC's full text for a non-OA
+  author manuscript (HTTP 500; NCBI E-utilities worked), BMJ and JMIR PDFs (refused; Europe PMC
+  XML worked for JMIR), NHIS Advance Data 292's rate tables (not archived).
+- Mistakes corrected: cached the Taipei paper first as "lin2018" and the China one as "gao2022";
+  the authors are Chen and Pai, and Hao et al. Renamed before committing.
+- Result: a sourced street crowd of 100 has about 21 aged 65+, 3 with a cane, 9 looking at a
+  phone, against 50 of each in RF-18's crowd.
+- Next step: the design questions for the user (`docs/population-profiles.md`, section 4).
+
 ## Open questions / risks
 
 1. **Whose population?** (raised in issue #16, B5): SingStat's fine age bands are of residents
