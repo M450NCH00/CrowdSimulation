@@ -38,6 +38,7 @@ from typing import Any, Callable, Mapping, Optional, Sequence
 from .. import __version__
 from ..configutil import PACKAGE_ROOT, ConfigError, as_bool, as_choice, as_number, check_keys, load_yaml, resolve_path
 from ..experiment.avoidance import AvoidanceExperiment, AvoidanceRunPlan, execute_avoidance_run, forget_rule_database
+from .. import populations as P
 from ..rules.database import RuleDatabase, file_sha256
 from ..rulegen.replay import database_path, mixed_population, population_of
 from ..rulegen.writer import StagingDatabase
@@ -109,6 +110,13 @@ class Scenario:
     rotate_people: bool
     note: str = ""
     overrides: Mapping[str, Any] = field(default_factory=dict)  # deep-merged into the scenario, e.g. a smaller crowd
+    #: Since issue #112 (RF-33): the scenario's people from a profile (``negsim.populations``) in
+    #: place of ``people``, and what the scenario is for (``realistic`` or ``stress``). ``pool``: a
+    #: small scenario's people are the first of a crowd of this many at the profile's exact shares.
+    population: Optional[str] = None
+    profile: Optional[P.Profile] = None
+    purpose: Optional[str] = None
+    pool: Optional[int] = None
 
 
 @dataclass(frozen=True)
@@ -176,16 +184,13 @@ class RuleSetEvaluationConfig:
                 name, tuple(own or ()), other, entry.get("ruleset"),
                 as_bool(entry.get("judged", not other), f"{where}.judged"), str(entry.get("description", "")),
             ))
-        scenarios = []
-        for i, entry in enumerate(raw["scenarios"] or []):
-            where = f"{source}.scenarios[{i}]"
-            check_keys(entry, where, ("name", "scenario"), ("rotate_people", "note", "scenario_overrides"))
-            scenarios.append(Scenario(
-                str(entry["name"]), str(entry["scenario"]), as_bool(entry.get("rotate_people", False), f"{where}.rotate_people"),
-                str(entry.get("note", "")), dict(entry.get("scenario_overrides") or {}),
-            ))
+        scenarios = [_scenario(entry, f"{source}.scenarios[{i}]") for i, entry in enumerate(raw["scenarios"] or [])]
         if not arms or not scenarios:
             raise ConfigError(f"{source}: at least one arm and one scenario")
+        if len({s.name for s in scenarios}) != len(scenarios):
+            raise ConfigError(f"{source}.scenarios: each scenario needs its own name")
+        if any(s.purpose for s in scenarios) and not all(s.purpose for s in scenarios):
+            raise ConfigError(f"{source}.scenarios: once one scenario says its purpose, every one does (a rule's verdict of record comes from the realistic ones)")
         logging = raw.get("logging") or {}
         check_keys(logging, f"{source}.logging", (), ("trajectory_stride",))
         people = dict(raw.get("people") or {"ages": [25, 70], "genders": ["female", "male"]})
@@ -215,10 +220,35 @@ class RuleSetEvaluationConfig:
             "left_out": [dict(entry) for entry in self.left_out],
             "arms": [{"name": arm.name, "rules": list(arm.rules), "database": arm.database, "ruleset": arm.ruleset, "judged": arm.judged, "description": arm.description} for arm in self.arms],
             "scenarios": [{"name": s.name, "scenario": s.file, "rotate_people": s.rotate_people, "note": s.note,
-                           **({"scenario_overrides": dict(s.overrides)} if s.overrides else {})} for s in self.scenarios],
+                           **({"scenario_overrides": dict(s.overrides)} if s.overrides else {}),
+                           **({"population": s.population, "population_sha256": s.profile.sha256} if s.profile else {}),
+                           **({"purpose": s.purpose} if s.purpose else {}), **({"pool": s.pool} if s.pool else {})} for s in self.scenarios],
             "baseline": self.baseline, "seed": self.seed, "seeds": self.seeds, "people": dict(self.people),
             "trajectory_stride": self.trajectory_stride, "alpha": self.alpha, "verdict_rule": self.verdict_rule,
         }
+
+
+def _scenario(entry: Any, where: str) -> Scenario:
+    check_keys(entry, where, ("name", "scenario"), ("rotate_people", "note", "scenario_overrides", "population", "purpose", "pool"))
+    rotate = as_bool(entry.get("rotate_people", False), f"{where}.rotate_people")
+    purpose = as_choice(entry["purpose"], f"{where}.purpose", P.PURPOSES) if "purpose" in entry else None
+    population, profile, pool = entry.get("population"), None, None
+    if population is not None:
+        profile = P.Profile.load(resolve_path(population))
+        if purpose is None:
+            raise ConfigError(f"{where}: a scenario with a population says its 'purpose'")
+        if purpose != profile.purpose:
+            raise ConfigError(f"{where}.purpose: {purpose!r}, but {population} is a {profile.purpose} profile")
+        if profile.generator == P.QUOTAS and rotate:
+            raise ConfigError(f"{where}: rotate_people is for a cycling mix; a profile of quotas draws new people on every seed")
+    if "pool" in entry:
+        if profile is None or profile.generator != P.QUOTAS:
+            raise ConfigError(f"{where}.pool: only with a population of quotas")
+        pool = int(as_number(entry["pool"], f"{where}.pool", minimum=1))
+    return Scenario(
+        str(entry["name"]), str(entry["scenario"]), rotate, str(entry.get("note", "")), dict(entry.get("scenario_overrides") or {}),
+        None if population is None else str(population), profile, purpose, pool,
+    )
 
 
 # --- the run's own staging database ---------------------------------------------------------------
@@ -304,6 +334,7 @@ class Run:
     arm: Optional[Arm]
     plan: AvoidanceRunPlan
     folder: Path
+    people: Mapping[int, Mapping[str, Any]] = field(default_factory=dict)
 
     @property
     def arm_name(self) -> str:
@@ -319,13 +350,17 @@ def runs(config: RuleSetEvaluationConfig, experiment_dir: Path) -> list[Run]:
             from ..scenarios.registry import build_crowd_scenario
 
             n_agents = len(build_crowd_scenario(plan.scenario_config).agents)
-            people = population_of(people_for(config, n_agents, plan.repeat, scenario.rotate_people), f"{scenario.name}_r{plan.repeat}")
+            if scenario.profile is None:
+                given = people_for(config, n_agents, plan.repeat, scenario.rotate_people)
+            else:
+                given = scenario.profile.people(n_agents, plan.seed, plan.repeat, scenario.rotate_people, scenario.pool)
+            people = population_of(given, f"{scenario.name}_r{plan.repeat}")
             for arm in (None, *config.arms):
                 name = PLAIN if arm is None else arm.name
                 out.append(Run(scenario, arm, replace(
                     plan, run_id=f"{scenario.name}_{name}_s{plan.seed}", population=people, visibility=dict(visibility),
                     directives=directives_for(arm, staging_root),
-                ), experiment_dir / RUNS_SUBDIR / scenario.name / name / str(plan.seed)))
+                ), experiment_dir / RUNS_SUBDIR / scenario.name / name / str(plan.seed), given))
     return out
 
 
@@ -359,8 +394,14 @@ def _mean(values: Sequence[Optional[float]]) -> Optional[float]:
     return round(sum(values) / len(values), 3) if values else None
 
 
-def summarise(config: RuleSetEvaluationConfig, results: Mapping[tuple[str, str, int], Mapping[str, Any]]) -> dict[str, Any]:
-    """Per scenario and arm: the paired seeds, means, the verdict, rule conflicts and uncovered conflicts."""
+def summarise(
+    config: RuleSetEvaluationConfig, results: Mapping[tuple[str, str, int], Mapping[str, Any]],
+    people: Optional[Mapping[tuple[str, int], Mapping[str, int]]] = None,
+) -> dict[str, Any]:
+    """Per scenario and arm: the paired seeds, means, the verdict, rule conflicts and uncovered conflicts.
+    Since issue #112, a scenario with a population also gets its profile and the people of each seed
+    (``people``: counts by scenario and seed, :func:`negsim.populations.counts`), and with purposes a
+    rule's verdict of record comes from its realistic scenarios."""
     scenarios = {}
     for scenario in config.scenarios:
         seeds = sorted({seed for (s, _, seed) in results if s == scenario.name})
@@ -375,13 +416,31 @@ def summarise(config: RuleSetEvaluationConfig, results: Mapping[tuple[str, str, 
             entry["per_seed"] = [{"seed": seed, "arm": {k: a[k] for k in KEPT}, "plain": {k: p[k] for k in KEPT}} for seed, a, p in zip(seeds, mine, plain)]
             arms[arm.name] = entry
         scenarios[scenario.name] = {"file": scenario.file, "note": scenario.note, "seeds": seeds, "arms": arms}
+        if scenario.purpose:
+            scenarios[scenario.name]["purpose"] = scenario.purpose
+        if scenario.profile:
+            per_seed = [{"seed": seed, **people[(scenario.name, seed)]} for seed in seeds] if people else []
+            keys = [key for key in (per_seed[0] if per_seed else {}) if key != "seed"]
+            scenarios[scenario.name]["population"] = {
+                **scenario.profile.describe(), **({"pool": scenario.pool} if scenario.pool else {}),
+                "mean_per_seed": {key: _mean([row[key] for row in per_seed]) for key in keys}, "per_seed": per_seed,
+            }
+    purposes = {s.purpose for s in config.scenarios if s.purpose}
     rule_verdicts = {}
     for rule in config.rules:
         alone = next((arm for arm in config.arms if arm.rules == (rule.rule_id,) and arm.judged), None)
         if alone is None:
             continue
         by_scenario = {name: s["arms"][alone.name]["verdict"]["verdict"] for name, s in scenarios.items()}
-        rule_verdicts[rule.rule_id] = {"arm": alone.name, "by_scenario": by_scenario, "overall": overall(by_scenario.values())}
+        entry = {"arm": alone.name, "by_scenario": by_scenario, "overall": overall(by_scenario.values())}
+        if purposes:
+            # The user's decision of 2026-10-27 (issue #112): the verdict of record comes from the
+            # realistic scenarios; a stress scenario's is reported beside it, never on its own.
+            entry["by_purpose"] = {purpose: overall([v for name, v in by_scenario.items() if scenarios[name]["purpose"] == purpose])
+                                   for purpose in P.PURPOSES if purpose in purposes}
+            entry["overall"] = entry["by_purpose"].get(P.REALISTIC)
+            entry["of_record_from"] = P.REALISTIC
+        rule_verdicts[rule.rule_id] = entry
     return {"scenarios": scenarios, "rule_verdicts": rule_verdicts}
 
 
@@ -437,14 +496,28 @@ def report_markdown(config: RuleSetEvaluationConfig, summary: Mapping[str, Any],
     lines += ["", "## Verdicts", "", "| Scenario | " + " | ".join(f"`{arm.name}`" for arm in config.arms if arm.judged) + " |",
               "| --- |" + " --- |" * sum(arm.judged for arm in config.arms)]
     for name, s in summary["scenarios"].items():
-        lines.append(f"| {name} | " + " | ".join(_cell(s["arms"][arm.name], config.verdict_rule) for arm in config.arms if arm.judged) + " |")
+        label = f"{name} ({s['purpose']})" if s.get("purpose") else name
+        lines.append(f"| {label} | " + " | ".join(_cell(s["arms"][arm.name], config.verdict_rule) for arm in config.arms if arm.judged) + " |")
     if summary["rule_verdicts"]:
-        lines += ["", "| Rule | Arm | " + " | ".join(summary["scenarios"]) + " | Overall |", "| --- | --- |" + " --- |" * (len(summary["scenarios"]) + 1)]
+        by_purpose = [p for p in P.PURPOSES if any(p in (e.get("by_purpose") or {}) for e in summary["rule_verdicts"].values())]
+        extra = "".join(f" {p.capitalize()} |" for p in by_purpose)
+        record = "Of record (realistic)" if by_purpose else "Overall"
+        lines += ["", "| Rule | Arm | " + " | ".join(summary["scenarios"]) + f" |{extra} {record} |",
+                  "| --- | --- |" + " --- |" * (len(summary["scenarios"]) + len(by_purpose) + 1)]
         for rule_id, entry in summary["rule_verdicts"].items():
-            lines.append(f"| `{rule_id}` | `{entry['arm']}` | " + " | ".join(entry["by_scenario"].values()) + f" | **{entry['overall']}** |")
+            cells = "".join(f" {_num((entry.get('by_purpose') or {}).get(p))} |" for p in by_purpose)
+            lines.append(f"| `{rule_id}` | `{entry['arm']}` | " + " | ".join(entry["by_scenario"].values()) + f" |{cells} **{_num(entry['overall'])}** |")
+        if by_purpose:
+            lines += ["", "A rule's verdict of record comes from its realistic scenarios; a stress scenario shows whether it works where it "
+                      "applies, and is never a verdict of record on its own (the user's decision of 2026-10-27, issue #112)."]
     for name, s in summary["scenarios"].items():
-        lines += ["", f"## {name}", "", f"`{s['file']}`" + (f". {s['note']}" if s["note"] else ""), "",
-                  "| Arm | Severe conflicts | Collisions | Throughput /min | Delay s | Gridlocked | Rule matches | ms/step | Left / right |",
+        lines += ["", f"## {name}", "", f"`{s['file']}`" + (f". {s['note']}" if s["note"] else ""), ""]
+        if s.get("population"):
+            pop = s["population"]
+            mean = ", ".join(f"{k} {_num(v)}" for k, v in pop["mean_per_seed"].items())
+            lines += [f"People: `{pop['file']}` ({pop['purpose']}, {pop['generator']}"
+                      + (f", the first of a crowd of {pop['pool']} at exact shares" if pop.get("pool") else "") + f"). Per seed, mean: {mean}.", ""]
+        lines += ["| Arm | Severe conflicts | Collisions | Throughput /min | Delay s | Gridlocked | Rule matches | ms/step | Left / right |",
                   "| --- | --- | --- | --- | --- | --- | --- | --- | --- |"]
         for arm_name, entry in s["arms"].items():
             m, lanes = entry["means"], entry["lanes"]
@@ -506,6 +579,7 @@ def run_evaluation(
     # ``git`` is the commit the runs were made with; ``judged_git`` the one that last judged them.
     _write_json(config_path, {**described, "created_utc": created, "git": first_git, "judged_utc": _utc_now(), "judged_git": dict(git), "copied": copied})
     planned = runs(config, experiment_dir)
+    people = {(run.scenario.name, run.plan.seed): P.counts(run.people) for run in planned if run.scenario.profile is not None}
     results = {}
     for i, run in enumerate(planned, 1):
         measures, ran = execute(run, git, overwrite)
@@ -515,7 +589,7 @@ def run_evaluation(
         if ran:
             report(f"  [{i}/{len(planned)}] {run.scenario.name} {run.arm_name} seed {run.plan.seed}: {measures['status']}, "
                    f"severe {measures['severe_conflicts']}, {measures['wall_s']:.1f} s")
-    summary = summarise(config, results)
+    summary = summarise(config, results, people)
     result.summary = summary
     _write_json(experiment_dir / "summary.json", {"experiment": config.experiment_name, "written_utc": _utc_now(), **summary})
     (experiment_dir / "report.md").write_text(report_markdown(config, summary, copied), encoding="utf-8", newline="\n")
@@ -532,7 +606,9 @@ def print_plan(config: RuleSetEvaluationConfig, out: Callable[[str], None] = pri
         what = ", ".join(arm.rules) if arm.rules else f"{arm.database}:{arm.ruleset}"
         out(f"  arm {arm.name}: {what}{'' if arm.judged else ' (reference, not judged)'}")
     for scenario in config.scenarios:
-        out(f"  scenario {scenario.name}: {scenario.file}{' (people rotate over the seeds)' if scenario.rotate_people else ''}")
+        people = f", people {scenario.population}" + (f" (the first of {scenario.pool})" if scenario.pool else "") if scenario.population else ""
+        out(f"  scenario {scenario.name}: {scenario.file}{' (people rotate over the seeds)' if scenario.rotate_people else ''}"
+            f"{people}{f', {scenario.purpose}' if scenario.purpose else ''}")
 
 
 def cli_run(args: argparse.Namespace) -> int:

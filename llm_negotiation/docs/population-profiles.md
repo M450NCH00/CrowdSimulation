@@ -1,7 +1,8 @@
 # Population profiles: who is in a simulated crowd (issue #112, RF-33)
 
-**Status: draft, session 1 of 2.** Section 2 (the sources) is done, and the user decided the
-build's questions (section 4). The profile files, the generator and the config keys follow.
+The sources (section 2), the user's decisions (section 4), the profiles and the generator
+(section 5). A rule-set evaluation scenario names a profile as its `population`
+(`rule-set-evaluation.md`, section 1.1).
 
 RF-18's crowd gave people their factors by cycling each factor's levels
 (`negsim.rulegen.replay.mixed_population`), so every factor sits at exactly half: half the crowd is
@@ -147,3 +148,42 @@ each time.
    used" or "no change" over 10 seeds. The realistic verdict is the verdict of record; the stress
    scenario (today's mix, every factor at half) is reported beside it, labelled as such, to show
    whether the rule works where it applies.
+
+## 5. The profiles and the generator
+
+Code: `negsim/populations.py`. Each profile is a **frozen** file under `configs/populations/`: a
+change of any share is a new file (`..._v2.yaml`), never an edit; the tests pin each file's hash.
+
+| Profile | Purpose | Generator | People |
+| --- | --- | --- | --- |
+| `singapore_street_v1` | realistic | `quotas` | Section 2's shares, from age 10, with section 4's placeholders |
+| `stress_all_factors_v1` | stress | `cycle` | RF-18's crowd: each factor's levels cycle (`mixed_population`), so 48 of 100 carry a cane, pull a suitcase and look at a phone, 50 are 70, 36 hold their ground |
+
+A realistic profile must be of quotas, and every share in it names a source listed in the file
+(`placeholder` is one, and says so). A profile also lists its limits, which the summary of every
+run that uses it repeats.
+
+**Quotas** (`quota_people`), for `n` people on a seed:
+
+1. The people are shared out over the age bands by sex by the **largest-remainder method**, so
+   the counts are exact (not drawn).
+2. Each person's age is drawn evenly from their band. **[design]** The table's "90 Years & Over"
+   is drawn from 90 to 94.
+3. For each factor, the crowd's number at its level is the nearest whole number to what the shares
+   give for this crowd's bands (100 people have 20 aged 65 and over, which gives 3.4 canes, so 3),
+   shared out over the bands in proportion to
+   their expected numbers, never more than a band holds; within a band, who gets it is drawn.
+   **[design]** Factors are drawn independently of each other within a band: no source gives joint
+   shares.
+4. Everyone is shuffled onto the agents.
+
+Every draw comes from one random stream named by the profile and the seed, so the same profile and
+seed give the same people for every arm, and each seed gives new people. With `pool: N` above `n`,
+the run's people are the first `n` of a crowd of `N` (**[design]** `pool: 100` for round 1's
+two-person scenarios).
+
+**[design]** Elche's phone bands (10–18, 18–35, 35–65, over 65; overlapping at 18 and 35) are laid
+on SingStat's five-year bands as 10–19, 20–34, 35–64 and 65 and over.
+
+At 100 people `singapore_street_v1` gives, on every seed: 20 aged 65 and over, 3 with a cane, 9
+looking at a phone, 1 with a large suitcase, 50 holding their ground.

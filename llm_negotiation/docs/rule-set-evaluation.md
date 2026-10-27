@@ -33,12 +33,33 @@ A config says `layer: rule_set_evaluation` and gives:
 | `rules` | Each rule switched on in some arm: the staging database it comes `from` and the `version`. Optional `priority` (with a `reason`): see section 2 |
 | `left_out` | Rules not run, each with its reason; listed in the report, so that what was left out is counted |
 | `arms` | Each a rule set: `rules` (of the ones above), or `database` and `ruleset` of another database (a reference). `judged: false` gives numbers and no verdict (the default for a reference). Plain ORCA is always run and is named `plain` |
-| `scenarios` | Each a `name`, a `scenario` file, optional `scenario_overrides`, a `note`, and `rotate_people` (below) |
+| `scenarios` | Each a `name` (each its own), a `scenario` file, optional `scenario_overrides`, a `note`, and `rotate_people` (below). Since issue #112: `population`, `purpose` and `pool` (section 1.1) |
 | `baseline`, `seed`, `seeds` | The baseline laid on every run (default `orca_perturbed_v1`), the base seed, and how many paired seeds (seed `seed + 1` to `seed + seeds`) |
 | `people` | `ages`, `genders` and core `factors` (a cane, a suitcase, a phone, assertiveness, ...), given to the people in a fixed mix (`negsim.rulegen.replay.mixed_population`), the same for every arm on a seed |
 | `alpha` | The sign test's level (0.05) |
 | `verdict_rule` | 1 (fixed before round 1's run) or 2 (collisions count separately; the default), section 3 |
 | `logging.trajectory_stride` | As for an avoidance run (10); the lane measure reads the trajectory |
+
+### 1.1 Populations and purposes (issue #112, RF-33)
+
+A scenario may take its people from a **population profile** (`population: configs/populations/<name>.yaml`,
+`docs/population-profiles.md`) in place of `people`, and must then say its **`purpose`**, which must
+be the profile's:
+
+| Purpose | People | Its verdict |
+| --- | --- | --- |
+| `realistic` | Sourced shares (`singapore_street_v1`), exact on every seed, new people on every seed | **The verdict of record** |
+| `stress` | Exaggerated shares (`stress_all_factors_v1`: RF-18's crowd) | Reported beside it, labelled: whether a rule works where it applies. **Never a verdict of record on its own** |
+
+The user's decision of 2026-10-27. Once one scenario says its purpose, every one must. A rule's
+`overall` in `summary.json` then comes from its **realistic scenarios only**, with `by_purpose`
+beside it (the report's rule table has a column for each). `pool: N` (profiles of quotas only):
+a small scenario's people are the first of a crowd of N at exact shares, a new pair on each seed
+(exact quotas for two people would give the two largest kinds of person on every seed). With a
+profile of quotas, `rotate_people` is refused: every seed already has new people. The summary
+records each such scenario's profile (file, hash, limits) and how many people of each kind it had on
+each seed. A config without these keys is described, run and judged exactly as before (tested
+against RF-18's committed run).
 
 **People.** In a crowd the mix is fixed, as in crowd screening. In a scenario with few people,
 `rotate_people: true` gives each seed a window on the mix that moves on by **one** person per seed.
@@ -152,11 +173,13 @@ people its rules read.
 ## 7. Limits
 
 - Two of the three scenarios have two people. Only the two-way flow is a crowd.
-- In the crowd, half the people carry a cane (the mix of crowd screening), which no real crowd
-  does; a rule about canes applies far more often than it would. **The user's decision of
-  2026-10-27:** simulate realistic scenarios wherever possible (people's factors at sourced, realistic
-  shares), and keep scenarios with exaggerated shares only to test rules that would rarely apply in
-  a normal one, labelled as such (RF-33, #112).
+- In RF-18's crowd, half the people carry a cane (the mix of crowd screening; 48 of 100), which no
+  real crowd does; a rule about canes applies far more often than it would. **The user's decision of
+  2026-10-27:** simulate realistic scenarios wherever possible, and keep scenarios with exaggerated
+  shares only to test rules that would rarely apply in a normal one, labelled as such. Since issue
+  #112 (RF-33) a scenario can do so (section 1.1); round 1 in a realistic crowd is
+  `configs/rule_set_evaluation/rf18_round1_realistic.yaml`. The realistic profile's own limits
+  (residents only; a cane and a phone from abroad; placeholders) are in `docs/population-profiles.md`.
 - A rule reads a cane at any distance; Step 1's agents saw one only within 5 m.
 - The verdict is about the simulation, not about people: whether a rule is what people do is
   RF-14's question.

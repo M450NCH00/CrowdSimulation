@@ -249,3 +249,116 @@ def test_the_command_plans_without_running_and_refuses_a_client(capsys):
     assert "150 run(s); no model calls, cost USD 0" in capsys.readouterr().out
     assert cli_main([str(RF18), "--plan", "--client", "mock"]) == 2
     assert cli_main([str(RF18), "--plan", "--confirm"]) == 2
+
+
+# --- issue #112 (RF-33): populations and purposes --------------------------------------------------
+
+REALISTIC = PACKAGE_ROOT / "configs" / "rule_set_evaluation" / "rf18_round1_realistic.yaml"
+RF18_RUN = PACKAGE_ROOT / "runs" / "rf18_round1"
+STREET = "configs/populations/singapore_street_v1.yaml"
+STRESS = "configs/populations/stress_all_factors_v1.yaml"
+HEAD_ON = "configs/scenarios/wide_corridor_head_on.yaml"
+
+
+def test_rf18s_config_describes_itself_as_its_run_recorded_it():
+    recorded = json.loads((RF18_RUN / "config.json").read_text(encoding="utf-8"))["experiment"]
+    assert json.loads(json.dumps(E.RuleSetEvaluationConfig.load(RF18).as_dict())) == recorded
+
+
+def test_rf18s_summary_is_unchanged_when_judged_again_from_its_runs():
+    loaded = E.RuleSetEvaluationConfig.load(RF18)
+    results = {}
+    for path in (RF18_RUN / E.RUNS_SUBDIR).rglob(E.MEASURES_FILE):
+        measures = json.loads(path.read_text(encoding="utf-8"))
+        results[(measures["scenario"], measures["arm"], measures["seed"])] = measures
+    assert len(results) == 150
+    recorded = json.loads((RF18_RUN / "summary.json").read_text(encoding="utf-8"))
+    again = json.loads(json.dumps(E.summarise(loaded, results)))
+    assert again == {"scenarios": recorded["scenarios"], "rule_verdicts": recorded["rule_verdicts"]}
+
+
+def test_the_realistic_rerun_config_is_rf18s_with_only_the_people_changed():
+    old, new = E.RuleSetEvaluationConfig.load(RF18), E.RuleSetEvaluationConfig.load(REALISTIC)
+    assert (old.rules, old.arms, old.left_out, old.seed, old.seeds, old.baseline, old.alpha, old.verdict_rule) == \
+           (new.rules, new.arms, new.left_out, new.seed, new.seeds, new.baseline, new.alpha, new.verdict_rule)
+    by_name = {s.name: s for s in new.scenarios}
+    for s in old.scenarios:
+        realistic, stress = by_name[f"{s.name}_realistic"], by_name[f"{s.name}_stress"]
+        assert realistic.file == stress.file == s.file
+        assert (realistic.purpose, realistic.profile.name, stress.purpose, stress.profile.name) == ("realistic", "singapore_street_v1", "stress", "stress_all_factors_v1")
+        assert stress.rotate_people == s.rotate_people and not realistic.rotate_people
+        assert realistic.pool == (100 if s.rotate_people else None)
+
+
+def test_a_stress_scenario_gives_rf18s_people_on_every_seed():
+    old, new = E.RuleSetEvaluationConfig.load(RF18), E.RuleSetEvaluationConfig.load(REALISTIC)
+    stress = {s.name: s for s in new.scenarios}["bottleneck_stress"]
+    for repeat in range(1, 11):
+        assert stress.profile.people(2, 30900 + repeat, repeat, True) == E.people_for(old, 2, repeat, True)
+
+
+def scenario(**changes):
+    return {"name": "head_on", "scenario": HEAD_ON, **changes}
+
+
+@pytest.mark.parametrize("entries, message", [
+    ([scenario(population=STREET)], "says its 'purpose'"),
+    ([scenario(population=STREET, purpose="stress")], "is a realistic profile"),
+    ([scenario(population=STRESS, purpose="realistic")], "is a stress profile"),
+    ([scenario(population=STREET, purpose="realistic", rotate_people=True)], "rotate_people"),
+    ([scenario(population=STRESS, purpose="stress", pool=100)], "pool"),
+    ([scenario(pool=100)], "pool"),
+    ([scenario(purpose="typical")], "purpose"),
+    ([scenario(population=STREET, purpose="realistic"), scenario(name="other")], "every one does"),
+    ([scenario(), scenario()], "its own name"),
+])
+def test_a_scenario_with_a_population_is_checked(entries, message):
+    with pytest.raises(ConfigError, match=message):
+        config(scenarios=entries)
+
+
+def test_an_earlier_scenario_describes_itself_as_before():
+    described = config().as_dict()["scenarios"][0]
+    assert set(described) == {"name", "scenario", "rotate_people", "note"}
+    with_population = config(scenarios=[scenario(population=STREET, purpose="realistic", pool=100)]).as_dict()["scenarios"][0]
+    assert with_population["population"] == STREET and with_population["purpose"] == "realistic" and with_population["pool"] == 100
+    assert with_population["population_sha256"] == E.P.Profile.load(PACKAGE_ROOT / STREET).sha256
+
+
+def test_a_rules_verdict_of_record_comes_from_its_realistic_scenarios():
+    loaded = config(scenarios=[scenario(name="real", purpose="realistic"), scenario(name="stressed", purpose="stress")],
+                    arms=[{"name": "keep_left_alone", "rules": ["keep_left_head_on"]}], rules={"keep_left_head_on": {"from": "rule_db", "version": 1}})
+    plain, helps, harms = row(10), row(5), row(20)
+    results = {}
+    for seed in range(1, 11):
+        results[("real", "plain", seed)], results[("real", "keep_left_alone", seed)] = plain, {**helps, "rule_matches": 0}
+        results[("stressed", "plain", seed)], results[("stressed", "keep_left_alone", seed)] = plain, harms
+    filled = {key: {**value, **{k: value.get(k, 0) for k in E.KEPT}, "uncovered": [], "matches_by_rule": {}, "lanes": None,
+                    **{k: 0 for k in ("pairs_matched_by_several_rules", "ambiguous_matches", "cross_pair_conflicts", "formation_mismatches",
+                                      "plans_started", "plans_skipped_busy", "near_misses", "wall_ms_per_step")}} for key, value in results.items()}
+    verdicts = E.summarise(loaded, filled)["rule_verdicts"]["keep_left_head_on"]
+    assert verdicts["by_scenario"] == {"real": V.NOT_USED, "stressed": V.HARMS}
+    assert verdicts["by_purpose"] == {"realistic": V.NOT_USED, "stress": V.HARMS}
+    assert verdicts["overall"] == V.NOT_USED and verdicts["of_record_from"] == "realistic"  # stress never on its own
+
+
+def test_a_run_with_a_population_gives_every_arm_the_same_people_and_reports_them(tmp_path):
+    small = config(scenarios=[{"name": "flow", "scenario": "configs/scenarios/bidirectional_flow.yaml", "scenario_overrides": SMALL_FLOW,
+                               "population": STREET, "purpose": "realistic"}],
+                   arms=[{"name": "keep_left_alone", "rules": ["keep_left_head_on"]}], rules={"keep_left_head_on": {"from": "rule_db", "version": 1}}, seeds=2)
+    planned = E.runs(small, tmp_path / "t")
+    by_seed = {}
+    for run in planned:
+        by_seed.setdefault(run.plan.seed, []).append(run)
+    for seed, runs_ in by_seed.items():
+        assert len(runs_) == 2 and runs_[0].plan.population == runs_[1].plan.population  # plain and the arm
+        assert runs_[0].people == E.P.Profile.load(PACKAGE_ROOT / STREET).people(8, seed)
+    assert by_seed[101][0].people != by_seed[102][0].people  # new people on each seed
+    result = E.run_evaluation(small, out_root=tmp_path, report=lambda _: None, git=GIT)
+    population = result.summary["scenarios"]["flow"]["population"]
+    assert population["name"] == "singapore_street_v1" and population["purpose"] == "realistic" and population["limits"]
+    assert [entry["seed"] for entry in population["per_seed"]] == [101, 102] and population["mean_per_seed"]["n"] == 8
+    assert result.summary["scenarios"]["flow"]["purpose"] == "realistic"
+    report = (tmp_path / "t" / "report.md").read_text(encoding="utf-8")
+    assert "People: `configs/populations/singapore_street_v1.yaml` (realistic, quotas)" in report and "flow (realistic)" in report
+    assert "Of record (realistic)" in report

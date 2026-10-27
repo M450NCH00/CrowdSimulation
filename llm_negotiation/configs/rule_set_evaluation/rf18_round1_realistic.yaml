@@ -1,0 +1,102 @@
+# Issue #112 (RF-33): round 1 again, in a realistic crowd. The same rules, arms, seeds and verdict rule as
+# RF-18 (configs/rule_set_evaluation/rf18_round1.yaml, issue #74); only the people change. Each scenario
+# runs twice:
+#   *_realistic  people at sourced shares (configs/populations/singapore_street_v1.yaml), the verdict of record;
+#   *_stress     RF-18's people, every factor at about half (configs/populations/stress_all_factors_v1.yaml),
+#                labelled as such: it shows whether a rule works where it applies (the user's decision of
+#                2026-10-27). These runs are RF-18's runs again, so they must give RF-18's numbers.
+# No model is called, so it costs nothing. Method: docs/rule-set-evaluation.md, docs/population-profiles.md.
+#
+#   python run_experiment.py configs/rule_set_evaluation/rf18_round1_realistic.yaml --plan
+#   python run_experiment.py configs/rule_set_evaluation/rf18_round1_realistic.yaml
+schema_version: 1
+layer: rule_set_evaluation
+experiment_name: rf18_round1_realistic
+description: >
+  RF-18's round 1 (issue #74) again, with each scenario in a realistic crowd (sourced shares) and in
+  RF-18's stress crowd: round 1's runnable staged rules alone and together, and rule_db's hand-written
+  default set as a reference, against plain ORCA in the two-way flow, the opposing bottleneck and
+  the narrow passage of round 2.
+
+rules:                       # [design, D-A] one translation per extracted rule: RF-31's format 4, which replaces RF-12's format 3
+  ext_head_on_0ecc2d1a6e:    # both turn 10° left from 9.8 m until the other passes; passed crowd screening
+    from: runs/rf31_round1_head_on/rule_db_staging/extracted
+    version: 2
+  ext_head_on_6455ca5589:    # whoever faces a person with a cane slows; failed crowd screening (gridlock on seed 30902)
+    from: runs/rf31_round1_head_on_retry/rule_db_staging/extracted
+    version: 2
+    priority: 600            # [the user's choice, 2026-10-27] the narrower rule wins where both match; switched on as v3
+    reason: >
+      Both translations have priority 500 and both match a head-on in which one person has a cane, so the loader refuses
+      them together (ambiguous). The user chose that the narrower rule wins where both match (the cane rule), so that
+      set 2 can run; the left-turn rule applies to every other head-on.
+
+left_out:
+  - rule: ext_head_on_aacce0961b (RF-31, format 4)
+    reason: refused by the loader since RF-31 (constant_roles); its roles hold for both people, so it never matched
+  - rule: ext_head_on_4eb7a97c8d (RF-11)
+    reason: not expressible in either format (signalling and speaking); nobody signals in ORCA
+  - rule: RF-12's three format 3 translations (0ecc2d1a6e, 6455ca5589, aacce0961b)
+    reason: replaced by RF-31's format 4 translations of the same rules (D-A); two act as plain ORCA
+
+arms:                        # [design, D-B, D-C]
+  - name: passed_screening
+    rules: [ext_head_on_0ecc2d1a6e]
+    description: Set 1, the rules that passed crowd screening (one rule after round 1).
+  - name: cane_rule_alone
+    rules: [ext_head_on_6455ca5589]
+    description: The retried cane rule alone, for its own verdict.
+  - name: all_runnable
+    rules: [ext_head_on_0ecc2d1a6e, ext_head_on_6455ca5589]
+    description: Set 2, every runnable staged rule, including those that failed screening.
+  - name: reference_default
+    database: rule_db
+    ruleset: default
+    judged: false
+    description: rule_db's hand-written seed rules of issue #28 (keep left head-on and three more), numbers only.
+
+scenarios:                   # [design, D-D of issue #74] RF-18's three, each realistic and stress (issue #112)
+  - name: flow_realistic
+    scenario: configs/scenarios/bidirectional_flow.yaml
+    population: configs/populations/singapore_street_v1.yaml
+    purpose: realistic
+    note: The two-way flow, 50 + 50, people at sourced shares, new people on every seed.
+  - name: bottleneck_realistic
+    scenario: configs/scenarios/corridor_to_bottleneck.yaml
+    population: configs/populations/singapore_street_v1.yaml
+    purpose: realistic
+    pool: 100                # [design] the pair is the first two of a crowd of 100 at exact shares, a new pair on every seed
+    note: Two people from opposite ends of a single-file segment, drawn from a realistic crowd.
+  - name: passage_realistic
+    scenario: configs/scenarios/passage_meet_middle_v1.yaml
+    population: configs/populations/singapore_street_v1.yaml
+    purpose: realistic
+    pool: 100
+    note: Round 2's narrow passage (two people meet inside it), drawn from a realistic crowd.
+  - name: flow_stress
+    scenario: configs/scenarios/bidirectional_flow.yaml
+    population: configs/populations/stress_all_factors_v1.yaml
+    purpose: stress
+    note: RF-18's flow, its people (48 of 100 with a cane, a suitcase, a phone).
+  - name: bottleneck_stress
+    scenario: configs/scenarios/corridor_to_bottleneck.yaml
+    population: configs/populations/stress_all_factors_v1.yaml
+    purpose: stress
+    rotate_people: true
+    note: RF-18's bottleneck, its people.
+  - name: passage_stress
+    scenario: configs/scenarios/passage_meet_middle_v1.yaml
+    population: configs/populations/stress_all_factors_v1.yaml
+    purpose: stress
+    rotate_people: true
+    note: RF-18's passage, its people.
+
+baseline: orca_perturbed_v1  # the primary baseline, as crowd screening
+seed: 30900                  # [design] crowd screening's base seed, so seeds 30901 and 30902 are RF-31's screening runs
+seeds: 10                    # [the user's choice, task 0] 10 paired seeds per scenario
+alpha: 0.05                  # [the user's choice, task 0] exact two-sided sign test
+verdict_rule: 2              # [the user's decision, 2026-10-27, after the run] collisions count separately: an arm also harms if
+                             # collided pairs (T4) or collision episodes are worse. Rule 1 (task 0's, before the run) is kept beside it
+
+logging:
+  trajectory_stride: 10      # as crowd screening; the lane measure reads the trajectory

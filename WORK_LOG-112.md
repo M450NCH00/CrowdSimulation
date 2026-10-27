@@ -104,6 +104,53 @@ Session 2 (build and run):
 - Recorded in `docs/population-profiles.md`, section 4.
 - Next step (session 2): the profiles, the generator with tests, the config keys, the rerun.
 
+### 2026-10-27 11:17 to 11:28 UTC — Session 2: the profiles, the generator, the config keys (tasks 2 to 4)
+- **Profiles** (`configs/populations/`, frozen, pinned by hash in `tests/test_populations.py`):
+  - `singapore_street_v1.yaml` (realistic, `generator: quotas`): SingStat's counts by band and sex
+    word for word (a test checks them against `refs/rf33_singstat_M810011_2026.json`), each factor's
+    share by age with its source, the four limits.
+  - `stress_all_factors_v1.yaml` (stress, `generator: cycle`): RF-18's people exactly (a test
+    checks it against `mixed_population` with RF-18's `people`).
+- **Generator** `negsim/populations.py`, `quota_people`: per seed, (1) the people over band × sex
+  by the largest-remainder method, so the counts are exact; (2) each age drawn evenly within its
+  band; (3) each factor's crowd total the nearest whole number to the shares, shared over the bands
+  in proportion (capped at a band's size), and who gets it drawn within the band; (4) everyone
+  shuffled onto the agents. One random stream per profile and seed (`random.Random("name:seed")`),
+  so every arm gets the same people on a seed and every seed new people.
+- **Config keys** per scenario (`negsim/ruleset_eval/experiment.py`): `population`, `purpose`
+  (must match the profile's; once one scenario has one, all must), `pool`. Scenario names must
+  differ. Summary: a scenario with a population gets its profile, limits and per-seed counts; with
+  purposes, a rule gets `by_purpose`, and `overall` (the verdict of record) comes from the realistic
+  scenarios only (`of_record_from: realistic`). Report: purposes in the verdict table, the rule
+  table's realistic/stress columns, and a "People:" line per scenario. Nothing is added to a
+  config without these keys.
+- **Decisions (mine, [design]), for the user to check:**
+  - D-1. **The 90+ band's ages are drawn from 90 to 94** (the table gives "90 Years & Over" only).
+  - D-2. **Elche's phone bands laid on SingStat's**: 10–19 (Elche's 10–18), 20–34 (18–35), 35–64
+    (35–65), 65+ (over 65). Elche's own bands overlap at 18 and 35.
+  - D-3. **Factors are independent of each other within an age band** (no source gives joint
+    shares; said in the profile's limits).
+  - D-4. **A small scenario's pair is the first two of a crowd of 100 at exact shares** (`pool:
+    100`). Exact quotas for 2 people would give the two largest cells (two women in their 30s) on
+    every seed, with no factor ever; the pool gives a new, realistic pair on each seed.
+  - D-5. **Realistic and stress are separate scenarios of one experiment**, `rf18_round1_realistic`,
+    300 runs (6 scenarios × 5 arms × 10 seeds). The stress ones are RF-18's runs again, which checks
+    that nothing changed.
+- **Found:** RF-18's "half" is not exactly half: 100 is not a multiple of the cycle, so its crowd
+  had 48 of 100 with a cane, a suitcase and a phone, and 36 holding their ground. The realistic
+  crowd's cane share is 3.55% (3 or 4 of 100), not 3.2%: the 0.5% placeholder under 65 adds 0.4
+  points to NHATS's 65+.
+- **Tests:** `tests/test_populations.py` 23 passed (exact shares at 37, 100 and 1,000 people;
+  by sex and band; deterministic; new people each seed; a cane mostly over 65; the pool; RF-18's
+  people; refusals). `tests/test_ruleset_eval.py` 40 passed (24 before, 16 new: **RF-18's config
+  describes itself as its run recorded it, and RF-18's summary re-judged from its 150 committed
+  `measures.json` is identical**; the scenario refusals; the verdict of record from realistic only;
+  a small run with a population).
+- One mistake on the way: the first test of exact shares apportioned band totals, but the
+  generator apportions band × sex cells (one fewer older person at 100); the test was wrong, not
+  the code. The rerun config was first cut wrongly by a script (it matched `people:` inside
+  `rotate_people:`); rebuilt with line-anchored keys and read back before use.
+
 ## Open questions / risks
 
 1. ~~**Whose population?**~~ SingStat residents, the user's decision of 2026-10-27 (entry above).
