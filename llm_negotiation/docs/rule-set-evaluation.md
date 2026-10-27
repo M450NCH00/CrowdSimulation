@@ -61,6 +61,15 @@ records each such scenario's profile (file, hash, limits) and how many people of
 each seed. A config without these keys is described, run and judged exactly as before (tested
 against RF-18's committed run).
 
+**The user's two decisions after RF-33's first run (2026-10-27):**
+- **More seeds where a factor is rare.** A scenario may give its own `seeds` in place of the
+  config's; round 1's realistic scenarios have 30, its stress ones 10 (as RF-18). With 10 seeds
+  only 9 of 10 agreeing is significant; with 30, 21 of 30 is (p = 0.043).
+- **A flag for RF-14.** A rule whose stress verdict is **harms** but whose verdict of record is
+  not gets `flag: harms_where_common` in `summary.json` (a column of the report's rule table).
+  **[design]** The flag is given by this rule to any rule, not to the cane rule by hand. It
+  changes no verdict.
+
 **People.** In a crowd the mix is fixed, as in crowd screening. In a scenario with few people,
 `rotate_people: true` gives each seed a window on the mix that moves on by **one** person per seed.
 Not by the number of people: the mix gives factors in blocks (a cane to four people in a row), so a
@@ -157,7 +166,11 @@ runs/<experiment>/
 
 The runs are deterministic, so the uncommitted logs are rebuilt by running the experiment again
 with `--overwrite`. Running again without it resumes: a run whose `measures.json` exists is not run
-again. A folder holding runs of another config is refused.
+again. A folder holding runs of another config is refused, except for the numbers of seeds (since
+issue #112): a run on a given seed does not depend on how many seeds there are (its people depend on
+the seed alone), so more seeds add runs and keep those on disk. Each such change is recorded in the
+experiment's `config.json` (`seeds_changed`: when, the commit, from and to); the runs added then
+record their own commit in their own `config.json`.
 
 ## 6. Rerun after every round, and cost
 

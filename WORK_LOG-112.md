@@ -171,6 +171,41 @@ Session 2 (build and run):
 - Docs (task 6): `docs/rule-set-evaluation.md` section 1.1 and limits, `docs/population-profiles.md`
   section 5, both READMEs.
 
+### 2026-10-27 13:25 to 13:29 UTC — The user's two decisions after the run: a flag, and 30 seeds
+- The user answered "Yes" to both open questions of the PR (#113):
+  1. **Flag a rule that harms where its factor is common.** Built as `flag: harms_where_common` in
+     each rule's `summary.json` entry (and a report column) when its stress verdict is harms and its
+     verdict of record is not. **[design] D-6:** given by that rule to any rule, not set by hand
+     for the cane rule; it changes no verdict.
+  2. **More seeds for rare factors.** A scenario may have its own `seeds`; round 1's realistic
+     scenarios get 30, the stress ones keep 10 (they are RF-18's runs).
+- **[design] D-7: a folder resumes when only the numbers of seeds change.** A run on a given seed
+  does not depend on how many seeds there are (the people depend on the profile and the seed only;
+  a cycle's people on the repeat, which is the seed minus the base seed), so the 300 runs on disk
+  are kept and 300 added (seeds 30911 to 30930 of the three realistic scenarios). The change is
+  recorded in the experiment's `config.json` (`seeds_changed`), and each added run records its
+  commit. The alternative, a new experiment of 600 runs, would repeat 300 runs, about 75 minutes.
+- Tests: 2 new and 1 extended (42 in `test_ruleset_eval.py`): the flag set and not set; a
+  scenario's own seeds; more seeds resume, are recorded, and any other change is still refused.
+  RF-18's summary is still identical.
+- Committed 84385390; the extension started 13:28 UTC.
+
+### 2026-10-27 13:28 to 14:44 UTC — The extension: realistic scenarios to 30 seeds, 300 runs added
+- 300 runs executed, 300 kept from the first run (`done: 300 run(s) executed, 300 already done`).
+  `config.json` records `seeds_changed` (13:28:59 UTC, commit 84385390, 10 to 30 for the three
+  realistic scenarios). Flow runs took 42 to 70 s each (the machine was busier than in the first run).
+- **The cane rule's verdict of record changes from no change to harms**: it gridlocks on seed
+  30913, one of the 20 added (timeout with 80 of 100 people arrived; plain ORCA and both other sets
+  finished that seed). Its other measures do not differ (collided pairs 13 of 30 fewer, n.s.). The
+  lean towards more collisions on the first 10 seeds (8 of 10) did not hold over 30. So the flag
+  `harms_where_common` is given to no round 1 rule: the cane rule's verdict of record is harms itself.
+- **The left-turn rule still helps**, and now also has fewer collided pairs (21 of 30, p = 0.043).
+  **Set 2 still helps** (severe 30 of 30 fewer, throughput 23 of 30; no gridlock).
+- Report rewritten (`runs/rf18_round1_realistic/evaluation_report.md`), with the 10-seed reading kept
+  as a row. One number fixed before committing: set 2's cane-rule matches are 148 a run, not 1,500.
+- Open for the user (in the report): one gridlock in 30 seeds counts as harms, as the verdict rule
+  fixed before RF-18's run says; whether a rare gridlock should weigh as much is not changed here.
+
 ## Open questions / risks
 
 1. ~~**Whose population?**~~ SingStat residents, the user's decision of 2026-10-27 (entry above).
@@ -180,12 +215,10 @@ Session 2 (build and run):
    figure was found for either. RF-14 should know the realistic crowd rests on them.
 3. **A large suitcase has no source at all**, and depends most on the place: 1% is a placeholder
    for a street only. An MRT-station or airport profile would need its own source.
-4. **The cane rule's "no change" is not "harmless".** Collisions lean worse on 8 of 10 seeds, and
-   its stress verdict is harms. Should such a rule be marked for RF-14 ("harms where the factor is
-   common")? The verdict rule does not say. The user's decision.
-5. **10 seeds are few for a rare factor**: only 9 of 10 seeds agreeing is significant. 30 seeds
-   (21 of 30 needed) would cost about 35 minutes per 10 seeds of the flow. The user's decision.
-6. D-1 to D-5 (entry of 11:17 UTC) are mine, for the user to check.
+4. ~~Should a rule that harms only where its factor is common be marked for RF-14?~~ **Yes** (the
+   user, 2026-10-27): `harms_where_common` (entry of 13:25 UTC).
+5. ~~More seeds for a rare factor?~~ **Yes** (the user, 2026-10-27): 30 for the realistic scenarios.
+6. D-1 to D-7 (entries of 11:17 and 13:25 UTC) are mine, for the user to check.
 
 ## Summary
 
@@ -200,17 +233,23 @@ Session 2 (build and run):
   every arm, new people on every seed.
 - Per scenario of a rule-set evaluation: `population`, `purpose`, `pool`. A rule's verdict of
   record comes from its realistic scenarios; stress verdicts are reported beside it.
-- Round 1 again in a realistic crowd (`runs/rf18_round1_realistic/`): **the left-turn rule still
-  helps; the cane rule goes from harms to no change; both together from harms to helps.**
+- Round 1 again in a realistic crowd (`runs/rf18_round1_realistic/`, realistic scenarios on 30 seeds,
+  stress on 10): **the left-turn rule still helps; the cane rule still harms (1 gridlock in 30 seeds;
+  on the first 10 it looked like no change); both together go from harms to helps.**
+- The user's decisions after the first run: a scenario may have its own number of seeds (30 for the
+  realistic ones), a folder resumes when only the seeds change, and a rule that harms only where its
+  factor is common is flagged `harms_where_common` for RF-14 (no round 1 rule gets it).
 
 **Why.** The user's decision of 2026-10-27: realistic scenarios wherever possible, with
 exaggerated ones only to test rules that rarely apply. RF-18 judged rules in a crowd where about half
 carried a cane.
 
 **How it was verified.**
-- `tests/test_populations.py` (23) and 16 new tests in `tests/test_ruleset_eval.py` (40 in all).
+- `tests/test_populations.py` (23) and 18 new tests in `tests/test_ruleset_eval.py` (42 in all).
   These include **RF-18's config and summary coming out identical from its committed run**, and the
   profile's SingStat counts checked against the cached table.
 - The 150 stress runs reproduce RF-18's 150 runs exactly.
-- Full suite: 2,164 passed, 10 skipped, no failure.
+- Full suite: 2,164 passed, 10 skipped, no failure (at 99aeab8c; after the flag and seeds change,
+  `test_ruleset_eval.py` and `test_populations.py` again, 65 passed, and the full suite once more
+  before the PR is updated, below).
 - No model call; USD 0.
