@@ -44,6 +44,7 @@ from ..avoidance.perception import NEVER_OBSERVABLE, PERCEPTION_SCHEMA_VERSION, 
 from ..avoidance.simulation import INTERACTION_OUTCOMES, AvoidanceSimulation, Perturbation, SimulationResult
 from ..metrics.avoidance import TIERS
 from ..rules import RuleDatabase, RuleDatabaseProvider, RuleError
+from ..rules.fields import VISIBLE_FACTOR_SWITCHES
 from ..rules.matching import DEFAULT_HYSTERESIS_STEPS
 from .baselines import Baseline, load_baseline
 from ..configutil import (
@@ -165,6 +166,9 @@ class AvoidanceRunPlan:
     perturbation: Perturbation = Perturbation()
     #: How ``seed`` was derived: ``paired`` or ``per_run`` (issue #30).
     seeding: str = SEEDING_PAIRED
+    #: Issue #108: each person's own view of another, by (observer, neighbour), for a version 4
+    #: rule's own-only condition (the identity check sets it from a Step 1 session). Empty otherwise.
+    pairwise: Mapping[tuple[int, int], Mapping[str, Any]] = field(default_factory=dict)
 
     def provider(self) -> DirectiveProvider:
         return build_provider(self.directives, self.visibility, "directives")
@@ -241,15 +245,19 @@ class AvoidanceExperiment:
 
     @staticmethod
     def _visibility(raw: Any, where: str) -> dict[str, bool]:
-        """The visibility settings of issue #24, read the same way."""
+        """The visibility settings of issue #24, read the same way. Since issue #108 also the
+        switches of the three attributes a version 4 rule may read (``mobility_aid``, ``load``,
+        ``distraction``): off unless named, and recorded only when named, so that an earlier config
+        records the same settings as before."""
         visibility = default_visibility()
         if raw is None or raw == "default":
             return visibility
         if not isinstance(raw, Mapping):
             raise ConfigError(f"{where}: expected 'default' or a mapping, got {raw!r}")
+        known = set(visibility) | set(VISIBLE_FACTOR_SWITCHES)
         for key, value in raw.items():
-            if key not in visibility:
-                raise ConfigError(f"{where}: unknown attribute {key!r}; known: {sorted(visibility)}")
+            if key not in known:
+                raise ConfigError(f"{where}: unknown attribute {key!r}; known: {sorted(known)}")
             visibility[key] = as_bool(value, f"{where}.{key}")
         return visibility
 
@@ -672,6 +680,7 @@ def simulation_for(plan: AvoidanceRunPlan, plans: Optional[Any] = None) -> Avoid
         trajectory_stride=plan.logging["trajectory_stride"],
         perturbation=plan.perturbation,
         plans=plans,
+        pairwise=plan.pairwise,
     )
 
 

@@ -220,6 +220,8 @@ class RuleMatcher:
         self.formation_checks = 0
         self.formation_mismatches = 0
         self._open_conflicts: dict[tuple[int, str], frozenset] = {}
+        #: Issue #108: the driver that carries out the plans rules give (``negsim.rules.plans``), or None.
+        self.steps: Optional[Any] = None
 
     # --- one step -------------------------------------------------------------------------------
 
@@ -276,7 +278,9 @@ class RuleMatcher:
         snapshot = None
         if any(above is None or rule.priority > above for rule in self.active.candidates(raw)):
             a, b = view.agent(i), view.agent(j)
-            snapshot = snapshot_of_pair(view.step, view.time_s, a, b, view.features(i, j), view.visibility, view.attributes)
+            snapshot = snapshot_of_pair(
+                view.step, view.time_s, a, b, view.features(i, j), view.visibility, view.attributes, getattr(view, "pairwise", None)
+            )
             evaluation = evaluate(self.active, snapshot, above)
         else:
             evaluation = Evaluation(NO_RULE_MATCHED, None, (), 0)
@@ -309,6 +313,13 @@ class RuleMatcher:
             "end_reason": None,
             "replaced_by": None,
         }
+        if match.steps != (None, None):
+            # Version 4 (issue #108): each person whose role has steps gets them as a plan, once for this match.
+            entry = state.held_entry["plans"] = {}
+            for agent, other, steps in ((match.agents[0], match.agents[1], match.steps[0]), (match.agents[1], match.agents[0], match.steps[1])):
+                if steps:
+                    started = self.steps is not None and self.steps.start(view.step, agent, other, steps, match.rule.key)
+                    entry[str(agent)] = {"steps": [step.as_dict() for step in steps], "started": bool(started)}
         state.matches.append(state.held_entry)
 
     def _end(self, state: PairRules, step: int, time_s: float, reason: str, replaced_by: Optional[str] = None) -> None:

@@ -45,6 +45,16 @@ information is ``needs_communication`` even if it is also malformed, and a rule 
 formula is ``format_limit`` though the loader would call it a schema error. Whether what a
 ``format_limit`` rule wanted could have been written another way is not judged here.
 
+**Version 4** (issue #108). The loader's ``own_only_scope`` (an own-only condition that would
+switch on a side, a share, an order or backing up) is ``needs_communication``: what both must
+agree on would depend on what only one of them knows. Its ``steps`` (a plan outside Step 1's
+vocabulary) is ``schema_error``, and its ``constant_roles`` (a role condition that holds for both or
+for neither in every situation, so the rule names two roles it can never give) ``inconsistent``. A proposal of an earlier version's session that uses what version
+4 added (a role by a condition, an own-only condition, steps, a visible attribute) is
+``format_limit``, as for version 3's additions. The comparisons of a role by a condition and of an
+own-only condition count as the rule's own fields. Perceived attractiveness is ``protected``
+everywhere but as ``self.finds_other_attractive`` in an own-only condition of a version 4 rule.
+
 What cannot be told mechanically is flagged for **manual review** (:data:`REVIEW_PATTERNS`):
 an ``intent``, a ``reason``, a message of the conversation or a value written as text that
 speaks of scaling ("grows with"), of "the more ..., the more ...", of a rate ("per year") or
@@ -60,8 +70,18 @@ from typing import Any, Iterator, Mapping, Optional, Sequence
 
 from ..rules.database import RULE_DB_ROOT, RuleSchemas, load_validator
 from ..rules.errors import RuleError
-from ..rules.fields import AGENT_FIELDS, CATEGORY, CONDITION_PREFIXES, PAIR_FIELDS, PROTECTED_NAMES, ROLE_PREFIXES, protected_attribute_of, resolve
-from ..rules.model import parse_rule, protected_part
+from ..rules.fields import (
+    AGENT_FIELDS,
+    CATEGORY,
+    CONDITION_PREFIXES,
+    OWN_PREFIXES,
+    PAIR_FIELDS,
+    PROTECTED_NAMES,
+    ROLE_PREFIXES,
+    protected_attribute_of,
+    resolve,
+)
+from ..rules.model import ROLE_CONDITION_PREFIXES, parse_rule, protected_part
 
 VALID = "valid"
 PROTECTED_ATTRIBUTE = "protected_attribute"
@@ -87,6 +107,9 @@ LOADER_CATEGORIES = {
     "operator": SCHEMA_ERROR,
     "roles": SCHEMA_ERROR,
     "no_tie_policy": SCHEMA_ERROR,
+    "own_only_scope": NEEDS_COMMUNICATION,  # issue #108
+    "steps": SCHEMA_ERROR,  # issue #108
+    "constant_roles": INCONSISTENT,  # issue #108: a role condition that names two roles it can never give
 }
 #: Words that, in an unknown field's name, name private information: the session's errand
 #: and its urgency, and what an errand implies about a person.
@@ -98,6 +121,8 @@ PRIVATE_WORDS = frozenset(
 METADATA_KEYS = ("schema_version", "rule_id", "version", "status", "provenance", "screening")
 #: The directive fields, each of which takes a constant (``back_up`` since issue #32).
 DIRECTIVE_FIELDS = ("side_preference", "responsibility_share", "speed_scale", "clearance_margin", "passage_order", "back_up")
+#: What version 4 added to a directive (issue #108): a plan, and an own-only condition.
+DIRECTIVE_FIELDS_V4 = ("steps", "own_when")
 #: Patterns that suggest something the format cannot express, each with the name its flag is
 #: recorded under. They read words, so they only flag, for a person to look at.
 REVIEW_PATTERNS = (
@@ -165,7 +190,8 @@ def _comparisons(condition: Any, where: str) -> Iterator[tuple[str, Mapping[str,
 
 
 def field_references(proposal: Mapping[str, Any]) -> list[tuple[str, str, tuple[str, ...]]]:
-    """Every field the proposal names: (where, the field as written, the prefixes allowed there)."""
+    """Every field the proposal names: (where, the field as written, the prefixes allowed there).
+    Since issue #108 also those of a role by a condition and of each own-only condition."""
     found = []
     for where, comparison in _comparisons(proposal.get("when"), "when"):
         if isinstance(comparison.get("field"), str):
@@ -173,7 +199,26 @@ def field_references(proposal: Mapping[str, Any]) -> list[tuple[str, str, tuple[
     roles = proposal.get("roles")
     if isinstance(roles, Mapping) and isinstance(roles.get("by"), Mapping) and isinstance(roles["by"].get("field"), str):
         found.append(("roles.by", roles["by"]["field"], ROLE_PREFIXES))
+    if isinstance(roles, Mapping) and isinstance(roles.get("by_condition"), Mapping):
+        for where, comparison in _comparisons(roles["by_condition"].get("when"), "roles.by_condition.when"):
+            if isinstance(comparison.get("field"), str):
+                found.append((where, comparison["field"], ROLE_CONDITION_PREFIXES))
+    for role, own in _own_whens(proposal):
+        for where, comparison in _comparisons(own.get("when"), f"directive.{role}.own_when.when"):
+            if isinstance(comparison.get("field"), str):
+                found.append((where, comparison["field"], OWN_PREFIXES))
     return found
+
+
+def _own_whens(proposal: Mapping[str, Any]) -> list[tuple[str, Mapping[str, Any]]]:
+    directive = proposal.get("directive")
+    if not isinstance(directive, Mapping):
+        return []
+    return [
+        (str(role), entry["own_when"])
+        for role, entry in directive.items()
+        if isinstance(entry, Mapping) and isinstance(entry.get("own_when"), Mapping)
+    ]
 
 
 def _role_assignment(proposal: Mapping[str, Any]) -> Optional[Mapping[str, Any]]:
@@ -198,6 +243,10 @@ def text_slots(proposal: Mapping[str, Any]) -> list[tuple[str, str]]:
         for role, entry in directive.items():
             if isinstance(entry, Mapping):
                 found += [(f"directive.{role}.{name}", entry[name]) for name in DIRECTIVE_FIELDS if isinstance(entry.get(name), str)]
+    for role, own in _own_whens(proposal):
+        then = own.get("then")
+        if isinstance(then, Mapping):
+            found += [(f"directive.{role}.own_when.then.{name}", then[name]) for name in ("speed_scale", "clearance_margin") if isinstance(then.get(name), str)]
     for where, comparison in _comparisons(proposal.get("when"), "when"):
         value = comparison.get("value")
         if _is_number_field(comparison.get("field")):
@@ -208,8 +257,9 @@ def text_slots(proposal: Mapping[str, Any]) -> list[tuple[str, str]]:
     return found
 
 
-def _needs_communication(proposal: Mapping[str, Any], visibility: Mapping[str, bool]) -> Optional[tuple[str, str]]:
-    """Why the proposal reads what the two could not both see, if it does."""
+def _needs_communication(proposal: Mapping[str, Any], visibility: Mapping[str, bool], schema_version: Optional[int] = None) -> Optional[tuple[str, str]]:
+    """Why the proposal reads what the two could not both see, if it does. A field a later version
+    of the format added than the session's is left to :func:`_later_format` (issue #108)."""
     for where, written, prefixes in field_references(proposal):
         try:
             ref = resolve(written, where, prefixes)
@@ -219,6 +269,8 @@ def _needs_communication(proposal: Mapping[str, Any], visibility: Mapping[str, b
             words = set(re.split(r"[^a-z]+", written.lower()))
             if error.category == "unknown_field" and words & PRIVATE_WORDS:
                 return "private_information", f"{where}: '{written}' names private information ({sorted(words & PRIVATE_WORDS)})"
+            continue
+        if schema_version is not None and ref.spec.since > schema_version:
             continue
         hidden = sorted(name for name in ref.spec.needs if not visibility.get(name, False))
         if hidden:
@@ -265,8 +317,11 @@ def _later_format(proposal: Mapping[str, Any], schema_version: int) -> Optional[
         for role, entry in directive.items():
             if isinstance(entry, Mapping):
                 for name in entry:
-                    if name not in directive_keys and name in DIRECTIVE_FIELDS:
+                    if name not in directive_keys and name in (*DIRECTIVE_FIELDS, *DIRECTIVE_FIELDS_V4):
                         return f"directive.{role}.{name}: the rule format this session was given (version {schema_version}) has no {name}"
+    roles = proposal.get("roles")
+    if schema_version < 4 and isinstance(roles, Mapping) and "by_condition" in roles:
+        return f"roles.by_condition: roles by a condition are not in the rule format this session was given (version {schema_version})"
     for where, written, prefixes in field_references(proposal):
         try:
             resolve(written, where, prefixes, schema_version)
@@ -339,11 +394,11 @@ def validate_proposal(
     def result(category: str, loader: Optional[str], message: str) -> Validation:
         return Validation(category, loader, message, references, ignored, flags)
 
-    protected = protected_part(proposal, terms)
+    protected = protected_part(proposal, terms, schema_version)
     if protected is not None:
         where, written, word = protected
         return result(PROTECTED_ATTRIBUTE, "protected_attribute", f"{where}: {written!r} refers to {PROTECTED_NAMES[protected_attribute_of(word)]} ({word!r}), which no rule may read")
-    private = _needs_communication(proposal, visibility)
+    private = _needs_communication(proposal, visibility, schema_version)
     if private is not None:
         return result(NEEDS_COMMUNICATION, private[0], private[1])
     limit = _format_limit(proposal) or _later_format(proposal, schema_version)

@@ -12,6 +12,13 @@ with what the session's plans did in ``plan_only``:
 - ``who_passed_first``: the same agent first out of the conflict zone, or both together;
 - ``passing_sides``: each person went by on the same side, in their own frame.
 
+**Rule format 4 (issue #108, RF-31).** For a version 4 rule each person also carries what the
+session gave them that format 4 reads: the cane, suitcase and phone (visible as the session's design
+showed them: on unless the design switched one off), their own private factors (assertiveness,
+urgency, residence, memory note), and their own view of the other (whether they know them, whether
+they find them attractive, as they were told it). A rule with steps has them carried out as in a
+crowd (``negsim.rules.plans``), beside the watcher. A format 3 rule's run is exactly as before.
+
 A session is **reproduced** when both hold. The same comparison is made for plain ORCA on the same
 seed, so that a rule is credited only with what plain ORCA does not already do. Plain ORCA's run
 must also be the one the session recorded (its ``*_plain_orca`` columns): if not, the row says so
@@ -36,7 +43,9 @@ from ..resolution.replay import case_of, check_session, pairs_of, plain_orca
 from ..resolution.scenarios import load_scenario
 from ..rulegen.cases import CaseStore
 from ..rulegen.replay import database_path, source_plan
+from ..rules.fields import VISIBLE_FACTOR_SWITCHES
 from ..rules.model import Rule
+from ..rules.snapshot import PRIVATE_ATTRIBUTES
 
 COMPARED = ("who_passed_first", "passing_side_a", "passing_side_b")
 ROW_COLUMNS = (
@@ -88,8 +97,19 @@ class SessionSource:
         return record
 
 
-def population(row: Mapping[str, str]) -> dict[int, dict[str, Any]]:
-    """The two people's ages and genders, as the session gave them (nothing else: a rule reads no more)."""
+#: Values an outcome row writes for something the session did not give.
+_ABSENT = ("", "not_told", "not_seen", "n/a")
+
+
+def _on(row: Mapping[str, str], column: str) -> bool:
+    """A design's switch as the row records it; a design that did not vary it had it on."""
+    return row.get(column, "True") not in ("False", "false", "0")
+
+
+def population(row: Mapping[str, str], schema_version: int = 3) -> dict[int, dict[str, Any]]:
+    """The two people's ages and genders, as the session gave them (nothing else: a rule of format 3
+    reads no more). For a rule of format 4 (issue #108), also each person's cane, suitcase and phone
+    and their own private factors."""
     out: dict[int, dict[str, Any]] = {}
     for person in ("p1", "p2"):
         attributes: dict[str, Any] = {}
@@ -97,15 +117,41 @@ def population(row: Mapping[str, str]) -> dict[int, dict[str, Any]]:
             attributes["age"] = int(float(row[f"{person}_age"]))
         if row.get(f"{person}_gender", "") not in ("", "not_told"):
             attributes["gender"] = row[f"{person}_gender"]
+        if schema_version >= 4:
+            for name in (*VISIBLE_FACTOR_SWITCHES, *PRIVATE_ATTRIBUTES):
+                if row.get(f"{person}_{name}", "") not in _ABSENT:
+                    attributes[name] = row[f"{person}_{name}"]
         agent = int(row[f"{person}_agent"])
         out[agent] = {"persona_id": f"{row['session_id']}:{person}", "attributes": attributes}
     return out
 
 
-def visibility(plan: AvoidanceRunPlan, row: Mapping[str, str]) -> dict[str, bool]:
-    """The case's visibility, with age and gender as the session's design showed them."""
+def pairwise(row: Mapping[str, str]) -> dict[tuple[int, int], dict[str, bool]]:
+    """Each person's own view of the other, as they were told it (issue #108): whether they know
+    them, whether they find them attractive. Left out where the design did not set it or did not
+    show it (its switch off)."""
+    switches = {"knows_other": "familiarity_visible", "finds_other_attractive": "attractiveness_visible"}
+    agents = {"p1": int(row["p1_agent"]), "p2": int(row["p2_agent"])}
+    out: dict[tuple[int, int], dict[str, bool]] = {}
+    for person, other in (("p1", "p2"), ("p2", "p1")):
+        view = {}
+        for name, switch in switches.items():
+            value = row.get(f"{person}_{name}", "")
+            if value not in _ABSENT and _on(row, switch):
+                view[name] = value in ("1", "True", "true", "yes")
+        if view:
+            out[(agents[person], agents[other])] = view
+    return out
+
+
+def visibility(plan: AvoidanceRunPlan, row: Mapping[str, str], schema_version: int = 3) -> dict[str, bool]:
+    """The case's visibility, with age and gender as the session's design showed them; for a rule of
+    format 4 also the cane, suitcase and phone, each as the design showed it."""
     shown = row.get("demographics_visible", "True") not in ("False", "false", "0")
-    return {**dict(plan.visibility), "age": shown, "gender": shown}
+    out = {**dict(plan.visibility), "age": shown, "gender": shown}
+    if schema_version >= 4:
+        out.update({name: _on(row, f"{name}_visible") for name in VISIBLE_FACTOR_SWITCHES})
+    return out
 
 
 class IdentityCheck:
@@ -138,9 +184,11 @@ class IdentityCheck:
         scenario = load_scenario(record["scenario"])
         agents = tuple(record["encounter"]["agents"])
         plain = self._plain_of(record, case, base)
+        version = rule.schema_version
         plan = replace(
-            base, run_id=f"{session_id}_{rule.rule_id}", population=population(source), visibility=visibility(base, source),
+            base, run_id=f"{session_id}_{rule.rule_id}", population=population(source, version), visibility=visibility(base, source, version),
             directives={"provider": "rules", "database": database_path(staging_root), "enable": {rule.rule_id: rule.version}},
+            pairwise=pairwise(source) if version >= 4 else {},
         )
         watcher = PlanDriver(MODE_PLAN_ORCA, scenario, agents)  # no plan: it only watches
         simulation = simulation_for(plan, watcher)

@@ -42,7 +42,7 @@ crowded out of the other's `max_neighbours`.
 | Of | An agent perceives | And never |
 |---|---|---|
 | the neighbour | where it is, how it is moving, which way it faces, how big it is, and the persona attributes the run's visibility settings switch on (its group among them, version 3) | its **task**; its preferred or maximum speed; its goal; its path; any directive it holds |
-| itself | its motion, size and preferred speed; its own age, gender and group | its own task (see the note below) |
+| itself | its motion, size and preferred speed; its own age, gender and group; and (issue #108) its own core factors of track #55, when its persona has them | its own task (see the note below) |
 | its surroundings | the nearest wall, the free width of the passage it is in, and how far ahead a single-file segment is | anything about walls beyond the environment range |
 
 **The task is never in a record.** Not the neighbour's, whatever the visibility settings
@@ -64,6 +64,7 @@ to add that deliberately, with a new version of this record.
 | `ethnic_group` | off | `neighbour_attributes.ethnic_group` (version 3; independent of `age` and `gender`) |
 | `speed` | on | `neighbour_speed_mps`, `relative_velocity_mps`, `closing_speed_mps`, `time_to_collision_s` |
 | `size` | on | `neighbour_radius_m`, `time_to_collision_s` |
+| `mobility_aid`, `load`, `distraction` | off | `neighbour_attributes.<name>` (issue #108: track #55's observable core factors, which a version 4 rule reads; a config that does not name them has them off and records nothing of them) |
 
 **A hidden value is `null`. It is never left out and never replaced by a default.** A
 hidden persona attribute is absent from `neighbour_attributes`, which is a mapping of only
@@ -354,3 +355,10 @@ A negotiation provider is to come behind the same interface.
   `neighbour_attributes`, flagged as not readable by rules. Nothing of version 2 was removed or
   changed meaning. Folders written under versions 1 and 2 are checked against their own; a
   version 2 record still reads back (`PerceptionRecord.from_dict`), its passage fields missing.
+- **3, unchanged, issue #108** (2026-10-26): `observer.attributes` may also hold the observer's own
+  core factors of track #55 (`urgency`, `mobility_aid`, `load`, `distraction`, `assertiveness`,
+  `residence`, `memory_note`) when its persona has them, and `neighbour_attributes` the three
+  observable ones when their switches are on. No field was added, removed or renamed, and no
+  persona of a run before issue #108 has any of them (an empty value is left out), so every earlier
+  record is exactly as it was; the version stays 3. A version 4 rule reads them
+  (`rule-format.md`, section 15).

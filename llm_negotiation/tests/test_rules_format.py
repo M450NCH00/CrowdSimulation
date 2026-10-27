@@ -128,10 +128,13 @@ def test_the_field_list_is_what_both_agents_can_see():
     assert set(fields_of(2)[1]) == {"age", "gender", "speed_mps", "radius_m", "time_to_segment_s"}
     assert fields_of(2)[0] == PAIR_FIELDS  # version 3 (issue #32) added no pair-level field ...
     # ... and four agent-level ones, where each is in a passage the two meet in.
-    assert set(AGENT_FIELDS) - set(fields_of(2)[1]) == {
+    assert set(fields_of(3)[1]) - set(fields_of(2)[1]) == {
         "in_segment", "segment_distance_travelled", "segment_distance_ahead", "segment_distance_behind",
     }
-    assert all(AGENT_FIELDS[name].since == 3 for name in set(AGENT_FIELDS) - set(fields_of(2)[1]))
+    # Issue #108: version 4 added three more agent-level fields, what one person can see of the other.
+    assert set(AGENT_FIELDS) - set(fields_of(3)[1]) == {"mobility_aid", "load", "distraction"}
+    assert all(AGENT_FIELDS[name].since == 4 for name in set(AGENT_FIELDS) - set(fields_of(3)[1]))
+    assert all(AGENT_FIELDS[name].since == 3 for name in set(fields_of(3)[1]) - set(fields_of(2)[1]))
     assert "task" in UNOBSERVABLE and not set(UNOBSERVABLE) & (set(PAIR_FIELDS) | set(AGENT_FIELDS))
 
 

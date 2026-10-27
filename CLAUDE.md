@@ -78,7 +78,11 @@ Constraints for every RF issue (from #55):
   either switched on until this file records that factor's own ethics sign-off.
   (Since 2026-10-24 real ethnicity replaces the fictional group in this track;
   see "Pending sign-offs", item 3.)
-- No rule may read a person's ethnicity (or group) or perceived attractiveness.
+- No rule may read a person's ethnicity (or group), in any version of the rule format.
+  *Amended 2026-10-26 (issue #108, RF-31), agreed by the supervisor (see "Supervisor
+  decisions"):* perceived attractiveness is readable from rule format 4 only, as a person's
+  own view of the other (`self.finds_other_attractive`, inside `own_when`). Rule formats 1 to 3
+  still refuse it, and so does format 4 anywhere else.
 - Prompt templates are frozen: a wording change means a new template version,
   never an edit.
 - Every feature is built and tested on the mock client first.
@@ -111,6 +115,8 @@ Budget:
   checked 2026-10-26.
   After issue #67's translation (USD 0.0017 in the ledger, cap 0.03): **USD 0.62**,
   checked 2026-10-26 (0.63 just before it).
+  After issue #108's translation and its retry (USD 0.0029 in the ledger, cap 0.05):
+  **USD 0.62**, checked 2026-10-26 (the endpoint shows two decimals; 0.62 just before it too).
 
 ### Phase 1 (on hold): the behaviour dataset
 The task from the first supervisor meeting, on hold since the second meeting.
@@ -142,6 +148,13 @@ in `README.md`, "Order of work (from the plan) and current status".
 Ethics sign-off for the perceived-attractiveness factor (issue #61): approved by the supervisor on 2026-10-24
 
 Ethics sign-off for the real-ethnicity factor (issue #92): approved by the supervisor on 2026-10-24
+
+Rules may read perceived attractiveness (issue #108, RF-31): agreed by the supervisor, reported by
+the user on 2026-10-26, "since we want to research on whether it affects decision in real time".
+As `docs/pairwise-factors.md` section 7 required, this was the supervisor's decision. It applies
+from rule format 4, and only as a person's own view of the other (`self.finds_other_attractive`,
+in an own-only condition). Real ethnicity stays unreadable by every rule, in every version. The
+ethics-gate sentences for paid runs above are unchanged.
 
 ### Meeting of Tuesday 2026-10-20
 The user's notes from the meeting, word for word:
@@ -182,7 +195,7 @@ The user's notes from the meeting, word for word:
   each simulator. Rules may be more specific, for example "keep left".
 
 ## Pending sign-offs
-Items 1, 5 and 6 are still pending (item 1 was approved for issues #64, #65, #98, #100, #101, #104, #66 and #67 only).
+Items 1, 5 and 6 are still pending (item 1 was approved for issues #64, #65, #98, #100, #101, #104, #66, #67 and #108 only).
 **Do not treat any of them as approved** until the user records the
 supervisor's answer in this file, with a date. Items 2 and 3, the ethics
 sign-offs for perceived attractiveness and real ethnicity, were recorded by the
@@ -245,6 +258,14 @@ used in this track). Numbers in brackets are the decisions of track issue #55.
      only for it, with a cap of **USD 0.03** on that experiment's own calls
      (`experiment_name: rf12_round1_head_on`; four calls, worst case USD 0.028,
      `WORK_LOG-67.md`).
+   - **Approved for issue #108 only, 2026-10-26:** the user approved paid runs for
+     RF-31's re-translation of round 1's four candidate rules into rule format 4 (#108),
+     and only for it, with a cap of **USD 0.05** on that experiment's own calls
+     (`experiment_name: rf31_round1_head_on`; four calls, worst case USD 0.043,
+     `WORK_LOG-108.md`). *The same day* the user answered "Yes" to retrying the one
+     unreadable translation (`x_head_on_6455ca5589`) as a further paid call, inside the
+     same cap: USD 0.05 for #108's calls together, of which USD 0.0025 was spent before
+     the retry (`experiment_name: rf31_round1_head_on_retry`, its own cap the rest).
 2. **Approved by the supervisor, 2026-10-24** — Ethics sign-off for perceived
    attractiveness as a factor (#55, 3). *The user decided on 2026-10-24* that
    attractiveness (both directions) is **in** RF-10's design, because bias can

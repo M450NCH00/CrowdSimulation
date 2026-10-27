@@ -24,6 +24,9 @@ CATEGORIES = (
     "visibility",  # a rule reads a field the run's visibility settings hide
     "status",  # a rule set enables a rule whose status does not allow it
     "ruleset",  # a rule set names a rule or version that is not in the database
+    "own_only_scope",  # version 4: an own-only condition that switches on more than the person's own movement (issue #108)
+    "steps",  # version 4: a plan that is not in Step 1's step vocabulary (issue #108)
+    "constant_roles",  # version 4: a role condition that can never give the two different roles (issue #108)
 )
 
 

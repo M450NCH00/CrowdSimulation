@@ -32,9 +32,10 @@ def fixture() -> dict:
 
 
 def test_both_schemas_are_in_the_database_and_frozen():
-    """Version 3 (issue #32, ``test_rules_schema_v3.py``) is there too."""
-    assert SCHEMA_VERSIONS == (1, 2, 3) and LATEST_SCHEMA_VERSION == 3
-    assert isinstance(SCHEMAS, RuleSchemas) and SCHEMAS.versions == (1, 2, 3)
+    """Version 3 (issue #32, ``test_rules_schema_v3.py``) is there too, and version 4 (issue #108,
+    ``test_rules_schema_v4.py``)."""
+    assert SCHEMA_VERSIONS == (1, 2, 3, 4) and LATEST_SCHEMA_VERSION == 4
+    assert isinstance(SCHEMAS, RuleSchemas) and SCHEMAS.versions == (1, 2, 3, 4)
     manifest = json.loads((RULE_DB_ROOT / "MANIFEST.json").read_text(encoding="utf-8"))["files"]
     for version in (1, 2):
         assert schema_path(version) in manifest
@@ -67,7 +68,7 @@ def test_a_version_2_rule_loads_with_its_intent_screening_and_generation_record(
     "change, message",
     [
         (lambda raw: raw.update(schema_version=1), "unknown property 'intent'"),  # version 1 has no intent
-        (lambda raw: raw.update(schema_version=4), "must be one of [1, 2, 3]"),  # 3 since issue #32
+        (lambda raw: raw.update(schema_version=5), "must be one of [1, 2, 3, 4]"),  # 3 since issue #32, 4 since issue #108
         (lambda raw: raw.pop("schema_version"), "missing required property 'schema_version'"),
         (lambda raw: raw.update(intent="x" * 501), "at most 500 character"),
         (lambda raw: raw["provenance"].update(source_type="dreamed"), "must be one of"),

@@ -337,12 +337,15 @@ provider. Empty if the experiment sets `logging.interactions: false`.
 | `state_at_end` | `unmatched`, `held` or `spent` (a match expired and nothing has matched since) |
 | `independent_agrees` | Whether, on the step the pair formed, each agent evaluating the rules on its own perception record got the same directive as the shared snapshot gave it (`rule-matching.md`, "Evaluation on a shared snapshot"). Should always be true |
 | `evaluations` | **Every evaluation, with its outcome.** Consecutive evaluations with the same outcome, rule and encounter class share one entry: `from_step`, `from_time_s`, `to_step`, `count` (how many evaluations, one per step), `encounter_class`, `outcome` (`rule_matched`, `no_rule_matched`, `ambiguous_match`, or `kept`: a held rule stayed because nothing of strictly higher priority matched), `rule` (`rule_id@version` applied, or null), `ambiguous_with` (the other rules at the same priority that matched with different directives), `candidates` (how many rules were tried), and `snapshot`: the values the conditions were evaluated on, at the first evaluation of the entry (null if no rule was tried) |
-| `matches` | Every match, in order: `rule_id`, `version`, `priority`, `encounter`, `expiry`, `outcome` (`rule_matched` or `ambiguous_match`), `ambiguous_with`, `from_step`, `from_time_s`, **the role each agent received** (`roles`, keyed by agent) and **the resulting directive** (`directives`, keyed by agent: all five fields, the rule's and the baseline values of those it leaves out), the `snapshot` it matched on, and **when and why it ended**: `to_step`, `to_time_s`, `end_reason` (`passed`, `replaced` by a rule of higher priority, `out_of_range`, `agent_arrived`, `run_ended`) and `replaced_by` |
+| `matches` | Every match, in order: `rule_id`, `version`, `priority`, `encounter`, `expiry`, `outcome` (`rule_matched` or `ambiguous_match`), `ambiguous_with`, `from_step`, `from_time_s`, **the role each agent received** (`roles`, keyed by agent) and **the resulting directive** (`directives`, keyed by agent: all five fields, the rule's and the baseline values of those it leaves out), the `snapshot` it matched on, and **when and why it ended**: `to_step`, `to_time_s`, `end_reason` (`passed`, `replaced` by a rule of higher priority, `out_of_range`, `agent_arrived`, `run_ended`) and `replaced_by`. *Issue #108:* a match of a rule with steps also has `plans`, keyed by agent, for each of the two whose role gave steps: `steps` (as Step 1's reply format writes them) and `started` (false if the person already had a plan in force) |
 | `cross_pair_conflicts` | The cross-pair conflicts this pair was part of, as in `events.jsonl` |
 
 A `snapshot` has `step`, `time_s`, `agents`, `pair` (every pair-level field a rule can
 read) and `agent` (every agent-level field, keyed by agent); a hidden value is null
-(`rule-format.md`).
+(`rule-format.md`). *Issue #108:* a version 4 agent-level field (`mobility_aid`, `load`,
+`distraction`) is in `agent` only when one of the two has a value for it, and each person's own
+private factors are in `self` (keyed by agent) only when one of them has a value; so the snapshots
+of every run before rule format 4 are exactly as they were.
 
 ### `events.jsonl`
 

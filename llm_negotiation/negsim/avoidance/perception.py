@@ -44,7 +44,7 @@ from typing import Any, Mapping, Optional, Sequence
 
 from ..core.agent import AgentRuntime
 from ..core.geometry import Rect, Vec, wrap_angle
-from ..personas.schema import ATTRIBUTES
+from ..personas.schema import ATTRIBUTES, FACTOR_ATTRIBUTES
 
 PERCEPTION_SCHEMA_VERSION = 3
 
@@ -73,8 +73,12 @@ CORRIDOR_SAMPLE_SPACING_M = 0.25
 
 #: Persona attributes that never appear in a record, whatever the visibility settings.
 NEVER_OBSERVABLE = frozenset({"task"})
-#: Persona attributes an agent knows about itself and that a record carries.
-OWN_ATTRIBUTES = ("age", "gender", "ethnic_group")
+#: Persona attributes an agent knows about itself and that a record carries. Since issue #108 also
+#: the core factors of track #55 (``FACTOR_ATTRIBUTES``: what others may see of it, such as a cane,
+#: and what only it knows, such as its assertiveness), which a version 4 rule reads. No persona of a
+#: run before issue #108 has them, and an empty value is left out, so those records are unchanged
+#: and the schema version stays 3 (``WORK_LOG-108.md``, D-E).
+OWN_ATTRIBUTES = ("age", "gender", "ethnic_group", *FACTOR_ATTRIBUTES)
 #: Below this speed an agent's heading is taken from its pose, not from its velocity.
 STATIONARY_SPEED = 1e-6
 #: The per-agent passage fields of version 3, in order (``docs/perception.md``).

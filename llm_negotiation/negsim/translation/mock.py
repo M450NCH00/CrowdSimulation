@@ -15,6 +15,13 @@ reproducible), and exercises every category of ``negsim.rulegen.validate`` and e
 - ``no_rule``: null, with everything lost;
 - ``protected_attribute``: a condition on ethnicity (never written);
 - ``schema_error``: a directive field format 3 does not have (a turn angle).
+
+``translate_rehearsal_v2`` (issue #108) does the same for ``translate_v2`` and rule format 4
+(:data:`PATHS_V4`): roles by a condition on a visible attribute with a plan of steps, an own-only
+condition with steps, an own-only condition on the person's own view of the other's
+attractiveness (the one place it is readable), an own-only condition that tries to set a side
+(``own_only_scope``, needs communication), attractiveness and ethnicity in a condition
+(protected), null, and a step outside Step 1's limits (a schema error).
 """
 
 from __future__ import annotations
@@ -85,4 +92,67 @@ def translate_rehearsal_v1(request: LLMRequest) -> Optional[str]:
     return "```json\n" + json.dumps({"rule": rules[path], "lost": lost, "note": f"mock path {path}"}) + "\n```"
 
 
-POLICIES = {"translate_rehearsal_v1": translate_rehearsal_v1}
+# --- rule format 4 (issue #108, RF-31) ------------------------------------------------------------
+
+#: ``translate_rehearsal_v2``'s paths, for ``translate_v2``: every new form of rule format 4, and
+#: every refusal it adds or keeps.
+PATHS_V4 = (
+    "valid_condition_steps", "valid_own_when", "valid_after_retry", "valid_own_attractiveness", "own_only_scope",
+    "protected_attractiveness", "protected_attribute", "no_rule", "schema_error",
+)
+_SIDESTEP = [{"start": {"at_distance_m": 4.0}, "sidestep": {"to": "right", "metres": 0.4}, "speed_mps": 1.0},
+             {"speed_mps": 1.1, "until": "other_passes"}]
+
+
+def path_of_v4(sentence: str) -> str:
+    return PATHS_V4[int(hashlib.sha256(sentence.encode("utf-8")).hexdigest(), 16) % len(PATHS_V4)]
+
+
+def _by_condition(field: str, value: str, assign: list[str]) -> dict[str, Any]:
+    return {"by_condition": {"when": {"field": field, "op": "==", "value": value}, "assign": assign, "tie": "no_match"}}
+
+
+def _seen(factors: list[str]) -> tuple[str, str]:
+    """The visible attribute a rule reads, if any (a cane by default), and its level."""
+    for name, level in (("mobility_aid", "cane"), ("load", "large_suitcase"), ("distraction", "phone")):
+        if f"other_{name}" in factors or f"own_{name}" in factors:
+            return f"agent.{name}", level
+    return "agent.mobility_aid", "cane"
+
+
+def _own(field: str, value: Any, then: dict[str, Any]) -> dict[str, Any]:
+    return {"when": {"field": field, "op": "==", "value": value}, "then": then}
+
+
+def translate_rehearsal_v2(request: LLMRequest) -> Optional[str]:
+    user = "\n".join(m["content"] for m in request.messages if m["role"] == "user")
+    found = _RULE.search(user)
+    if found is None:
+        return "I could not find the rule."
+    block = _FACTORS.search(user)
+    factors = _FACTOR.findall(block.group(1)) if block else []
+    path = path_of_v4(found.group(1))
+    lost = [{"part": item["column"], "kind": "condition", "how": "left_out"} for item in factor_losses(factors, 4) if item["status"] in LOST_STATUSES]
+    retried = any(m["role"] == "assistant" for m in request.messages)
+    if path == "valid_after_retry" and not retried:
+        return "Here is the rule: the one who sees a cane steps aside."
+    field, level = _seen(factors)
+    condition_steps = _head_on(_by_condition(field, level, ["seen", "gives_way"]),
+                               {"seen": {"responsibility_share": 0.0}, "gives_way": {"responsibility_share": 1.0, "steps": _SIDESTEP}})
+    rules = {
+        "valid_condition_steps": condition_steps,
+        "valid_after_retry": condition_steps,
+        "valid_own_when": _head_on("symmetric", {"both": {"own_when": _own("self.assertiveness", "gives_way", {"speed_scale": 0.8, "steps": _SIDESTEP})}}),
+        "valid_own_attractiveness": _head_on("symmetric", {"both": {"own_when": _own("self.finds_other_attractive", True, {"clearance_margin": 0.1})}}),
+        "own_only_scope": _head_on("symmetric", {"both": {"own_when": _own("self.assertiveness", "gives_way", {"side_preference": "left"})}}),
+        "protected_attractiveness": _head_on("symmetric", {"both": {"speed_scale": 0.9}}, [{"field": "either.finds_other_attractive", "op": "==", "value": True}]),
+        "protected_attribute": _head_on("symmetric", {"both": {"speed_scale": 0.9}}, [{"field": "either.ethnicity", "op": "==", "value": "chinese"}]),
+        "no_rule": None,
+        "schema_error": _head_on("symmetric", {"both": {"steps": [{"turn": {"to": "left", "degrees": 120}, "until": "other_passes"}]}}),
+    }
+    if path == "no_rule":
+        lost.append({"part": found.group(1), "kind": "other", "how": "left_out"})
+    return "```json\n" + json.dumps({"rule": rules[path], "lost": lost, "note": f"mock path {path}"}) + "\n```"
+
+
+POLICIES = {"translate_rehearsal_v1": translate_rehearsal_v1, "translate_rehearsal_v2": translate_rehearsal_v2}

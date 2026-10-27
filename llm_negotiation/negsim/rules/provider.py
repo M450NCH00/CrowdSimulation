@@ -41,11 +41,22 @@ class RuleDatabaseProvider(DirectiveProvider):
         self.visibility = dict(visibility)
         self.database = database
         self.matcher = RuleMatcher(active, hysteresis_steps)
+        #: Issue #108: each person's own view of another, by (observer, neighbour); the simulation
+        #: sets it. Only a version 4 rule's own-only condition reads it.
+        self.pairwise: Mapping[tuple[int, int], Mapping[str, Any]] = {}
+        #: Issue #108: the driver for the plans a version 4 rule gives, built only if an enabled rule
+        #: has steps; the simulation attaches it (``negsim.rules.plans``). ``None`` otherwise.
+        self.step_driver = None
+        if any(rule.has_steps for rule in active.rules):
+            from .plans import RuleStepDriver
+
+            self.step_driver = RuleStepDriver()
+            self.matcher.steps = self.step_driver
 
     def directive(self, record: PerceptionRecord) -> AvoidanceDirective:
         """What the observer concludes from its own record alone: its role's directive, or
         plain ORCA if no rule matches."""
-        evaluation = evaluate(self.active, snapshot_of_record(record, self.visibility))
+        evaluation = evaluate(self.active, snapshot_of_record(record, self.visibility, self.pairwise))
         return PLAIN_ORCA if evaluation.match is None else evaluation.match.directive_of(record.observer_id)
 
     def update(self, view: Any) -> Mapping[tuple[int, int], AvoidanceDirective]:
@@ -73,4 +84,5 @@ class RuleDatabaseProvider(DirectiveProvider):
             "cross_pair_conflicts": len(matcher.conflict_events),
             "formation_checks": matcher.formation_checks,
             "formation_mismatches": matcher.formation_mismatches,
+            **({"plans": self.step_driver.summary()} if self.step_driver is not None else {}),
         }
