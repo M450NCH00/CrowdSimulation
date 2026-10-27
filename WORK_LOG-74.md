@@ -90,10 +90,38 @@ approval needed.
   `pair_interactions.jsonl` has what uncovered conflicts need (tier, encounter class, matches).
 - Next step: task 0, the definition of "helps", for the user to confirm before any run.
 
+### 2026-10-27 about 07:55 UTC — Task 0: what "helps" means, fixed before any run (the user's choice)
+- Asked the user, who chose the proposed rule ("Proposed rule (Recommended)"). Fixed here, before any
+  code or run of this issue:
+  - **Unit:** per arm and scenario, against plain ORCA on the **same seeds** (paired, `baseline.md`
+    section 6), **10 seeds** per scenario.
+  - **Main measure, severe conflicts:** the number of pair interactions at tier **T3 or T4** (a near
+    miss, a collision or a deadlock while the pair was open; `metrics.md`, section 11.3) in a run.
+  - **Side measures, the cost to the crowd:** throughput (agents arrived per minute) and **delay per
+    agent** (time to goal minus the path's length over the agent's preferred speed, mean over those
+    who arrived).
+  - **Gridlock:** the run ends in deadlock, or at its time limit with people still walking (as crowd
+    screening).
+  - **Better or worse** on a measure only if the **exact two-sided sign test** over the seeds, ties
+    dropped, gives **p < 0.05** (with 10 seeds and no ties: 9 of 10 must agree).
+  - **Verdicts**, in this order:
+    - **not used**: no rule of the arm matched on any seed;
+    - **harms**: it gridlocks on a seed where plain ORCA did not, or severe conflicts are
+      significantly worse;
+    - **helps**: severe conflicts significantly fewer, and throughput and delay not significantly
+      worse;
+    - **trade-off**: severe conflicts significantly fewer, but throughput or delay significantly
+      worse;
+    - **no change**: anything else.
+  - **Lane formation is reported, not judged:** it is about realism, which is RF-14's filter.
+  - **A rule's verdict** is that of the arm with the rule alone; set 2's verdict is the set's.
+- Also: the order recorded in `README.md` and `llm_negotiation/README.md` (RF-18, RF-32, RF-14,
+  RF-15; RF-13 in round 2).
+- Next step: the layer (plan step 1).
+
 ## Open questions / risks
 
-1. **The definition of "helps"** is a research design decision; it is proposed below (task 0) and
-   asked of the user before any run.
+1. ~~**The definition of "helps"**~~ fixed with the user before any run (entry above).
 2. **Half the crowd carries a cane** (D-E). The cane rule's harm in screening may come from that share.
 3. Round 1 gives one rule that changes ORCA's outcome, so set 1 is a single rule. The tool is the
    lasting part; round 1's numbers are thin.
