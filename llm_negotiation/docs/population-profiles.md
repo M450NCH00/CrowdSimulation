@@ -1,7 +1,7 @@
 # Population profiles: who is in a simulated crowd (issue #112, RF-33)
 
-**Status: draft, session 1 of 2.** Section 2 (the sources) is done. The profile files, the
-generator and the config keys follow once the user has decided the questions in section 4.
+**Status: draft, session 1 of 2.** Section 2 (the sources) is done, and the user decided the
+build's questions (section 4). The profile files, the generator and the config keys follow.
 
 RF-18's crowd gave people their factors by cycling each factor's levels
 (`negsim.rulegen.replay.mixed_population`), so every factor sits at exactly half: half the crowd is
@@ -132,14 +132,18 @@ At the shares above (people aged 10 and over), a crowd of 100 has about **21 age
 **3 with a cane** and **9 looking at a phone**, against 50 of each in RF-18's crowd. A large
 suitcase is a placeholder.
 
-## 4. Open for the user (before the build)
+## 4. The user's decisions for the build (2026-10-27)
 
-1. **Whose crowd:** SingStat residents (Singapore, fine bands, residents only), or the observed
-   street age mix of Elche (who is out walking, but Spain)?
-2. **The youngest:** count from 10, as Elche's observers did (younger children mostly walk with an
-   adult and are not alone in an encounter), or from 0?
-3. **The placeholders:** a cane under 65, a large suitcase on a street, and assertiveness: which
-   values, or leave a factor out of the realistic profile.
-4. **Small numbers:** at 3% a crowd of 100 has 3 people with a cane, so a cane rule applies rarely
-   and its verdict over 10 seeds may be "not used" or "no change". Is that the intended reading
-   (the user's decision: a stress scenario tests whether the rule works where it applies)?
+Asked after the sources were read, before any profile or code; the user chose the proposed option
+each time.
+
+1. **Whose crowd: SingStat residents**, five-year bands by sex (2.1), with its two limits stated
+   wherever the profile is used. Not Elche's observed mix, and not a reweighting of one by the other.
+2. **The youngest: from 10**, as Elche's observers counted. Younger children mostly walk with an
+   adult and are rarely alone in an encounter.
+3. **The placeholders: small marked values.** A cane under 65: 0.5%; a large suitcase on a street:
+   1%; assertiveness: half each way. Each is marked `[placeholder]` in the profile and the report.
+4. **Rare rules: as designed.** At realistic shares a rule about a rare factor may come out "not
+   used" or "no change" over 10 seeds. The realistic verdict is the verdict of record; the stress
+   scenario (today's mix, every factor at half) is reported beside it, labelled as such, to show
+   whether the rule works where it applies.

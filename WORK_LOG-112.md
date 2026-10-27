@@ -93,10 +93,25 @@ Session 2 (build and run):
   phone, against 50 of each in RF-18's crowd.
 - Next step: the design questions for the user (`docs/population-profiles.md`, section 4).
 
+### 2026-10-27 10:24 UTC — The user's four decisions, before any profile or code
+- Asked four questions; the user chose the proposed option each time:
+  1. **Age mix: SingStat residents** (not Elche's observed mix, not a reweighting).
+  2. **From age 10.**
+  3. **Placeholders: small marked values**: a cane under 65 0.5%, a large suitcase on a street 1%,
+     assertiveness half each way; each `[placeholder]`.
+  4. **Rare rules: as designed**: the realistic verdict is the verdict of record; the stress
+     scenario is reported beside it, labelled.
+- Recorded in `docs/population-profiles.md`, section 4.
+- Next step (session 2): the profiles, the generator with tests, the config keys, the rerun.
+
 ## Open questions / risks
 
-1. **Whose population?** (raised in issue #16, B5): SingStat's fine age bands are of residents
-   (4.23 million of 6.21 million at end-June 2026); the total population comes in broad bands only.
-   And neither is the people on a street: who is out walking differs from who lives here.
+1. ~~**Whose population?**~~ SingStat residents, the user's decision of 2026-10-27 (entry above).
+   The limits stay: residents only (4.23 of 6.21 million at end-June 2026), and who is out walking
+   differs from who lives here (Elche saw 15.9% over 65, SingStat gives 21.3% of those 10+).
+2. **Two shares come from abroad** (a cane: the US, 2011; a phone: Spain, 2019). No Singapore
+   figure was found for either. RF-14 should know the realistic crowd rests on them.
+3. **A large suitcase has no source at all**, and depends most on the place: 1% is a placeholder
+   for a street only. An MRT-station or airport profile would need its own source.
 
 ## Summary (fill in at the end)
