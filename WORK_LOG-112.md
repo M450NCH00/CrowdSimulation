@@ -150,6 +150,26 @@ Session 2 (build and run):
   generator apportions band × sex cells (one fewer older person at 100); the test was wrong, not
   the code. The rerun config was first cut wrongly by a script (it matched `people:` inside
   `rotate_people:`); rebuilt with line-anchored keys and read back before use.
+- Hygiene and related tests (`test_repo_hygiene`, `test_rulegen_replay`, `test_experiment_config`):
+  76 passed. Committed the build (99aeab8c) before the run of record.
+
+### 2026-10-27 11:40 to 12:55 UTC — The run of record: `rf18_round1_realistic`, 300 runs, no model call (task 5)
+- `python run_experiment.py configs/rule_set_evaluation/rf18_round1_realistic.yaml` at 99aeab8c
+  (clean). 42 s per flow run; the two-person runs take a fraction of a second. stdout went to a
+  file and was buffered, so I followed progress by counting `measures.json` files instead.
+- **Check: all 150 stress runs give exactly RF-18's measures** (every measure but wall time;
+  script compared each run folder with RF-18's).
+- **Verdicts of record (realistic):** the left-turn rule **helps** (unchanged: it reads no factor,
+  so its runs are the same in both crowds); the cane rule **no change** (RF-18: harms); set 2
+  **helps** (RF-18: harms). The cane rule no longer gridlocks (153 matches a run against 1,607), but
+  collided pairs are worse on 8 of 10 seeds (216 against 164; p = 0.11, not significant).
+- Report: `runs/rf18_round1_realistic/evaluation_report.md` (mine), `report.md` (the code's).
+  Bulky logs are gitignored by RF-18's `rf18_*` patterns; committed: config, outcome and measures
+  per run, the summary and reports.
+- Full suite (run alongside the experiment, 12:02 to 12:30 UTC): **2,164 passed, 10 skipped, no
+  failure** (the peak-hour `cost.json` test passed off-peak).
+- Docs (task 6): `docs/rule-set-evaluation.md` section 1.1 and limits, `docs/population-profiles.md`
+  section 5, both READMEs.
 
 ## Open questions / risks
 
@@ -160,5 +180,37 @@ Session 2 (build and run):
    figure was found for either. RF-14 should know the realistic crowd rests on them.
 3. **A large suitcase has no source at all**, and depends most on the place: 1% is a placeholder
    for a street only. An MRT-station or airport profile would need its own source.
+4. **The cane rule's "no change" is not "harmless".** Collisions lean worse on 8 of 10 seeds, and
+   its stress verdict is harms. Should such a rule be marked for RF-14 ("harms where the factor is
+   common")? The verdict rule does not say. The user's decision.
+5. **10 seeds are few for a rare factor**: only 9 of 10 seeds agreeing is significant. 30 seeds
+   (21 of 30 needed) would cost about 35 minutes per 10 seeds of the flow. The user's decision.
+6. D-1 to D-5 (entry of 11:17 UTC) are mine, for the user to check.
 
-## Summary (fill in at the end)
+## Summary
+
+**What changed.**
+- Sourced shares for a realistic Singapore street crowd (`docs/population-profiles.md`; sources
+  cached in `refs/rf33_*`): SingStat residents at end-June 2026 by age and sex, from age 10; a cane
+  by age (NHATS 2011, US); looking at a phone by age (Elche 2019, Spain); a large suitcase, a cane
+  under 65 and assertiveness as marked placeholders with the user's values.
+- Two frozen profiles (`configs/populations/`): `singapore_street_v1` (realistic, exact quotas)
+  and `stress_all_factors_v1` (RF-18's crowd, named for what it is).
+- A generator of exact shares (`negsim/populations.py`): exact counts per seed, the same people for
+  every arm, new people on every seed.
+- Per scenario of a rule-set evaluation: `population`, `purpose`, `pool`. A rule's verdict of
+  record comes from its realistic scenarios; stress verdicts are reported beside it.
+- Round 1 again in a realistic crowd (`runs/rf18_round1_realistic/`): **the left-turn rule still
+  helps; the cane rule goes from harms to no change; both together from harms to helps.**
+
+**Why.** The user's decision of 2026-10-27: realistic scenarios wherever possible, with
+exaggerated ones only to test rules that rarely apply. RF-18 judged rules in a crowd where about half
+carried a cane.
+
+**How it was verified.**
+- `tests/test_populations.py` (23) and 16 new tests in `tests/test_ruleset_eval.py` (40 in all).
+  These include **RF-18's config and summary coming out identical from its committed run**, and the
+  profile's SingStat counts checked against the cached table.
+- The 150 stress runs reproduce RF-18's 150 runs exactly.
+- Full suite: 2,164 passed, 10 skipped, no failure.
+- No model call; USD 0.

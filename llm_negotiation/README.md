@@ -113,7 +113,8 @@ of paid runs and a cap for its round, recorded in `CLAUDE.md`.
   crowds and an unseen scenario, against plain ORCA, rerun after every round (*done*:
   `negsim/ruleset_eval/`, `docs/rule-set-evaluation.md`, `runs/rf18_round1/evaluation_report.md`); RF-33
   (#112) realistic scenarios (sourced shares of canes and the rest, and stress scenarios only for rare
-  rules); RF-32 (#110) three or four people meeting head-on; RF-14 (#69) Step 3, verification against human
+  rules) (*done*: `negsim/populations.py`, `configs/populations/`, `docs/population-profiles.md`,
+  `runs/rf18_round1_realistic/evaluation_report.md`); RF-32 (#110) three or four people meeting head-on; RF-14 (#69) Step 3, verification against human
   evidence; RF-15 (#70) results summary for the interim report (25 January 2027). *The user's
   order of 2026-10-27:* RF-18 before RF-32 and RF-14, so that a rule is first run in the
   simulation (does it help?) and then checked against human evidence; a verdict in RF-18 does not
