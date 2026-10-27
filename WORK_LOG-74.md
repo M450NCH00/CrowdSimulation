@@ -243,4 +243,7 @@ then single-file meetings: rounds 2 and 3. Cost ×1.5 to ×1.6 per step at 1,000
 
 **How it was verified.** `tests/test_ruleset_eval.py` (21 tests, including task 8's two hand-made
 rules together and an unmatched conflict logged); the run's first two flow seeds reproduce RF-31's
-screening runs exactly; the benchmark run on a quiet machine. Full suite: see the PR.
+screening runs exactly; the benchmark run on a quiet machine. Full suite at 8f3e91eb: 2,121 passed,
+10 skipped, 1 failed: `test_stop_at_cap_...`, the known peak-hour `cost.json` gap of #64 (run at
+09:54 UTC, DeepSeek's peak; the same numbers as on #108's branch before this one), not touched here.
+PR #111, against `feat/108-rf31-rule-format-4`.
