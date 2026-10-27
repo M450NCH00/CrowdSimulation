@@ -1,6 +1,6 @@
 # rf18_round1: the rule set against plain ORCA
 
-Machine-written by `negsim.ruleset_eval` (issue #74, RF-18). Method: `docs/rule-set-evaluation.md`. 10 paired seeds per scenario, baseline `orca_perturbed_v1`, sign test at p < 0.05.
+Machine-written by `negsim.ruleset_eval` (issue #74, RF-18). Method: `docs/rule-set-evaluation.md`. 10 paired seeds per scenario, baseline `orca_perturbed_v1`, sign test at p < 0.05, verdict rule 2 (`docs/rule-set-evaluation.md`, section 3).
 
 ## Rules
 
@@ -19,7 +19,7 @@ Machine-written by `negsim.ruleset_eval` (issue #74, RF-18). Method: `docs/rule-
 
 | Scenario | `passed_screening` | `cane_rule_alone` | `all_runnable` |
 | --- | --- | --- | --- |
-| flow | helps | harms | trade-off |
+| flow | helps | harms | harms (rule 1: trade-off) |
 | bottleneck | no change | no change | no change |
 | passage | not used | not used | not used |
 
@@ -42,9 +42,9 @@ Machine-written by `negsim.ruleset_eval` (issue #74, RF-18). Method: `docs/rule-
 
 Means over the seeds. Tests (better / worse / tied seeds, p):
 
-- `passed_screening`: **helps** (fewer severe conflicts, and neither throughput nor delay worse). severe_conflicts 10/0/0, p = 0.00195; throughput_agents_per_min 9/1/0, p = 0.0215; mean_delay_s 9/1/0, p = 0.0215.
-- `cane_rule_alone`: **harms** (gridlocked on seed(s) [30902, 30904], where plain ORCA did not). severe_conflicts 5/5/0, p = 1; throughput_agents_per_min 2/8/0, p = 0.109; mean_delay_s 2/8/0, p = 0.109.
-- `all_runnable`: **trade-off** (fewer severe conflicts, but worse mean_delay_s). severe_conflicts 9/1/0, p = 0.0215; throughput_agents_per_min 3/7/0, p = 0.344; mean_delay_s 0/10/0, p = 0.00195.
+- `passed_screening`: **helps** (fewer severe conflicts, and neither throughput nor delay worse, nor collisions). severe_conflicts 10/0/0, p = 0.00195; throughput_agents_per_min 9/1/0, p = 0.0215; mean_delay_s 9/1/0, p = 0.0215; collided_pairs 7/3/0, p = 0.344; collision_episodes 7/3/0, p = 0.344.
+- `cane_rule_alone`: **harms** (gridlocked on seed(s) [30902, 30904], where plain ORCA did not). severe_conflicts 5/5/0, p = 1; throughput_agents_per_min 2/8/0, p = 0.109; mean_delay_s 2/8/0, p = 0.109; collided_pairs 2/8/0, p = 0.109; collision_episodes 2/8/0, p = 0.109.
+- `all_runnable`: **harms** (more collided pairs and collision episodes than plain ORCA). severe_conflicts 9/1/0, p = 0.0215; throughput_agents_per_min 3/7/0, p = 0.344; mean_delay_s 0/10/0, p = 0.00195; collided_pairs 1/9/0, p = 0.0215; collision_episodes 0/10/0, p = 0.00195.
 - Uncovered conflicts under `passed_screening` (pairs, all seeds; most frequent first): overtaking T2: 1721, overtaking T1: 1144, overtaking T3: 579, overtaking T4: 371, crossing T2: 16, crossing T3: 6.
   Rule conflicts: 0 pairs matched by several rules, 0 ambiguous matches, 0 cross-pair conflicts; plans started 4077, not started because one was in force 45373.
 - Uncovered conflicts under `cane_rule_alone` (pairs, all seeds; most frequent first): overtaking T2: 16593, head_on T2: 5011, overtaking T4: 1678, overtaking T3: 1403, head_on T3: 1250, crossing T2: 719.
@@ -68,9 +68,9 @@ Means over the seeds. Tests (better / worse / tied seeds, p):
 
 Means over the seeds. Tests (better / worse / tied seeds, p):
 
-- `passed_screening`: **no change** (no significant difference in severe conflicts). severe_conflicts 0/0/10, p = 1; throughput_agents_per_min 0/0/10, p = 1; mean_delay_s 0/0/10, p = 1.
-- `cane_rule_alone`: **no change** (no significant difference in severe conflicts). severe_conflicts 0/0/10, p = 1; throughput_agents_per_min 0/0/10, p = 1; mean_delay_s 0/0/10, p = 1.
-- `all_runnable`: **no change** (no significant difference in severe conflicts). severe_conflicts 0/0/10, p = 1; throughput_agents_per_min 0/0/10, p = 1; mean_delay_s 0/0/10, p = 1.
+- `passed_screening`: **no change** (no significant difference in severe conflicts). severe_conflicts 0/0/10, p = 1; throughput_agents_per_min 0/0/10, p = 1; mean_delay_s 0/0/10, p = 1; collided_pairs 0/0/10, p = 1; collision_episodes 0/0/10, p = 1.
+- `cane_rule_alone`: **no change** (no significant difference in severe conflicts). severe_conflicts 0/0/10, p = 1; throughput_agents_per_min 0/0/10, p = 1; mean_delay_s 0/0/10, p = 1; collided_pairs 0/0/10, p = 1; collision_episodes 0/0/10, p = 1.
+- `all_runnable`: **no change** (no significant difference in severe conflicts). severe_conflicts 0/0/10, p = 1; throughput_agents_per_min 0/0/10, p = 1; mean_delay_s 0/0/10, p = 1; collided_pairs 0/0/10, p = 1; collision_episodes 0/0/10, p = 1.
 - Uncovered conflicts under `cane_rule_alone` (pairs, all seeds; most frequent first): single_file_segment T3: 8.
   Rule conflicts: 0 pairs matched by several rules, 0 ambiguous matches, 0 cross-pair conflicts; plans started 2, not started because one was in force 0.
 
@@ -88,9 +88,9 @@ Means over the seeds. Tests (better / worse / tied seeds, p):
 
 Means over the seeds. Tests (better / worse / tied seeds, p):
 
-- `passed_screening`: **not used** (no rule of the set matched on any seed). severe_conflicts 0/0/10, p = 1; throughput_agents_per_min 0/0/10, p = 1; mean_delay_s 0/0/0, p = 1.
-- `cane_rule_alone`: **not used** (no rule of the set matched on any seed). severe_conflicts 0/0/10, p = 1; throughput_agents_per_min 0/0/10, p = 1; mean_delay_s 0/0/0, p = 1.
-- `all_runnable`: **not used** (no rule of the set matched on any seed). severe_conflicts 0/0/10, p = 1; throughput_agents_per_min 0/0/10, p = 1; mean_delay_s 0/0/0, p = 1.
+- `passed_screening`: **not used** (no rule of the set matched on any seed). severe_conflicts 0/0/10, p = 1; throughput_agents_per_min 0/0/10, p = 1; mean_delay_s 0/0/0, p = 1; collided_pairs 0/0/10, p = 1; collision_episodes 0/0/10, p = 1.
+- `cane_rule_alone`: **not used** (no rule of the set matched on any seed). severe_conflicts 0/0/10, p = 1; throughput_agents_per_min 0/0/10, p = 1; mean_delay_s 0/0/0, p = 1; collided_pairs 0/0/10, p = 1; collision_episodes 0/0/10, p = 1.
+- `all_runnable`: **not used** (no rule of the set matched on any seed). severe_conflicts 0/0/10, p = 1; throughput_agents_per_min 0/0/10, p = 1; mean_delay_s 0/0/0, p = 1; collided_pairs 0/0/10, p = 1; collision_episodes 0/0/10, p = 1.
 - Uncovered conflicts under `passed_screening` (pairs, all seeds; most frequent first): single_file_segment T4: 9, single_file_segment T3: 1.
   Rule conflicts: 0 pairs matched by several rules, 0 ambiguous matches, 0 cross-pair conflicts; plans started 0, not started because one was in force 0.
 - Uncovered conflicts under `cane_rule_alone` (pairs, all seeds; most frequent first): single_file_segment T4: 9, single_file_segment T3: 1.

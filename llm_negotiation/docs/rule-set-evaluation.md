@@ -37,6 +37,7 @@ A config says `layer: rule_set_evaluation` and gives:
 | `baseline`, `seed`, `seeds` | The baseline laid on every run (default `orca_perturbed_v1`), the base seed, and how many paired seeds (seed `seed + 1` to `seed + seeds`) |
 | `people` | `ages`, `genders` and core `factors` (a cane, a suitcase, a phone, assertiveness, ...), given to the people in a fixed mix (`negsim.rulegen.replay.mixed_population`), the same for every arm on a seed |
 | `alpha` | The sign test's level (0.05) |
+| `verdict_rule` | 1 (fixed before round 1's run) or 2 (collisions count separately; the default), section 3 |
 | `logging.trajectory_stride` | As for an avoidance run (10); the lane measure reads the trajectory |
 
 **People.** In a crowd the mix is fixed, as in crowd screening. In a scenario with few people,
@@ -62,9 +63,10 @@ which leaves priority out, is unchanged), with the reason in its provenance's `n
 version is switched on. The staged original is untouched. Which rule wins is a decision, recorded
 in the config with its reason.
 
-## 3. What "helps" means (fixed with the user before any run)
+## 3. What "helps" means (fixed with the user before any run; amended after round 1)
 
-Fixed in `WORK_LOG-74.md` (task 0), before any code or run of issue #74, by the user's choice.
+Rule 1 was fixed in `WORK_LOG-74.md` (task 0), before any code or run of issue #74, by the user's
+choice; rule 2 amends it (below).
 
 - **Unit:** each arm in each scenario, against plain ORCA on the same seeds and people (paired
   seeds, `baseline.md`, section 6); 10 seeds.
@@ -84,6 +86,16 @@ Fixed in `WORK_LOG-74.md` (task 0), before any code or run of issue #74, by the 
 | **helps** | Severe conflicts fewer, and throughput and delay not worse |
 | **trade-off** | Severe conflicts fewer, but throughput or delay worse |
 | **no change** | Anything else (worse throughput or delay alone is no change: only severe conflicts and gridlock harm) |
+
+**Rule 2: collisions count separately** (the user's decision of 2026-10-27, after round 1's run, and
+the default since: `verdict_rule: 2`). Rule 1's main measure counts a near miss and a collision
+alike (T3 + T4 pairs), so a pair that collides instead of nearly missing is not worse by it; round
+1's set 2 had fewer near misses and more collisions on every seed, and rule 1 called it a
+trade-off. Under rule 2 an arm **also harms** if **collided pairs** (T4) or **collision episodes**
+are worse by the same sign test; everything else is rule 1. Both rules' verdicts are in
+`summary.json` (`verdict_by_rule`), and the report shows rule 1's beside rule 2's where they differ.
+`alpha` and `verdict_rule` only judge finished runs: changing them re-judges the runs on disk
+without running them again.
 
 - **A rule's verdict** in a scenario is that of the arm with the rule alone. **[design]** Its overall
   reading over the scenarios takes, in order: harms anywhere, helps somewhere, a trade-off
@@ -141,7 +153,10 @@ people its rules read.
 
 - Two of the three scenarios have two people. Only the two-way flow is a crowd.
 - In the crowd, half the people carry a cane (the mix of crowd screening), which no real crowd
-  does; a rule about canes applies far more often than it would.
+  does; a rule about canes applies far more often than it would. **The user's decision of
+  2026-10-27:** simulate realistic scenarios wherever possible (people's factors at sourced, realistic
+  shares), and keep scenarios with exaggerated shares only to test rules that would rarely apply in
+  a normal one, labelled as such (a follow-up issue).
 - A rule reads a cane at any distance; Step 1's agents saw one only within 5 m.
 - The verdict is about the simulation, not about people: whether a rule is what people do is
   RF-14's question.

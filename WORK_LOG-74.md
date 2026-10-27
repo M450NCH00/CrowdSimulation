@@ -3,7 +3,7 @@
 **Issue:** https://github.com/M450NCH00/CrowdSimulation/issues/74
 **Branch:** feat/74-rf18-rule-set-crowd-runs (from `feat/108-rf31-rule-format-4`; PR #109 merged into
 `feat/67-...` on 2026-10-27, and `main` is not used in this track)
-**Started:** 2026-10-27, about 07:40 UTC
+**Started:** 2026-10-27, 07:34 UTC
 
 ## Understanding the issue
 
@@ -81,7 +81,7 @@ approval needed.
 
 ## Progress log
 
-### 2026-10-27 about 07:40 UTC — Started
+### 2026-10-27 07:34 UTC — Started
 - What I did: read #74 and #55, the replay and crowd screening code (`negsim/rulegen/replay.py`), the
   provider and database (`negsim/rules/`), `rule-matching.md`, `metrics.md`, `log-schema.md`, the
   benchmark, and RF-31's report and configs.
@@ -90,7 +90,7 @@ approval needed.
   `pair_interactions.jsonl` has what uncovered conflicts need (tier, encounter class, matches).
 - Next step: task 0, the definition of "helps", for the user to confirm before any run.
 
-### 2026-10-27 about 07:55 UTC — Task 0: what "helps" means, fixed before any run (the user's choice)
+### 2026-10-27 07:38 UTC — Task 0: what "helps" means, fixed before any run (the user's choice)
 - Asked the user, who chose the proposed rule ("Proposed rule (Recommended)"). Fixed here, before any
   code or run of this issue:
   - **Unit:** per arm and scenario, against plain ORCA on the **same seeds** (paired, `baseline.md`
@@ -119,7 +119,7 @@ approval needed.
   RF-15; RF-13 in round 2).
 - Next step: the layer (plan step 1).
 
-### 2026-10-27 about 08:30 UTC — The layer, and a clash found before any run
+### 2026-10-27 07:48 UTC — The layer, and a clash found before any run
 - What I did: `negsim/ruleset_eval/` (`experiment.py`: config, the run's own staging database, the
   runs, summary and report; `measures.py`; `verdicts.py`, the rule of task 0), wired into
   `run_experiment.py`; `StagingDatabase.copy_in` and `write_ruleset` in `negsim/rulegen/writer.py`;
@@ -146,7 +146,7 @@ approval needed.
 - Committed the build (159cf715) before the run of record, so its runs record a clean commit.
 - Next step: the run of record (150 runs), tests, the benchmark, docs.
 
-### 2026-10-27 about 08:40 UTC — Tests, the benchmark option, the doc (while the run goes)
+### 2026-10-27 07:52 UTC — Tests, the benchmark option, the doc (while the run goes)
 - Tests: `tests/test_ruleset_eval.py`, 21 passed (the sign test; every verdict; the config's
   refusals; the byte-for-byte copy and its refusal; a rule set frozen once; two clashing rules refused
   unless one gets a priority, with the canonical form unchanged; people moving on by one; **task 8**:
@@ -157,7 +157,7 @@ approval needed.
 - `negsim.rules.benchmark`: `--database`, `--ruleset`, `--people-from`; the defaults as before.
 - Doc: `docs/rule-set-evaluation.md`.
 
-### 2026-10-27 about 09:10 UTC — The run of record: 150 runs, no model call
+### 2026-10-27 07:48 to 08:27 UTC — The run of record: 150 runs, no model call
 - What I did: `python run_experiment.py configs/rule_set_evaluation/rf18_round1.yaml` at commit
   159cf715 (clean). Report: `runs/rf18_round1/evaluation_report.md` (mine) and `report.md` (written by
   the code).
@@ -189,7 +189,7 @@ approval needed.
 - The hand-written reference (`rule_db` `default`) cut severe conflicts further (439 against plain
   804 and set 1's 569) and sent 69% of the crowd left; numbers only, as D-C.
 
-### 2026-10-27 about 09:40 UTC — The cost per step (quiet machine)
+### 2026-10-27 08:28 to 08:59 UTC — The cost per step (quiet machine)
 - `python -m negsim.rules.benchmark --database runs/rf18_round1/rule_db_staging --ruleset <set>
   --people-from configs/rule_set_evaluation/rf18_round1.yaml --agents 100 1000`, for both sets, nothing
   else running; no Kernel-Power 506/507 events in the two hours before.
@@ -198,7 +198,7 @@ approval needed.
   was ×2.32 and ×2.98 (its absolute times differ: plain ORCA then took 52 ms at 100).
 - Reading: towards 10,000 agents, plain ORCA's own growth is the larger cost; the rules add about half.
 
-### 2026-10-27 about 10:20 UTC — Committing the run (after a pause: the shell's permission check failed)
+### 2026-10-27 09:30 UTC — Committing the run (after a pause: the shell's permission check failed)
 - The run folder's tracked files came to 55.5 MB, 44.0 MB of it `events.jsonl` (set 2's runs log
   tens of thousands of cross-pair conflicts and collisions). **Decision (mine): `events.jsonl` of
   RF-18's runs is not committed** either (gitignored with the other bulky logs); nothing in the
@@ -206,15 +206,32 @@ approval needed.
   exactly), so `--overwrite` rebuilds it. Committed: 11.5 MB in 469 files (`config.json`,
   `outcome.json`, `measures.json` per run; the summary, reports, benchmarks, the staging database).
 
+### 2026-10-27 10:06 UTC — The user's two decisions after the run
+- **1. "Yes collision should count separately."** Built as **verdict rule 2** (`verdicts.py`, the
+  default; config `verdict_rule`): an arm also harms if collided pairs (T4) or collision episodes are
+  worse by the same sign test. Rule 1 stays, and `summary.json` gives both (`verdict_by_rule`). `alpha`
+  and `verdict_rule` judge finished runs only, so round 1 was **re-judged from its `measures.json`, with
+  no simulation run again** (0 executed, 150 done); its `config.json` keeps the runs' time and commit
+  and adds `judged_utc` and `judged_git`. Result: set 2 **harms** (more collided pairs 9 of 10, p = 0.02;
+  more collision episodes 10 of 10, p = 0.002); the left-turn rule still **helps**; the cane rule still
+  **harms**. Tests: 3 more (24 passed).
+- **2. "Simulate as many scenarios that are realistic as possible, and only put some scenarios to
+  test some rules that can't be used in a normal scenario."** Recorded in the report, the doc's limits,
+  the README and #55. It needs sourced shares (a cane, a suitcase, a phone, age in a Singapore crowd)
+  and a population that gives exact shares (today's mix only cycles levels, so every factor is at
+  half), so it is proposed as a follow-up issue rather than built here. Until then, the cane rule's
+  "harms" is a verdict about a crowd where half carry a cane.
+- Also corrected the times of this log's entries (written by estimate, up to 1.5 hours ahead).
+
+*(The times of the entries above were first written by estimate, up to 1.5 hours ahead of the clock; corrected on 2026-10-27 from the commits, the run's `config.json` and the benchmark files.)*
+
 ## Open questions / risks
 
 1. ~~**The definition of "helps"**~~ fixed with the user before any run (entry above).
-2. **Half the crowd carries a cane** (D-E). The cane rule's harm in screening may come from that share.
+2. **Half the crowd carries a cane** (D-E). The cane rule's harm may come from that share. **The user, 2026-10-27:** realistic scenarios wherever possible; a follow-up issue.
 3. Round 1 gives one rule that changes ORCA's outcome, so set 1 is a single rule. The tool is the
    lasting part; round 1's numbers are thin.
-4. **Should collisions count separately in the verdict, for later reruns?** Proposal: an arm also
-   harms if collided pairs (T4) or collision episodes are significantly worse. Not applied to this
-   run; under it set 2 would be "harms" and set 1 would stay "helps". The user's decision.
+4. ~~Should collisions count separately?~~ **Yes, the user, 2026-10-27**: verdict rule 2 (entry above).
 5. **D-F (mine): a rule's overall reading over scenarios** puts harms first, then helps, trade-off, no
    change, not used. Both round 1 rules have only one scenario where they are used, so it changes
    nothing here.

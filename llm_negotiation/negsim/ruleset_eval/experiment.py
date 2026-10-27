@@ -36,7 +36,7 @@ from pathlib import Path
 from typing import Any, Callable, Mapping, Optional, Sequence
 
 from .. import __version__
-from ..configutil import PACKAGE_ROOT, ConfigError, as_bool, as_number, check_keys, load_yaml, resolve_path
+from ..configutil import PACKAGE_ROOT, ConfigError, as_bool, as_choice, as_number, check_keys, load_yaml, resolve_path
 from ..experiment.avoidance import AvoidanceExperiment, AvoidanceRunPlan, execute_avoidance_run, forget_rule_database
 from ..rules.database import RuleDatabase, file_sha256
 from ..rulegen.replay import database_path, mixed_population, population_of
@@ -125,6 +125,7 @@ class RuleSetEvaluationConfig:
     people: Mapping[str, Any]
     trajectory_stride: int
     alpha: float
+    verdict_rule: int = V.DEFAULT_RULE
     source: str = "<config>"
 
     @classmethod
@@ -136,7 +137,7 @@ class RuleSetEvaluationConfig:
     def from_raw(cls, raw: Any, source: str = "<config>") -> "RuleSetEvaluationConfig":
         check_keys(
             raw, source, ("layer", "experiment_name", "rules", "arms", "scenarios"),
-            ("schema_version", "description", "left_out", "baseline", "seed", "seeds", "people", "logging", "alpha"),
+            ("schema_version", "description", "left_out", "baseline", "seed", "seeds", "people", "logging", "alpha", "verdict_rule"),
         )
         if raw["layer"] != LAYER:
             raise ConfigError(f"{source}: layer must be {LAYER!r}")
@@ -202,6 +203,7 @@ class RuleSetEvaluationConfig:
             people=people,
             trajectory_stride=int(as_number(logging.get("trajectory_stride", 10), f"{source}.logging.trajectory_stride", minimum=1)),
             alpha=float(as_number(raw.get("alpha", V.ALPHA), f"{source}.alpha", minimum=0.0)),
+            verdict_rule=int(as_choice(raw.get("verdict_rule", V.DEFAULT_RULE), f"{source}.verdict_rule", V.RULES)),
             source=source,
         )
 
@@ -215,7 +217,7 @@ class RuleSetEvaluationConfig:
             "scenarios": [{"name": s.name, "scenario": s.file, "rotate_people": s.rotate_people, "note": s.note,
                            **({"scenario_overrides": dict(s.overrides)} if s.overrides else {})} for s in self.scenarios],
             "baseline": self.baseline, "seed": self.seed, "seeds": self.seeds, "people": dict(self.people),
-            "trajectory_stride": self.trajectory_stride, "alpha": self.alpha,
+            "trajectory_stride": self.trajectory_stride, "alpha": self.alpha, "verdict_rule": self.verdict_rule,
         }
 
 
@@ -345,7 +347,10 @@ def execute(run: Run, git: Mapping[str, Any], overwrite: bool = False) -> tuple[
 # --- summary and report --------------------------------------------------------------------------
 
 
-KEPT = ("status", "gridlocked", "arrived", "n_agents", "severe_conflicts", "collision_episodes", "near_misses",
+#: Config keys that change only how finished runs are judged, never a run: a change re-judges the
+#: runs on disk without running them again.
+ANALYSIS_KEYS = ("alpha", "verdict_rule")
+KEPT = ("status", "gridlocked", "arrived", "n_agents", "severe_conflicts", "tiers", "collision_episodes", "near_misses",
         "throughput_agents_per_min", "mean_delay_s", "rule_matches", "plans_started", "plans_skipped_busy", "wall_ms_per_step")
 
 
@@ -365,7 +370,8 @@ def summarise(config: RuleSetEvaluationConfig, results: Mapping[tuple[str, str, 
             mine = [results[(scenario.name, arm.name, seed)] for seed in seeds]
             entry = _arm_summary(mine)
             paired = [{"seed": seed, "arm": a, "plain": p} for seed, a, p in zip(seeds, mine, plain)]
-            entry["verdict"] = V.verdict(paired, config.alpha) if arm.judged else None
+            entry["verdict"] = V.verdict(paired, config.alpha, config.verdict_rule) if arm.judged else None
+            entry["verdict_by_rule"] = {str(rule): V.verdict(paired, config.alpha, rule)["verdict"] for rule in V.RULES} if arm.judged else None
             entry["per_seed"] = [{"seed": seed, "arm": {k: a[k] for k in KEPT}, "plain": {k: p[k] for k in KEPT}} for seed, a, p in zip(seeds, mine, plain)]
             arms[arm.name] = entry
         scenarios[scenario.name] = {"file": scenario.file, "note": scenario.note, "seeds": seeds, "arms": arms}
@@ -408,6 +414,12 @@ def _arm_summary(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _cell(entry: Mapping[str, Any], rule: int) -> str:
+    """The verdict in force, and any other rule's that differs from it."""
+    others = [f"rule {r}: {v}" for r, v in (entry.get("verdict_by_rule") or {}).items() if int(r) != rule and v != entry["verdict"]["verdict"]]
+    return entry["verdict"]["verdict"] + (f" ({'; '.join(others)})" if others else "")
+
+
 def _num(value: Any) -> str:
     return "–" if value is None else (f"{value:g}" if isinstance(value, (int, float)) else str(value))
 
@@ -415,7 +427,8 @@ def _num(value: Any) -> str:
 def report_markdown(config: RuleSetEvaluationConfig, summary: Mapping[str, Any], copied: Sequence[Mapping[str, Any]]) -> str:
     lines = [f"# {config.experiment_name}: the rule set against plain ORCA", "",
              "Machine-written by `negsim.ruleset_eval` (issue #74, RF-18). Method: `docs/rule-set-evaluation.md`. "
-             f"{config.seeds} paired seeds per scenario, baseline `{config.baseline}`, sign test at p < {config.alpha:g}.", ""]
+             f"{config.seeds} paired seeds per scenario, baseline `{config.baseline}`, sign test at p < {config.alpha:g}, "
+             f"verdict rule {config.verdict_rule} (`docs/rule-set-evaluation.md`, section 3).", ""]
     lines += ["## Rules", "", "| Rule | From | Version |", "| --- | --- | --- |"]
     lines += [f"| `{rule.rule_id}` | `{_relative(rule.database)}` | {rule.version} |" for rule in config.rules]
     if config.left_out:
@@ -424,7 +437,7 @@ def report_markdown(config: RuleSetEvaluationConfig, summary: Mapping[str, Any],
     lines += ["", "## Verdicts", "", "| Scenario | " + " | ".join(f"`{arm.name}`" for arm in config.arms if arm.judged) + " |",
               "| --- |" + " --- |" * sum(arm.judged for arm in config.arms)]
     for name, s in summary["scenarios"].items():
-        lines.append(f"| {name} | " + " | ".join(s["arms"][arm.name]["verdict"]["verdict"] for arm in config.arms if arm.judged) + " |")
+        lines.append(f"| {name} | " + " | ".join(_cell(s["arms"][arm.name], config.verdict_rule) for arm in config.arms if arm.judged) + " |")
     if summary["rule_verdicts"]:
         lines += ["", "| Rule | Arm | " + " | ".join(summary["scenarios"]) + " | Overall |", "| --- | --- |" + " --- |" * (len(summary["scenarios"]) + 1)]
         for rule_id, entry in summary["rule_verdicts"].items():
@@ -456,6 +469,11 @@ def report_markdown(config: RuleSetEvaluationConfig, summary: Mapping[str, Any],
     return "\n".join(lines)
 
 
+def _runs_part(described: Mapping[str, Any]) -> dict[str, Any]:
+    """What of a config decides the runs (everything but ``ANALYSIS_KEYS``)."""
+    return {key: value for key, value in described.items() if key not in ANALYSIS_KEYS}
+
+
 @dataclass
 class EvaluationResult:
     experiment_dir: Path
@@ -477,12 +495,16 @@ def run_evaluation(
     experiment_dir.mkdir(parents=True, exist_ok=True)
     config_path = experiment_dir / "config.json"
     described = {"layer": LAYER, "schema_version": SCHEMA_VERSION, "experiment": config.as_dict(), "software": {"negsim": __version__}}
+    created, first_git = _utc_now(), dict(git)
     if config_path.is_file():
         before = json.loads(config_path.read_text(encoding="utf-8"))
-        if before.get("experiment") != described["experiment"] and any((experiment_dir / RUNS_SUBDIR).rglob(MEASURES_FILE)) and not overwrite:
+        if _runs_part(before.get("experiment") or {}) != _runs_part(described["experiment"]) and any((experiment_dir / RUNS_SUBDIR).rglob(MEASURES_FILE)) and not overwrite:
             raise ConfigError(f"{experiment_dir}: it holds runs made with another config; give it a new experiment_name, or --overwrite")
+        if not overwrite:
+            created, first_git = before.get("created_utc", created), before.get("git", first_git)
     copied = assemble(config, experiment_dir / STAGING_DIR)
-    _write_json(config_path, {**described, "created_utc": _utc_now(), "git": dict(git), "copied": copied})
+    # ``git`` is the commit the runs were made with; ``judged_git`` the one that last judged them.
+    _write_json(config_path, {**described, "created_utc": created, "git": first_git, "judged_utc": _utc_now(), "judged_git": dict(git), "copied": copied})
     planned = runs(config, experiment_dir)
     results = {}
     for i, run in enumerate(planned, 1):

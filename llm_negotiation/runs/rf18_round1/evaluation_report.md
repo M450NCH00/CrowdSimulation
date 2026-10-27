@@ -33,11 +33,13 @@ version.
 
 ## Findings
 
-**1. The verdicts, as fixed before the run.**
+**1. The verdicts.** Rule 1 was fixed before the run; **rule 2, collisions counting separately, is the
+user's decision of 2026-10-27 after it** (`docs/rule-set-evaluation.md`, section 3), and is the
+verdict of record. They differ for set 2 only.
 
 | Scenario | Set 1 (left turn) | Cane rule alone | Set 2 (both) |
 | --- | --- | --- | --- |
-| Two-way flow, 50 + 50 | **helps** | **harms** | **trade-off** |
+| Two-way flow, 50 + 50 | **helps** | **harms** | **harms** (rule 1: trade-off) |
 | Opposing bottleneck, 2 people | no change | no change | no change |
 | Narrow passage (round 2's layout), 2 people | not used | not used | not used |
 
@@ -65,11 +67,14 @@ to 577), which is why halving the mean is not significant for set 1.
 - **The cane rule harms**: it gridlocks the flow on 2 of 10 seeds, with 2.9 times plain ORCA's
   collision episodes on average. Half this crowd carries a cane, so the rule applies far more often
   than it would in a real crowd (limitation 2).
-- **Set 2 is a trade-off by the rule fixed before the run, and that reading understates its harm.**
+- **Set 2 harms under rule 2; it was a trade-off by rule 1, the rule fixed before the run, which
+  understated its harm.**
   Its severe conflicts are fewer (9 of 10), but only because near misses are fewer: **collided pairs
   are more on 9 of 10 seeds (p = 0.02) and collision episodes more on all 10 (p = 0.002)**, and delay
-  is worse on all 10. The main measure counts a pair at T3 or T4 alike, so a pair that collides
-  instead of nearly missing is not counted as worse (open question for the user, below).
+  is worse on all 10. Rule 1's main measure counts a pair at T3 or T4 alike, so a pair that collides
+  instead of nearly missing is not counted as worse; the user decided that collisions count
+  separately (rule 2), under which set 2 harms. The left-turn rule still helps under rule 2: its
+  collisions are not worse (fewer on 7 of 10 seeds).
 - **The hand-written reference** (`keep_left_head_on` and three more, issue #28; fixtures that make
   no claim about people) cuts severe conflicts further than the extracted rule (439 against 569) and
   makes more of the crowd keep left (69%), with collisions and throughput as plain ORCA's and delay a
@@ -138,15 +143,15 @@ of a rule step is matching; the rest is the different motion the rules cause.
 - **The rules of round 1 cover head-ons only.** Most of what goes wrong in the flow is overtaking,
   and the passage is a single-file meeting; rounds 2 and 3 are aimed at exactly these.
 
-## Open questions for the user
+## The user's decisions after the run (2026-10-27)
 
-1. **Should collisions count separately in the verdict?** The rule fixed before the run counts a near
-   miss and a collision alike (T3 + T4). Set 2 shows the cost: fewer near misses hide more collisions.
-   A proposal for the reruns after later rounds, **not applied to this run**: an arm also **harms** if
-   collided pairs (T4) or collision episodes are significantly worse. Under it, set 2 would be
-   "harms" and the left-turn rule would stay "helps".
-2. **The share of canes in the crowd** (half, from crowd screening's mix) decides how often the cane
-   rule applies. A realistic share would need a source.
+1. **Collisions count separately** (rule 2, above): set 2 harms; the other verdicts are unchanged.
+   Re-judged from the runs' `measures.json`, with no simulation run again.
+2. **Realistic scenarios wherever possible.** Half this crowd carries a cane (crowd screening's mix),
+   which decides how often the cane rule applies: its "harms" is a verdict about a crowd that does not
+   exist. People's factors should come at sourced, realistic shares, with scenarios of exaggerated
+   shares kept only to test rules that would rarely apply in a normal one, and labelled so. The cane
+   rule's verdict is to be redone in a realistic crowd (a follow-up issue).
 
 ## Limitations
 

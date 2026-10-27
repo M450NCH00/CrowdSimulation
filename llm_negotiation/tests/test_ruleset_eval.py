@@ -54,8 +54,9 @@ def test_ties_and_missing_values_are_dropped_from_the_test():
     assert result["direction"] == V.SAME
 
 
-def row(severe, throughput=60.0, delay=1.0, gridlocked=False, matches=1):
-    return {"severe_conflicts": severe, "throughput_agents_per_min": throughput, "mean_delay_s": delay, "gridlocked": gridlocked, "rule_matches": matches}
+def row(severe, throughput=60.0, delay=1.0, gridlocked=False, matches=1, collided=5, episodes=5):
+    return {"severe_conflicts": severe, "throughput_agents_per_min": throughput, "mean_delay_s": delay, "gridlocked": gridlocked,
+            "rule_matches": matches, "tiers": {"T4": collided}, "collision_episodes": episodes}
 
 
 def paired(arm_rows, plain_rows):
@@ -65,6 +66,7 @@ def paired(arm_rows, plain_rows):
 def test_the_verdicts_follow_the_rule_fixed_before_any_run():
     plain = [row(10, matches=0)] * 10
     assert V.verdict(paired([row(5)] * 10, plain))["verdict"] == V.HELPS
+    assert V.verdict(paired([row(5)] * 10, plain), rule=1)["verdict"] == V.HELPS
     assert V.verdict(paired([row(5, throughput=50.0)] * 10, plain))["verdict"] == V.TRADE_OFF
     assert V.verdict(paired([row(5, delay=2.0)] * 10, plain))["verdict"] == V.TRADE_OFF
     assert V.verdict(paired([row(15)] * 10, plain))["verdict"] == V.HARMS
@@ -77,6 +79,32 @@ def test_the_verdicts_follow_the_rule_fixed_before_any_run():
     assert gridlock["verdict"] == V.HARMS and gridlock["new_gridlock_seeds"] == [9]
     # costs alone, with severe conflicts unchanged, are no change (only severe conflicts and gridlock harm)
     assert V.verdict(paired([row(10, throughput=30.0)] * 10, plain))["verdict"] == V.NO_CHANGE
+
+
+def test_under_rule_2_more_collisions_harm_where_rule_1_saw_fewer_severe_conflicts():
+    # Round 1's set 2: fewer near misses, so fewer severe conflicts, but more collisions.
+    plain = [row(10, matches=0, collided=3, episodes=3)] * 10
+    more_collided = [row(8, collided=6, episodes=3)] * 10
+    more_episodes = [row(8, collided=3, episodes=9)] * 10
+    assert V.verdict(paired(more_collided, plain), rule=1)["verdict"] == V.HELPS
+    assert V.verdict(paired(more_collided, plain), rule=2)["verdict"] == V.HARMS
+    assert "more collided pairs" in V.verdict(paired(more_collided, plain))["reasons"][0]
+    assert V.verdict(paired(more_episodes, plain))["verdict"] == V.HARMS
+    assert "collided_pairs" not in V.verdict(paired(more_episodes, plain), rule=1)["tests"]
+    # fewer collisions never help by themselves: severe conflicts decide
+    assert V.verdict(paired([row(10, collided=1, episodes=1)] * 10, plain))["verdict"] == V.NO_CHANGE
+    with pytest.raises(ValueError):
+        V.verdict(paired(more_collided, plain), rule=3)
+
+
+def test_a_change_of_verdict_rule_rejudges_the_runs_without_running_them_again(tmp_path):
+    E.run_evaluation(config(verdict_rule=1), out_root=tmp_path, report=lambda _: None, git=GIT)
+    again = E.run_evaluation(config(verdict_rule=2), out_root=tmp_path, report=lambda _: None, git={"commit": "later", "dirty": False})
+    assert (again.executed, again.skipped) == (0, 4)
+    saved = json.loads((tmp_path / "t" / "config.json").read_text(encoding="utf-8"))
+    assert saved["git"] == GIT and saved["judged_git"]["commit"] == "later" and saved["experiment"]["verdict_rule"] == 2
+    arm = again.summary["scenarios"]["head_on"]["arms"]["both"]
+    assert arm["verdict"]["rule"] == 2 and set(arm["verdict_by_rule"]) == {"1", "2"}
 
 
 def test_a_rules_reading_over_scenarios_puts_harm_first():
@@ -95,7 +123,7 @@ def test_the_round_1_config_loads_with_the_users_priority_for_the_cane_rule():
     assert rules["ext_head_on_6455ca5589"].priority == 600 and rules["ext_head_on_6455ca5589"].enabled_version == 3
     assert rules["ext_head_on_0ecc2d1a6e"].priority is None and rules["ext_head_on_0ecc2d1a6e"].enabled_version == 2
     assert [arm.name for arm in loaded.arms if not arm.judged] == ["reference_default"]
-    assert (loaded.seeds, loaded.alpha, loaded.seed) == (10, 0.05, 30900)
+    assert (loaded.seeds, loaded.alpha, loaded.seed, loaded.verdict_rule) == (10, 0.05, 30900, 2)
 
 
 @pytest.mark.parametrize("change, message", [
@@ -103,6 +131,7 @@ def test_the_round_1_config_loads_with_the_users_priority_for_the_cane_rule():
     ({"arms": [{"name": "a", "rules": ["no_such_rule"]}]}, "not listed"),
     ({"arms": [{"name": "a", "rules": ["keep_left_head_on"], "database": "rule_db", "ruleset": "default"}]}, "either"),
     ({"arms": [{"name": "a", "database": "rule_db"}]}, "ruleset"),
+    ({"verdict_rule": 3}, "verdict_rule"),
     ({"rules": {"keep_left_head_on": {"from": "rule_db", "version": 1, "priority": 50}}, "arms": [{"name": "a", "rules": ["keep_left_head_on"]}]}, "reason"),
 ])
 def test_a_config_that_cannot_be_run_as_asked_is_refused(change, message):
