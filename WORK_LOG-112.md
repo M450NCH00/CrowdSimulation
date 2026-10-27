@@ -93,7 +93,7 @@ Session 2 (build and run):
   phone, against 50 of each in RF-18's crowd.
 - Next step: the design questions for the user (`docs/population-profiles.md`, section 4).
 
-### 2026-10-27 10:24 UTC — The user's four decisions, before any profile or code
+### 2026-10-27 11:14 UTC — The user's four decisions, before any profile or code
 - Asked four questions; the user chose the proposed option each time:
   1. **Age mix: SingStat residents** (not Elche's observed mix, not a reweighting).
   2. **From age 10.**
