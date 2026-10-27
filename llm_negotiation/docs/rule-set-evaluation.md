@@ -156,7 +156,7 @@ people its rules read.
   does; a rule about canes applies far more often than it would. **The user's decision of
   2026-10-27:** simulate realistic scenarios wherever possible (people's factors at sourced, realistic
   shares), and keep scenarios with exaggerated shares only to test rules that would rarely apply in
-  a normal one, labelled as such (a follow-up issue).
+  a normal one, labelled as such (RF-33, #112).
 - A rule reads a cane at any distance; Step 1's agents saw one only within 5 m.
 - The verdict is about the simulation, not about people: whether a rule is what people do is
   RF-14's question.

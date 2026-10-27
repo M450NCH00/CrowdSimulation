@@ -151,7 +151,7 @@ of a rule step is matching; the rest is the different motion the rules cause.
    which decides how often the cane rule applies: its "harms" is a verdict about a crowd that does not
    exist. People's factors should come at sourced, realistic shares, with scenarios of exaggerated
    shares kept only to test rules that would rarely apply in a normal one, and labelled so. The cane
-   rule's verdict is to be redone in a realistic crowd (a follow-up issue).
+   rule's verdict is to be redone in a realistic crowd: RF-33 (#112).
 
 ## Limitations
 
