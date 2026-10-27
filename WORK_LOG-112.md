@@ -250,6 +250,6 @@ carried a cane.
   profile's SingStat counts checked against the cached table.
 - The 150 stress runs reproduce RF-18's 150 runs exactly.
 - Full suite: 2,164 passed, 10 skipped, no failure (at 99aeab8c; after the flag and seeds change,
-  `test_ruleset_eval.py` and `test_populations.py` again, 65 passed, and the full suite once more
-  before the PR is updated, below).
+  `test_ruleset_eval.py` and `test_populations.py` again, 65 passed; full suite at 9dd81864,
+  14:46 to 15:13 UTC: **2,166 passed, 10 skipped, no failure**).
 - No model call; USD 0.
