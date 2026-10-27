@@ -340,6 +340,11 @@ def test_a_rules_verdict_of_record_comes_from_its_realistic_scenarios():
     assert verdicts["by_scenario"] == {"real": V.NOT_USED, "stressed": V.HARMS}
     assert verdicts["by_purpose"] == {"realistic": V.NOT_USED, "stress": V.HARMS}
     assert verdicts["overall"] == V.NOT_USED and verdicts["of_record_from"] == "realistic"  # stress never on its own
+    assert verdicts["flag"] == E.HARMS_WHERE_COMMON  # harms where its factor is common: flagged for RF-14
+    # no flag where the verdict of record is harms too, or the stress verdict is not
+    both_harm = {key: (filled[("stressed", "keep_left_alone", key[2])] if key[1] == "keep_left_alone" else value) for key, value in filled.items()}
+    assert E.summarise(loaded, both_harm)["rule_verdicts"]["keep_left_head_on"]["flag"] is None
+    assert "flag" not in E.summarise(config(), {})["rule_verdicts"].get("keep_left_head_on", {})  # no purposes: as before
 
 
 def test_a_run_with_a_population_gives_every_arm_the_same_people_and_reports_them(tmp_path):
@@ -362,3 +367,30 @@ def test_a_run_with_a_population_gives_every_arm_the_same_people_and_reports_the
     report = (tmp_path / "t" / "report.md").read_text(encoding="utf-8")
     assert "People: `configs/populations/singapore_street_v1.yaml` (realistic, quotas)" in report and "flow (realistic)" in report
     assert "Of record (realistic)" in report
+
+
+def test_a_scenario_may_have_its_own_number_of_seeds():
+    loaded = config(scenarios=[scenario(name="many", seeds=3), scenario(name="few")], seeds=1)
+    many, few = loaded.scenarios
+    assert [p.seed for p in E.base_plans(loaded, many)] == [101, 102, 103] and [p.seed for p in E.base_plans(loaded, few)] == [101]
+    assert loaded.as_dict()["scenarios"][0]["seeds"] == 3 and "seeds" not in loaded.as_dict()["scenarios"][1]
+    with pytest.raises(ConfigError, match="seeds"):
+        config(scenarios=[scenario(seeds=0)])
+
+
+def test_more_seeds_resume_the_runs_on_disk_and_are_recorded(tmp_path):
+    first = config(scenarios=[scenario()], arms=[{"name": "keep_left_alone", "rules": ["keep_left_head_on"]}],
+                   rules={"keep_left_head_on": {"from": "rule_db", "version": 1}}, seeds=1)
+    E.run_evaluation(first, out_root=tmp_path, report=lambda _: None, git=GIT)
+    more = config(scenarios=[scenario(seeds=2)], arms=[{"name": "keep_left_alone", "rules": ["keep_left_head_on"]}],
+                  rules={"keep_left_head_on": {"from": "rule_db", "version": 1}}, seeds=1)
+    again = E.run_evaluation(more, out_root=tmp_path, report=lambda _: None, git={"commit": "later", "dirty": False})
+    assert (again.executed, again.skipped) == (2, 2)  # seed 101 kept, seed 102 run for both arms
+    saved = json.loads((tmp_path / "t" / "config.json").read_text(encoding="utf-8"))
+    assert saved["git"] == GIT and saved["seeds_changed"][0]["from"] == {"head_on": 1} and saved["seeds_changed"][0]["to"] == {"head_on": 2}
+    assert saved["seeds_changed"][0]["git"]["commit"] == "later"
+    assert again.summary["scenarios"]["head_on"]["seeds"] == [101, 102]
+    with pytest.raises(ConfigError, match="another config"):  # any other change is still refused
+        E.run_evaluation(config(scenarios=[scenario(seeds=2, note="x")], arms=[{"name": "keep_left_alone", "rules": ["keep_left_head_on"]}],
+                                rules={"keep_left_head_on": {"from": "rule_db", "version": 1}}, seeds=1),
+                         out_root=tmp_path, report=lambda _: None, git=GIT)

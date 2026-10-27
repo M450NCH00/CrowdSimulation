@@ -1,6 +1,7 @@
-# Issue #112 (RF-33): round 1 again, in a realistic crowd. The same rules, arms, seeds and verdict rule as
-# RF-18 (configs/rule_set_evaluation/rf18_round1.yaml, issue #74); only the people change. Each scenario
-# runs twice:
+# Issue #112 (RF-33): round 1 again, in a realistic crowd. The same rules, arms, base seed and verdict rule
+# as RF-18 (configs/rule_set_evaluation/rf18_round1.yaml, issue #74); the people change, and the realistic
+# scenarios have 30 seeds instead of 10 (the user's decision, 2026-10-27: more seeds where a factor is
+# rare; first run with 10, then extended). Each scenario runs twice:
 #   *_realistic  people at sourced shares (configs/populations/singapore_street_v1.yaml), the verdict of record;
 #   *_stress     RF-18's people, every factor at about half (configs/populations/stress_all_factors_v1.yaml),
 #                labelled as such: it shows whether a rule works where it applies (the user's decision of
@@ -57,17 +58,20 @@ arms:                        # [design, D-B, D-C]
 
 scenarios:                   # [design, D-D of issue #74] RF-18's three, each realistic and stress (issue #112)
   - name: flow_realistic
+    seeds: 30                # [the user's decision, 2026-10-27, issue #112] more seeds where a factor is rare; the first 10 are the runs of 10 seeds
     scenario: configs/scenarios/bidirectional_flow.yaml
     population: configs/populations/singapore_street_v1.yaml
     purpose: realistic
     note: The two-way flow, 50 + 50, people at sourced shares, new people on every seed.
   - name: bottleneck_realistic
+    seeds: 30
     scenario: configs/scenarios/corridor_to_bottleneck.yaml
     population: configs/populations/singapore_street_v1.yaml
     purpose: realistic
     pool: 100                # [design] the pair is the first two of a crowd of 100 at exact shares, a new pair on every seed
     note: Two people from opposite ends of a single-file segment, drawn from a realistic crowd.
   - name: passage_realistic
+    seeds: 30
     scenario: configs/scenarios/passage_meet_middle_v1.yaml
     population: configs/populations/singapore_street_v1.yaml
     purpose: realistic
@@ -93,7 +97,7 @@ scenarios:                   # [design, D-D of issue #74] RF-18's three, each re
 
 baseline: orca_perturbed_v1  # the primary baseline, as crowd screening
 seed: 30900                  # [design] crowd screening's base seed, so seeds 30901 and 30902 are RF-31's screening runs
-seeds: 10                    # [the user's choice, task 0] 10 paired seeds per scenario
+seeds: 10                    # [the user's choice, task 0] 10 paired seeds per scenario; the realistic ones have 30 (above)
 alpha: 0.05                  # [the user's choice, task 0] exact two-sided sign test
 verdict_rule: 2              # [the user's decision, 2026-10-27, after the run] collisions count separately: an arm also harms if
                              # collided pairs (T4) or collision episodes are worse. Rule 1 (task 0's, before the run) is kept beside it
