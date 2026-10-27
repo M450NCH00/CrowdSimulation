@@ -129,6 +129,42 @@ class StagingDatabase:
         self._write_manifest(manifest)
         return name, True
 
+    def copy_in(self, source: Path | str, note: str) -> tuple[str, bool]:
+        """Freeze a copy of a rule file frozen in another database (issue #74): the same text,
+        line endings LF, under the same name. The same text again writes nothing; other text
+        under a frozen name is refused."""
+        source = Path(source)
+        name = f"rules/{source.name}"
+        path = self.root / name
+        text = source.read_text(encoding="utf-8").replace("\r\n", "\n")
+        manifest = self.manifest()
+        if name in manifest["files"] or path.is_file():
+            if path.is_file() and path.read_text(encoding="utf-8").replace("\r\n", "\n") == text:
+                return name, False
+            raise WriterError(f"{name} is frozen with other contents; a change is the next version, never an edit")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8", newline="\n")
+        manifest["files"][name] = {"sha256": file_sha256(path), "frozen_on": date.today().isoformat(), "note": note}
+        self._write_manifest(manifest)
+        return name, True
+
+    def write_ruleset(self, name: str, rules: Mapping[str, int], description: str) -> tuple[str, bool]:
+        """Freeze a named rule set (issue #74), as ``rule_db/rulesets/`` holds them. The same set
+        again writes nothing; another set under a frozen name is refused."""
+        relative = f"rulesets/{name}.yaml"
+        path = self.root / relative
+        text = yaml.safe_dump({"name": name, "description": description, "rules": dict(rules)}, sort_keys=False, allow_unicode=True, width=100)
+        manifest = self.manifest()
+        if relative in manifest["files"] or path.is_file():
+            if path.is_file() and path.read_text(encoding="utf-8").replace("\r\n", "\n") == text:
+                return relative, False
+            raise WriterError(f"{relative} is frozen with another set; a different set is a new file with a new name")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8", newline="\n")
+        manifest["files"][relative] = {"sha256": file_sha256(path), "frozen_on": date.today().isoformat(), "note": "a rule set of RF-18 (issue #74)"}
+        self._write_manifest(manifest)
+        return relative, True
+
     def load(self) -> RuleDatabase:
         return RuleDatabase.load(self.root)
 

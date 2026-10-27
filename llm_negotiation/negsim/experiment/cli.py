@@ -20,6 +20,8 @@ A config that says ``layer: resolution`` is a resolution experiment (issue #58):
 meet in conflict cases and are asked what they do.
 A config that says ``layer: rule_extraction`` extracts rules from resolution experiments'
 results (issue #66, Step 2).
+A config that says ``layer: rule_set_evaluation`` runs the staged rules together against plain
+ORCA, in several scenarios, on paired seeds (issue #74, RF-18); no model is called.
 A config that says ``layer: rule_translation`` translates extracted rules into rule format 3,
 then replays and screens them (issue #67, RF-12).
 ``--plan`` prints its sessions and worst-case cost; with ``--client deepseek`` it writes the
@@ -44,6 +46,8 @@ from ..resolution.experiment import cli_run as run_resolution
 from ..resolution.experiment import is_resolution_config
 from ..rulegen.experiment import cli_run as run_rule_generation
 from ..rulegen.experiment import is_rule_generation_config
+from ..ruleset_eval.experiment import cli_run as run_rule_set_evaluation
+from ..ruleset_eval.experiment import is_rule_set_evaluation_config
 from ..translation.experiment import cli_run as run_rule_translation
 from ..translation.experiment import is_translation_config
 from .avoidance import AvoidanceExperiment, is_avoidance_config, run_avoidance_experiment
@@ -103,6 +107,10 @@ def main(argv: Optional[list[str]] = None) -> int:
             if args.overwrite:
                 raise ConfigError("--overwrite does not apply to a rule translation, which resumes and never rewrites a translation")
             return run_rule_translation(args)
+        if is_rule_set_evaluation_config(raw):
+            if args.confirm:
+                raise ConfigError("--confirm does not apply to a rule-set evaluation, which calls no model")
+            return run_rule_set_evaluation(args)
         if args.confirm:
             raise ConfigError("--confirm applies only to rule-generation, resolution, rule-extraction and rule-translation experiments")
         if is_avoidance_config(raw):

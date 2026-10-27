@@ -17,6 +17,11 @@ The two modes start alike and then drift apart, because the rules change how the
 move. The difference in time per step therefore mixes the cost of matching with the cost
 of a slightly different crowd; the time inside the provider is the cost of matching alone.
 
+Issue #74 (RF-18) adds ``--database`` and ``--ruleset``, to time another rule set (a staging
+database's), and ``--people-from``, a rule-set evaluation config whose ``people`` (ages, genders,
+canes, assertiveness, ...) the crowd is given in the same mix, so that a rule reading them can
+apply; with it, everything a format 4 rule may read is visible. Without them it is as before.
+
 This is a measurement. It has no pass mark.
 """
 
@@ -29,7 +34,7 @@ import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Mapping, Optional
 
 from ..avoidance.benchmark import SCENARIO, corridor_for, environment
 from ..avoidance.directives import NullProvider
@@ -79,12 +84,29 @@ def _spec(n_agents: int, gap: float):
     return build_crowd_scenario(load_scenario_config(SCENARIO, overrides)), baseline
 
 
-def _time_once(mode: str, n_agents: int, steps: int, gap: float, seed: int) -> dict[str, Any]:
+def _people(people: Optional[Mapping[str, Any]], n_agents: int) -> tuple[Optional[dict[int, dict[str, Any]]], dict[str, bool]]:
+    """The crowd's attributes and what is visible: none and the defaults, or (issue #74) a
+    rule-set evaluation's mix of people with everything a format 4 rule reads visible."""
+    if people is None:
+        return None, default_visibility()
+    from ..rulegen.replay import mixed_population
+    from ..translation.experiment import visible_for
+
+    mixed = mixed_population(n_agents, people["ages"], people["genders"], people.get("factors"))
+    return {agent: dict(person) for agent, person in mixed.items()}, visible_for(4)
+
+
+def _time_once(
+    mode: str, n_agents: int, steps: int, gap: float, seed: int,
+    database: str = "rule_db", ruleset: str = RULESET, people: Optional[Mapping[str, Any]] = None,
+) -> dict[str, Any]:
     """Step one simulation ``steps`` times in one mode, timing each step."""
     spec, baseline = _spec(n_agents, gap)
-    provider = NullProvider() if mode == "plain" else _TimedProvider(RuleDatabase.load().activate(RULESET), default_visibility())
+    attributes, visibility = _people(people, len(spec.agents))
+    provider = NullProvider() if mode == "plain" else _TimedProvider(RuleDatabase.load(resolve_path(database)).activate(ruleset), visibility)
     simulation = AvoidanceSimulation(
-        spec, provider=provider, seed=seed, perturbation=baseline.perturbation, record_trajectory=False
+        spec, provider=provider, seed=seed, perturbation=baseline.perturbation, record_trajectory=False,
+        attributes=attributes, visibility=visibility,
     )
     durations, open_pairs = [], []
     for _ in range(steps):
@@ -115,12 +137,15 @@ def _time_once(mode: str, n_agents: int, steps: int, gap: float, seed: int) -> d
     return entry
 
 
-def measure(n_agents: int, steps: int, gap: float, repeats: int, seed: int = 1) -> dict[str, Any]:
+def measure(
+    n_agents: int, steps: int, gap: float, repeats: int, seed: int = 1,
+    database: str = "rule_db", ruleset: str = RULESET, people: Optional[Mapping[str, Any]] = None,
+) -> dict[str, Any]:
     """Time both modes ``repeats`` times each, in turn, and compare their medians."""
     runs: dict[str, list[dict[str, Any]]] = {mode: [] for mode in MODES}
     for _ in range(repeats):
         for mode in MODES:
-            runs[mode].append(_time_once(mode, n_agents, steps, gap, seed))
+            runs[mode].append(_time_once(mode, n_agents, steps, gap, seed, database, ruleset, people))
     row: dict[str, Any] = {"agents": runs["plain"][0]["agents"], "steps_timed": steps, "repeats": repeats}
     for mode in MODES:
         means = [entry["ms_per_step_mean"] for entry in runs[mode]]
@@ -144,15 +169,25 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser.add_argument("--repeats", type=int, default=3, help="times each mode is timed, in turn with the other")
     parser.add_argument("--gap", type=float, default=6.0, help="metres between the two crowds at the start")
     parser.add_argument("--out", type=Path, help="write the results to this JSON file")
+    parser.add_argument("--database", default="rule_db", help="the rule database (under llm_negotiation/), e.g. a staging database (issue #74)")
+    parser.add_argument("--ruleset", default=RULESET, help="the rule set of that database to time (issue #74)")
+    parser.add_argument("--people-from", type=Path, help="a rule-set evaluation config whose people the crowd is given (issue #74)")
     args = parser.parse_args(argv)
     if args.repeats < 1 or args.steps < 1:
         parser.error("--repeats and --steps must be at least 1")
+    people = None
+    if args.people_from is not None:
+        from ..ruleset_eval.experiment import RuleSetEvaluationConfig
+
+        people = dict(RuleSetEvaluationConfig.load(args.people_from).people)
 
     report: dict[str, Any] = {
         "benchmark": "bidirectional_flow, rule-matching overhead per simulation step",
         "scenario": SCENARIO,
         "baseline": BASELINE,
-        "ruleset": RULESET,
+        "database": args.database,
+        "ruleset": args.ruleset,
+        **({"people_from": str(args.people_from), "people": people} if people is not None else {}),
         "run_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "git": git_state(),
         "gap_m": args.gap,
@@ -161,7 +196,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     }
     for n_agents in args.agents:
         print(f"{n_agents} agents: timing {args.steps} steps, plain and with rules, {args.repeats} times each ...", file=sys.stderr, flush=True)
-        row = measure(n_agents, args.steps, args.gap, args.repeats)
+        row = measure(n_agents, args.steps, args.gap, args.repeats, database=args.database, ruleset=args.ruleset, people=people)
         report["results"].append(row)
         print(
             f"  {row['agents']:>6} agents  plain {row['plain']['ms_per_step_mean_median']:>9.2f} ms/step  "
