@@ -115,9 +115,9 @@ runs/<experiment>/
   config.json             the config, the software, the git state, every file copied
   rule_db_staging/        the run's own database (section 2)
   runs/<scenario>/<arm>/<seed>/
-    config.json outcome.json events.jsonl   as for any avoidance run (log-schema.md)
+    config.json outcome.json   as for any avoidance run (log-schema.md)
     measures.json         every measure of section 4, the run's wall time
-    interactions.jsonl pair_interactions.jsonl trajectory.csv   not committed (about 25 MB a crowd run)
+    events.jsonl interactions.jsonl pair_interactions.jsonl trajectory.csv   not committed (about 25 MB a crowd run)
   summary.json            per scenario and arm: means, paired seeds, tests, verdict, rule and uncovered conflicts; rule verdicts
   report.md               the same, as tables
 ```

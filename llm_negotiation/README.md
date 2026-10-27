@@ -110,7 +110,8 @@ of paid runs and a cap for its round, recorded in `CLAUDE.md`.
   actions as steps) and round 1 translated again (*done*: `docs/rule-format.md` section 15,
   `negsim/rules/plans.py`, `docs/rule-translation.md` section 13,
   `runs/rf31_round1_head_on/translation_report.md`); RF-18 (#74) all rules so far with ORCA on
-  crowds and an unseen scenario, against plain ORCA, rerun after every round (*in progress*); RF-32
+  crowds and an unseen scenario, against plain ORCA, rerun after every round (*done*:
+  `negsim/ruleset_eval/`, `docs/rule-set-evaluation.md`, `runs/rf18_round1/evaluation_report.md`); RF-32
   (#110) three or four people meeting head-on; RF-14 (#69) Step 3, verification against human
   evidence; RF-15 (#70) results summary for the interim report (25 January 2027). *The user's
   order of 2026-10-27:* RF-18 before RF-32 and RF-14, so that a rule is first run in the

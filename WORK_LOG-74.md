@@ -157,11 +157,90 @@ approval needed.
 - `negsim.rules.benchmark`: `--database`, `--ruleset`, `--people-from`; the defaults as before.
 - Doc: `docs/rule-set-evaluation.md`.
 
+### 2026-10-27 about 09:10 UTC — The run of record: 150 runs, no model call
+- What I did: `python run_experiment.py configs/rule_set_evaluation/rf18_round1.yaml` at commit
+  159cf715 (clean). Report: `runs/rf18_round1/evaluation_report.md` (mine) and `report.md` (written by
+  the code).
+- **Check:** seeds 30901 and 30902 of the flow reproduce RF-31's screening runs exactly (plain ORCA,
+  the left-turn rule, the cane rule: status, time, collisions and every tier count), although the
+  rules are copies, and the cane rule a new version (v3, priority 600).
+- **Verdicts, by the rule fixed before the run:**
+  - flow: set 1 (left turn) **helps** (severe conflicts fewer on 10 of 10 seeds; throughput and delay
+    better on 9 of 10); the cane rule alone **harms** (gridlock on seeds 30902 and 30904); set 2
+    **trade-off** (severe fewer on 9 of 10, delay worse on 10 of 10);
+  - bottleneck: **no change** for all three (the pair is a single-file meeting until the last two
+    steps, so the rule's plan starts too late);
+  - passage: **not used** for all three (plain ORCA deadlocks on every seed; the pair is
+    `single_file_segment` throughout, which no round 1 rule covers).
+  - Per rule: `ext_head_on_0ecc2d1a6e` **helps**, `ext_head_on_6455ca5589` **harms**.
+- **Exploratory, after the run (not part of the verdict):** sign tests on collided pairs (T4) and
+  collision episodes. Set 2 has **more collided pairs on 9 of 10 seeds (p = 0.02) and more collision
+  episodes on 10 of 10 (p = 0.002)**: its fewer severe conflicts are fewer near misses only. The main
+  measure (T3 + T4 pairs) cannot see a near miss turning into a collision. The left-turn rule's gain is
+  in near misses too (T3 10 of 10); its collisions are fewer on 7 of 10, not significant. **I did not
+  change the verdicts after seeing the data**; the report gives both readings and asks the user about
+  a fix for later reruns (open question 4).
+- Uncovered conflicts: overtaking dominates the flow under every rule arm (set 2: 15,368 pairs at T1
+  or above), then crossing; single-file meetings in the two small scenarios. Both are rounds 2 and 3's
+  scenarios already, so nothing new is proposed.
+- Rule conflicts: 0 pairs matched by several extracted rules; 31,094 cross-pair conflicts in set 2
+  (the cane rule's slowing spreads, the smallest scale applying); under the left-turn rule 45,373
+  matches did not start a plan because one was in force (4,077 did).
+- The hand-written reference (`rule_db` `default`) cut severe conflicts further (439 against plain
+  804 and set 1's 569) and sent 69% of the crowd left; numbers only, as D-C.
+
+### 2026-10-27 about 09:40 UTC — The cost per step (quiet machine)
+- `python -m negsim.rules.benchmark --database runs/rf18_round1/rule_db_staging --ruleset <set>
+  --people-from configs/rule_set_evaluation/rf18_round1.yaml --agents 100 1000`, for both sets, nothing
+  else running; no Kernel-Power 506/507 events in the two hours before.
+- Set 1: ×1.84 at 100 agents, ×1.51 at 1,000; set 2: ×1.73 and ×1.57; matching is 35 to 38% of a rule
+  step. Plain ORCA: 70 ms a step at 100, 687 at 1,000 (about tenfold). Issue #28's hand-written set
+  was ×2.32 and ×2.98 (its absolute times differ: plain ORCA then took 52 ms at 100).
+- Reading: towards 10,000 agents, plain ORCA's own growth is the larger cost; the rules add about half.
+
+### 2026-10-27 about 10:20 UTC — Committing the run (after a pause: the shell's permission check failed)
+- The run folder's tracked files came to 55.5 MB, 44.0 MB of it `events.jsonl` (set 2's runs log
+  tens of thousands of cross-pair conflicts and collisions). **Decision (mine): `events.jsonl` of
+  RF-18's runs is not committed** either (gitignored with the other bulky logs); nothing in the
+  verdicts reads it, and the runs are deterministic (the first two seeds reproduced RF-31's runs
+  exactly), so `--overwrite` rebuilds it. Committed: 11.5 MB in 469 files (`config.json`,
+  `outcome.json`, `measures.json` per run; the summary, reports, benchmarks, the staging database).
+
 ## Open questions / risks
 
 1. ~~**The definition of "helps"**~~ fixed with the user before any run (entry above).
 2. **Half the crowd carries a cane** (D-E). The cane rule's harm in screening may come from that share.
 3. Round 1 gives one rule that changes ORCA's outcome, so set 1 is a single rule. The tool is the
    lasting part; round 1's numbers are thin.
+4. **Should collisions count separately in the verdict, for later reruns?** Proposal: an arm also
+   harms if collided pairs (T4) or collision episodes are significantly worse. Not applied to this
+   run; under it set 2 would be "harms" and set 1 would stay "helps". The user's decision.
+5. **D-F (mine): a rule's overall reading over scenarios** puts harms first, then helps, trade-off, no
+   change, not used. Both round 1 rules have only one scenario where they are used, so it changes
+   nothing here.
+6. "Covered" means a rule matched the pair at some point (the bottleneck's pair counts as covered
+   although it was a single-file meeting for most of its encounter). A stricter count (the share of a
+   pair's evaluations matched) could come later.
 
 ## Summary (fill in at the end)
+
+**What changed.** A new layer, `rule_set_evaluation` (`negsim/ruleset_eval/`, run by
+`run_experiment.py`): staged rules switched on together, in a staging database of the run's own
+(copied byte for byte, one rule set per arm, a new priority only as a new version with a reason),
+against plain ORCA on paired seeds in several scenarios; measures (severe conflicts, collisions,
+throughput, delay, lane formation, rule conflicts, uncovered conflicts); verdicts by the rule fixed
+with the user before any run (`verdicts.py`); `summary.json` and `report.md`. `StagingDatabase`
+gained `copy_in` and `write_ruleset`; `negsim.rules.benchmark` gained `--database`, `--ruleset` and
+`--people-from`. Round 1's run of record: `runs/rf18_round1/` (`evaluation_report.md`).
+
+**Why.** #74, reordered by the user on 2026-10-27 to come before RF-14: an extracted rule is first
+run in the simulation (does it help?), then checked against human evidence.
+
+**Result.** The left-turn rule helps in the two-way flow; the cane rule harms; together they are a
+trade-off by the agreed rule, which understates harm (collisions up on every seed). Neither rule
+applies to single-file meetings (the bottleneck, the narrow passage). What no rule covers: overtaking,
+then single-file meetings: rounds 2 and 3. Cost ×1.5 to ×1.6 per step at 1,000 agents.
+
+**How it was verified.** `tests/test_ruleset_eval.py` (21 tests, including task 8's two hand-made
+rules together and an unmatched conflict logged); the run's first two flow seeds reproduce RF-31's
+screening runs exactly; the benchmark run on a quiet machine. Full suite: see the PR.
