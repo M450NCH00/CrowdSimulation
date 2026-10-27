@@ -1,0 +1,83 @@
+# Issue #74 (RF-18), after round 1: the staged rules of track #55 switched on together, with ORCA
+# for every pair they do not match, against plain ORCA on paired seeds. No model is called, so it
+# costs nothing. Method: docs/rule-set-evaluation.md; decisions D-A to D-F in WORK_LOG-74.md.
+#
+#   python run_experiment.py configs/rule_set_evaluation/rf18_round1.yaml --plan
+#   python run_experiment.py configs/rule_set_evaluation/rf18_round1.yaml
+#
+# What "helps" means was fixed with the user before any run (WORK_LOG-74.md, task 0).
+# Later rounds: copy this file under a new experiment_name, add the round's rules and arms.
+schema_version: 1
+layer: rule_set_evaluation
+experiment_name: rf18_round1
+description: >
+  Round 1's runnable staged rules (rule format 4, RF-31), alone and together, and rule_db's
+  hand-written default set as a reference, against plain ORCA in the two-way flow, the opposing
+  bottleneck and the narrow passage of round 2.
+
+rules:                       # [design, D-A] one translation per extracted rule: RF-31's format 4, which replaces RF-12's format 3
+  ext_head_on_0ecc2d1a6e:    # both turn 10° left from 9.8 m until the other passes; passed crowd screening
+    from: runs/rf31_round1_head_on/rule_db_staging/extracted
+    version: 2
+  ext_head_on_6455ca5589:    # whoever faces a person with a cane slows; failed crowd screening (gridlock on seed 30902)
+    from: runs/rf31_round1_head_on_retry/rule_db_staging/extracted
+    version: 2
+    priority: 600            # [the user's choice, 2026-10-27] the narrower rule wins where both match; switched on as v3
+    reason: >
+      Both translations have priority 500 and both match a head-on in which one person has a cane, so the loader refuses
+      them together (ambiguous). The user chose that the narrower rule wins where both match (the cane rule), so that
+      set 2 can run; the left-turn rule applies to every other head-on.
+
+left_out:
+  - rule: ext_head_on_aacce0961b (RF-31, format 4)
+    reason: refused by the loader since RF-31 (constant_roles); its roles hold for both people, so it never matched
+  - rule: ext_head_on_4eb7a97c8d (RF-11)
+    reason: not expressible in either format (signalling and speaking); nobody signals in ORCA
+  - rule: RF-12's three format 3 translations (0ecc2d1a6e, 6455ca5589, aacce0961b)
+    reason: replaced by RF-31's format 4 translations of the same rules (D-A); two act as plain ORCA
+
+arms:                        # [design, D-B, D-C]
+  - name: passed_screening
+    rules: [ext_head_on_0ecc2d1a6e]
+    description: Set 1, the rules that passed crowd screening (one rule after round 1).
+  - name: cane_rule_alone
+    rules: [ext_head_on_6455ca5589]
+    description: The retried cane rule alone, for its own verdict.
+  - name: all_runnable
+    rules: [ext_head_on_0ecc2d1a6e, ext_head_on_6455ca5589]
+    description: Set 2, every runnable staged rule, including those that failed screening.
+  - name: reference_default
+    database: rule_db
+    ruleset: default
+    judged: false
+    description: rule_db's hand-written seed rules of issue #28 (keep left head-on and three more), numbers only.
+
+scenarios:                   # [design, D-D]
+  - name: flow
+    scenario: configs/scenarios/bidirectional_flow.yaml
+    note: The two-way flow, 50 + 50, as crowd screening.
+  - name: bottleneck
+    scenario: configs/scenarios/corridor_to_bottleneck.yaml
+    rotate_people: true
+    note: Two people from opposite ends of a single-file segment.
+  - name: passage
+    scenario: configs/scenarios/passage_meet_middle_v1.yaml
+    rotate_people: true
+    note: A scenario no rule was extracted from, round 2's narrow passage (two people meet inside it).
+
+baseline: orca_perturbed_v1  # the primary baseline, as crowd screening
+seed: 30900                  # [design] crowd screening's base seed, so seeds 30901 and 30902 are RF-31's screening runs
+seeds: 10                    # [the user's choice, task 0] 10 paired seeds per scenario
+alpha: 0.05                  # [the user's choice, task 0] exact two-sided sign test
+
+people:                      # [design, D-E] RF-31's screening population
+  ages: [25, 70]
+  genders: [female, male]
+  factors:
+    mobility_aid: [none, cane]
+    load: [none, large_suitcase]
+    distraction: [none, phone]
+    assertiveness: [gives_way, holds_ground]
+
+logging:
+  trajectory_stride: 10      # as crowd screening; the lane measure reads the trajectory
