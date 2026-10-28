@@ -57,6 +57,19 @@ human number) keeps the first N members; the rest stay plain ORCA, and the sessi
 it left out. The **conflict pairs** are the two who started it and every other pair of members
 predicted to be in conflict at the start; the outcome counts only them (section 7).
 
+**Small groups** (issue #110, RF-32). Two hooks of the scenario say who can start an encounter
+(`Scenario.trigger_pairs`; by default the case's two, each way) and which of its pairs count
+(`Scenario.conflict_pairs`; by default the rule above); with their defaults every earlier plug-in
+behaves exactly as before. `passing_group` (cases of type `group_head_on`) lets any two people
+walking opposite ways start it, the case's two checked first; puts everyone in the case in it,
+nearest first; and counts every pair walking opposite ways, predicted in conflict or not (in 2 v 2
+the diagonal pairs start outside the conflict reach and can still be walked into). Two people of
+one group are not a conflict pair, but a collision between them fails each conflict pair of
+theirs, since the outcome counts a collision with anyone (section 7). A person walking side by
+side with a friend is told so, and on which side, in a block of the scenario's own (WHO YOU ARE
+WITH): someone abreast is outside the 75° view cone. All three are assumptions of the issue's build
+(`WORK_LOG-110.md`).
+
 ## 3. Decision points (D5)
 
 **The first prompt of each member** needs D4 to hold for it, toward any other member (an
@@ -250,7 +263,11 @@ factor of this layer: since issue #92 track #55 uses real ethnicity instead (`et
 `ethnicity_visible`; `ethnicity.md`), and a paid run that varies it needs its ethics sign-off. A cell run more than once (`repeats` > 1, or a cell of
 `exact_repeats`) is in the exact-repeat set (D14). RF-7 (#62) added the screening designs: a
 fraction or a sample instead of every cell, geometries, a balanced exact-repeat set and
-counterfactual pairs (`screening-designs.md`). **Resume:** a session with a record is read back,
+counterfactual pairs (`screening-designs.md`). Issue #110 added `design.others: {age, gender}`: a
+persona for everyone in the case beyond the design's two (by default they have none), with
+`gender` `female`, `male` or `as_companion` (the design person in their group), a routine errand and
+the base level of every core factor the design varies; not with real ethnicity or a pairwise
+factor. Their rows are in `others` (`outcomes.jsonl`). **Resume:** a session with a record is read back,
 never run or written again (tested byte for byte); an aborted one is kept as
 `<id>.aborted<n>.json` and runs again; the replays and the tables are rebuilt from the records.
 `log-schema.md`, "Resolution experiments", lists every file and field.

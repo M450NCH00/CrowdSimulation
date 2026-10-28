@@ -314,6 +314,19 @@ Rounds 1 to 3 use two-person cases. Train boarding (round 4) and the queue (roun
 than two people prompted in one encounter. Their build issues add that, with a cap on prompted
 people per encounter as a cost limit (D12).
 
+**Amended by the user, 2026-10-27, for issue #110 (RF-32) only.** Round 1 is run once more with
+three and four people, 2 v 1 (two people side by side meet one) and 2 v 2 (two pairs meet), in
+round 1's corridor and geometries, independent condition only, to ask whether the agents resolve a
+head-on as pairs did and whether round 1's rules still describe them. Every other round 1 to 3
+issue keeps two-person cases. *As built (#110):* the scenario type `group_head_on` and case set
+`rf32_group_v1` (`cases.md`, section 10); the plug-in `passing_group`, in which everyone in the
+case is in the encounter (cap 4), every pair walking opposite ways is a conflict pair, and a person
+walking side by side with a friend is told so (template `scenario_passing_group_v1`, block WHO YOU
+ARE WITH); `design.others`, a persona for everyone beyond the design's two
+(`encounter-protocol.md`, sections 2 and 8). The choices that are not the user's (the companion
+block, who joins, the conflict pairs, the side-by-side spacing of 0.63 m from Zanlungo et al. 2017,
+the design) are in `WORK_LOG-110.md`.
+
 ## D12. Values
 
 | Item | Value | Status |

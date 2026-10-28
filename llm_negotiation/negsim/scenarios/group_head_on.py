@@ -71,11 +71,7 @@ class GroupHeadOnScenario(CrowdScenario):
         return CrowdLayout(tuple(placements), walls)
 
     def check(self, spec: CrowdScenarioSpec) -> None:
-        half_width = spec.geometry["width"] / 2.0
-        for agent in spec.agents:
-            y = agent.start.xy[1]
-            if abs(y) + agent.radius > half_width:
-                raise ConfigError(f"scenario '{self.type_name}': agent {agent.agent_id} at y = {y} m starts inside a wall")
+        # A body overlapping a wall is refused by CrowdScenario.build for every scenario.
         for side in (EASTBOUND, WESTBOUND):
             mine = sorted((agent.start.xy[1], agent) for agent in spec.agents if agent.group == side)
             for (y0, a), (y1, b) in zip(mine, mine[1:]):
