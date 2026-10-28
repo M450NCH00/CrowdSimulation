@@ -1,0 +1,114 @@
+# Issue #117 (RF-35): encounters sampled from crowds. Step 1: do the LLM agents resolve a conflict
+# inside a crowd?
+#
+#   python run_experiment.py configs/resolution/rf35_crowd_encounters.yaml --plan
+#   python run_experiment.py configs/resolution/rf35_crowd_encounters.yaml --out runs_mock/rf35   # mock rehearsal
+#
+# PAID RUN: not yet approved (CLAUDE.md, pending item 1). Once the user records the approval and cap:
+#   python run_experiment.py configs/resolution/rf35_crowd_encounters.yaml --client deepseek --confirm
+# off-peak, a pilot with --limit first.
+#
+# The user's decisions of 2026-10-28 (track #55, issue #117): sample encounters from crowds rather
+# than prompt whole crowds; two densities, 25 and 50 people per way in RF-18's two-way flow; the
+# independent condition; everyone beyond the design's two drawn from RF-33's realistic profile.
+#
+# - Cases: rf35_crowd_v1 (configs/cases/rf35_crowd_cases_v1.yaml), 8 pairs from plain-ORCA flows,
+#   two per density and tier (T3, T4).
+# - Plug-in: passing_crowd (by the cases' type): the two who start the encounter, then anyone still
+#   walking within 10 m predicted to conflict with either, nearest first; at most 4 prompted (D11,
+#   D12); everyone else stays ORCA and is seen by the prompted people.
+# - Design [mine]: a balanced sample of 8 cells of RF-32's four factors on person 1 (age, gender, a cane,
+#   assertiveness); urgency and a phone fixed at their base level for the design's two, so that a
+#   bystander's phone is shown to whoever sees them (a factor is rendered only if the design has it).
+#   No suitcase: it widens a body (issue #60), which would change the crowd's run, and its 1% is a
+#   placeholder; design.others.population refuses it. 8 cells x 8 cases = 64, plus an exact-repeat set of 4 cells x 3: 72 sessions.
+# - Bystanders: design.others.population (issue #117), exact shares of singapore_street_v1, drawn
+#   per case and cell (an exact repeat has the same people).
+# - As RF-32 (round1_group_head_on_orca_groups.yaml): resolve_v6, resolve_factors_v2, keep_line,
+#   waiting for plans, deepseek-flash at 1.0, reply cap 300.
+# - protocol.orca_within_groups [mine, applying the user's RF-32 decision]: in the flow a run's group is
+#   its walking direction, so ORCA keeps people walking the same way apart and the plans alone decide
+#   between people walking opposite ways. protocol.distance_to_partner [mine, after RF-34]: in a crowd
+#   the nearest person in view at the trigger may be a stranger, not the partner.
+schema_version: 1
+layer: resolution
+experiment_name: rf35_crowd_encounters
+description: >-
+  RF-35, Step 1 in crowds: encounters sampled from RF-18's two-way flow at 25 and 50 people per way,
+  up to 4 people prompted, the rest ORCA; independent condition; bystanders from the realistic profile.
+
+cases:
+  store: cases
+  ids:
+    - flow_1b5b9b8d@1   # 25 per way, T3
+    - flow_b0c1353e@1   # 25 per way, T3
+    - flow_06018e0c@1   # 25 per way, T4
+    - flow_61f018fc@1   # 25 per way, T4
+    - flow_32e86a8e@1   # 50 per way, T3
+    - flow_826d5092@1   # 50 per way, T3
+    - flow_9274de21@1   # 50 per way, T4
+    - flow_bf8bfa07@1   # 50 per way, T4
+
+conditions: [independent]
+
+design:
+  kind: sample                   # 8 balanced cells of the 16 (the fractional kind has 16 or 32)
+  cells: 8
+  seed: 117
+  base_age: 25
+  age_difference: 45
+  exact_repeats:
+    cells: 4
+    times: 3
+  others:
+    population: configs/populations/singapore_street_v1.yaml
+  factors:
+    age_pair: [same, p1_older]
+    gender_pair: [p1_female, p1_male]
+    mobility_aid: [neither, p1]    # person 1 walks with a cane
+    assertiveness: [neither, p1]   # person 1 holds their ground
+    urgency: [neither]             # both routine
+    distraction: [neither]         # base level only: a bystander's phone is shown
+    mapping: [p1_higher]
+    demographics_visible: [true]
+
+# The same gate as RF-10, RF-30 and RF-32.
+resolution_gate:
+  plan_only_resolved_min: 0.50
+  reason: >-
+    RF-10's gate (WORK_LOG-65.md), unchanged: the plan_only rate over the design's sessions (exact
+    repeats left out). An encounter is resolved only if every conflict pair is. Reported by density
+    beside RF-30's pairs (0.55 independent) and RF-32's groups (0.06).
+
+protocol:
+  max_decision_points: 3            # D5 (the independent condition has one)
+  min_gap_s: 1.0                    # D5
+  no_conflict_end_s: 1.0            # [placeholder]
+  max_prompted: 4                   # D11, D12
+  speech_words_per_second: 2.5      # [placeholder]
+  execution: keep_line              # as RF-30 and RF-32
+  no_conflict_waits_for_plans: true # as RF-30 and RF-32
+  orca_within_groups: true          # [mine] the user's RF-32 decision: in the flow, a group is a walking direction
+  distance_to_partner: true         # [mine] RF-34's fix: distances checked against the partner
+
+templates:
+  core: resolve_v6
+  debrief: resolve_debrief_v1
+  factors: resolve_factors_v2       # as RF-30 and RF-32 (no ethnicity line: the design does not vary it)
+
+llm_view: configs/resolution/llm_view_v1.yaml
+factor_values: configs/resolution/factors_v1.yaml
+
+llm:
+  client: mock
+  mock_policy: resolution_rehearsal_v1
+  model: deepseek-flash
+  temperature: 1.0
+  max_tokens: 300
+  thinking: disabled
+  transport_retries: 2
+
+budget:
+  cap_usd: 0.0            # not approved yet: set to the cap the user approves for #117 (CLAUDE.md)
+  ledger: spend_ledger.jsonl
+  over_cap: stop_at_cap

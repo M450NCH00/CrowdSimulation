@@ -90,6 +90,13 @@ person walking in their group, for a case whose scenario has groups), a routine 
 base level of every core factor the design varies, so that their own lines and what others see of
 them render as the design's two people's do. Not with real ethnicity or a pairwise factor, which
 are drawn or set for the two only. A config without it is as before.
+
+Issue #117 (RF-35): ``others: {population: configs/populations/<name>.yaml}`` draws everyone else
+from a population profile instead (``negsim.populations``, exact shares, ``quota_people``): their age,
+gender and every core factor the design varies, at the profile's level or at its base level, with a
+routine errand. The draw is seeded by the design's seed, the case and the cell, so every session of
+one case and cell (an exact repeat) has the same people, and a different case or cell different ones.
+Not with ``load``: a suitcase widens a body, which would change the case's run.
 """
 
 from __future__ import annotations
@@ -104,6 +111,7 @@ from typing import Any, Mapping, Optional, Sequence
 
 from ..configutil import ConfigError, as_number, check_keys, resolve_path
 from ..personas.schema import ATTRIBUTES, FACTOR_ATTRIBUTES
+from ..populations import Profile, quota_people
 from ..rulegen.design import DEFAULT_TASKS, FACTOR_LEVELS as RULEGEN_LEVELS, personas_of, visibility_of
 from .ethnicity import (
     DIFFERENT, DRAW_BALANCED, DRAW_REAL, DRAWS, ETHNICITY_FACTORS, GROUPS, PAIR_FACTOR, PAIR_LEVELS, SAME, SHARES_CONFIG, SWITCH_FACTOR,
@@ -217,12 +225,16 @@ class CounterfactualPair:
 
 @dataclass(frozen=True)
 class OthersSpec:
-    """Issue #110: the persona of everyone in a case beyond the design's two people."""
+    """Issue #110: the persona of everyone in a case beyond the design's two people. Issue #117:
+    or ``population``, a profile they are drawn from (``age`` and ``gender`` then ``None``)."""
 
-    age: int
-    gender: str
+    age: Optional[int]
+    gender: Optional[str]
+    population: Optional[str] = None
 
     def as_dict(self) -> dict[str, Any]:
+        if self.population is not None:  # issue #117
+            return {"population": self.population}
         return {"age": self.age, "gender": self.gender}
 
 
@@ -330,7 +342,17 @@ class ResolutionDesign:
         if kind not in KINDS:
             raise ConfigError(f"{where}.kind: one of {list(KINDS)}, got {kind!r}")
         others = None
-        if raw.get("others") is not None:  # issue #110
+        if raw.get("others") is not None and isinstance(raw["others"], Mapping) and "population" in raw["others"]:  # issue #117
+            block = check_keys(raw["others"], f"{where}.others", ("population",), ())
+            drawn_for_two = [name for name in factors if name in ETHNICITY_FACTORS or name in PAIRWISE_FACTORS or name in PAIRWISE_SWITCH_FACTORS]
+            if drawn_for_two:
+                raise ConfigError(f"{where}.others: not with {drawn_for_two}, which are drawn or set for the design's two people only")
+            if "load" in factors:  # a suitcase widens a body (issue #60); only the design's two have a radius set
+                raise ConfigError(f"{where}.others.population: not with load, which would widen bystanders' bodies and change the case's run")
+            population = str(block["population"])
+            Profile.load(resolve_path(population))  # refused here if it does not load
+            others = OthersSpec(None, None, population)
+        elif raw.get("others") is not None:  # issue #110
             block = check_keys(raw["others"], f"{where}.others", ("gender",), ("age",))
             if block["gender"] not in OTHER_GENDERS:
                 raise ConfigError(f"{where}.others.gender: one of {list(OTHER_GENDERS)}, got {block['gender']!r}")
@@ -570,11 +592,25 @@ def personas_for(
 
 def others_for(
     cell: Mapping[str, Any], people: Mapping[int, Mapping[str, Any]], others: Mapping[int, Optional[int]], design: "ResolutionDesign",
+    key: str = "",
 ) -> dict[int, dict[str, Any]]:
     """Issue #110: the personas of everyone beyond the design's two (``others``: each such agent, and
-    the design person walking in their group, or ``None``), as ``design.others`` says."""
+    the design person walking in their group, or ``None``), as ``design.others`` says. Issue #117:
+    with a ``population``, drawn from it, seeded by ``key``."""
     spec = design.others
     out = {}
+    if spec.population is not None:  # issue #117
+        profile = Profile.load(resolve_path(spec.population))
+        agents = sorted(int(agent) for agent in others)
+        drawn = quota_people(profile, len(agents), f"{design.seed}:{key}")
+        for index, agent in enumerate(agents):
+            person = drawn[index]
+            persona: dict[str, Any] = {"age": person["age"], "gender": person["gender"], "task": design.tasks["routine"], "urgency": "routine"}
+            for name in PERSON_FACTORS:
+                if name in cell and name != "urgency":
+                    persona[name] = person.get(name, ATTRIBUTES[name].levels[0])
+            out[agent] = persona
+        return out
     for agent, companion in sorted(others.items()):
         if spec.gender == AS_COMPANION:
             if companion is None:
@@ -782,7 +818,7 @@ def sessions_for(
     def everyone(entry: Mapping[str, Any]) -> dict[int, dict[str, Any]]:
         people = personas_for(entry["cell"], entry["agents"], design, groups_of(entry))
         if design.others is not None:  # issue #110
-            people.update(others_for(entry["cell"], people, others_of[entry["case_id"]], design))
+            people.update(others_for(entry["cell"], people, others_of[entry["case_id"]], design, ":".join(map(str, entry["_unit"]))))
         return people
 
     return [
