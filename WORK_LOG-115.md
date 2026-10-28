@@ -124,6 +124,31 @@ and D5), do groups resolve more often than in RF-32's independent run, and near 
   `distance_to_partner: true`.
 - `groups.py`: the report no longer crashes without `--pairs`.
 
+### 2026-10-28 11:02 UTC — the paid run of record, all 72 sessions (off-peak)
+- From a clean tree (commit `5ef775d`). Calls 11:02:17 to 11:29:42 UTC (ledger), run ended 11:32:45
+  with its replays. 990 calls, **USD 0.150197**, all off-peak, no transport error.
+- #115's spend: USD 0.168796 of the USD 0.20 cap. Balance after: **USD 0.39** (0.56 before).
+
+### 2026-10-28, about 11:35 UTC — the analysis and the report
+- `python -m negsim.resolution.groups ... --pairs runs/rf30_round1_head_on_keep_line --pairs-condition
+  non_verbal --against runs/rf32_round1_group_head_on_orca_groups`, RF-32's six arms.
+- Result (`runs/rf34_round1_group_head_on_non_verbal_partner/group_report.md`):
+  - **9 of 64 design sessions resolved in `plan_only` (0.14, CI 0.08 to 0.25)**, against RF-32's 4 of 64
+    and RF-30's non-verbal pairs' 37 of 64 (Fisher p < 0.0001). Paired with RF-32: 9 here only, 4 there
+    only, **none in both**, 51 neither (sign test p = 0.27).
+  - 58 collisions, all with an oncoming person (60 collision events, none between friends), 6.0 to 7.7 s.
+  - Resolved conflict pairs 37 (RF-32: 21): right to right 20, left to left 4; single file passed cleanly
+    11 of 14 (RF-32: 2 of 8).
+  - 48 signals (nods, raised hands); decision points: 2.85 a person, the last at 4.4 s (median), the
+    first collision 1.7 s after it; RF-30's pairs also 4.4 s.
+  - No distance refusal (unreadable 10 of 722: 8 `start` written as an event, 2 unknown `until`).
+  - Rules: as RF-32 (left turn resolves 64 of 64 under ORCA; no rule reproduces the agents).
+  - Holds ground and did not slow: 15 of 32 (RF-32: 20 of 32).
+- Checked before writing: every number against `analysis/group_summary.json`, `group_sessions.json`,
+  the replays' `events.jsonl` (collision partners) and the ledger; one sentence about why first plans
+  lean right reworded, since the run cannot tell its cause.
+- `CLAUDE.md` (balance), `README.md` (RF-34's row).
+
 ## Open questions / risks
 
 - **Design (mine, same as RF-32's):** nothing is changed but the condition, so the run pairs with
