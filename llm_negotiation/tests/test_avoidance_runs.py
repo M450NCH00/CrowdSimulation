@@ -523,7 +523,7 @@ def test_every_committed_run_folder_still_passes_the_schema_check():
         if config_path.parent.parent.name.startswith(("c0_", "c1_", "c2_")):
             assert config["log_schema_version"] == 1 and "run_kind" not in config
     assert versions[1] == 66  # 54 no-LLM runs and 12 paid ones, as issue #24 left them
-    assert versions[5] == 16 + 560 + 16 + 8  # issue #32: the in-passage case sources and behaviour checks; issue #60: the passage case sources with the pair 0.3 m apart; issue #110: the group head-on case sources
+    assert versions[5] == 16 + 560 + 16 + 8 + 4  # issue #32: the in-passage case sources and behaviour checks; issue #60: the passage case sources with the pair 0.3 m apart; issue #110: the group head-on case sources; issue #117: RF-35's crowd flow sources
     assert kinds["avoidance"] == versions[2] + versions[3] + versions[4] + versions[5]
 
 

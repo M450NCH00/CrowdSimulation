@@ -143,6 +143,11 @@ condition; bystanders drawn from RF-33's realistic profile `singapore_street_v1`
 - `test_ethnicity`'s list of configs now includes RF-35's (the same factor template as RF-32), with a note.
 - `crowd_report.md` written; README row; `CLAUDE.md` balance.
 
+### 2026-10-28 16:15 to 16:45 UTC — full suite
+- 2,212 passed, 10 skipped, 2 failed (27 min 56 s): the two exact counts that new committed cases and
+  source runs break (`test_avoidance_runs`: version-5 run folders +4, RF-35's flow sources;
+  `test_resolution`: crowd cases +8). Both updated with a note; both pass.
+
 ## Open questions / risks
 
 - Same-direction people in an encounter are treated as one "group" by `orca_within_groups` and by the
