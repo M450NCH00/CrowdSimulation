@@ -9,10 +9,12 @@ from ...configutil import ConfigError
 from ..scenario import Scenario
 from .passing import PassingScenario
 from .passing_crowd import PassingCrowdScenario
+from .passing_group import PassingGroupScenario
 
 PLUGINS: dict[str, type[Scenario]] = {
     "passing": PassingScenario,
     "passing_crowd": PassingCrowdScenario,
+    "passing_group": PassingGroupScenario,  # issue #110
 }
 
 
@@ -40,4 +42,4 @@ def plugin_for(case: Mapping[str, Any], named: Optional[str] = None) -> str:
     return found[0]
 
 
-__all__ = ["PLUGINS", "PassingCrowdScenario", "PassingScenario", "load_scenario", "plugin_for"]
+__all__ = ["PLUGINS", "PassingCrowdScenario", "PassingGroupScenario", "PassingScenario", "load_scenario", "plugin_for"]

@@ -264,3 +264,38 @@ round 2 result on these cases is therefore not comparable, number for number, wi
 issue #32's. The extraction report is `cases/extractions/rf5_passage_v1.json`. *Tested:*
 `tests/test_factors.py` (every case of the set takes a loaded person under both mappings, and
 every case of `si32_passage_v1` is refused).
+
+## 10. The case set of issue #110
+
+**Why.** RF-32 (issue #110) asks whether LLM agents resolve a head-on as pairs did when three or
+four people meet (`resolution.md`, D11, as amended for that issue). The head-on scenario holds two
+people, so the cases come from a new scenario type, `group_head_on`
+(`configs/scenarios/group_head_on.yaml`): round 1's corridor, word for word, with `eastbound` and
+`westbound` listing each person's line of travel. People walking one way start abreast, a pair
+0.63 m apart centre to centre (the abreast distance of 716 leisure dyads in Zanlungo et al. 2017,
+*PLOS ONE* 12(11): e0187253, Table 1; `refs/rf32_zanlungo2017_arxiv.txt`). `wide_corridor_head_on`
+is unchanged.
+
+**`rf32_group_v1`**: from `configs/cases/rf32_group_cases_v1.yaml`, by `si3_cases_v1.yaml`'s rules
+but for `min_tier: T3` (so that the case's pair came within the near-miss distance under the
+baseline, as every round 1 head-on pair did) and one stratum per layout. The source is
+`runs/rf32_source_group_head_on` (`configs/cases/rf32_source_group_head_on.yaml`, the primary
+baseline, plain ORCA, 8 runs: four layouts, two repeats, from a clean tree at `c288360`). A case is
+one pair of a 3- or 4-person run, as a flow case is one pair of a 100-person run; the plug-in
+`passing_group` brings everyone else of the case into the encounter (`encounter-protocol.md`,
+section 2). Companions, side by side from the start, form with class `none` and are not eligible.
+
+| Case | Layout | Lines of travel, eastbound; westbound (m) | Case's pair | Baseline: closest gap of the pair | Source run, pair |
+|---|---|---|---|---|---|
+| `group_75a57582` | 2 v 1, aligned | 0.315, -0.315; 0.0 | 1, 2 | 0.005 m (T3) | `rf32_source_group_head_on/001_2v1_aligned_r1`, pair 2 |
+| `group_6bc7f193` | 2 v 1, 20 cm apart | 0.415, -0.215; -0.1 | 1, 2 | 0.013 m (T3) | `.../003_2v1_apart_20cm_r1`, pair 2 |
+| `group_37a3c705` | 2 v 2, aligned | 0.315, -0.315; 0.315, -0.315 | 1, 2 | 0.000 m (T3) | `.../005_2v2_aligned_r1`, pair 4 |
+| `group_206147b4` | 2 v 2, 20 cm apart | 0.415, -0.215; 0.215, -0.415 | 1, 2 | 0.000 m (T3) | `.../008_2v2_apart_20cm_r2`, pair 4 |
+
+"20 cm apart" shifts each group 10 cm to its own left, as round 1's `apart_20cm` shifts each person.
+Under the baseline everyone arrives in every run, and every head-on pair passes within the near-miss
+distance (T3), as in round 1; in 2 v 2 the diagonal pairs meet too (pair 4 of each, agents 1 and 2,
+started 0.63 m apart, the case's pair). **The corridor is round 1's, 1.75 m wide**: four bodies
+abreast (2.0 m) do not fit, so in 2 v 2 someone must fall in behind; three abreast leave 0.25 m in
+all. The extraction report is `cases/extractions/rf32_group_v1.json`. *Tested:*
+`tests/test_rf32_group.py`.

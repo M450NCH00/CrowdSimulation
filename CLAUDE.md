@@ -117,6 +117,8 @@ Budget:
   checked 2026-10-26 (0.63 just before it).
   After issue #108's translation and its retry (USD 0.0029 in the ledger, cap 0.05):
   **USD 0.62**, checked 2026-10-26 (the endpoint shows two decimals; 0.62 just before it too).
+  After issue #110's run with its pilot (USD 0.0619 in the ledger, cap 0.15): **USD 0.56**,
+  checked 2026-10-28 (0.62 just before it).
 
 ### Phase 1 (on hold): the behaviour dataset
 The task from the first supervisor meeting, on hold since the second meeting.
@@ -195,7 +197,7 @@ The user's notes from the meeting, word for word:
   each simulator. Rules may be more specific, for example "keep left".
 
 ## Pending sign-offs
-Items 1, 5 and 6 are still pending (item 1 was approved for issues #64, #65, #98, #100, #101, #104, #66, #67 and #108 only).
+Items 1, 5 and 6 are still pending (item 1 was approved for issues #64, #65, #98, #100, #101, #104, #66, #67, #108 and #110 only).
 **Do not treat any of them as approved** until the user records the
 supervisor's answer in this file, with a date. Items 2 and 3, the ethics
 sign-offs for perceived attractiveness and real ethnicity, were recorded by the
@@ -266,6 +268,11 @@ used in this track). Numbers in brackets are the decisions of track issue #55.
      unreadable translation (`x_head_on_6455ca5589`) as a further paid call, inside the
      same cap: USD 0.05 for #108's calls together, of which USD 0.0025 was spent before
      the retry (`experiment_name: rf31_round1_head_on_retry`, its own cap the rest).
+   - **Approved for issue #110 only, 2026-10-28:** the user approved paid runs for RF-32's
+     round 1 with three or four people (#110), and only for it, with a cap of **USD 0.15** on that
+     experiment's own calls (`experiment_name: rf32_round1_group_head_on`; 72 sessions, independent
+     condition only, about USD 0.07 off-peak from RF-10's measured cost per call, `WORK_LOG-110.md`).
+     The user also answered "Run as built" to the issue's design choices listed there.
 2. **Approved by the supervisor, 2026-10-24** — Ethics sign-off for perceived
    attractiveness as a factor (#55, 3). *The user decided on 2026-10-24* that
    attractiveness (both directions) is **in** RF-10's design, because bias can

@@ -65,6 +65,7 @@ SCENARIO_SHORT = {
     "corridor_to_bottleneck": "bottleneck",
     "bidirectional_flow": "flow",
     "passage_meeting": "passage",  # issue #32
+    "group_head_on": "group",  # issue #110
 }
 #: What a stratum may be made of. ``experiment``, the source experiment (issue #32), tells apart
 #: two scenarios of one type whose experiments name their levels alike.

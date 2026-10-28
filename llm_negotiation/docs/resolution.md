@@ -260,7 +260,16 @@ velocity. An empty plan there changes nothing, so empty plans reproduce the plai
 - `until` is asked of the scenario.
 
 After the last step the agent walks on to its goal. `parameters.md`, section 8.5, gives each
-definition. A replay runs a session's plans on its case's own run and seed, in either mode,
+definition.
+
+**Amended by the user, 2026-10-28 (issue #110): people walking together.** In an encounter with
+groups, `plan_only` left ORCA out between every two members, friends walking side by side
+included, and RF-32's pilot lost 3 of 8 sessions to friends walking into each other before they met
+anyone. With `protocol.orca_within_groups: true` ORCA still keeps two members of one group (the
+run's `group`) apart, as it does walls and everyone else; the plans alone decide only between
+people walking opposite ways, which is what this mode measures. The encounter goes back to ORCA when
+every pair of different groups has passed. Off by default, and named in a record only when on, so
+every earlier record replays exactly as before. A replay runs a session's plans on its case's own run and seed, in either mode,
 under `runs/<experiment>/replay/<session_id>/<mode>/`. It is rebuilt byte for byte from the
 session record alone (`python -m negsim.resolution.replay ... --verify`; `log-schema.md`).
 
@@ -313,6 +322,19 @@ so the baselines and old configs behave exactly as before.
 Rounds 1 to 3 use two-person cases. Train boarding (round 4) and the queue (round 6) need more
 than two people prompted in one encounter. Their build issues add that, with a cap on prompted
 people per encounter as a cost limit (D12).
+
+**Amended by the user, 2026-10-27, for issue #110 (RF-32) only.** Round 1 is run once more with
+three and four people, 2 v 1 (two people side by side meet one) and 2 v 2 (two pairs meet), in
+round 1's corridor and geometries, independent condition only, to ask whether the agents resolve a
+head-on as pairs did and whether round 1's rules still describe them. Every other round 1 to 3
+issue keeps two-person cases. *As built (#110):* the scenario type `group_head_on` and case set
+`rf32_group_v1` (`cases.md`, section 10); the plug-in `passing_group`, in which everyone in the
+case is in the encounter (cap 4), every pair walking opposite ways is a conflict pair, and a person
+walking side by side with a friend is told so (template `scenario_passing_group_v1`, block WHO YOU
+ARE WITH); `design.others`, a persona for everyone beyond the design's two
+(`encounter-protocol.md`, sections 2 and 8). The choices that are not the user's (the companion
+block, who joins, the conflict pairs, the side-by-side spacing of 0.63 m from Zanlungo et al. 2017,
+the design) are in `WORK_LOG-110.md`.
 
 ## D12. Values
 

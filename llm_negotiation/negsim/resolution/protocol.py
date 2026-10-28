@@ -133,10 +133,15 @@ class ProtocolSettings:
     #: Issue #65: the encounter does not end on ``no_conflict`` while a member's plan is still
     #: waiting or running (RF-9: 3 of 16 such sessions collided afterwards, nobody asked again).
     no_conflict_waits_for_plans: bool = False
+    #: Issue #110 (the user's decision, 2026-10-28): in ``plan_only``, ORCA still keeps apart two
+    #: members of one group (the run's ``group``: people walking together), and plans alone decide
+    #: only between members of different groups. RF-32's pilot lost 3 of 8 sessions to friends
+    #: walking into each other before they met anyone.
+    orca_within_groups: bool = False
 
     KEYS = (
         "max_decision_points", "min_gap_s", "no_conflict_end_s", "max_prompted", "speech_words_per_second", "execution",
-        "no_conflict_waits_for_plans",
+        "no_conflict_waits_for_plans", "orca_within_groups",
     )
 
     def __post_init__(self) -> None:
@@ -150,6 +155,8 @@ class ProtocolSettings:
             raise ConfigError(f"protocol.execution: one of {EXECUTIONS}, got {self.execution!r}")
         if not isinstance(self.no_conflict_waits_for_plans, bool):
             raise ConfigError(f"protocol.no_conflict_waits_for_plans: true or false, got {self.no_conflict_waits_for_plans!r}")
+        if not isinstance(self.orca_within_groups, bool):
+            raise ConfigError(f"protocol.orca_within_groups: true or false, got {self.orca_within_groups!r}")
 
     @classmethod
     def from_mapping(cls, raw: Any, where: str = "protocol") -> "ProtocolSettings":
@@ -163,6 +170,7 @@ class ProtocolSettings:
             speech_words_per_second=as_number(block.get("speech_words_per_second", default.speech_words_per_second), f"{where}.speech_words_per_second", minimum=0.0, strict_minimum=True),
             execution=as_choice(block.get("execution", default.execution), f"{where}.execution", EXECUTIONS),
             no_conflict_waits_for_plans=block.get("no_conflict_waits_for_plans", default.no_conflict_waits_for_plans),
+            orca_within_groups=block.get("orca_within_groups", default.orca_within_groups),
         )
 
     def decision_points_for(self, condition: str) -> int:
@@ -175,6 +183,8 @@ class ProtocolSettings:
             del described["execution"]
         if not self.no_conflict_waits_for_plans:  # issue #65: likewise
             del described["no_conflict_waits_for_plans"]
+        if not self.orca_within_groups:  # issue #110: likewise
+            del described["orca_within_groups"]
         return described
 
 
@@ -317,9 +327,8 @@ class EncounterSession:
         return self.outcome
 
     def _find_trigger(self) -> bool:
-        a, b = self.pair
         while not self._finished:
-            for observer, other in ((a, b), (b, a)):
+            for observer, other in self.scenario.trigger_pairs(self.sim, self.pair):
                 if self._d4(observer, other):
                     self._start(observer, other)
                     return True
@@ -336,12 +345,11 @@ class EncounterSession:
             members, self.left_out = members[:cap], members[cap:]
         self.order = members
         self.members = {agent: _Member(agent, slot) for slot, agent in enumerate(members)}
-        self.pairs = [(observer, other)] + [
-            (p, q) for k, p in enumerate(members) for q in members[k + 1:]
-            if {p, q} != {observer, other} and self.scenario.conflict_predicted(sim, p, q)
-        ]
+        self.pairs = [tuple(pair) for pair in self.scenario.conflict_pairs(sim, members, observer, other)]
+        if not self.pairs or self.pairs[0] != (observer, other) or any(not set(pair) <= set(members) for pair in self.pairs):
+            raise ValueError(f"{type(self.scenario).__name__}.conflict_pairs must list the two who started it first, then pairs of members")
         self.trigger = {"step": sim.world.step_index, "time_s": round(sim.world.time, 6), "agent_id": observer, "other_id": other}
-        self.run = PlanRun(sim, MODE_PLAN_ONLY, self.scenario, members, self.settings.execution)
+        self.run = PlanRun(sim, MODE_PLAN_ONLY, self.scenario, members, self.settings.execution, self.settings.orca_within_groups)
         self._last_conflict_s = sim.world.time
 
     def _encounter(self) -> None:

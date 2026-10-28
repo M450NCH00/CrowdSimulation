@@ -444,7 +444,10 @@ def test_configs_written_before_have_no_ethnicity_anywhere(path):
         pytest.skip("not an experiment config written before issue #92")
     c = E.ResolutionConfig.load(path)
     assert not c.design.uses_ethnicity and c.design.ethnicity_shares is None and "ethnicity_shares" not in c.design.as_dict()
-    assert c.templates.get("factors") in (None, "resolve_factors_v1")
+    # Issue #110: RF-32's configs name RF-30's factor template (resolve_factors_v1 word for word plus the
+    # ethnicity lines, which a design that does not vary ethnicity never renders), and vary no ethnicity.
+    rf32 = path.endswith(("round1_group_head_on.yaml", "round1_group_head_on_orca_groups.yaml"))
+    assert c.templates.get("factors") in ((None, "resolve_factors_v1", "resolve_factors_v2") if rf32 else (None, "resolve_factors_v1"))
     for session in E.plan(c).sessions:
         assert not session.ethnicity and "ethnicity" not in session.visibility
         assert all("ethnicity" not in persona for persona in session.personas.values())

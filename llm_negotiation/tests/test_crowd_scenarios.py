@@ -35,7 +35,7 @@ SCENARIO_DIR = PACKAGE_ROOT / "configs" / "scenarios"
 def test_the_five_scenarios_issue_26_asks_for_are_registered_and_shipped():
     expected = {"wide_corridor_head_on", "open_crossing", "overtaking", "corridor_to_bottleneck", "bidirectional_flow"}
     assert expected == set(CROWD_SCENARIOS)
-    assert set(REGISTERED) == expected | {"passage_meeting"}  # issue #32's sixth type
+    assert set(REGISTERED) == expected | {"passage_meeting", "group_head_on"}  # issue #32's sixth type; issue #110's seventh
     for name in expected:
         assert (SCENARIO_DIR / f"{name}.yaml").is_file()
     assert CROWD_SCHEMA_VERSION == 2

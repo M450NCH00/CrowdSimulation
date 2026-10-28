@@ -276,7 +276,7 @@ class PlanDriver:
     effect in the next :meth:`prepare`, so a live run and a replay of its log are the same run.
     """
 
-    def __init__(self, mode: str, scenario: Scenario, agents: Sequence[int], execution: str = EXECUTION_RF4):
+    def __init__(self, mode: str, scenario: Scenario, agents: Sequence[int], execution: str = EXECUTION_RF4, orca_within_groups: bool = False):
         if mode not in MODES:
             raise ValueError(f"mode: one of {MODES}, got {mode!r}")
         if execution not in EXECUTIONS:
@@ -288,6 +288,10 @@ class PlanDriver:
         #: Whether a turn walks at its angle off the step's start direction and the line is kept
         #: between steps (issue #64), as both ``as_prompted`` and ``keep_line`` do.
         self._as_prompted = execution in (EXECUTION_AS_PROMPTED, EXECUTION_KEEP_LINE)
+        #: Issue #110: ORCA still keeps apart two members of one group (the run's ``group``) in
+        #: ``plan_only``; the plans alone decide only between members of different groups.
+        self.orca_within_groups = bool(orca_within_groups)
+        self._groups: Optional[dict[int, str]] = None
         self.plans: dict[int, Plan] = {}
         self.decisions: list[Plan] = []
         self._pending: dict[int, list[tuple[int, tuple[Step, ...], int]]] = {}
@@ -380,6 +384,8 @@ class PlanDriver:
         encounter if it is over. Read from the state at the start of the step."""
         world = simulation.world
         step, now = world.step_index, world.time
+        if self.orca_within_groups and self._groups is None:
+            self._groups = {agent: world.agents[agent].spec.group for agent in self.agents}
         for agent, steps, partner in self._pending.pop(step, []):
             self._take_up(agent, steps, partner, step, now, simulation)
         for agent in self.agents:
@@ -422,8 +428,11 @@ class PlanDriver:
         return velocity
 
     def ignores(self, i: int, j: int) -> bool:
-        """Whether ORCA leaves out the half-plane of ``i`` toward ``j`` (``plan_only`` only)."""
-        return self.mode == MODE_PLAN_ONLY and self.active and i in self.agents and j in self.agents
+        """Whether ORCA leaves out the half-plane of ``i`` toward ``j`` (``plan_only`` only; with
+        ``orca_within_groups``, not between two members of one group)."""
+        if not (self.mode == MODE_PLAN_ONLY and self.active and i in self.agents and j in self.agents):
+            return False
+        return not (self._groups is not None and self._groups[i] == self._groups[j])
 
     def backing(self, i: int) -> bool:
         """Whether ``i`` is on a back-up step: intentional backing, never an artefact."""
@@ -609,6 +618,8 @@ class PlanDriver:
             return None
         margin = simulation.spec.single_file_safety_margin
         pairs = [(i, j) for k, i in enumerate(walking) for j in walking[k + 1:]]
+        if self._groups is not None:  # issue #110: ORCA steers a group's members already; they never "pass"
+            pairs = [(i, j) for i, j in pairs if self._groups[i] != self._groups[j]]
         return RELEASE_PASSED if all(simulation._passed(i, j, margin) for i, j in pairs) else None
 
     def as_dict(self) -> dict[str, Any]:
@@ -621,6 +632,8 @@ class PlanDriver:
             "released_step": self.released_step,
             "released_time_s": None if self.released_time_s is None else round(self.released_time_s, 6),
             "release_reason": self.release_reason,
+            # Issue #110: only when on, so that an older replay's outcome.json is written as before.
+            **({"orca_within_groups": True} if self.orca_within_groups else {}),
             "decisions": [plan.as_dict() for plan in self.decisions],
         }
 
@@ -647,11 +660,11 @@ class WorldState:
 class PlanRun:
     """A simulation with a plan driver attached: one encounter's live run, or its replay."""
 
-    def __init__(self, simulation: Any, mode: str, scenario: Scenario, agents: Sequence[int], execution: str = EXECUTION_RF4):
+    def __init__(self, simulation: Any, mode: str, scenario: Scenario, agents: Sequence[int], execution: str = EXECUTION_RF4, orca_within_groups: bool = False):
         if simulation.plans is not None:
             raise ValueError("the simulation already has a plan driver")
         self.simulation = simulation
-        self.driver = PlanDriver(mode, scenario, agents, execution)
+        self.driver = PlanDriver(mode, scenario, agents, execution, orca_within_groups)
         simulation.plans = self.driver
         self.result: Any = None
 
