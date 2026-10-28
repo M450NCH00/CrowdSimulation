@@ -260,7 +260,16 @@ velocity. An empty plan there changes nothing, so empty plans reproduce the plai
 - `until` is asked of the scenario.
 
 After the last step the agent walks on to its goal. `parameters.md`, section 8.5, gives each
-definition. A replay runs a session's plans on its case's own run and seed, in either mode,
+definition.
+
+**Amended by the user, 2026-10-28 (issue #110): people walking together.** In an encounter with
+groups, `plan_only` left ORCA out between every two members, friends walking side by side
+included, and RF-32's pilot lost 3 of 8 sessions to friends walking into each other before they met
+anyone. With `protocol.orca_within_groups: true` ORCA still keeps two members of one group (the
+run's `group`) apart, as it does walls and everyone else; the plans alone decide only between
+people walking opposite ways, which is what this mode measures. The encounter goes back to ORCA when
+every pair of different groups has passed. Off by default, and named in a record only when on, so
+every earlier record replays exactly as before. A replay runs a session's plans on its case's own run and seed, in either mode,
 under `runs/<experiment>/replay/<session_id>/<mode>/`. It is rebuilt byte for byte from the
 session record alone (`python -m negsim.resolution.replay ... --verify`; `log-schema.md`).
 

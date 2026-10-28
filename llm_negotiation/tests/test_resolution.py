@@ -24,7 +24,7 @@ from negsim.resolution.reply import (
     DEBRIEF_KINDS, ReplyContext, parse_debrief, parse_reply, reply_parser,
 )
 from negsim.resolution.scenario import Scenario
-from negsim.resolution.scenarios import PLUGINS, PassingCrowdScenario, PassingScenario, load_scenario
+from negsim.resolution.scenarios import PLUGINS, PassingCrowdScenario, PassingGroupScenario, PassingScenario, load_scenario
 from negsim.resolution.view import CHANGES, CONDITIONS, SIGNALS, Block, Done, Heard
 from negsim.rulegen.cases import CASE_FILE, CASES_ROOT, CaseStore
 
@@ -114,7 +114,7 @@ def test_the_core_template_names_no_scenario():
 
 
 def test_every_case_renders_in_every_condition_with_every_placeholder_filled():
-    assert len(PAIRS) == 28 + 8 and len(CROWDS) == 16  # every file of cases/: 28 of two people (and issue #60's 8 passage cases), 16 out of crowds
+    assert len(PAIRS) == 28 + 8 and len(CROWDS) == 16 + 4  # every file of cases/: 28 of two people (and issue #60's 8 passage cases), 16 out of crowds (and issue #110's 4 out of groups)
     count = 0
     for case, agent, condition, rendered in every_prompt():
         assert [m["role"] for m in rendered.messages] == ["system", "user"]
@@ -534,7 +534,7 @@ def test_a_second_scenario_renders_through_the_same_core_template():
 
 
 def test_scenario_plugins_and_their_templates():
-    assert PLUGINS == {"passing": PassingScenario, "passing_crowd": PassingCrowdScenario}  # passing_crowd: issue #58
+    assert PLUGINS == {"passing": PassingScenario, "passing_crowd": PassingCrowdScenario, "passing_group": PassingGroupScenario}  # passing_crowd: issue #58; passing_group: issue #110
     with pytest.raises(ConfigError, match="unknown scenario"):
         load_scenario("escalator")
     with pytest.raises(ConfigError, match="at least one event"):

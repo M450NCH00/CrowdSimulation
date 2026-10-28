@@ -68,7 +68,11 @@ one group are not a conflict pair, but a collision between them fails each confl
 theirs, since the outcome counts a collision with anyone (section 7). A person walking side by
 side with a friend is told so, and on which side, in a block of the scenario's own (WHO YOU ARE
 WITH): someone abreast is outside the 75° view cone. All three are assumptions of the issue's build
-(`WORK_LOG-110.md`).
+(`WORK_LOG-110.md`). **`protocol.orca_within_groups`** (the user's decision after RF-32's pilot,
+2026-10-28; `resolution.md`, D6): in `plan_only` ORCA still keeps two members of one group apart, and
+the plans alone decide between people walking opposite ways; off by default. Each pair of a group
+session is measured by `python -m negsim.resolution.groups` (plan_only, plain ORCA and rule arms on
+the same seeds; the identity check per pair; how friends got past each oncoming person).
 
 ## 3. Decision points (D5)
 
@@ -252,7 +256,7 @@ python run_experiment.py configs/resolution/<config>.yaml --client deepseek --co
 | `scenarios` | optional: case id → plug-in; otherwise the plug-in whose `CASE_TYPES` holds the case's type |
 | `conditions` | any of `independent`, `non_verbal`, `talk` |
 | `design` | `seed`, `factors` (`age_pair`, `gender_pair`, `task`, `demographics_visible`, `mapping`), `repeats`, `base_age`, `age_difference`, `tasks`; issue #62: `kind` (`full`, `fractional`, `sample`), `cells`, `geometries`, `exact_repeats` (`cells`, `times`), `counterfactual_pairs` (`screening-designs.md`); issue #92: `ethnicity_shares` (default `configs/resolution/ethnicity_sg_2026.yaml`) and `ethnicity_draw` (`real`, the default, or `balanced`), for a design that varies `ethnicity_pair` (`ethnicity.md`) |
-| `protocol` | `max_decision_points` (3), `min_gap_s` (1), `no_conflict_end_s` (1), `max_prompted` (none), `speech_words_per_second` (2.5), `execution` (`rf4`, or `as_prompted`: issue #64, `execute.py`), `no_conflict_waits_for_plans` (false; issue #65) |
+| `protocol` | `max_decision_points` (3), `min_gap_s` (1), `no_conflict_end_s` (1), `max_prompted` (none), `speech_words_per_second` (2.5), `execution` (`rf4`, or `as_prompted`: issue #64, `execute.py`), `no_conflict_waits_for_plans` (false; issue #65), `orca_within_groups` (false; issue #110) |
 | `templates` | `core` (`resolve_v2`; `resolve_v3` for a design that varies an RF-5 or RF-6 factor, issue #61; `resolve_v4`, named, also gives the other's age and gender from 10 m, issue #64; `resolve_v5`, named, also lets any step have a `start`, issue #64; `resolve_v6`, named, also reads an `until` at a distance or written as an object, and calls a walker up to 45° off the opposite or the same direction drifting rather than walking across, issue #65), `debrief` (`resolve_debrief_v1`); with factors also `factors` (`resolve_factors_v1`; `resolve_factors_v2` for a design that varies real ethnicity, issue #92) and `pairwise` (`resolve_pairwise_v1`) |
 | `llm_view` | the perception config (`configs/resolution/llm_view_v1.yaml`) |
 | `llm` | `client`, `mock_policy` (`resolution_rehearsal_v1`), `model`, `temperature`, `max_tokens` (400), `thinking` (disabled), `transport_retries` |
