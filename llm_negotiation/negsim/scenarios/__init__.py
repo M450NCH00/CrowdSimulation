@@ -28,6 +28,7 @@ from .hallway import HallwayScenario
 from .intersection import IntersectionScenario
 from .open_crossing import OpenCrossingScenario
 from .overtaking import OvertakingScenario
+from .group_head_on import GroupHeadOnScenario
 from .passage_meeting import PassageMeetingScenario
 from .registry import (
     CROWD_SCENARIOS,
@@ -48,6 +49,7 @@ __all__ = [
     "BidirectionalFlowScenario",
     "ConflictSettings",
     "CorridorToBottleneckScenario",
+    "GroupHeadOnScenario",
     "CrowdAgentSpec",
     "CrowdLayout",
     "CrowdScenario",

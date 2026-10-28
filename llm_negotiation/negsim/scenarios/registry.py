@@ -20,6 +20,7 @@ from .bidirectional_flow import BidirectionalFlowScenario
 from .corridor_to_bottleneck import CorridorToBottleneckScenario
 from .crowd_base import CrowdScenario, CrowdScenarioSpec
 from .doorway import DoorwayScenario
+from .group_head_on import GroupHeadOnScenario
 from .hallway import HallwayScenario
 from .intersection import IntersectionScenario
 from .open_crossing import OpenCrossingScenario
@@ -40,6 +41,7 @@ CROWD_SCENARIOS: dict[str, type[CrowdScenario]] = {
         CorridorToBottleneckScenario,
         BidirectionalFlowScenario,
         PassageMeetingScenario,  # issue #32
+        GroupHeadOnScenario,  # issue #110
     )
 }
 
