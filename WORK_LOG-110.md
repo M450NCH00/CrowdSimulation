@@ -222,8 +222,8 @@ Session 2: the paid run (pilot with `--limit`, read, then the rest), the analysi
   found no gain from either with pairs. A non-verbal run would cost about as much again.
 - **For the user:** whether this finding needs follow-up before RF-14: a non-verbal condition, a
   wider corridor for 2 v 2, or extracting rules from group sessions (out of scope here, the issue says).
-- The full suite was not rerun after the analysis module, `orca_within_groups` and the test updates;
-  the touched test files were (above). A full run before merging is advisable.
+- The full suite on the final tree (commit `419ddc1`), 05:51 to 06:17 UTC: **2,189 passed, 10
+  skipped, none failed**.
 
 ## Summary
 
@@ -252,6 +252,5 @@ stall under ORCA (64 of 64), but no rule describes what the agents did.
 
 **Verified.** Mock rehearsal of all 72 sessions and of the analysis; `tests/test_rf32_group.py` (21
 tests: scenario type, cases, plug-in, hooks' defaults, `design.others`, `orca_within_groups` including
-the pilot's tuck-in plan, re-execution, analysis); the full suite (2,162 passed, 5 enumeration failures
-fixed and rerun); every report number taken from the files named with it; two interpretive claims
+the pilot's tuck-in plan, re-execution, analysis); the full suite on the final tree (2,189 passed, 10 skipped); every report number taken from the files named with it; two interpretive claims
 counted or reworded. Paid: USD 0.0619 of USD 0.15, off-peak, balance USD 0.56.
