@@ -132,8 +132,10 @@ def pairs_of(session: Mapping[str, Any]) -> Optional[list[tuple[int, int]]]:
 def driver_for(session: Mapping[str, Any], mode: str, run_plan: AvoidanceRunPlan, scenario: Scenario) -> PlanDriver:
     """A driver with the session's plans scheduled at their steps, read back with the parser's checks."""
     agents = tuple(session["encounter"]["agents"])
-    # Issue #64: how plans are carried out is the session's protocol.execution (named only when not the default).
-    driver = PlanDriver(mode, scenario, agents, (session.get("protocol") or {}).get("execution", EXECUTION_RF4))
+    # Issue #64: how plans are carried out is the session's protocol.execution (named only when not the default);
+    # issue #110: likewise whether ORCA keeps a group's members apart in plan_only.
+    protocol = session.get("protocol") or {}
+    driver = PlanDriver(mode, scenario, agents, protocol.get("execution", EXECUTION_RF4), bool(protocol.get("orca_within_groups", False)))
     specs = build_crowd_scenario(run_plan.scenario_config).agents
     for decision in session["decisions"]:
         agent = int(decision["agent_id"])

@@ -1,0 +1,114 @@
+# Issue #110 (RF-32): round1_group_head_on.yaml with one change, the user's decision of 2026-10-28
+# after the pilot: protocol.orca_within_groups. In plan_only ORCA still keeps two people of one group
+# (friends walking side by side) apart; the plans alone decide only between people walking opposite
+# ways, which is what D6 measures. The pilot (runs/rf32_round1_group_head_on, 8 sessions, USD 0.0075)
+# lost 3 of 8 to friends walking into each other before they met anyone. Its 8 sessions are carried
+# out again under this setting with no call (python -m negsim.resolution.reexecute ... --orca-within-groups;
+# every decision came at the trigger) and their records put in this experiment's folder, so that a
+# run of this config reads them back and pays only for the other 64.
+#
+# PAID RUN: approved by the user for issue #110 only, 2026-10-28, cap USD 0.15 for #110's calls
+# together: USD 0.00752 spent by the pilot, so this experiment's own cap is USD 0.1425 (CLAUDE.md).
+#
+# Issue #110 (RF-32): round 1 (head-on) with three or four people: 2 v 1 and 2 v 2.
+#
+#   python run_experiment.py configs/resolution/round1_group_head_on.yaml --plan
+#   python run_experiment.py configs/resolution/round1_group_head_on.yaml --out runs_mock/rf32   # mock rehearsal
+#
+# PAID RUN: approved by the user for issue #110 only, 2026-10-28, cap USD 0.15 (CLAUDE.md, pending
+# item 1). This config names the mock client; the paid run is
+#   python run_experiment.py configs/resolution/round1_group_head_on.yaml --client deepseek --confirm
+# off-peak, a pilot with --limit first. The cost: 72 sessions at RF-10's measured USD 0.00013 a call
+# (6 calls for three people, 8 for four) is about USD 0.07.
+#
+# Everything that is not the number of people is RF-30's sessions' (configs/resolution/
+# round1_head_on_keep_line.yaml; RF-11 extracted round 1's rules from them): core template
+# resolve_v6, factor template resolve_factors_v2, protocol.execution keep_line, waiting for plans,
+# the cap of 4 prompted, deepseek-flash at temperature 1.0, a reply cap of 300. The user decided on
+# 2026-10-27 (track #55) that this issue amends D11 (two-person cases) for itself only and runs the
+# independent condition only.
+#
+# What differs, and why (WORK_LOG-110.md, "Design choices"):
+# - the cases: rf32_group_v1, 2 v 1 and 2 v 2 in round 1's corridor, each in round 1's two
+#   geometries (aligned; 20 cm apart), a pair side by side 0.63 m apart (Zanlungo et al. 2017);
+# - the plug-in passing_group (from the cases' type): everyone in the case is in the encounter,
+#   every pair walking opposite ways is a conflict pair, and a person walking with a friend is told so;
+# - the design: the two factors round 1's rules read (a cane, assertiveness) and age (the cane
+#   rule's extraction named the elderly), on person 1, who is the westbound person of the case's pair
+#   (in 2 v 1 the one walking alone); every other factor of RF-30 at its base level, and not in the
+#   prompt. Everyone else (the companions) gets a persona: 25, their companion's gender, a routine
+#   errand, no cane, gives way.
+schema_version: 1
+layer: resolution
+experiment_name: rf32_round1_group_head_on_orca_groups
+description: >-
+  RF-32, round 1 (head-on) with three or four people: 2 v 1 and 2 v 2 in round 1's corridor and
+  geometries, the independent condition, RF-30's template and execution; a full design on person
+  1's age, gender, cane and assertiveness; in plan_only ORCA keeps friends apart (orca_within_groups).
+
+conditions: [independent]
+
+design:
+  seed: 110
+  base_age: 25
+  age_difference: 45
+  geometries:
+    - group_75a57582@1   # 2 v 1, aligned
+    - group_6bc7f193@1   # 2 v 1, 20 cm apart
+    - group_37a3c705@1   # 2 v 2, aligned
+    - group_206147b4@1   # 2 v 2, 20 cm apart
+  exact_repeats:
+    cells: 4
+    times: 3
+  others:
+    age: 25
+    gender: as_companion
+  factors:
+    age_pair: [same, p1_older]
+    gender_pair: [p1_female, p1_male]
+    urgency: [neither]            # both routine, as RF-30's base level
+    mobility_aid: [neither, p1]   # person 1 walks with a cane
+    assertiveness: [neither, p1]  # person 1 holds their ground
+    mapping: [p1_higher]          # person 1 is the westbound one of the case's pair (agent 2 in every case)
+    demographics_visible: [true]
+
+# The same gate as RF-10 and RF-30, so that the share compares with round 1's pairs.
+resolution_gate:
+  plan_only_resolved_min: 0.50
+  reason: >-
+    RF-10's gate (WORK_LOG-65.md), unchanged: the plan_only rate over the design's sessions (exact
+    repeats left out), 0.50 meaning the plans resolve the meeting more often than not. Here an
+    encounter is resolved only if every pair walking opposite ways is. Reported by layout beside
+    RF-30's pairs (0.53 pooled; 0.55 independent).
+
+protocol:
+  max_decision_points: 3            # D5 (the independent condition has one)
+  min_gap_s: 1.0                    # D5
+  no_conflict_end_s: 1.0            # [placeholder]
+  max_prompted: 4                   # D11, D12: everyone in these cases
+  speech_words_per_second: 2.5      # [placeholder]
+  execution: keep_line              # as RF-30
+  no_conflict_waits_for_plans: true # as RF-30
+  orca_within_groups: true          # issue #110, the user's decision after the pilot: ORCA keeps friends apart
+
+templates:
+  core: resolve_v6
+  debrief: resolve_debrief_v1
+  factors: resolve_factors_v2       # as RF-30 (no ethnicity line is rendered: the design does not vary it)
+
+llm_view: configs/resolution/llm_view_v1.yaml
+factor_values: configs/resolution/factors_v1.yaml
+
+llm:
+  client: mock
+  mock_policy: resolution_rehearsal_v1
+  model: deepseek-flash
+  temperature: 1.0
+  max_tokens: 300
+  thinking: disabled
+  transport_retries: 2
+
+budget:
+  cap_usd: 0.1425         # #110's USD 0.15 less the pilot's USD 0.00752 (CLAUDE.md)
+  ledger: spend_ledger.jsonl
+  over_cap: stop_at_cap

@@ -55,20 +55,25 @@ def decided_at_trigger(record: Mapping[str, Any]) -> bool:
     return trigger is not None and all(point["time_s"] <= trigger + _EPS for point in points)
 
 
-def reexecuted(record: Mapping[str, Any], execution: str, source: str) -> dict[str, Any]:
-    """The record with ``protocol.execution`` set, and where it came from."""
+def reexecuted(record: Mapping[str, Any], execution: str, source: str, orca_within_groups: bool = False) -> dict[str, Any]:
+    """The record with ``protocol.execution`` set (and, issue #110, ``orca_within_groups`` switched
+    on), and where it came from."""
     out = copy.deepcopy(dict(record))
     was = (out.get("protocol") or {}).get("execution", "rf4")
     out.setdefault("protocol", {})["execution"] = execution
     out["reexecuted_from"] = {"experiment": source, "execution": was}
+    if orca_within_groups:  # only when asked, so that every earlier re-execution is written as before
+        out["reexecuted_from"]["orca_within_groups"] = bool(out["protocol"].get("orca_within_groups", False))
+        out["protocol"]["orca_within_groups"] = True
     return out
 
 
 def reexecute(
     source: Path, execution: str, out_root: Path, name: Optional[str] = None, condition: Optional[str] = None,
-    git: Optional[Mapping[str, Any]] = None,
+    git: Optional[Mapping[str, Any]] = None, orca_within_groups: bool = False,
 ) -> Path:
-    """Carry out ``source``'s sessions (of ``condition``, if given) again under ``execution``."""
+    """Carry out ``source``'s sessions (of ``condition``, if given) again under ``execution`` (and,
+    issue #110, with ``protocol.orca_within_groups`` on, if asked)."""
     if execution not in EXECUTIONS:
         raise ConfigError(f"execution: one of {EXECUTIONS}, got {execution!r}")
     source = Path(source)
@@ -94,7 +99,7 @@ def reexecute(
     (target / SESSIONS_DIR).mkdir(parents=True, exist_ok=True)
     rows = []
     for record in records:
-        again = reexecuted(record, execution, experiment["experiment_name"])
+        again = reexecuted(record, execution, experiment["experiment_name"], orca_within_groups)
         (target / SESSIONS_DIR / f"{record['session_id']}.json").write_text(
             json.dumps(again, ensure_ascii=False, indent=1) + "\n", encoding="utf-8", newline="\n"
         )
@@ -115,12 +120,15 @@ def reexecute(
     new_config["reexecution"] = {
         "source": experiment["experiment_name"], "source_folder": str(source), "execution": execution,
         "condition": condition, "sessions": len(records), "created_utc": when,
+        **({"orca_within_groups": True} if orca_within_groups else {}),
     }
     (target / CONFIG_FILE).write_text(json.dumps(new_config, ensure_ascii=False, indent=1) + "\n", encoding="utf-8", newline="\n")
     (target / NOTE_FILE).write_text(
         f"# {name}\n\n{experiment['experiment_name']}'s "
         + (f"{condition} " if condition else "")
-        + f"sessions ({len(records)}), carried out again under `protocol.execution: {execution}` with no LLM call "
+        + f"sessions ({len(records)}), carried out again under `protocol.execution: {execution}`"
+        + (" and `protocol.orca_within_groups: true` (issue #110)" if orca_within_groups else "")
+        + " with no LLM call "
         "(`python -m negsim.resolution.reexecute`, issue #101). Every decision point came at the encounter's trigger, so "
         "the plans and everything the agents were told are the source's; only how the plans were carried out differs. "
         "Prompts, replies, tokens and cost in `sessions/` are the source's, not new spending.\n",
@@ -136,9 +144,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument("--condition", help="only the sessions of this condition")
     parser.add_argument("--out", type=Path, help="where to put the new experiment folder (default: beside the source)")
     parser.add_argument("--name", help="the new experiment's name (default: <source name>_<execution>)")
+    parser.add_argument("--orca-within-groups", action="store_true", help="also switch on protocol.orca_within_groups (issue #110)")
     args = parser.parse_args(argv)
     try:
-        target = reexecute(args.source, args.execution, args.out or args.source.parent, args.name, args.condition)
+        target = reexecute(
+            args.source, args.execution, args.out or args.source.parent, args.name, args.condition, orca_within_groups=args.orca_within_groups,
+        )
     except (ReexecuteError, ConfigError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
