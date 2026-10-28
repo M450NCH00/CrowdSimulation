@@ -82,6 +82,67 @@ condition; bystanders drawn from RF-33's realistic profile `singapore_street_v1`
   resolved share by encounter size. `docs/resolution.md`: a note under D11.
 - Mock rehearsal of all 72 started at 13:15:17 UTC (`runs_mock/rf35/`).
 
+### 2026-10-28 14:07 UTC — mock rehearsal read; cost estimate
+- All 72 ran (13:15 to 14:07 UTC: each session reruns a 50- or 100-person flow). Every encounter reached the cap of 4 (21 more within 10 m on average left to ORCA); 2 to 4
+  of them prompted (a member is prompted only once it perceives someone it conflicts with). 6.8 calls a
+  session; prompts about 4,000 characters, 1.23 times RF-32's (3,261), at USD 0.000121 a call there.
+- Estimate about USD 0.07 for 72 sessions; proposed cap USD 0.10.
+- `groups.py` on the mock records: started at 14:08, stopped after the pilot (it reruns two 50- or
+  100-person flows a session; the pilot's analysis below exercised the same code).
+
+### 2026-10-28 14:09 UTC — the user's answer: paid runs approved, cap USD 0.10
+- Recorded in `CLAUDE.md`; the config's cap set. Balance checked: USD 0.39.
+
+### 2026-10-28 14:10 to 14:21 UTC — pilot (paid): 8 sessions, USD 0.008887, off-peak
+- Calls 14:10:10 to 14:13:03 UTC (ledger): 60 calls, all off-peak, no transport error. About USD 0.0011
+  a session: 72 sessions ≈ USD 0.08, inside the cap.
+- Plans are sensible: people step aside towards a wall, slow for the elderly, pass a slow walker ahead,
+  "keep my line and let the crowd sort itself out". Live: 5 passed, 3 no conflict left, none collided.
+  One reply refused on a distance; genuine (the partner was 0.67 m away, the reply said until 1.4 m).
+- **Problem found: the pair measure does not work in a crowd.** In `plan_only`, 1 of 37 conflict pairs
+  resolved; plain ORCA on the same seeds 0 of 37. 36 and 33 of them count a collision: grazes of 1 to
+  30 mm with a bystander or with each other, which ORCA makes all the time in a dense flow (16 to 91
+  collisions per source run). Under this measure no crowd encounter can be resolved, by anyone.
+- I asked the user, since it redefines Step 1's measure; it does not change the sessions (scored from
+  the replays).
+
+### 2026-10-28, before 14:32 UTC — the user's decisions: score against plain ORCA; run the rest
+- **Measure (the user's choice):** a crowd encounter is resolved when, from its start on the same seed,
+  its people collide no more often and no deeper than under plain ORCA, and none is stuck. Built in
+  `groups.py` (`contacts`, `against_orca`): episodes ending at or after the start that involve one of
+  the encounter's people (walls included), the deepest overlap, stuck = a deadlock or not arrived;
+  better / same / worse per session, the sign test over sessions. The pair measure stays reported.
+- **The remaining 64 sessions** started from a clean tree (commit `fd3ac8a`), off-peak.
+
+### 2026-10-28 14:32 to 15:38 UTC — the run (paid): 72 sessions, USD 0.070697, off-peak
+- Calls 14:32:58 to 14:53:36 UTC (ledger); the rest of the time is the replays (each reruns a 50- or
+  100-person flow three times). 424 calls for the 64, USD 0.061811; with the pilot 484 calls (256
+  decisions, 228 debriefs) over 72 sessions, **USD 0.070697**, inside the cap of 0.10. All off-peak,
+  no transport error. Balance (`GET /user/balance`, the key not printed): **USD 0.32** (0.39 before).
+- All 72 completed; 6.7 calls a session; every encounter reached the cap of 4. Live: 59 passed, 13 no
+  conflict left. 12 unreadable decision points (9 an `until` distance beyond the current one), 16
+  retried. Debriefs: common sense 124, habit 88, none 16.
+- The scenario's own measure (every conflict pair clear, no collision or near miss): 0 of 72 in every
+  mode, plain ORCA included, as the pilot found; the measure of record is against plain ORCA.
+- Analysis (`groups.py ... --pairs runs/rf10_round1_head_on_keep_line`) started at 15:39 UTC.
+
+### 2026-10-28 15:39 to 16:09 UTC — analysis; then the report
+- Against plain ORCA: **14 of 64 resolved** (0.22, 0.14 to 0.33): 8 of 32 at 25 per way, 6 of 32 at 50;
+  better 6, same 8, worse 50 (sign test p < 0.001); collisions 389 with plans against 336; nobody
+  stuck. Pair measure: 0 of 64 in every mode; 12 of 264 conflict pairs with plans, 0 with plain ORCA.
+- Looked further (from the replays' `events.jsonl`): in 32 of 64 sessions the count is the same and the
+  verdict turns on depth (median deepest 14 mm with plans, 5 mm without). Tolerance check: 26 of 64 at
+  5 mm, 34 at 1 cm; the count alone: more in 30, fewer in 2. The deep contacts (median 13.8 mm, up to
+  54 mm) are between the encounter's own people walking opposite ways; grazes with bystanders are
+  about 3 mm. Exact repeats scored identically within each set.
+- **Found [mine]:** the replays are 2.0 GB, 1.9 GB of it the two interaction logs, which the viewer and
+  the outcomes do not need and `negsim.resolution.replay` rebuilds from the records. They are now
+  gitignored and untracked (the pilot's 32, committed in `fd3ac8a`, too); the rest of each replay is
+  committed (about 130 MB). The pilot commit still holds those 32 files (about 250 MB) in history; the
+  branch is not pushed, so whether to rewrite it before pushing is the user's call.
+- `test_ethnicity`'s list of configs now includes RF-35's (the same factor template as RF-32), with a note.
+- `crowd_report.md` written; README row; `CLAUDE.md` balance.
+
 ## Open questions / risks
 
 - Same-direction people in an encounter are treated as one "group" by `orca_within_groups` and by the
