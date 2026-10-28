@@ -1,0 +1,28 @@
+# Issue #117 (RF-35): the baseline runs that the crowd-encounter cases are taken from, made the way
+# the flow's first cases were (configs/cases/source_bidirectional_flow.yaml): RF-18's two-way flow
+# (4 m x 50 m, Moussaid et al. 2009), the primary baseline (plain ORCA, perturbed), paired seeds,
+# two repeats. No model is called.
+#
+#   python run_experiment.py configs/cases/rf35_source_crowd_flow.yaml
+#
+# Two densities, the user's decision of 2026-10-28: 25 and 50 people per way (50 is RF-18's flow).
+schema_version: 1
+layer: avoidance
+experiment_name: rf35_source_crowd_flow
+description: Conflict-case source (issue #117). The two-way flow at 25 and 50 people per way, primary baseline, plain ORCA.
+scenario: configs/scenarios/bidirectional_flow.yaml
+baseline: orca_perturbed_v1
+
+logging:
+  trajectory_stride: 10
+
+design:
+  seed: 35100
+  seeding: paired
+  repeats: 2
+  factors:
+    density:
+      - name: per_way_25
+        scenario_overrides: {geometry: {agents_per_direction: 25}}
+      - name: per_way_50
+        scenario_overrides: {geometry: {agents_per_direction: 50}}
