@@ -149,6 +149,10 @@ and D5), do groups resolve more often than in RF-32's independent run, and near 
   lean right reworded, since the run cannot tell its cause.
 - `CLAUDE.md` (balance), `README.md` (RF-34's row).
 
+### 2026-10-28 11:39 UTC — the full suite on the final tree
+- `pytest` over `llm_negotiation/` on commit `838527a`, 11:39:45 to 12:08:13 UTC: **2,200 passed, 10
+  skipped, none failed** (RF-32's 2,189, plus 9 new RF-34 tests and 2 configs in the ethnicity check).
+
 ## Open questions / risks
 
 - **Design (mine, same as RF-32's):** nothing is changed but the condition, so the run pairs with
@@ -157,5 +161,38 @@ and D5), do groups resolve more often than in RF-32's independent run, and near 
   is coordinated only through what each was told at the start ("WHO YOU ARE WITH").
 - **The run still stops at the first collision**, so the later decision points are censored, as in
   RF-32; the session-level share is not affected.
+- `protocol.distance_to_partner` is my build of the user's choice; it is used only by this run (RF-32's
+  sessions never needed it: every decision there came at the trigger).
+- **For the user:** D5's cap of 3 decision points is used up by 4.4 s (median), 1.7 s before the
+  first collision; RF-30's pairs used theirs by the same time. Whether groups need more is a change to
+  `resolution.md`, the user's design. Also not done: the talk condition, and a wider corridor for 2 v 2.
+- Not significant against RF-32 (paired p = 0.27); the design was sized for RF-32's comparison with pairs.
 
-## Summary (fill in at the end)
+## Summary
+
+**What changed.**
+- Config `round1_group_head_on_non_verbal_partner.yaml` (the run of record): RF-32's run of record in the
+  non-verbal condition, with `protocol.distance_to_partner`; `round1_group_head_on_non_verbal.yaml` is the
+  pilot's, as built.
+- Resolution layer: `protocol.distance_to_partner` (off by default, named in a record only when on), the
+  user's decision after the pilot; documented in `docs/encounter-protocol.md`.
+- Analysis `negsim.resolution.groups`: `--pairs-condition`, `--against` (paired by cell and case, exact
+  sign test), the later decision points and signals; the report's heading names the experiment; no crash
+  without `--pairs`.
+- Runs: the pilot (`runs/rf34_round1_group_head_on_non_verbal`, 8 sessions, as built) and the run of
+  record (`runs/rf34_round1_group_head_on_non_verbal_partner`, 72 sessions, `group_report.md`).
+- Docs: `CLAUDE.md` (approval, balance), `README.md` (RF-34's row); #55 lists #115 after #110.
+
+**Why.** The user's follow-up to RF-32 (#110): do groups resolve a head-on when they can see each other
+move and signal?
+
+**Result.** A little better, still far from pairs: 9 of 64 (0.14) against RF-32's 4 of 64 (paired p =
+0.27, no session resolved in both) and RF-30's non-verbal pairs' 37 of 64 (0.58). Groups now pass right
+to right and do well in single file; signals carry no side; decision points run out before the meeting.
+
+**Verified.** Mock rehearsal of all 72 sessions under both configs and of the analysis;
+`tests/test_rf34_group_non_verbal.py` (9 tests: the configs, a signal seen by the oncoming person and not
+by the friend abreast, the later decision points, the pairs' condition filter, the paired comparison,
+`distance_to_partner`'s default and the pilot's refusal reproduced with it off and gone with it on); the
+full suite on the final tree (2,200 passed, 10 skipped); every report number checked against the files
+named with it. Paid: USD 0.1688 of USD 0.20, off-peak, balance USD 0.39.
