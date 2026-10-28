@@ -1,19 +1,24 @@
 """Round 1 with three or four people, non-verbal (issue #115, RF-34): the config differs from RF-32's
 run of record only in its condition, a non-verbal group session on the mock, and the analysis's
-additions (round 1's pairs of one condition, the paired comparison, the later decision points)."""
+additions (round 1's pairs of one condition, the paired comparison, the later decision points), and
+``protocol.distance_to_partner`` (the user's decision after the pilot)."""
 
 from __future__ import annotations
 
 import csv
 import json
 
-from negsim.configutil import load_yaml
+import pytest
+
+from negsim.configutil import ConfigError, load_yaml
 from negsim.experiment.avoidance import simulation_for
 from negsim.llm.mock import MockClient
 from negsim.resolution import groups as G
 from negsim.resolution import mock as M
 from negsim.resolution import protocol as P
 from negsim.resolution import scenarios as S
+from negsim.resolution import view as V
+from negsim.resolution.prompt import CoreTemplate
 from negsim.rulegen.cases import CaseStore
 from negsim.rulegen.protocol import LLMSettings
 from negsim.rulegen.replay import source_plan
@@ -125,3 +130,64 @@ def test_the_paired_comparison_matches_cell_and_case_across_conditions(tmp_path)
     found = G.paired(design, against)
     assert found["2v1"] == {"both": 1, "this_only": 1, "other_only": 0, "neither": 0, "n": 2, "sign_test_p": 1.0}
     assert found["all"] == {"both": 1, "this_only": 2, "other_only": 0, "neither": 1, "n": 4, "sign_test_p": 0.5}
+
+
+# --- protocol.distance_to_partner (the user's decision after the pilot) ---------------------------
+
+RF34_PARTNER = "configs/resolution/round1_group_head_on_non_verbal_partner.yaml"
+
+
+def test_the_run_of_record_is_the_pilots_config_but_for_distance_to_partner():
+    pilot, record = load_yaml(RF34), load_yaml(RF34_PARTNER)
+    assert record["protocol"] == {**pilot["protocol"], "distance_to_partner": True}
+    assert record["experiment_name"] == "rf34_round1_group_head_on_non_verbal_partner"
+    assert record["budget"]["cap_usd"] == 0.1814  # USD 0.20 less the pilot's 0.018599
+    different = {"experiment_name", "description", "budget", "protocol"}
+    assert {k: v for k, v in record.items() if k not in different} == {k: v for k, v in pilot.items() if k not in different}
+
+
+def test_distance_to_partner_is_off_by_default_and_named_only_when_on():
+    assert P.ProtocolSettings().distance_to_partner is False
+    assert "distance_to_partner" not in P.ProtocolSettings().as_dict()
+    assert P.ProtocolSettings.from_mapping({"distance_to_partner": True}).as_dict()["distance_to_partner"] is True
+    with pytest.raises(ConfigError):
+        P.ProtocolSettings(distance_to_partner="yes")
+
+
+FALL_BEHIND = json.dumps({"intent": "Fall in behind my friend.", "steps": [
+    {"start": "now", "speed_mps": 0.6, "until": {"seconds": 1.5}}, {"speed_mps": 1.3, "until": "other_passes"},
+], "reason": "r"})
+UNTIL_3M = json.dumps({"intent": "Ease off until they are close.", "steps": [
+    {"start": "now", "speed_mps": 1.1, "until": {"at_distance_m": 3.0}}, {"speed_mps": 1.3, "until": "other_passes"},
+], "reason": "r"})
+
+
+@pytest.mark.parametrize("on", [False, True])
+def test_with_distance_to_partner_a_friend_just_ahead_does_not_refuse_a_distance(monkeypatch, on):
+    # The pilot's refusals came with no time-to-meet line, where the check falls back to the nearest
+    # person in view: force that here, and let person 0 fall in behind their friend, then answer
+    # "until 3 m" while the oncoming person (its partner) is about 8 m away.
+    monkeypatch.setattr(V.View, "meeting_distance_m", lambda view: min((p.distance_m for p in view.seen), default=None))
+
+    def answer(request):
+        meta = request.metadata
+        if meta.get("kind") == "debrief":
+            return M.DEBRIEF_PATHS["with_source"]
+        if meta["agent_id"] == 0:
+            return FALL_BEHIND if meta["decision_point"] == 1 else UNTIL_3M
+        return M.CARRY_ON
+
+    run = P.EncounterSession(
+        simulation_for(source_plan(TWO_V_ONE)), TWO_V_ONE["agents"], S.load_scenario("passing_group"), "non_verbal",
+        MockClient(policy=answer), LLMSettings("deepseek-flash", 1.0, 300),
+        P.ProtocolSettings(max_prompted=4, max_decision_points=3, execution="keep_line", orca_within_groups=True, distance_to_partner=on),
+        core=CoreTemplate.load("resolve_v6"),
+    )
+    run.run_session()
+    second = [p for p in run.as_dict()["decision_points"] if p["agent_id"] == 0][1]
+    nearest = min(second["view"]["seen"], key=lambda person: person["distance_m"])
+    assert nearest["distance_m"] < 1.0 and second["partner_id"] == 2  # the friend just ahead; the partner is oncoming
+    if on:
+        assert second["parse_error"] is None and second["parsed"]["steps"][0]["until"] == {"at_distance_m": 3.0}
+    else:
+        assert "until_at_distance_beyond_current" in str(second["parse_error"])

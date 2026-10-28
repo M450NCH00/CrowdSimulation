@@ -556,8 +556,8 @@ def report_markdown(summary: Mapping[str, Any], arms: Sequence[Arm], experiment:
         lines.append(f"| {layout} | {row['n']} | {_share([True] * row['plan_only'] + [False] * (row['n'] - row['plan_only']))} | "
                      f"{row['vs_pairs_fisher_p']} | {row['plain_orca']} | " + " | ".join(str(row[a.name]) for a in arms) + " |")
     pr = summary["pairs_round1"]
-    lines += ["", f"Round 1's pairs: {pr['plan_only']} / {pr['n']} resolved ({pr['ci'][0]:.2f} to {pr['ci'][1]:.2f}); "
-              f"sides of the resolved: {pr['sides_resolved']}.", "",
+    lines += ["", (f"Round 1's pairs: {pr['plan_only']} / {pr['n']} resolved ({pr['ci'][0]:.2f} to {pr['ci'][1]:.2f}); "
+                   f"sides of the resolved: {pr['sides_resolved']}." if pr["n"] else "Round 1's pairs: none given (--pairs)."), "",
               "## Conflict pairs", "", f"{summary['conflict_pairs']}", "", "## Identity check per conflict pair", "",
               "| Arm | Pairs | Reproduced | Same first | Same sides | Resolved | Matched |", "| --- | --- | --- | --- | --- | --- | --- |"]
     for mode, parts in summary["identity"].items():

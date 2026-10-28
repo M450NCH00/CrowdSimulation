@@ -72,6 +72,58 @@ and D5), do groups resolve more often than in RF-32's independent run, and near 
   note, #66); the run waits for off-peak.
 - Next step: ask the user to approve the paid run and its cap.
 
+### 2026-10-28, about 09:30 UTC — the user's answer: paid runs approved, cap USD 0.20
+- The user approved paid runs for #115 only, **cap USD 0.20** (the proposed cap). Recorded in
+  `CLAUDE.md`; the config's cap set. Balance checked: **USD 0.56** (DeepSeek's endpoint).
+- The neighbouring suites (`test_rf32_group`, `test_ethnicity`, `test_repo_hygiene`,
+  `test_resolution`): 158 passed, 10 skipped, 1 failed: the ethnicity check's list of configs that may
+  name RF-30's factor template (as RF-32 found). RF-34's config added with a note; it passes.
+
+### 2026-10-28 10:01 UTC — pilot (paid): 8 sessions, USD 0.0186, off-peak
+- What I did: waited for off-peak (10:00 UTC), then `--client deepseek --confirm --limit 8`. Calls
+  10:01:15 to 10:04:41 UTC (ledger): 119 calls, USD 0.018599, all off-peak, no transport error.
+- Result:
+  - **USD 0.0023 a session**, above my estimate (14.9 calls a session, USD 0.000156 a call):
+    72 sessions ≈ USD 0.17, inside the cap.
+  - Plans are rich and use the condition: people open a gap, fall into single file, give way to the
+    cane, raise a hand (3 signals, all seen by the oncoming people, one also by a friend behind).
+    Live: 2 of 8 passed; `plan_only`: 1 of 7 design sessions resolved.
+  - Each person's three decision points are mostly used by about 4.4 s (one a second, D5's
+    `min_gap_s`, someone always turning or slowing); the meetings come at about 6 s. As in RF-30's
+    pairs; noted, not changed.
+  - **Problem found: 5 of 83 decision points lost to a check that measured to the wrong person.**
+    6 replies were unreadable after their retry; 5 were refused as `start`/`until` `at_distance_m`
+    "beyond current": "2.5 m, but the other is 0.7 m away". In every one the nearest person in view
+    was the friend ahead (0.50 to 0.67 m, after one fell in behind), no time-to-meet line was shown,
+    and the partner, the oncoming person the executor measures `at_distance_m` to
+    (`execute.py`, `_within`), was 5 to 7 m away. The reply check reads `View.meeting_distance_m()`:
+    the time-to-meet person, else **the nearest person in view**. With two people both are the same
+    person; in RF-32 (independent) every prompt came at the trigger, before anyone fell behind. So
+    this is new with groups and later decision points. (The sixth: `start: "other_passes"`, as RF-32.)
+  - `groups.py` crashed without `--pairs` (the report formatted round 1's missing interval); fixed.
+- I stopped the paid run and asked the user, since the fix changes what is measured.
+
+### 2026-10-28, between 10:07 and 11:01 UTC — the user's decision: fix, and run all 72 again
+(The question was asked at 10:07; the clock read 11:01 after the build, the mock rehearsal and the tests below.)
+- The user chose "Fix, rerun all 72" (of: the same with the cap raised to USD 0.25; run as built).
+- Built: `protocol.distance_to_partner` (off by default, named in a record only when on, so every
+  earlier record replays as before; replays never re-check distances, `execute.py` reads them back
+  with an unbounded distance). When on, the reply check's distance is the centre-to-centre distance
+  to the plan's partner, as the executor's `_within` measures it; the view's distance once the partner
+  has arrived. Documented in `docs/encounter-protocol.md`.
+- A refused reply changes what happens next (the agent carries on with its old plan, and others see
+  that), so unlike RF-32's pilot this one **cannot be re-executed**: all 72 sessions run again under the
+  new config `round1_group_head_on_non_verbal_partner.yaml` (experiment
+  `rf34_round1_group_head_on_non_verbal_partner`, cap USD 0.1814 = 0.20 − the pilot's 0.018599). The
+  pilot's config and folder (`runs/rf34_round1_group_head_on_non_verbal`) stay as built, the config
+  marked as the pilot's.
+- Tests: the new config is the pilot's but for the setting; the default and checks; a mock session
+  where person 0 falls in behind their friend, then answers "until 3 m" with no time-to-meet line
+  (forced): refused with the setting off, as in the pilot, accepted with it on.
+- Mock rehearsal of the new config, all 72 sessions (`runs_mock/rf34p/`); every record names
+  `distance_to_partner: true`.
+- `groups.py`: the report no longer crashes without `--pairs`.
+
 ## Open questions / risks
 
 - **Design (mine, same as RF-32's):** nothing is changed but the condition, so the run pairs with

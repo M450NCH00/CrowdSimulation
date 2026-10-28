@@ -63,7 +63,7 @@ both replays are rebuilt from the record alone (D13).
 from __future__ import annotations
 
 import math
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from datetime import datetime, timezone
 from typing import Any, Mapping, Optional, Sequence
 
@@ -138,10 +138,16 @@ class ProtocolSettings:
     #: only between members of different groups. RF-32's pilot lost 3 of 8 sessions to friends
     #: walking into each other before they met anyone.
     orca_within_groups: bool = False
+    #: Issue #115 (the user's decision, 2026-10-28): a reply's ``at_distance_m`` (a start or an until)
+    #: is checked against the distance to the agent's partner, the person the plan is carried out
+    #: against (``execute``, ``_within``), not against ``View.meeting_distance_m`` (the time-to-meet
+    #: person, else the nearest person in view). With two people both are the same person; in a group
+    #: the nearest can be a friend walking just ahead. RF-34's pilot lost 5 of 83 decision points so.
+    distance_to_partner: bool = False
 
     KEYS = (
         "max_decision_points", "min_gap_s", "no_conflict_end_s", "max_prompted", "speech_words_per_second", "execution",
-        "no_conflict_waits_for_plans", "orca_within_groups",
+        "no_conflict_waits_for_plans", "orca_within_groups", "distance_to_partner",
     )
 
     def __post_init__(self) -> None:
@@ -157,6 +163,8 @@ class ProtocolSettings:
             raise ConfigError(f"protocol.no_conflict_waits_for_plans: true or false, got {self.no_conflict_waits_for_plans!r}")
         if not isinstance(self.orca_within_groups, bool):
             raise ConfigError(f"protocol.orca_within_groups: true or false, got {self.orca_within_groups!r}")
+        if not isinstance(self.distance_to_partner, bool):
+            raise ConfigError(f"protocol.distance_to_partner: true or false, got {self.distance_to_partner!r}")
 
     @classmethod
     def from_mapping(cls, raw: Any, where: str = "protocol") -> "ProtocolSettings":
@@ -171,6 +179,7 @@ class ProtocolSettings:
             execution=as_choice(block.get("execution", default.execution), f"{where}.execution", EXECUTIONS),
             no_conflict_waits_for_plans=block.get("no_conflict_waits_for_plans", default.no_conflict_waits_for_plans),
             orca_within_groups=block.get("orca_within_groups", default.orca_within_groups),
+            distance_to_partner=block.get("distance_to_partner", default.distance_to_partner),
         )
 
     def decision_points_for(self, condition: str) -> int:
@@ -185,6 +194,8 @@ class ProtocolSettings:
             del described["no_conflict_waits_for_plans"]
         if not self.orca_within_groups:  # issue #110: likewise
             del described["orca_within_groups"]
+        if not self.distance_to_partner:  # issue #115: likewise
+            del described["distance_to_partner"]
         return described
 
 
@@ -522,6 +533,8 @@ class EncounterSession:
                 view, self.condition, self.scenario.events, self.core.later_step_start,
                 self.core.until_at_distance, self.core.until_event_as_object, self.core.sidestep,
             )
+            if self.settings.distance_to_partner:
+                context = replace(context, distance_m=self._partner_distance(member, context.distance_m))
             metadata = {
                 **self.labels, "kind": "decision", "agent_id": agent, "agent_slot": member.slot,
                 "decision_point": member.prompts + 1, "step": step,
@@ -571,6 +584,14 @@ class EncounterSession:
                     self.run.driver.give(sim, agent, (), member.partner)  # it carries on as it is
                     given = []
             self._record(member, reasons, view, prompt, reply, given, now, step)
+
+    def _partner_distance(self, member: _Member, otherwise: Optional[float]) -> Optional[float]:
+        """Centre to centre, to the partner the plan is carried out against (``distance_to_partner``);
+        ``otherwise`` once the partner has arrived."""
+        agents = self.sim.world.agents
+        if member.partner is None or agents[member.partner].done:
+            return otherwise
+        return math.dist(agents[member.agent_id].pose.xy, agents[member.partner].pose.xy)
 
     def _factor_lines(self, agent: int) -> dict[str, Any]:
         """The lines of the session's factors in ``agent``'s view (RF-5): its own, its notes, what
