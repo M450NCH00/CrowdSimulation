@@ -5,17 +5,21 @@ scenario hooks' defaults, a persona for everyone (``design.others``) and RF-32's
 from __future__ import annotations
 
 import copy
+import json
 
 import pytest
 
 from negsim.configutil import ConfigError, load_yaml
 from negsim.experiment.avoidance import simulation_for
 from negsim.llm.mock import MockClient
+from negsim.resolution import execute as X
 from negsim.resolution import experiment as E
+from negsim.resolution import groups as G
 from negsim.resolution import mock as M
 from negsim.resolution import protocol as P
 from negsim.resolution import scenarios as S
 from negsim.resolution.design import ResolutionDesign, others_for
+from negsim.resolution.reexecute import reexecuted
 from negsim.resolution.scenarios.passing_group import companion_side
 from negsim.rulegen.cases import CaseStore
 from negsim.rulegen.protocol import LLMSettings
@@ -36,13 +40,13 @@ def scenario_with(eastbound, westbound):
     return build_crowd_scenario(raw)
 
 
-def session_on(case, answers=None):
+def session_on(case, answers=None, **settings):
     def answer(request):
         meta = request.metadata
         return M.DEBRIEF_PATHS["with_source"] if meta.get("kind") == "debrief" else (answers or {}).get(meta["agent_id"], M.CARRY_ON)
     run = P.EncounterSession(
         simulation_for(source_plan(case)), case["agents"], S.load_scenario("passing_group"), "independent",
-        MockClient(policy=answer), LLM, P.ProtocolSettings(max_prompted=4),
+        MockClient(policy=answer), LLM, P.ProtocolSettings(max_prompted=4, **settings),
     )
     run.run_session()
     return run.as_dict()
@@ -195,3 +199,92 @@ def test_rf32s_config_plans_72_sessions_with_everyone_given_a_persona():
                 assert persona["mobility_aid"] == "none" and persona["assertiveness"] == "gives_way" and persona["age"] == 25
     lone = [s for s in plan.sessions if plan.cases[s.case_id]["scenario"]["n_agents"] == 3]
     assert all(companion_side(plan.cases[s.case_id]["scenario"]["geometry"], s.persons[0]) is None for s in lone)
+
+
+# --- ORCA keeps friends apart (the user's decision after the pilot) ------------------------------
+
+#: RF-32's pilot, I_group_37a3c705_0d7b1bbf_r1: "tuck in behind my friend", written as a 20 degree turn
+#: at full speed; the friend was hit 0.3 s later. (Its second step ended at a distance, which only
+#: resolve_v6 reads; here it ends when the other passes.)
+TUCK_IN = json.dumps({"intent": "Tuck in behind my friend.", "steps": [
+    {"start": "now", "speed_mps": 1.3, "turn": {"to": "right", "degrees": 20.0}, "until": {"seconds": 1.0}},
+    {"speed_mps": 1.3, "until": "other_passes"},
+], "reason": "r"})
+
+
+def test_orca_within_groups_is_off_by_default_and_named_only_when_on():
+    assert "orca_within_groups" not in P.ProtocolSettings().as_dict()
+    assert P.ProtocolSettings(orca_within_groups=True).as_dict()["orca_within_groups"] is True
+    assert P.ProtocolSettings.from_mapping({"orca_within_groups": True}).orca_within_groups is True
+    with pytest.raises(ConfigError, match="orca_within_groups"):
+        P.ProtocolSettings(orca_within_groups="yes")
+
+
+def test_with_orca_within_groups_a_friend_is_not_walked_into():
+    off = session_on(TWO_V_TWO, {0: TUCK_IN}, execution="keep_line")
+    on = session_on(TWO_V_TWO, {0: TUCK_IN}, execution="keep_line", orca_within_groups=True)
+    assert off["encounter"]["end"]["reason"] == P.END_COLLISION and off["encounter"]["end"]["time_s"] < 3.5  # the friend, at once
+    assert not (on["encounter"]["end"]["reason"] == P.END_COLLISION and on["encounter"]["end"]["time_s"] < 3.5)
+    assert on["protocol"]["orca_within_groups"] is True and "orca_within_groups" not in off["protocol"]
+
+
+def test_the_driver_leaves_orca_on_within_a_group_and_off_across():
+    sim = simulation_for(source_plan(TWO_V_TWO))
+    for flag in (False, True):
+        driver = X.PlanDriver(X.MODE_PLAN_ONLY, S.load_scenario("passing_group"), (0, 1, 2, 3), "keep_line", flag)
+        driver.give(sim, 0, (), 2)
+        driver.started_step = 0
+        driver.prepare(sim)
+        assert driver.ignores(0, 2) and driver.ignores(1, 3)
+        assert driver.ignores(0, 1) is (not flag) and driver.ignores(2, 3) is (not flag)
+        assert ("orca_within_groups" in driver.as_dict()) is flag
+
+
+def test_a_reexecution_switches_it_on_only_when_asked():
+    record = {"session_id": "s", "protocol": {"execution": "keep_line"}}
+    assert reexecuted(record, "keep_line", "src") == {**record, "reexecuted_from": {"experiment": "src", "execution": "keep_line"}}
+    again = reexecuted(record, "keep_line", "src", orca_within_groups=True)
+    assert again["protocol"] == {"execution": "keep_line", "orca_within_groups": True}
+    assert again["reexecuted_from"] == {"experiment": "src", "execution": "keep_line", "orca_within_groups": False}
+
+
+# --- the analysis per conflict pair (tasks 8 and 9) ----------------------------------------------
+
+
+def test_wilson_and_fisher():
+    assert G.wilson(0, 0) == (None, None)
+    low, high = G.wilson(35, 64)
+    assert 0.42 < low < 0.43 and 0.66 < high < 0.67  # RF-30's independent pairs: 0.43 to 0.66
+    assert G.fisher(3, 1, 1, 3) == pytest.approx(0.485714, abs=1e-6)  # the textbook tea-tasting table
+    assert G.fisher(0, 16, 35, 29) < 0.001
+
+
+def test_an_arm_names_a_rule_set_or_a_rule():
+    arm = G.Arm.parse("left_turn=runs/rf18_round1_realistic/rule_db_staging:passed_screening:4")
+    assert arm.ruleset == "passed_screening" and arm.enable is None and arm.schema_version == 4
+    arm = G.Arm.parse("slow=runs/rf12_round1_head_on/rule_db_staging/extracted:ext_head_on_6455ca5589@2:3")
+    assert arm.enable == {"ext_head_on_6455ca5589": 2} and arm.schema_version == 3
+    assert arm.directives()["enable"] == {"ext_head_on_6455ca5589": 2}
+    with pytest.raises(ValueError):
+        G.Arm.parse("nothing")
+
+
+def test_a_session_is_measured_per_conflict_pair_and_everyone_carries_their_factors(tmp_path):
+    record = session_on(TWO_V_ONE_APART, {0: TUCK_IN}, execution="keep_line", orca_within_groups=True)
+    record.update({
+        "session_id": "s", "case": {"case_id": TWO_V_ONE_APART["case_id"], "version": 1}, "scenario": "passing_group",
+        "session": {"personas": {"0": {"age": 25, "gender": "male"}, "1": {"age": 25, "gender": "female"},
+                                 "2": {"age": 70, "gender": "female", "mobility_aid": "cane", "assertiveness": "holds_ground"}},
+                    "visibility": {"age": True, "gender": True}},
+    })
+    assert G.population(record, 3)[2]["attributes"] == {"age": 70, "gender": "female"}
+    assert G.population(record, 4)[2]["attributes"] == {"age": 70, "gender": "female", "mobility_aid": "cane", "assertiveness": "holds_ground"}
+    arm = G.Arm.parse("left_turn=runs/rf18_round1_realistic/rule_db_staging:passed_screening:4")
+    measured = G.GroupAnalysis(tmp_path, [arm]).session(record)
+    assert [(row["agent_a"], row["agent_b"]) for row in measured["pairs"]] == [tuple(pair) for pair in record["encounter"]["pairs"]]
+    row = measured["pairs"][0]
+    assert row["left_turn_matched"] is True and row["left_turn_resolved"] is True  # RF-31: the left turn resolves a head-on
+    assert row["plain_orca_resolved"] is False  # plain ORCA passes within the near-miss distance
+    assert measured["resolved"]["left_turn"] is True
+    assert {f["formation"] for f in measured["formations"]} <= set(G.FORMATIONS) and len(measured["formations"]) == 1
+    assert [p["with_friend"] for p in sorted(measured["first_plans"], key=lambda p: p["agent_id"])] == [True, True, False]
