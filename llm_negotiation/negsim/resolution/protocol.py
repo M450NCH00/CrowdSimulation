@@ -317,9 +317,8 @@ class EncounterSession:
         return self.outcome
 
     def _find_trigger(self) -> bool:
-        a, b = self.pair
         while not self._finished:
-            for observer, other in ((a, b), (b, a)):
+            for observer, other in self.scenario.trigger_pairs(self.sim, self.pair):
                 if self._d4(observer, other):
                     self._start(observer, other)
                     return True
@@ -336,10 +335,9 @@ class EncounterSession:
             members, self.left_out = members[:cap], members[cap:]
         self.order = members
         self.members = {agent: _Member(agent, slot) for slot, agent in enumerate(members)}
-        self.pairs = [(observer, other)] + [
-            (p, q) for k, p in enumerate(members) for q in members[k + 1:]
-            if {p, q} != {observer, other} and self.scenario.conflict_predicted(sim, p, q)
-        ]
+        self.pairs = [tuple(pair) for pair in self.scenario.conflict_pairs(sim, members, observer, other)]
+        if not self.pairs or self.pairs[0] != (observer, other) or any(not set(pair) <= set(members) for pair in self.pairs):
+            raise ValueError(f"{type(self.scenario).__name__}.conflict_pairs must list the two who started it first, then pairs of members")
         self.trigger = {"step": sim.world.step_index, "time_s": round(sim.world.time, 6), "agent_id": observer, "other_id": other}
         self.run = PlanRun(sim, MODE_PLAN_ONLY, self.scenario, members, self.settings.execution)
         self._last_conflict_s = sim.world.time

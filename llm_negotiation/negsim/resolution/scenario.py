@@ -25,6 +25,10 @@ On the encounter side (issue #58, RF-3) a scenario supplies:
   part of the trigger (D4) and of "the conflict still matters" (D5) that is the scenario's;
 - who is in an encounter that two people started (:meth:`Scenario.encounter_members`): the
   two, or more (D11). The protocol applies the cap on prompted people;
+- which two can start it (:meth:`Scenario.trigger_pairs`): the case's two by default; and which
+  pairs of the encounter its outcome counts (:meth:`Scenario.conflict_pairs`): the two who started
+  it and every other pair predicted to be in conflict then, by default (issue #110 added both
+  hooks, for small groups; their defaults are what the protocol did before);
 - which case types it takes when a config names no plug-in (``CASE_TYPES``).
 
 Adding a scenario adds a subclass and a template. It never edits the core template
@@ -158,3 +162,18 @@ class Scenario:
         """Who is in the encounter that ``i`` and ``j`` start: ``i`` and ``j`` first, then anyone
         else the scenario brings in, in the order they are to be prompted. Two people by default."""
         return [i, j]
+
+    def trigger_pairs(self, simulation: Any, pair: Sequence[int]) -> list[tuple[int, int]]:
+        """Who can start the encounter, as ``(observer, other)``, in the order the trigger checks
+        them: the case's two, each way (issue #110 made it a hook; this is what the protocol did)."""
+        a, b = (int(agent) for agent in pair)
+        return [(a, b), (b, a)]
+
+    def conflict_pairs(self, simulation: Any, members: Sequence[int], observer: int, other: int) -> list[tuple[int, int]]:
+        """The pairs of the encounter whose outcome counts, fixed when it starts: the two who
+        started it, then every other pair of ``members`` predicted to be in conflict now (issue #58;
+        a hook since issue #110, with the protocol's rule as its default)."""
+        return [(observer, other)] + [
+            (p, q) for k, p in enumerate(members) for q in members[k + 1:]
+            if {p, q} != {observer, other} and self.conflict_predicted(simulation, p, q)
+        ]

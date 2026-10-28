@@ -386,10 +386,24 @@ def plan(config: ResolutionConfig) -> Plan:
     sessions = sessions_for(
         [(case_id, case["version"], tuple(case["agents"]), scenarios[case_id]) for case_id, case in cases.items()],
         config.design, config.conditions, config.experiment_name, geometry_of,
+        others_in(cases) if config.design.others is not None else None,
     )
     if config.design.uses_factors:
         check_bodies(config, sessions, cases)
     return Plan(cases, scenarios, sessions, preview_cost(config, sessions, cases, PriceTable.from_yaml()))
+
+
+def others_in(cases: Mapping[str, Mapping[str, Any]]) -> dict[str, dict[int, Optional[int]]]:
+    """Issue #110 (``design.others``): each case's people beyond its pair, each with the member of
+    the pair who walks in the same group as them (the run's ``group``), or ``None``."""
+    out = {}
+    for case_id, case in cases.items():
+        specs = build_crowd_scenario(source_plan(case).scenario_config).agents
+        out[case_id] = {
+            spec.agent_id: next((agent for agent in case["agents"] if specs[agent].group == spec.group), None)
+            for spec in specs if spec.agent_id not in case["agents"]
+        }
+    return out
 
 
 def geometry_label(case: Mapping[str, Any]) -> str:

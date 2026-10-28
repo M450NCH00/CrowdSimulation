@@ -568,6 +568,8 @@ def scene_of(simulation: Any) -> dict[str, Any]:
         "scenario": {
             "type": spec.scenario_type,
             "n_agents": len(simulation.world.agents),
+            # Issue #110: the layout, as a case holds it, for a plug-in that says where a companion is.
+            "geometry": dict(spec.geometry),
             "single_file_segments": [
                 {
                     "name": segment.name,

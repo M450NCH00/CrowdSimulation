@@ -81,6 +81,15 @@ shares; or ``balanced``, every group equally often in a fixed rotation, each ses
 to the shares (``ethnicity_weight``; ``ethnicity.py``).
 
 A paid run that varies it waits for the ethics sign-off (``negsim.ethics``; ``experiment.py``).
+
+**Everyone else in the case** (issue #110, RF-32; a key of the design, optional). By default only
+the design's two people have a persona, and anyone else the scenario brings into the encounter has
+none. ``others: {age, gender}`` gives each other person of the case one: ``age`` (default
+``base_age``), ``gender`` (``female``, ``male``, or ``as_companion``: the gender of the design's
+person walking in their group, for a case whose scenario has groups), a routine errand, and the
+base level of every core factor the design varies, so that their own lines and what others see of
+them render as the design's two people's do. Not with real ethnicity or a pairwise factor, which
+are drawn or set for the two only. A config without it is as before.
 """
 
 from __future__ import annotations
@@ -140,6 +149,9 @@ KIND_FULL, KIND_FRACTIONAL, KIND_SAMPLE = "full", "fractional", "sample"
 KINDS = (KIND_FULL, KIND_FRACTIONAL, KIND_SAMPLE)
 #: A counterfactual pair's two sessions.
 ROLE_BASE, ROLE_FLIPPED = "base", "flipped"
+#: Issue #110: how a person outside the design's two gets their gender.
+AS_COMPANION = "as_companion"
+OTHER_GENDERS = ("female", "male", AS_COMPANION)
 #: Issue #92: what a counterfactual pair may flip besides a design factor: one person's group of
 #: real ethnicity, with both groups fixed by the pair (``ethnicity: {p1, p2}``) instead of drawn.
 GROUP_FLIPS = ("p1_ethnicity", "p2_ethnicity")
@@ -204,6 +216,17 @@ class CounterfactualPair:
 
 
 @dataclass(frozen=True)
+class OthersSpec:
+    """Issue #110: the persona of everyone in a case beyond the design's two people."""
+
+    age: int
+    gender: str
+
+    def as_dict(self) -> dict[str, Any]:
+        return {"age": self.age, "gender": self.gender}
+
+
+@dataclass(frozen=True)
 class ResolutionDesign:
     seed: int
     levels: Mapping[str, tuple[Any, ...]]
@@ -227,6 +250,8 @@ class ResolutionDesign:
     ethnicity_shares: Optional[EthnicityShares] = None
     #: Issue #92: how the groups are drawn, ``real`` or ``balanced``.
     ethnicity_draw: str = DRAW_REAL
+    #: Issue #110: the persona of everyone beyond the design's two, or ``None`` (they have none).
+    others: Optional[OthersSpec] = None
 
     #: ``personas_of`` reads it: the fictional group is never on in this layer.
     groups = None
@@ -262,7 +287,7 @@ class ResolutionDesign:
         check_keys(
             raw, where, ("seed", "factors"),
             ("repeats", "base_age", "age_difference", "tasks", "kind", "cells", "geometries", "exact_repeats", "counterfactual_pairs",
-             "ethnicity_shares", "ethnicity_draw"),
+             "ethnicity_shares", "ethnicity_draw", "others"),
         )
         factors = check_keys(raw["factors"], f"{where}.factors", REQUIRED, tuple(name for name in ALL_FACTORS if name not in REQUIRED))
         if ("task" in factors) == ("urgency" in factors):
@@ -304,6 +329,18 @@ class ResolutionDesign:
         kind = str(raw.get("kind", KIND_FULL))
         if kind not in KINDS:
             raise ConfigError(f"{where}.kind: one of {list(KINDS)}, got {kind!r}")
+        others = None
+        if raw.get("others") is not None:  # issue #110
+            block = check_keys(raw["others"], f"{where}.others", ("gender",), ("age",))
+            if block["gender"] not in OTHER_GENDERS:
+                raise ConfigError(f"{where}.others.gender: one of {list(OTHER_GENDERS)}, got {block['gender']!r}")
+            age = int(as_number(block.get("age", base_age), f"{where}.others.age", minimum=1))
+            if age > 120:
+                raise ConfigError(f"{where}.others.age: a possible age, at most 120")
+            drawn_for_two = [name for name in factors if name in ETHNICITY_FACTORS or name in PAIRWISE_FACTORS or name in PAIRWISE_SWITCH_FACTORS]
+            if drawn_for_two:
+                raise ConfigError(f"{where}.others: not with {drawn_for_two}, which are drawn or set for the design's two people only")
+            others = OthersSpec(age, block["gender"])
         size = None
         if kind == KIND_FULL and raw.get("cells") is not None:
             raise ConfigError(f"{where}.cells: a full design has every cell; cells is for kind fractional or sample")
@@ -324,6 +361,7 @@ class ResolutionDesign:
             kind_given="kind" in raw,
             ethnicity_shares=EthnicityShares.load(resolve_path(raw.get("ethnicity_shares") or SHARES_CONFIG)) if PAIR_FACTOR in factors else None,
             ethnicity_draw=str(raw.get("ethnicity_draw", DRAW_REAL)),
+            others=others,
         )
         if kind == KIND_FRACTIONAL:
             try:
@@ -485,6 +523,8 @@ class ResolutionDesign:
             described["ethnicity_shares"] = self.ethnicity_shares.as_dict()
             if self.ethnicity_draw != DRAW_REAL:  # only when not the default
                 described["ethnicity_draw"] = self.ethnicity_draw
+        if self.others is not None:  # issue #110: only when used
+            described["others"] = self.others.as_dict()
         return described
 
     def ethnicity_assignment(self, units: Mapping[tuple[str, str], set]) -> dict[tuple[str, str], dict[str, tuple[str, str]]]:
@@ -526,6 +566,28 @@ def personas_for(
     if ethnicity is not None:
         people[first]["ethnicity"], people[second]["ethnicity"] = ethnicity
     return people
+
+
+def others_for(
+    cell: Mapping[str, Any], people: Mapping[int, Mapping[str, Any]], others: Mapping[int, Optional[int]], design: "ResolutionDesign",
+) -> dict[int, dict[str, Any]]:
+    """Issue #110: the personas of everyone beyond the design's two (``others``: each such agent, and
+    the design person walking in their group, or ``None``), as ``design.others`` says."""
+    spec = design.others
+    out = {}
+    for agent, companion in sorted(others.items()):
+        if spec.gender == AS_COMPANION:
+            if companion is None:
+                raise ConfigError(f"design.others.gender: as_companion, but agent {agent} walks with neither of the design's two people")
+            gender = people[companion]["gender"]
+        else:
+            gender = spec.gender
+        persona: dict[str, Any] = {"age": spec.age, "gender": gender, "task": design.tasks["routine"], "urgency": "routine"}
+        for name in PERSON_FACTORS:
+            if name in cell and name != "urgency":
+                persona[name] = ATTRIBUTES[name].levels[0]
+        out[int(agent)] = persona
+    return out
 
 
 def visibility_for(cell: Mapping[str, Any]) -> dict[str, bool]:
@@ -653,13 +715,16 @@ def sessions_for(
     conditions: Sequence[str],
     experiment: str,
     geometry_of: Optional[Mapping[str, str]] = None,
+    others_of: Optional[Mapping[str, Mapping[int, Optional[int]]]] = None,
 ) -> list[Session]:
     """Every condition, case and cell of the design, each ``design.repeats`` times (or, with an
     exact-repeat set, its cells that many times on their case); then every counterfactual pair, as
     two sessions on every case; shuffled by the design's seed. ``cases`` are ``(case_id, version,
     agents, scenario plug-in)``; ``geometry_of`` names each case's geometry when the design lists
     geometries. Ids come from what a session is: ``<I|N|T>_<case>_<cell code>_r<repeat>``, and a
-    pair's ``<I|N|T>_<case>_<cell code>_x<pair code>``."""
+    pair's ``<I|N|T>_<case>_<cell code>_x<pair code>``. Issue #110: with ``design.others``,
+    ``others_of`` gives each case's other people (agent, and the design person in their group or
+    ``None``), and each gets a persona (:func:`others_for`)."""
     cells = design.cell_list()
     repeats = design.exact_repeat_plan(cells, [case[0] for case in cases])
     unordered = []
@@ -711,10 +776,19 @@ def sessions_for(
         return entry.get("_fixed") or assigned[entry["_unit"]][entry["cell"][PAIR_FACTOR]]
 
     weight_of = dict(zip(range(len(order)), weights(design.ethnicity_shares, [groups_of(e) for e in order]))) if drawn else {}
+    if design.others is not None and others_of is None:
+        raise ConfigError("design.others: the cases' other people are not known (others_of)")
+
+    def everyone(entry: Mapping[str, Any]) -> dict[int, dict[str, Any]]:
+        people = personas_for(entry["cell"], entry["agents"], design, groups_of(entry))
+        if design.others is not None:  # issue #110
+            people.update(others_for(entry["cell"], people, others_of[entry["case_id"]], design))
+        return people
+
     return [
         Session(
             index=index, **{key: value for key, value in entry.items() if key not in ("_unit", "_fixed")},
-            personas=personas_for(entry["cell"], entry["agents"], design, groups_of(entry)), visibility=visibility_for(entry["cell"]),
+            personas=everyone(entry), visibility=visibility_for(entry["cell"]),
             geometry=(geometry_of or {}).get(entry["case_id"]) if design.geometries else None,
             ethnicity_weight=weight_of.get(index - 1),
         )
