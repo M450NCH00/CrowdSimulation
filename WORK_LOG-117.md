@@ -143,7 +143,7 @@ condition; bystanders drawn from RF-33's realistic profile `singapore_street_v1`
 - `test_ethnicity`'s list of configs now includes RF-35's (the same factor template as RF-32), with a note.
 - `crowd_report.md` written; README row; `CLAUDE.md` balance.
 
-### 2026-10-28 16:15 to 16:45 UTC — full suite
+### 2026-10-28 16:15 to 16:44 UTC — full suite
 - 2,212 passed, 10 skipped, 2 failed (27 min 56 s): the two exact counts that new committed cases and
   source runs break (`test_avoidance_runs`: version-5 run folders +4, RF-35's flow sources;
   `test_resolution`: crowd cases +8). Both updated with a note; both pass.
@@ -155,4 +155,19 @@ condition; bystanders drawn from RF-33's realistic profile `singapore_street_v1`
 - The 8 cases come from four source runs (two seeds per density); different crowds would give other
   encounters.
 
+- At a depth tolerance (5 mm or 1 cm), 26 or 34 of 64 would resolve: whether millimetres should count
+  is the user's choice (`crowd_report.md`, open question 1).
+- The non-verbal condition for the same encounters (as RF-34 did for groups) is not run.
+
 ## Summary (fill in at the end)
+
+- **Built:** crowd-encounter cases from RF-18's flow at 25 and 50 per way (`rf35_crowd_v1`, 8 cases);
+  `design.others.population` (bystanders from a profile at exact shares, the same for exact repeats);
+  RF-35's config; the measure against plain ORCA on the same seed (`groups.contacts`, `against_orca`);
+  13 tests.
+- **Ran:** 72 sessions, USD 0.070697 with the pilot (cap 0.10), all off-peak; balance USD 0.32.
+- **Found:** inside a crowd the LLM's plans do not beat ORCA: 14 of 64 resolved against plain ORCA,
+  worse in 50, better in 6; extra collisions in 30 sessions, fewer in 2; the deep ones between the
+  encounter's own people. The plans themselves are sensible (keep right, slow when giving way, room for
+  a cane), and the debriefs name no source. Report: `runs/rf35_crowd_encounters/crowd_report.md`.
+- **Full suite:** 2,212 passed, 10 skipped after the two count updates.
