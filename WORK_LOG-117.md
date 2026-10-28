@@ -112,7 +112,7 @@ condition; bystanders drawn from RF-33's realistic profile `singapore_street_v1`
   `groups.py` (`contacts`, `against_orca`): episodes ending at or after the start that involve one of
   the encounter's people (walls included), the deepest overlap, stuck = a deadlock or not arrived;
   better / same / worse per session, the sign test over sessions. The pair measure stays reported.
-- **The remaining 64 sessions** started from a clean tree (commit `fd3ac8a`), off-peak.
+- **The remaining 64 sessions** started from a clean tree (commit `fd3ac8a`, `0920bb7` after the rewrite below), off-peak.
 
 ### 2026-10-28 14:32 to 15:38 UTC — the run (paid): 72 sessions, USD 0.070697, off-peak
 - Calls 14:32:58 to 14:53:36 UTC (ledger); the rest of the time is the replays (each reruns a 50- or
@@ -138,8 +138,10 @@ condition; bystanders drawn from RF-33's realistic profile `singapore_street_v1`
 - **Found [mine]:** the replays are 2.0 GB, 1.9 GB of it the two interaction logs, which the viewer and
   the outcomes do not need and `negsim.resolution.replay` rebuilds from the records. They are now
   gitignored and untracked (the pilot's 32, committed in `fd3ac8a`, too); the rest of each replay is
-  committed (about 130 MB). The pilot commit still holds those 32 files (about 250 MB) in history; the
-  branch is not pushed, so whether to rewrite it before pushing is the user's call.
+  committed (about 130 MB). The pilot commit still held those 32 files (258 MB) in history.
+- **The user's decision (16:46 UTC): rewrite, then push.** `git filter-branch --index-filter` over the
+  branch's 11 unpushed commits only, removing the RF-35 replays' two interaction logs; the final tree is
+  unchanged (empty diff) and the files stay on disk. The pilot commit is now `0920bb7`.
 - `test_ethnicity`'s list of configs now includes RF-35's (the same factor template as RF-32), with a note.
 - `crowd_report.md` written; README row; `CLAUDE.md` balance.
 
