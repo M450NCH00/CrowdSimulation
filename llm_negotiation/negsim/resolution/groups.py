@@ -255,6 +255,15 @@ def later_points(record: Mapping[str, Any]) -> dict[str, Any]:
             "signals": dict(signals), "signals_seen_by": dict(seen_by)}
 
 
+def layout_of(case: Mapping[str, Any]) -> Optional[str]:
+    """A case's layout (RF-32's group cases), else its variant in words (issue #117: the flow's
+    ``density=per_way_25``), else ``None``."""
+    variant = case["scenario"].get("variant") or {}
+    if "layout" in variant:
+        return variant["layout"]
+    return ";".join(f"{key}={value}" for key, value in sorted(variant.items())) or None
+
+
 def design_key(session_id: str) -> str:
     """The session id without its condition letter (``I_group_..._r1`` and ``N_group_..._r1`` are the
     same cell, case and repeat)."""
@@ -291,11 +300,11 @@ class GroupAnalysis:
                 visibility=visibility(base, record, arm.schema_version), directives=arm.directives(),
             )
             measured[arm.name] = _run(plan, PlanDriver(MODE_PLAN_ORCA, scenario, agents), start)
-        variant = case["scenario"].get("variant") or {}
+        layout = layout_of(case)
         rows = []
         for pair in pairs:
             row: dict[str, Any] = {
-                "session_id": record["session_id"], "case_id": case["case_id"], "layout": variant.get("layout"),
+                "session_id": record["session_id"], "case_id": case["case_id"], "layout": layout,
                 "agent_a": pair[0], "agent_b": pair[1],
             }
             found = {mode: _pair_columns(m, pair, scenario, goals) for mode, m in measured.items()}
@@ -307,8 +316,10 @@ class GroupAnalysis:
                     row[f"{mode}_matched"] = measured[mode].matched
             rows.append(row)
         return {
-            "session_id": record["session_id"], "layout": variant.get("layout"), "case_id": case["case_id"],
+            "session_id": record["session_id"], "layout": layout, "case_id": case["case_id"],
             "n_people": case["scenario"]["n_agents"], "pairs": rows,
+            "encounter_size": len(agents), "prompted": len(record["encounter"].get("prompted") or []),
+            "left_out_by_cap": len(record["encounter"].get("left_out_by_cap") or []),
             "resolved": {mode: all(row[f"{mode}_{RESOLVED}"] for row in rows) for mode in measured},
             "formations": formations(step1, agents),
             "first_plans": [
@@ -464,6 +475,12 @@ def summarise(
             **{arm.name: sum(s["resolved"][arm.name] for s in mine) for arm in arms},
         }
     out["resolved"] = resolved
+    by_size = {}  # issue #117: by how many people were in the encounter
+    for size in sorted({s.get("encounter_size") for s in design if s.get("encounter_size") is not None}):
+        mine = [s for s in design if s.get("encounter_size") == size]
+        k = sum(s["resolved"]["plan_only"] for s in mine)
+        by_size[str(size)] = {"n": len(mine), "plan_only": k, "ci": wilson(k, len(mine))}
+    out["resolved_by_encounter_size"] = by_size
     out["pairs_round1"] = {"n": len(pairs), "plan_only": pair_k, "ci": wilson(pair_k, len(pairs))}
     every = [row for s in design for row in s["pairs"]]
     out["conflict_pairs"] = {
@@ -572,6 +589,11 @@ def report_markdown(summary: Mapping[str, Any], arms: Sequence[Arm], experiment:
     for name, table in summary["debriefs"].items():
         lines.append(f"- **{name}**: {table}")
     lines += ["", f"Unreadable after retry: {summary['unreadable']}"]
+    if summary.get("resolved_by_encounter_size"):
+        lines += ["", "## Resolved in plan_only, by the number of people in the encounter", "",
+                  "| People | Sessions | Resolved (95% CI) |", "| --- | --- | --- |"]
+        for size, row in summary["resolved_by_encounter_size"].items():
+            lines.append(f"| {size} | {row['n']} | {_share([True] * row['plan_only'] + [False] * (row['n'] - row['plan_only']))} |")
     if "later_points" in summary:
         lines += ["", "## Decision points after each person's first", "", f"{summary['later_points']}"]
     if "paired" in summary:

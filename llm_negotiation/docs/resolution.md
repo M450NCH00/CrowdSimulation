@@ -336,6 +336,17 @@ ARE WITH); `design.others`, a persona for everyone beyond the design's two
 block, who joins, the conflict pairs, the side-by-side spacing of 0.63 m from Zanlungo et al. 2017,
 the design) are in `WORK_LOG-110.md`.
 
+**Amended by the user, 2026-10-28, for issue #117 (RF-35) only: encounters sampled from crowds.**
+Round 1's rules came from pairs and were judged in crowds; to ask the agents themselves about crowds
+without prompting whole crowds, encounters are sampled from RF-18's two-way flow at 25 and 50 people
+per way: the two who start a conflict and anyone within 10 m predicted to conflict with them
+(`passing_crowd`, cap 4 prompted, D12), everyone else ORCA and seen by the prompted people.
+Independent condition; everyone beyond the design's two drawn from the realistic profile
+`singapore_street_v1` (`design.others.population`). Step 1 only: extraction from crowd encounters
+follows only if the agents resolve them. *As built (#117):* source runs `rf35_source_crowd_flow`, case
+set `rf35_crowd_v1` (two per density at tiers T3 and T4); the choices that are not the user's are in
+`WORK_LOG-117.md`.
+
 ## D12. Values
 
 | Item | Value | Status |

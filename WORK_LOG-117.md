@@ -52,6 +52,41 @@ condition; bystanders drawn from RF-33's realistic profile `singapore_street_v1`
   everyone else), `others_in` (each case's other people, any scenario), `populations.quota_people`
   (exact shares from a seed), `SessionFactors` (a factor is rendered only if the design varies it).
 
+### 2026-10-28 13:12 to 13:18 UTC — cases, bystanders, config, tests
+- Source runs (13:11 to 13:12 UTC, free): every person arrived in all four; collisions 16 and 15 at 25
+  per way, 91 and 81 at 50 per way (plain ORCA, as RF-18 found in its flow).
+- Case set `rf35_crowd_v1`: 302 eligible pairs (T3 and above, head-on when formed); two per density and
+  tier: 25 per way T3 `flow_1b5b9b8d`, `flow_b0c1353e`, T4 `flow_06018e0c`, `flow_61f018fc`; 50 per way T3
+  `flow_32e86a8e`, `flow_826d5092`, T4 `flow_9274de21`, `flow_bf8bfa07`.
+  **Changed from the issue [mine]:** tiers T3 and T4, not T2 to T4: 4 per density do not split evenly
+  over three tiers, and a T2 pass is no conflict to resolve.
+- `design.others.population` (`design.py`): everyone beyond the design's two drawn with
+  `populations.quota_people` (exact shares), seeded by the design's seed, the case and the cell, so an
+  exact repeat has the same people. Their persona carries only the factors the design has (a factor is
+  rendered only then), so the config fixes `distraction` at its base level for the two, and a
+  bystander's phone is shown. The old form (#110) is unchanged.
+- **Found, and changed [mine]:** `load` in the design crashed the plan: a bystander drawn with a
+  suitcase gets a wider body (issue #60), which only the design's two have radii for, and which would
+  change the case's run. `load` left out of the design (its 1% is a placeholder; the user's option named
+  age, gender, a cane and a phone), and `others.population` now refuses `load` with a clear message.
+- **Design kind [mine]:** `sample` (a balanced 8 of the 16 cells): the fractional kind has 16 or 32.
+- **Protocol [mine]:** `orca_within_groups: true` (in the flow a run's group is its walking direction:
+  the user's RF-32 decision then means the plans decide only between people walking opposite ways) and
+  `distance_to_partner: true` (in a crowd the nearest person in view at the trigger may be a stranger).
+- `--plan`: 72 sessions over 8 cases, at most 8 calls a session; loose worst case USD 23.5 (crowd
+  prompts are long: everyone in view is described).
+- `tests/test_rf35_crowd.py` (6): cases, config, exact shares, exact repeats, a bystander's cane or
+  phone in what others are told, the population form's checks and the old form unchanged. RF-32's and
+  RF-34's tests pass.
+- `groups.py`: a case without a `layout` (the flow) is labelled by its variant (`density=...`); the
+  resolved share by encounter size. `docs/resolution.md`: a note under D11.
+- Mock rehearsal of all 72 started at 13:15:17 UTC (`runs_mock/rf35/`).
+
 ## Open questions / risks
+
+- Same-direction people in an encounter are treated as one "group" by `orca_within_groups` and by the
+  analysis's formations (there labelled friends); in a crowd they are strangers.
+- The 8 cases come from four source runs (two seeds per density); different crowds would give other
+  encounters.
 
 ## Summary (fill in at the end)
