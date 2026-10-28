@@ -36,6 +36,12 @@ oncoming person caused it.
         --pairs runs/rf30_round1_head_on_keep_line --pairs-condition non_verbal \\
         --against runs/rf32_round1_group_head_on_orca_groups --arm ...
 
+Issue #117 (RF-35), encounters in a crowd: there the pair measure fails almost every pair, plain ORCA
+included (grazes of a few millimetres with someone nearby), so each session is also scored **against
+plain ORCA** on its own seed (the user's decision, 2026-10-28; :func:`against_orca`): from the
+encounter's start, the encounter's people collide no more often and no deeper than under plain ORCA,
+and none of them is stuck.
+
 Nothing here calls a model. Every run is deterministic and rebuilt from the session record.
 """
 
@@ -214,6 +220,32 @@ def formations(measured: Measured, members: Sequence[int]) -> list[dict[str, Any
     return out
 
 
+def contacts(measured: Measured, members: Sequence[int]) -> dict[str, Any]:
+    """Issue #117: the collisions of the encounter's people from its start (episodes ending at or after
+    it, as ``outcomes.physical_outcome`` counts them; walls included), the deepest overlap, and
+    whether any of them is stuck (a deadlock, or not arrived when the run ended)."""
+    result, people = measured.result, set(members)
+    start_time = measured.start * measured.simulation.world.dt - 1e-9
+    pairs = [e for e in result.collision_episodes if e.end_time_s >= start_time and set(e.pair) & people]
+    walls = [e for e in result.wall_collision_episodes if e["agent_id"] in people and e["end_time_s"] >= start_time]
+    depths = [-e.min_separation_m for e in pairs] + [e["max_overlap_m"] for e in walls]
+    stuck = bool(result.deadlock) or any(result.goal_times.get(agent) is None for agent in members)
+    return {"collisions": len(pairs) + len(walls), "deepest_m": round(max(depths), 6) if depths else 0.0, "stuck": stuck}
+
+
+def against_orca(found: Mapping[str, Any], plain: Mapping[str, Any]) -> dict[str, Any]:
+    """Issue #117, the user's measure: ``resolved`` when the plans' run is not stuck and its people
+    collide no more often and no deeper than under plain ORCA (or plain ORCA is stuck and the plans'
+    run is not). ``verdict``: better, same or worse, by stuck, then the number of collisions, then the
+    deepest overlap."""
+    resolved = not found["stuck"] and (
+        plain["stuck"] or (found["collisions"] <= plain["collisions"] and found["deepest_m"] <= plain["deepest_m"] + 1e-9)
+    )
+    key = lambda c: (c["stuck"], c["collisions"], round(c["deepest_m"], 6))  # noqa: E731
+    verdict = "same" if key(found) == key(plain) else "better" if key(found) < key(plain) else "worse"
+    return {"plan_only": dict(found), "plain_orca": dict(plain), "resolved": resolved, "verdict": verdict}
+
+
 def first_plans(record: Mapping[str, Any]) -> list[dict[str, Any]]:
     """Each prompted person's first readable plan, coded mechanically, with the largest turn."""
     seen, out = set(), []
@@ -332,6 +364,7 @@ class GroupAnalysis:
             "decision_points": len(record.get("decision_points") or []),
             "condition": record.get("condition"),
             "later_points": later_points(record),
+            "against_orca": against_orca(contacts(step1, agents), contacts(plain, agents)),
         }
 
     def run(self, report=None) -> list[dict[str, Any]]:
@@ -481,6 +514,22 @@ def summarise(
         k = sum(s["resolved"]["plan_only"] for s in mine)
         by_size[str(size)] = {"n": len(mine), "plan_only": k, "ci": wilson(k, len(mine))}
     out["resolved_by_encounter_size"] = by_size
+    scored = [s for s in design if "against_orca" in s]
+    if scored:  # issue #117
+        table = {}
+        for layout in sorted({s["layout"] for s in scored}) + ["all"]:
+            mine = [s["against_orca"] for s in scored if layout == "all" or s["layout"] == layout]
+            k = sum(a["resolved"] for a in mine)
+            verdicts = Counter(a["verdict"] for a in mine)
+            table[layout] = {
+                "n": len(mine), "resolved": k, "ci": wilson(k, len(mine)),
+                "better": verdicts["better"], "same": verdicts["same"], "worse": verdicts["worse"],
+                "sign_test_p": round(sign_test(verdicts["better"], verdicts["worse"]), 6),
+                "collisions_plan_only": sum(a["plan_only"]["collisions"] for a in mine),
+                "collisions_plain_orca": sum(a["plain_orca"]["collisions"] for a in mine),
+                "stuck_plan_only": sum(a["plan_only"]["stuck"] for a in mine), "stuck_plain_orca": sum(a["plain_orca"]["stuck"] for a in mine),
+            }
+        out["against_orca"] = table
     out["pairs_round1"] = {"n": len(pairs), "plan_only": pair_k, "ci": wilson(pair_k, len(pairs))}
     every = [row for s in design for row in s["pairs"]]
     out["conflict_pairs"] = {
@@ -589,6 +638,15 @@ def report_markdown(summary: Mapping[str, Any], arms: Sequence[Arm], experiment:
     for name, table in summary["debriefs"].items():
         lines.append(f"- **{name}**: {table}")
     lines += ["", f"Unreadable after retry: {summary['unreadable']}"]
+    if summary.get("against_orca"):
+        lines += ["", "## Against plain ORCA on the same seed (issue #117)", "",
+                  "| Layout | Sessions | Resolved: no more collisions, none deeper, none stuck (95% CI) | Better | Same | Worse | Sign test p | Collisions, plans / plain ORCA | Stuck, plans / plain ORCA |",
+                  "| --- | --- | --- | --- | --- | --- | --- | --- | --- |"]
+        for layout, row in summary["against_orca"].items():
+            lines.append(
+                f"| {layout} | {row['n']} | {_share([True] * row['resolved'] + [False] * (row['n'] - row['resolved']))} | {row['better']} | "
+                f"{row['same']} | {row['worse']} | {row['sign_test_p']} | {row['collisions_plan_only']} / {row['collisions_plain_orca']} | "
+                f"{row['stuck_plan_only']} / {row['stuck_plain_orca']} |")
     if summary.get("resolved_by_encounter_size"):
         lines += ["", "## Resolved in plan_only, by the number of people in the encounter", "",
                   "| People | Sessions | Resolved (95% CI) |", "| --- | --- | --- |"]

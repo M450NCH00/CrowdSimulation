@@ -91,3 +91,42 @@ def test_the_population_form_is_checked_and_the_old_form_is_as_before():
         design_with({"population": PROFILE, "age": 25})
     with pytest.raises(Exception):
         design_with({"population": "configs/populations/no_such_profile.yaml"})
+
+
+# --- scoring a crowd encounter against plain ORCA (the user's decision after the pilot) ------------
+
+from types import SimpleNamespace  # noqa: E402
+
+from negsim.metrics.avoidance import ProximityEpisode  # noqa: E402
+from negsim.resolution import groups as G  # noqa: E402
+
+
+def measured(episodes, walls=(), goal_times=None, deadlock=False, start=100):
+    result = SimpleNamespace(collision_episodes=list(episodes), wall_collision_episodes=list(walls), deadlock=deadlock,
+                             goal_times=goal_times or {1: 30.0, 2: 31.0, 3: 32.0})
+    return G.Measured(SimpleNamespace(world=SimpleNamespace(dt=0.1)), result, [], start)
+
+
+def test_contacts_count_the_encounters_people_from_its_start_only():
+    found = G.contacts(measured([
+        ProximityEpisode((1, 9), 10.5, 10.6, -0.012),   # a member and a bystander, after the start (10 s)
+        ProximityEpisode((2, 3), 11.0, 11.1, -0.030),   # two members
+        ProximityEpisode((7, 8), 12.0, 12.1, -0.200),   # two bystanders: not counted
+        ProximityEpisode((1, 4), 8.0, 9.5, -0.100),     # ended before the start: not counted
+    ], walls=[{"agent_id": 3, "start_time_s": 12.0, "end_time_s": 12.2, "max_overlap_m": 0.01}]), [1, 2, 3])
+    assert found == {"collisions": 3, "deepest_m": 0.03, "stuck": False}
+    assert G.contacts(measured([], goal_times={1: 30.0, 2: None, 3: 32.0}), [1, 2, 3])["stuck"] is True
+    assert G.contacts(measured([], deadlock=True), [1, 2, 3])["stuck"] is True
+
+
+@pytest.mark.parametrize("plans, plain, resolved, verdict", [
+    ({"collisions": 2, "deepest_m": 0.01, "stuck": False}, {"collisions": 2, "deepest_m": 0.01, "stuck": False}, True, "same"),
+    ({"collisions": 1, "deepest_m": 0.01, "stuck": False}, {"collisions": 2, "deepest_m": 0.02, "stuck": False}, True, "better"),
+    ({"collisions": 1, "deepest_m": 0.05, "stuck": False}, {"collisions": 2, "deepest_m": 0.02, "stuck": False}, False, "better"),  # fewer but deeper
+    ({"collisions": 3, "deepest_m": 0.01, "stuck": False}, {"collisions": 2, "deepest_m": 0.02, "stuck": False}, False, "worse"),
+    ({"collisions": 5, "deepest_m": 0.09, "stuck": False}, {"collisions": 0, "deepest_m": 0.0, "stuck": True}, True, "better"),
+    ({"collisions": 0, "deepest_m": 0.0, "stuck": True}, {"collisions": 4, "deepest_m": 0.04, "stuck": False}, False, "worse"),
+])
+def test_against_orca(plans, plain, resolved, verdict):
+    scored = G.against_orca(plans, plain)
+    assert scored["resolved"] is resolved and scored["verdict"] == verdict
