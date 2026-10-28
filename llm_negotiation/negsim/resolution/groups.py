@@ -21,9 +21,20 @@ fell in behind the other; ``abreast``: they stayed side by side and the oncoming
 outside; ``not_reached``: the run stopped first); the debriefs; and the resolved share by layout
 against round 1's pairs (Wilson intervals, Fisher's exact test).
 
+Issue #115 (RF-34), the non-verbal run: round 1's pairs of one condition only (``--pairs-condition``;
+RF-30's folder holds non-verbal and talk); a **paired** comparison with another group experiment
+on the same design (``--against``, matched by cell and case: the session id without its condition
+letter), with the exact sign test on the sessions only one of them resolved; and the later
+decision points, why they fired and what was signalled, each split by whether a friend or an
+oncoming person caused it.
+
     python -m negsim.resolution.groups runs/rf32_round1_group_head_on_orca_groups \\
         --pairs runs/rf10_round1_head_on_keep_line \\
         --arm left_turn=runs/rf18_round1_realistic/rule_db_staging:passed_screening:4 ...
+
+    python -m negsim.resolution.groups runs/rf34_round1_group_head_on_non_verbal \\
+        --pairs runs/rf30_round1_head_on_keep_line --pairs-condition non_verbal \\
+        --against runs/rf32_round1_group_head_on_orca_groups --arm ...
 
 Nothing here calls a model. Every run is deterministic and rebuilt from the session record.
 """
@@ -48,6 +59,7 @@ from ..rulegen.cases import CaseStore
 from ..rulegen.replay import database_path
 from ..rules.fields import VISIBLE_FACTOR_SWITCHES
 from ..rules.snapshot import PRIVATE_ATTRIBUTES
+from ..ruleset_eval.verdicts import sign_test
 from .execute import MODE_PLAN_ONLY, MODE_PLAN_ORCA, PlanDriver
 from .experiment import coded_plan
 from .outcomes import RESOLVED, TOGETHER, physical_outcome
@@ -217,6 +229,38 @@ def first_plans(record: Mapping[str, Any]) -> list[dict[str, Any]]:
     return out
 
 
+def later_points(record: Mapping[str, Any]) -> dict[str, Any]:
+    """Each person's decision points after their first: why each fired, every reason that names
+    someone counted as caused by a friend (two members who are no conflict pair) or by an oncoming
+    person; and the signals made, with who saw them (issue #115)."""
+    opposite = {frozenset(pair) for pair in pairs_of(record) or []}
+
+    def by(agent: int, other: int) -> str:
+        return "oncoming" if frozenset((agent, other)) in opposite else "friend"
+
+    seen, reasons, readable = set(), Counter(), 0
+    for point in record.get("decision_points") or []:
+        agent = point["agent_id"]
+        if agent not in seen:
+            seen.add(agent)
+            continue
+        readable += not point.get("parse_error")
+        for reason in point.get("trigger_reasons") or []:
+            name, _, other = reason.rpartition(":")
+            reasons[f"{name}:{by(agent, int(other))}" if other.isdigit() else reason] += 1
+    signals = Counter(str(made.get("signal")) for made in record.get("signals") or [])
+    seen_by = Counter(by(int(made["signaller_id"]), int(other)) for made in record.get("signals") or [] for other in made.get("seen_by") or [])
+    points = len(record.get("decision_points") or [])
+    return {"later": points - len(seen), "later_readable": readable, "reasons": dict(reasons),
+            "signals": dict(signals), "signals_seen_by": dict(seen_by)}
+
+
+def design_key(session_id: str) -> str:
+    """The session id without its condition letter (``I_group_..._r1`` and ``N_group_..._r1`` are the
+    same cell, case and repeat)."""
+    return session_id.split("_", 1)[1]
+
+
 class GroupAnalysis:
     """Measures every completed session of a group experiment, per conflict pair."""
 
@@ -275,6 +319,8 @@ class GroupAnalysis:
             "debriefs": [d.get("parsed") or {} for d in record.get("debriefs") or []],
             "unreadable": sum(1 for p in record.get("decision_points") or [] if p.get("parse_error")),
             "decision_points": len(record.get("decision_points") or []),
+            "condition": record.get("condition"),
+            "later_points": later_points(record),
         }
 
     def run(self, report=None) -> list[dict[str, Any]]:
@@ -314,9 +360,10 @@ def fisher(a: int, b: int, c: int, d: int) -> float:
 # --- round 1's pairs, for comparison -------------------------------------------------------------
 
 
-def pair_sessions(folder: Path | str) -> list[dict[str, Any]]:
+def pair_sessions(folder: Path | str, condition: Optional[str] = None) -> list[dict[str, Any]]:
     """Round 1's two-person sessions (an experiment folder): design sessions only (no exact-repeat
-    copy and no counterfactual pair), with their plan_only outcome and first plans."""
+    copy and no counterfactual pair), of ``condition`` if given, with their plan_only outcome and
+    first plans."""
     folder = Path(folder)
     with (folder / "outcomes.csv").open(encoding="utf-8", newline="") as handle:
         rows = {row["session_id"]: row for row in csv.DictReader(handle)}
@@ -324,12 +371,46 @@ def pair_sessions(folder: Path | str) -> list[dict[str, Any]]:
     for session_id, row in sorted(rows.items()):
         if row.get("pair_id") or row.get("repeat") not in ("1", ""):
             continue
+        if condition is not None and row.get("condition") != condition:
+            continue
         record = json.loads((folder / "sessions" / f"{session_id}.json").read_text(encoding="utf-8"))
         out.append({
             "session_id": session_id, "geometry": row.get("case_geometry"), "resolved": row["resolved_plan_only"] == "True",
             "sides": (row["passing_side_a_plan_only"], row["passing_side_b_plan_only"]), "first_plans": first_plans(record),
             "debriefs": [d.get("parsed") or {} for d in record.get("debriefs") or []],
         })
+    return out
+
+
+# --- another group experiment on the same design, for a paired comparison ------------------------
+
+
+def against_sessions(folder: Path | str) -> dict[str, bool]:
+    """Another group experiment's design sessions, by :func:`design_key`: whether each resolved in
+    plan_only, read from its analysis (``analysis/group_sessions.json``, written by this module)."""
+    folder = Path(folder)
+    with (folder / "outcomes.csv").open(encoding="utf-8", newline="") as handle:
+        design_ids = {row["session_id"] for row in csv.DictReader(handle) if row.get("repeat") == "1"}
+    found = json.loads((folder / "analysis" / "group_sessions.json").read_text(encoding="utf-8"))
+    return {design_key(s["session_id"]): bool(s["resolved"]["plan_only"]) for s in found if s["session_id"] in design_ids}
+
+
+def paired(design: Sequence[Mapping[str, Any]], against: Mapping[str, bool]) -> dict[str, Any]:
+    """This experiment's design sessions against the other's of the same cell and case, by layout:
+    both resolved, this one only, the other only, neither; the exact sign test on the sessions only
+    one of them resolved (McNemar's exact test)."""
+    out: dict[str, Any] = {}
+    for layout in sorted({s["layout"] for s in design}) + ["all"]:
+        counts = Counter()
+        for s in design:
+            key = design_key(s["session_id"])
+            if (layout != "all" and s["layout"] != layout) or key not in against:
+                continue
+            mine, theirs = bool(s["resolved"]["plan_only"]), against[key]
+            counts["both" if mine and theirs else "this_only" if mine else "other_only" if theirs else "neither"] += 1
+        out[layout] = {name: counts[name] for name in ("both", "this_only", "other_only", "neither")}
+        out[layout]["n"] = sum(counts.values())
+        out[layout]["sign_test_p"] = round(sign_test(counts["this_only"], counts["other_only"]), 6)
     return out
 
 
@@ -363,8 +444,12 @@ def _debrief_table(debriefs: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     return {"debriefs": len(debriefs), "kinds": dict(Counter(str(d.get("kind")) for d in debriefs)), "terms": terms, "sources": sources}
 
 
-def summarise(sessions: Sequence[Mapping[str, Any]], pairs: Sequence[Mapping[str, Any]], arms: Sequence[Arm], design_ids: Optional[set] = None) -> dict[str, Any]:
-    """Every table of the report, as numbers. ``design_ids``: the sessions of the design (no exact-repeat copy)."""
+def summarise(
+    sessions: Sequence[Mapping[str, Any]], pairs: Sequence[Mapping[str, Any]], arms: Sequence[Arm], design_ids: Optional[set] = None,
+    against: Optional[Mapping[str, bool]] = None,
+) -> dict[str, Any]:
+    """Every table of the report, as numbers. ``design_ids``: the sessions of the design (no exact-repeat
+    copy); ``against``: another group experiment's design sessions (:func:`against_sessions`)."""
     design = [s for s in sessions if design_ids is None or s["session_id"] in design_ids]
     out: dict[str, Any] = {"sessions": len(sessions), "design_sessions": len(design)}
     pair_k = sum(p["resolved"] for p in pairs)
@@ -428,6 +513,23 @@ def summarise(sessions: Sequence[Mapping[str, Any]], pairs: Sequence[Mapping[str
     out["debriefs"] = {"groups": _debrief_table([d for s in sessions for d in s["debriefs"]]),
                        "round1_pairs": _debrief_table([d for p in pairs for d in p["debriefs"]])}
     out["unreadable"] = {"decision_points": sum(s["decision_points"] for s in sessions), "unreadable": sum(s["unreadable"] for s in sessions)}
+    later = [s["later_points"] for s in design if "later_points" in s]
+    if later:
+        def total(name: str) -> dict[str, int]:
+            found = Counter()
+            for row in later:
+                found.update(row[name])
+            return dict(found.most_common())
+
+        resolved_later = [s["later_points"]["later"] for s in design if "later_points" in s and s["resolved"]["plan_only"]]
+        out["later_points"] = {
+            "sessions": len(later), "with_any": sum(1 for row in later if row["later"]),
+            "later": sum(row["later"] for row in later), "later_readable": sum(row["later_readable"] for row in later),
+            "in_resolved_sessions": sum(resolved_later),
+            "reasons": total("reasons"), "signals": total("signals"), "signals_seen_by": total("signals_seen_by"),
+        }
+    if against is not None:
+        out["paired"] = paired(design, against)
     return out
 
 
@@ -444,8 +546,8 @@ def pairs_csv(sessions: Sequence[Mapping[str, Any]]) -> str:
     return buffer.getvalue()
 
 
-def report_markdown(summary: Mapping[str, Any], arms: Sequence[Arm]) -> str:
-    lines = ["# RF-32: group sessions per conflict pair (machine-written)", "",
+def report_markdown(summary: Mapping[str, Any], arms: Sequence[Arm], experiment: str = "RF-32") -> str:
+    lines = [f"# {experiment}: group sessions per conflict pair (machine-written)", "",
              f"{summary['sessions']} completed sessions, {summary['design_sessions']} of the design (exact-repeat copies left out).", "",
              "## Resolved in plan_only, by layout", "",
              "| Layout | Sessions | Resolved (95% CI) | Fisher p against round 1's pairs | plain ORCA | " + " | ".join(a.name for a in arms) + " |",
@@ -470,6 +572,14 @@ def report_markdown(summary: Mapping[str, Any], arms: Sequence[Arm]) -> str:
     for name, table in summary["debriefs"].items():
         lines.append(f"- **{name}**: {table}")
     lines += ["", f"Unreadable after retry: {summary['unreadable']}"]
+    if "later_points" in summary:
+        lines += ["", "## Decision points after each person's first", "", f"{summary['later_points']}"]
+    if "paired" in summary:
+        lines += ["", "## Paired with the other group experiment (same cell and case)", "",
+                  "| Layout | Sessions | Both resolved | This only | Other only | Neither | Sign test p |",
+                  "| --- | --- | --- | --- | --- | --- | --- |"]
+        for layout, row in summary["paired"].items():
+            lines.append(f"| {layout} | {row['n']} | {row['both']} | {row['this_only']} | {row['other_only']} | {row['neither']} | {row['sign_test_p']} |")
     return "\n".join(lines) + "\n"
 
 
@@ -477,22 +587,24 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m negsim.resolution.groups", description=__doc__.split("\n\n")[0])
     parser.add_argument("folder", type=Path, help="the group experiment's folder")
     parser.add_argument("--pairs", type=Path, help="round 1's two-person experiment folder to compare with")
+    parser.add_argument("--pairs-condition", help="only round 1's pairs of this condition (issue #115)")
+    parser.add_argument("--against", type=Path, help="another group experiment on the same design, analysed by this module, to pair with (issue #115)")
     parser.add_argument("--arm", action="append", default=[], help="name=database:ruleset:format or name=database:rule_id@version:format")
     parser.add_argument("--out", type=Path, help="where to write (default: the folder's analysis/)")
     args = parser.parse_args(argv)
     arms = [Arm.parse(text) for text in args.arm]
     analysis = GroupAnalysis(args.folder, arms)
     sessions = analysis.run(report=lambda line: print(line, file=sys.stderr))
-    pairs = pair_sessions(args.pairs) if args.pairs else []
+    pairs = pair_sessions(args.pairs, args.pairs_condition) if args.pairs else []
     with (args.folder / "outcomes.csv").open(encoding="utf-8", newline="") as handle:
         design_ids = {row["session_id"] for row in csv.DictReader(handle) if row.get("repeat") == "1"}
-    summary = summarise(sessions, pairs, arms, design_ids)
+    summary = summarise(sessions, pairs, arms, design_ids, against_sessions(args.against) if args.against else None)
     out = args.out or args.folder / "analysis"
     out.mkdir(parents=True, exist_ok=True)
     (out / "group_pairs.csv").write_text(pairs_csv(sessions), encoding="utf-8", newline="\n")
     (out / "group_sessions.json").write_text(json.dumps(sessions, indent=1, default=str) + "\n", encoding="utf-8", newline="\n")
     (out / "group_summary.json").write_text(json.dumps({"arms": [a.__dict__ | {"database": str(a.database)} for a in arms], **summary}, indent=1, default=str) + "\n", encoding="utf-8", newline="\n")
-    (out / "group_analysis.md").write_text(report_markdown(summary, arms), encoding="utf-8", newline="\n")
+    (out / "group_analysis.md").write_text(report_markdown(summary, arms, args.folder.name), encoding="utf-8", newline="\n")
     print(f"written: {out}")
     return 0
 

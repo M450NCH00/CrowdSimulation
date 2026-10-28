@@ -197,7 +197,7 @@ The user's notes from the meeting, word for word:
   each simulator. Rules may be more specific, for example "keep left".
 
 ## Pending sign-offs
-Items 1, 5 and 6 are still pending (item 1 was approved for issues #64, #65, #98, #100, #101, #104, #66, #67, #108 and #110 only).
+Items 1, 5 and 6 are still pending (item 1 was approved for issues #64, #65, #98, #100, #101, #104, #66, #67, #108, #110 and #115 only).
 **Do not treat any of them as approved** until the user records the
 supervisor's answer in this file, with a date. Items 2 and 3, the ethics
 sign-offs for perceived attractiveness and real ethnicity, were recorded by the
@@ -273,6 +273,11 @@ used in this track). Numbers in brackets are the decisions of track issue #55.
      experiment's own calls (`experiment_name: rf32_round1_group_head_on`; 72 sessions, independent
      condition only, about USD 0.07 off-peak from RF-10's measured cost per call, `WORK_LOG-110.md`).
      The user also answered "Run as built" to the issue's design choices listed there.
+   - **Approved for issue #115 only, 2026-10-28:** the user approved paid runs for RF-34's
+     non-verbal run of RF-32's group sessions (#115), and only for it, with a cap of **USD 0.20** on
+     that experiment's own calls (`experiment_name: rf34_round1_group_head_on_non_verbal`; 72
+     sessions, non-verbal condition only, about USD 0.12 to 0.14 off-peak, up to about 0.20 at the
+     mock's call count, `WORK_LOG-115.md`).
 2. **Approved by the supervisor, 2026-10-24** — Ethics sign-off for perceived
    attractiveness as a factor (#55, 3). *The user decided on 2026-10-24* that
    attractiveness (both directions) is **in** RF-10's design, because bias can

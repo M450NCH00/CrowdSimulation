@@ -45,6 +45,40 @@ and D5), do groups resolve more often than in RF-32's independent run, and near 
   folder holds non-verbal and talk, so it needs a filter.
 - Next step: the config and the mock rehearsal.
 
+### 2026-10-28 09:28 UTC — config, mock rehearsal, analysis extended, cost estimate
+- What I did:
+  - `configs/resolution/round1_group_head_on_non_verbal.yaml`: RF-32's run of record with
+    `conditions: [non_verbal]`; everything else the same except the name, description and the cap,
+    which is `0.0` until the user approves one.
+  - `--plan`: 72 sessions (64 of the design, 8 exact repeats), at most 16 calls a session; loose
+    worst case USD 9.08 (`stop_at_cap` stops the run at the cap).
+  - Mock rehearsal, all 72 sessions (`runs_mock/rf34/`, 4 min): 12 to 20 calls a session.
+  - `negsim/resolution/groups.py`: `--pairs-condition`, `--against` (a paired comparison by cell and
+    case, the exact sign test from RF-18's `ruleset_eval.verdicts`), `later_points` (later decision
+    points, why each fired, signals, each split by friend or oncoming person); the report's heading
+    names the experiment folder. Tests: `tests/test_rf34_group_non_verbal.py` (5).
+- Result (mock):
+  - later decision points fire in groups (signals seen, someone slowed or turned, plan failing);
+  - **a friend walking abreast never sees a signal or causes a prompt** (outside the 75° view);
+    a friend counts only once one falls in behind the other ("came into view": 60 of 440 later
+    reasons, with 30 of 405 signal sightings by a friend). That is RF-17's view, not a choice made here;
+  - the analysis pairs all 64 design sessions with RF-32's real ones by cell and case.
+- **Cost estimate**: RF-30's non-verbal pairs took 7.53 calls a session against about 4 for
+  independent pairs (×1.9); RF-32's independent groups took 7.02, so about 13 a session here. At
+  USD 0.000121 to 0.000147 a call (RF-32's groups; RF-30's non-verbal), **USD 0.12 to 0.14**; the
+  mock's own count (16.1 a session, more retries and later points than real agents) gives up to
+  USD 0.20. Proposed cap **USD 0.20**; balance USD 0.56.
+- **Off-peak:** DeepSeek's peak hours fall between 06:00 and 10:00 UTC on weekdays (`test_stop_at_cap`
+  note, #66); the run waits for off-peak.
+- Next step: ask the user to approve the paid run and its cap.
+
 ## Open questions / risks
+
+- **Design (mine, same as RF-32's):** nothing is changed but the condition, so the run pairs with
+  RF-32 session by session. The talk condition is not run.
+- In non-verbal, friends abreast cannot see each other's signals (RF-17's 75° view): a group's plan
+  is coordinated only through what each was told at the start ("WHO YOU ARE WITH").
+- **The run still stops at the first collision**, so the later decision points are censored, as in
+  RF-32; the session-level share is not affected.
 
 ## Summary (fill in at the end)
