@@ -133,6 +133,32 @@ item 1). Balance USD 0.32 (after #117, 2026-10-28).
 - I stopped and asked the user whether to raise the cap (my recommendation USD 0.20), since the
   approved cap would leave the design short.
 
+### 2026-10-29 08:48 UTC — the user: finish RF-36, under the approved cap
+- The user asked what the credit was being spent on, since verification (RF-14) seemed to be the
+  stage. I explained that RF-36 is Step 1 again (crowds, non-verbal), added by the user's decision,
+  and that RF-14 (#69, paid: no) comes after it in #55. I recommended stopping at the pilot to keep
+  the credit for rounds 2 and 3. The user answered "ok now finished RF-36": finish the run.
+- No cap change was asked for, so the run goes on under the approved **USD 0.15** (the pilot's
+  0.0176 included); `stop_at_cap` stops it there, near session 67 of 72 by the pilot's rate.
+  Balance checked (the key not printed): **USD 0.30**.
+- 08:48 UTC is peak (twice the price), so the other 64 sessions wait for 10:01 UTC (background,
+  the same command without `--limit`; it resumes after the pilot's 8).
+
+### 2026-10-29 10:01 to 11:14 UTC — the run (paid): stopped at the cap, 66 of 72 sessions
+- Started 10:01:03 UTC; calls until 10:36:30 UTC (ledger); the run ended 11:13:14 UTC with its replays,
+  exit 3: `stop_at_cap` refused a call in session 67 (USD 0.147095 recorded, that call up to
+  USD 0.003215, cap 0.15), as the pilot projected.
+- **RF-36 in all: 844 calls (628 decisions, 216 debriefs), USD 0.147095**, all off-peak, no transport
+  error. Balance checked (the key not printed): **USD 0.17** (0.30 before the run). Recorded in
+  `CLAUDE.md`.
+- **66 sessions completed**: 60 of the 64 design sessions, and 6 of the 8 exact repeats. Not run:
+  design sessions 67 to 70 (67 aborted after 13 calls, its cost in the ledger, no record), and the two
+  last exact repeats (71, 72). The pairing with RF-35 skips a session without a partner, so the
+  comparison is over 60 pairs.
+- Analysis started 11:14 UTC: `python -m negsim.resolution.groups runs/rf36_crowd_encounters_non_verbal
+  --pairs runs/rf30_round1_head_on_keep_line --pairs-condition non_verbal --against
+  runs/rf35_crowd_encounters` (round 1's pairs of the same condition, as RF-34).
+
 ## Open questions / risks
 
 ## Summary (fill in at the end)
