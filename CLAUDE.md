@@ -201,7 +201,7 @@ The user's notes from the meeting, word for word:
   each simulator. Rules may be more specific, for example "keep left".
 
 ## Pending sign-offs
-Items 1, 5 and 6 are still pending (item 1 was approved for issues #64, #65, #98, #100, #101, #104, #66, #67, #108, #110, #115 and #117 only).
+Items 1, 5 and 6 are still pending (item 1 was approved for issues #64, #65, #98, #100, #101, #104, #66, #67, #108, #110, #115, #117 and #119 only).
 **Do not treat any of them as approved** until the user records the
 supervisor's answer in this file, with a date. Items 2 and 3, the ethics
 sign-offs for perceived attractiveness and real ethnicity, were recorded by the
@@ -286,6 +286,12 @@ used in this track). Numbers in brackets are the decisions of track issue #55.
      encounters sampled from crowds (#117), and only for it, with a cap of **USD 0.10** on that
      experiment's own calls (`experiment_name: rf35_crowd_encounters`; 72 sessions, independent
      condition only, about USD 0.07 off-peak from RF-32's measured cost per call, `WORK_LOG-117.md`).
+   - **Approved for issue #119 only, 2026-10-29:** the user answered "ok run as built, do with your
+     recommendation" to paid runs for RF-36's non-verbal run of RF-35's crowd encounters (#119), and only
+     for it, with the recommended cap of **USD 0.15** on that experiment's own calls (`experiment_name:
+     rf36_crowd_encounters_non_verbal`; 72 sessions, non-verbal condition only, about USD 0.11 to 0.12
+     off-peak from RF-35's measured cost per call, a pilot first, `WORK_LOG-119.md`). The same answer
+     keeps D5 as written (a bystander coming into view prompts again).
 2. **Approved by the supervisor, 2026-10-24** — Ethics sign-off for perceived
    attractiveness as a factor (#55, 3). *The user decided on 2026-10-24* that
    attractiveness (both directions) is **in** RF-10's design, because bias can

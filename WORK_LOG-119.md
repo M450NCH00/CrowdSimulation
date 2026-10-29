@@ -109,6 +109,14 @@ item 1). Balance USD 0.32 (after #117, 2026-10-28).
   runs share each session's crowd. The mock's own scores (8 of 64 resolved) come from scripted replies
   and mean nothing about the model.
 
+### 2026-10-29 03:47 UTC — the user's answer: run as built, paid runs approved, cap USD 0.15
+- The user answered "ok run as built, do with your recommendation": D5 unchanged (a bystander coming
+  into view prompts again), and paid runs for #119 only with the recommended cap of **USD 0.15**, a
+  pilot first. Recorded in `CLAUDE.md`; the config's cap set. Balance checked (DeepSeek's endpoint, the
+  key not printed): **USD 0.32**.
+- Off-peak: DeepSeek's peak windows (`configs/llm/`) are 01:00 to 04:00 and 06:00 to 10:00 UTC on
+  weekdays; the pilot waits for 04:00, and the run must end its calls before 06:00.
+
 ## Open questions / risks
 
 ## Summary (fill in at the end)
