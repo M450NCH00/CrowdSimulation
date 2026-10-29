@@ -159,6 +159,46 @@ item 1). Balance USD 0.32 (after #117, 2026-10-28).
   --pairs runs/rf30_round1_head_on_keep_line --pairs-condition non_verbal --against
   runs/rf35_crowd_encounters` (round 1's pairs of the same condition, as RF-34).
 
+### 2026-10-29 11:14 to 11:42 UTC — analysis, report, commit
+- Analysis 11:14:40 to 11:39:03 UTC, exit 0. **Plain ORCA's contacts identical in all 60 pairs.**
+- **Result: no better, somewhat worse.** Against plain ORCA, 9 of 60 resolved against RF-35's 13 on the
+  same 60 (paired: both 8, RF-36 only 1, RF-35 only 5, p = 0.22). Plans compared directly: worse than
+  RF-35's in 30, the same in 22, better in 8 (p < 0.001). Collisions 487 against RF-35's 373 and plain
+  ORCA's 321; more than plain ORCA in 39 sessions, fewer in none. At 5 mm and 1 cm tolerances 14 and 21
+  (RF-35, same 60: 23 and 31).
+- Who collides (a scratch script, checked to reproduce RF-35's committed table exactly): the deep
+  contact between prompted people walking towards each other is unchanged (72 against 70, median
+  13.8 mm); grazes with bystanders walking the same way tripled (114 against 38, median 0.4 mm).
+- 55 of 60 design sessions had later decision points, 310 in all, **181 fired only by a bystander
+  coming into view**; 127 raised hands. 61 of 549 decision points unreadable (56 a distance beyond the
+  current one, genuine).
+- One exact-repeat set differed between copies (better, then worse: 0.36 against 0.91 mm), unlike
+  RF-35's.
+- `runs/rf36_crowd_encounters_non_verbal/crowd_report.md`; README row; committed with the run folder
+  (interaction logs ignored, 6.1 MB) and the ledger (`425cd70`).
+- Full suite 11:43:03 to 12:12:41 UTC: **2222 passed, 10 skipped**.
+
 ## Open questions / risks
 
+1. The 6 sessions not run (4 design at 50 per way, 2 exact repeats): about USD 0.013 at this run's
+   rate, a new cap needed. With 5 against 1 in the paired comparison and 30 worse against 8 better,
+   4 more pairs would not change the conclusion. My recommendation: keep the 60 and spend the credit on
+   rounds 2 and 3.
+2. Should D5 count only the encounter's own people in a crowd? 181 of 310 later decision points were
+   about strangers. A design decision for the user; not tested here.
+3. RF-35's questions 1 (a depth tolerance) and 3 (strangers walking the same way treated as a group)
+   still apply.
+4. Balance USD 0.17. The plan prices a lean round at USD 0.10 to 0.20, so rounds 2 and 3 do not both
+   fit without a top-up. RF-14 (#69, next) makes no paid call.
+
 ## Summary (fill in at the end)
+
+RF-36 ran RF-35's crowd encounters in the non-verbal condition (the user's decision of 2026-10-29). Built:
+no prompt after the driver's release (a bug a same-way conflict pair exposed on the mock), and
+`paired_crowd` and `resolved_within` in `groups.py`, with 7 tests. Paid run, approved for this issue
+only with a cap of USD 0.15: USD 0.1471, all off-peak, stopped at the cap with 66 of 72 sessions (60 of
+64 design). **Non-verbal does not help in a crowd**: 9 of 60 resolved against plain ORCA, against
+RF-35's 13 on the same sessions; the plans are worse than RF-35's in 30 sessions and better in 8. The
+deep contact between the prompted people is unchanged; the extra is sub-millimetre grazing with
+bystanders walking the same way, and most later decision points are triggered by bystanders coming
+into view (D5 as written). Balance USD 0.17. Next in #55: RF-14 (#69), verification, no paid call.
