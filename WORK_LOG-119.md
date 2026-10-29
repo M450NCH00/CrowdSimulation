@@ -117,6 +117,22 @@ item 1). Balance USD 0.32 (after #117, 2026-10-28).
 - Off-peak: DeepSeek's peak windows (`configs/llm/`) are 01:00 to 04:00 and 06:00 to 10:00 UTC on
   weekdays; the pilot waits for 04:00, and the run must end its calls before 06:00.
 
+### 2026-10-29 04:01 to 04:13 UTC — pilot (paid): 8 sessions, USD 0.017626, off-peak; over the estimate
+- `--client deepseek --confirm --limit 8` from a clean tree (commit `22ef16e`), started 04:01:03 UTC.
+  Calls 04:01:16 to 04:04:52 UTC (ledger): 97 calls (71 decisions, 26 debriefs), **USD 0.017626**, all
+  off-peak, no transport error. Run ended 04:11:22 with its replays.
+- **Above my estimate:** 12.1 calls a session (mock 10.4) at USD 0.000182 a call (RF-35 0.000146: the
+  non-verbal prompts are longer), USD 0.0022 a session: **72 sessions ≈ USD 0.159, over the cap of
+  0.15.** `stop_at_cap` would stop the run near session 67 of 72.
+- The sessions: 8 completed (7 passed, 1 no conflict); 65 decision points, 38 later ones, 18 of them
+  only because a bystander came into view; 15 signals (all a raised hand); nobody due after a release.
+  6 unreadable, all an `until` distance beyond the current one (0.9 to 1.2 m asked, the partner 0.5 to
+  0.7 m away, with `distance_to_partner` on: genuine, as RF-35's 9). Debriefs: no source named, common
+  sense, habit, courtesy.
+- RF-36's replay interaction logs gitignored as RF-35's are, before any commit of the run.
+- I stopped and asked the user whether to raise the cap (my recommendation USD 0.20), since the
+  approved cap would leave the design short.
+
 ## Open questions / risks
 
 ## Summary (fill in at the end)
