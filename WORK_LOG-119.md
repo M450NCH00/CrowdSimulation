@@ -98,6 +98,17 @@ item 1). Balance USD 0.32 (after #117, 2026-10-28).
   session and RF-35's USD 0.000146 a call, somewhat more for the longer later prompts: **about USD 0.11
   to 0.12** for 72 sessions. Proposed cap **USD 0.15**; balance USD 0.32.
 
+### 2026-10-29 02:14 to 03:14 UTC — asked the user; the mock's replays and analysis
+- Pushed the branch and commented on #119; asked the user to approve paid runs for #119 with a cap of
+  USD 0.15, and whether D5's "came into view" should count bystanders in crowds (my recommendation: run
+  as built, D5 unchanged). No answer yet; no paid call made.
+- The mock rehearsal ended at 02:38 UTC with all 72 replays (exit 0).
+- `python -m negsim.resolution.groups runs_mock/rf36b/... --against runs/rf35_crowd_encounters`, 02:38 to
+  03:14 UTC, exit 0: the new tables render. **Plain ORCA's contacts are the same in all 64 pairs of
+  sessions** (`plain_orca_differs` 0 at both densities), so the pairing's assumption holds: the two
+  runs share each session's crowd. The mock's own scores (8 of 64 resolved) come from scripted replies
+  and mean nothing about the model.
+
 ## Open questions / risks
 
 ## Summary (fill in at the end)
