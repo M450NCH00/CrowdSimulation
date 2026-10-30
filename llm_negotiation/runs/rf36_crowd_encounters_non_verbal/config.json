@@ -1,0 +1,158 @@
+{
+  "resolution_log_version": 1,
+  "layer": "resolution",
+  "experiment": {
+    "experiment_name": "rf36_crowd_encounters_non_verbal",
+    "description": "RF-36, Step 1 in crowds in the non-verbal condition: RF-35's encounters sampled from RF-18's two-way flow at 25 and 50 people per way (up to 4 prompted, the rest ORCA, bystanders from the realistic profile), with only the condition changed.",
+    "source": "configs/resolution/rf36_crowd_encounters_non_verbal.yaml",
+    "cases": {
+      "store": "cases",
+      "set": null,
+      "ids": [
+        "flow_1b5b9b8d@1",
+        "flow_b0c1353e@1",
+        "flow_06018e0c@1",
+        "flow_61f018fc@1",
+        "flow_32e86a8e@1",
+        "flow_826d5092@1",
+        "flow_9274de21@1",
+        "flow_bf8bfa07@1"
+      ]
+    },
+    "scenarios": {},
+    "conditions": [
+      "non_verbal"
+    ],
+    "design": {
+      "seed": 117,
+      "factors": {
+        "age_pair": [
+          "same",
+          "p1_older"
+        ],
+        "gender_pair": [
+          "p1_female",
+          "p1_male"
+        ],
+        "urgency": [
+          "neither"
+        ],
+        "mobility_aid": [
+          "neither",
+          "p1"
+        ],
+        "distraction": [
+          "neither"
+        ],
+        "assertiveness": [
+          "neither",
+          "p1"
+        ],
+        "demographics_visible": [
+          true
+        ],
+        "mapping": [
+          "p1_higher"
+        ]
+      },
+      "repeats": 1,
+      "base_age": 25,
+      "age_difference": 45,
+      "tasks": {
+        "urgent": "the emergency room",
+        "routine": "the supermarket"
+      },
+      "kind": "sample",
+      "cells": 8,
+      "exact_repeats": {
+        "cells": 4,
+        "times": 3
+      },
+      "others": {
+        "population": "configs/populations/singapore_street_v1.yaml"
+      }
+    },
+    "protocol": {
+      "max_decision_points": 3,
+      "min_gap_s": 1.0,
+      "no_conflict_end_s": 1.0,
+      "max_prompted": 4,
+      "speech_words_per_second": 2.5,
+      "execution": "keep_line",
+      "no_conflict_waits_for_plans": true,
+      "orca_within_groups": true,
+      "distance_to_partner": true
+    },
+    "templates": {
+      "core": "resolve_v6",
+      "debrief": "resolve_debrief_v1",
+      "factors": "resolve_factors_v2"
+    },
+    "llm_view": "configs/resolution/llm_view_v1.yaml",
+    "llm": {
+      "client": "mock",
+      "mock_policy": "resolution_rehearsal_v1",
+      "model": "deepseek-flash",
+      "temperature": 1.0,
+      "max_tokens": 300,
+      "thinking": "disabled",
+      "transport_retries": 2
+    },
+    "budget": {
+      "cap_usd": 0.15,
+      "ledger": "spend_ledger.jsonl",
+      "over_cap": "stop_at_cap"
+    },
+    "factor_values": "configs/resolution/factors_v1.yaml",
+    "resolution_gate": {
+      "plan_only_resolved_min": 0.5,
+      "reason": "RF-10's gate (WORK_LOG-65.md), unchanged: the plan_only rate over the design's sessions (exact repeats left out). An encounter is resolved only if every conflict pair is. Reported by density beside RF-30's pairs (0.55 independent) and RF-32's groups (0.06)."
+    }
+  },
+  "client_name": "deepseek",
+  "created_utc": "2026-10-29T04:01:13+00:00",
+  "git": {
+    "commit": "22ef16e5293952e903e401a677038172d9b513dd",
+    "dirty": false
+  },
+  "software": {
+    "negsim_version": "0.1.0",
+    "python": "3.13.3"
+  },
+  "templates": {
+    "core": {
+      "key": "resolve_v6",
+      "sha256": "b3b89563cedafe845cc2ec9a716a6d3c84a64edaef17c6e53c2297b61ec5f66f"
+    },
+    "debrief": {
+      "key": "resolve_debrief_v1",
+      "sha256": "1c23e5a7d4f6a546ec7a0dcc2404df0b372458b45b4bf87ba092c9eb7fcf7747"
+    }
+  },
+  "llm_view": {
+    "half_angle_deg": 75.0,
+    "range_m": 10.0,
+    "detail_range_m": 5.0,
+    "occlusion": true,
+    "walls_block_sight": true,
+    "hearing_range_m": 3.2,
+    "heard_close_m": 1.0,
+    "eye_contact_range_m": 10.0,
+    "change_speed_fraction": 0.07,
+    "change_direction_deg": 2.0,
+    "max_people": null
+  },
+  "factors": {
+    "template": {
+      "key": "resolve_factors_v2",
+      "sha256": "2e528b1da88d0a9224a6e8c94eb5b699e1f2a1dacbbaef2eb0a28f17b0ecbab8"
+    },
+    "values": {
+      "load_width_added_m": 0.2,
+      "hearing_range_m": {
+        "quiet": 8.9,
+        "busy": 3.2
+      }
+    }
+  }
+}

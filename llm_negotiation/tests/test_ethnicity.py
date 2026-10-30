@@ -448,8 +448,10 @@ def test_configs_written_before_have_no_ethnicity_anywhere(path):
     # ethnicity lines, which a design that does not vary ethnicity never renders), and vary no ethnicity.
     # Issue #115: RF-34's configs are RF-32's run of record in the non-verbal condition, the same in this.
     # Issue #117: RF-35's crowd encounters use RF-32's template too; its bystanders carry no ethnicity.
+    # Issue #119: RF-36's config is RF-35's in the non-verbal condition, the same in this.
     rf32 = path.endswith(("round1_group_head_on.yaml", "round1_group_head_on_orca_groups.yaml", "round1_group_head_on_non_verbal.yaml",
-                              "round1_group_head_on_non_verbal_partner.yaml", "rf35_crowd_encounters.yaml"))
+                              "round1_group_head_on_non_verbal_partner.yaml", "rf35_crowd_encounters.yaml",
+                              "rf36_crowd_encounters_non_verbal.yaml"))
     assert c.templates.get("factors") in ((None, "resolve_factors_v1", "resolve_factors_v2") if rf32 else (None, "resolve_factors_v1"))
     for session in E.plan(c).sessions:
         assert not session.ethnicity and "ethnicity" not in session.visibility

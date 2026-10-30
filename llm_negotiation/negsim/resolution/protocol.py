@@ -313,6 +313,7 @@ class EncounterSession:
         self.debriefs: list[dict[str, Any]] = []
         self._pending_speech: list[tuple[float, int, str]] = []
         self._last_conflict_s = -math.inf
+        self._not_prompted_after_release: set[int] = set()
 
     # --- the run ----------------------------------------------------------------------------
 
@@ -383,7 +384,13 @@ class EncounterSession:
                     reasons = self._d5(member)
                     if reasons:
                         due.append((agent, member.partner, reasons))
-            if due:
+            if due and self.run.driver.released_step is not None:
+                # Issue #119: the driver has already handed the encounter to ORCA (every pair walking
+                # opposite ways has passed, with orca_within_groups), while a conflict pair of one
+                # group (passing_crowd lists them) keeps the encounter open. No plan can be given
+                # after a release, so nobody is prompted; who would have been is recorded.
+                self._not_prompted_after_release.update(agent for agent, _, _ in due)
+            elif due:
                 self._decision_point(due)
             if self._llm_done() and self._conflict_now() and self.run.driver.active:
                 self.run.release(RELEASE_NOT_RESOLVED)
@@ -797,6 +804,8 @@ class EncounterSession:
                 "end": self.end,
                 "orca_took_over": self.release,
                 "prompted": [agent for agent in self.order if self.members[agent].prompts > 0],
+                # issue #119: named only when someone was due after the driver's release
+                **({"not_prompted_after_release": sorted(self._not_prompted_after_release)} if self._not_prompted_after_release else {}),
             },
             "decision_points": self.decision_points,
             "debriefs": self.debriefs,
