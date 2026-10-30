@@ -42,6 +42,15 @@ none reports stopping. The evidence is consistent but indirect.
   25. On the 76 resolved Step 1 sessions it resolves all 76 but reproduces the agents' own outcome less
   than plain ORCA (0.20 against 0.36), because the agents mostly passed right to right.
 
+**Where "left" came from: the translator, with no source.** RF-31's translation prompt
+(`llm_negotiation/runs/rf31_round1_head_on/translations/x_head_on_0ecc2d1a6e.json`) never mentions
+Singapore or keeping left; the extracted rule said "passing side equal to final_side" (each pair keeps
+whatever side its plans take). The translator's own note: "the side choice [is approximated] by a fixed
+left turn of 10 degrees". So the side is an arbitrary pick by the translator that happens to match
+Singapore's guidance ([MOT2024], [LTA2025], [NParks-PCN]); the guidance can be cited for it, but it is
+not where the rule came from. What made the rule help in RF-18 is that both people take the *same*
+side, which is what the evidence below supports.
+
 **Evidence for a shared side**
 - [Moussaid2009], section 5 (full text): the side bias "can be interpreted as a behavioural
   convention that emerges because the coordination during evading manoeuvres is enhanced when both
