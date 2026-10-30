@@ -62,6 +62,52 @@ measured**, as RF-18's "helps" was before its run.
   is a new version of the file.
 - Next step: the inventory of existing measures.
 
+### 2026-10-30 15:11 UTC — Inventory: what is already measured, and where the data is
+Read `docs/metrics.md`, `docs/rule-set-evaluation.md`, `negsim/ruleset_eval/measures.py`,
+`negsim/resolution/outcomes.py` (Step 1's physical outcome columns) and the function list of
+`negsim/resolution/groups.py`.
+
+| Target | Measured today | Where | What is missing |
+| --- | --- | --- | --- |
+| H1, H2 passing distance | `min_separation_m`, the smallest gap between the two **bodies' surfaces** | `outcomes.py`; `metrics.md` section 7 | Rapos2021's distance may be between centres (task 1); centres = gap + both radii (0.5 m) |
+| H3 start of turning | nothing | | new measure, Huber2014's own definition (below) |
+| H4, H5 slowing | yield events (below half the preferred speed for at least 1 s) | `metrics.md` section 4 | too coarse: a new speed change, Huber's maximum minus minimum speed |
+| H6, H8 who adapts more | `path_deviation_max_m` per agent over the whole run; `who_passed_first` (zone exit) | `metrics.md` section 7; `outcomes.py` | each agent's share of the pair's lateral deviation, within the encounter |
+| H7 what decides the roles | `who_passed_first` | `outcomes.py` | every Step 1 head-on agent walks at 1.3 m/s on the same line: speed must vary to test it |
+| H9 stopping, backing up | `stopped_*`, `backed_up_*`, `backed_distance_*_m` | `outcomes.py`; `metrics.md` section 10 | nothing |
+| S1 to S5 side | `passing_side_a`, `passing_side_b`, own frame, at the closest approach | `outcomes.py` | not in `ruleset_eval`'s measures; reuse |
+| C1, C2 lanes | `lanes()`: share on own left or right within 10 m of the middle | `measures.py` | reported for one density only, not judged |
+| C3 speed against density | nothing | | new measure, and a source (task 1) |
+
+**Where the data is.**
+- **Step 1's agents**: `runs/rf10_round1_head_on_keep_line/replay/` (96 independent sessions) and
+  `runs/rf30_round1_head_on_keep_line/replay/` (192 non-verbal and talk). Scenario
+  `wide_corridor_head_on`: **1.75 m wide, Moussaid2009's corridor**, both at 1.3 m/s, layouts with
+  lateral offsets. Trajectories are **committed at stride 1** (0.1 s), modes `plan_only` and
+  `plan_orca`. These targets can be measured with no new run. Plain ORCA's columns are in
+  `outcomes.csv`, but its trajectories are not on disk; it is rerun deterministically.
+- **Rule arms**: `rf18_round1_realistic` has **no open head-on of two people**. Its scenarios are
+  the two-way flow, the single-file bottleneck and the narrow passage. Its trajectories are at stride
+  10 (1 s) and are not committed. The pair targets for rules therefore need the study-matched head-on
+  of task 4, at stride 1. The flow gives C1 and C2.
+
+**Huber2014's definitions** (`refs/rf14_huber2014_speed_path.txt`, section 4.4, read in full):
+- PoMD is the point on the walker's path where it is nearest the interferer.
+- **Start of turning** is the first point where the angular speed exceeds the walker's own baseline
+  turning magnitude: the mean of its maximal angular speed when walking with no interferer, per
+  participant and speed. It is reported as the distance from PoMD along the walking direction.
+- **Speed change** is the lowest local minimum (between two peaks) subtracted from the maximum.
+- **Table 1 gives means only, with no spread.** By task 0's rule, H3 is therefore judged **on
+  direction**: the start of turning is further from PoMD at higher speed, which was significant
+  between all three speeds. The 2.4 m (normal speed, 180°) is reported beside, with no verdict. The
+  authors also note that some onsets were cut off by the tracked area, so the true values may be
+  larger.
+- **[design, for the measure]** In the simulator an agent walking alone goes dead straight. Its
+  baseline turning magnitude is therefore close to zero, apart from the 1e-4 m/s perturbation, so a
+  floor is needed. It will be set from the same agent's no-interferer run on the same seed, plus a
+  stated floor, and reported with the measure.
+- Next step: task 1, the source gaps.
+
 ## Open questions / risks
 
 1. ~~**Tolerances** (task 0): not yet agreed.~~ Agreed 11:38 UTC (above).
