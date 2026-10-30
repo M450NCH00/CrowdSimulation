@@ -1,0 +1,75 @@
+# Issue #122 (RF-37): round 1's rules and plain ORCA in the two-way flow at two more crowd sizes, for the
+# crowd targets C1 (lanes) and C3 (speed against density) of configs/human_targets/head_on_v1.yaml.
+# RF-33's flow_realistic (runs/rf18_round1_realistic, 50 + 50) is the middle size and is read from
+# there; these add 15 + 15 and 75 + 75. The same rules, arms, base seed, baseline, people and logging
+# as rf18_round1_realistic.yaml. No model is called, so it costs nothing.
+#
+#   python run_experiment.py configs/rule_set_evaluation/rf37_flow_density.yaml --plan
+#   python run_experiment.py configs/rule_set_evaluation/rf37_flow_density.yaml
+schema_version: 1
+layer: rule_set_evaluation
+experiment_name: rf37_flow_density
+description: >
+  Round 1's runnable staged rules alone and together, rule_db's default set as a reference, and plain
+  ORCA, in the two-way flow of round 1 with 15 and with 75 people each way, people from a realistic
+  Singapore crowd. With RF-33's 50 each way, the crowd targets of issue #122 are judged over three sizes.
+
+rules:                       # as rf18_round1_realistic.yaml (issue #112), unchanged
+  ext_head_on_0ecc2d1a6e:
+    from: runs/rf31_round1_head_on/rule_db_staging/extracted
+    version: 2
+  ext_head_on_6455ca5589:
+    from: runs/rf31_round1_head_on_retry/rule_db_staging/extracted
+    version: 2
+    priority: 600            # [the user's choice, 2026-10-27] the narrower rule wins where both match; switched on as v3
+    reason: >
+      Both translations have priority 500 and both match a head-on in which one person has a cane, so the loader refuses
+      them together (ambiguous). The user chose that the narrower rule wins where both match (the cane rule), so that
+      set 2 can run; the left-turn rule applies to every other head-on.
+
+left_out:
+  - rule: ext_head_on_aacce0961b (RF-31, format 4)
+    reason: refused by the loader since RF-31 (constant_roles); its roles hold for both people, so it never matched
+  - rule: ext_head_on_4eb7a97c8d (RF-11)
+    reason: not expressible in either format (signalling and speaking); nobody signals in ORCA
+
+arms:
+  - name: passed_screening
+    rules: [ext_head_on_0ecc2d1a6e]
+    description: Set 1, the rules that passed crowd screening (the left-turn rule).
+  - name: cane_rule_alone
+    rules: [ext_head_on_6455ca5589]
+    description: The retried cane rule alone.
+  - name: all_runnable
+    rules: [ext_head_on_0ecc2d1a6e, ext_head_on_6455ca5589]
+    description: Set 2, every runnable staged rule.
+  - name: reference_default
+    database: rule_db
+    ruleset: default
+    judged: false
+    description: rule_db's hand-written seed rules of issue #28, numbers only.
+
+scenarios:                   # [design] two more sizes of round 1's flow; RF-33's 50 + 50 is the third
+  - name: flow_15
+    seeds: 10
+    scenario: configs/scenarios/bidirectional_flow.yaml
+    scenario_overrides: {geometry: {agents_per_direction: 15}}
+    population: configs/populations/singapore_street_v1.yaml
+    purpose: realistic
+    note: The two-way flow, 15 + 15, people at sourced shares.
+  - name: flow_75
+    seeds: 10
+    scenario: configs/scenarios/bidirectional_flow.yaml
+    scenario_overrides: {geometry: {agents_per_direction: 75}}
+    population: configs/populations/singapore_street_v1.yaml
+    purpose: realistic
+    note: The two-way flow, 75 + 75, people at sourced shares.
+
+baseline: orca_perturbed_v1
+seed: 30900
+seeds: 10
+alpha: 0.05
+verdict_rule: 2
+
+logging:
+  trajectory_stride: 10      # as round 1's flow; the crowd measures do not need every step
