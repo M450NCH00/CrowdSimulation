@@ -156,6 +156,74 @@ Read `docs/metrics.md`, `docs/rule-set-evaluation.md`, `negsim/ruleset_eval/meas
 - For the user, optional and not blocking: four PDFs that a browser can fetch. See open question 3.
 - Next step: task 2, the targets file and its loader.
 
+### 2026-10-30 15:41 UTC — Tasks 2 to 4: targets file, measures, judging, study-matched runs (commit 7d41263e)
+- **Two corrections to the issue's table, from the sources' own words:**
+  - **C2 is not human evidence.** Moussaid2009's "almost uniform distribution for bidirectional
+    pedestrian flows of low density" is a result of their model (Supplementary Figure 6). Only C1, the
+    two lanes, is observed (Bordeaux). Under decision 6, C2 is listed in `not_targets` with that reason.
+  - **H2's wording.** The abstract gives 0.79 m for "older adults … passing closer to the other
+    pedestrian". It does not say whether the other was older or young, so H2 applies to any pair with
+    an older adult and says so. Rapos2021, Olivier2013 and Knorr2016 studied **crossing paths**, not
+    only head-on meetings; each target's `differs` says so.
+- **C1 now has numbers:** Moussaid2009's Figure 5b (observed) read the same way:
+  - **own right 0.77, own left 0.23** (zones 4–6 and 1–3);
+  - the script is now `read_moussaid2009_figures.py`, and the image is
+    `refs/rf37_moussaid2009_fig5.png`.
+- **Task 2**: `configs/human_targets/head_on_v1.yaml`, loaded by `negsim/human_targets/targets.py`.
+  - Frozen by hash. The tolerances are refused if they differ from task 0's.
+  - Every target must name a listed source. A direction target cannot carry a value or SD, and a
+    disagreement must point both ways.
+  - The side is a parameter by place, and is refused if judged while Singapore's is unknown.
+  - 15 tests in `tests/test_human_targets.py`.
+- **Task 3**: `negsim/human_targets/measures.py`, with Huber2014's own definitions:
+  - the point of minimal distance, the start of turning, and the speed change;
+  - the smallest centre distance, the lateral share, the side, and who passed first;
+  - for crowds, speed against density in Zhang2012's 2 m measuring area, and RF-18's lane measure
+    unchanged.
+
+  6 tests on hand-built trajectories with known answers. Checked on a Step 1 replay: the 1.150 m
+  centre distance there is Step 1's own 0.550 m gap plus radii of 0.25 and 0.35 (the suitcase).
+  **[design]** choices:
+  - `TURN_RATE_FLOOR_RAD_S` is 0.05, since a simulated walker alone has no turning of its own;
+  - `CLEAR_DISTANCE_M` is 1.0 m, because in a head-on meeting the two are abreast at the same moment;
+  - for H4 and H5, slowing means a speed drop of more than 0.1 m/s. That is report only, with no
+    verdict.
+- **Judging**: `negsim/human_targets/judge.py`.
+  - Value targets: within or outside the study's mean ± 1 SD.
+  - Direction targets: RF-18's exact sign test at 0.05, giving agrees, opposite or not shown.
+  - H4 and H5: no verdict.
+  - H7: a Bonferroni threshold over the traits tested **[design]**.
+
+  9 tests.
+- **Task 4**: two rule-set evaluation configs. RF-18's runner already supports per-scenario
+  overrides, a pool, and the stride, so no new runner was needed.
+  - `rf37_head_on`: `wide_corridor_head_on` (Moussaid2009's 1.75 m) at 1.3 m/s, and at Huber2014's
+    1.15, 1.42 and 1.78 m/s. Realistic people (pool of 100), 30 seeds, round 1's five arms.
+    Trajectories at stride 1. 600 runs, all completed. Their logs are gitignored like RF-18's.
+  - `rf37_flow_density`: 15 and 75 people each way, beside RF-33's 50 (on disk). 10 seeds, 100 runs,
+    **running**.
+- **The side both ways (issue task 5)**: not run. A right-turning copy of the left-turn rule would
+  be a changed rule, which is out of scope. The corridor is mirror-symmetric, so a right-turn version
+  gives the mirror image of the left-turn rule's runs. Every target but the side is the same, apart
+  from the random perturbation. Labelled `[derived: mirror symmetry; not run]` in the report.
+- **A first look** (trial report, flows still incomplete). Not yet the run of record:
+  - **H1 pass distance**: plain ORCA 0.51 m and the left-turn rule 1.25 m, both **outside**
+    0.76–1.10 m. Step 1's agents are **within** in all three conditions (0.93 to 0.97 m).
+  - **H3**: plain ORCA's start of turning grows with speed (3.0, 3.7, 4.9 m), which **agrees** in
+    direction. Huber2014 has 2.1, 2.4 and 2.7 m.
+    - The left-turn rule starts at about 5.0 m at every speed. Its fixed 9.8 m trigger means half of
+      that for each walker.
+    - The sign test calls it "opposite" from a consistent 3 cm difference. **A significant direction
+      can be a tiny effect in near-deterministic runs** (open question 4).
+  - **H7**: in the non-verbal condition, Step 1's agents' roles are predicted by assertiveness
+    (**opposite** to Knorr2016). The other two conditions agree.
+  - **H8**: Step 1's agents **agree** in all three conditions (the young adapt more).
+  - **C1**: plain ORCA's flows do **not** form lanes (34 of 36 runs). rule_db's keep-left reference
+    does.
+  - **C3**: all subjects slow with density. The left-turn rule keeps people at about 1.2 m/s up to
+    2.25 person/m², with a flow per metre of 2.8 /(m·s), against Zhang2012's plateau of 1.5.
+- Next step: when the flows finish, the report of record, then the docs.
+
 ## Open questions / risks
 
 1. ~~**Tolerances** (task 0): not yet agreed.~~ Agreed 11:38 UTC (above).
@@ -171,5 +239,11 @@ Read `docs/metrics.md`, `docs/rule-set-evaluation.md`, `negsim/ruleset_eval/meas
 
    Without them, H1 uses the inferred centre-to-centre definition and H6 and H7 are judged on
    direction.
+4. **Direction-only judging in near-deterministic runs.** Under task 0's rule, a target with no
+   spread is judged by the sign test alone. Rule and ORCA runs vary little from seed to seed, so a
+   consistent difference of centimetres is significant (H3, the left-turn rule).
+
+   The report shows the magnitudes beside each verdict. Whether to add a smallest effect that counts
+   is the user's decision: it would amend task 0, so it would mean a new targets file.
 
 ## Summary (fill in at the end)
