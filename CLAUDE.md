@@ -195,7 +195,8 @@ The user's notes from the meeting, word for word:
   for any rule. Only then extract the rule or pattern behind how they resolved it.
 - Ask the LLM for the reference a rule comes from.
 - Verify extracted rules against real human behaviour. What counts as "real
-  human behaviour" is pending (see below).
+  human behaviour": published studies only (the user's decision, 2026-10-30;
+  see "Pending sign-offs", item 6).
 - Include many factors and find which ones actually drive the LLM's decision;
   build a mapping from factors to decision. More factors may be added, for
   example the agent's attractiveness represented as a matrix (an ethics
@@ -204,13 +205,15 @@ The user's notes from the meeting, word for word:
   each simulator. Rules may be more specific, for example "keep left".
 
 ## Pending sign-offs
-Items 1, 5 and 6 are still pending (item 1 was approved for issues #64, #65, #98, #100, #101, #104, #66, #67, #108, #110, #115, #117 and #119 only).
+Items 1 and 5 are still pending (item 1 was approved for issues #64, #65, #98, #100, #101, #104, #66, #67, #108, #110, #115, #117 and #119 only).
 **Do not treat any of them as approved** until the user records the
 supervisor's answer in this file, with a date. Items 2 and 3, the ethics
 sign-offs for perceived attractiveness and real ethnicity, were recorded by the
 user as approved by the supervisor on 2026-10-24. Items 4, 7 and 8 were decided
 by the user on 2026-10-22, on their own authority, as part of the resolution
 design (`llm_negotiation/docs/resolution.md`); they need no supervisor sign-off.
+Item 6 was decided by the user on 2026-10-30, on their own authority, at the
+start of RF-14 (issue #69).
 
 **The code's ethics gates read one exact sentence each**, not the items below:
 a paid run that varies the factor is refused until this file holds the
@@ -315,9 +318,13 @@ used in this track). Numbers in brackets are the decisions of track issue #55.
 5. **PENDING** — How far the portable-rules track (#34) is paused: only the
    build (#42 onward), or the remaining literature issues (#35 to #41) as well
    (#55, 5).
-6. **PENDING** — What "verify with real human behaviour" means: published
-   studies only (RF-14 as written), or observed data such as recorded pedestrian
-   trajectories, video or field observation in Singapore (#55, 6).
+6. **Decided by the user, 2026-10-30** — What "verify with real human
+   behaviour" means (#55, 6): **published studies only**, RF-14 as written. The
+   user's words: "published studies only is what I decided". Observed data
+   (recorded pedestrian trajectories, video, field observation in Singapore) is
+   out of RF-14's scope, so its task 8 (an observed-data plan) is not done.
+   *Earlier wording:* published studies only, or observed data; pending since
+   issue #55.
 7. **Decided by the user, 2026-10-22** — Which LLM gives the reference for a
    rule: the extractor model that writes the rule from the results, or the
    agents themselves, asked afterwards in a debrief (#55, 7): both, the agents

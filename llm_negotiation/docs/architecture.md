@@ -874,7 +874,8 @@ LLM for the reference** the rule comes from. Which LLM gives the reference, the 
 agents in a debrief, was pending (#55, decision 7); the user decided on 2026-10-22: both (D8).
 
 **SV3. Verify the extracted rule with real human behaviour.** Whether that means published
-studies or observed data is pending (#55, decision 6).
+studies or observed data was pending (#55, decision 6); the user decided on 2026-10-30:
+published studies only (RF-14, #69).
 
 **SV4. Include as many factors as possible, and find which ones drive the decision**, with a
 mapping from factors to decision. More factors may be added, for example the agent's
