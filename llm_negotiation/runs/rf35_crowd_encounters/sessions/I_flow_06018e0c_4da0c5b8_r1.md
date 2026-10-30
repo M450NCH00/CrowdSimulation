@@ -1,0 +1,324 @@
+# Session I_flow_06018e0c_4da0c5b8_r1
+
+- Case: flow_06018e0c@1; scenario plug-in `passing_crowd`
+- Condition: independent; repeat 1
+- Design cell: {"age_pair": "same", "assertiveness": "neither", "demographics_visible": true, "distraction": "neither", "gender_pair": "p1_male", "mapping": "p1_higher", "mobility_aid": "p1", "urgency": "neither"}
+- People: agent 0: {"age": 24, "assertiveness": "holds_ground", "distraction": "phone", "gender": "male", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 1: {"age": 32, "assertiveness": "gives_way", "distraction": "phone", "gender": "male", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 2: {"age": 36, "assertiveness": "gives_way", "distraction": "none", "gender": "male", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 3: {"age": 20, "assertiveness": "gives_way", "distraction": "none", "gender": "female", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 4: {"age": 26, "assertiveness": "gives_way", "distraction": "none", "gender": "female", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 5: {"age": 35, "assertiveness": "gives_way", "distraction": "none", "gender": "female", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 6: {"age": 58, "assertiveness": "gives_way", "distraction": "none", "gender": "male", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 7: {"age": 62, "assertiveness": "gives_way", "distraction": "none", "gender": "male", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 8: {"age": 55, "assertiveness": "holds_ground", "distraction": "none", "gender": "male", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 9: {"age": 46, "assertiveness": "holds_ground", "distraction": "none", "gender": "male", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 10: {"age": 29, "assertiveness": "holds_ground", "distraction": "none", "gender": "female", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 11: {"age": 65, "assertiveness": "gives_way", "distraction": "none", "gender": "male", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 12: {"age": 70, "assertiveness": "holds_ground", "distraction": "none", "gender": "female", "mobility_aid": "cane", "task": "the supermarket", "urgency": "routine"}; agent 13: {"age": 27, "assertiveness": "gives_way", "distraction": "phone", "gender": "male", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 14: {"age": 25, "assertiveness": "gives_way", "distraction": "none", "gender": "female", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 15: {"age": 74, "assertiveness": "holds_ground", "distraction": "none", "gender": "female", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 16: {"age": 16, "assertiveness": "holds_ground", "distraction": "none", "gender": "male", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 17: {"age": 29, "assertiveness": "holds_ground", "distraction": "none", "gender": "male", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 18: {"age": 35, "assertiveness": "holds_ground", "distraction": "none", "gender": "male", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 19: {"age": 78, "assertiveness": "holds_ground", "distraction": "none", "gender": "male", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 20: {"age": 48, "assertiveness": "holds_ground", "distraction": "none", "gender": "female", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 21: {"age": 31, "assertiveness": "holds_ground", "distraction": "none", "gender": "female", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 22: {"age": 40, "assertiveness": "holds_ground", "distraction": "none", "gender": "female", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 23: {"age": 47, "assertiveness": "gives_way", "distraction": "none", "gender": "female", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 24: {"age": 41, "assertiveness": "gives_way", "distraction": "none", "gender": "male", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 25: {"age": 33, "assertiveness": "holds_ground", "distraction": "none", "gender": "male", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 26: {"age": 62, "assertiveness": "holds_ground", "distraction": "none", "gender": "female", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 27: {"age": 82, "assertiveness": "gives_way", "distraction": "none", "gender": "female", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 28: {"age": 37, "assertiveness": "holds_ground", "distraction": "none", "gender": "female", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 29: {"age": 67, "assertiveness": "gives_way", "distraction": "none", "gender": "female", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 30: {"age": 31, "assertiveness": "gives_way", "distraction": "none", "gender": "female", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 31: {"age": 25, "assertiveness": "gives_way", "distraction": "none", "gender": "male", "mobility_aid": "cane", "task": "the supermarket", "urgency": "routine"}; agent 32: {"age": 65, "assertiveness": "holds_ground", "distraction": "none", "gender": "female", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 33: {"age": 12, "assertiveness": "gives_way", "distraction": "none", "gender": "female", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 34: {"age": 54, "assertiveness": "holds_ground", "distraction": "none", "gender": "female", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 35: {"age": 10, "assertiveness": "holds_ground", "distraction": "phone", "gender": "male", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 36: {"age": 44, "assertiveness": "gives_way", "distraction": "none", "gender": "female", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 37: {"age": 52, "assertiveness": "gives_way", "distraction": "none", "gender": "female", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 38: {"age": 52, "assertiveness": "gives_way", "distraction": "none", "gender": "male", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 39: {"age": 57, "assertiveness": "gives_way", "distraction": "none", "gender": "female", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 40: {"age": 67, "assertiveness": "holds_ground", "distraction": "none", "gender": "male", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 41: {"age": 73, "assertiveness": "gives_way", "distraction": "none", "gender": "male", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 42: {"age": 62, "assertiveness": "holds_ground", "distraction": "none", "gender": "female", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 43: {"age": 76, "assertiveness": "gives_way", "distraction": "none", "gender": "female", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 44: {"age": 40, "assertiveness": "holds_ground", "distraction": "none", "gender": "male", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 45: {"age": 49, "assertiveness": "gives_way", "distraction": "none", "gender": "male", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 46: {"age": 64, "assertiveness": "gives_way", "distraction": "none", "gender": "male", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 47: {"age": 15, "assertiveness": "gives_way", "distraction": "none", "gender": "female", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 48: {"age": 51, "assertiveness": "holds_ground", "distraction": "none", "gender": "male", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}; agent 49: {"age": 56, "assertiveness": "holds_ground", "distraction": "none", "gender": "female", "mobility_aid": "none", "task": "the supermarket", "urgency": "routine"}
+- Model: deepseek-flash (temperature 1.0, reply cap 300 tokens)
+- Outcome: **completed**
+
+## The encounter
+
+- Began at 15.5 s (step 155): agent 14 and agent 31.
+- In it: agents [14, 31, 30, 15]; conflict pairs [[14, 31], [14, 15], [31, 30]]; prompted [14, 31, 30, 15]; left out by the cap: 10
+- Ended at 18.5 s: passed
+
+## The fixed text (system message)
+
+```
+You are playing the part of the person described below, on foot. Decide as this person would.
+
+Below you are told what you can see and hear around you right now. Say what you do from now on: how you move.
+Left and right always mean your own left and right.
+Other people see how you move, if you are in their view. Nobody else knows your intent or your reason.
+
+HOW TO REPLY
+Reply with a single JSON object and nothing else, with these keys in this order:
+"intent": what you are trying to do, in your own words.
+"steps": what you do from now on, as a list of steps (see STEPS). Write [] if you carry on as you are.
+"reason": why, in your own words. Nobody else sees it.
+The format, with placeholders: {"intent": "<what you are trying to do>", "steps": [<step>, ...], "reason": "<why>"}
+
+STEPS
+The steps are carried out in order, each beginning when the one before it ends, unless it has a start that has not come yet: then it begins when its start comes, and until then you walk on towards where you are going. After the last step ends, you walk on towards where you are going. Each step is a JSON object with these keys; leave out the ones you do not need:
+"start": in any step, when it begins: "now", {"at_distance_m": <metres>} to begin when the person you would meet is that close to you, or {"after_seconds": <seconds>}, counted from now. Without it, the opening step begins now and a later step begins when the one before it ends.
+"speed_mps": the speed you walk at during the step, in m/s, from 0 (standing still) up to the fastest you can walk.
+"turn": {"to": "left" or "right", "degrees": <from 0 to 90>}: during the step, walk at this angle to your left or right of the direction you are going.
+"back_up_m": walk backwards this many metres. The step ends when you have.
+"until": when the step ends: {"seconds": <seconds>}, {"at_distance_m": <metres>} to end it when the person you would meet is that close to you, or one of these events, written as its name in quotes: "other_passes" (until the other person has passed you), "other_stops" (until the other person stops) or "i_am_out_of_the_stretch" (until you are out of the narrow stretch). Every step needs it, except a step that walks backwards.
+The format of a step, with placeholders: {"start": "now", "speed_mps": <number>, "turn": {"to": "<left or right>", "degrees": <number>}, "until": {"seconds": <number>}}
+```
+
+## Decision point 1: agent 14, its number 1, at 15.5 s
+
+Why: trigger, perceives:31
+
+What it was told:
+
+```
+ABOUT YOU
+- You are 25 years old.
+- You are a woman.
+- You are on your way to the supermarket.
+- You are walking at 1.27 m/s. Your usual walking speed is 1.30 m/s.
+- The fastest you can walk is 2.00 m/s.
+- Your body is 0.50 m wide.
+- You are easy-going and tend to give way.
+
+WHERE YOU ARE
+- You are in a passage 4.00 m wide. The wall on your left is 1.32 m from you, the wall on your right 2.68 m.
+
+WHO YOU CAN SEE
+- Person 1, 1.0 m away, straight ahead of you.
+  They are walking at 1.28 m/s, in the same direction as you, and the distance between you is not shrinking.
+  Their body is 0.50 m wide.
+  They look about 29 years old.
+  They look like a woman.
+- Person 2, 1.0 m away, ahead of you and 34° to your left.
+  They are walking at 1.15 m/s, in the same direction as you, drifting to your right by 11°, and the distance between you is shrinking.
+  Their body is 0.50 m wide.
+  They look about 65 years old.
+  They look like a man.
+- Person 3, 1.0 m away, ahead of you and 30° to your right.
+  They are walking at 1.30 m/s, in the opposite direction to you, and the distance between you is shrinking.
+  Their body is 0.50 m wide.
+  They look about 82 years old.
+  They look like a woman.
+- Person 4, 1.6 m away, ahead of you and 59° to your right.
+  They are walking at 1.15 m/s, in the same direction as you, and the distance between you is not shrinking.
+  Their body is 0.50 m wide.
+  They look about 46 years old.
+  They look like a man.
+- Person 5, 1.9 m away, ahead of you and 16° to your right.
+  They are walking at 1.27 m/s, in the opposite direction to you, and the distance between you is shrinking.
+  Their body is 0.50 m wide.
+  They look about 25 years old.
+  They look like a man.
+  They are walking with a cane.
+- Person 6, 2.7 m away, ahead of you and 68° to your right.
+  They are walking at 1.24 m/s, in the same direction as you, and the distance between you is not shrinking.
+  Their body is 0.50 m wide.
+  They look about 55 years old.
+  They look like a man.
+
+At your current speeds you would meet Person 5 in about 0.7 s.
+
+What do you do now? Reply with the JSON object only.
+```
+
+Reply (attempt 1):
+
+```
+{"intent": "Keep out of the way of the oncoming people, especially the man with the cane, by easing to the left and slowing a little.", "steps": [{"start": "now", "speed_mps": 1.10, "turn": {"to": "left", "degrees": 15}, "until": {"seconds": 1.2}}, {"speed_mps": 1.25, "turn": {"to": "right", "degrees": 10}, "until": {"seconds": 1.5}}], "reason": "Person 5 with the cane is coming straight at me and will reach me almost at once; Person 3 is also oncoming on my right. Slowing and shifting left gives them room and lets the faster crowd ahead settle, while I stay easy-going and yield."}
+```
+
+Coded: {"backed_up": false, "carry_on": false, "n_steps": 2, "side": "both", "slowed": true, "start_after_s": null, "start_distance_m": null, "stopped": false}
+What came of it, until 18.5 s (passed): plan completed, smallest gap to anyone in the encounter -0.013769 m
+
+## Decision point 2: agent 31, its number 1, at 15.5 s
+
+Why: trigger, perceives:14
+
+What it was told:
+
+```
+ABOUT YOU
+- You are 25 years old.
+- You are a man.
+- You are on your way to the supermarket.
+- You are walking at 1.27 m/s. Your usual walking speed is 1.30 m/s.
+- The fastest you can walk is 2.00 m/s.
+- Your body is 0.50 m wide.
+- You are walking with a cane.
+- You are easy-going and tend to give way.
+
+WHERE YOU ARE
+- You are in a passage 4.00 m wide. The wall on your left is 2.27 m from you, the wall on your right 1.73 m.
+
+WHO YOU CAN SEE
+- Person 1, 0.7 m away, ahead of you and 35° to your left.
+  They are walking at 1.23 m/s, in the same direction as you, and the distance between you is shrinking.
+  Their body is 0.50 m wide.
+  They look about 62 years old.
+  They look like a woman.
+- Person 2, 0.9 m away, straight ahead of you.
+  They are walking at 1.30 m/s, in the same direction as you, and the distance between you is not shrinking.
+  Their body is 0.50 m wide.
+  They look about 82 years old.
+  They look like a woman.
+- Person 3, 1.0 m away, ahead of you and 31° to your right.
+  They are walking at 1.28 m/s, in the opposite direction to you, and the distance between you is shrinking.
+  Their body is 0.50 m wide.
+  They look about 29 years old.
+  They look like a woman.
+- Person 4, 1.4 m away, ahead of you and 47° to your right.
+  They are walking at 1.15 m/s, in the opposite direction to you, drifting to your left by 10°, and the distance between you is shrinking.
+  Their body is 0.50 m wide.
+  They look about 65 years old.
+  They look like a man.
+- Person 5, 1.6 m away, ahead of you and 69° to your right.
+  They are walking at 0.97 m/s, in the same direction as you, and the distance between you is shrinking.
+  Their body is 0.50 m wide.
+  They look about 37 years old.
+  They look like a woman.
+- Person 6, 1.9 m away, ahead of you and 15° to your right.
+  They are walking at 1.27 m/s, in the opposite direction to you, and the distance between you is shrinking.
+  Their body is 0.50 m wide.
+  They look about 25 years old.
+  They look like a woman.
+
+At your current speeds you would meet Person 6 in about 0.7 s.
+
+What do you do now? Reply with the JSON object only.
+```
+
+Reply (attempt 1):
+
+```
+{"intent": "Ease off to the left and slow a little to let the oncoming people pass and to avoid crowding the two older women ahead.", "steps": [{"start": "now", "speed_mps": 1.05, "turn": {"to": "left", "degrees": 15}, "until": {"seconds": 1.5}}, {"speed_mps": 1.15, "turn": {"to": "right", "degrees": 10}, "until": {"seconds": 2.0}}], "reason": "There is a tight cluster of people ahead, including elderly walkers and oncoming traffic. Giving way slightly to the left and slowing lets Person 6 and Person 3 pass while I keep clear of the two women walking ahead of me."}
+```
+
+Coded: {"backed_up": false, "carry_on": false, "n_steps": 2, "side": "both", "slowed": true, "start_after_s": null, "start_distance_m": null, "stopped": false}
+What came of it, until 18.5 s (passed): plan running, smallest gap to anyone in the encounter -0.013769 m
+
+## Decision point 3: agent 30, its number 1, at 15.5 s
+
+Why: trigger, perceives:31
+
+What it was told:
+
+```
+ABOUT YOU
+- You are 31 years old.
+- You are a woman.
+- You are on your way to the supermarket.
+- You are walking at 1.22 m/s. Your usual walking speed is 1.30 m/s.
+- The fastest you can walk is 2.00 m/s.
+- Your body is 0.50 m wide.
+- You are easy-going and tend to give way.
+
+WHERE YOU ARE
+- You are in a passage 4.00 m wide. The wall on your left is 1.78 m from you, the wall on your right 2.22 m.
+
+WHO YOU CAN SEE
+- Person 1, 0.6 m away, ahead of you and 56° to your right.
+  They are walking at 1.27 m/s, in the same direction as you, and the distance between you is shrinking.
+  Their body is 0.50 m wide.
+  They look about 25 years old.
+  They look like a man.
+  They are walking with a cane.
+- Person 2, 0.6 m away, ahead of you and 51° to your left.
+  They are walking at 1.02 m/s, in the opposite direction to you, and the distance between you is shrinking.
+  Their body is 0.50 m wide.
+  They look about 35 years old.
+  They look like a woman.
+- Person 3, 0.9 m away, straight ahead of you.
+  They are walking at 1.23 m/s, in the same direction as you, and the distance between you is not shrinking.
+  Their body is 0.50 m wide.
+  They look about 62 years old.
+  They look like a woman.
+- Person 4, 1.3 m away, ahead of you and 24° to your left.
+  They are walking at 1.15 m/s, in the opposite direction to you, and the distance between you is shrinking.
+  Their body is 0.50 m wide.
+  They look about 46 years old.
+  They look like a man.
+
+At your current speeds you would meet Person 1 in about 2.6 s.
+
+What do you do now? Reply with the JSON object only.
+```
+
+Reply (attempt 1):
+
+```
+{"intent": "Keep to the right side of the passage and slip past the oncoming people without bumping anyone, staying clear of the man with the cane.", "steps": [{"start": "now", "speed_mps": 1.22, "turn": {"to": "right", "degrees": 15}, "until": {"seconds": 1.0}}, {"speed_mps": 1.22, "turn": {"to": "left", "degrees": 10}, "until": {"seconds": 2.0}}], "reason": "Person 1 with the cane is close on my right and catching up, and two people are coming the other way on my left, so I ease slightly right to give the cane user room, then straighten out to keep clear of the oncoming pair without crowding the wall."}
+```
+
+Coded: {"backed_up": false, "carry_on": false, "n_steps": 2, "side": "both", "slowed": false, "start_after_s": null, "start_distance_m": null, "stopped": false}
+What came of it, until 18.5 s (passed): plan running, smallest gap to anyone in the encounter -0.001326 m
+
+## Decision point 4: agent 15, its number 1, at 15.5 s
+
+Why: trigger, perceives:14
+
+What it was told:
+
+```
+ABOUT YOU
+- You are 74 years old.
+- You are a woman.
+- You are on your way to the supermarket.
+- You are walking at 1.18 m/s. Your usual walking speed is 1.30 m/s.
+- The fastest you can walk is 2.00 m/s.
+- Your body is 0.50 m wide.
+- You are determined and tend to hold your ground.
+
+WHERE YOU ARE
+- You are in a passage 4.00 m wide. The wall on your left is 0.70 m from you, the wall on your right 3.30 m.
+
+WHO YOU CAN SEE
+- Person 1, 0.6 m away, ahead of you and 72° to your right.
+  They are walking at 1.27 m/s, in the same direction as you, and the distance between you is shrinking.
+  Their body is 0.50 m wide.
+  They look about 25 years old.
+  They look like a woman.
+- Person 2, 1.0 m away, straight ahead of you.
+  They are walking at 1.15 m/s, in the same direction as you, and the distance between you is shrinking.
+  Their body is 0.50 m wide.
+  They look about 65 years old.
+  They look like a man.
+- Person 3, 1.3 m away, ahead of you and 23° to your right.
+  They are walking at 1.28 m/s, in the same direction as you, and the distance between you is not shrinking.
+  Their body is 0.50 m wide.
+  They look about 29 years old.
+  They look like a woman.
+- Person 4, 1.4 m away, ahead of you and 22° to your left.
+  They are walking at 0.97 m/s, in the opposite direction to you, and the distance between you is shrinking.
+  Their body is 0.50 m wide.
+  They look about 37 years old.
+  They look like a woman.
+- Person 5, 1.5 m away, ahead of you and 42° to your right.
+  They are walking at 1.30 m/s, in the opposite direction to you, and the distance between you is shrinking.
+  Their body is 0.50 m wide.
+  They look about 82 years old.
+  They look like a woman.
+
+At your current speeds you would meet Person 1 in about 2.7 s.
+
+What do you do now? Reply with the JSON object only.
+```
+
+Reply (attempt 1):
+
+```
+{"intent": "Keep my line towards the supermarket, holding slightly to the left of the middle to avoid the cluster on my right, and let the oncoming people pass.", "steps": [{"start": "now", "speed_mps": 1.18, "turn": {"to": "left", "degrees": 5}, "until": {"seconds": 1.5}}, {"start": "now", "speed_mps": 1.18, "until": {"seconds": 2.5}}], "reason": "I have the right to my path, and Person 2 straight ahead is moving at much the same pace as me so I just follow. The busy group is to my right, so I edge a little left to give Person 1 and Person 5 room to get by without bumping into me. I will not slow down for them."}
+```
+
+Coded: {"backed_up": false, "carry_on": false, "n_steps": 2, "side": "left", "slowed": false, "start_after_s": null, "start_distance_m": null, "stopped": false}
+What came of it, until 18.5 s (passed): plan running, smallest gap to anyone in the encounter 0.008133 m
+
+## Debrief: agent 14
+
+Reply (attempt 1):
+
+```
+{"basis": "Nothing formal — just ordinary pedestrian common sense and a habit of giving way to oncoming people, especially someone elderly with a cane. No law, study, or local custom was in mind.", "kind": "common_sense", "source": "none", "applies_to": "Easing left and slowing to let the oncoming man with the cane and the other oncoming walkers pass."}
+```
+
+## Debrief: agent 31
+
+Reply (attempt 1):
+
+```
+{"basis": "Nothing formal — just general courtesy and habit: I tend to give way to oncoming foot traffic and keep clear of elderly walkers, using my cane and slowing rather than pushing past.", "kind": "habit", "source": "none", "applies_to": "Easing left and slowing to let oncoming people pass and avoid crowding the two older women ahead"}
+```
+
+## Debrief: agent 30
+
+Reply (attempt 1):
+
+```
+{"basis": "Just everyday give-and-take: keeping to my right and leaving room for a cane user and people coming the other way, without any specific rule in mind.", "kind": "habit", "source": "none", "applies_to": "Easing right to give the cane user room, then straightening out to pass the oncoming pair."}
+```
+
+## Debrief: agent 15
+
+Reply (attempt 1):
+
+```
+{"basis": "Nothing formal. I just sized up the crowd on my right, kept to my line and gave a bit of room on the left. It's ordinary pavement judgement, not a rule I could cite.", "kind": "common_sense", "source": "none", "applies_to": "Holding my line and edging slightly left to avoid the cluster on my right while letting the oncoming people pass."}
+```
+
+## Totals
+
+8 call(s), 0 retried; tokens {"completion_tokens": 1035, "prompt_cache_hit_tokens": 7552, "prompt_cache_miss_tokens": 4275, "prompt_tokens": 11827, "reasoning_tokens": 0}; USD 0.001284906

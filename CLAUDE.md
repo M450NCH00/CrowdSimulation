@@ -121,6 +121,11 @@ Budget:
   checked 2026-10-28 (0.62 just before it).
   After issue #115's run with its pilot (USD 0.1688 in the ledger, cap 0.20): **USD 0.39**,
   checked 2026-10-28 (0.56 just before it).
+  After issue #117's run with its pilot (USD 0.0707 in the ledger, cap 0.10): **USD 0.32**,
+  checked 2026-10-28 (0.39 just before it).
+  After issue #119's run with its pilot (USD 0.1471 in the ledger, cap 0.15, stopped at the cap with 66
+  of 72 sessions): **USD 0.17**, checked 2026-10-29 (0.30 just before the rest of the run, 0.32 before
+  the pilot).
 
 ### Phase 1 (on hold): the behaviour dataset
 The task from the first supervisor meeting, on hold since the second meeting.
@@ -199,7 +204,7 @@ The user's notes from the meeting, word for word:
   each simulator. Rules may be more specific, for example "keep left".
 
 ## Pending sign-offs
-Items 1, 5 and 6 are still pending (item 1 was approved for issues #64, #65, #98, #100, #101, #104, #66, #67, #108, #110 and #115 only).
+Items 1, 5 and 6 are still pending (item 1 was approved for issues #64, #65, #98, #100, #101, #104, #66, #67, #108, #110, #115, #117 and #119 only).
 **Do not treat any of them as approved** until the user records the
 supervisor's answer in this file, with a date. Items 2 and 3, the ethics
 sign-offs for perceived attractiveness and real ethnicity, were recorded by the
@@ -280,6 +285,16 @@ used in this track). Numbers in brackets are the decisions of track issue #55.
      that experiment's own calls (`experiment_name: rf34_round1_group_head_on_non_verbal`; 72
      sessions, non-verbal condition only, about USD 0.12 to 0.14 off-peak, up to about 0.20 at the
      mock's call count, `WORK_LOG-115.md`).
+   - **Approved for issue #117 only, 2026-10-28:** the user approved paid runs for RF-35's
+     encounters sampled from crowds (#117), and only for it, with a cap of **USD 0.10** on that
+     experiment's own calls (`experiment_name: rf35_crowd_encounters`; 72 sessions, independent
+     condition only, about USD 0.07 off-peak from RF-32's measured cost per call, `WORK_LOG-117.md`).
+   - **Approved for issue #119 only, 2026-10-29:** the user answered "ok run as built, do with your
+     recommendation" to paid runs for RF-36's non-verbal run of RF-35's crowd encounters (#119), and only
+     for it, with the recommended cap of **USD 0.15** on that experiment's own calls (`experiment_name:
+     rf36_crowd_encounters_non_verbal`; 72 sessions, non-verbal condition only, about USD 0.11 to 0.12
+     off-peak from RF-35's measured cost per call, a pilot first, `WORK_LOG-119.md`). The same answer
+     keeps D5 as written (a bystander coming into view prompts again).
 2. **Approved by the supervisor, 2026-10-24** — Ethics sign-off for perceived
    attractiveness as a factor (#55, 3). *The user decided on 2026-10-24* that
    attractiveness (both directions) is **in** RF-10's design, because bias can

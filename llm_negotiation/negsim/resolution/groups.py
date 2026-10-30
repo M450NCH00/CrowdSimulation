@@ -36,6 +36,17 @@ oncoming person caused it.
         --pairs runs/rf30_round1_head_on_keep_line --pairs-condition non_verbal \\
         --against runs/rf32_round1_group_head_on_orca_groups --arm ...
 
+Issue #117 (RF-35), encounters in a crowd: there the pair measure fails almost every pair, plain ORCA
+included (grazes of a few millimetres with someone nearby), so each session is also scored **against
+plain ORCA** on its own seed (the user's decision, 2026-10-28; :func:`against_orca`): from the
+encounter's start, the encounter's people collide no more often and no deeper than under plain ORCA,
+and none of them is stuck.
+
+Issue #119 (RF-36), crowd encounters in the non-verbal condition: ``--against`` a crowd experiment also
+pairs the two by that measure, compares the two runs' plans directly (the same cell and case give the
+same seed, people and crowd; :func:`paired_crowd`), and the resolved counts with depths within 5 mm
+or 1 cm counted as equal are reported beside the measure of record (:func:`resolved_within`).
+
 Nothing here calls a model. Every run is deterministic and rebuilt from the session record.
 """
 
@@ -214,6 +225,45 @@ def formations(measured: Measured, members: Sequence[int]) -> list[dict[str, Any
     return out
 
 
+def contacts(measured: Measured, members: Sequence[int]) -> dict[str, Any]:
+    """Issue #117: the collisions of the encounter's people from its start (episodes ending at or after
+    it, as ``outcomes.physical_outcome`` counts them; walls included), the deepest overlap, and
+    whether any of them is stuck (a deadlock, or not arrived when the run ended)."""
+    result, people = measured.result, set(members)
+    start_time = measured.start * measured.simulation.world.dt - 1e-9
+    pairs = [e for e in result.collision_episodes if e.end_time_s >= start_time and set(e.pair) & people]
+    walls = [e for e in result.wall_collision_episodes if e["agent_id"] in people and e["end_time_s"] >= start_time]
+    depths = [-e.min_separation_m for e in pairs] + [e["max_overlap_m"] for e in walls]
+    stuck = bool(result.deadlock) or any(result.goal_times.get(agent) is None for agent in members)
+    return {"collisions": len(pairs) + len(walls), "deepest_m": round(max(depths), 6) if depths else 0.0, "stuck": stuck}
+
+
+def against_orca(found: Mapping[str, Any], plain: Mapping[str, Any]) -> dict[str, Any]:
+    """Issue #117, the user's measure: ``resolved`` when the plans' run is not stuck and its people
+    collide no more often and no deeper than under plain ORCA (or plain ORCA is stuck and the plans'
+    run is not). ``verdict``: better, same or worse, by stuck, then the number of collisions, then the
+    deepest overlap."""
+    resolved = not found["stuck"] and (
+        plain["stuck"] or (found["collisions"] <= plain["collisions"] and found["deepest_m"] <= plain["deepest_m"] + 1e-9)
+    )
+    key = lambda c: (c["stuck"], c["collisions"], round(c["deepest_m"], 6))  # noqa: E731
+    verdict = "same" if key(found) == key(plain) else "better" if key(found) < key(plain) else "worse"
+    return {"plan_only": dict(found), "plain_orca": dict(plain), "resolved": resolved, "verdict": verdict}
+
+
+#: Issue #119: the depth tolerances RF-35's report checked (its open question 1, the user's to decide).
+TOLERANCES_M = (0.005, 0.01)
+
+
+def resolved_within(scored: Mapping[str, Any], tolerance_m: float) -> bool:
+    """Issue #119: :func:`against_orca`'s ``resolved`` with depths within ``tolerance_m`` counted as
+    equal, as RF-35's report counted it. Not the measure of record."""
+    found, plain = scored["plan_only"], scored["plain_orca"]
+    return not found["stuck"] and (
+        plain["stuck"] or (found["collisions"] <= plain["collisions"] and found["deepest_m"] <= plain["deepest_m"] + tolerance_m + 1e-9)
+    )
+
+
 def first_plans(record: Mapping[str, Any]) -> list[dict[str, Any]]:
     """Each prompted person's first readable plan, coded mechanically, with the largest turn."""
     seen, out = set(), []
@@ -255,6 +305,15 @@ def later_points(record: Mapping[str, Any]) -> dict[str, Any]:
             "signals": dict(signals), "signals_seen_by": dict(seen_by)}
 
 
+def layout_of(case: Mapping[str, Any]) -> Optional[str]:
+    """A case's layout (RF-32's group cases), else its variant in words (issue #117: the flow's
+    ``density=per_way_25``), else ``None``."""
+    variant = case["scenario"].get("variant") or {}
+    if "layout" in variant:
+        return variant["layout"]
+    return ";".join(f"{key}={value}" for key, value in sorted(variant.items())) or None
+
+
 def design_key(session_id: str) -> str:
     """The session id without its condition letter (``I_group_..._r1`` and ``N_group_..._r1`` are the
     same cell, case and repeat)."""
@@ -291,11 +350,11 @@ class GroupAnalysis:
                 visibility=visibility(base, record, arm.schema_version), directives=arm.directives(),
             )
             measured[arm.name] = _run(plan, PlanDriver(MODE_PLAN_ORCA, scenario, agents), start)
-        variant = case["scenario"].get("variant") or {}
+        layout = layout_of(case)
         rows = []
         for pair in pairs:
             row: dict[str, Any] = {
-                "session_id": record["session_id"], "case_id": case["case_id"], "layout": variant.get("layout"),
+                "session_id": record["session_id"], "case_id": case["case_id"], "layout": layout,
                 "agent_a": pair[0], "agent_b": pair[1],
             }
             found = {mode: _pair_columns(m, pair, scenario, goals) for mode, m in measured.items()}
@@ -307,8 +366,10 @@ class GroupAnalysis:
                     row[f"{mode}_matched"] = measured[mode].matched
             rows.append(row)
         return {
-            "session_id": record["session_id"], "layout": variant.get("layout"), "case_id": case["case_id"],
+            "session_id": record["session_id"], "layout": layout, "case_id": case["case_id"],
             "n_people": case["scenario"]["n_agents"], "pairs": rows,
+            "encounter_size": len(agents), "prompted": len(record["encounter"].get("prompted") or []),
+            "left_out_by_cap": len(record["encounter"].get("left_out_by_cap") or []),
             "resolved": {mode: all(row[f"{mode}_{RESOLVED}"] for row in rows) for mode in measured},
             "formations": formations(step1, agents),
             "first_plans": [
@@ -321,6 +382,7 @@ class GroupAnalysis:
             "decision_points": len(record.get("decision_points") or []),
             "condition": record.get("condition"),
             "later_points": later_points(record),
+            "against_orca": against_orca(contacts(step1, agents), contacts(plain, agents)),
         }
 
     def run(self, report=None) -> list[dict[str, Any]]:
@@ -385,14 +447,64 @@ def pair_sessions(folder: Path | str, condition: Optional[str] = None) -> list[d
 # --- another group experiment on the same design, for a paired comparison ------------------------
 
 
-def against_sessions(folder: Path | str) -> dict[str, bool]:
-    """Another group experiment's design sessions, by :func:`design_key`: whether each resolved in
-    plan_only, read from its analysis (``analysis/group_sessions.json``, written by this module)."""
+def _analysed_design_sessions(folder: Path | str) -> list[dict[str, Any]]:
+    """Another group experiment's design sessions, as this module analysed them (``analysis/group_sessions.json``)."""
     folder = Path(folder)
     with (folder / "outcomes.csv").open(encoding="utf-8", newline="") as handle:
         design_ids = {row["session_id"] for row in csv.DictReader(handle) if row.get("repeat") == "1"}
     found = json.loads((folder / "analysis" / "group_sessions.json").read_text(encoding="utf-8"))
-    return {design_key(s["session_id"]): bool(s["resolved"]["plan_only"]) for s in found if s["session_id"] in design_ids}
+    return [s for s in found if s["session_id"] in design_ids]
+
+
+def against_sessions(folder: Path | str) -> dict[str, bool]:
+    """Another group experiment's design sessions, by :func:`design_key`: whether each resolved in
+    plan_only, read from its analysis (``analysis/group_sessions.json``, written by this module)."""
+    return {design_key(s["session_id"]): bool(s["resolved"]["plan_only"]) for s in _analysed_design_sessions(folder)}
+
+
+def against_crowd_sessions(folder: Path | str) -> dict[str, dict[str, Any]]:
+    """Issue #119: another crowd experiment's design sessions, by :func:`design_key`: each one's score
+    against plain ORCA (:func:`against_orca`), for those its analysis scored."""
+    return {design_key(s["session_id"]): s["against_orca"] for s in _analysed_design_sessions(folder) if "against_orca" in s}
+
+
+def paired_crowd(design: Sequence[Mapping[str, Any]], other: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
+    """Issue #119: this crowd experiment's design sessions against the other's of the same cell and case
+    (the same seed, the same people, the same crowd), by layout:
+
+    - ``against_orca``: both, this one only, the other only, or neither resolved against plain ORCA,
+      with McNemar's exact test, as :func:`paired`;
+    - ``direct``: this one's plans against the other's, scored as :func:`against_orca` scores plans
+      against plain ORCA (stuck, then the number of collisions, then the deepest overlap), and by the
+      number of collisions alone; the sign test on better against worse;
+    - ``plain_orca_differs``: sessions whose plain ORCA contacts differ between the two, which the
+      pairing assumes never happens."""
+    out: dict[str, Any] = {}
+    for layout in sorted({s["layout"] for s in design}) + ["all"]:
+        resolved, direct, by_count, differs = Counter(), Counter(), Counter(), 0
+        for s in design:
+            key = design_key(s["session_id"])
+            if (layout != "all" and s["layout"] != layout) or key not in other or "against_orca" not in s:
+                continue
+            mine, theirs = s["against_orca"], other[key]
+            a, b = mine["resolved"], theirs["resolved"]
+            resolved["both" if a and b else "this_only" if a else "other_only" if b else "neither"] += 1
+            direct[against_orca(mine["plan_only"], theirs["plan_only"])["verdict"]] += 1
+            ca, cb = mine["plan_only"]["collisions"], theirs["plan_only"]["collisions"]
+            by_count["same" if ca == cb else "better" if ca < cb else "worse"] += 1
+            differs += mine["plain_orca"] != theirs["plain_orca"]
+        row = {name: resolved[name] for name in ("both", "this_only", "other_only", "neither")}
+        row["n"] = sum(resolved.values())
+        row["sign_test_p"] = round(sign_test(resolved["this_only"], resolved["other_only"]), 6)
+        out[layout] = {
+            "against_orca": row,
+            "direct": {**{name: direct[name] for name in ("better", "same", "worse")},
+                       "sign_test_p": round(sign_test(direct["better"], direct["worse"]), 6)},
+            "direct_collisions_only": {**{name: by_count[name] for name in ("better", "same", "worse")},
+                                       "sign_test_p": round(sign_test(by_count["better"], by_count["worse"]), 6)},
+            "plain_orca_differs": differs,
+        }
+    return out
 
 
 def paired(design: Sequence[Mapping[str, Any]], against: Mapping[str, bool]) -> dict[str, Any]:
@@ -446,10 +558,11 @@ def _debrief_table(debriefs: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
 
 def summarise(
     sessions: Sequence[Mapping[str, Any]], pairs: Sequence[Mapping[str, Any]], arms: Sequence[Arm], design_ids: Optional[set] = None,
-    against: Optional[Mapping[str, bool]] = None,
+    against: Optional[Mapping[str, bool]] = None, against_crowd: Optional[Mapping[str, Mapping[str, Any]]] = None,
 ) -> dict[str, Any]:
     """Every table of the report, as numbers. ``design_ids``: the sessions of the design (no exact-repeat
-    copy); ``against``: another group experiment's design sessions (:func:`against_sessions`)."""
+    copy); ``against``: another group experiment's design sessions (:func:`against_sessions`);
+    ``against_crowd``: another crowd experiment's (:func:`against_crowd_sessions`, issue #119)."""
     design = [s for s in sessions if design_ids is None or s["session_id"] in design_ids]
     out: dict[str, Any] = {"sessions": len(sessions), "design_sessions": len(design)}
     pair_k = sum(p["resolved"] for p in pairs)
@@ -464,6 +577,29 @@ def summarise(
             **{arm.name: sum(s["resolved"][arm.name] for s in mine) for arm in arms},
         }
     out["resolved"] = resolved
+    by_size = {}  # issue #117: by how many people were in the encounter
+    for size in sorted({s.get("encounter_size") for s in design if s.get("encounter_size") is not None}):
+        mine = [s for s in design if s.get("encounter_size") == size]
+        k = sum(s["resolved"]["plan_only"] for s in mine)
+        by_size[str(size)] = {"n": len(mine), "plan_only": k, "ci": wilson(k, len(mine))}
+    out["resolved_by_encounter_size"] = by_size
+    scored = [s for s in design if "against_orca" in s]
+    if scored:  # issue #117
+        table = {}
+        for layout in sorted({s["layout"] for s in scored}) + ["all"]:
+            mine = [s["against_orca"] for s in scored if layout == "all" or s["layout"] == layout]
+            k = sum(a["resolved"] for a in mine)
+            verdicts = Counter(a["verdict"] for a in mine)
+            table[layout] = {
+                "n": len(mine), "resolved": k, "ci": wilson(k, len(mine)),
+                "better": verdicts["better"], "same": verdicts["same"], "worse": verdicts["worse"],
+                "sign_test_p": round(sign_test(verdicts["better"], verdicts["worse"]), 6),
+                "collisions_plan_only": sum(a["plan_only"]["collisions"] for a in mine),
+                "collisions_plain_orca": sum(a["plain_orca"]["collisions"] for a in mine),
+                "stuck_plan_only": sum(a["plan_only"]["stuck"] for a in mine), "stuck_plain_orca": sum(a["plain_orca"]["stuck"] for a in mine),
+                "resolved_within_m": {str(t): sum(resolved_within(a, t) for a in mine) for t in TOLERANCES_M},  # issue #119
+            }
+        out["against_orca"] = table
     out["pairs_round1"] = {"n": len(pairs), "plan_only": pair_k, "ci": wilson(pair_k, len(pairs))}
     every = [row for s in design for row in s["pairs"]]
     out["conflict_pairs"] = {
@@ -530,6 +666,8 @@ def summarise(
         }
     if against is not None:
         out["paired"] = paired(design, against)
+    if against_crowd:
+        out["paired_crowd"] = paired_crowd(design, against_crowd)
     return out
 
 
@@ -572,6 +710,24 @@ def report_markdown(summary: Mapping[str, Any], arms: Sequence[Arm], experiment:
     for name, table in summary["debriefs"].items():
         lines.append(f"- **{name}**: {table}")
     lines += ["", f"Unreadable after retry: {summary['unreadable']}"]
+    if summary.get("against_orca"):
+        lines += ["", "## Against plain ORCA on the same seed (issue #117)", "",
+                  "| Layout | Sessions | Resolved: no more collisions, none deeper, none stuck (95% CI) | Better | Same | Worse | Sign test p | Collisions, plans / plain ORCA | Stuck, plans / plain ORCA |",
+                  "| --- | --- | --- | --- | --- | --- | --- | --- | --- |"]
+        for layout, row in summary["against_orca"].items():
+            lines.append(
+                f"| {layout} | {row['n']} | {_share([True] * row['resolved'] + [False] * (row['n'] - row['resolved']))} | {row['better']} | "
+                f"{row['same']} | {row['worse']} | {row['sign_test_p']} | {row['collisions_plan_only']} / {row['collisions_plain_orca']} | "
+                f"{row['stuck_plan_only']} / {row['stuck_plain_orca']} |")
+        within = {layout: row["resolved_within_m"] for layout, row in summary["against_orca"].items() if "resolved_within_m" in row}
+        if within:  # issue #119
+            lines += ["", "Resolved with depths within a tolerance counted as equal (not the measure of record): " +
+                      "; ".join(f"{layout}: " + ", ".join(f"{float(t) * 1000:g} mm {k}" for t, k in row.items()) for layout, row in within.items())]
+    if summary.get("resolved_by_encounter_size"):
+        lines += ["", "## Resolved in plan_only, by the number of people in the encounter", "",
+                  "| People | Sessions | Resolved (95% CI) |", "| --- | --- | --- |"]
+        for size, row in summary["resolved_by_encounter_size"].items():
+            lines.append(f"| {size} | {row['n']} | {_share([True] * row['plan_only'] + [False] * (row['n'] - row['plan_only']))} |")
     if "later_points" in summary:
         lines += ["", "## Decision points after each person's first", "", f"{summary['later_points']}"]
     if "paired" in summary:
@@ -580,6 +736,15 @@ def report_markdown(summary: Mapping[str, Any], arms: Sequence[Arm], experiment:
                   "| --- | --- | --- | --- | --- | --- | --- |"]
         for layout, row in summary["paired"].items():
             lines.append(f"| {layout} | {row['n']} | {row['both']} | {row['this_only']} | {row['other_only']} | {row['neither']} | {row['sign_test_p']} |")
+    if "paired_crowd" in summary:
+        lines += ["", "## Paired with the other crowd experiment (same cell and case), against plain ORCA (issue #119)", "",
+                  "| Layout | Sessions | Both resolved | This only | Other only | Neither | Sign test p | Plans against the other's: better / same / worse (p) | By collisions alone (p) | Plain ORCA differs |",
+                  "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |"]
+        for layout, row in summary["paired_crowd"].items():
+            a, d, c = row["against_orca"], row["direct"], row["direct_collisions_only"]
+            lines.append(f"| {layout} | {a['n']} | {a['both']} | {a['this_only']} | {a['other_only']} | {a['neither']} | {a['sign_test_p']} | "
+                         f"{d['better']} / {d['same']} / {d['worse']} ({d['sign_test_p']}) | {c['better']} / {c['same']} / {c['worse']} ({c['sign_test_p']}) | "
+                         f"{row['plain_orca_differs']} |")
     return "\n".join(lines) + "\n"
 
 
@@ -598,7 +763,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     pairs = pair_sessions(args.pairs, args.pairs_condition) if args.pairs else []
     with (args.folder / "outcomes.csv").open(encoding="utf-8", newline="") as handle:
         design_ids = {row["session_id"] for row in csv.DictReader(handle) if row.get("repeat") == "1"}
-    summary = summarise(sessions, pairs, arms, design_ids, against_sessions(args.against) if args.against else None)
+    summary = summarise(sessions, pairs, arms, design_ids, against_sessions(args.against) if args.against else None,
+                        against_crowd_sessions(args.against) if args.against else None)
     out = args.out or args.folder / "analysis"
     out.mkdir(parents=True, exist_ok=True)
     (out / "group_pairs.csv").write_text(pairs_csv(sessions), encoding="utf-8", newline="\n")
