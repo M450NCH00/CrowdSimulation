@@ -18,7 +18,7 @@ issue: "RF-14's scope: what counts as 'real human behaviour', published studies 
 decided." So **published studies only**, the user's own decision (recorded in `CLAUDE.md`, pending
 sign-offs item 6, like items 4, 7 and 8). Task 8 (a plan for observed data) is therefore not done.
 
-**What there is to verify (inventory, 00:20 to 00:35 UTC):**
+**What there is to verify (inventory, 00:19 to 00:24 UTC):**
 
 - **Rules.** RF-11 wrote 25 rules over three runs; four were kept (found in at least 2 of 3 runs):
   - `x_head_on_aacce0961b`: a person who holds their ground keeps their line at full speed and only
@@ -77,7 +77,9 @@ sign-offs item 6, like items 4, 7 and 8). Task 8 (a plan for observed data) is t
   `origin/feat/110-rf32-group-head-on`.
 - Next step: inventory.
 
-### 2026-10-30 00:35 UTC — Inventory done, decision 6 recorded
+### 2026-10-30 00:24 UTC — Inventory done, decision 6 recorded
+*(Time corrected at 00:30 UTC from the commit time: the entry first said 00:35, an estimate written
+ahead of the clock.)*
 - What I did: read RF-11's extraction report and run files, RF-31's translation report, RF-33's
   evaluation report, RF-10's screen report; counted every debrief of every paid run.
 - Result: see "Understanding the issue". The main surprise: neither the extractor nor any agent names
@@ -85,8 +87,67 @@ sign-offs item 6, like items 4, 7 and 8). Task 8 (a plan for observed data) is t
   task 3's independent search.
 - Next step: independent search.
 
+### 2026-10-30 00:25 to 00:32 UTC — Searches and sources
+- What I did: searched the repository's literature folders (only Rapos et al. 2021 was relevant), then
+  12 web searches and Europe PMC's API (`literature/rule-verification/search-log.md`). Cached 18 files
+  as `refs/rf14_*`.
+- Result: the key studies are Moussaïd et al. 2009 (side convention, slowing in head-on), Olivier et al.
+  2013 and Knorr et al. 2016 (roles in avoidance; personality not correlated), Huber et al. 2014 (head-on:
+  path, not speed), Rapos et al. 2021 (young adults adjust more for older ones), Nummenmaa et al. 2009
+  (gaze), Arminen & Heino 2023 (civil inattention), Valuch et al. 2015 (attractive faces hold gaze),
+  Echeverría-Huarte et al. 2026 (Japan keeps left), Jung & Jung 2013 (Korea: guidance and preference
+  diverge). **No published study of which side Singapore pedestrians keep**; only guidance (MOT 2024).
+- Dead ends: HAL, mediaTUM and Turku returned Anubis bot checks; those pages were deleted and the
+  abstracts taken from Europe PMC. Cary 1978 (civil inattention in passing) has no Europe PMC record.
+  Wolff 1973 is a book chapter: citation only. A Vassallo et al. 2017 link was an HTML page, deleted.
+
+### 2026-10-30 00:32 UTC — Promotion tried on a scratch copy: refused
+- What I did: `python -m negsim.rulegen promote runs/rf31_round1_head_on/rule_db_staging/extracted
+  ext_head_on_0ecc2d1a6e --reason "dry run" --database <scratch copy of rule_db>`.
+- Result: refused before copying: `promote` loads the whole staging database strictly, and RF-31's
+  `ext_head_on_aacce0961b` is refused there (`constant_roles`, the user's decision of 2026-10-26). The real
+  `rule_db/` was never touched.
+- Decision: **not promoting in this issue.** Besides the code change, the rule's grade (Partly
+  supported) is borderline under "published studies only": the side, left, has guidance but no study in
+  Singapore. That is the user's call (open question 1).
+
+### 2026-10-30 00:37 UTC — Deliverables written
+- What I did: wrote `literature/rule-verification/` (README with the summary table, references check,
+  six evidence files, sources, search log). Checked numbers against the run files: the Step 1
+  comparisons were computed on the 216 sessions of `rf10_round1_head_on_keep_line` and
+  `rf30_round1_head_on_keep_line` outside the exact-repeat set (my filters did not reproduce RF-11's 192;
+  stated in the report's limits). Corrected two counts while checking (keep-left debriefs 56, of which 53
+  name Singapore; the "every other factor" line, which wrongly said nothing else reached p < 0.03).
+- Result: every kept rule is Partly supported; assertiveness as a factor is Contradicted (Knorr 2016,
+  abstract); neither the extractor nor any agent named a checkable source.
+
 ## Open questions / risks
 
-- Only one rule (the left-turn translation) can be promoted, by the decision table of #55.
+1. **Promote `ext_head_on_0ecc2d1a6e` (both turn 10° left)?** #55's table says promote (Partly
+   supported, helps), but (a) under "published studies only" the side has no Singapore evidence, and
+   (b) `promote` needs a small code change to skip the refused rule in RF-31's staging database. My
+   recommendation: do not promote yet; keep it staged, labelled "helps; shared side supported, left in
+   Singapore rests on guidance", and promote only if a Singapore side study turns up or the user accepts
+   guidance plus Japan as enough.
+2. **Abstract-only sources.** Olivier2013, Knorr2016, Nummenmaa2009, Rapos2021 and Jung2013 were read
+   as abstracts (bot checks). In particular, the Contradicted grade for assertiveness depends on which
+   traits Knorr2016 measured. The user can fetch the PDFs in a browser in minutes.
+3. **The passing-distance comparison assumes the 0.25 m default radius** (`hallway.yaml`, marked a
+   placeholder); a suitcase widens a body.
+4. **Grades are one reader's judgment** on sources found in one session; #37's scale was not used (no
+   supervisor approval).
 
 ## Summary (fill in at the end)
+
+- **Changed:** recorded the user's decision on #55 decision 6 (published studies only) in `CLAUDE.md`,
+  `README.md`, `docs/architecture.md` and #55. Wrote `literature/rule-verification/` (RF-14's report,
+  evidence per rule, references check, sources, search log) and cached 18 sources in `refs/rf14_*`. No
+  code changed; nothing promoted; no model call, USD 0.
+- **Found:** 0 of 27 extractor references and 0 of 2,681 debriefs name a checkable source. All four kept
+  rules are Partly supported; the keep-right pattern has no evidence for Singapore; assertiveness, the
+  screen's one sure factor for avoidance, is contradicted by Knorr 2016; the other's age is supported
+  (Rapos 2021: 0.90 of young agents slow for a 70-year-old against 0.52 for a peer).
+- **Verified (section 5b):** every number in the report carries its run file or source and section;
+  every task is answered or marked (task 6 not done, with reasons; task 8 not needed); the open
+  questions are listed; sources are cached in `refs/`. No test was run: no code changed (the only file
+  under `llm_negotiation/` touched is `docs/architecture.md`).
