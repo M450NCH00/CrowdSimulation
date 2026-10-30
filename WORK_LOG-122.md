@@ -49,9 +49,22 @@ measured**, as RF-18's "helps" was before its run.
   this branch from `origin/feat/110-rf32-group-head-on`.
 - Next step: task 0 (the tolerances), then the inventory.
 
+### 2026-10-30 11:38 UTC — Task 0: tolerances agreed with the user, before any measuring
+- Asked the user two questions; the answers, word for word as chosen:
+  - Tolerance: **"Within 1 SD (Recommended)"**: the simulated mean must fall within the study's mean
+    ± 1 reported standard deviation (Rapos2021's two young adults, 0.93 ± 0.17 m: 0.76 to 1.10 m).
+    Targets with no reported spread are judged on direction only.
+  - Studies that disagree: **"Report, no verdict (Recommended)"**: the simulation's value is shown
+    beside both studies, with no pass or fail on that target until a further source settles it. Today
+    this applies to H4 against H5 (slowing in a head-on: Huber2014 none at 180°, Moussaid2009 a
+    significant decrease).
+- Fixed before any rule was measured. The targets file will carry these two rules, and changing them
+  is a new version of the file.
+- Next step: the inventory of existing measures.
+
 ## Open questions / risks
 
-1. **Tolerances** (task 0): not yet agreed.
+1. ~~**Tolerances** (task 0): not yet agreed.~~ Agreed 11:38 UTC (above).
 2. **Study settings differ from the simulator's**: lab tasks with instructed walkers, one walker going
    straight in Huber2014, young adults in France, Germany, Canada and China; none in Singapore. Every
    comparison whose setting cannot be matched is labelled `[setting differs]`.
