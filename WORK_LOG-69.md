@@ -121,6 +121,25 @@ ahead of the clock.)*
 - Result: every kept rule is Partly supported; assertiveness as a factor is Contradicted (Knorr 2016,
   abstract); neither the extractor nor any agent named a checkable source.
 
+### 2026-10-30 00:51 UTC — Where "left" came from (commit fa24c4d9)
+- What I did: read RF-31's translation prompt and reply for `x_head_on_0ecc2d1a6e`. The extracted rule
+  said "passing side equal to final_side"; format 4's `turn` takes only `left` or `right`, so the
+  translator picked left ("the side choice [is approximated] by a fixed left turn of 10 degrees"). The
+  prompt never mentions Singapore. Recorded in `evidence/x_head_on_0ecc2d1a6e.md`, section B; cached two
+  more Singapore guidance pages (`refs/rf14_lta_trial_2025.html`, `refs/rf14_nparks_pcn_etiquette.html`).
+- Result: the side is the translator's pick; the guidance can be cited for it but is not its source.
+
+### 2026-10-30 11:35 UTC — The user's questions after the PR; RF-37 opened
+- What happened: the user asked how the extracted and translated rules differ, why "keep your side"
+  became "both go left", what the 10° turn does (a veer of about 0.85 m each, not a 90° turn), how a
+  "nearer side, else left" rule could be written (a pair field `pair.lateral_offset_m`, schema version
+  5; not built, the user's decision), and how experiments should serve 10,000 agents.
+- The user's goal, stated today: **resolve conflicts in a way accurate to human behaviour**. Neither
+  RF-18's "helps" nor RF-31's identity check measures that.
+- Result: opened #122 (RF-37: measurable human targets from published studies, with tolerances fixed
+  before measuring) and added it to #55 after RF-14, with the decision recorded there.
+- Next step: merge PR #121 (the user asked), close #69, start #122.
+
 ## Open questions / risks
 
 1. **Promote `ext_head_on_0ecc2d1a6e` (both turn 10° left)?** #55's table says promote (Partly
