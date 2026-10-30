@@ -115,7 +115,10 @@ of paid runs and a cap for its round, recorded in `CLAUDE.md`.
   (#112) realistic scenarios (sourced shares of canes and the rest, and stress scenarios only for rare
   rules) (*done*: `negsim/populations.py`, `configs/populations/`, `docs/population-profiles.md`,
   `runs/rf18_round1_realistic/evaluation_report.md`); RF-32 (#110) three or four people meeting head-on; RF-14 (#69) Step 3, verification against human
-  evidence; RF-15 (#70) results summary for the interim report (25 January 2027). *The user's
+  evidence; RF-37 (#122) human targets: numbers from published studies, with sources and tolerances,
+  against which every rule arm, plain ORCA and Step 1's agents are measured (*done*:
+  `negsim/human_targets/`, `configs/human_targets/`, `docs/human-targets.md`,
+  `runs/rf37_human_targets/report.md`); RF-15 (#70) results summary for the interim report (25 January 2027). *The user's
   order of 2026-10-27:* RF-18 before RF-32 and RF-14, so that a rule is first run in the
   simulation (does it help?) and then checked against human evidence; a verdict in RF-18 does not
   remove a rule from RF-14 (track #55, "Decisions", the two filters).

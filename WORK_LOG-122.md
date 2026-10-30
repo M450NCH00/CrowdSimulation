@@ -224,6 +224,60 @@ Read `docs/metrics.md`, `docs/rule-set-evaluation.md`, `negsim/ruleset_eval/meas
     2.25 person/m², with a flow per metre of 2.8 /(m·s), against Zhang2012's plateau of 1.5.
 - Next step: when the flows finish, the report of record, then the docs.
 
+### 2026-10-30 17:02 UTC — Tasks 5 to 8: the report of record, docs, verification
+- `rf37_flow_density` finished: 100 runs, USD 0.
+  - At 75 people each way, 8 runs ended at the time limit: plain ORCA 2 of 10, the cane rule 3,
+    `reference_default` 3, the left-turn rule none. They stay in, as the jams people also meet.
+  - The `rule_set_evaluation` "helps" verdicts of both experiments are in their own `report.md`.
+    They are a by-product, not this issue's question.
+- **Report of record**: `python -m negsim.human_targets.report` writes
+  `runs/rf37_human_targets/report.md` and `summary.json`, with every pair's measures. It reads 600
+  head-on runs, 150 flows (50 per subject over three sizes) and 152 resolved Step 1 sessions.
+- **Results** (each comparison `[setting differs]` except H5's):
+  - **H1 pass distance** (0.76–1.10 m):
+    - Step 1's agents are **within** in all three conditions (0.93, 0.96, 0.97 m);
+    - plain ORCA is **outside, too close** (0.51 m: the bodies just clear);
+    - the left-turn rule is **outside, too wide** (1.25 m).
+
+    Over all pairs, any ages, plain ORCA gives 0.50–0.52 and the left-turn rule 1.25.
+  - **H2** (an older adult): Step 1 within in the independent and talk conditions, and just
+    outside (0.98) in the non-verbal. Of the rule arms, only `all_runnable` is within (0.92, n 9).
+    The cane rule slows some pairs, which puts them close.
+  - **H3**: plain ORCA, the cane rule and `reference_default` **agree**: earlier at higher speed.
+    Their values are 3.0/3.7/4.9 m against Huber2014's 2.1/2.4/2.7, so earlier than people at every
+    speed. The left-turn rule is "opposite" by centimetres, in effect speed-independent at ~5.0 m.
+  - **H4/H5** (no verdict):
+    - plain ORCA slows every walker by about 0.25 m/s;
+    - the left-turn rule slows almost nobody (0.02 m/s);
+    - Step 1's agents slow 61–69% of walkers.
+  - **H6**: Step 1 **agrees** in the independent and non-verbal conditions and is not shown in
+    talk. Every rule arm and plain ORCA is not comparable, since the two always pass together.
+  - **H7**: Step 1 is **opposite in the non-verbal condition** (roles follow assertiveness) and
+    agrees in the other two.
+  - **H8**: Step 1 **agrees** in all three conditions. The rule arms have too few older–young pairs
+    (3 of 30).
+  - **C1 lanes**: plain ORCA and the cane rule are **opposite** (3 and 4 of 50 runs separate).
+    `reference_default` (keep left) **agrees** (40 of 50). The left-turn rule and `all_runnable` are
+    not shown (32 and 27 of 50).
+  - **C3**: all **agree** in direction. The flow per metre at 2.0–2.5 person/m² is about 1.4 for
+    `reference_default` (Zhang2012's plateau is 1.5), about 2.2 for plain ORCA, and about 2.8 for
+    the left-turn rule. **The left-turn rule's crowd is more efficient than people's.**
+  - **Sides in head-on pairs**: the left-turn rule passes left 30 of 30, plain ORCA 15/15, and Step
+    1's independent agents mostly right (37 of 52).
+- **Task 7**: the promotion-table proposal is in `docs/human-targets.md`, section 6, for the user:
+  - "does not harm" replaces "helps";
+  - no applicable target outside or opposite;
+  - not comparable and no-verdict targets do not block.
+
+  Under it, no round 1 rule would be promoted today: the left-turn rule is outside on H1, and the
+  cane rule is outside on H1 and opposite on C1.
+- **Task 8**: the docs are `docs/human-targets.md` (new) and `docs/rule-set-evaluation.md` (lane
+  formation is now judged here, and its verdicts are unchanged), plus both READMEs.
+- **Verification**:
+  - the full suite: **2251 passed, 10 skipped** (40 min, sharing the machine with the flows);
+  - the 29 new tests also passed on their own;
+  - the repository hygiene test passed with the new package.
+
 ## Open questions / risks
 
 1. ~~**Tolerances** (task 0): not yet agreed.~~ Agreed 11:38 UTC (above).
@@ -246,4 +300,43 @@ Read `docs/metrics.md`, `docs/rule-set-evaluation.md`, `negsim/ruleset_eval/meas
    The report shows the magnitudes beside each verdict. Whether to add a smallest effect that counts
    is the user's decision: it would amend task 0, so it would mean a new targets file.
 
+5. **The promotion-table proposal** (`docs/human-targets.md`, section 6) is for the user, who may
+   want the supervisor's view. Nothing is promoted by this issue.
+
 ## Summary (fill in at the end)
+
+**What changed.**
+- A layer that measures rules, plain ORCA and Step 1's LLM agents against numbers from published
+  studies: `negsim/human_targets/` (targets loader, measures, judging, report).
+- A frozen targets file, `configs/human_targets/head_on_v1.yaml`: 10 targets, 2 left out with
+  reasons, and the side by place, not judged.
+- Two rule-set evaluation configs matched to the studies, `rf37_head_on` and `rf37_flow_density`
+  (700 runs).
+- The report of record, `runs/rf37_human_targets/report.md`, and the docs, `docs/human-targets.md`.
+- New sources cached in `refs/` (`rf37_*`), and a script that reads Moussaid2009's figures.
+
+**Why.** The user's goal is conflict resolution accurate to human behaviour. "Helps" measures
+efficiency and the identity check measures agreement with the LLM agents; neither is human accuracy.
+
+**What it found.**
+- Step 1's agents pass at a human distance; plain ORCA passes too close and the left-turn rule too
+  wide.
+- Plain ORCA forms no lanes; the hand-written keep-left rules do, at a human-like flow.
+- The left-turn rule makes the crowd more efficient than people's, and starts avoiding at a fixed
+  distance whatever the speed.
+- In the non-verbal condition, the agents decide roles by assertiveness, against Knorr2016.
+
+**How it was verified.**
+- 29 new tests: hand-built trajectories with known answers, the file's rules, and the judging.
+- The full suite passed: 2251 passed, 10 skipped.
+- Section 5b:
+  - every number in the targets file names its source and where in it;
+  - the figure readings are reproducible by script;
+  - inferred items are labelled;
+  - open questions 3 to 5 stand.
+
+**Tasks**: 0 to 8 done.
+- Task 5's "the side run both ways" was **not run**. It is derived from the corridor's mirror
+  symmetry, because a mirrored rule would be a changed rule (out of scope).
+- Task 1's two closed full texts (Rapos2021's distance definition, Knorr2016's traits) were not
+  read: they are inferred or left as the abstract says (open question 3).

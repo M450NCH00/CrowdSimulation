@@ -130,7 +130,9 @@ without running them again.
 - **A rule's verdict** in a scenario is that of the arm with the rule alone. **[design]** Its overall
   reading over the scenarios takes, in order: harms anywhere, helps somewhere, a trade-off
   somewhere, no change somewhere, else not used.
-- **Lane formation is reported, not judged**: it is about realism, which is RF-14's filter.
+- **Lane formation is reported, not judged**: it is about realism, which is RF-14's filter. Since
+  issue #122 (RF-37) it is judged against a published study, with the other human targets, in a
+  layer of its own (`human-targets.md`, target C1); the verdicts here are unchanged.
 
 ## 4. Measures (`measures.py`)
 
@@ -195,4 +197,5 @@ people its rules read.
   (residents only; a cane and a phone from abroad; placeholders) are in `docs/population-profiles.md`.
 - A rule reads a cane at any distance; Step 1's agents saw one only within 5 m.
 - The verdict is about the simulation, not about people: whether a rule is what people do is
-  RF-14's question.
+  RF-14's question, and since issue #122 also RF-37's, measured against published studies'
+  numbers (`human-targets.md`).
