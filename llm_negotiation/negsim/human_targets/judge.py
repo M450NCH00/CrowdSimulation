@@ -214,10 +214,9 @@ def not_predicted_by_traits_given(pairs: Sequence[Mapping[str, Any]], groups: Ma
             entry["separated"]["p"] = fisher(*split["with"], *split["against"])
         elif sum(split["with"]) or sum(split["against"]):
             entry["not_separable"] = {side: {"holder_passed_first": h, "other_passed_first": o} for side, (h, o) in split.items()}
-        if "unseparated" in entry or "separated" in entry:
-            tested[name] = entry
-        elif "not_separable" in entry:
+        if "not_separable" in entry:
             not_separable.append(name)
+        if len(entry) > 1:
             tested[name] = entry
     ps = [(name, part["p"]) for name, entry in tested.items() for part in (entry.get("unseparated"), entry.get("separated")) if part]
     if not ps:
@@ -231,9 +230,10 @@ def not_predicted_by_traits_given(pairs: Sequence[Mapping[str, Any]], groups: Ma
 
 def holder_younger(pairs: Sequence[Mapping[str, Any]], groups: Mapping[str, tuple[int, int]], one_with: tuple[str, Any]) -> dict[str, Any]:
     """Issue #124: who passed first in the pairs where the one person at ``one_with``'s level is the
-    younger of the two, by years and by the targets' age groups (the holder not older, the other older).
-    If age, not the factor, decided who went first, the other would go first in these."""
+    younger of the two, by years and by the targets' age groups (the holder below the older group, the
+    other in it). If age, not the factor, decided who went first, the other would go first in these."""
     name, level = one_with
+    older_from = groups["older"][0]
     out = {key: {"pairs": 0, "holder": 0, "other": 0, "together": 0, "none": 0} for key in ("by_years", "by_group")}
     for pair in pairs:
         at = [person.get(name) == level for person in pair["people"]]
@@ -245,8 +245,8 @@ def holder_younger(pairs: Sequence[Mapping[str, Any]], groups: Mapping[str, tupl
             continue
         passed = pair["passed_first"]
         who = "none" if passed is None else "together" if passed == "together" else "holder" if passed == pair["agents"][h] else "other"
-        kinds = (age_group(holder["age"], groups) == "older", age_group(other["age"], groups) == "older")
-        for key, younger in (("by_years", holder["age"] < other["age"]), ("by_group", kinds == (False, True))):
+        by_group = holder["age"] < older_from and age_group(other["age"], groups) == "older"
+        for key, younger in (("by_years", holder["age"] < other["age"]), ("by_group", by_group)):
             if younger:
                 out[key]["pairs"] += 1
                 out[key][who] += 1

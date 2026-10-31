@@ -69,7 +69,7 @@ distance does not depend on who the two are; the realistic crowd gives few pairs
 | reference_default | 30 | `keep_left_head_on@1` 15, `younger_yields_head_on@1` 15 |
 
 **Who adapts in a pair with one person at mobility_aid cane** (described, not a target: no study read is about
-this; H8 is about age, and most such people are 65 or over). Counts are the other's way against the cane
+this; H8 is about age). Counts are the other's way against the cane
 user's, ties dropped, with the exact sign test's p:
 
 | Subject | Pairs | The other's mean lateral share | The other deviates more | The other slows more | Passed first: cane user / other / together / none |

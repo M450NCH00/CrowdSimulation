@@ -94,6 +94,18 @@ def test_pairs_the_cane_does_not_separate_keep_h7s_sign_test(targets):
     assert found["traits"]["assertiveness"]["unseparated"]["p"] == round(J.judge(targets.targets["H7"], targets, pairs, [])["traits"]["assertiveness"]["p"], 6)
 
 
+def test_a_trait_tested_elsewhere_is_still_listed_when_its_cane_pairs_are_one_sided(targets):
+    """PR #125's review: a sign test on pairs without a cane must not hide one-sided cane pairs."""
+    pairs = [_pair(first=0, ages=(75, 30)) for _ in range(3)] + [_pair(first=0, ages=(75, 30), aids=("cane", None))]
+    found = J.not_predicted_by_traits_given(pairs, targets.age_groups, CANE)
+    assert "unseparated" in found["traits"]["older"] and found["not_separable"] == ["older"]
+
+
+def test_an_age_beyond_every_group_is_not_younger_by_group(targets):
+    found = J.holder_younger([_pair(first=0, ages=(99, 70), aids=("cane", None))], targets.age_groups, CANE)
+    assert found["by_group"]["pairs"] == 0 and found["by_years"]["pairs"] == 0
+
+
 def test_who_goes_first_when_the_cane_user_is_the_younger(targets):
     pairs = [_pair(first=0, ages=(50, 70), aids=("cane", None)), _pair(first="together", ages=(70, 80), aids=(None, "cane")),
              _pair(first=1, ages=(70, 72), aids=("cane", None)), _pair(first=0, ages=(80, 30), aids=("cane", None)),

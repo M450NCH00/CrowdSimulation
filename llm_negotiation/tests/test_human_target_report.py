@@ -21,6 +21,14 @@ def test_rf37s_study_reads_the_runs_it_always_read():
     assert rf37.title == "Round 1 against the human targets (issue #122, RF-37)"
 
 
+def test_the_report_refuses_to_overwrite_when_the_runs_are_missing(tmp_path, monkeypatch):
+    """PR #125's review: the trajectories are gitignored, so a fresh clone has no runs to read."""
+    monkeypatch.setattr(R, "_seed_dirs", lambda *args: [])
+    with pytest.raises(SystemExit):
+        R.main(["--study", "rf38", "--out", str(tmp_path)])
+    assert not list(tmp_path.iterdir())
+
+
 def test_rf38s_study_reads_the_cane_pairs_only():
     rf38 = R.STUDIES["rf38"]
     assert rf38.head_on == ("rf38_cane_head_on", "head_on_cane") and rf38.one_with == CANE

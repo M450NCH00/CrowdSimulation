@@ -263,7 +263,7 @@ def report_markdown(file: TargetFile, summary: Mapping[str, Any], study: Study =
         d = entry["centre_distance_all_pairs"]
         lines.append(f"| {name} | {d['n']} | {d['mean']} | {d['min']} | {d['max']} |")
     if "holder_pairs" in summary:
-        lines += holder_markdown(summary)
+        lines += holder_markdown(summary, file.age_groups["older"][0])
     if study.flows:
         lines += ["", "**Speed against density** (C3; Zhang2012 reports a free speed of 1.55 ± 0.18 m/s, no difference from one-way",
                   "flow below 1.0 person/m², and a flow per metre of width that levels off from about 1.0 and peaks at 1.5 /(m·s) at",
@@ -303,7 +303,7 @@ def report_markdown(file: TargetFile, summary: Mapping[str, Any], study: Study =
     return "\n".join(lines) + "\n"
 
 
-def holder_markdown(summary: Mapping[str, Any]) -> list[str]:
+def holder_markdown(summary: Mapping[str, Any], older_from: int) -> list[str]:
     """Issue #124: how often each rule matched, and who adapts in the pairs with one holder."""
     (name, level), = summary["one_with"].items()
     lines = ["", f"**How often each rule matched** (runs in which it matched at least once, of each arm's pairs):", "",
@@ -312,7 +312,7 @@ def holder_markdown(summary: Mapping[str, Any]) -> list[str]:
         what = ", ".join(f"`{rule}` {count}" for rule, count in matched.items()) or "none"
         lines.append(f"| {arm} | {summary['subjects'][arm]['pairs']} | {what} |")
     lines += ["", f"**Who adapts in a pair with one person at {name} {level}** (described, not a target: no study read is about",
-              f"this; H8 is about age, and most such people are 65 or over). Counts are the other's way against the {level}",
+              f"this; H8 is about age). Counts are the other's way against the {level}",
               "user's, ties dropped, with the exact sign test's p:", "",
               f"| Subject | Pairs | The other's mean lateral share | The other deviates more | The other slows more | Passed first: {level} user / other / together / none |",
               "| --- | --- | --- | --- | --- | --- |"]
@@ -322,7 +322,7 @@ def holder_markdown(summary: Mapping[str, Any]) -> list[str]:
                      f"{a['study_way']} to {a['other_way']}, p {a['p']:.3g} | {s['study_way']} to {s['other_way']}, p {s['p']:.3g} | "
                      f"{f['holder']} / {f['other']} / {f['together']} / {f['none']} |")
     if "h7_known_factor" in summary:
-        lines += h7_known_markdown(summary, level)
+        lines += h7_known_markdown(summary, level, older_from)
     return lines
 
 
@@ -339,7 +339,7 @@ def _known_trait(entry: Mapping[str, Any]) -> str:
     return "; ".join(parts)
 
 
-def h7_known_markdown(summary: Mapping[str, Any], level: str) -> list[str]:
+def h7_known_markdown(summary: Mapping[str, Any], level: str, older_from: int) -> list[str]:
     """Issue #124: H7 with the factor held fixed, and who went first when its holder is the younger."""
     traits = list(J.TRAITS)
     lines = ["", f"**H7 with the {level} held fixed** (not the verdict of record, which is H7's row above). A trait is tested",
@@ -354,7 +354,7 @@ def h7_known_markdown(summary: Mapping[str, Any], level: str) -> list[str]:
         lines.append(f"| {subject} | {_cell(summary['results']['H7'][subject])} | {cell} | "
                      + " | ".join(_known_trait(entry["traits"][t]) if t in entry["traits"] else "–" for t in traits) + " |")
     lines += ["", f"**When the {level} user is the younger** (who passed first: {level} user / other / together / none). If age,",
-              f"not the {level}, decided who went first, the other would go first here. By group: the {level} user under 65, the other 65 or over.", "",
+              f"not the {level}, decided who went first, the other would go first here. By group: the {level} user under {older_from}, the other {older_from} or over.", "",
               "| Subject | Younger by years | Younger by age group |", "| --- | --- | --- |"]
     for subject, entry in summary["holder_younger"].items():
         lines.append(f"| {subject} | " + " | ".join(f"{e['pairs']} pairs: {e['holder']} / {e['other']} / {e['together']} / {e['none']}"
@@ -369,6 +369,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     args = parser.parse_args(argv)
     study = STUDIES[args.study]
     out = args.out or study.out
+    if not _seed_dirs(*study.head_on, "plain"):
+        # the trajectories are gitignored (.gitignore, RF-37 and RF-38): on a fresh clone the report would
+        # find no pair and overwrite the committed summary with empty results
+        parser.error(f"no runs in runs/{study.head_on[0]}: rebuild them first (negsim.ruleset_eval ... --overwrite)")
     file = TargetFile.load(TARGETS)
     summary = evaluate(file, subjects(study), study)
     out.mkdir(parents=True, exist_ok=True)
