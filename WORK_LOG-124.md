@@ -131,7 +131,8 @@ No model call; USD 0.
   designed after the result, and it cannot test age here), or "not comparable" (the study's sample had no
   cane users). I recommended: as recorded for RF-38, and "not comparable" from the next run.
 - **The user chose the recommendation** ("ok let's go with your recommendation"), on their own authority.
-- Recorded in `docs/human-targets.md` section 8, `findings.md`, `README.md`. No code changed: RF-38's
+- Recorded in `docs/human-targets.md` section 8, `findings.md`, `README.md`, and (at the user's request)
+  in #55's "Decisions" under 2026-10-31. No code changed: RF-38's
   verdicts stay as they are, and the outcome does not change (the cane rule is dropped by harms and H2).
   The "not comparable" treatment is not built yet (see open questions).
 
