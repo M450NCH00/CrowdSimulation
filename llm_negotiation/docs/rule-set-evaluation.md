@@ -33,7 +33,7 @@ A config says `layer: rule_set_evaluation` and gives:
 | `rules` | Each rule switched on in some arm: the staging database it comes `from` and the `version`. Optional `priority` (with a `reason`): see section 2 |
 | `left_out` | Rules not run, each with its reason; listed in the report, so that what was left out is counted |
 | `arms` | Each a rule set: `rules` (of the ones above), or `database` and `ruleset` of another database (a reference). `judged: false` gives numbers and no verdict (the default for a reference). Plain ORCA is always run and is named `plain` |
-| `scenarios` | Each a `name` (each its own), a `scenario` file, optional `scenario_overrides`, a `note`, and `rotate_people` (below). Since issue #112: `population`, `purpose` and `pool` (section 1.1) |
+| `scenarios` | Each a `name` (each its own), a `scenario` file, optional `scenario_overrides`, a `note`, and `rotate_people` (below). Since issue #112: `population`, `purpose` and `pool` (section 1.1); since issue #124: `one_with` (section 1.1) |
 | `baseline`, `seed`, `seeds` | The baseline laid on every run (default `orca_perturbed_v1`), the base seed, and how many paired seeds (seed `seed + 1` to `seed + seeds`) |
 | `people` | `ages`, `genders` and core `factors` (a cane, a suitcase, a phone, assertiveness, ...), given to the people in a fixed mix (`negsim.rulegen.replay.mixed_population`), the same for every arm on a seed |
 | `alpha` | The sign test's level (0.05) |
@@ -69,6 +69,13 @@ against RF-18's committed run).
   not gets `flag: harms_where_common` in `summary.json` (a column of the report's rule table).
   **[design]** The flag is given by this rule to any rule, not to the cane rule by hand. It
   changes no verdict.
+
+**Exactly one person at a factor's level (issue #124, RF-38; the user's decision of 2026-10-31).**
+`one_with: {factor: level}` (with a profile of quotas and a `pool` only; the level must be the one whose
+share the profile gives): the run's people are drawn from the crowd of `pool` so that exactly one is at
+the level (`docs/population-profiles.md`, section 6). It is for a rule about a rare factor, judged in a
+meeting that does happen in real life rather than in a stress crowd. The config and the summary record
+it only where it is given, so earlier configs are described as before.
 
 **People.** In a crowd the mix is fixed, as in crowd screening. In a scenario with few people,
 `rotate_people: true` gives each seed a window on the mix that moves on by **one** person per seed.

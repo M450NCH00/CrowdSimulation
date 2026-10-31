@@ -48,6 +48,19 @@ def sign_test(better: int, worse: int) -> float:
     return min(1.0, 2.0 * sum(comb(n, i) for i in range(k + 1)) / 2.0**n)
 
 
+def fisher(a: int, b: int, c: int, d: int) -> float:
+    """Two-sided p of Fisher's exact test on [[a, b], [c, d]] (as likely or less likely tables).
+    Moved here from ``negsim.resolution.groups`` (issue #110) in issue #124, unchanged."""
+    n, row, col = a + b + c + d, a + b, a + c
+
+    def prob(x: int) -> float:
+        return comb(col, x) * comb(n - col, row - x) / comb(n, row)
+
+    observed = prob(a)
+    lo, hi = max(0, row + col - n), min(row, col)
+    return round(min(1.0, sum(p for x in range(lo, hi + 1) if (p := prob(x)) <= observed * (1 + 1e-9))), 6)
+
+
 def compare(arm: Sequence[Optional[float]], plain: Sequence[Optional[float]], lower_is_better: bool, alpha: float = ALPHA) -> dict[str, Any]:
     """One measure, seed by seed: how many seeds the arm did better, worse or the same, and the test."""
     better = worse = ties = missing = 0

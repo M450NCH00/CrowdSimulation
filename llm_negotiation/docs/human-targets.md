@@ -13,6 +13,8 @@ every rule arm, plain ORCA and Step 1's own agents against them.
     python run_experiment.py configs/rule_set_evaluation/rf37_head_on.yaml        # pairs matched to the studies
     python run_experiment.py configs/rule_set_evaluation/rf37_flow_density.yaml   # the flow at two more sizes
     python -m negsim.human_targets.report                                           # runs/rf37_human_targets/
+    python run_experiment.py configs/rule_set_evaluation/rf38_cane_head_on.yaml   # issue #124: pairs with one cane user
+    python -m negsim.human_targets.report --study rf38                              # runs/rf38_human_targets/ (section 8)
 
 Code: `negsim/human_targets/` (`targets.py`, `measures.py`, `judge.py`, `report.py`). No model is called.
 
@@ -134,10 +136,10 @@ changed rule. The corridor is symmetric about its centre line, so a right-turn v
 mirror image of the left-turn rule's runs. Every target but the side is therefore the same, apart
 from the baseline's random perturbation `[derived: mirror symmetry]`.
 
-## 6. Proposal for #55's promotion table (task 7; for the user, who may want the supervisor's view)
+## 6. #55's promotion table (proposed in task 7; adopted by the user on 2026-10-31)
 
-Today's table promotes a rule that **helps** in the simulation (RF-18) and **matches human
-evidence** (RF-14). The proposal adds this layer and changes what the simulation must show:
+The earlier table promoted a rule that **helps** in the simulation (RF-18) and **matches human
+evidence** (RF-14). This one adds this layer and changes what the simulation must show:
 
 | | Supported or partly supported (RF-14), and no applicable target **outside** or **opposite** (RF-37) | Otherwise |
 | --- | --- | --- |
@@ -152,7 +154,10 @@ evidence** (RF-14). The proposal adds this layer and changes what the simulation
   - the side is not a target while Singapore's is unknown.
 - **No combined score.** The targets are shown side by side.
 
-**[design] This is a proposal, not a decision.** The user decides; the supervisor may want to see it.
+**Adopted by the user on 2026-10-31** (issue #124), on the user's own authority after RF-37's report;
+no supervisor view is recorded. It replaces #55's table of 2026-10-27. Under it, no round 1 rule is
+promoted: the left-turn rule is outside on H1, and the cane rule is outside on H1 and opposite on C1.
+A smallest effect that counts (section 3) was not set with it and stays open.
 
 ## 7. Limits
 
@@ -169,3 +174,52 @@ evidence** (RF-14). The proposal adds this layer and changes what the simulation
 - In the realistic crowd, few pairs are two young adults. The report also gives the pass distance
   over all pairs, which in the rule arms and plain ORCA does not depend on age (no round 1 rule
   reads age).
+
+## 8. Pairs with one cane user (issue #124, RF-38)
+
+In RF-37's pairs, drawn from a realistic crowd of 100, a cane appears on about 6% of seeds, so the cane
+rule almost never applied. **The user decided on 2026-10-31** to test a rare rule in meetings that do
+happen, with the rare factor in exactly one person.
+
+- **The draw**: a rule-set evaluation scenario's `one_with: {factor: level}` (`docs/population-profiles.md`,
+  section 6): exactly one person at the level, the crowd's first holder, the other from its people
+  without it; the holder's end alternates by seed. Any factor of the profile can be required; only the
+  cane is run.
+- **The runs**: `rf38_cane_head_on`, RF-37's `head_on` (1.3 m/s, 30 seeds, the same rules and arms) with
+  `pool: 1000` **[design]** (100 people round to 3 canes, all aged 65 to 79; 1,000 give the profile's
+  ages) and `one_with: {mobility_aid: cane}`. Not Huber2014's three speeds: a cane user at 1.78 m/s is
+  not realistic (the user's decision).
+- **The report** (`--study rf38`): the same targets and verdicts; Step 1's subjects are their sessions with
+  exactly one cane user; it adds how often each rule matched and **who adapts in a cane pair** (the other
+  against the cane user: lateral share, slowing, who passed first), described and not judged, since no
+  study read is about a cane.
+
+Results and reading: `runs/rf38_human_targets/findings.md`. In short: the cane rule matched in all 30
+pairs and made the other person give way every time, as Step 1's agents also do; but the pairs pass at
+0.50 m (two bodies touching, as plain ORCA), outside H2, and H7 comes out opposite because the cane user,
+usually older, goes first.
+
+**H7 with the cane held fixed** (added 2026-10-31 at the user's request; described beside H7's verdict,
+which it does not replace). `judge.not_predicted_by_traits_given` **[design]** keeps H7's sign test for
+pairs the factor does not separate. For pairs with one holder, it asks whether the holder goes first as often
+when a trait is on the holder's side as when it is on the other's (Fisher's exact test, moved unchanged to
+`ruleset_eval.verdicts`). A trait whose pairs all fall on one side is reported as not separable and not
+counted. `judge.holder_younger` gives who went first when the holder is the younger, by years and by
+age group. For the cane rule, H7 becomes "agrees" with age and gender not separable. For Step 1's
+non-verbal agents, "opposite (assertiveness)" becomes "agrees" with assertiveness not separable.
+No pair has a cane user under 65 meeting someone 65 or over.
+
+**H7 in pairs a factor outside its study separates (decided by the user on 2026-10-31,** on their own
+authority, out of three options: H7 as recorded, with the factor held fixed, or not comparable):
+
+- **RF-38 keeps H7 as recorded** as its verdict of record, because the check was fixed before any rule was
+  measured. The held-fixed check stays beside it as a description. The cane rule's outcome does not depend
+  on this: RF-33's harms and H2 already drop it.
+- **From the next run on, H7 is "not comparable"** in a pair that a factor outside its study's sample
+  separates (for example a cane: Knorr2016 did not study mobility aids). This applies to rule arms, plain
+  ORCA and Step 1's subjects alike. The held-fixed check is still shown beside it. Not comparable does not
+  count against a rule (section 6). This was decided before the next run, so it is not fitted to a result.
+- **Not built yet.** Building it needs a list, for each target, of the factors outside its study's sample.
+  That list would go in a new targets file version (`head_on_v1.yaml` stays frozen) and should be agreed
+  with the user. Only the cane is identified so far. Whether the same treatment extends to other targets
+  is not decided.

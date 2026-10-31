@@ -1,6 +1,7 @@
 """Round 1 against the human targets: rule arms, plain ORCA and Step 1's agents (issue #122, RF-37).
 
-    python -m negsim.human_targets.report            # writes runs/rf37_human_targets/{summary.json,report.md}
+    python -m negsim.human_targets.report               # writes runs/rf37_human_targets/{summary.json,report.md}
+    python -m negsim.human_targets.report --study rf38  # writes runs/rf38_human_targets/ (issue #124)
 
 Reads finished runs only; no simulation is run and no model is called. The subjects:
 
@@ -11,6 +12,11 @@ Reads finished runs only; no simulation is run and no model is called. The subje
   (non-verbal, talk) carried out under ``keep_line``, the sessions whose plans alone resolved the
   meeting (``resolved_plan_only``), measured on their ``plan_only`` replays (the agents' own plans,
   no ORCA underneath).
+
+``--study rf38`` (issue #124, RF-38) reads ``rf38_cane_head_on`` in place of the head-on runs: pairs in
+which exactly one person walks with a cane, drawn from a realistic crowd (no speeds, no crowds). Step 1's
+subjects are then the resolved sessions with exactly one cane user. It adds how often each rule
+matched, and who adapts in a cane pair (described, not a target: no study read is about a cane).
 """
 
 from __future__ import annotations
@@ -38,6 +44,27 @@ STEP1 = (("step1_independent", "rf10_round1_head_on_keep_line", "independent"),
          ("step1_non_verbal", "rf30_round1_head_on_keep_line", "non_verbal"),
          ("step1_talk", "rf30_round1_head_on_keep_line", "talk"))
 PERSON = ("age", "gender", "assertiveness", "mobility_aid", "load", "distraction")
+
+
+@dataclass(frozen=True)
+class Study:
+    """The runs one report reads."""
+    key: str
+    title: str
+    out: Path
+    head_on: tuple[str, str]
+    speeds: tuple[tuple[str, str], ...] = ()
+    flows: tuple[tuple[str, str], ...] = ()
+    #: Since issue #124: Step 1's sessions with exactly one person at this level only, and who adapts
+    #: in such pairs.
+    one_with: Optional[tuple[str, str]] = None
+
+
+STUDIES = {
+    "rf37": Study("rf37", "Round 1 against the human targets (issue #122, RF-37)", OUT, HEAD_ON, SPEEDS, FLOWS),
+    "rf38": Study("rf38", "Round 1 in head-on pairs with one cane user, against the human targets (issue #124, RF-38)",
+                  RUNS / "rf38_human_targets", ("rf38_cane_head_on", "head_on_cane"), one_with=("mobility_aid", "cane")),
+}
 
 
 @dataclass
@@ -72,17 +99,21 @@ def evaluation_pairs(experiment: str, scenario: str, arm: str) -> list[dict[str,
     return out
 
 
-def evaluation_runs(arm: str) -> list[dict[str, Any]]:
+def evaluation_runs(arm: str, flows: Sequence[tuple[str, str]] = FLOWS) -> list[dict[str, Any]]:
     out = []
-    for experiment, scenario in FLOWS:
+    for experiment, scenario in flows:
         for run in _seed_dirs(experiment, scenario, arm):
             out.append({"source": f"{experiment}/{scenario}/{arm}/{run.name}", "scenario": scenario, **crowd_measures(run)})
     return out
 
 
-def step1_pairs(experiment: str, condition: str) -> tuple[list[dict[str, Any]], int]:
-    """The resolved sessions of one condition, and how many sessions it had in all."""
+def step1_pairs(experiment: str, condition: str, one_with: Optional[tuple[str, str]] = None) -> tuple[list[dict[str, Any]], int]:
+    """The resolved sessions of one condition, and how many sessions it had in all; with ``one_with``,
+    of the sessions with exactly one person at that level only."""
     rows = [row for row in csv.DictReader((RUNS / experiment / "outcomes.csv").open(encoding="utf-8")) if row["condition"] == condition]
+    if one_with is not None:
+        name, level = one_with
+        rows = [row for row in rows if (row[f"p1_{name}"] == level) + (row[f"p2_{name}"] == level) == 1]
     out = []
     for row in rows:
         if row["resolved_plan_only"] != "True":
@@ -101,15 +132,55 @@ def step1_pairs(experiment: str, condition: str) -> tuple[list[dict[str, Any]], 
     return out, len(rows)
 
 
-def subjects() -> list[Subject]:
+def subjects(study: Study = STUDIES["rf37"]) -> list[Subject]:
     out = []
     for arm in ARMS:
-        speed_pairs = [pair for experiment, scenario in SPEEDS for pair in evaluation_pairs(experiment, scenario, arm)]
-        out.append(Subject(arm, evaluation_pairs(*HEAD_ON, arm), speed_pairs, evaluation_runs(arm)))
+        speed_pairs = [pair for experiment, scenario in study.speeds for pair in evaluation_pairs(experiment, scenario, arm)]
+        out.append(Subject(arm, evaluation_pairs(*study.head_on, arm), speed_pairs, evaluation_runs(arm, study.flows)))
+    which = "" if study.one_with is None else f" with exactly one person at {study.one_with[0]} {study.one_with[1]}"
     for name, experiment, condition in STEP1:
-        pairs, total = step1_pairs(experiment, condition)
-        out.append(Subject(name, pairs, [], [], f"{len(pairs)} of {total} sessions resolved by the plans alone"))
+        pairs, total = step1_pairs(experiment, condition, study.one_with)
+        out.append(Subject(name, pairs, [], [], f"{len(pairs)} of {total} sessions{which} resolved by the plans alone"))
     return out
+
+
+def rule_matches(experiment: str, scenario: str, arm: str) -> dict[str, int]:
+    """For each rule, in how many of an arm's runs it matched at least once (``measures.json``)."""
+    out: dict[str, int] = {}
+    for run in _seed_dirs(experiment, scenario, arm):
+        for rule, count in _json(run / "measures.json")["matches_by_rule"].items():
+            out[rule] = out.get(rule, 0) + (count > 0)
+    return dict(sorted(out.items()))
+
+
+def holder_pairs(pairs: Sequence[Mapping[str, Any]], one_with: tuple[str, str]) -> dict[str, Any]:
+    """Who adapts in the pairs with exactly one person at a level (issue #124): that person (the holder)
+    against the other. Described, not judged: no target is about such a person. Each count is the
+    other's way against the holder's, with the exact sign test's p (ties and undefined dropped):
+    ``other_adapts_more`` by lateral share, ``other_slows_more`` by speed change."""
+    name, level = one_with
+    n = 0
+    shares: list[float] = []
+    adapts, slows = [0, 0], [0, 0]
+    first = {"holder": 0, "other": 0, "together": 0, "none": 0}
+    for pair in pairs:
+        at = [person.get(name) == level for person in pair["people"]]
+        per = pair["measures"].get("per_agent")
+        if sum(at) != 1 or not per:
+            continue
+        n += 1
+        h = at.index(True)
+        holder, other = (per[str(pair["agents"][i])] for i in (h, 1 - h))
+        if other["lateral_share"] is not None:
+            shares.append(other["lateral_share"])
+            if other["lateral_share"] != 0.5:
+                adapts[other["lateral_share"] < 0.5] += 1
+        if holder["speed_change_mps"] != other["speed_change_mps"]:
+            slows[holder["speed_change_mps"] > other["speed_change_mps"]] += 1
+        passed = pair["passed_first"]
+        first["none" if passed is None else "together" if passed == "together" else "holder" if passed == pair["agents"][h] else "other"] += 1
+    return {"pairs": n, "other_mean_lateral_share": J._mean(shares), "other_adapts_more": J._direction(*adapts),
+            "other_slows_more": J._direction(*slows), "passed_first": first}
 
 
 def _spread(pairs: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
@@ -117,7 +188,7 @@ def _spread(pairs: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     return {"n": len(values), "mean": J._mean(values), "min": min(values) if values else None, "max": max(values) if values else None}
 
 
-def evaluate(file: TargetFile, found: Sequence[Subject]) -> dict[str, Any]:
+def evaluate(file: TargetFile, found: Sequence[Subject], study: Study = STUDIES["rf37"]) -> dict[str, Any]:
     results: dict[str, dict[str, Any]] = {}
     for target in file.targets.values():
         results[target.id] = {}
@@ -131,6 +202,13 @@ def evaluate(file: TargetFile, found: Sequence[Subject]) -> dict[str, Any]:
                               "sides": J.sides(s.pairs), "centre_distance_all_pairs": _spread(s.pairs)} for s in found},
         "results": results,
         "pairs": {s.name: [{k: v for k, v in p.items()} for p in s.pairs + s.speed_pairs] for s in found},
+        **({} if study.one_with is None else {
+            "study": study.key, "one_with": {study.one_with[0]: study.one_with[1]},
+            "rule_matches": {arm: rule_matches(*study.head_on, arm) for arm in ARMS},
+            "holder_pairs": {s.name: holder_pairs(s.pairs, study.one_with) for s in found},
+            "h7_known_factor": {s.name: J.not_predicted_by_traits_given(s.pairs, file.age_groups, study.one_with) for s in found},
+            "holder_younger": {s.name: J.holder_younger(s.pairs, file.age_groups, study.one_with) for s in found},
+        }),
     }
 
 
@@ -154,10 +232,10 @@ def _cell(entry: Mapping[str, Any]) -> str:
     return verdict
 
 
-def report_markdown(file: TargetFile, summary: Mapping[str, Any]) -> str:
+def report_markdown(file: TargetFile, summary: Mapping[str, Any], study: Study = STUDIES["rf37"]) -> str:
     names = list(summary["subjects"])
     lines = [
-        "# Round 1 against the human targets (issue #122, RF-37)", "",
+        f"# {study.title}", "",
         f"Targets: `{file.source}` (sha256 `{file.sha256[:12]}`). Method: `docs/human-targets.md`. No model call, USD 0.", "",
         "**Tolerances** (the user's decision of 2026-10-30, fixed before any rule was measured): a value target is met",
         "within one reported SD of the study's mean; a target with no reported spread is judged on its direction, by the",
@@ -184,14 +262,17 @@ def report_markdown(file: TargetFile, summary: Mapping[str, Any]) -> str:
     for name, entry in summary["subjects"].items():
         d = entry["centre_distance_all_pairs"]
         lines.append(f"| {name} | {d['n']} | {d['mean']} | {d['min']} | {d['max']} |")
-    lines += ["", "**Speed against density** (C3; Zhang2012 reports a free speed of 1.55 ± 0.18 m/s, no difference from one-way",
-              "flow below 1.0 person/m², and a flow per metre of width that levels off from about 1.0 and peaks at 1.5 /(m·s) at",
-              "2.0 person/m²). Mean speed (m/s) and flow per metre (/(m·s)) by density bin, over every sample:", ""]
-    for name in names:
-        bins = summary["results"]["C3"][name].get("bins")
-        if bins:
-            lines.append(f"- {name}: " + "; ".join(f"{b['density_from']}-{b['density_to']}: {b['mean_speed_mps']}, {b['specific_flow_per_m_s']} ({b['samples']})"
-                                                   for b in bins if b["samples"] >= 5))
+    if "holder_pairs" in summary:
+        lines += holder_markdown(summary, file.age_groups["older"][0])
+    if study.flows:
+        lines += ["", "**Speed against density** (C3; Zhang2012 reports a free speed of 1.55 ± 0.18 m/s, no difference from one-way",
+                  "flow below 1.0 person/m², and a flow per metre of width that levels off from about 1.0 and peaks at 1.5 /(m·s) at",
+                  "2.0 person/m²). Mean speed (m/s) and flow per metre (/(m·s)) by density bin, over every sample:", ""]
+        for name in names:
+            bins = summary["results"]["C3"][name].get("bins")
+            if bins:
+                lines.append(f"- {name}: " + "; ".join(f"{b['density_from']}-{b['density_to']}: {b['mean_speed_mps']}, {b['specific_flow_per_m_s']} ({b['samples']})"
+                                                       for b in bins if b["samples"] >= 5))
     lines += ["", "## The targets", ""]
     for target in file.targets.values():
         source = file.sources[target.source]["cite"].split(".")[0]
@@ -222,16 +303,82 @@ def report_markdown(file: TargetFile, summary: Mapping[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def holder_markdown(summary: Mapping[str, Any], older_from: int) -> list[str]:
+    """Issue #124: how often each rule matched, and who adapts in the pairs with one holder."""
+    (name, level), = summary["one_with"].items()
+    lines = ["", f"**How often each rule matched** (runs in which it matched at least once, of each arm's pairs):", "",
+             "| Arm | Pairs | Rules matched |", "| --- | --- | --- |"]
+    for arm, matched in summary["rule_matches"].items():
+        what = ", ".join(f"`{rule}` {count}" for rule, count in matched.items()) or "none"
+        lines.append(f"| {arm} | {summary['subjects'][arm]['pairs']} | {what} |")
+    lines += ["", f"**Who adapts in a pair with one person at {name} {level}** (described, not a target: no study read is about",
+              f"this; H8 is about age). Counts are the other's way against the {level}",
+              "user's, ties dropped, with the exact sign test's p:", "",
+              f"| Subject | Pairs | The other's mean lateral share | The other deviates more | The other slows more | Passed first: {level} user / other / together / none |",
+              "| --- | --- | --- | --- | --- | --- |"]
+    for subject, h in summary["holder_pairs"].items():
+        a, s, f = h["other_adapts_more"], h["other_slows_more"], h["passed_first"]
+        lines.append(f"| {subject} | {h['pairs']} | {h['other_mean_lateral_share']} | "
+                     f"{a['study_way']} to {a['other_way']}, p {a['p']:.3g} | {s['study_way']} to {s['other_way']}, p {s['p']:.3g} | "
+                     f"{f['holder']} / {f['other']} / {f['together']} / {f['none']} |")
+    if "h7_known_factor" in summary:
+        lines += h7_known_markdown(summary, level, older_from)
+    return lines
+
+
+def _known_trait(entry: Mapping[str, Any]) -> str:
+    parts = []
+    if "unseparated" in entry:
+        u = entry["unseparated"]
+        parts.append(f"both or neither: {u['level_passed_first']} to {u['other_passed_first']}, p {u['p']:.3g}")
+    for key in ("separated", "not_separable"):
+        if key in entry:
+            w, a = entry[key]["with"], entry[key]["against"]
+            text = f"holder first with {w['holder_passed_first']} of {sum(w.values())}, against {a['holder_passed_first']} of {sum(a.values())}"
+            parts.append(text + (f", p {entry[key]['p']:.3g}" if key == "separated" else ", not separable"))
+    return "; ".join(parts)
+
+
+def h7_known_markdown(summary: Mapping[str, Any], level: str, older_from: int) -> list[str]:
+    """Issue #124: H7 with the factor held fixed, and who went first when its holder is the younger."""
+    traits = list(J.TRAITS)
+    lines = ["", f"**H7 with the {level} held fixed** (not the verdict of record, which is H7's row above). A trait is tested",
+             f"apart from the {level}: in pairs where both or neither have it, by H7's sign test; in pairs with one {level} user,",
+             f"by whether the {level} user passes first as often when the trait is at its level on the {level} user's side",
+             "(\"with\") as on the other's (\"against\"), by Fisher's exact test. A trait whose pairs all fall on one side cannot",
+             f"be told apart from the {level} and is not counted. Bonferroni over every test made.", "",
+             "| Subject | H7 as recorded | With the " + level + " held fixed | " + " | ".join(traits) + " |",
+             "| --- | --- | --- |" + " --- |" * len(traits)]
+    for subject, entry in summary["h7_known_factor"].items():
+        cell = _cell(entry) + (f"; not separable: {', '.join(entry['not_separable'])}" if entry.get("not_separable") else "")
+        lines.append(f"| {subject} | {_cell(summary['results']['H7'][subject])} | {cell} | "
+                     + " | ".join(_known_trait(entry["traits"][t]) if t in entry["traits"] else "–" for t in traits) + " |")
+    lines += ["", f"**When the {level} user is the younger** (who passed first: {level} user / other / together / none). If age,",
+              f"not the {level}, decided who went first, the other would go first here. By group: the {level} user under {older_from}, the other {older_from} or over.", "",
+              "| Subject | Younger by years | Younger by age group |", "| --- | --- | --- |"]
+    for subject, entry in summary["holder_younger"].items():
+        lines.append(f"| {subject} | " + " | ".join(f"{e['pairs']} pairs: {e['holder']} / {e['other']} / {e['together']} / {e['none']}"
+                                                    for e in (entry["by_years"], entry["by_group"])) + " |")
+    return lines
+
+
 def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--out", type=Path, default=OUT)
+    parser.add_argument("--study", choices=sorted(STUDIES), default="rf37", help="which runs to read (default: rf37, issue #122)")
+    parser.add_argument("--out", type=Path, default=None, help="default: the study's own folder")
     args = parser.parse_args(argv)
+    study = STUDIES[args.study]
+    out = args.out or study.out
+    if not _seed_dirs(*study.head_on, "plain"):
+        # the trajectories are gitignored (.gitignore, RF-37 and RF-38): on a fresh clone the report would
+        # find no pair and overwrite the committed summary with empty results
+        parser.error(f"no runs in runs/{study.head_on[0]}: rebuild them first (negsim.ruleset_eval ... --overwrite)")
     file = TargetFile.load(TARGETS)
-    summary = evaluate(file, subjects())
-    args.out.mkdir(parents=True, exist_ok=True)
-    (args.out / "summary.json").write_text(json.dumps(summary, indent=1, sort_keys=False) + "\n", encoding="utf-8")
-    (args.out / "report.md").write_text(report_markdown(file, summary), encoding="utf-8")
-    print(f"wrote {args.out / 'report.md'}")
+    summary = evaluate(file, subjects(study), study)
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "summary.json").write_text(json.dumps(summary, indent=1, sort_keys=False) + "\n", encoding="utf-8")
+    (out / "report.md").write_text(report_markdown(file, summary, study), encoding="utf-8")
+    print(f"wrote {out / 'report.md'}")
     return 0
 
 

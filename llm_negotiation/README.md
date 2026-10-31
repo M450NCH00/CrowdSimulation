@@ -118,7 +118,9 @@ of paid runs and a cap for its round, recorded in `CLAUDE.md`.
   evidence; RF-37 (#122) human targets: numbers from published studies, with sources and tolerances,
   against which every rule arm, plain ORCA and Step 1's agents are measured (*done*:
   `negsim/human_targets/`, `configs/human_targets/`, `docs/human-targets.md`,
-  `runs/rf37_human_targets/report.md`); RF-15 (#70) results summary for the interim report (25 January 2027). *The user's
+  `runs/rf37_human_targets/report.md`); RF-38 (#124) the same targets in head-on pairs with exactly one cane
+  user, drawn from a realistic crowd (*done*: `one_with` in `negsim/populations.py`,
+  `configs/rule_set_evaluation/rf38_cane_head_on.yaml`, `runs/rf38_human_targets/findings.md`); RF-15 (#70) results summary for the interim report (25 January 2027). *The user's
   order of 2026-10-27:* RF-18 before RF-32 and RF-14, so that a rule is first run in the
   simulation (does it help?) and then checked against human evidence; a verdict in RF-18 does not
   remove a rule from RF-14 (track #55, "Decisions", the two filters).

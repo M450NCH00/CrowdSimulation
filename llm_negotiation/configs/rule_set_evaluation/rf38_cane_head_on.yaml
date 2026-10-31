@@ -1,0 +1,75 @@
+# Issue #124 (RF-38): round 1's rules and plain ORCA in head-on meetings where exactly one person walks
+# with a cane, drawn from a realistic crowd, measured against the human targets
+# (configs/human_targets/head_on_v1.yaml). RF-37's rules, arms, base seed, baseline and corridor
+# (configs/rule_set_evaluation/rf37_head_on.yaml); only the people differ. No model is called, so it
+# costs nothing.
+#
+#   python run_experiment.py configs/rule_set_evaluation/rf38_cane_head_on.yaml --plan
+#   python run_experiment.py configs/rule_set_evaluation/rf38_cane_head_on.yaml
+#   python -m negsim.human_targets.report --study rf38
+schema_version: 1
+layer: rule_set_evaluation
+experiment_name: rf38_cane_head_on
+description: >
+  Round 1's runnable staged rules alone and together, rule_db's hand-written default set as a
+  reference, and plain ORCA, in head-on meetings of two people in Moussaid et al. 2009's corridor
+  (1.75 m) at 1.3 m/s, where exactly one of the two walks with a cane: the cane user from the cane
+  holders of a realistic Singapore crowd, the other from its people without one. Measured against the
+  human targets of issue #122.
+
+rules:                       # as rf37_head_on.yaml, unchanged
+  ext_head_on_0ecc2d1a6e:    # both turn 10° left from 9.8 m until the other passes
+    from: runs/rf31_round1_head_on/rule_db_staging/extracted
+    version: 2
+  ext_head_on_6455ca5589:    # whoever faces a person with a cane slows
+    from: runs/rf31_round1_head_on_retry/rule_db_staging/extracted
+    version: 2
+    priority: 600            # [the user's choice, 2026-10-27] the narrower rule wins where both match; switched on as v3
+    reason: >
+      Both translations have priority 500 and both match a head-on in which one person has a cane, so the loader refuses
+      them together (ambiguous). The user chose that the narrower rule wins where both match (the cane rule), so that
+      set 2 can run; the left-turn rule applies to every other head-on.
+
+left_out:
+  - rule: ext_head_on_aacce0961b (RF-31, format 4)
+    reason: refused by the loader since RF-31 (constant_roles); its roles hold for both people, so it never matched
+  - rule: ext_head_on_4eb7a97c8d (RF-11)
+    reason: not expressible in either format (signalling and speaking); nobody signals in ORCA
+
+arms:                        # as rf37_head_on.yaml
+  - name: passed_screening
+    rules: [ext_head_on_0ecc2d1a6e]
+    description: Set 1, the rules that passed crowd screening (the left-turn rule).
+  - name: cane_rule_alone
+    rules: [ext_head_on_6455ca5589]
+    description: The retried cane rule alone.
+  - name: all_runnable
+    rules: [ext_head_on_0ecc2d1a6e, ext_head_on_6455ca5589]
+    description: Set 2, every runnable staged rule.
+  - name: reference_default
+    database: rule_db
+    ruleset: default
+    judged: false
+    description: rule_db's hand-written seed rules of issue #28 (keep left head-on and three more), numbers only.
+
+scenarios:
+  - name: head_on_cane           # H2, H4 to H8 and the side, at Moussaid2009's walking speed (1.3 m/s, the file's own)
+    seeds: 30
+    scenario: configs/scenarios/wide_corridor_head_on.yaml
+    population: configs/populations/singapore_street_v1.yaml
+    purpose: realistic
+    pool: 1000                   # [design] a crowd of 1,000 has 35 canes at the profile's ages (3 under 65, 12 aged 80+);
+                                 # one of 100 has 3, all aged 65 to 79 by rounding
+    one_with: {mobility_aid: cane}   # the user's decision of 2026-10-31: exactly one of the two, from the crowd's cane holders
+    note: >
+      Two people head-on in a 1.75 m corridor, at 1.3 m/s; exactly one walks with a cane (agent seed % 2), drawn from
+      the cane holders of a realistic crowd of 1,000, the other from its people without a cane.
+
+baseline: orca_perturbed_v1  # the primary baseline, as round 1
+seed: 30900                  # round 1's base seed
+seeds: 30
+alpha: 0.05
+verdict_rule: 2
+
+logging:
+  trajectory_stride: 1       # the pair measures need every step (0.1 s)

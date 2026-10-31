@@ -14,11 +14,11 @@ def targets():
 
 
 def _pair(distance=0.9, shares=(0.5, 0.5), first="together", ages=(25, 25), seed=1, speed=1.3, starts=(2.0, 2.0),
-          changes=(0.0, 0.0), sides=("right", "right"), assertiveness=("gives_way", "gives_way")):
+          changes=(0.0, 0.0), sides=("right", "right"), assertiveness=("gives_way", "gives_way"), aids=(None, None)):
     per_agent = {str(i): {"lateral_share": shares[i], "turning_start_m": starts[i], "speed_change_mps": changes[i], "side": sides[i]}
                  for i in (0, 1)}
     return {"seed": seed, "speed_mps": speed, "agents": [0, 1], "passed_first": first,
-            "people": [{"age": ages[i], "gender": "male", "assertiveness": assertiveness[i]} for i in (0, 1)],
+            "people": [{"age": ages[i], "gender": "male", "assertiveness": assertiveness[i], "mobility_aid": aids[i]} for i in (0, 1)],
             "measures": {"min_centre_distance_m": distance, "per_agent": per_agent}}
 
 
@@ -60,6 +60,65 @@ def test_roles_decided_by_assertiveness_are_opposite_to_h7(targets):
     assert found["verdict"] == J.OPPOSITE and found["predicted_by"] == ["assertiveness"]
     mixed = decided[:5] + [_pair(first=1, assertiveness=("holds_ground", "gives_way")) for _ in range(5)]
     assert J.judge(targets.targets["H7"], targets, mixed, [])["verdict"] == J.AGREES
+
+
+CANE = ("mobility_aid", "cane")
+
+
+def test_age_that_only_travels_with_the_cane_is_not_separable(targets):
+    """Issue #124: the cane user is the older and always goes first. H7's check flags age; with the cane
+    held fixed, age cannot be told apart from it, and nothing else is left to test."""
+    pairs = [_pair(first=0, ages=(75, 30), aids=("cane", None)) for _ in range(8)]
+    assert J.judge(targets.targets["H7"], targets, pairs, [])["predicted_by"] == ["older"]
+    found = J.not_predicted_by_traits_given(pairs, targets.age_groups, CANE)
+    assert found["verdict"] == J.NOT_COMPARABLE and found["not_separable"] == ["older"]
+    assert found["traits"]["older"]["not_separable"]["with"] == {"holder_passed_first": 8, "other_passed_first": 0}
+
+
+def test_a_trait_that_matters_beyond_the_cane_is_still_found(targets):
+    """The cane user goes first when holding ground and gives way otherwise: assertiveness decides."""
+    pairs = [_pair(first=0, assertiveness=("holds_ground", "gives_way"), aids=("cane", None)) for _ in range(8)]
+    pairs += [_pair(first=1, assertiveness=("gives_way", "holds_ground"), aids=("cane", None)) for _ in range(8)]
+    found = J.not_predicted_by_traits_given(pairs, targets.age_groups, CANE)
+    assert found["verdict"] == J.OPPOSITE and found["predicted_by"] == ["assertiveness"]
+    assert found["traits"]["assertiveness"]["separated"]["p"] < 0.001
+    # the cane alone deciding, whatever the assertiveness, is not the trait's doing
+    alone = [_pair(first=0, assertiveness=(a, b), aids=("cane", None)) for a, b in [("holds_ground", "gives_way"), ("gives_way", "holds_ground")] * 8]
+    assert J.not_predicted_by_traits_given(alone, targets.age_groups, CANE)["verdict"] == J.AGREES
+
+
+def test_pairs_the_cane_does_not_separate_keep_h7s_sign_test(targets):
+    pairs = [_pair(first=0, assertiveness=("holds_ground", "gives_way")) for _ in range(10)]
+    found = J.not_predicted_by_traits_given(pairs, targets.age_groups, CANE)
+    assert found["verdict"] == J.OPPOSITE and found["traits"]["assertiveness"]["unseparated"]["level_passed_first"] == 10
+    assert found["traits"]["assertiveness"]["unseparated"]["p"] == round(J.judge(targets.targets["H7"], targets, pairs, [])["traits"]["assertiveness"]["p"], 6)
+
+
+def test_a_trait_tested_elsewhere_is_still_listed_when_its_cane_pairs_are_one_sided(targets):
+    """PR #125's review: a sign test on pairs without a cane must not hide one-sided cane pairs."""
+    pairs = [_pair(first=0, ages=(75, 30)) for _ in range(3)] + [_pair(first=0, ages=(75, 30), aids=("cane", None))]
+    found = J.not_predicted_by_traits_given(pairs, targets.age_groups, CANE)
+    assert "unseparated" in found["traits"]["older"] and found["not_separable"] == ["older"]
+
+
+def test_an_age_beyond_every_group_is_not_younger_by_group(targets):
+    found = J.holder_younger([_pair(first=0, ages=(99, 70), aids=("cane", None))], targets.age_groups, CANE)
+    assert found["by_group"]["pairs"] == 0 and found["by_years"]["pairs"] == 0
+
+
+def test_who_goes_first_when_the_cane_user_is_the_younger(targets):
+    pairs = [_pair(first=0, ages=(50, 70), aids=("cane", None)), _pair(first="together", ages=(70, 80), aids=(None, "cane")),
+             _pair(first=1, ages=(70, 72), aids=("cane", None)), _pair(first=0, ages=(80, 30), aids=("cane", None)),
+             _pair(first=0, ages=(30, 70))]  # no cane: not counted
+    found = J.holder_younger(pairs, targets.age_groups, CANE)
+    assert found["by_years"] == {"pairs": 2, "holder": 1, "other": 1, "together": 0, "none": 0}
+    assert found["by_group"] == {"pairs": 1, "holder": 1, "other": 0, "together": 0, "none": 0}  # 50 against 70 only
+
+
+def test_fisher_moved_unchanged():
+    from negsim.resolution import groups as G
+    from negsim.ruleset_eval import verdicts as V
+    assert G.fisher is V.fisher and V.fisher(3, 1, 1, 3) == pytest.approx(0.485714, abs=1e-6)
 
 
 def test_the_young_adapting_more_agrees_with_h8(targets):

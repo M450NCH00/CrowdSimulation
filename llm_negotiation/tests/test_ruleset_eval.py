@@ -394,3 +394,52 @@ def test_more_seeds_resume_the_runs_on_disk_and_are_recorded(tmp_path):
         E.run_evaluation(config(scenarios=[scenario(seeds=2, note="x")], arms=[{"name": "keep_left_alone", "rules": ["keep_left_head_on"]}],
                                 rules={"keep_left_head_on": {"from": "rule_db", "version": 1}}, seeds=1),
                          out_root=tmp_path, report=lambda _: None, git=GIT)
+
+
+# --- issue #124 (RF-38): exactly one person at a factor's level -----------------------------------
+
+RF37_HEAD_ON = PACKAGE_ROOT / "configs" / "rule_set_evaluation" / "rf37_head_on.yaml"
+RF38 = PACKAGE_ROOT / "configs" / "rule_set_evaluation" / "rf38_cane_head_on.yaml"
+
+
+@pytest.mark.parametrize("entry, message", [
+    (scenario(population=STREET, purpose="realistic", one_with={"mobility_aid": "cane"}), "a 'pool'"),
+    (scenario(one_with={"mobility_aid": "cane"}), "a 'pool'"),
+    (scenario(population=STRESS, purpose="stress", one_with={"mobility_aid": "cane"}), "a 'pool'"),
+    (scenario(population=STREET, purpose="realistic", pool=100, one_with={"mobility_aid": "walker"}), "share of 'cane'"),
+])
+def test_a_scenario_with_one_with_is_checked(entry, message):
+    with pytest.raises(ConfigError, match=message):
+        config(scenarios=[entry])
+
+
+def test_one_with_is_described_only_where_it_is_given():
+    with_one = config(scenarios=[scenario(population=STREET, purpose="realistic", pool=1000, one_with={"mobility_aid": "cane"})])
+    assert with_one.scenarios[0].one_with == ("mobility_aid", "cane")
+    assert with_one.as_dict()["scenarios"][0]["one_with"] == {"mobility_aid": "cane"}
+    assert "one_with" not in config(scenarios=[scenario(population=STREET, purpose="realistic", pool=100)]).as_dict()["scenarios"][0]
+
+
+def test_rf38s_config_is_rf37s_head_on_with_only_the_people_changed():
+    old, new = E.RuleSetEvaluationConfig.load(RF37_HEAD_ON), E.RuleSetEvaluationConfig.load(RF38)
+    assert (old.rules, old.arms, old.left_out, old.seed, old.seeds, old.baseline, old.alpha, old.verdict_rule, old.trajectory_stride) == \
+           (new.rules, new.arms, new.left_out, new.seed, new.seeds, new.baseline, new.alpha, new.verdict_rule, new.trajectory_stride)
+    head_on, (cane,) = {s.name: s for s in old.scenarios}["head_on"], new.scenarios
+    assert (cane.file, cane.overrides, cane.population, cane.purpose, cane.seeds) == \
+           (head_on.file, head_on.overrides, head_on.population, head_on.purpose, head_on.seeds)
+    assert (cane.pool, cane.one_with) == (1000, ("mobility_aid", "cane"))
+
+
+def test_a_run_with_one_with_gives_every_arm_the_same_pair_with_one_holder(tmp_path):
+    small = config(scenarios=[scenario(population=STREET, purpose="realistic", pool=1000, one_with={"mobility_aid": "cane"})],
+                   arms=[{"name": "keep_left_alone", "rules": ["keep_left_head_on"]}], rules={"keep_left_head_on": {"from": "rule_db", "version": 1}}, seeds=2)
+    planned = E.runs(small, tmp_path / "t")
+    assert len(planned) == 4
+    for run in planned:
+        assert run.people == E.P.Profile.load(PACKAGE_ROOT / STREET).people(2, run.plan.seed, pool=1000, one_with=("mobility_aid", "cane"))
+        assert [k for k, p in run.people.items() if p["mobility_aid"] == "cane"] == [run.plan.seed % 2]
+    result = E.run_evaluation(small, out_root=tmp_path, report=lambda _: None, git=GIT)
+    population = result.summary["scenarios"]["head_on"]["population"]
+    assert population["one_with"] == {"mobility_aid": "cane"} and population["mean_per_seed"]["mobility_aid_cane"] == 1
+    report = (tmp_path / "t" / "report.md").read_text(encoding="utf-8")
+    assert "exactly one person with mobility_aid cane drawn from a crowd of 1000" in report

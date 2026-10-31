@@ -70,7 +70,7 @@ from ..rulegen.cases import CaseStore
 from ..rulegen.replay import database_path
 from ..rules.fields import VISIBLE_FACTOR_SWITCHES
 from ..rules.snapshot import PRIVATE_ATTRIBUTES
-from ..ruleset_eval.verdicts import sign_test
+from ..ruleset_eval.verdicts import fisher, sign_test  # fisher was defined here until issue #124
 from .execute import MODE_PLAN_ONLY, MODE_PLAN_ORCA, PlanDriver
 from .experiment import coded_plan
 from .outcomes import RESOLVED, TOGETHER, physical_outcome
@@ -405,18 +405,6 @@ def wilson(k: int, n: int, z: float = 1.959964) -> tuple[Optional[float], Option
     p = k / n
     centre, half = (p + z * z / (2 * n)) / (1 + z * z / n), z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / (1 + z * z / n)
     return round(max(0.0, centre - half), 4), round(min(1.0, centre + half), 4)
-
-
-def fisher(a: int, b: int, c: int, d: int) -> float:
-    """Two-sided p of Fisher's exact test on [[a, b], [c, d]] (as likely or less likely tables)."""
-    n, row, col = a + b + c + d, a + b, a + c
-
-    def prob(x: int) -> float:
-        return math.comb(col, x) * math.comb(n - col, row - x) / math.comb(n, row)
-
-    observed = prob(a)
-    lo, hi = max(0, row + col - n), min(row, col)
-    return round(min(1.0, sum(p for x in range(lo, hi + 1) if (p := prob(x)) <= observed * (1 + 1e-9))), 6)
 
 
 # --- round 1's pairs, for comparison -------------------------------------------------------------
