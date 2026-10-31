@@ -125,6 +125,16 @@ No model call; USD 0.
   apart from the cane is not tested. Also found: Step 1 non-verbal's "opposite (assertiveness)" is the same
   kind of confound (in its one-cane resolved sessions, the one holding ground is always the cane user).
 
+### 2026-10-31 13:27 UTC — The user's decision on H7 in cane pairs
+- I set out three options with their pros and cons: H7 as recorded (fixed in advance, but it penalises the
+  rule for something the study did not measure), with the cane held fixed (asks the study's question, but
+  designed after the result, and it cannot test age here), or "not comparable" (the study's sample had no
+  cane users). I recommended: as recorded for RF-38, and "not comparable" from the next run.
+- **The user chose the recommendation** ("ok let's go with your recommendation"), on their own authority.
+- Recorded in `docs/human-targets.md` section 8, `findings.md`, `README.md`. No code changed: RF-38's
+  verdicts stay as they are, and the outcome does not change (the cane rule is dropped by harms and H2).
+  The "not comparable" treatment is not built yet (see open questions).
+
 ## Open questions / risks
 
 - The smallest effect that counts in a direction target (RF-37, section 3) is still open.
@@ -134,6 +144,9 @@ No model call; USD 0.
   count against a rule under the adopted table? *Since 13:13 UTC:* the two checks support the confound
   reading but cannot clear age (no pair separates it from the cane). Testing age apart from the cane would
   need pairs with a cane user under 65 meeting someone 65 or over: a design choice, not a realistic draw.
+  *Decided 13:27 UTC* (see the progress log): H7 as recorded for RF-38; "not comparable" from the next run.
+- Not built: the "not comparable" treatment of H7 needs a list, per target, of the factors outside its
+  study's sample (a new targets file version). Only the cane is identified so far.
 - Whether RF-10's screening design pairs "holds ground" with the cane on purpose was not checked.
 - **For the user:** the adopted table puts the cane rule in "dropped". Nothing has been removed.
 - The pass distance of every rule arm is ORCA's (bodies touching). A rule that only says who gives way

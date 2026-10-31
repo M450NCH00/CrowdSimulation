@@ -207,5 +207,19 @@ when a trait is on the holder's side as when it is on the other's (Fisher's exac
 counted. `judge.holder_younger` gives who went first when the holder is the younger, by years and by
 age group. For the cane rule, H7 becomes "agrees" with age and gender not separable. For Step 1's
 non-verbal agents, "opposite (assertiveness)" becomes "agrees" with assertiveness not separable.
-No pair has a cane user under 65 meeting someone 65 or over. Whether H7 is judged this way in cane pairs is
-the user's decision; until then, H7 as recorded is used.
+No pair has a cane user under 65 meeting someone 65 or over.
+
+**H7 in pairs a factor outside its study separates (decided by the user on 2026-10-31,** on their own
+authority, out of three options: H7 as recorded, with the factor held fixed, or not comparable):
+
+- **RF-38 keeps H7 as recorded** as its verdict of record, because the check was fixed before any rule was
+  measured. The held-fixed check stays beside it as a description. The cane rule's outcome does not depend
+  on this: RF-33's harms and H2 already drop it.
+- **From the next run on, H7 is "not comparable"** in a pair that a factor outside its study's sample
+  separates (for example a cane: Knorr2016 did not study mobility aids). This applies to rule arms, plain
+  ORCA and Step 1's subjects alike. The held-fixed check is still shown beside it. Not comparable does not
+  count against a rule (section 6). This was decided before the next run, so it is not fitted to a result.
+- **Not built yet.** Building it needs a list, for each target, of the factors outside its study's sample.
+  That list would go in a new targets file version (`head_on_v1.yaml` stays frozen) and should be agreed
+  with the user. Only the cane is identified so far. Whether the same treatment extends to other targets
+  is not decided.

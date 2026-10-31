@@ -104,12 +104,21 @@ What this shows:
   cane user is the one who holds ground. Assertiveness cannot be told apart from the cane there either.
   (Whether RF-10's screening design pairs them on purpose was not checked.)
 
-**For the user:** the checks support reading finding 4 as a confound, and suggest the same for Step 1's
-non-verbal row. They cannot show that age plays no part: no pair separates the two. Whether H7 should be
-judged with the cane held fixed, as recorded, or set aside for cane pairs is still the user's decision. Until
-then the promotion table below uses H7 as recorded. A run that could test age apart from the cane would need
-pairs with a cane user under 65 meeting someone 65 or over: a design choice (`one_with` with an age
-condition), not a realistic crowd's draw.
+The checks support reading finding 4 as a confound, and suggest the same for Step 1's non-verbal row. They
+cannot show that age plays no part: no pair separates the two. A run that could test age apart from the cane
+would need pairs with a cane user under 65 meeting someone 65 or over: a design choice (`one_with` with an
+age condition), not a realistic crowd's draw.
+
+**Decided by the user on 2026-10-31** (on their own authority, choosing the recommendation of three options
+set out in the session: as recorded, cane held fixed, or not comparable):
+
+- **For RF-38, H7 as recorded is the verdict of record.** The check was fixed before any rule was measured
+  (the user's decision of 2026-10-30), and the outcome does not depend on it: the cane rule is dropped by
+  RF-33's harms and H2 alone. The check with the cane held fixed stays beside it, as a description.
+- **From the next run on, H7 is "not comparable" in pairs that a factor outside its study's sample
+  separates**, such as a cane (Knorr et al. 2016 did not study mobility aids). The same goes for Step 1's
+  subjects. Under the promotion table, "not comparable" does not count against a rule. Not built yet: see
+  `docs/human-targets.md`, section 8.
 
 ## Under the promotion table adopted on 2026-10-31
 
