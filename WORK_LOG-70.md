@@ -99,4 +99,6 @@ rounds 2 and 3 as planned work; it is to be updated when later rounds finish.
 - **Why:** issue #70's tasks 1 to 8, for the interim report of 25 January 2027, covering round 1.
 - **Verified:** every number in the summary was checked against the report or file named beside it; the draft
   and talking points take theirs from the summary. No code changed and no model was called; the rerun used the
-  existing analysis with RF-10's settings. Tests: see the next entry.
+  existing analysis with RF-10's settings. Tests: `test_repo_hygiene.py` (the only test that scans the whole
+  package) and `test_avoidance_runs.py` (counts run folders): 88 passed; no other test lists every run folder
+  (checked by search). The full suite was not run: no code changed (it passed at 2280 on PR #125's merge).
