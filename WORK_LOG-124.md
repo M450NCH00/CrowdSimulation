@@ -136,6 +136,25 @@ No model call; USD 0.
   verdicts stay as they are, and the outcome does not change (the cane rule is dropped by harms and H2).
   The "not comparable" treatment is not built yet (see open questions).
 
+### 2026-10-31 13:40 UTC — Review of PR #125, before merging (the user's request)
+- What I did: `/code-review medium 125`; checked each finding against the code.
+- Fixed (commit `eda4c16d`, with tests):
+  - **the report could overwrite itself with empty results**: the trajectories are gitignored (RF-37's and
+    RF-38's), so on a fresh clone `report` found no pair, judged every target "not comparable" and wrote
+    that over the committed summary, with no warning. It now stops with an error. RF-37 had the same gap
+    since PR #123.
+  - `not_predicted_by_traits_given` left a trait out of `not_separable` when it also had a sign test on
+    pairs without the factor (did not occur in RF-38's data);
+  - `holder_younger` counted an age in no group as "not older"; the bound of the older group is now read
+    from the targets file, as is the "65" in the report's text; the generic holder table no longer says
+    "most such people are 65 or over" (true of canes, not of every factor).
+- Not fixed, noted: `holder_pairs` passes its described counts through `_direction`, so `summary.json`
+  carries `verdict` keys for them (the report does not show them); the holder test is written in four
+  places (a shared helper would do); `step1_pairs` raises KeyError for a factor with no column in Step 1's
+  outcomes (only the cane is run).
+- Check: RF-37's report and summary, and RF-38's summary, regenerate byte for byte; RF-38's report changes
+  in that one sentence only. The two test modules: 22 passed.
+
 ## Open questions / risks
 
 - The smallest effect that counts in a direction target (RF-37, section 3) is still open.
