@@ -23,6 +23,10 @@ The checks (each a sign test over pairs or runs; ties and undefined pairs droppe
 | ``speed_decreases_with_density`` | each run: the sign of the least-squares slope of speed on density | most runs negative |
 
 ``no_speed_change`` and ``speed_decreases`` (H4, H5) disagree, so they only report the speed change.
+
+Since issue #124, for pairs with one person at a factor's level (RF-38's cane), two descriptions beside
+H7's verdict, which they do not replace: ``not_predicted_by_traits_given`` (H7's check with that factor
+held fixed) and ``holder_younger`` (who went first when that person is the younger).
 """
 
 from __future__ import annotations
@@ -30,7 +34,7 @@ from __future__ import annotations
 import math
 from typing import Any, Iterable, Mapping, Optional, Sequence
 
-from ..ruleset_eval.verdicts import sign_test
+from ..ruleset_eval.verdicts import fisher, sign_test
 from .targets import DIRECTION, VALUE, Target, TargetFile
 
 ALPHA = 0.05
@@ -165,6 +169,88 @@ def not_predicted_by_traits(pairs: Sequence[Mapping[str, Any]], groups: Mapping[
     predicted = sorted(name for name, entry in tested.items() if entry["p"] < threshold)
     return {"verdict": OPPOSITE if predicted else AGREES, "predicted_by": predicted, "threshold": round(threshold, 6), "traits": tested,
             "note": "speed and heading do not differ between the two walkers in these runs, so that half of the finding is not tested"}
+
+
+def not_predicted_by_traits_given(pairs: Sequence[Mapping[str, Any]], groups: Mapping[str, tuple[int, int]],
+                                  known: tuple[str, Any]) -> dict[str, Any]:
+    """H7's check with a factor the study did not look at held fixed (issue #124: the cane). Not the
+    verdict of record; ``not_predicted_by_traits`` is.
+
+    Each pair with distinct roles that differs in a trait is counted in one of two ways:
+
+    * the known factor does not separate the two (both or neither at its level): the sign test of
+      ``not_predicted_by_traits``;
+    * it does (one holder): the trait is at its level on the holder's side ("with") or the other's
+      ("against"). If the trait adds nothing to the known factor, the holder passes first as often
+      either way: Fisher's exact test on [[holder first, other first] with, [...] against]. With
+      pairs on one side only, the trait cannot be told apart from the known factor there
+      (``not_separable``).
+
+    Bonferroni over every test made. A trait with no test at all is listed, not counted."""
+    name_k, level_k = known
+    tested, not_separable = {}, []
+    for name, level in TRAITS.items():
+        same = [0, 0]                            # level first, other first
+        split = {"with": [0, 0], "against": [0, 0]}  # holder first, other first
+        for pair in pairs:
+            first = pair["passed_first"]
+            if first not in pair["agents"]:
+                continue
+            values = [_trait(person, name, groups) for person in pair["people"]]
+            if values[0] == values[1] or level not in values:
+                continue
+            winner = pair["agents"].index(first)
+            held = [person.get(name_k) == level_k for person in pair["people"]]
+            if held[0] == held[1]:
+                same[values[winner] != level] += 1
+            else:
+                holder = held.index(True)
+                split["with" if values[holder] == level else "against"][winner != holder] += 1
+        entry: dict[str, Any] = {"level": level}
+        if sum(same):
+            entry["unseparated"] = {"level_passed_first": same[0], "other_passed_first": same[1], "p": round(sign_test(*same), 6)}
+        if sum(split["with"]) and sum(split["against"]):
+            entry["separated"] = {side: {"holder_passed_first": h, "other_passed_first": o} for side, (h, o) in split.items()}
+            entry["separated"]["p"] = fisher(*split["with"], *split["against"])
+        elif sum(split["with"]) or sum(split["against"]):
+            entry["not_separable"] = {side: {"holder_passed_first": h, "other_passed_first": o} for side, (h, o) in split.items()}
+        if "unseparated" in entry or "separated" in entry:
+            tested[name] = entry
+        elif "not_separable" in entry:
+            not_separable.append(name)
+            tested[name] = entry
+    ps = [(name, part["p"]) for name, entry in tested.items() for part in (entry.get("unseparated"), entry.get("separated")) if part]
+    if not ps:
+        return {"verdict": NOT_COMPARABLE, "known": {name_k: level_k}, "not_separable": not_separable, "traits": tested,
+                "reason": "no trait could be tested apart from the known factor"}
+    threshold = ALPHA / len(ps)
+    predicted = sorted({name for name, p in ps if p < threshold})
+    return {"verdict": OPPOSITE if predicted else AGREES, "known": {name_k: level_k}, "predicted_by": predicted,
+            "not_separable": sorted(not_separable), "threshold": round(threshold, 6), "traits": tested}
+
+
+def holder_younger(pairs: Sequence[Mapping[str, Any]], groups: Mapping[str, tuple[int, int]], one_with: tuple[str, Any]) -> dict[str, Any]:
+    """Issue #124: who passed first in the pairs where the one person at ``one_with``'s level is the
+    younger of the two, by years and by the targets' age groups (the holder not older, the other older).
+    If age, not the factor, decided who went first, the other would go first in these."""
+    name, level = one_with
+    out = {key: {"pairs": 0, "holder": 0, "other": 0, "together": 0, "none": 0} for key in ("by_years", "by_group")}
+    for pair in pairs:
+        at = [person.get(name) == level for person in pair["people"]]
+        if sum(at) != 1:
+            continue
+        h = at.index(True)
+        holder, other = pair["people"][h], pair["people"][1 - h]
+        if holder.get("age") is None or other.get("age") is None:
+            continue
+        passed = pair["passed_first"]
+        who = "none" if passed is None else "together" if passed == "together" else "holder" if passed == pair["agents"][h] else "other"
+        kinds = (age_group(holder["age"], groups) == "older", age_group(other["age"], groups) == "older")
+        for key, younger in (("by_years", holder["age"] < other["age"]), ("by_group", kinds == (False, True))):
+            if younger:
+                out[key]["pairs"] += 1
+                out[key][who] += 1
+    return out
 
 
 def segregated(runs: Sequence[Mapping[str, Any]]) -> dict[str, Any]:

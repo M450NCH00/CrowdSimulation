@@ -206,6 +206,8 @@ def evaluate(file: TargetFile, found: Sequence[Subject], study: Study = STUDIES[
             "study": study.key, "one_with": {study.one_with[0]: study.one_with[1]},
             "rule_matches": {arm: rule_matches(*study.head_on, arm) for arm in ARMS},
             "holder_pairs": {s.name: holder_pairs(s.pairs, study.one_with) for s in found},
+            "h7_known_factor": {s.name: J.not_predicted_by_traits_given(s.pairs, file.age_groups, study.one_with) for s in found},
+            "holder_younger": {s.name: J.holder_younger(s.pairs, file.age_groups, study.one_with) for s in found},
         }),
     }
 
@@ -319,6 +321,44 @@ def holder_markdown(summary: Mapping[str, Any]) -> list[str]:
         lines.append(f"| {subject} | {h['pairs']} | {h['other_mean_lateral_share']} | "
                      f"{a['study_way']} to {a['other_way']}, p {a['p']:.3g} | {s['study_way']} to {s['other_way']}, p {s['p']:.3g} | "
                      f"{f['holder']} / {f['other']} / {f['together']} / {f['none']} |")
+    if "h7_known_factor" in summary:
+        lines += h7_known_markdown(summary, level)
+    return lines
+
+
+def _known_trait(entry: Mapping[str, Any]) -> str:
+    parts = []
+    if "unseparated" in entry:
+        u = entry["unseparated"]
+        parts.append(f"both or neither: {u['level_passed_first']} to {u['other_passed_first']}, p {u['p']:.3g}")
+    for key in ("separated", "not_separable"):
+        if key in entry:
+            w, a = entry[key]["with"], entry[key]["against"]
+            text = f"holder first with {w['holder_passed_first']} of {sum(w.values())}, against {a['holder_passed_first']} of {sum(a.values())}"
+            parts.append(text + (f", p {entry[key]['p']:.3g}" if key == "separated" else ", not separable"))
+    return "; ".join(parts)
+
+
+def h7_known_markdown(summary: Mapping[str, Any], level: str) -> list[str]:
+    """Issue #124: H7 with the factor held fixed, and who went first when its holder is the younger."""
+    traits = list(J.TRAITS)
+    lines = ["", f"**H7 with the {level} held fixed** (not the verdict of record, which is H7's row above). A trait is tested",
+             f"apart from the {level}: in pairs where both or neither have it, by H7's sign test; in pairs with one {level} user,",
+             f"by whether the {level} user passes first as often when the trait is at its level on the {level} user's side",
+             "(\"with\") as on the other's (\"against\"), by Fisher's exact test. A trait whose pairs all fall on one side cannot",
+             f"be told apart from the {level} and is not counted. Bonferroni over every test made.", "",
+             "| Subject | H7 as recorded | With the " + level + " held fixed | " + " | ".join(traits) + " |",
+             "| --- | --- | --- |" + " --- |" * len(traits)]
+    for subject, entry in summary["h7_known_factor"].items():
+        cell = _cell(entry) + (f"; not separable: {', '.join(entry['not_separable'])}" if entry.get("not_separable") else "")
+        lines.append(f"| {subject} | {_cell(summary['results']['H7'][subject])} | {cell} | "
+                     + " | ".join(_known_trait(entry["traits"][t]) if t in entry["traits"] else "–" for t in traits) + " |")
+    lines += ["", f"**When the {level} user is the younger** (who passed first: {level} user / other / together / none). If age,",
+              f"not the {level}, decided who went first, the other would go first here. By group: the {level} user under 65, the other 65 or over.", "",
+              "| Subject | Younger by years | Younger by age group |", "| --- | --- | --- |"]
+    for subject, entry in summary["holder_younger"].items():
+        lines.append(f"| {subject} | " + " | ".join(f"{e['pairs']} pairs: {e['holder']} / {e['other']} / {e['together']} / {e['none']}"
+                                                    for e in (entry["by_years"], entry["by_group"])) + " |")
     return lines
 
 

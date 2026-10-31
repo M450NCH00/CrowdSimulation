@@ -83,6 +83,37 @@ user's, ties dropped, with the exact sign test's p:
 | step1_non_verbal | 27 | 0.6302 | 21 to 2, p 6.6e-05 | 23 to 4, p 0.000311 | 9 / 2 / 16 / 0 |
 | step1_talk | 16 | 0.6389 | 12 to 4, p 0.0768 | 13 to 3, p 0.0213 | 4 / 2 / 10 / 0 |
 
+**H7 with the cane held fixed** (not the verdict of record, which is H7's row above). A trait is tested
+apart from the cane: in pairs where both or neither have it, by H7's sign test; in pairs with one cane user,
+by whether the cane user passes first as often when the trait is at its level on the cane user's side
+("with") as on the other's ("against"), by Fisher's exact test. A trait whose pairs all fall on one side cannot
+be told apart from the cane and is not counted. Bonferroni over every test made.
+
+| Subject | H7 as recorded | With the cane held fixed | assertiveness | gender | older |
+| --- | --- | --- | --- | --- | --- |
+| plain | not comparable | not comparable | – | – | – |
+| passed_screening | not comparable | not comparable | – | – | – |
+| cane_rule_alone | opposite (older) | agrees; not separable: gender, older | holder first with 4 of 4, against 2 of 2, p 1 | holder first with 0 of 0, against 6 of 6, not separable | holder first with 7 of 7, against 0 of 0, not separable |
+| all_runnable | opposite (older) | agrees; not separable: gender, older | holder first with 4 of 4, against 2 of 2, p 1 | holder first with 0 of 0, against 6 of 6, not separable | holder first with 7 of 7, against 0 of 0, not separable |
+| reference_default | not comparable | not comparable | – | – | – |
+| step1_independent | agrees | agrees; not separable: assertiveness, older | holder first with 3 of 5, against 0 of 0, not separable | holder first with 1 of 4, against 5 of 7, p 0.242 | holder first with 2 of 5, against 0 of 0, not separable |
+| step1_non_verbal | opposite (assertiveness) | agrees; not separable: assertiveness, older | holder first with 7 of 7, against 0 of 0, not separable | holder first with 6 of 6, against 3 of 5, p 0.182 | holder first with 5 of 5, against 0 of 0, not separable |
+| step1_talk | agrees | agrees; not separable: assertiveness, older | holder first with 2 of 3, against 0 of 0, not separable | holder first with 3 of 3, against 1 of 3, p 0.4 | holder first with 1 of 2, against 0 of 0, not separable |
+
+**When the cane user is the younger** (who passed first: cane user / other / together / none). If age,
+not the cane, decided who went first, the other would go first here. By group: the cane user under 65, the other 65 or over.
+
+| Subject | Younger by years | Younger by age group |
+| --- | --- | --- |
+| plain | 6 pairs: 0 / 0 / 6 / 0 | 0 pairs: 0 / 0 / 0 / 0 |
+| passed_screening | 6 pairs: 0 / 0 / 6 / 0 | 0 pairs: 0 / 0 / 0 / 0 |
+| cane_rule_alone | 6 pairs: 4 / 0 / 2 / 0 | 0 pairs: 0 / 0 / 0 / 0 |
+| all_runnable | 6 pairs: 4 / 0 / 2 / 0 | 0 pairs: 0 / 0 / 0 / 0 |
+| reference_default | 6 pairs: 0 / 0 / 6 / 0 | 0 pairs: 0 / 0 / 0 / 0 |
+| step1_independent | 0 pairs: 0 / 0 / 0 / 0 | 0 pairs: 0 / 0 / 0 / 0 |
+| step1_non_verbal | 0 pairs: 0 / 0 / 0 / 0 | 0 pairs: 0 / 0 / 0 / 0 |
+| step1_talk | 0 pairs: 0 / 0 / 0 / 0 | 0 pairs: 0 / 0 / 0 / 0 |
+
 ## The targets
 
 **H1.** Two young adults on a collision course pass with their centres this far apart at the closest point. *Rapos V, Cinelli ME, Grunberg R, Bourgaize S, Cretual A, Olivier A-H (2021)*, Results (abstract) (abstract).
