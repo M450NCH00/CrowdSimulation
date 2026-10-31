@@ -183,7 +183,8 @@ Targets from published studies, with tolerances fixed with the user before any r
 Sources: `runs/rf37_human_targets/report.md` (H1, H8, C1; H1 for the rule arms rests on one pair of two young
 adults), `runs/rf38_human_targets/findings.md` (H2 for the cane rule, in pairs with one cane user).
 **Step 1's agents pass at a human distance; every rule passes at ORCA's 0.50 m, two bodies touching, or the
-left-turn rule's 1.25 m.** A rule that only decides who gives way cannot fix the distance, which comes from
+left-turn rule's 1.25 m.** (Both rules on together come out "within" on H2, 0.92 m, but only as the average
+of pairs at 0.50 and 1.25 m: `runs/rf37_human_targets/report.md`, H2 and the pass distance table.) A rule that only decides who gives way cannot fix the distance, which comes from
 ORCA underneath. In RF-38's cane pairs the cane rule made the other person give way in 30 of 30, as Step 1's
 agents also do (14 to 3, 21 to 2, 12 to 4 by condition).
 
