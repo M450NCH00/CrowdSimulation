@@ -134,10 +134,10 @@ changed rule. The corridor is symmetric about its centre line, so a right-turn v
 mirror image of the left-turn rule's runs. Every target but the side is therefore the same, apart
 from the baseline's random perturbation `[derived: mirror symmetry]`.
 
-## 6. Proposal for #55's promotion table (task 7; for the user, who may want the supervisor's view)
+## 6. #55's promotion table (proposed in task 7; adopted by the user on 2026-10-31)
 
-Today's table promotes a rule that **helps** in the simulation (RF-18) and **matches human
-evidence** (RF-14). The proposal adds this layer and changes what the simulation must show:
+The earlier table promoted a rule that **helps** in the simulation (RF-18) and **matches human
+evidence** (RF-14). This one adds this layer and changes what the simulation must show:
 
 | | Supported or partly supported (RF-14), and no applicable target **outside** or **opposite** (RF-37) | Otherwise |
 | --- | --- | --- |
@@ -152,7 +152,10 @@ evidence** (RF-14). The proposal adds this layer and changes what the simulation
   - the side is not a target while Singapore's is unknown.
 - **No combined score.** The targets are shown side by side.
 
-**[design] This is a proposal, not a decision.** The user decides; the supervisor may want to see it.
+**Adopted by the user on 2026-10-31** (issue #124), on the user's own authority after RF-37's report;
+no supervisor view is recorded. It replaces #55's table of 2026-10-27. Under it, no round 1 rule is
+promoted: the left-turn rule is outside on H1, and the cane rule is outside on H1 and opposite on C1.
+A smallest effect that counts (section 3) was not set with it and stays open.
 
 ## 7. Limits
 
