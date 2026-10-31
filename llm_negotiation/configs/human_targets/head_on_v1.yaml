@@ -1,0 +1,257 @@
+# Human targets for head-on meetings, version 1 (issue #122, RF-37; docs/human-targets.md).
+# Read by negsim.human_targets. Frozen: a change of any value, tolerance or source is a new file
+# (head_on_v2.yaml), never an edit of this one.
+#
+# Every target comes from a number or a finding reported in a published study (track #55, decision 6
+# of 2026-10-30: published studies only). Each says where in the source it comes from, how much of
+# the source was read, the study's setting, and how the simulation's setting differs from it. A
+# target without a source is not in this file; what was looked at and left out is under not_targets.
+schema_version: 1
+name: head_on_v1
+
+tolerance:                   # the user's decision of 2026-10-30 (issue #122, task 0), before any rule was measured
+  value: within_1_sd         # a value target: the simulated mean must lie within the study's mean +/- 1 reported SD
+  no_spread: direction_only  # a target with no reported spread is judged on its direction only; its numbers are shown beside
+  disagreement: report_no_verdict   # where two studies disagree, both are shown and that target has no verdict
+  decided: "2026-10-30"
+
+age_groups:                  # [design] how the simulation's people are matched to a study's groups
+  young: [18, 35]            # Rapos2021's young adults were 23 +/- 2 years old
+  older: [65, 94]            # Rapos2021's older adults were 68 +/- 3; SingStat's "65 Years & Over"
+
+targets:
+  H1:
+    claim: Two young adults on a collision course pass with their centres this far apart at the closest point.
+    kind: value
+    measure: min_centre_distance_m
+    value: 0.93
+    sd: 0.17
+    unit: m
+    applies: {pair_ages: [young, young]}
+    source: rapos2021
+    where: Results (abstract)
+    read: abstract
+    setting: Laboratory, Canada, a 12.6 m pathway, 17 young and 17 older adults, comfortable speed.
+    differs:
+      - crossing paths at several angles in the study; head-on in the simulation
+      - "[inferred] the distance is between body centres (Meerhoff2018's method in the same line of work); Rapos2021's own methods were not read"
+  H2:
+    claim: When an older adult is on a collision course, the two pass closer than two young adults do.
+    kind: value
+    measure: min_centre_distance_m
+    value: 0.79
+    sd: 0.18
+    unit: m
+    applies: {pair_ages: [older, any]}
+    source: rapos2021
+    where: Results (abstract)
+    read: abstract
+    setting: As H1.
+    differs:
+      - "the abstract does not say whether the other walker was older or young"
+      - crossing paths at several angles in the study; head-on in the simulation
+      - "[inferred] the distance is between body centres, as H1"
+  H3:
+    claim: A walker starts to turn further before the point of minimal distance the faster it walks.
+    kind: direction
+    check: increases_with_speed
+    measure: turning_start_m
+    reported: {fast: 2.7, normal: 2.4, slow: 2.1}   # m before the point of minimal distance, at 180 degrees; means only
+    reported_speeds: {fast: 1.78, normal: 1.42, slow: 1.15}   # m/s, Results 1
+    unit: m
+    applies: {encounter: head_on}
+    source: huber2014
+    where: Table 1 (start of turning, 180 degrees); Results 2.2; Methods 4.4 (definitions)
+    read: full text
+    setting: Laboratory, Germany, instructed speeds; the other walker (the interferer) went straight and did not avoid.
+    differs:
+      - in the study only one walker avoided; in the simulation both may, unless the scenario makes one go straight
+      - "the authors note that some starts coincided with the first tracked point, so the true values may be larger"
+  H4:
+    claim: In a head-on meeting walkers change their path and not their speed.
+    kind: direction
+    check: no_speed_change
+    measure: speed_change_mps
+    applies: {encounter: head_on}
+    source: huber2014
+    where: Results 2.1 and 3.1; Table 1 (no start of braking at 180 degrees)
+    read: full text
+    setting: As H3.
+    disagrees_with: H5
+    differs:
+      - in the study only one walker avoided
+  H5:
+    claim: In a head-on meeting walkers slow down significantly while they decide on which side to pass.
+    kind: direction
+    check: speed_decreases
+    measure: speed_change_mps
+    applies: {encounter: head_on}
+    source: moussaid2009
+    where: Section 4.2 and Figure 3 (the decision zone)
+    read: full text
+    setting: Laboratory, France, a corridor 7.88 x 1.75 m, 40 people aged 18 to 30.
+    disagrees_with: H4
+    differs: []
+  H6:
+    claim: The walker who gives way (passes second) contributes more to the avoidance than the one who passes first.
+    kind: direction
+    check: giver_adapts_more
+    measure: lateral_share
+    applies: {encounter: head_on, roles_differ: true}
+    source: olivier2013
+    where: Abstract
+    read: abstract
+    setting: Laboratory, France, crossing paths.
+    differs:
+      - crossing paths at several angles in the study; head-on in the simulation, where both may pass "together"
+  H7:
+    claim: Who passes first is predicted by the walkers' initial speed and heading, not by gender, height or personality traits.
+    kind: direction
+    check: not_predicted_by_traits
+    measure: passed_first
+    applies: {encounter: head_on}
+    source: knorr2016
+    where: Abstract (experiments 1 and 2)
+    read: abstract
+    setting: Laboratory, Germany, pairs at their natural speed on paths that would collide halfway.
+    differs:
+      - which personality traits were measured is not in the abstract; the simulation tests the traits its people have (assertiveness, and age and gender)
+  H8:
+    claim: When an older adult meets a young adult, the young adult contributes more to the avoidance, whoever passes first.
+    kind: direction
+    check: younger_adapts_more
+    measure: lateral_share
+    applies: {pair_ages: [older, young]}
+    source: rapos2021
+    where: Results (abstract)
+    read: abstract
+    setting: As H1.
+    differs:
+      - crossing paths at several angles in the study; head-on in the simulation
+  C1:
+    claim: In a two-way street flow the two directions separate, each keeping mostly to one side of the street.
+    kind: direction
+    check: segregated
+    measure: lane_share_majority_side
+    reported: {own_right: 0.77, own_left: 0.23}   # read from Figure 5b by pixel measurement (refs/rf37_moussaid2009_fig5.png)
+    applies: {scenario: two_way_flow}
+    source: moussaid2009
+    where: Section 4.4 (ii) and Figure 5b (observed, blue bars)
+    read: full text
+    setting: Field, Bordeaux (Sainte-Catherine street), 2,670 pedestrians tracked in an 8 x 6 m field, inflow about 0.65 per second each way.
+    differs:
+      - the simulation's flow starts all at once on a lattice; the street's people entered over 30 minutes
+      - which side is kept is a parameter by place (sides, below); this target judges the separation, not the side
+  C3:
+    claim: In a two-way flow walking speed falls as density rises, and the flow per metre of width levels off from about 1.0 person per square metre.
+    kind: direction
+    check: speed_decreases_with_density
+    measure: speed_by_density
+    reported: {free_speed_mps: 1.55, free_speed_sd_mps: 0.18, plateau_from_density_per_m2: 1.0, peak_specific_flow_per_m_s: 1.5, at_density_per_m2: 2.0}
+    applies: {scenario: two_way_flow}
+    source: zhang2012
+    where: Sections 2, 4.1 and 4.3; Conclusion
+    read: full text
+    setting: Laboratory, Duesseldorf, up to 350 participants, mostly students, corridors 3.0 and 3.6 m wide.
+    differs:
+      - the simulation's corridor is 4.0 m wide
+      - the free speed spread (1.55 +/- 0.18 m/s) is of the free walk, not of the speed at a density, so it is shown and not used as a tolerance
+
+sides:                       # which side people pass on: a parameter by place, not one target (issue #122)
+  judged: false              # for Singapore no published study was found (#69), so the side is unknown under decision 6
+  singapore: unknown
+  places:
+    france:
+      side: right
+      shares:
+        both_walk: {right: 0.80, left: 0.20}       # Figure 4d, normalised (read 0.89 and 0.23; the two summed to 1.12)
+        other_stands: {right: 0.60, left: 0.41}    # Figure 4c
+        street_flow: {right: 0.77, left: 0.23}     # Figure 5b, observed
+      source: moussaid2009
+      read: full text, figures read by pixel measurement
+    beijing:
+      side: right
+      shares: {right: 0.6875}
+      source: circle_antipode2019
+      read: full text, preprint
+    korea:
+      side: left
+      shares: {kept_left_under_a_keep_left_rule: 0.593, said_they_prefer_right: 0.737}
+      source: jung2013
+      read: abstract
+    japan:
+      side: left
+      shares: {}
+      source: echeverria2026
+      read: full text
+      note: "lanes in bidirectional flows conspicuously appear on the left side, as pedestrians generally avoid others by stepping to the left"
+
+not_targets:                 # looked at and left out, with the reason
+  - id: C2
+    claim: At low density a two-way flow spreads almost uniformly across the street.
+    source: moussaid2009
+    reason: a result of the authors' model (their Supplementary Figure 6), not an observation; under decision 6 it is not human evidence
+  - id: H9
+    claim: Walkers do not stop or back up in a head-on meeting.
+    source: none
+    reason: no study read reports stopping or backing up, and none counts them; the simulation's stops and backing up are reported, not judged
+
+sources:
+  rapos2021:
+    cite: >-
+      Rapos V, Cinelli ME, Grunberg R, Bourgaize S, Cretual A, Olivier A-H (2021). Collision avoidance
+      behaviours between older adult and young adult walkers. Gait & Posture 88, 210-215.
+      doi:10.1016/j.gaitpost.2021.05.033.
+    cached: refs/rf14_rapos2021_epmc.json
+  meerhoff2018:
+    cite: >-
+      Meerhoff LA, Pettre J, Lynch SD, Cretual A, Olivier A-H (2018). Collision avoidance with multiple
+      walkers: sequential or simultaneous interactions? Frontiers in Psychology 9, 2354.
+      doi:10.3389/fpsyg.2018.02354. Read for the definition of the minimal predicted distance only.
+    cached: refs/rf37_meerhoff2018_mpd_epmc.xml
+  huber2014:
+    cite: >-
+      Huber M, Su Y-H, Krueger M, Faschian K, Glasauer S, Hermsdoerfer J (2014). Adjustments of speed
+      and path when avoiding collisions with another pedestrian. PLoS ONE 9(2), e89589.
+      doi:10.1371/journal.pone.0089589.
+    cached: refs/rf14_huber2014_speed_path.pdf
+  moussaid2009:
+    cite: >-
+      Moussaid M, Helbing D, Garnier S, Johansson A, Combe M, Theraulaz G (2009). Experimental study of
+      the behavioural mechanisms underlying self-organization in human crowds. Proc. R. Soc. B
+      276(1668), 2755-2762. doi:10.1098/rspb.2009.0405.
+    cached: refs/rf14_moussaid2009_side_preference.pdf
+  olivier2013:
+    cite: >-
+      Olivier A-H, Marin A, Cretual A, Berthoz A, Pettre J (2013). Collision avoidance between two
+      walkers: role-dependent strategies. Gait & Posture 38(4), 751-756.
+      doi:10.1016/j.gaitpost.2013.03.017.
+    cached: refs/rf14_olivier2013_epmc.json
+  knorr2016:
+    cite: >-
+      Knorr AG, Willacker L, Hermsdoerfer J, Glasauer S, Krueger M (2016). Influence of person- and
+      situation-specific characteristics on collision avoidance behavior in human locomotion. J. Exp.
+      Psychol.: Hum. Percept. Perform. 42(9), 1332-1343. doi:10.1037/xhp0000223.
+    cached: refs/rf14_knorr2016_epmc.json
+  zhang2012:
+    cite: >-
+      Zhang J, Klingsch W, Schadschneider A, Seyfried A (2012). Ordering in bidirectional pedestrian
+      flows and its influence on the fundamental diagram. J. Stat. Mech. P02002.
+      doi:10.1088/1742-5468/2012/02/P02002.
+    cached: refs/rf37_zhang2012_bidirectional_fd.pdf
+  circle_antipode2019:
+    cite: >-
+      Go left or right? Explore the side preference behavior with circle antipode experiments (2019).
+      arXiv 1912.10870. Preprint.
+    cached: refs/rf14_circle_antipode2019.pdf
+  jung2013:
+    cite: >-
+      Jung HS, Jung HS (2013). Survey of Korean pedestrians' natural preference for walking directions.
+      Applied Ergonomics 44(6), 1015-1023. doi:10.1016/j.apergo.2013.04.003.
+    cached: refs/rf14_korea2013_epmc.json
+  echeverria2026:
+    cite: >-
+      Echeverria-Huarte I, Feliciani C, Shi Z, Nishinari K, Sanchez A, Garcimartin A, Zuriguel I (2026).
+      Individual locomotor bias drives counterclockwise motion in pedestrian crowds. Nature
+      Communications. doi:10.1038/s41467-026-73713-w.
+    cached: refs/echeverria2026_locomotor_bias.html
