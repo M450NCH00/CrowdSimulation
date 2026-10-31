@@ -187,3 +187,27 @@ on SingStat's five-year bands as 10–19, 20–34, 35–64 and 65 and over.
 
 At 100 people `singapore_street_v1` gives, on every seed: 20 aged 65 and over, 3 with a cane, 9
 looking at a phone, 1 with a large suitcase, 50 holding their ground.
+
+## 6. Exactly one person at a factor's level (issue #124, RF-38)
+
+At realistic shares a rule about a rare factor seldom applies: in RF-37's head-on pairs, drawn from a
+crowd of 100, a cane appeared on about 6% of seeds. Section 4's decision 4 answered this with a stress
+crowd beside the realistic one. **The user decided on 2026-10-31** to also test such a rule in meetings
+that do happen in real life, with the rare factor in exactly one person.
+
+`one_with: (factor, level)` (`one_with_people`, quotas only; in a rule-set evaluation scenario,
+`one_with: {mobility_aid: cane}` with a `pool`):
+
+1. The crowd of `pool` is drawn and shuffled exactly as without it (no extra draw, so the people of
+   every other scenario are unchanged).
+2. The person at the level is the crowd's **first holder**, so their age and other factors are as the
+   profile gives them for such people. The others are the crowd's first people **not** at the level.
+3. The holder is agent `seed % n`: in a pair, the end that starts with the factor alternates by seed.
+
+Refused: a factor the profile does not give, a level other than the one whose share it gives, a
+cycling profile, and a crowd with nobody at the level.
+
+**[design] Use a crowd large enough for the factor's ages.** 100 people round to 3 canes, which the
+quotas place in the three largest bands (65 to 79), so no cane user is ever under 65 or 80 and over.
+1,000 people give 35 canes, 3 under 65 and 12 aged 80 and over, close to the profile's 11% and 33%.
+RF-38 uses `pool: 1000`.

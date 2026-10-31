@@ -13,6 +13,8 @@ every rule arm, plain ORCA and Step 1's own agents against them.
     python run_experiment.py configs/rule_set_evaluation/rf37_head_on.yaml        # pairs matched to the studies
     python run_experiment.py configs/rule_set_evaluation/rf37_flow_density.yaml   # the flow at two more sizes
     python -m negsim.human_targets.report                                           # runs/rf37_human_targets/
+    python run_experiment.py configs/rule_set_evaluation/rf38_cane_head_on.yaml   # issue #124: pairs with one cane user
+    python -m negsim.human_targets.report --study rf38                              # runs/rf38_human_targets/ (section 8)
 
 Code: `negsim/human_targets/` (`targets.py`, `measures.py`, `judge.py`, `report.py`). No model is called.
 
@@ -172,3 +174,27 @@ A smallest effect that counts (section 3) was not set with it and stays open.
 - In the realistic crowd, few pairs are two young adults. The report also gives the pass distance
   over all pairs, which in the rule arms and plain ORCA does not depend on age (no round 1 rule
   reads age).
+
+## 8. Pairs with one cane user (issue #124, RF-38)
+
+In RF-37's pairs, drawn from a realistic crowd of 100, a cane appears on about 6% of seeds, so the cane
+rule almost never applied. **The user decided on 2026-10-31** to test a rare rule in meetings that do
+happen, with the rare factor in exactly one person.
+
+- **The draw**: a rule-set evaluation scenario's `one_with: {factor: level}` (`docs/population-profiles.md`,
+  section 6): exactly one person at the level, the crowd's first holder, the other from its people
+  without it; the holder's end alternates by seed. Any factor of the profile can be required; only the
+  cane is run.
+- **The runs**: `rf38_cane_head_on`, RF-37's `head_on` (1.3 m/s, 30 seeds, the same rules and arms) with
+  `pool: 1000` **[design]** (100 people round to 3 canes, all aged 65 to 79; 1,000 give the profile's
+  ages) and `one_with: {mobility_aid: cane}`. Not Huber2014's three speeds: a cane user at 1.78 m/s is
+  not realistic (the user's decision).
+- **The report** (`--study rf38`): the same targets and verdicts; Step 1's subjects are their sessions with
+  exactly one cane user; it adds how often each rule matched and **who adapts in a cane pair** (the other
+  against the cane user: lateral share, slowing, who passed first), described and not judged, since no
+  study read is about a cane.
+
+Results and reading: `runs/rf38_human_targets/findings.md`. In short: the cane rule matched in all 30
+pairs and made the other person give way every time, as Step 1's agents also do; but the pairs pass at
+0.50 m (two bodies touching, as plain ORCA), outside H2, and H7 comes out opposite because the cane user,
+usually older, goes first.

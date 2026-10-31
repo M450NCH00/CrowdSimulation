@@ -59,9 +59,56 @@ No model call; USD 0.
   the issue proposed. Their people come from the screening design, not a realistic crowd; the report says so.
 - Next step: the draw and its tests.
 
+### 2026-10-31 05:44 UTC — The draw, the scenario key, the config; run
+- What I did: `one_with` in `negsim/populations.py` (`Profile.people`, `quota_people`, `one_with_people`,
+  `Profile.check_one_with`) and as a rule-set evaluation scenario key (`negsim/ruleset_eval/experiment.py`:
+  parsed, recorded in `as_dict`, the summary, the report and `--plan` only where given). Config
+  `configs/rule_set_evaluation/rf38_cane_head_on.yaml`. Ran 150 runs, 05:44:11 to 05:44:39 UTC, USD 0.
+- **[design] `pool: 1000`, not RF-37's 100**, found in the first smoke test: with 100 people the quotas
+  give 3 canes, always in the 65–69, 70–74 and 75–79 bands, so every cane user was 65 to 79. The profile
+  gives cane users 11% under 65 and 33% aged 80+; a crowd of 1,000 gives 35 canes, 3 under 65 and 12 aged
+  80+. The user chose "From a real crowd ... other traits at real shares", which 100 would not give.
+  Stated in the config, the docs and the findings.
+- Result (RF-18's measure): the cane rule matched in **30 of 30** pairs (RF-37: about 6%); no change against
+  plain ORCA; no gridlock or collision in any arm. The left-turn rule helps (as in RF-37's pairs).
+
+### 2026-10-31 05:48 UTC — The report, `--study rf38`
+- What I did: the runs `negsim.human_targets.report` reads became a `Study` (`--study rf37`, the default,
+  or `rf38`). RF-38 adds `rule_matches`, `holder_pairs` (who adapts: the other against the cane user) and
+  Step 1's sessions filtered to exactly one cane user.
+- Check: `--study rf37` written to the scratchpad gives `report.md` and `summary.json` **byte for byte** as
+  committed in `runs/rf37_human_targets/`.
+- Result (`runs/rf38_human_targets/report.md`, read in `findings.md`):
+  - the other person moves aside and slows more than the cane user in **30 of 30** pairs under the cane
+    rule; the cane user passes first in 13, together in 17;
+  - Step 1's agents do the same: the other moves aside more 14 to 3, 21 to 2, 12 to 4 (independent,
+    non-verbal, talk);
+  - **H2 outside for every rule arm**: the cane rule 0.50 m (two bodies touching), plain ORCA 0.51, the
+    left-turn rule 1.25, against 0.61 to 0.97; Step 1's agents within (0.93, 0.84) or just outside (0.98);
+  - **H7 opposite (older) for the cane rule**: the cane user, usually older, goes first. Confounded: Knorr
+    2016 studied gender, height and personality, not canes. Left for the user (open question below);
+  - `all_runnable` equals `cane_rule_alone` in cane pairs: the cane rule outranks the left-turn rule.
+- Under the adopted table: the cane rule's verdict of record is still RF-33's harms, it is outside on H2,
+  so it falls in "harms / otherwise", dropped. Nothing was removed from any database.
+
+### 2026-10-31 05:55 UTC — Tests and docs
+- Tests: `tests/test_populations.py` (exactly one holder, alternating end, no extra draw, ages from 1,000
+  against 100, refusals), `tests/test_ruleset_eval.py` (the key's checks, described only where given,
+  RF-38's config is RF-37's `head_on` with only the people changed, a run gives every arm the same pair),
+  new `tests/test_human_target_report.py` (the studies, `holder_pairs` on hand-made pairs, Step 1's
+  filter). The touched modules: 115 passed.
+- Docs: `docs/population-profiles.md` section 6, `docs/rule-set-evaluation.md` section 1.1,
+  `docs/human-targets.md` section 8, both READMEs, `.gitignore` (RF-38's big logs, as RF-37's).
+
 ## Open questions / risks
 
 - The smallest effect that counts in a direction target (RF-37, section 3) is still open.
 - In rule-set evaluation a cane changes only what a rule reads; the cane user walks at 1.3 m/s.
+- **For the user:** H7 counts "older" as a trait that must not decide roles. In cane pairs it is
+  confounded with the cane, which Knorr 2016 did not study. Should a verdict driven by a confounded trait
+  count against a rule under the adopted table?
+- **For the user:** the adopted table puts the cane rule in "dropped". Nothing has been removed.
+- The pass distance of every rule arm is ORCA's (bodies touching). A rule that only says who gives way
+  cannot meet H1 or H2; a margin in the rule, or in the ORCA layer, would be needed.
 
 ## Summary (fill in at the end)
