@@ -177,3 +177,54 @@ def test_a_realistic_profile_cannot_be_a_cycling_mix():
     raw["purpose"] = P.REALISTIC
     with pytest.raises(ConfigError, match="realistic profile gives sourced shares"):
         P.Profile.from_mapping(raw, "test")
+
+
+# --- issue #124 (RF-38): exactly one person at a factor's level -----------------------------------
+
+CANE = ("mobility_aid", "cane")
+
+
+def test_one_with_gives_exactly_one_holder_on_an_end_that_alternates_by_seed(street):
+    for seed in range(30901, 30931):
+        people = street.people(2, seed, pool=1000, one_with=CANE)
+        holders = [k for k, person in people.items() if person["mobility_aid"] == "cane"]
+        assert holders == [seed % 2]
+
+
+def test_one_with_takes_the_crowds_first_holder_and_first_others_without_a_new_draw(street):
+    crowd = street.people(1000, 30905, pool=1000)  # the same crowd, shuffled, before one_with
+    holder = next(p for p in crowd.values() if p["mobility_aid"] == "cane")
+    others = [p for p in crowd.values() if p["mobility_aid"] != "cane"]
+    assert street.people(3, 30905, pool=1000, one_with=CANE) == {0: others[0], 1: others[1], 2: holder}  # 30905 % 3 == 2
+    # without one_with, nothing changes
+    assert street.people(2, 30905, pool=1000) == {0: crowd[0], 1: crowd[1]}
+
+
+def test_one_with_from_a_large_crowd_gives_cane_users_at_the_profiles_ages(street):
+    ages = [p["age"] for seed in range(1, 201) for p in street.people(2, seed, pool=1000, one_with=CANE).values() if p["mobility_aid"] == "cane"]
+    under, over = sum(a < 65 for a in ages) / len(ages), sum(a >= 80 for a in ages) / len(ages)
+    assert 0.03 < under < 0.2 and 0.2 < over < 0.45  # the profile gives 0.11 and 0.33
+    small = {p["age"] for seed in range(1, 201) for p in street.people(2, seed, pool=100, one_with=CANE).values() if p["mobility_aid"] == "cane"}
+    assert min(small) >= 65 and max(small) < 80  # why RF-38 draws from 1,000: 100 people round to 3 canes aged 65 to 79
+
+
+@pytest.mark.parametrize("raw, match", [
+    ({"mobility_aid": "walker"}, "gives the share of 'cane'"),
+    ({"mobility_aid": "none"}, "gives the share of 'cane'"),
+    ({"ethnicity": "malay"}, "not a factor"),
+    ({"mobility_aid": "cane", "load": "large_suitcase"}, "one factor"),
+    ("cane", "one factor"),
+])
+def test_a_bad_one_with_is_refused(street, raw, match):
+    with pytest.raises(ConfigError, match=match):
+        street.check_one_with(raw, "test")
+    assert street.check_one_with({"mobility_aid": "cane"}, "test") == CANE
+
+
+def test_one_with_is_refused_where_it_cannot_hold(street, stress):
+    with pytest.raises(ConfigError, match="quotas"):
+        stress.check_one_with({"mobility_aid": "cane"}, "test")
+    with pytest.raises(ConfigError, match="quotas"):
+        stress.people(2, 1, one_with=CANE)
+    with pytest.raises(ConfigError, match="nobody in this crowd"):
+        street.people(2, 30901, one_with=CANE)  # two people, no pool: no cane in the crowd

@@ -134,15 +134,33 @@ class Profile:
 
     # --- people ----------------------------------------------------------------------------------
 
-    def people(self, n_agents: int, seed: int, repeat: int = 1, rotate: bool = False, pool: Optional[int] = None) -> dict[int, dict[str, Any]]:
-        """The people of one run, the same for every arm on a seed."""
+    def people(self, n_agents: int, seed: int, repeat: int = 1, rotate: bool = False, pool: Optional[int] = None,
+               one_with: Optional[tuple[str, str]] = None) -> dict[int, dict[str, Any]]:
+        """The people of one run, the same for every arm on a seed. ``one_with`` (quotas only): exactly
+        one of them at a factor's level (:func:`one_with_people`)."""
         if self.generator == CYCLE:
+            if one_with is not None:
+                raise ConfigError(f"population {self.source}: one_with needs a profile of quotas")
             from .rulegen.replay import mixed_population
 
             offset = repeat - 1 if rotate else 0
             mixed = mixed_population(offset + n_agents, self.cycle["ages"], self.cycle["genders"], self.cycle["factors"])
             return {k: mixed[offset + k] for k in range(n_agents)}
-        return quota_people(self, n_agents, seed, pool)
+        return quota_people(self, n_agents, seed, pool, one_with)
+
+    def check_one_with(self, raw: Any, where: str) -> tuple[str, str]:
+        """``{factor: level}``, one entry, the level whose share this profile gives (issue #124)."""
+        if self.generator != QUOTAS:
+            raise ConfigError(f"{where}: only with a population of quotas")
+        if not isinstance(raw, Mapping) or len(raw) != 1:
+            raise ConfigError(f"{where}: one factor and its level, e.g. {{mobility_aid: cane}}")
+        (name, level), = raw.items()
+        given = {factor.name: factor.level for factor in self.factors}
+        if name not in given:
+            raise ConfigError(f"{where}: {name!r} is not a factor of {self.source} ({', '.join(given)})")
+        if level != given[name]:
+            raise ConfigError(f"{where}.{name}: {level!r}, but {self.source} gives the share of {given[name]!r}")
+        return str(name), str(level)
 
     def expected(self) -> dict[str, float]:
         """The share of a crowd aged ``OLDER_FROM`` and over, and at each factor's level, as the
@@ -221,7 +239,8 @@ def _cycle(raw: Mapping[str, Any], where: str) -> dict[str, Any]:
     return {"ages": ages, "genders": genders, "factors": factors}
 
 
-def quota_people(profile: Profile, n_agents: int, seed: int, pool: Optional[int] = None) -> dict[int, dict[str, Any]]:
+def quota_people(profile: Profile, n_agents: int, seed: int, pool: Optional[int] = None,
+                 one_with: Optional[tuple[str, str]] = None) -> dict[int, dict[str, Any]]:
     """People at exact shares, the same for every arm on a seed, and different from seed to seed.
 
     1. The ``size`` people (``pool``, or ``n_agents`` if larger) are shared out over the age bands
@@ -234,6 +253,8 @@ def quota_people(profile: Profile, n_agents: int, seed: int, pool: Optional[int]
     4. The people are shuffled onto the agents, and the first ``n_agents`` of them are the run's.
        With ``pool`` above ``n_agents``, a small scenario takes a sample of a crowd at exact shares,
        rather than the same two kinds of person on every seed.
+    5. With ``one_with``, the run's people are chosen from the shuffled crowd by
+       :func:`one_with_people` in place of step 4's first ``n_agents``.
 
     Every draw comes from one random stream named by the profile and the seed, so the same profile
     and seed give the same people (``random.Random`` seeded with a string is the same on every
@@ -268,7 +289,33 @@ def quota_people(profile: Profile, n_agents: int, seed: int, pool: Optional[int]
             for person in band:
                 people[person][factor.name] = factor.level if person in chosen else factor.other
     rng.shuffle(people)
+    if one_with is not None:
+        return one_with_people(people, n_agents, seed, one_with)
     return {k: people[k] for k in range(n_agents)}
+
+
+def one_with_people(crowd: Sequence[dict[str, Any]], n_agents: int, seed: int, one_with: tuple[str, str]) -> dict[int, dict[str, Any]]:
+    """Exactly one of the run's people at a factor's level (issue #124, RF-38; the user's decision of
+    2026-10-31): a meeting that does happen in real life, so that a rule about a rare factor can be
+    judged where it applies.
+
+    From a crowd at exact shares, already shuffled: the person at the level is the crowd's first at it
+    (so their age and other factors are as the profile gives them for such people, a cane mostly at
+    65 and over), and the others are the crowd's first ``n_agents - 1`` not at it. The holder is agent
+    ``seed % n_agents``, so in a pair the end that starts with the factor alternates by seed. No draw
+    is added: the crowd and its random stream are those of :func:`quota_people` without ``one_with``.
+    """
+    name, level = one_with
+    holders = [person for person in crowd if person[name] == level]
+    others = [person for person in crowd if person[name] != level]
+    if not holders:
+        raise ConfigError(f"one_with {name}: {level}: nobody in this crowd of {len(crowd)} is at it; give a larger pool")
+    if len(others) < n_agents - 1:
+        raise ConfigError(f"one_with {name}: {level}: this crowd of {len(crowd)} has {len(others)} people not at it, "
+                          f"{n_agents - 1} are needed; give a larger pool")
+    chosen = others[:n_agents - 1]
+    chosen.insert(int(seed) % n_agents, holders[0])
+    return dict(enumerate(chosen))
 
 
 def counts(people: Mapping[int, Mapping[str, Any]]) -> dict[str, int]:

@@ -120,6 +120,10 @@ class Scenario:
     #: Since issue #112: this scenario's number of paired seeds, in place of the config's ``seeds``
     #: (the user's decision of 2026-10-27: more seeds where a factor is rare).
     seeds: Optional[int] = None
+    #: Since issue #124 (RF-38): exactly one person at a factor's level, ``(factor, level)``, drawn
+    #: from the crowd of ``pool`` (``negsim.populations.one_with_people``; the user's decision of
+    #: 2026-10-31: a rare factor in a meeting that does happen in real life).
+    one_with: Optional[tuple[str, str]] = None
 
     def n_seeds(self, default: int) -> int:
         return self.seeds or default
@@ -229,14 +233,15 @@ class RuleSetEvaluationConfig:
                            **({"scenario_overrides": dict(s.overrides)} if s.overrides else {}),
                            **({"population": s.population, "population_sha256": s.profile.sha256} if s.profile else {}),
                            **({"purpose": s.purpose} if s.purpose else {}), **({"pool": s.pool} if s.pool else {}),
-                           **({"seeds": s.seeds} if s.seeds else {})} for s in self.scenarios],
+                           **({"seeds": s.seeds} if s.seeds else {}),
+                           **({"one_with": {s.one_with[0]: s.one_with[1]}} if s.one_with else {})} for s in self.scenarios],
             "baseline": self.baseline, "seed": self.seed, "seeds": self.seeds, "people": dict(self.people),
             "trajectory_stride": self.trajectory_stride, "alpha": self.alpha, "verdict_rule": self.verdict_rule,
         }
 
 
 def _scenario(entry: Any, where: str) -> Scenario:
-    check_keys(entry, where, ("name", "scenario"), ("rotate_people", "note", "scenario_overrides", "population", "purpose", "pool", "seeds"))
+    check_keys(entry, where, ("name", "scenario"), ("rotate_people", "note", "scenario_overrides", "population", "purpose", "pool", "seeds", "one_with"))
     rotate = as_bool(entry.get("rotate_people", False), f"{where}.rotate_people")
     purpose = as_choice(entry["purpose"], f"{where}.purpose", P.PURPOSES) if "purpose" in entry else None
     population, profile, pool = entry.get("population"), None, None
@@ -253,9 +258,14 @@ def _scenario(entry: Any, where: str) -> Scenario:
             raise ConfigError(f"{where}.pool: only with a population of quotas")
         pool = int(as_number(entry["pool"], f"{where}.pool", minimum=1))
     seeds = int(as_number(entry["seeds"], f"{where}.seeds", minimum=1)) if "seeds" in entry else None
+    one_with = None
+    if "one_with" in entry:
+        if profile is None or pool is None:
+            raise ConfigError(f"{where}.one_with: only with a population of quotas and a 'pool' to draw from")
+        one_with = profile.check_one_with(entry["one_with"], f"{where}.one_with")
     return Scenario(
         str(entry["name"]), str(entry["scenario"]), rotate, str(entry.get("note", "")), dict(entry.get("scenario_overrides") or {}),
-        None if population is None else str(population), profile, purpose, pool, seeds,
+        None if population is None else str(population), profile, purpose, pool, seeds, one_with,
     )
 
 
@@ -361,7 +371,7 @@ def runs(config: RuleSetEvaluationConfig, experiment_dir: Path) -> list[Run]:
             if scenario.profile is None:
                 given = people_for(config, n_agents, plan.repeat, scenario.rotate_people)
             else:
-                given = scenario.profile.people(n_agents, plan.seed, plan.repeat, scenario.rotate_people, scenario.pool)
+                given = scenario.profile.people(n_agents, plan.seed, plan.repeat, scenario.rotate_people, scenario.pool, scenario.one_with)
             people = population_of(given, f"{scenario.name}_r{plan.repeat}")
             for arm in (None, *config.arms):
                 name = PLAIN if arm is None else arm.name
@@ -431,6 +441,7 @@ def summarise(
             keys = [key for key in (per_seed[0] if per_seed else {}) if key != "seed"]
             scenarios[scenario.name]["population"] = {
                 **scenario.profile.describe(), **({"pool": scenario.pool} if scenario.pool else {}),
+                **({"one_with": {scenario.one_with[0]: scenario.one_with[1]}} if scenario.one_with else {}),
                 "mean_per_seed": {key: _mean([row[key] for row in per_seed]) for key in keys}, "per_seed": per_seed,
             }
     purposes = {s.purpose for s in config.scenarios if s.purpose}
@@ -498,6 +509,12 @@ def _num(value: Any) -> str:
     return "–" if value is None else (f"{value:g}" if isinstance(value, (int, float)) else str(value))
 
 
+def _with(one_with: Mapping[str, str]) -> str:
+    """``{mobility_aid: cane}`` as "person with mobility_aid cane"."""
+    (name, level), = one_with.items()
+    return f"person with {name} {level}"
+
+
 def report_markdown(config: RuleSetEvaluationConfig, summary: Mapping[str, Any], copied: Sequence[Mapping[str, Any]]) -> str:
     lines = [f"# {config.experiment_name}: the rule set against plain ORCA", "",
              "Machine-written by `negsim.ruleset_eval` (issue #74, RF-18). Method: `docs/rule-set-evaluation.md`. "
@@ -537,7 +554,9 @@ def report_markdown(config: RuleSetEvaluationConfig, summary: Mapping[str, Any],
             pop = s["population"]
             mean = ", ".join(f"{k} {_num(v)}" for k, v in pop["mean_per_seed"].items())
             lines += [f"People: `{pop['file']}` ({pop['purpose']}, {pop['generator']}"
-                      + (f", the first of a crowd of {pop['pool']} at exact shares" if pop.get("pool") else "") + f"). Per seed, mean: {mean}.", ""]
+                      + (f", the first of a crowd of {pop['pool']} at exact shares" if pop.get("pool") and not pop.get("one_with") else "")
+                      + (f", exactly one {_with(pop['one_with'])} drawn from a crowd of {pop['pool']} at exact shares, the others from its people without"
+                         if pop.get("one_with") else "") + f"). Per seed, mean: {mean}.", ""]
         lines += ["| Arm | Severe conflicts | Collisions | Throughput /min | Delay s | Gridlocked | Rule matches | ms/step | Left / right |",
                   "| --- | --- | --- | --- | --- | --- | --- | --- | --- |"]
         for arm_name, entry in s["arms"].items():
@@ -650,7 +669,9 @@ def print_plan(config: RuleSetEvaluationConfig, out: Callable[[str], None] = pri
         what = ", ".join(arm.rules) if arm.rules else f"{arm.database}:{arm.ruleset}"
         out(f"  arm {arm.name}: {what}{'' if arm.judged else ' (reference, not judged)'}")
     for scenario in config.scenarios:
-        people = f", people {scenario.population}" + (f" (the first of {scenario.pool})" if scenario.pool else "") if scenario.population else ""
+        people = f", people {scenario.population}" + (f" (the first of {scenario.pool})" if scenario.pool and not scenario.one_with else "") if scenario.population else ""
+        if scenario.one_with:
+            people += f" (exactly one {_with({scenario.one_with[0]: scenario.one_with[1]})}, from a crowd of {scenario.pool})"
         out(f"  scenario {scenario.name}: {scenario.file}{' (people rotate over the seeds)' if scenario.rotate_people else ''}"
             f"{people}{f', {scenario.purpose}' if scenario.purpose else ''}{f', {scenario.seeds} seeds' if scenario.seeds else ''}")
 
