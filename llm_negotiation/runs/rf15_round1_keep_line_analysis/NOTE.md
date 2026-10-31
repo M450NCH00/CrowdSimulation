@@ -14,6 +14,12 @@ are RF-29's re-execution of RF-10's independent sessions and RF-30's non-verbal 
 288 sessions as RF-30's pooled gate. RF-10's own `analysis/` (under `as_prompted`, which undid sidesteps) is
 unchanged.
 
+**`mapping_compact.csv`**: the same command with `--mapping-factors
+own_assertiveness,knows_other,finds_other_attractive,own_mobility_aid`, the four factors with an effect
+that survives Holm's correction in `report.md`, section 1 (chosen by that rule before looking at the
+mapping). Every other output of that run is identical to this folder's, so only its mapping is kept. The
+full `mapping.csv` has 402 combinations, 330 of them seen once, too sparse to read as a lookup table.
+
 The intent-against-plan check (section 7) covers non-verbal and talk only: the re-execution folder has no
 `decisions.jsonl`. The independent sessions' intents and plans are RF-10's, word for word, so RF-10's figure
 for them stands (`../rf10_round1_head_on/analysis/report.md`, section 7: 55 of 163, 0.337).
