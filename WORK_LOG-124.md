@@ -100,6 +100,10 @@ No model call; USD 0.
 - Docs: `docs/population-profiles.md` section 6, `docs/rule-set-evaluation.md` section 1.1,
   `docs/human-targets.md` section 8, both READMEs, `.gitignore` (RF-38's big logs, as RF-37's).
 
+### 2026-10-31 06:27 UTC — Full suite
+- Full suite (started 05:52 UTC, 35 min): **2272 passed, 10 skipped** (RF-37's 2251 + 21 new). The
+  `analysis/` package is untouched and was not rerun.
+
 ## Open questions / risks
 
 - The smallest effect that counts in a direction target (RF-37, section 3) is still open.
@@ -112,3 +116,13 @@ No model call; USD 0.
   cannot meet H1 or H2; a margin in the rule, or in the ORCA layer, would be needed.
 
 ## Summary (fill in at the end)
+
+- **What changed:** `one_with` (exactly one person at a factor's level, drawn from a realistic crowd) in
+  `negsim/populations.py` and rule-set evaluation scenarios; `configs/rule_set_evaluation/rf38_cane_head_on.yaml`
+  (RF-37's `head_on` with one cane user, `pool: 1000`); `negsim.human_targets.report --study rf38` (rule matches,
+  who adapts in a cane pair, Step 1's one-cane sessions). The promotion table adopted (`docs/human-targets.md`, 6).
+- **Result:** the cane rule applied in 30 of 30 pairs and the other person gave way in every one, as Step 1's
+  agents also do; but every rule arm passes at ORCA's 0.50 m, outside H2; H7 opposite through the cane-age
+  confound. Under the adopted table the cane rule is dropped (nothing removed).
+- **Verified:** RF-37's report and summary regenerate byte for byte; earlier configs are described as before
+  (tested); full suite 2272 passed, 10 skipped. No model call, USD 0.
