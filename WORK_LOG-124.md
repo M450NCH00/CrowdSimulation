@@ -154,6 +154,8 @@ No model call; USD 0.
   outcomes (only the cane is run).
 - Check: RF-37's report and summary, and RF-38's summary, regenerate byte for byte; RF-38's report changes
   in that one sentence only. The two test modules: 22 passed.
+- Full suite (13:41 to 14:14 UTC): **2280 passed, 10 skipped** (2272 + 8 new since: 5 for the held-fixed
+  checks and the `fisher` move, 3 for the review's fixes). Then pushed and merged at the user's request.
 
 ## Open questions / risks
 
