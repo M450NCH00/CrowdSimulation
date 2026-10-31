@@ -198,3 +198,14 @@ Results and reading: `runs/rf38_human_targets/findings.md`. In short: the cane r
 pairs and made the other person give way every time, as Step 1's agents also do; but the pairs pass at
 0.50 m (two bodies touching, as plain ORCA), outside H2, and H7 comes out opposite because the cane user,
 usually older, goes first.
+
+**H7 with the cane held fixed** (added 2026-10-31 at the user's request; described beside H7's verdict,
+which it does not replace). `judge.not_predicted_by_traits_given` **[design]** keeps H7's sign test for
+pairs the factor does not separate. For pairs with one holder, it asks whether the holder goes first as often
+when a trait is on the holder's side as when it is on the other's (Fisher's exact test, moved unchanged to
+`ruleset_eval.verdicts`). A trait whose pairs all fall on one side is reported as not separable and not
+counted. `judge.holder_younger` gives who went first when the holder is the younger, by years and by
+age group. For the cane rule, H7 becomes "agrees" with age and gender not separable. For Step 1's
+non-verbal agents, "opposite (assertiveness)" becomes "agrees" with assertiveness not separable.
+No pair has a cane user under 65 meeting someone 65 or over. Whether H7 is judged this way in cane pairs is
+the user's decision; until then, H7 as recorded is used.

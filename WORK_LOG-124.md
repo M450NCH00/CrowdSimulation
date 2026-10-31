@@ -104,13 +104,37 @@ No model call; USD 0.
 - Full suite (started 05:52 UTC, 35 min): **2272 passed, 10 skipped** (RF-37's 2251 + 21 new). The
   `analysis/` package is untouched and was not rerun.
 
+### 2026-10-31 13:13 UTC — H7 with the cane held fixed (the user's follow-up)
+- What I did: the user asked what "age standing in for the cane" means, then asked for both checks I
+  suggested: (1) who goes first when the cane user is the younger; (2) H7's check with the cane counted as
+  a known factor. Added `judge.holder_younger` and `judge.not_predicted_by_traits_given` **[design]**
+  (sign test for pairs the cane does not separate; Fisher's exact test for pairs with one cane user, trait
+  on the cane user's side or the other's; a trait whose pairs all fall on one side is "not separable",
+  not counted). `fisher` moved unchanged from `resolution/groups.py` to `ruleset_eval/verdicts.py` (groups
+  re-exports it), so the judge does not import the experiment stack. `report --study rf38` shows both
+  beside H7's row; **H7's verdict of record is unchanged**.
+- Why the Fisher form, not a sign test on the pairs where trait and cane point at different people: there,
+  the cane user going first would make the trait look significant the other way, which is still the cane.
+  The question is whether the trait shifts who goes first once the cane is fixed.
+- Check: `--study rf37` written to the scratchpad is byte for byte as committed; RF-38's summary keeps every
+  earlier key unchanged and adds `h7_known_factor` and `holder_younger`.
+- Result (`findings.md`, new section): the cane rule's H7 becomes "agrees" with **age and gender not
+  separable** (every pair differing in age group has the older person holding the cane; every pair
+  differing in gender with a first has a male cane user). By years, a younger cane user still went first in
+  4 of 6 pairs, the other never. **No pair has a cane user under 65 meeting someone 65 or over**, so age
+  apart from the cane is not tested. Also found: Step 1 non-verbal's "opposite (assertiveness)" is the same
+  kind of confound (in its one-cane resolved sessions, the one holding ground is always the cane user).
+
 ## Open questions / risks
 
 - The smallest effect that counts in a direction target (RF-37, section 3) is still open.
 - In rule-set evaluation a cane changes only what a rule reads; the cane user walks at 1.3 m/s.
 - **For the user:** H7 counts "older" as a trait that must not decide roles. In cane pairs it is
   confounded with the cane, which Knorr 2016 did not study. Should a verdict driven by a confounded trait
-  count against a rule under the adopted table?
+  count against a rule under the adopted table? *Since 13:13 UTC:* the two checks support the confound
+  reading but cannot clear age (no pair separates it from the cane). Testing age apart from the cane would
+  need pairs with a cane user under 65 meeting someone 65 or over: a design choice, not a realistic draw.
+- Whether RF-10's screening design pairs "holds ground" with the cane on purpose was not checked.
 - **For the user:** the adopted table puts the cane rule in "dropped". Nothing has been removed.
 - The pass distance of every rule arm is ORCA's (bodies touching). A rule that only says who gives way
   cannot meet H1 or H2; a margin in the rule, or in the ORCA layer, would be needed.

@@ -52,11 +52,64 @@ apply to the rule arms: no pair has two young adults.
 4. **H7 "opposite (older)" here is the cane, not age.** The rule lets the cane user go first, and the cane
    users are mostly older, so "older" predicts who goes first. Knorr et al. 2016 studied gender, height and
    personality, not mobility aids. Under the adopted promotion table this verdict still counts against the
-   rule; whether a confounded trait should count is a question for the user.
+   rule; whether a confounded trait should count is a question for the user. The two checks below (added
+   the same day) test this.
 5. **In a cane pair the left-turn rule never acts** when both rules are on: the cane rule outranks it
    (priority 600, the user's choice of 2026-10-27), so `all_runnable` equals `cane_rule_alone` here.
 6. **The keep-left defaults also make the other give way** (24 to 6), through their younger-yields rule,
    because the cane user is usually the older one.
+
+## H7 with the cane held fixed (added 2026-10-31, at the user's request)
+
+Two checks of finding 4, on the same runs (no new run, no model call). Both are in `report.md` beside H7's
+row, which they do not replace: H7's verdict of record is unchanged.
+
+**1. When the cane user is the younger, who goes first?** If age decided, the other would.
+
+| Subject | Cane user younger by years: cane user / other / together | Younger by age group (under 65 against 65+) |
+| --- | --- | --- |
+| Cane rule (alone, or with the left-turn rule) | 6 pairs: **4 / 0 / 2** | no pair |
+| Plain ORCA, left-turn rule, keep-left defaults | 6 pairs: 0 / 0 / 6 | no pair |
+| Step 1's agents | no pair (the other is always 25) | no pair |
+
+In all 30 cane-rule pairs the other person never goes first, whatever the ages. Where the cane user is the
+younger by years (for example 71 against 80, 38 against 51), the cane user still goes first in 4 of 6 and
+passes together in 2. But **by the targets' age groups, which H7 uses, no pair has a cane user under 65 and
+the other 65 or over**: the realistic crowd's 3 younger cane users met people aged 19 to 51. So this is
+evidence by years, not a test of H7's own "older".
+
+**2. H7's check with the cane held fixed** (`judge.not_predicted_by_traits_given`, **[design]**). For each
+trait, pairs where both or neither have a cane keep H7's sign test. In pairs with one cane user, the trait
+is either on the cane user's side or on the other's; if the trait adds nothing to the cane, the cane user
+goes first equally often either way (Fisher's exact test). If every pair is on one side, the trait cannot be
+told apart from the cane and is not counted. Bonferroni over all the tests made.
+
+| Subject | H7 as recorded | With the cane held fixed | Not separable from the cane |
+| --- | --- | --- | --- |
+| Cane rule (alone, or with the left-turn rule) | opposite (older) | agrees (assertiveness only: the cane user first 4 of 4 and 2 of 2, p 1) | older, gender |
+| Step 1, independent | agrees | agrees (gender, p 0.24) | assertiveness, older |
+| Step 1, non-verbal | **opposite (assertiveness)** | agrees (gender, p 0.18) | assertiveness, older |
+| Step 1, talk | agrees | agrees (gender, p 0.40) | assertiveness, older |
+
+What this shows:
+
+- **The cane rule's "opposite" goes away once the cane is held fixed, but age is not cleared.** Every pair
+  that differs in age group has the older person holding the cane, so these runs cannot say whether age
+  matters apart from the cane. The "agrees" rests on assertiveness alone (6 pairs).
+- **Gender was confounded too.** In the 6 cane-rule pairs that differ in gender and have a first, the cane
+  user is the man every time. H7 as recorded gave gender p 0.031, just over its Bonferroni threshold
+  (0.0167).
+- **Step 1's non-verbal "opposite (assertiveness)" is the same kind of confound.** In Step 1's one-cane
+  sessions that resolved, the other person always gives way, so whenever the two differ in assertiveness the
+  cane user is the one who holds ground. Assertiveness cannot be told apart from the cane there either.
+  (Whether RF-10's screening design pairs them on purpose was not checked.)
+
+**For the user:** the checks support reading finding 4 as a confound, and suggest the same for Step 1's
+non-verbal row. They cannot show that age plays no part: no pair separates the two. Whether H7 should be
+judged with the cane held fixed, as recorded, or set aside for cane pairs is still the user's decision. Until
+then the promotion table below uses H7 as recorded. A run that could test age apart from the cane would need
+pairs with a cane user under 65 meeting someone 65 or over: a design choice (`one_with` with an age
+condition), not a realistic crowd's draw.
 
 ## Under the promotion table adopted on 2026-10-31
 
