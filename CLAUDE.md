@@ -128,6 +128,8 @@ Budget:
   the pilot).
   Topped up by the user before issue #127's run (the user: "I have topped up up to 5 us dollar"):
   **USD 5.17**, checked 2026-11-01 (5.17 topped up, 0.00 granted).
+  After issue #127's run with its pilot (USD 0.9885 in the ledger, cap 1.60): **USD 4.18**,
+  checked 2026-11-01.
 
 ### Phase 1 (on hold): the behaviour dataset
 The task from the first supervisor meeting, on hold since the second meeting.

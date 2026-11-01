@@ -198,12 +198,79 @@ a pilot (`--limit 24`), read its replays for sidesteps and later decisions, then
 - Decision [mine, within the approved plan]: the pilot shows nothing to fix; run the remaining 792
   sessions now (Sunday, off-peak until Monday 01:00 UTC), `stop_at_cap`.
 
+### 2026-11-01 07:13 UTC — `analysis.sidestep_reprompt` (while the run went on)
+- The gate, `lateral` and `compare` count first runs only (`design_rows`), right for pairing with RF-29
+  and RF-30 but blind to repeats 2 to 4. New module for RF-39's two questions: the first plans' kind
+  (a dance or not) and how many of each resolved, per condition (Fisher's exact); how a dance ended
+  (who changed side, a side said or pointed to); the first side across a cell's 4 repeats against a
+  weighted coin (chi-square, df 1); the side against the room in the first prompt and the debrief's
+  `side_basis`. Standard library only, 6 tests (Fisher checked against R's values); the analysis suite
+  90 passed. Rehearsed on the mock run (20 s for 816 sessions).
+
+### 2026-11-01 10:17 UTC — The run finished (816 of 816, USD 0.988492)
+- Last call 10:17 UTC; 5,753 calls (4,151 decisions, 1,602 debriefs), all off-peak, no error, no
+  upper-bound cost. Cap USD 1.60; the mock's estimate 1.08, the pilot's projection 1.07.
+- Balance **USD 4.18** (5.17 before; the difference is the ledger's to the cent). Recorded in `CLAUDE.md`.
+- Calls a session: independent 4.03, non-verbal 8.59, talk 8.54 (the mock: 4.11, 11.14, 11.43).
+- Unreadable after the retry: independent 29 of 544 (RF-29: 2 of 192), non-verbal 57 of 1,705, talk
+  26 of 1,738; debriefs 0 of 1,602.
+
+### 2026-11-01 11:40 UTC — Analysis
+- Ran `analysis.gate`, `analysis.lateral`, `analysis.compare` (RF-30 non-verbal and talk, RF-29
+  independent, and readable-only), `analysis.sidestep_reprompt` and the factor report
+  (`python -m analysis`). Written up in `runs/rf39_round1_head_on_sidestep_reprompt/comparison_report.md`.
+- **Found: the model's fingerprint changed.** RF-29 and RF-30 (2026-10-25): `e72d3c7f…`; RF-32 (10-28)
+  onward, this run included: `bc19ba97…` (checked in each run's session records). Same model name and
+  listed version. Not recorded before. The comparisons with RF-29/30 change the model too; RF-39's
+  own comparisons between conditions do not.
+- **`compare.py`'s stability line is not comparable here** (it counts shared sessions, mostly one run a
+  cell: "58 of 64"). Left as is; the report says so and uses the 4-repeat stability instead.
+- Main results (the report has the tables): a second chance rescues 47 of 120 (non-verbal) and 41 of 124
+  (talk) dances at the start, against 0 of 90 in independent; one agent changes side in 74 of the 88
+  rescues, nobody in 118 of the 156 failures. The side: the same in all 4 repeats 0.30 / 0.29 against a
+  coin's 0.13 / 0.15 (non-verbal, talk; independent within a coin); visitors from the US go right; no
+  factor predicts resolution. "More room" (39% of answers) does not predict the side (0.53 in the
+  layout where it is defined); visitors name a custom in 4 of 377. Gate on first runs 92 of 192 (0.48),
+  fails narrowly; RF-30 passed at 0.53.
+- Read examples (for the report's claims): in the 20 cm layout "more room" is read both ways ("kept me
+  in the wider gap" / "kept me tight to the wall and left the wider space on his side"); in talk the
+  speaker names its own side ("I'll keep to my left, plenty of room") and the other does not switch;
+  one agent "plenty of room on your right" from that same side.
+- Coding choices [mine]: a message "names a side" if it has the word `left` or `right`; "more room" is
+  a wall at least 5 cm farther; "changed side" is a later readable decision with the other side.
+- Run folder: 225 MB. As RF-35 and RF-36, the two interaction logs (13 MB, rebuilt from the session
+  records) are gitignored; session records, transcripts, events and trajectories are committed.
+
 ## Open questions / risks
 - ~~For the user: the scale, the execution, the meaning of `[]`, and the cap.~~ Decided 2026-11-01 (above).
-- Prices were last checked 2026-10-26 (`configs/llm/deepseek_pricing.yaml`): re-check before paying.
-- The mock never sidesteps, so the rehearsal checks bookkeeping and call counts, not behaviour; the
-  pilot's replays must be read for sidesteps and later decisions before the rest is paid for.
-- Repeat 1 pairs with RF-30 by session, but RF-30 ran under `keep_line` and `resolve_v6`: the
-  comparison changes two things, the template and (for later decisions only) the execution.
+- ~~Prices were last checked 2026-10-26~~: re-checked 2026-11-01, unchanged.
+- ~~The mock never sidesteps~~: the pilot's replays were read (sidesteps in 132 of 145 decisions).
+- Repeat 1 pairs with RF-30 by session, but RF-30 ran under `keep_line` and `resolve_v6`, with 3
+  decision points, **and on another model fingerprint**: the comparison changes four things at once.
+- For the user: whether the fingerprint change (from RF-32 on) should be noted in the earlier reports
+  (RF-32 to RF-36) and in `docs/round1-results.md`, whose round 1 numbers come from both.
+- For the user: the gate is at its threshold (0.48 here, 0.53 in RF-30). Whether head-on "passes"
+  Step 1 is a judgement on a rate of about one half, not a clear pass or fail.
+- The keyword coding (a side named, "more room" at 5 cm) is mine and unchecked by a second reader.
 
-## Summary (fill in at the end)
+## Summary
+**What changed:** RF-39's config (`resolve_v8` in all three conditions, every cell 4 times,
+`keep_line_replan`, 6 decision points, `resolve_debrief_v2`), the executor fix `keep_line_replan`, the
+debrief's side question, `analysis.sidestep_reprompt`, and the paid run (816 sessions, USD 0.988 of
+the USD 1.60 cap) with its report.
+
+**Why:** to see whether a second chance ends the pavement dance (round 1's main failure) and whether
+the side an agent takes is a preference or a coin flip.
+
+**Results:** a second chance rescues about a third of dances (0.39 non-verbal, 0.33 talk; 0 with one
+decision), by one agent changing side; overall 0.59 against 0.36. The side is a weak, person-level
+preference (US visitors right; assertive, hurried right; older left) that the agents' stated reasons do
+not match. No factor predicts resolution. Gate 0.48 (fails narrowly). No paired difference from RF-30
+or RF-29, on a changed model fingerprint.
+
+**Verified:** 21 RF-39 tests and the 276 in the files the changes touch (before the run); `test_llm.py`
+after the price date; the analysis suite (90 passed, the new module's 6 among them); with the run folder staged,
+`test_repo_hygiene`, `test_resolution`, `test_avoidance_runs` and `test_rf39_sidestep_reprompt`: 180
+passed (29 min). The report's numbers
+were re-read against `analysis/*.md` and the scripts' output (three corrections: the debriefs' base
+1,536, "most" of the gain, the residence counts' base). The full negsim suite (about 33 min) was not run.

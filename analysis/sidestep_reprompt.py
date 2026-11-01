@@ -265,6 +265,13 @@ def summarise(sessions: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     return out
 
 
+def _p(p: Optional[float]) -> str:
+    """A p value as text: ``< 0.0001`` where rounding would show 0."""
+    if p is None:
+        return "n/a"
+    return "< 0.0001" if p < 0.0001 else f"= {p:.4f}"
+
+
 def _shown(rate: Mapping[str, Any]) -> str:
     if not rate["n"]:
         return "0 / 0"
@@ -285,7 +292,7 @@ def markdown(summary: Mapping[str, Any]) -> str:
     for c, starts in summary["start"].items():
         lines.append(f"| {c} | " + " | ".join(_shown(starts[kind]) for kind in SIDESTEPS) + " |")
     for c, p in summary["dance_vs_independent"].items():
-        lines.append(f"\nA dance at the start, resolved in {c} against independent: Fisher's exact p = {p}.")
+        lines.append(f"\nA dance at the start, resolved in {c} against independent: Fisher's exact p {_p(p)}.")
     lines += ["", "## 3. How a dance at the start ended (non-verbal and talk)", "",
               "| Condition | Ended | Sessions | Changed side: none / one / both | A message names a side | Someone pointed | Decision points (median) | When level: own same side / same wall / not both aside |",
               "| --- | --- | --- | --- | --- | --- | --- | --- |"]
@@ -308,7 +315,7 @@ def markdown(summary: Mapping[str, Any]) -> str:
         if name == "left_out" or not s.get("units"):
             continue
         counts = " / ".join(str(s["right_of_4"][k]) for k in range(5))
-        lines.append(f"| {name} | {s['units']} | {counts} | {s['share_right']:.2f} | {s['all_one_way_share']:.2f} ({s['all_one_way_expected_share']:.2f}) | {s['chi2']}, {s['p']} |")
+        lines.append(f"| {name} | {s['units']} | {counts} | {s['share_right']:.2f} | {s['all_one_way_share']:.2f} ({s['all_one_way_expected_share']:.2f}) | {s['chi2']}, p {_p(s['p'])} |")
     lines += ["", "## 6. The first side against the room each agent was told it had", "",
               f"More room: a wall at least {ROOM_M * 100:.0f} cm farther on one side in the first prompt.", "",
               "| Geometry | Took the more-room side | Took the less-room side | Neither side had more room |", "| --- | --- | --- | --- |"]
