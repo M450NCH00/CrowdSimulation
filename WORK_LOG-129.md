@@ -81,6 +81,19 @@ meant a conversation: the simulation pauses, A is asked, B hears all of A's mess
   rulegen describe and cases): 277 passed, 1 failed, the known one: `test_ethnicity`'s list of configs
   written after #92 needed the new config. Added; passes.
 
+### 2026-11-01 — Mock rehearsal (`runs_mock/rf40/`, 816 of 816)
+- Sessions finished 13:46 UTC; replays and tables after. `outcomes.csv` has `first_asked`: person 1 in
+  every session of repeats 1 and 3 (192 each), person 2 in repeats 2 and 4, person 1 in all 48 pair
+  sessions.
+- Calls a session: silent 9.99, non-verbal 11.25, talk 11.31 (at most 17). In 399 non-verbal and 431
+  talk pauses the second agent was asked because of the first's signal or message. Silent made no
+  signal and said nothing. Every heard message from someone in view carried the note (36, all facing).
+- **Hearing range:** of the mock's 113 talk utterances, 56 were heard by nobody (out of range). In a
+  paused exchange a message is said when the agent decides, often 9 to 10 m away. For the user.
+- **Cost** (off-peak, RF-39's measured cost a call: non-verbal USD 0.000174, talk 0.000180; silent
+  costed as non-verbal): the mock's calls give **USD 1.56**; scaled by RF-39's real calls against its
+  mock's (0.77, 0.75), **USD 1.19**. Recommended cap **USD 1.80**, a pilot first. Balance USD 4.18.
+
 ## Open questions / risks
 - **Hearing range in the pause** (for the user): a message is heard only within 8.9 m (quiet) or
   3.2 m (busy), as D2 says. At the first decision (about 9 to 10 m apart) a message in a busy cell is
