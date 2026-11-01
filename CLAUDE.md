@@ -304,7 +304,10 @@ used in this track). Numbers in brackets are the decisions of track issue #55.
      experiment's own calls (`experiment_name: rf39_round1_head_on_sidestep_reprompt`; 816 sessions, about
      USD 0.77 to 0.86 off-peak from RF-29's and RF-30's measured costs, a pilot first, `WORK_LOG-127.md`).
      The user's words: "Approve cap of USD 1.20, but do not do the run first as I have not top up the
-     money": no paid call until the user says the balance has been topped up.
+     money": no paid call until the user says the balance has been topped up. *The same day* the user
+     raised the cap to **USD 1.60** (answering "Raise to USD 1.60"), after the limit of decision points
+     went from 3 to 6 and the debrief gained a question (`resolve_debrief_v2`): about USD 1.08 off-peak
+     on the mock's calls. The top-up condition still holds.
 2. **Approved by the supervisor, 2026-10-24** — Ethics sign-off for perceived
    attractiveness as a factor (#55, 3). *The user decided on 2026-10-24* that
    attractiveness (both directions) is **in** RF-10's design, because bias can

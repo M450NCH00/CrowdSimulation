@@ -140,7 +140,7 @@ def test_rf39s_config_is_rf30s_sessions_with_resolve_v8_all_three_conditions_and
     changed = ("execution", "max_decision_points")
     assert {k: v for k, v in new.protocol.as_dict().items() if k not in changed} == {k: v for k, v in rf30.protocol.as_dict().items() if k not in changed}
     assert new.llm == rf30.llm and new.resolution_gate == rf30.resolution_gate
-    assert new.budget["cap_usd"] == 1.20 and new.budget["over_cap"] == "stop_at_cap"  # the cap CLAUDE.md records for #127
+    assert new.budget["cap_usd"] == 1.60 and new.budget["over_cap"] == "stop_at_cap"  # the cap CLAUDE.md records for #127
     sessions = E.plan(new).sessions
     assert len(sessions) == 816
     for condition in new.conditions:

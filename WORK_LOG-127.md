@@ -154,7 +154,8 @@ a pilot (`--limit 24`), read its replays for sidesteps and later decisions, then
   (was 8.69); at most 15. All 1,554 debriefs read, with a side basis (the mock's two answers).
 - Cost at the measured cost a call: 0.14 + 0.45 + 0.49 = **about USD 1.08 off-peak** (the side
   keys add about 30 output tokens a debrief, a few per cent). USD 1.20 would leave about 10%.
-  Recommended cap: **USD 1.60**, pending the user's approval.
+  Recommended cap: **USD 1.60**. **The user raised the cap to USD 1.60** (recorded in `CLAUDE.md`) and
+  answered "Wording is fine" to `resolve_debrief_v2`'s question. The top-up condition still holds.
 
 ## Open questions / risks
 - ~~For the user: the scale, the execution, the meaning of `[]`, and the cap.~~ Decided 2026-11-01 (above).
