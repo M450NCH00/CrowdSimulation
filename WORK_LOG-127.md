@@ -168,6 +168,36 @@ a pilot (`--limit 24`), read its replays for sidesteps and later decisions, then
   order the first 24 were 3 independent, 11 non-verbal, 10 talk).
 - Next: the pilot, `--client deepseek --confirm --limit 24`, then read its replays.
 
+### 2026-11-01 07:02 UTC — Pilot (24 sessions, USD 0.0370, off-peak)
+- 2 independent, 13 non-verbal, 9 talk; no transport error, no session aborted.
+- **Sidesteps:** 132 of 145 readable decisions use one; first plans pick left 25, right 22.
+- **Later decisions:** 33 agents were asked a second time, 14 a fifth time, 4 a sixth (the new limit).
+  Commonest reasons: the other's signal (64), `plan_failing` (57), the other slowing (46), moving
+  aside (50).
+- **Pavement dance survives the second chance in these sessions:** in the collisions read
+  (`N_..e57e5fb0_r1`, `T_..1caa9a84_r1`, `N_..7eed7b59_r1`), one agent sidesteps to its right and
+  the other to its left (the same wall), and each keeps its own side for 5 or 6 decisions, both
+  ending against that wall, "straight ahead" of each other, until they collide. Talk did not break it
+  either: "plenty of room on your right" / "I'll keep to my right" (both meaning the same wall). This
+  is what the run is to measure, not a fault; the full run says how often.
+- **Executor:** the line is kept across later decisions (agent 0 in `T_..1caa9a84_r1`: right wall
+  0.87, 0.37, 0.25 m at decisions 2, 3, 5). The second prompt reports the own move ("Since then you
+  have moved 0.5 m over to your right.").
+- **What an agent is told about the other's move aside:** only within 5 m (the detail range, D-design
+  of `resolution.md`), as in RF-30: "Since you last looked, they have moved over to your right"
+  appears 14 times. A prompt triggered by `other_moved_*` farther away does not say it. Not changed
+  (the perception design, and the comparison with RF-30), but worth a line in the report.
+- **Unreadable:** 2 of 147 decisions after the one retry (`until: {"event": "other_passes"}`);
+  4 retries in 197 calls (RF-30: 23 in 1,446).
+- **Debriefs:** 48 of 48 read. `side_basis`: more room 20, where they were 18, either side 5, what
+  they did 3, custom or rule 2. The details are concrete (wall distances, the other's position).
+- **Resolved by the LLM:** non-verbal 9 of 13, talk 6 of 9, independent 0 of 2 (too few to read).
+- **Cost:** per session independent USD 0.00071, non-verbal 0.00160, talk 0.00164; calls a session
+  8.7 and 8.4 (the mock: 11.1 and 11.4), at USD 0.00019 a call (RF-30: 0.00015). Projected for 816:
+  **about USD 1.07**, inside the USD 1.60 cap.
+- Decision [mine, within the approved plan]: the pilot shows nothing to fix; run the remaining 792
+  sessions now (Sunday, off-peak until Monday 01:00 UTC), `stop_at_cap`.
+
 ## Open questions / risks
 - ~~For the user: the scale, the execution, the meaning of `[]`, and the cap.~~ Decided 2026-11-01 (above).
 - Prices were last checked 2026-10-26 (`configs/llm/deepseek_pricing.yaml`): re-check before paying.
