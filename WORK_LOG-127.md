@@ -254,6 +254,17 @@ a pilot (`--limit 24`), read its replays for sidesteps and later decisions, then
   second placeholder; agents talking late and in long, greeting-first sentences (a template change
   would be a new version).
 
+### 2026-11-01 — Talk as built against the user's intent; RF-40 opened (#129)
+- The user's intended talk design: the simulation pauses, A is asked, B hears A's full message and
+  answers. As built (RF-3, #58): both asked on the same state, speech takes simulated time (D3:
+  "speaking takes simulated time"; 2.5 words a second a placeholder). RF-30's and RF-39's talk results
+  are therefore real-time speech while walking, not a conversation.
+- The user: "Yes" to a new issue with the order counterbalanced. Opened **#129 (RF-40)**; open there:
+  signals paused too or not, a perception line for the other's frame, which conditions to run.
+- Measured for the user's other questions: talk replies carry a message in 0.49 of decisions (0.30 of
+  first decisions), a signal in 0.69; non-verbal a signal in 0.54. Talk does not resolve better than
+  non-verbal (0.59 and 0.59 over all repeats; RF-30 0.47 against 0.58, not significant).
+
 ## Open questions / risks
 - ~~For the user: the scale, the execution, the meaning of `[]`, and the cap.~~ Decided 2026-11-01 (above).
 - ~~Prices were last checked 2026-10-26~~: re-checked 2026-11-01, unchanged.
