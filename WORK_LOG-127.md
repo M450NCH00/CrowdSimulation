@@ -82,6 +82,20 @@ cap is 0 until the user records the approval and cap in `CLAUDE.md` (pending ite
   More decision points after sidesteps, and `resolve_v8`'s longer system message (mostly cached),
   could add 10 to 30%.
 
+### 2026-11-01 — Mock rehearsal (`runs_mock/rf39/`, 816 of 816)
+- Every session ran under `resolve_v8` and `keep_line_replan` (`config.json`). Calls a session:
+  independent 4.11, non-verbal 8.57, talk 8.69 (RF-30's real run: 7.53; the mock re-prompts a
+  little more often here, so it overstates).
+- Cost at the measured cost a call (RF-29 independent USD 0.000128, RF-30 non-verbal 0.000147 and
+  talk 0.000159, off-peak) times the mock's calls: 0.14 + 0.34 + 0.38 = **USD 0.86 off-peak**.
+  With the estimate per session above (0.77), **USD 0.77 to 0.86 off-peak**; peak would double it.
+- Recommended cap: **USD 1.20** (about 40% over the higher estimate), `stop_at_cap`, a pilot of
+  about 24 sessions first.
+- Tests after the change: `test_execute.py`, `test_reexecute.py`, `test_resolve_v8.py`,
+  `test_ethnicity.py`, `test_repo_hygiene.py`, `test_rules_schema_v4.py` and the new file: two
+  enumeration lists needed the new execution and config (`AS_PROMPTED_TURNS`; the ethnicity
+  configs list), then all pass (48 passed, 11 skipped in the two files rerun).
+
 ## Open questions / risks
 - **For the user:** the scale (repeats, which conditions), the execution (`keep_line_replan` or
   `keep_line`), the meaning of `[]`, and the cap. Until the approval and cap are in `CLAUDE.md`,
