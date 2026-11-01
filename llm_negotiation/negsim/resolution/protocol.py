@@ -29,7 +29,16 @@ condition, and records everything they were told and replied:
    *non-verbal*, signals and movement, up to the cap; *talk*, the same and one message per
    agent per decision point. A signal is seen by whoever sees the agent when it is made. A
    message takes time to say (``speech_words_per_second``) and is heard, when it has been said,
-   by everyone within hearing range: an event for each listener.
+   by everyone within hearing range: an event for each listener. *Silent* (issue #129): no
+   signal and no message, as independent, but asked again as non-verbal and talk are.
+5a. **The exchange** (issue #129). ``real_time`` (the default, RF-3's): everyone due at a step is
+   asked on the same state, and what they signal or say reaches the others as above.
+   ``turn_taking`` (the user's design of 2026-11-01): the simulation pauses; those due are asked
+   one at a time (``first_asked`` first, then in the encounter's order); a signal or message is
+   seen or heard at once, in full, by whoever perceives it; and a member who perceives it, has
+   been prompted before and has decision points left is asked next in the same pause, whatever
+   the time since its last prompt. Each member is asked at most once per pause; its answer
+   reaches the others at their next decision point. Then the plans run.
 6. **The end.** The encounter ends when every conflict pair has passed (or one of the pair has
    arrived), when no conflict between members has been predicted for ``no_conflict_end_s``
    (with ``no_conflict_waits_for_plans``, issue #65: and no member's plan is still waiting or
@@ -80,7 +89,7 @@ from .perceive import (
 from .prompt import CoreTemplate, DebriefTemplate, RenderedPrompt, debrief_messages, render
 from .reply import START_AFTER_SECONDS, START_AT_DISTANCE, ParsedReply, ReplyContext, Step, parse_debrief, reply_parser
 from .scenario import Scenario
-from .view import CONDITION_INDEPENDENT, CONDITION_TALK, CONDITIONS
+from .view import ALL_CONDITIONS, CONDITION_INDEPENDENT, CONDITION_TALK
 
 # How a session can end.
 SESSION_COMPLETED = "completed"  # an encounter took place and was recorded to its end
@@ -112,6 +121,15 @@ REASON_PLAN_ENDED = "plan_ended"
 REASON_OTHER = "other_"  # prefix of a change of someone in the encounter: other_stopped, other_moved_left, ...
 
 _EPS = 1e-9
+
+# How the members of an encounter take in each other's signals and words (issue #129).
+EXCHANGE_REAL_TIME = "real_time"  # RF-3's: asked on the same state; a message takes time to say
+EXCHANGE_TURN_TAKING = "turn_taking"  # the user's design of 2026-11-01: a pause, one at a time
+EXCHANGES = (EXCHANGE_REAL_TIME, EXCHANGE_TURN_TAKING)
+#: Issue #129: how much later each turn of a paused exchange looks than the one before it, so that
+#: what one turn signals or says falls inside the next turn's look and after the earlier turns'
+#: own looks (``perceive``: a look shows what came after the agent's last look). Not simulated time.
+_TURN_S = 1e-6
 
 
 def _utc_now() -> str:
@@ -145,10 +163,12 @@ class ProtocolSettings:
     #: person, else the nearest person in view). With two people both are the same person; in a group
     #: the nearest can be a friend walking just ahead. RF-34's pilot lost 5 of 83 decision points so.
     distance_to_partner: bool = False
+    #: Issue #129 (the user's decision, 2026-11-01): how signals and words are taken in (``EXCHANGES``).
+    exchange: str = EXCHANGE_REAL_TIME
 
     KEYS = (
         "max_decision_points", "min_gap_s", "no_conflict_end_s", "max_prompted", "speech_words_per_second", "execution",
-        "no_conflict_waits_for_plans", "orca_within_groups", "distance_to_partner",
+        "no_conflict_waits_for_plans", "orca_within_groups", "distance_to_partner", "exchange",
     )
 
     def __post_init__(self) -> None:
@@ -166,6 +186,8 @@ class ProtocolSettings:
             raise ConfigError(f"protocol.orca_within_groups: true or false, got {self.orca_within_groups!r}")
         if not isinstance(self.distance_to_partner, bool):
             raise ConfigError(f"protocol.distance_to_partner: true or false, got {self.distance_to_partner!r}")
+        if self.exchange not in EXCHANGES:
+            raise ConfigError(f"protocol.exchange: one of {EXCHANGES}, got {self.exchange!r}")
 
     @classmethod
     def from_mapping(cls, raw: Any, where: str = "protocol") -> "ProtocolSettings":
@@ -181,6 +203,7 @@ class ProtocolSettings:
             no_conflict_waits_for_plans=block.get("no_conflict_waits_for_plans", default.no_conflict_waits_for_plans),
             orca_within_groups=block.get("orca_within_groups", default.orca_within_groups),
             distance_to_partner=block.get("distance_to_partner", default.distance_to_partner),
+            exchange=as_choice(block.get("exchange", default.exchange), f"{where}.exchange", EXCHANGES),
         )
 
     def decision_points_for(self, condition: str) -> int:
@@ -197,7 +220,13 @@ class ProtocolSettings:
             del described["orca_within_groups"]
         if not self.distance_to_partner:  # issue #115: likewise
             del described["distance_to_partner"]
+        if self.exchange == EXCHANGE_REAL_TIME:  # issue #129: likewise
+            del described["exchange"]
         return described
+
+    @property
+    def turn_taking(self) -> bool:
+        return self.exchange == EXCHANGE_TURN_TAKING
 
 
 # --- coding a plan mechanically (task 9) ----------------------------------------------------------
@@ -280,9 +309,10 @@ class EncounterSession:
         labels: Optional[Mapping[str, Any]] = None,
         factors: Optional[Any] = None,
         pairwise: Optional[Any] = None,
+        first_asked: Optional[int] = None,
     ):
-        if condition not in CONDITIONS:
-            raise ConfigError(f"condition: one of {CONDITIONS}, got {condition!r}")
+        if condition not in ALL_CONDITIONS:
+            raise ConfigError(f"condition: one of {ALL_CONDITIONS}, got {condition!r}")
         if simulation.plans is not None or simulation.world.step_index != 0:
             raise ValueError("the session needs its case's run fresh: built, not stepped, with no plan driver")
         self.sim, self.pair, self.scenario, self.condition = simulation, tuple(int(a) for a in pair), scenario, condition
@@ -298,6 +328,12 @@ class EncounterSession:
         self.factors, self.pairwise = factors, pairwise
         self.labels = dict(labels or {})
         self.max_dp = self.settings.decision_points_for(condition)
+        if first_asked is not None and not self.settings.turn_taking:
+            raise ConfigError("first_asked: only for protocol.exchange turn_taking (issue #129)")
+        if first_asked is not None and int(first_asked) not in self.pair:
+            raise ConfigError(f"first_asked: one of the case's two people {self.pair}, got {first_asked!r}")
+        #: Issue #129: who is asked first in a paused exchange (the experiment counterbalances it).
+        self.first_asked = None if first_asked is None else int(first_asked)
 
         self.outcome: Optional[str] = None
         self.error: Optional[str] = None
@@ -391,6 +427,8 @@ class EncounterSession:
                 # group (passing_crowd lists them) keeps the encounter open. No plan can be given
                 # after a release, so nobody is prompted; who would have been is recorded.
                 self._not_prompted_after_release.update(agent for agent, _, _ in due)
+            elif due and self.settings.turn_taking:
+                self._paused_exchange(due)
             elif due:
                 self._decision_point(due)
             if self._llm_done() and self._conflict_now() and self.run.driver.active:
@@ -528,30 +566,8 @@ class EncounterSession:
         asked = []
         for agent, partner, reasons in due:
             member = self.members[agent]
-            if member.perceiver is None:
-                member.partner = partner
-                member.perceiver = perceiver_for(
-                    sim, agent, partner, self.scenario, self.view_settings, self.core,
-                    people=self.people, show_age=self.show_age, show_gender=self.show_gender, since_s=self.trigger["time_s"] - _EPS,
-                )
-            outcomes = self.run.driver.outcomes(agent)
-            view = view_in(sim, member.perceiver, self.exchange, outcomes=[outcomes[k] for k in member.driver_decisions], **self._factor_lines(agent))
-            prompt = render(view, self.condition, self.scenario, self.core)
-            context = ReplyContext.of(
-                view, self.condition, self.scenario.events, self.core.later_step_start,
-                self.core.until_at_distance, self.core.until_event_as_object, self.core.sidestep,
-            )
-            if self.settings.distance_to_partner:
-                context = replace(context, distance_m=self._partner_distance(member, context.distance_m))
-            metadata = {
-                **self.labels, "kind": "decision", "agent_id": agent, "agent_slot": member.slot,
-                "decision_point": member.prompts + 1, "step": step,
-            }
             try:
-                reply = request_with_retry(
-                    self.client, [dict(m) for m in prompt.messages], self.llm.model, self.llm.temperature, self.llm.max_tokens,
-                    self.llm.thinking, metadata, reply_parser(context), self.core.retry(self.condition),
-                )
+                view, prompt, reply = self._ask(member, partner, step)
             except Exception as exc:  # refused before anything was sent for this agent
                 self._keep_unapplied(asked, now, step)
                 raise _Stopped(exc) from exc
@@ -561,37 +577,126 @@ class EncounterSession:
                 raise _Stopped(reply.stopped)
         bodies, by_id = self._bodies()
         for member, partner, reasons, view, prompt, reply in asked:
-            self._close(member, "decision_point")
-            agent = member.agent_id
-            member.prompts += 1
-            member.last_prompt_s = now
-            member.clear_since_decision = False
-            member.smallest_gap_m = math.inf
-            plan = self._plan_of(member)
-            if plan is not None:
-                member.ended_noticed = max(member.ended_noticed, plan.decision_point)
-            parsed: Optional[ParsedReply] = reply.parsed
-            given: Optional[list[dict[str, Any]]] = None
-            if parsed is not None:
-                self.run.driver.give(sim, agent, parsed.steps, member.partner)
-                given = [s.as_dict() for s in parsed.steps]
-                member.driver_decisions.append(self._next_decision_index(agent))
-                member.perceiver.decided(now, by_id[agent], parsed.intent, parsed.message, parsed.signal)
-                member.replies.append(parsed)
-                member.last_prompt, member.last_raw = prompt, reply.attempts[-1].raw_output
-                if parsed.signal != "none":
-                    # Made during the step after the decision: after everyone looked at this
-                    # decision point, so that it is new to them (perceive counts what came after a look).
-                    self.exchange.signal(now + sim.world.dt, agent, parsed.signal, bodies, sim.world.obstacles)
-                if parsed.message and self.condition == CONDITION_TALK:
+            self._apply(member, reasons, view, prompt, reply, now, step, bodies, by_id)
+
+    def _paused_exchange(self, due: Sequence[tuple[int, int, list[str]]]) -> None:
+        """Issue #129, ``turn_taking``: the simulation does not step while those due are asked one
+        at a time, each reply carried out (given to the driver) and what it signals or says made
+        at once; a member who perceives that, has been prompted before and has decision points
+        left is asked next, at most once per pause (point 5a)."""
+        sim = self.sim
+        now, step = sim.world.time, sim.world.step_index
+        first = self.first_asked
+        queue = [list(entry) for entry in sorted(due, key=lambda entry: (entry[0] != first, self.order.index(entry[0])))]
+        asked: set[int] = set()
+        turn = 0
+        while queue:
+            agent, partner, reasons = queue.pop(0)
+            member = self.members[agent]
+            look = now + turn * _TURN_S
+            try:
+                view, prompt, reply = self._ask(member, partner, step, look)
+            except Exception as exc:  # refused before anything was sent for this agent
+                raise _Stopped(exc) from exc
+            if reply.stopped is not None:
+                self._keep_unapplied([(member, partner, reasons, view, prompt, reply)], now, step)
+                raise _Stopped(reply.stopped)
+            bodies, by_id = self._bodies()
+            signal, said = self._apply(member, reasons, view, prompt, reply, now, step, bodies, by_id, made_at=look)
+            self.decision_points[-1]["turn"] = turn  # issue #129: its place in the pause (0: asked first)
+            asked.add(agent)
+            turn += 1
+            for other in self.order:
+                why = []
+                if signal is not None and other in signal.seen_by:
+                    why.append(f"{REASON_SIGNALLED}:{agent}")
+                if said is not None and other in said.heard_by:
+                    why.append(f"{REASON_HEARD}:{agent}")
+                if not why or other == agent or other in asked:
+                    continue
+                queued = next((entry for entry in queue if entry[0] == other), None)
+                if queued is not None:
+                    queued[2] = list(dict.fromkeys([*queued[2], *why]))
+                    continue
+                listener = self.members[other]
+                if listener.prompts == 0 or listener.prompts >= self.max_dp or sim.world.agents[other].done:
+                    continue  # an agent's first prompt is D4's (an assumption, issue #129)
+                queue.append([other, listener.partner, why])
+
+    def _ask(self, member: _Member, partner: int, step: int, look_time_s: Optional[float] = None) -> tuple[Any, RenderedPrompt, Any]:
+        """Build ``member``'s view and prompt, and send it (with its retry). ``look_time_s``: a
+        turn of a paused exchange (issue #129)."""
+        sim = self.sim
+        agent = member.agent_id
+        if member.perceiver is None:
+            member.partner = partner
+            member.perceiver = perceiver_for(
+                sim, agent, partner, self.scenario, self.view_settings, self.core,
+                people=self.people, show_age=self.show_age, show_gender=self.show_gender, since_s=self.trigger["time_s"] - _EPS,
+            )
+        outcomes = self.run.driver.outcomes(agent)
+        when = {} if look_time_s is None else {"look_time_s": look_time_s}
+        view = view_in(sim, member.perceiver, self.exchange, outcomes=[outcomes[k] for k in member.driver_decisions], **self._factor_lines(agent), **when)
+        prompt = render(view, self.condition, self.scenario, self.core)
+        context = ReplyContext.of(
+            view, self.condition, self.scenario.events, self.core.later_step_start,
+            self.core.until_at_distance, self.core.until_event_as_object, self.core.sidestep,
+        )
+        if self.settings.distance_to_partner:
+            context = replace(context, distance_m=self._partner_distance(member, context.distance_m))
+        metadata = {
+            **self.labels, "kind": "decision", "agent_id": agent, "agent_slot": member.slot,
+            "decision_point": member.prompts + 1, "step": step,
+        }
+        reply = request_with_retry(
+            self.client, [dict(m) for m in prompt.messages], self.llm.model, self.llm.temperature, self.llm.max_tokens,
+            self.llm.thinking, metadata, reply_parser(context), self.core.retry(self.condition),
+        )
+        return view, prompt, reply
+
+    def _apply(self, member, reasons, view, prompt, reply, now, step, bodies, by_id, made_at: Optional[float] = None) -> tuple[Any, Any]:
+        """Carry out ``member``'s reply and record its decision point. ``made_at`` (issue #129) is
+        when what it signals or says is made, at once and in full; without it a signal is made
+        during the next step and a message is heard once it has been said (``real_time``).
+        Returns what it signalled and said (each None if nothing, and both None without ``made_at``)."""
+        sim = self.sim
+        self._close(member, "decision_point")
+        agent = member.agent_id
+        member.prompts += 1
+        member.last_prompt_s = now
+        member.clear_since_decision = False
+        member.smallest_gap_m = math.inf
+        plan = self._plan_of(member)
+        if plan is not None:
+            member.ended_noticed = max(member.ended_noticed, plan.decision_point)
+        parsed: Optional[ParsedReply] = reply.parsed
+        given: Optional[list[dict[str, Any]]] = None
+        signal = said = None
+        if parsed is not None:
+            self.run.driver.give(sim, agent, parsed.steps, member.partner)
+            given = [s.as_dict() for s in parsed.steps]
+            member.driver_decisions.append(self._next_decision_index(agent))
+            member.perceiver.decided(now, by_id[agent], parsed.intent, parsed.message, parsed.signal)
+            member.replies.append(parsed)
+            member.last_prompt, member.last_raw = prompt, reply.attempts[-1].raw_output
+            if parsed.signal != "none":
+                # Made during the step after the decision: after everyone looked at this
+                # decision point, so that it is new to them (perceive counts what came after a look).
+                when = now + sim.world.dt if made_at is None else made_at
+                signal = self.exchange.signal(when, agent, parsed.signal, bodies, sim.world.obstacles)
+            if parsed.message and self.condition == CONDITION_TALK:
+                if made_at is None:
                     words = max(1, len(parsed.message.split()))
                     self._pending_speech.append((now + words / self.settings.speech_words_per_second, agent, parsed.message))
-            else:
-                member.perceiver.looks.pop()  # it made no decision: its next view is from its last look
-                if plan is None:
-                    self.run.driver.give(sim, agent, (), member.partner)  # it carries on as it is
-                    given = []
-            self._record(member, reasons, view, prompt, reply, given, now, step)
+                else:
+                    said = self.exchange.say(made_at, agent, parsed.message, bodies)
+        else:
+            member.perceiver.looks.pop()  # it made no decision: its next view is from its last look
+            if plan is None:
+                self.run.driver.give(sim, agent, (), member.partner)  # it carries on as it is
+                given = []
+        self._record(member, reasons, view, prompt, reply, given, now, step)
+        return (signal, said) if made_at is not None else (None, None)
 
     def _partner_distance(self, member: _Member, otherwise: Optional[float]) -> Optional[float]:
         """Centre to centre, to the partner the plan is carried out against (``distance_to_partner``);
@@ -805,6 +910,8 @@ class EncounterSession:
                 "end": self.end,
                 "orca_took_over": self.release,
                 "prompted": [agent for agent in self.order if self.members[agent].prompts > 0],
+                # issue #129: named only in a paused exchange
+                **({"first_asked": self.first_asked} if self.settings.turn_taking else {}),
                 # issue #119: named only when someone was due after the driver's release
                 **({"not_prompted_after_release": sorted(self._not_prompted_after_release)} if self._not_prompted_after_release else {}),
             },

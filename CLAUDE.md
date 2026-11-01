@@ -66,6 +66,11 @@ sign-off needed. An agent's reply says what it physically does (`intent`, then
 Its description follows what a person would perceive (a 75° view to 10 m,
 detail within 5 m, hearing from any direction). There are three conditions
 (independent, non-verbal, talk), prompting is event-driven, and each agent is
+*Amended 2026-11-01 (issue #129, RF-40), the user's decisions:* from RF-40 on, the conditions are
+silent (no signal, no talk, but asked again), non-verbal and talk, silent replacing independent; and
+signals and talk can be a turn-taking exchange (`protocol.exchange: turn_taking`: the simulation
+pauses, one person is asked at a time, and what they signal or say is taken in at once, in full).
+Earlier runs keep independent and the real-time exchange, unchanged.
 debriefed afterwards for the reference behind its decision. The work goes one
 scenario at a time, in rounds (D15 to D17). Architecture section 8.7 holds the
 decision record.
@@ -330,7 +335,9 @@ used in this track). Numbers in brackets are the decisions of track issue #55.
    pending since issue #32.
 4. **Decided by the user, 2026-10-22** — Whether to add the silent condition
    beside the talk condition (#55, 4): three conditions, namely independent,
-   non-verbal and talk (`resolution.md`, D3).
+   non-verbal and talk (`resolution.md`, D3). (#55's "silent" was what became non-verbal. The
+   *silent* condition of issue #129, decided by the user on 2026-11-01, is another one: no signal
+   and no talk, asked again; it replaces independent from RF-40 on.)
 5. **PENDING** — How far the portable-rules track (#34) is paused: only the
    build (#42 onward), or the remaining literature issues (#35 to #41) as well
    (#55, 5).

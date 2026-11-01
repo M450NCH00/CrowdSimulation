@@ -135,8 +135,29 @@ assumption).
 | `independent` | 1 | move; a message or signal in the reply is ignored and flagged |
 | `non_verbal` | up to 3 | move and signal |
 | `talk` | up to 3 | move, signal and speak: one message per decision point |
+| `silent` (issue #129) | up to the cap, as non-verbal and talk | move; a message or signal in the reply is ignored and flagged. Offered by `resolve_v9` on |
 
-Speaking order is not a factor: everyone due at a step is asked on the same state.
+Speaking order is not a factor: everyone due at a step is asked on the same state. This is the
+default exchange, `protocol.exchange: real_time`.
+
+**The paused exchange (issue #129, `protocol.exchange: turn_taking`, the user's decisions of
+2026-11-01).** At a decision point the simulation does not step. Those due are asked one at a time:
+the session's `first_asked` first (the experiment counterbalances it: person 1 in a cell's odd
+repeats, person 2 in its even ones; `outcomes.csv`'s `first_asked`), then in the encounter's order.
+Each reply is given to the driver at once, and its signal or message is made at once and in full,
+seen by whoever sees the agent and heard by everyone within the hearing range (unchanged: 8.9 m in
+quiet surroundings, 3.2 m in busy ones). A member who perceives it, has been prompted before and has
+decision points left is asked next in the same pause, whatever the time since its last prompt
+(`heard:n`, `signalled:n`). Each member is asked at most once per pause, so an answer reaches the
+first speaker at its next decision point. Each turn looks one microsecond after the one before it
+(`_TURN_S`), so that a look shows what the turns before it made; no simulated time passes. A
+decision point records its `turn` in the pause, and the encounter its `first_asked`; neither is in
+a record of the real-time exchange. A template's wording must match the exchange (`resolve_v9` is
+written for the paused one): the experiment layer refuses a mismatch.
+
+**Assumptions (issue #129, mine):** an agent's first prompt is still D4's (hearing a message does
+not ask an agent who has not yet been prompted); a member is asked at most once per pause (the
+perception keeps one look per decision point); the hearing range applies in the pause.
 
 ## 5. The end, the hand-over to ORCA, and the debrief (D6, D8)
 
@@ -261,7 +282,7 @@ python run_experiment.py configs/resolution/<config>.yaml --client deepseek --co
 | `scenarios` | optional: case id → plug-in; otherwise the plug-in whose `CASE_TYPES` holds the case's type |
 | `conditions` | any of `independent`, `non_verbal`, `talk` |
 | `design` | `seed`, `factors` (`age_pair`, `gender_pair`, `task`, `demographics_visible`, `mapping`), `repeats`, `base_age`, `age_difference`, `tasks`; issue #62: `kind` (`full`, `fractional`, `sample`), `cells`, `geometries`, `exact_repeats` (`cells`, `times`), `counterfactual_pairs` (`screening-designs.md`); issue #92: `ethnicity_shares` (default `configs/resolution/ethnicity_sg_2026.yaml`) and `ethnicity_draw` (`real`, the default, or `balanced`), for a design that varies `ethnicity_pair` (`ethnicity.md`) |
-| `protocol` | `max_decision_points` (3), `min_gap_s` (1), `no_conflict_end_s` (1), `max_prompted` (none), `speech_words_per_second` (2.5), `execution` (`rf4`, or `as_prompted`: issue #64, `keep_line`: issue #101, `keep_line_replan`: issue #127; `execute.py`), `no_conflict_waits_for_plans` (false; issue #65), `orca_within_groups` (false; issue #110), `distance_to_partner` (false; issue #115) |
+| `protocol` | `max_decision_points` (3), `min_gap_s` (1), `no_conflict_end_s` (1), `max_prompted` (none), `speech_words_per_second` (2.5), `execution` (`rf4`, or `as_prompted`: issue #64, `keep_line`: issue #101, `keep_line_replan`: issue #127; `execute.py`), `no_conflict_waits_for_plans` (false; issue #65), `orca_within_groups` (false; issue #110), `distance_to_partner` (false; issue #115), `exchange` (`real_time`, or `turn_taking`: issue #129) |
 | `templates` | `core` (`resolve_v2`; `resolve_v3` for a design that varies an RF-5 or RF-6 factor, issue #61; `resolve_v4`, named, also gives the other's age and gender from 10 m, issue #64; `resolve_v5`, named, also lets any step have a `start`, issue #64; `resolve_v6`, named, also reads an `until` at a distance or written as an object, and calls a walker up to 45° off the opposite or the same direction drifting rather than walking across, issue #65), `debrief` (`resolve_debrief_v1`); with factors also `factors` (`resolve_factors_v1`; `resolve_factors_v2` for a design that varies real ethnicity, issue #92) and `pairwise` (`resolve_pairwise_v1`) |
 | `llm_view` | the perception config (`configs/resolution/llm_view_v1.yaml`) |
 | `llm` | `client`, `mock_policy` (`resolution_rehearsal_v1`), `model`, `temperature`, `max_tokens` (400), `thinking` (disabled), `transport_retries` |

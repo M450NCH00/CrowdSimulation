@@ -53,7 +53,9 @@ from .factors import DESIGN_COLUMNS, OBSERVABLE, PAIRWISE, PERSON, SITUATIONS
 MODES = ("plan_only", "plan_orca", "plain_orca")
 TOGETHER = "together"
 COMPLETED = "completed"
-CONDITIONS = ("independent", "non_verbal", "talk")
+CONDITIONS = ("independent", "non_verbal", "talk", "silent")  # silent: issue #129 (RF-40)
+#: The conditions in which an agent cannot signal.
+NO_SIGNAL = ("independent", "silent")
 
 #: The columns this analysis cannot do without. ``encounter_agents`` and the ``_shown`` counts
 #: were added by issue #63: an older ``outcomes.csv`` is rebuilt by running its experiment again
@@ -289,6 +291,9 @@ def agents_table(raw: pd.DataFrame, sessions: pd.DataFrame) -> tuple[pd.DataFram
                     frame[column] = ((as_number(data[f"{me}_{column}"]) == 1) & pairwise_told).astype(float)
             frame["pairwise_unseen"] = (~pairwise_told).astype(float)
         frame["is_lower_agent"] = (frame["agent"] < frame["other_agent"]).astype(float)
+        asked = _column(data, "first_asked")
+        if asked.notna().any():  # issue #129: a paused exchange; whether this agent was asked first
+            frame["asked_first"] = (asked == me).astype(float).to_numpy()
 
         # Outcomes, physical (the sessions table's mode) and of the first coded plan.
         first = sessions["first"]
@@ -304,7 +309,7 @@ def agents_table(raw: pd.DataFrame, sessions: pd.DataFrame) -> tuple[pd.DataFram
             frame[f"plan_{key}"] = as_bool(_column(data, f"{me}_first_{key}"))
         frame["start_distance_m"] = as_number(_column(data, f"{me}_first_start_distance_m"))
         signals = _column(data, f"{me}_signals")
-        frame["signalled"] = np.where(sessions["condition"] == "independent", np.nan, signals.notna().astype(float))
+        frame["signalled"] = np.where(sessions["condition"].isin(NO_SIGNAL), np.nan, signals.notna().astype(float))
         frame["decision_points"] = as_number(_column(data, f"{me}_decision_points"))
         frame["debrief_kind"] = _column(data, f"{me}_debrief_kind").to_numpy()
         rows.append(frame)
@@ -313,6 +318,7 @@ def agents_table(raw: pd.DataFrame, sessions: pd.DataFrame) -> tuple[pd.DataFram
         "own_age_high", "own_female", "own_demographics_hidden", "other_age_high", "other_female", "other_demographics_unseen",
         *(f"own_{name}" for name in PERSON), *(f"other_{name}" for name in OBSERVABLE), "same_ethnicity", "ethnicity_unseen",
         *(f"{name}_{marked}" for name, (_, marked) in SITUATIONS.items()), *PAIRWISE, "pairwise_unseen", "is_lower_agent",
+        "asked_first",
     ]
     return agents, [column for column in order if column in agents.columns]
 

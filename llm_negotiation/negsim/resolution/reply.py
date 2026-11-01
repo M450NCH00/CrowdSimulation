@@ -50,7 +50,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Mapping, Optional
 
 from ..negotiation.parsing import TurnParseError, _strip_code_fence
-from .view import CONDITION_INDEPENDENT, CONDITION_TALK, CONDITIONS, SIGNALS, View
+from .view import ALL_CONDITIONS, CONDITION_TALK, SIGNALLING_CONDITIONS, SIGNALS, View
 
 #: The largest turn a step may ask for, in degrees. **[placeholder]**
 MAX_TURN_DEGREES = 90.0
@@ -177,8 +177,8 @@ class ReplyContext:
     sidestep: bool = False
 
     def __post_init__(self) -> None:
-        if self.condition not in CONDITIONS:
-            raise ValueError(f"condition: one of {CONDITIONS}, got {self.condition!r}")
+        if self.condition not in ALL_CONDITIONS:
+            raise ValueError(f"condition: one of {ALL_CONDITIONS}, got {self.condition!r}")
 
     @classmethod
     def of(
@@ -367,7 +367,7 @@ def parse_reply(raw: Optional[str], context: ReplyContext) -> ParsedReply:
 
     signal = "none"
     if data.get("signal") is not None:
-        if context.condition == CONDITION_INDEPENDENT:
+        if context.condition not in SIGNALLING_CONDITIONS:  # independent, and silent (issue #129)
             if not (isinstance(data["signal"], str) and data["signal"].strip().lower() == "none"):
                 flags.append("signal_ignored")
         else:

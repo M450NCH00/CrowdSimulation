@@ -59,8 +59,8 @@ from .adapter import _person
 from .prompt import SIMULATION_CORE_TEMPLATE, CoreTemplate
 from .scenario import Scenario
 from .view import (
-    CHANGES, DETAIL_FULL, DETAIL_SHORT, MOTION_BACKING, MOTION_STILL, MOTION_WALKING, OUTCOMES, SIGNALS,
-    Block, Done, Heard, Me, SeenPerson, TimeToMeet, View,
+    CHANGES, DETAIL_FULL, DETAIL_SHORT, FRAME_FACING, FRAME_SAME_WAY, MOTION_BACKING, MOTION_STILL, MOTION_WALKING,
+    OUTCOMES, SIGNALS, Block, Done, Heard, Me, SeenPerson, TimeToMeet, View,
 )
 
 LLM_VIEW_CONFIG = PACKAGE_ROOT / "configs" / "resolution" / "llm_view_v1.yaml"
@@ -68,6 +68,10 @@ LLM_VIEW_CONFIG = PACKAGE_ROOT / "configs" / "resolution" / "llm_view_v1.yaml"
 CLOSE_SIGNALS = ("eye_contact", "nod")
 #: A threshold is met at its value: rounding in the arithmetic must not hide that.
 _EPS = 1e-9
+#: Issue #129: a speaker heading within this many degrees of the listener's opposite direction is
+#: facing it, and within this many of its own direction walking its way (the note beside what they
+#: say). [placeholder, mine] Between the two, no note: their left is neither side of the listener.
+FRAME_WITHIN_DEG = 45.0
 
 
 def _still(speed_mps: float) -> bool:
@@ -409,7 +413,7 @@ class Perceiver:
         seen = tuple(
             self._seen_person(observer, body, time_s, last, since, exchange, factor_lines, pairwise_lines) for body in visible
         )
-        heard = self._heard(time_s, since, exchange, {b.agent_id for b in visible})
+        heard = self._heard(time_s, since, exchange, {b.agent_id: b for b in visible}, observer)
         meet = None
         partner = by_id.get(self.partner_id)
         if partner is not None and partner in visible and safety_distance_m is not None:
@@ -478,9 +482,13 @@ class Perceiver:
         made = [s for s in exchange.signals if s.signaller_id == agent and since < s.time_s <= time_s and self.agent_id in s.seen_by]
         return made[-1].signal if made else "none"
 
-    def _heard(self, time_s: float, since: float, exchange: Optional[Exchange], in_view: set[int]) -> tuple[Heard, ...]:
+    def _heard(
+        self, time_s: float, since: float, exchange: Optional[Exchange], in_view: Mapping[int, Body], observer: Body,
+    ) -> tuple[Heard, ...]:
         """What was said since the agent last looked, within its hearing range. A speaker in view
-        now is named; one who is not is "someone", from where the voice came when it was said."""
+        now is named; one who is not is "someone", from where the voice came when it was said.
+        Under a core template with ``heard_frame`` (issue #129), a speaker in view also carries
+        which way they face the agent (:func:`frame_of`)."""
         if exchange is None:
             return ()
         heard = []
@@ -488,7 +496,8 @@ class Perceiver:
             if not since < said.time_s <= time_s or self.agent_id not in said.heard_by:
                 continue
             if said.speaker_id in in_view:
-                heard.append(Heard(said.message, self.labels[said.speaker_id]))
+                frame = frame_of(observer, in_view[said.speaker_id]) if self.core.heard_frame else None
+                heard.append(Heard(said.message, self.labels[said.speaker_id], frame=frame))
             else:
                 heard.append(Heard(said.message, None, *said.heard_by[self.agent_id]))
         return tuple(heard)
@@ -506,6 +515,18 @@ class Perceiver:
             sideways_m=dx * left[0] + dy * left[1],
             back_m=-(dx * ahead[0] + dy * ahead[1]),
         )
+
+
+def frame_of(listener: Body, speaker: Body) -> Optional[str]:
+    """Issue #129: whether ``speaker`` faces ``listener`` (heading within ``FRAME_WITHIN_DEG`` of the
+    opposite way) or walks its way (within it of the same way); None otherwise. A speaker standing
+    still faces where their path takes them, as everywhere here (``Body.travel_rad``)."""
+    angle = abs(math.degrees(wrap_angle(speaker.travel_rad - listener.facing_rad)))
+    if angle >= 180.0 - FRAME_WITHIN_DEG - _EPS:
+        return FRAME_FACING
+    if angle <= FRAME_WITHIN_DEG + _EPS:
+        return FRAME_SAME_WAY
+    return None
 
 
 def changes_since(then: Body, now: Body, facing_rad: float, settings: LLMViewSettings) -> tuple[str, ...]:
@@ -632,6 +653,7 @@ def view_in(
     pairwise_lines: Optional[Mapping[int, Sequence[str]]] = None,
     own_lines: Sequence[str] = (),
     situation_lines: Sequence[str] = (),
+    look_time_s: Optional[float] = None,
 ) -> View:
     """The view of ``perceiver``'s agent at the simulation's present step: every block of D2.
 
@@ -639,6 +661,8 @@ def view_in(
     factor lines, RF-5); WHERE YOU ARE (and any block of the scenario's own) from the scenario
     plug-in and the agent's own record, then ``situation_lines`` (RF-5's setting, the same for
     everyone); the rest from :meth:`Perceiver.look`. Reads the simulation and changes nothing in it.
+    ``look_time_s`` (issue #129) is when the look is taken, if not the simulation's present time: a
+    turn of a paused exchange looks a moment after the turn before it, at the same world state.
     """
     agents = simulation.world.agents
     agent = agents[perceiver.agent_id]
@@ -658,7 +682,7 @@ def view_in(
         factor_lines=tuple(own_lines),
     )
     return perceiver.look(
-        simulation.world.time,
+        simulation.world.time if look_time_s is None else look_time_s,
         bodies_in(simulation),
         simulation.world.obstacles,
         me,

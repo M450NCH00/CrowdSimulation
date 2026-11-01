@@ -52,7 +52,10 @@ from .gate import COMPLETED
 from .lateral import SIDESTEPS, outcome_of, sidestep, when_level
 from .noise import wilson
 
-CONDITIONS = ("independent", "non_verbal", "talk")
+CONDITIONS = ("independent", "silent", "non_verbal", "talk")  # silent: issue #129 (RF-40)
+#: The reference for a dance at the start: independent (one decision, no second chance) when the
+#: run has it, else silent (a second chance, no signal and no talk; issue #129).
+REFERENCES = ("independent", "silent")
 SIDES = ("left", "right")
 #: A difference in wall distance smaller than this (metres) means neither side has more room.
 ROOM_M = 0.05
@@ -200,10 +203,12 @@ def summarise(sessions: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
             level[s["outcome"]][sidestep(s["level"]["own_0_m"], s["level"]["own_1_m"])] += 1
         out["level"][c] = {name: {kind: level[name][kind] for kind in SIDESTEPS} for name in sorted(level)}
 
-    if "independent" in out["start"]:
-        ref = out["start"]["independent"]["towards_same_wall"]
+    reference = next((c for c in REFERENCES if c in out["start"]), None)
+    out["reference"] = reference
+    if reference is not None:
+        ref = out["start"][reference]["towards_same_wall"]
         for c in conditions:
-            if c != "independent":
+            if c != reference:
                 new = out["start"][c]["towards_same_wall"]
                 out["dance_vs_independent"][c] = round(fisher_exact(new["k"], new["n"] - new["k"], ref["k"], ref["n"] - ref["k"]), 4)
 
@@ -292,8 +297,8 @@ def markdown(summary: Mapping[str, Any]) -> str:
     for c, starts in summary["start"].items():
         lines.append(f"| {c} | " + " | ".join(_shown(starts[kind]) for kind in SIDESTEPS) + " |")
     for c, p in summary["dance_vs_independent"].items():
-        lines.append(f"\nA dance at the start, resolved in {c} against independent: Fisher's exact p {_p(p)}.")
-    lines += ["", "## 3. How a dance at the start ended (non-verbal and talk)", "",
+        lines.append(f"\nA dance at the start, resolved in {c} against {summary['reference']}: Fisher's exact p {_p(p)}.")
+    lines += ["", "## 3. How a dance at the start ended (every condition asked again)", "",
               "| Condition | Ended | Sessions | Changed side: none / one / both | A message names a side | Someone pointed | Decision points (median) | When level: own same side / same wall / not both aside |",
               "| --- | --- | --- | --- | --- | --- | --- | --- |"]
     for c, ending in summary["dance_ending"].items():

@@ -26,7 +26,16 @@ from typing import Any, Mapping, Optional
 CONDITION_INDEPENDENT = "independent"
 CONDITION_NON_VERBAL = "non_verbal"
 CONDITION_TALK = "talk"
+#: Issue #129 (RF-40, the user's decision of 2026-11-01): no signal and no talk, as independent, but
+#: asked again under D5 like non-verbal and talk; it replaces independent from RF-40 on.
+CONDITION_SILENT = "silent"
+#: The conditions every core template has a section for (D3).
 CONDITIONS = (CONDITION_INDEPENDENT, CONDITION_NON_VERBAL, CONDITION_TALK)
+#: Every condition a session may run in: a template offers silent only from ``resolve_v9`` (issue
+#: #129), so the earlier templates load as before.
+ALL_CONDITIONS = (*CONDITIONS, CONDITION_SILENT)
+#: The conditions in which an agent may signal (and, in talk, speak).
+SIGNALLING_CONDITIONS = (CONDITION_NON_VERBAL, CONDITION_TALK)
 
 #: The signals of D1; ``none`` is no signal.
 SIGNALS = ("none", "eye_contact", "nod", "wave_on", "hold_up_hand", "point", "other")
@@ -56,6 +65,10 @@ OUTCOMES = (OUTCOME_COMPLETED, OUTCOME_ONGOING, OUTCOME_REPLACED)
 #: Where the voice of a speaker the agent cannot see came from, roughly (RF-17), and how far.
 HEARD_DIRECTIONS = ("ahead", "behind", "left", "right")
 HEARD_BANDS = ("close", "far")
+#: Issue #129: which way a speaker in view faces the listener, for the note beside what they say.
+FRAME_FACING = "facing"  # walking towards the listener: their left is the listener's right
+FRAME_SAME_WAY = "same_way"  # walking the listener's way: their left is the listener's left
+HEARD_FRAMES = (FRAME_FACING, FRAME_SAME_WAY)
 
 
 @dataclass(frozen=True)
@@ -114,8 +127,13 @@ class Heard:
     label: Optional[int] = None
     direction: Optional[str] = None
     band: Optional[str] = None
+    #: Issue #129: how the speaker, in view, faces the listener (``HEARD_FRAMES``), when the core
+    #: template prints a note on it (``resolve_v9``); left out of the record when ``None``.
+    frame: Optional[str] = None
 
     def __post_init__(self) -> None:
+        if self.frame is not None and self.frame not in HEARD_FRAMES:
+            raise ValueError(f"frame: one of {HEARD_FRAMES}, got {self.frame!r}")
         if self.direction is not None and self.direction not in HEARD_DIRECTIONS:
             raise ValueError(f"direction: one of {HEARD_DIRECTIONS}, got {self.direction!r}")
         if self.band is not None and self.band not in HEARD_BANDS:
@@ -191,4 +209,8 @@ class View:
         return min((p.distance_m for p in self.seen), default=None)
 
     def as_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        described = asdict(self)
+        for heard in described["heard"]:
+            if heard["frame"] is None:  # issue #129: named only when set, so earlier records read as before
+                del heard["frame"]
+        return described

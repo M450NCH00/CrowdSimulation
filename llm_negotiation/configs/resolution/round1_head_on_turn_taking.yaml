@@ -1,0 +1,149 @@
+# Issue #129 (RF-40): round 1, head-on in a corridor: talk and signals as a turn-taking exchange.
+#
+#   python run_experiment.py configs/resolution/round1_head_on_turn_taking.yaml --plan
+#   python run_experiment.py configs/resolution/round1_head_on_turn_taking.yaml --out runs_mock/rf40   # mock rehearsal
+#
+# NO PAID RUN IS APPROVED: budget.cap_usd is 0 until the user records the approval and the cap for
+# issue #129 in CLAUDE.md (pending item 1). This config names the mock client.
+#
+# RF-39's config (configs/resolution/round1_head_on_sidestep_reprompt.yaml) with these changes, the
+# user's decisions of 2026-11-01 (issue #129):
+# - protocol.exchange: turn_taking. The simulation pauses while those due are asked one at a time;
+#   what one signals or says is seen or heard at once, in full, and whoever perceives it (having been
+#   prompted before, with decision points left) is asked next in the same pause. In RF-39's talk
+#   dances, 96 of 108 replies naming a side were never said before the encounter ended.
+# - who is asked first: counterbalanced, person 1 in odd repeats and person 2 in even ones
+#   (experiment.first_asked; outcomes.csv's first_asked column), analysed as a factor.
+# - conditions: silent, non_verbal, talk. Silent (no signal, no talk, asked again under D5) replaces
+#   independent. RF-39's independent sessions are the one-decision reference, if needed.
+# - templates.core: resolve_v9 (resolve_v8 written for the paused exchange, with the silent section
+#   and a note beside a heard message on which way the speaker faces; the message is never
+#   rewritten). The wording is the assistant's draft, for the user to review before a paid run.
+# Everything else is RF-39's: the design (32 cells x 2 geometries x 4 repeats and 16 in pairs, per
+# condition), the people (drawn by unit, so every condition of a cell meets the same people as in
+# RF-39), keep_line_replan, 6 decision points, resolve_debrief_v2, the model and the factors.
+# Perceived attractiveness and real ethnicity are on, as in RF-10: both ethics sign-offs are
+# recorded in CLAUDE.md (2026-10-24). No rule may read either.
+schema_version: 1
+layer: resolution
+experiment_name: rf40_round1_head_on_turn_taking
+description: >-
+  RF-40, round 1 (head-on): RF-39's sessions with talk and signals as a turn-taking exchange (the
+  simulation pauses, one person is asked at a time, and what they signal or say is taken in at
+  once, in full), who goes first counterbalanced, and silent in place of independent; core
+  template resolve_v9; everything else RF-39's.
+
+conditions: [silent, non_verbal, talk]   # issue #129: silent replaces independent (the user's decision, 2026-11-01)
+
+design:
+  kind: fractional
+  cells: 32
+  seed: 65
+  base_age: 25
+  age_difference: 45
+  ethnicity_draw: balanced
+  geometries:
+    - head_on_de176842@2   # wide_corridor_head_on, walking lines aligned (0 cm apart)
+    - head_on_02dfbadb@2   # the same, walking lines 20 cm apart
+  repeats: 4              # every cell, geometry and condition 4 times (in place of exact_repeats: 8 cells x 3)
+  factors:
+    age_pair: [same, p1_older]
+    gender_pair: [p1_female, p1_male]
+    urgency: [neither, p1]
+    mobility_aid: [neither, p1]
+    load: [neither, p1]
+    distraction: [neither, p1]
+    assertiveness: [neither, p1]
+    residence: [neither, p1]
+    memory_note: [neither, p1]
+    attractiveness_0_sees_1: [unremarkable, attractive]   # how person 1 sees person 2
+    attractiveness_1_sees_0: [unremarkable, attractive]   # how person 2 sees person 1
+    familiarity: [strangers, acquaintances]
+    ethnicity_pair: [same, different]
+    surroundings: [quiet, busy]
+    time_of_day: [daytime, late_night]
+    mapping: [p1_lower, p1_higher]
+    demographics_visible: [true]
+    ethnicity_visible: [true]
+    attractiveness_visible: [true]
+  counterfactual_pairs:
+    # The same session but person 2's group differs (same to different), person 1's kept.
+    - base: &base
+        age_pair: same
+        gender_pair: p1_female
+        urgency: neither
+        mobility_aid: neither
+        load: neither
+        distraction: neither
+        assertiveness: neither
+        residence: neither
+        memory_note: neither
+        attractiveness_0_sees_1: unremarkable
+        attractiveness_1_sees_0: unremarkable
+        familiarity: strangers
+        ethnicity_pair: same
+        surroundings: quiet
+        time_of_day: daytime
+        mapping: p1_lower
+      factor: ethnicity_pair
+    # Behaviour towards someone the agent is told is Indian (RF-26): both groups fixed, only
+    # person 2's flips.
+    - base: *base
+      factor: p2_ethnicity
+      ethnicity: {p1: chinese, p2: chinese}
+      to: indian
+    - base:
+        <<: *base
+        ethnicity_pair: different
+      factor: p2_ethnicity
+      ethnicity: {p1: chinese, p2: malay}
+      to: indian
+    # Person 1 told that it finds person 2 attractive, against unremarkable.
+    - base: *base
+      factor: attractiveness_0_sees_1
+
+# Fixed before the run (task 3). Decided on the user's delegation of 2026-10-24 (WORK_LOG-65.md).
+resolution_gate:
+  plan_only_resolved_min: 0.50
+  reason: >-
+    Step 1 asks whether LLM agents can resolve the conflict on their own plans, so the gate is the
+    plan_only rate (ORCA does not steer the pair apart), pooled over the design's 192 sessions of
+    32 cells x 2 geometries x 3 conditions (exact repeats and counterfactual pairs left out, so
+    each cell counts once per geometry and condition). 0.50 means the plans resolve the meeting
+    more often than not; it is a judgement, not a sourced number. Head-on walkers in life almost
+    never collide, so 0.50 is lenient against people, and strict against plain ORCA here, which
+    passes within the near-miss distance and never counts as resolved (RF-9: 0 of 72). RF-9's
+    pilot resolved 0.24 before resolve_v6's fixes, so failing the gate is a possible Step 1 result.
+
+protocol:
+  max_decision_points: 6            # issue #127 (the user's decision of 2026-11-01): D5's 3 was a cost limit; 76% of RF-30's agents used all 3
+  min_gap_s: 1.0                    # D5
+  no_conflict_end_s: 1.0            # [placeholder] the encounter ends after this long with no conflict predicted
+  max_prompted: 4                   # D11, D12: the cap on prompted people per encounter (a cost limit)
+  speech_words_per_second: 2.5      # [placeholder] how fast a message is said
+  execution: keep_line_replan       # issue #127: keep_line, and the line is also kept across a later decision (a waiting first step, [])
+  exchange: turn_taking            # issue #129: a pause, one at a time, signals and words taken in at once
+  no_conflict_waits_for_plans: true # issue #65: no_conflict does not end the encounter while a plan runs
+
+templates:
+  core: resolve_v9                  # issue #129: resolve_v8 for the paused exchange, the silent section, the note on a speaker's facing
+  debrief: resolve_debrief_v2       # issue #127: also asks why that side (after the encounter)
+  factors: resolve_factors_v2       # the ethnicity lines (issue #92)
+  pairwise: resolve_pairwise_v1
+
+llm_view: configs/resolution/llm_view_v1.yaml
+factor_values: configs/resolution/factors_v1.yaml
+
+llm:
+  client: mock
+  mock_policy: resolution_rehearsal_v1
+  model: deepseek-flash   # what the preview prices; the mock answers
+  temperature: 1.0        # the experiment's one sampling setting, unchanged (llm-backend.md, section 2)
+  max_tokens: 300         # RF-9's recommended reply cap (largest reply 214 tokens)
+  thinking: disabled
+  transport_retries: 2
+
+budget:
+  cap_usd: 0.00           # no paid run approved for #129 yet (CLAUDE.md, pending item 1)
+  ledger: spend_ledger.jsonl
+  over_cap: stop_at_cap

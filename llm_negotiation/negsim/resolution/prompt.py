@@ -25,7 +25,7 @@ from ..configutil import ConfigError
 from ..negotiation.prompts import load_template_data
 from ..rulegen.describe import _direction, _heading, across, along, fill, speed
 from .scenario import Scenario
-from .view import CONDITIONS, DETAIL_FULL, MOTION_BACKING, MOTION_STILL, View
+from .view import ALL_CONDITIONS, CONDITIONS, DETAIL_FULL, MOTION_BACKING, MOTION_STILL, View
 
 KIND_CORE = "resolution"
 KIND_DEBRIEF = "resolution_debrief"
@@ -93,8 +93,8 @@ def _direction_within(bearing: float, phrases: Mapping[str, str], ahead_deg: flo
 
 
 def _check_condition(condition: str) -> None:
-    if condition not in CONDITIONS:
-        raise ConfigError(f"condition: one of {CONDITIONS}, got {condition!r}")
+    if condition not in ALL_CONDITIONS:
+        raise ConfigError(f"condition: one of {ALL_CONDITIONS}, got {condition!r}")
 
 
 @dataclass(frozen=True)
@@ -166,6 +166,23 @@ class CoreTemplate:
         return bool(self.data.get("sidestep", False))
 
     @property
+    def exchange(self) -> Optional[str]:
+        """The exchange the template's wording is written for (``resolve_v9``, issue #129:
+        ``turn_taking``), or None for the earlier templates, written for speech in real time."""
+        value = self.data.get("exchange")
+        return None if value is None else str(value)
+
+    @property
+    def heard_frame(self) -> bool:
+        """Whether a heard message from someone in view carries a note on which way they face
+        (``resolve_v9``, issue #129: "their left is on your right")."""
+        return bool(self.data.get("heard_frame", False))
+
+    def offers(self, condition: str) -> bool:
+        """Whether the template has a section for ``condition`` (silent: ``resolve_v9`` on)."""
+        return condition in self.data["conditions"]
+
+    @property
     def direction_ahead_deg(self) -> Optional[float]:
         """Within how many degrees someone is "straight ahead" (``resolve_v7``, issue #98); None
         for the earlier templates, which keep ``negsim.rulegen.describe``'s 5°."""
@@ -185,7 +202,7 @@ class CoreTemplate:
 
     def system(self, condition: str, scenario: Scenario) -> str:
         """The fixed text of a condition in a scenario: the same for every agent and decision point."""
-        _check_condition(condition)
+        self._check_offers(condition)
         section = self.data["conditions"][condition]
         return fill(
             self.data["system"],
@@ -196,8 +213,13 @@ class CoreTemplate:
         ).strip()
 
     def retry(self, condition: str) -> str:
-        _check_condition(condition)
+        self._check_offers(condition)
         return " ".join(self.data["conditions"][condition]["retry"].split())
+
+    def _check_offers(self, condition: str) -> None:
+        _check_condition(condition)
+        if not self.offers(condition):
+            raise ConfigError(f"prompt template {self.key!r} has no section for the {condition} condition")
 
     # --- the description ------------------------------------------------------------------------
 
@@ -310,6 +332,8 @@ class CoreTemplate:
                 lines.append(fill(v["heard_unseen_from"], direction=direction, band=band, message=heard.message))
             elif heard.label is None:
                 lines.append(fill(v["heard_unseen"], message=heard.message))
+            elif heard.frame is not None:  # issue #129: the note on which way the speaker faces
+                lines.append(fill(v[f"heard_seen_{heard.frame}"], n=heard.label, message=heard.message))
             else:
                 lines.append(fill(v["heard_seen"], n=heard.label, message=heard.message))
         return lines

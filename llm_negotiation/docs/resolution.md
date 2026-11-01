@@ -179,6 +179,17 @@ debrief (D8), and RF-11's extractor and RF-12's translator, which read results.
 | **Non-verbal** | up to 3 | Move and signal. |
 | **Talk** | up to 3 | Move, signal and speak (`message`). One message per agent per decision point; speaking takes simulated time. |
 
+**Amended 2026-11-01 (issue #129, RF-40), the user's decisions.** From RF-40 on: (1) a **silent**
+condition (move only, no message and no signal, but asked again under D5, up to the cap) replaces
+independent, which the user had understood to work so; (2) signals and talk can be a **turn-taking
+exchange** (`protocol.exchange: turn_taking`): the simulation pauses, those due are asked one at a
+time, who goes first counterbalanced over a cell's repeats, and a signal or message is taken in at
+once, in full, by whoever perceives it, who is asked next; (3) a heard message from someone in view
+carries a note on which way they face ("their left is your right"), the message never rewritten.
+`resolve_v9` is written for this. The earlier runs keep independent, speech in simulated time and
+their templates (`encounter-protocol.md`, section 4). (#55's "silent condition", item 4 of
+`CLAUDE.md`'s pending sign-offs, was what became non-verbal: not this one.)
+
 ## D4. When an agent is prompted (the trigger)
 
 All of these must hold:

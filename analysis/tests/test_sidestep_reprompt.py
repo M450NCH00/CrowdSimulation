@@ -78,6 +78,19 @@ def test_a_dance_at_the_start_and_how_it_ended():
     assert "non_verbal" in out["dance_vs_independent"]
 
 
+def test_without_independent_silent_is_the_reference_and_its_dances_are_read_as_asked_again():
+    # Issue #129 (RF-40): silent replaces independent; it is asked again, so its dances end too.
+    sessions = [
+        session("S_a", 1, "silent", ["left", "right"], ["right", "right"], True),
+        session("S_b", 1, "silent", ["left"], ["right"], False, level=(0.4, -0.4)),
+        session("T_a", 1, "talk", ["left", "right"], ["right", "right"], True),
+    ]
+    out = sr.summarise(sessions)
+    assert out["reference"] == "silent" and set(out["dance_vs_independent"]) == {"talk"}
+    assert out["dance_ending"]["silent"]["resolved"]["switched"] == {"none": 0, "one": 1, "both": 0}
+    assert "against silent" in sr.markdown(out)
+
+
 def test_side_units_need_four_runs_that_moved_aside():
     sessions = [session("N_a", r, "non_verbal", ["right"], [side], True) for r, side in
                 zip((1, 2, 3, 4), ("left", "left", "right", "none"))]

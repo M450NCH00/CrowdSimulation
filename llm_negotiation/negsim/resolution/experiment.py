@@ -93,14 +93,14 @@ from .pairwise import ATTRACTIVENESS, FAMILIARITY, PAIRWISE_TEMPLATE, PairwiseFa
 from .perceive import LLM_VIEW_CONFIG, LLMViewSettings
 from .factors import SWITCHES as OBSERVABLE
 from .prompt import DEBRIEF_TEMPLATE, CoreTemplate, DebriefTemplate, default_core
-from .protocol import SESSION_ABORTED, SESSION_COMPLETED, EncounterSession, ProtocolSettings, code_plan
+from .protocol import EXCHANGE_REAL_TIME, SESSION_ABORTED, SESSION_COMPLETED, EncounterSession, ProtocolSettings, code_plan
 from .replay import plain_orca, replay_session, run_plan_for
 from .reply import ParsedReply
 from .scenario import Scenario
 from .screening import base_count, resolution
 from .scenarios import load_scenario, plugin_for
 from .transcript import render as render_transcript
-from .view import CHANGES, CONDITION_TALK, CONDITIONS, DETAIL_FULL, DETAIL_SHORT, MOTION_WALKING, Done, Heard, Me, SeenPerson, TimeToMeet, View
+from .view import ALL_CONDITIONS, CHANGES, CONDITION_TALK, DETAIL_FULL, DETAIL_SHORT, MOTION_WALKING, Done, Heard, Me, SeenPerson, TimeToMeet, View
 
 LAYER_RESOLUTION = "resolution"
 SCHEMA_VERSION = 1  # of the config
@@ -239,8 +239,8 @@ class ResolutionConfig:
         if not isinstance(ids, list) or len(set(ids)) != len(ids):
             raise ConfigError(f"{where}.cases.ids: a list of distinct case ids (each may be id@version)")
         conditions = raw["conditions"]
-        if not isinstance(conditions, list) or not conditions or any(c not in CONDITIONS for c in conditions) or len(set(conditions)) != len(conditions):
-            raise ConfigError(f"{where}.conditions: a list of distinct conditions from {list(CONDITIONS)}, got {conditions!r}")
+        if not isinstance(conditions, list) or not conditions or any(c not in ALL_CONDITIONS for c in conditions) or len(set(conditions)) != len(conditions):
+            raise ConfigError(f"{where}.conditions: a list of distinct conditions from {list(ALL_CONDITIONS)}, got {conditions!r}")
         scenarios = raw.get("scenarios") or {}
         if not isinstance(scenarios, Mapping):
             raise ConfigError(f"{where}.scenarios: a mapping of case id to scenario plug-in")
@@ -263,6 +263,18 @@ class ResolutionConfig:
                 raise ConfigError(f"{where}.templates.factors: {chosen['factors']} has no ethnicity lines, and the design varies {PAIR_FACTOR}")
         if design.uses_pairwise:
             chosen["pairwise"] = str(templates.get("pairwise", PAIRWISE_TEMPLATE))
+        protocol = ProtocolSettings.from_mapping(raw.get("protocol"), f"{where}.protocol")
+        core_template = CoreTemplate.load(chosen["core"])
+        if (core_template.exchange or EXCHANGE_REAL_TIME) != protocol.exchange:
+            # Issue #129: resolve_v9's words say a signal or message is taken in before the other
+            # decides, which is true only of a paused exchange; the earlier templates' are not.
+            raise ConfigError(
+                f"{where}.templates.core: {chosen['core']} is written for the {core_template.exchange or EXCHANGE_REAL_TIME} "
+                f"exchange, and protocol.exchange is {protocol.exchange}"
+            )
+        lacking = [c for c in conditions if not core_template.offers(c)]
+        if lacking:
+            raise ConfigError(f"{where}.templates.core: {chosen['core']} has no section for {lacking}")
         default_values = str(FACTOR_VALUES_CONFIG.relative_to(PACKAGE_ROOT)).replace("\\", "/")
         return cls(
             experiment_name=name,
@@ -274,7 +286,7 @@ class ResolutionConfig:
             scenarios={str(case): str(plugin) for case, plugin in scenarios.items()},
             conditions=tuple(conditions),
             design=design,
-            protocol=ProtocolSettings.from_mapping(raw.get("protocol"), f"{where}.protocol"),
+            protocol=protocol,
             templates=chosen,
             llm_view=str(raw.get("llm_view", str(LLM_VIEW_CONFIG.relative_to(PACKAGE_ROOT)).replace("\\", "/"))),
             llm={
@@ -616,6 +628,7 @@ def run_session(
         config.protocol, view_settings, core, debrief, people=session.people,
         show_age=session.visibility.get("age", True), show_gender=session.visibility.get("gender", True), labels=labels,
         factors=factors, pairwise=pairwise,
+        **({"first_asked": first_asked(session)} if config.protocol.turn_taking else {}),
     )
     started = _utc_now()
     try:
@@ -650,6 +663,15 @@ def run_session(
         if record["outcome"] == SESSION_COMPLETED else None
     )
     return record
+
+
+def first_asked(session: Session) -> int:
+    """Issue #129 (the user's decision of 2026-11-01): who is asked first in a paused exchange,
+    counterbalanced over a cell's repeats: person 1 in an odd repeat, person 2 in an even one. Both
+    sessions of a counterfactual pair are first runs, so person 1 goes first in both."""
+    one = session.agents[0] if session.cell["mapping"] == "p1_lower" else session.agents[1]
+    two = session.agents[1] if one == session.agents[0] else session.agents[0]
+    return one if session.repeat % 2 == 1 else two
 
 
 def session_factors(config: ResolutionConfig, session: Session) -> SessionFactors:
@@ -903,6 +925,8 @@ def outcome_row(record: Mapping[str, Any], case: Mapping[str, Any], physical: Op
         # physical columns' ``_a`` and ``_b`` are its first two, not person 1 and person 2.
         "encounter_agents": ";".join(str(agent) for agent in encounter.get("agents") or []) or None,
         "prompted": len(encounter.get("prompted") or []),
+        # Issue #129: who was asked first in a paused exchange, as person 1 or person 2.
+        **({"first_asked": "p1" if encounter["first_asked"] == first else "p2"} if encounter.get("first_asked") is not None else {}),
         "left_out_by_cap": len(encounter.get("left_out_by_cap") or []),
         "encounter_start_s": None if not encounter.get("trigger") else encounter["trigger"]["time_s"],
         "end_reason": end.get("reason"), "end_s": end.get("time_s"),

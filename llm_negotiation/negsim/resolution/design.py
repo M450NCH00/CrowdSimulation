@@ -120,7 +120,7 @@ from .ethnicity import (
 from .factors import SITUATIONS, SWITCHES
 from .pairwise import ATTRACTIVENESS_FACTORS, DESIGN_FACTORS as PAIRWISE_DESIGN, LEVELS as PAIRWISE_LEVELS, SWITCHES as PAIRWISE_SWITCHES, block_for
 from .screening import DesignError, aliasing_problems, balanced_sample, balanced_subset, fraction, smallest_runs
-from .view import CONDITIONS
+from .view import ALL_CONDITIONS
 
 #: The factors of issue #58: a design names all of them, but ``task`` may give way to ``urgency``.
 FACTORS = ("age_pair", "gender_pair", "task", "demographics_visible", "mapping")
@@ -151,7 +151,7 @@ FACTOR_LEVELS: dict[str, tuple[Any, ...]] = {
     SWITCH_FACTOR: (True, False),
 }
 REQUIRED = ("age_pair", "gender_pair", "demographics_visible", "mapping")
-CONDITION_LETTER = {"independent": "I", "non_verbal": "N", "talk": "T"}
+CONDITION_LETTER = {"independent": "I", "non_verbal": "N", "talk": "T", "silent": "S"}  # silent: issue #129
 #: The kinds of design (issue #62): which cells of the full factorial a design runs.
 KIND_FULL, KIND_FRACTIONAL, KIND_SAMPLE = "full", "fractional", "sample"
 KINDS = (KIND_FULL, KIND_FRACTIONAL, KIND_SAMPLE)
@@ -765,8 +765,8 @@ def sessions_for(
     repeats = design.exact_repeat_plan(cells, [case[0] for case in cases])
     unordered = []
     for condition in conditions:
-        if condition not in CONDITIONS:
-            raise ConfigError(f"unknown condition {condition!r}; the conditions are {list(CONDITIONS)}")
+        if condition not in ALL_CONDITIONS:
+            raise ConfigError(f"unknown condition {condition!r}; the conditions are {list(ALL_CONDITIONS)}")
         letter = CONDITION_LETTER[condition]
         for case_id, version, agents, scenario in cases:
             common = {"condition": condition, "case_id": case_id, "case_version": version, "agents": tuple(sorted(agents)), "scenario": scenario}
