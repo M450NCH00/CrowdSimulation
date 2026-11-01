@@ -147,6 +147,15 @@ a pilot (`--limit 24`), read its replays for sidesteps and later decisions, then
   earlier runs are written as before; the mock adds the keys only when the question asks for them.
   7 more tests (21 in the file).
 
+### 2026-11-01 — Mock rehearsal with 6 decision points and `resolve_debrief_v2` (`runs_mock/rf39_dp6/`)
+- 816 of 816; `config.json` has `max_decision_points: 6` and `resolve_debrief_v2`. (`--overwrite`
+  is refused for a resolution experiment, which resumes; hence a new folder.)
+- Calls a session: independent 4.11 (unchanged), non-verbal 11.14 (was 8.57 with 3), talk 11.43
+  (was 8.69); at most 15. All 1,554 debriefs read, with a side basis (the mock's two answers).
+- Cost at the measured cost a call: 0.14 + 0.45 + 0.49 = **about USD 1.08 off-peak** (the side
+  keys add about 30 output tokens a debrief, a few per cent). USD 1.20 would leave about 10%.
+  Recommended cap: **USD 1.60**, pending the user's approval.
+
 ## Open questions / risks
 - ~~For the user: the scale, the execution, the meaning of `[]`, and the cap.~~ Decided 2026-11-01 (above).
 - Prices were last checked 2026-10-26 (`configs/llm/deepseek_pricing.yaml`): re-check before paying.
