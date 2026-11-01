@@ -241,6 +241,19 @@ a pilot (`--limit 24`), read its replays for sidesteps and later decisions, then
 - Run folder: 225 MB. As RF-35 and RF-36, the two interaction logs (13 MB, rebuilt from the session
   records) are gitignored; session records, transcripts, events and trajectories are committed.
 
+### 2026-11-01 — Why the other did not act on "I'll keep left" (the user's question); a correction
+- The user asked whether it was timing (both prompted at once), left/right confusion, or a choice.
+- Traced each talk-dance message through the session records' `utterances`: 108 replies named a side;
+  **96 were never said** (the encounter ended first: median reply 2.2 s before the end, at 3.5 m; 7.5
+  words, 3 s to say; heard only once said in full). 12 heard, 8 with no later decision for the
+  listener, 4 (2 sessions) with one: in all 4 the listener cited the words and took the wrong side
+  (perspective). Speakers: 3 of 6 "your left/right" messages named the speaker's own side.
+- **Correction:** the report said "the other ... does not switch", implying it heard; it mostly never
+  heard. Fixed in `comparison_report.md` (In short, sections 2 and 7), marked as corrected.
+- Design levers, for the user (not changed): a message heard only when said in full; the 2.5 words a
+  second placeholder; agents talking late and in long, greeting-first sentences (a template change
+  would be a new version).
+
 ## Open questions / risks
 - ~~For the user: the scale, the execution, the meaning of `[]`, and the cap.~~ Decided 2026-11-01 (above).
 - ~~Prices were last checked 2026-10-26~~: re-checked 2026-11-01, unchanged.

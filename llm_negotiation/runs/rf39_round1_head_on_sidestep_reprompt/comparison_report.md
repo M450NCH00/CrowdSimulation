@@ -18,11 +18,14 @@ module, `python -m analysis.sidestep_reprompt`), `analysis/gate.md`, `analysis/l
   non-verbal and 37 of 41 in talk exactly one agent moved to its other side at a later decision. In the
   dances that did not end, nobody changed side in 54 of 73 and 64 of 83: each agent kept its own side,
   up to 6 decisions, until they collided against the same wall.
-- **Words do not carry the side in a way that helps.** Nobody points in non-verbal. In talk, a message
-  names a side in 41 of the 83 dances that did not end and 9 of the 41 that did: the speaker names its
-  *own* side ("I'll keep to my left"), and the other, heading for the same wall, does not switch. The
-  unresolved sessions are also twice as long (median 10 decision points against 5), so more chances to
-  speak; the difference is not evidence that naming a side hurts.
+- **Words almost never reach the other in time.** Nobody points in non-verbal. In talk dances, 108
+  replies named a side, but **96 were never said before the encounter ended**: the median one came at
+  3.5 m, 2.2 s before the end, and took 3 s to say (7.5 words at 2.5 a second; a message is heard only
+  once said in full). 12 were heard, 4 while the listener could still decide (2 sessions). In all 4
+  the listener acted on the words and **took the wrong side**: "she says she'll keep left, so … tuck in
+  tight to the right wall"; "he's coming through on my left … so I keep well left". Too few to call a
+  finding, but no listener heard a side and ignored it. *(Corrected 2026-11-01: an earlier version
+  said the other heard the side and did not switch; see section 2.)*
 - **The side is a weak preference, not a pure coin flip, and it follows the person.** An agent's first
   side across its cell's 4 identical repeats was the same all 4 times in 0.30 (non-verbal) and 0.29
   (talk) of agents, against 0.13 and 0.15 for a coin (p < 0.0001, p = 0.0001); independent is within a
@@ -102,10 +105,20 @@ How a dance at the start ended:
 
 - "Changed side": a later readable decision with a side other than the agent's first. "Both" changing
   (a second dance the other way) is rare: 4 and 2 unresolved sessions.
-- "Names a side": the words `left` or `right` in a message (a keyword match, mine). Read examples
-  (`WORK_LOG-127.md`): the speaker names its own side ("I'll keep to my left, plenty of room") and the
-  other, moving to the same wall, does not switch; some messages send the other into the speaker's own
-  path ("plenty of room on your right", from an agent on that side). Most messages are greetings.
+- "Names a side": the words `left` or `right` in a reply's message (a keyword match, mine). The column
+  counts what the agents *wrote*, not what the other *heard*. Most messages are greetings.
+- **What reached the listener** (the session records' `utterances`, talk dances): of 108 replies
+  naming a side, 96 were never said, because the encounter ended before the message was finished (the
+  median came 2.2 s before the end, at 3.5 m, and needed 3 s at 2.5 words a second; a message is heard
+  only when said in full, `docs/encounter-protocol.md`, section 3). 12 were said and heard; in 8 the
+  listener had no later decision. In the 4 left (2 sessions), the listener's reason cites the words and
+  it took the wrong side: "I'll keep left" (the speaker's left, the listener's right) answered by
+  "tuck in tight to the right wall"; "coming through on your left" (correct, from an agent on its own
+  right) answered three times by "he's coming through on my left … so I keep well left". Speakers err
+  too: of 6 messages phrased "your left/right", 3 named the side the speaker itself was on. Too few to
+  say the agents confuse the frames in general; none heard a side and ignored it.
+- Over all talk sessions, 457 of 832 messages were never said before the encounter ended; of the 375
+  said, 304 were heard (the others out of hearing range: 3.2 m in busy surroundings, 8.9 m in quiet).
 - Fisher's exact test on messages naming a side, resolved against not: p = 0.004, but the unresolved
   sessions are twice as long; not read as an effect.
 - Perception, unchanged from RF-30: an agent is told the other "moved over to your right/left" only
@@ -235,7 +248,9 @@ debriefed (never prompted) or no side basis in the reply.
   2. *A visitor from a keep-right country keeps right* (and assertive or hurried people go right, older
      people left): a person-level side preference that the agents themselves do not name.
   3. Words and signals in these agents do not settle the side: the tie-breaker in pattern 1 comes from
-     a change of plan, not from what was said.
+     a change of plan, not from what was said. For talk this is mostly timing (the words arrive after
+     the encounter), not a test of whether words would work; in the few cases they arrived, the
+     listener read the side wrongly.
 - **Step 3:** pattern 1 and 2 are the kind of claim the published-studies check (RF-14) can test: side
   preference by country of origin, and how a pavement dance ends. Neither is checked here.
 - **For the simulation:** the agents do not coordinate the side reliably; a rule that picks the side
