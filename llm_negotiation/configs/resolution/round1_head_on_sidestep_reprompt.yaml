@@ -9,7 +9,7 @@
 #   python run_experiment.py configs/resolution/round1_head_on_sidestep_reprompt.yaml --client deepseek --confirm
 # off-peak, after a pilot with --limit. The cost: about USD 0.77 to 0.86 off-peak (WORK_LOG-127.md).
 #
-# RF-30's config (configs/resolution/round1_head_on_keep_line.yaml) with three changes:
+# RF-30's config (configs/resolution/round1_head_on_keep_line.yaml) with these changes:
 # - templates.core: resolve_v8 (RF-29's: resolve_v6 plus a sidestep by an amount in metres), so that
 #   the agents have the sidestep and, in non-verbal and talk, up to 3 decision points (D5) to try
 #   again after a pavement dance. Neither RF-29 (independent only) nor RF-30 (resolve_v6) had both.
@@ -19,6 +19,13 @@
 #   condition runs 4 times, for the noise floor and the factor effects (the user's aim, 2026-11-01:
 #   enough data to extract a good rule). The people are drawn by unit (case and cell, and each
 #   pair), so repeat 1 has RF-30's (and RF-29's) session ids and people; only the template differs.
+# - protocol.execution: keep_line_replan (issue #127): keep_line, and the line is also kept across a
+#   later decision (a waiting first step, or []), where keep_line gave back a sidestep.
+# - protocol.max_decision_points: 6 in place of D5's 3 (the user's decision of 2026-11-01): in RF-30,
+#   293 of 384 agents used all 3, and 71 of the 92 failed sessions ended with the agents out of
+#   decisions. The prompts give no number ("You may be asked again later"), so no wording changes.
+# - templates.debrief: resolve_debrief_v2, which also asks why that side and not the other (the
+#   user's point of 2026-11-01). Asked after the encounter, so the decisions cannot be steered by it.
 # Model deepseek-flash, temperature 1.0, thinking off, reply cap 300, the factors, fraction,
 # geometries, counterfactual pairs and gate are RF-10's, RF-29's and RF-30's.
 # Perceived attractiveness and real ethnicity are on, as in RF-10: both ethics sign-offs are
@@ -114,7 +121,7 @@ resolution_gate:
     pilot resolved 0.24 before resolve_v6's fixes, so failing the gate is a possible Step 1 result.
 
 protocol:
-  max_decision_points: 3            # D5
+  max_decision_points: 6            # issue #127 (the user's decision of 2026-11-01): D5's 3 was a cost limit; 76% of RF-30's agents used all 3
   min_gap_s: 1.0                    # D5
   no_conflict_end_s: 1.0            # [placeholder] the encounter ends after this long with no conflict predicted
   max_prompted: 4                   # D11, D12: the cap on prompted people per encounter (a cost limit)
@@ -124,7 +131,7 @@ protocol:
 
 templates:
   core: resolve_v8                  # issue #101: resolve_v6 with the sidestep option; turning stays
-  debrief: resolve_debrief_v1
+  debrief: resolve_debrief_v2       # issue #127: also asks why that side (after the encounter)
   factors: resolve_factors_v2       # the ethnicity lines (issue #92)
   pairwise: resolve_pairwise_v1
 

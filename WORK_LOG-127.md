@@ -108,6 +108,45 @@ Asked in four questions; the answers, word for word where given:
 Next, once the user says the balance is topped up: re-check the pricing page, check the balance,
 a pilot (`--limit 24`), read its replays for sidesteps and later decisions, then the rest off-peak.
 
+### 2026-11-01 — Six decision points (the user's decision)
+- The user asked whether one re-prompt is enough, since in life a dance can take three tries. It
+  is up to 2 re-prompts now (D5: 3 decision points an agent in non-verbal and talk). In RF-30, 293
+  of 384 agents used all 3, and 71 of the 92 failed sessions ended with the agents out of decisions
+  and ORCA taking over. But the commonest reason for a later prompt was the other's signal (112) or
+  slight turn, not a dance.
+- Recommended raising the limit to 6, and the cap to about USD 1.60 after a new mock; the user:
+  "Yes please do that". `protocol.max_decision_points: 6`. The prompts give no number ("You may be
+  asked again later"), so no wording changes. **The cap stays USD 1.20 until the user approves a
+  new one** (recorded in `CLAUDE.md`), after the mock below.
+- Caveat for the report: repeat 1 pairs with RF-30 only up to the third decision; the sessions that
+  reach it (most failures) go on differently.
+
+### 2026-11-01 — Why that side: the debrief asks it (`resolve_debrief_v2`)
+- The user's point: the results do not say whether an agent took a side because it prefers it or
+  because either side would have done. Round 1 (RF-10 and RF-30 first plans with a side, 595):
+  - right 62% when the lines are 20 cm apart, 61% when aligned: a lean, the same in both layouts;
+  - in RF-10's exact repeats, an agent took the same side all 3 times in 5 of 13 (38%), against 29%
+    for a coin weighted 62/38 (few agents: weak evidence);
+  - 82% of reasons name the side, but almost none say why that side: a custom 2 to 4%, the other's
+    position about 4% (a keyword coding of the private reasons, mine; `[unverified]` beyond that).
+- Two measures in RF-39:
+  1. **From behaviour (the main one):** with every cell 4 times, whether a cell's side is stable
+     (a preference) or a coin flip, the lean overall, by layout, and by factor.
+  2. **Asked:** `resolve_debrief_v2`, v1 word for word plus "If you moved to one side, why that side
+     and not the other? ... or nothing: either side would have done as well. That is a perfectly
+     good answer too." and the reply keys `side_basis` (`custom_or_rule`, `where_they_were`,
+     `more_room`, `what_they_did`, `either_side`, `did_not_move_aside`) and `side_detail`. Asked
+     after the encounter, so it cannot steer a decision; the first prompts stay RF-30's. **The
+     wording is my draft, for the user to review before the paid run** (a change means v3).
+  - The two are compared: round 1 found that what agents say drives them often does not show in
+    what they do (`docs/round1-results.md`, 4.4), so the stated reason is checked against the
+    behaviour, not taken as the cause.
+- Code: the parser reads the side keys only under the template's `side_question` flag (as
+  `resolve_v8`'s `sidestep` flag); a missing or unknown side basis is flagged, not refused, so the
+  rest of the debrief is kept; records and `debriefs.jsonl` gain the keys only when asked, so
+  earlier runs are written as before; the mock adds the keys only when the question asks for them.
+  7 more tests (21 in the file).
+
 ## Open questions / risks
 - ~~For the user: the scale, the execution, the meaning of `[]`, and the cap.~~ Decided 2026-11-01 (above).
 - Prices were last checked 2026-10-26 (`configs/llm/deepseek_pricing.yaml`): re-check before paying.

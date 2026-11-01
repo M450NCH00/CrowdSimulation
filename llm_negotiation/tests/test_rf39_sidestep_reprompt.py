@@ -19,7 +19,11 @@ from negsim.avoidance.simulation import AvoidanceSimulation
 from negsim.resolution import execute as X
 from negsim.resolution import experiment as E
 from negsim.resolution import protocol as P
-from negsim.resolution.prompt import CoreTemplate
+from negsim.negotiation.parsing import TurnParseError
+from negsim.resolution.mock import debrief_paths_v1
+from negsim.resolution.prompt import CoreTemplate, DebriefTemplate
+from negsim.resolution.reply import SIDE_BASES, parse_debrief
+from negsim.llm.base import LLMRequest
 from test_encounter_protocol import HEAD_ON, points_of, session_on
 from test_execute import EVENTS, PASSING, records, run_plans
 
@@ -124,14 +128,17 @@ def test_a_pavement_dance_prompts_again_and_the_prompt_says_how_far_aside_the_ag
 
 
 def test_rf39s_config_is_rf30s_sessions_with_resolve_v8_all_three_conditions_and_every_cell_repeated():
+    # The user's decisions of 2026-11-01: 4 repeats, three conditions, keep_line_replan, 6 decision
+    # points, and the debrief that asks why that side.
     rf30 = E.ResolutionConfig.load("configs/resolution/round1_head_on_keep_line.yaml")
     rf29 = E.ResolutionConfig.load("configs/resolution/round1_head_on_sidestep.yaml")
     new = E.ResolutionConfig.load(CONFIG)
     assert new.experiment_name == "rf39_round1_head_on_sidestep_reprompt"
     assert new.conditions == ("independent", "non_verbal", "talk")
-    assert new.templates == rf29.templates and new.templates["core"] == "resolve_v8"
-    assert new.protocol.execution == X.EXECUTION_KEEP_LINE_REPLAN
-    assert {k: v for k, v in new.protocol.as_dict().items() if k != "execution"} == {k: v for k, v in rf30.protocol.as_dict().items() if k != "execution"}
+    assert new.templates == {**rf29.templates, "debrief": "resolve_debrief_v2"} and new.templates["core"] == "resolve_v8"
+    assert new.protocol.execution == X.EXECUTION_KEEP_LINE_REPLAN and new.protocol.max_decision_points == 6
+    changed = ("execution", "max_decision_points")
+    assert {k: v for k, v in new.protocol.as_dict().items() if k not in changed} == {k: v for k, v in rf30.protocol.as_dict().items() if k not in changed}
     assert new.llm == rf30.llm and new.resolution_gate == rf30.resolution_gate
     assert new.budget["cap_usd"] == 1.20 and new.budget["over_cap"] == "stop_at_cap"  # the cap CLAUDE.md records for #127
     sessions = E.plan(new).sessions
@@ -151,3 +158,80 @@ def test_rf39s_config_is_rf30s_sessions_with_resolve_v8_all_three_conditions_and
     for session in sessions:
         if session.pair_id is None:
             assert session.personas == by_id[session.session_id.rsplit("_r", 1)[0] + "_r1"].personas
+
+
+# --- the debrief that asks why that side (resolve_debrief_v2) --------------------------------------
+
+D1, D2 = DebriefTemplate.load("resolve_debrief_v1"), DebriefTemplate.load("resolve_debrief_v2")
+BASE = {"basis": "Habit.", "kind": "habit", "source": "none", "applies_to": "my first decision"}
+
+
+def test_resolve_debrief_v2_is_v1_plus_the_side_paragraph_the_two_keys_and_the_flag():
+    one, two = D1.data, D2.data
+    assert not D1.side_question and D2.side_question
+    for key in ("decision", "steps", "no_steps", "said", "signal"):
+        assert one[key] == two[key], key
+    first, second = one["text"].split("\n\n"), two["text"].split("\n\n")
+    assert second[0] == first[0] and second[-1] == first[-1] == "{reply_format}"
+    assert second[1].startswith("If you moved to one side, why that side and not the other?") and "either side would have done as well" in second[1]
+    for basis in SIDE_BASES:
+        assert f'"{basis}"' in two["reply_format"], basis
+    assert set(two["reply_format"].splitlines()) >= set(one["reply_format"].splitlines()[:-1])
+
+
+@pytest.mark.parametrize(("extra", "basis", "flags"), [
+    ({"side_basis": "Either_Side", "side_detail": "Both were free."}, "either_side", []),
+    ({"side_basis": "keep_left", "side_detail": "x"}, None, ["unknown_side_basis"]),
+    ({}, None, ["no_side_basis"]),
+])
+def test_a_side_answer_is_read_and_a_bad_one_is_flagged_not_refused(extra, basis, flags):
+    reply = parse_debrief(json.dumps({**BASE, **extra}), side=True).as_dict()
+    assert reply["side_basis"] == basis and reply["flags"] == flags and reply["kind"] == "habit"
+    assert reply["side_detail"] == extra.get("side_detail")
+
+
+def test_without_the_flag_a_debrief_is_read_and_written_as_before():
+    plain = parse_debrief(json.dumps(BASE)).as_dict()
+    assert "side_basis" not in plain and "side_detail" not in plain
+    assert parse_debrief(json.dumps({**BASE, "side_basis": "either_side"})).as_dict() == plain
+    with pytest.raises(TurnParseError):
+        parse_debrief(json.dumps({**BASE, "kind": "other"}), side=True)  # the rest is checked as before
+
+
+def test_the_mock_adds_the_side_keys_only_when_the_question_asks_for_them():
+    def request(text):
+        return LLMRequest(messages=({"role": "user", "content": text},), model="m", temperature=1.0, max_tokens=300, metadata={"path_index": 0})
+    assert "side_basis" not in json.loads(debrief_paths_v1(request("Was what you did based on anything?")))
+    assert json.loads(debrief_paths_v1(request('... "side_basis": ...')))["side_basis"] in SIDE_BASES
+
+
+def session_with_debrief(debrief_reply, debrief_template):
+    """An independent head-on session under resolve_v8, both sidestepping 0.4 m to their right, each
+    debrief answered with ``debrief_reply``."""
+    from negsim.experiment.avoidance import simulation_for
+    from negsim.llm.mock import MockClient
+    from negsim.resolution.scenarios import load_scenario
+    from negsim.rulegen.replay import source_plan
+    from test_encounter_protocol import LLM
+    move = answer({"speed_mps": 1.3, "sidestep": {"to": "right", "metres": 0.4}})
+    client = MockClient(policy=lambda request: debrief_reply if request.metadata.get("kind") == "debrief" else move)
+    run = P.EncounterSession(
+        simulation_for(source_plan(HEAD_ON)), HEAD_ON["agents"], load_scenario("passing"), "independent", client, LLM,
+        P.ProtocolSettings(execution=X.EXECUTION_KEEP_LINE_REPLAN), core=V8, debrief=debrief_template,
+    )
+    run.run_session()
+    return run.as_dict(), client
+
+
+def test_a_session_under_resolve_debrief_v2_asks_why_that_side_and_records_the_answer():
+    reply = json.dumps({**BASE, "side_basis": "where_they_were", "side_detail": "They were a little to my left."})
+    record, client = session_with_debrief(reply, D2)
+    asked = [r for r in client.requests if r.metadata.get("kind") == "debrief"]
+    assert len(asked) == 2 and all("why that side and not the other?" in r.messages[-1]["content"] for r in asked)
+    assert [d["parsed"]["side_basis"] for d in record["debriefs"]] == ["where_they_were"] * 2
+    rows = E.debrief_rows({**record, "session_id": "s"})  # an experiment's record names its session
+    assert [(row["side_basis"], row["side_detail"]) for row in rows] == [("where_they_were", "They were a little to my left.")] * 2
+    # Under resolve_debrief_v1 the same session is asked and recorded as before.
+    old, client = session_with_debrief(json.dumps(BASE), D1)
+    assert all("why that side" not in r.messages[-1]["content"] for r in client.requests if r.metadata.get("kind") == "debrief")
+    assert all("side_basis" not in d["parsed"] for d in old["debriefs"]) and all("side_basis" not in row for row in E.debrief_rows({**old, "session_id": "s"}))

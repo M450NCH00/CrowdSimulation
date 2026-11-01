@@ -1,0 +1,52 @@
+# Prompt template resolve_debrief, version 2.  FROZEN — do not edit.
+# The hash of this file is pinned in MANIFEST.json and checked every time it is loaded.
+# To change any wording, copy the file to resolve_debrief_v3.yaml, change it there, freeze it,
+# and record the reason in the work log.
+template_id: resolve_debrief
+version: 2
+kind: resolution_debrief
+description: >-
+  The debrief of docs/resolution.md, D8, as resolve_debrief_v1, plus one question: if the agent
+  moved to one side, why that side and not the other, with "either side would have done as well"
+  a perfectly good answer. Asked after the encounter, never during it, so that asking cannot
+  steer the decision (the first prompts are those of a run under resolve_debrief_v1).
+provenance: >-
+  Issue #127 (RF-39), the user's point of 2026-11-01: round 1's results do not say whether an
+  agent took a side because it prefers that side (a custom, where the other was, the room) or
+  because either side would have done. resolve_debrief_v1 word for word, except a second
+  paragraph of the question and two keys of the reply, side_basis and side_detail. The
+  side_question flag tells the debrief parser to read them. The wording of the question and its
+  kinds are Claude's draft, for the user to review before the paid run.
+
+# Issue #127: the reply has side_basis and side_detail (the debrief parser reads them).
+side_question: true
+
+text: |-
+  Stepping out of the role now. Earlier, as this person, you:
+  {decisions}
+  Was what you did based on anything: a law or official guidance, a published study, a local custom, a habit, or nothing in particular? If you know a specific source, name it. If there is none, say so. That is a perfectly good answer.
+
+  If you moved to one side, why that side and not the other? It may have been a custom or rule about which side to keep to, where the other person was, which side had more room, something the other person did, or nothing: either side would have done as well. That is a perfectly good answer too.
+
+  {reply_format}
+
+decision: '- decided: "{intent}"'
+steps: "  Your steps were: {steps}."
+no_steps: "none, you carried on as you were"
+said: '  You said: "{message}"'
+signal: "  Your signal was: {signal}."
+
+reply_format: |-
+  HOW TO REPLY
+  Reply with a single JSON object and nothing else, with these keys:
+  "basis": in your own words, what you did was based on.
+  "kind": one of "law_or_guidance", "published_study", "local_custom", "habit", "common_sense" or "none".
+  "source": a specific source you know of, as a citation, or "none".
+  "applies_to": which of your decisions this is about.
+  "side_basis": why you moved to that side and not the other: one of "custom_or_rule", "where_they_were", "more_room", "what_they_did", "either_side" or "did_not_move_aside".
+  "side_detail": in your own words, why that side.
+  The format, with placeholders: {"basis": "<what it was based on>", "kind": "<one of the kinds>", "source": "<a citation, or none>", "applies_to": "<which decision>", "side_basis": "<one of the side reasons>", "side_detail": "<why that side>"}
+
+retry: >-
+  Your last reply could not be read. Reply again with only a JSON object of the form
+  {"basis": "<what it was based on>", "kind": "<one of the kinds>", "source": "<a citation, or none>", "applies_to": "<which decision>", "side_basis": "<one of the side reasons>", "side_detail": "<why that side>"}.
