@@ -126,6 +126,8 @@ Budget:
   After issue #119's run with its pilot (USD 0.1471 in the ledger, cap 0.15, stopped at the cap with 66
   of 72 sessions): **USD 0.17**, checked 2026-10-29 (0.30 just before the rest of the run, 0.32 before
   the pilot).
+  Topped up by the user before issue #127's run (the user: "I have topped up up to 5 us dollar"):
+  **USD 5.17**, checked 2026-11-01 (5.17 topped up, 0.00 granted).
 
 ### Phase 1 (on hold): the behaviour dataset
 The task from the first supervisor meeting, on hold since the second meeting.
@@ -307,7 +309,9 @@ used in this track). Numbers in brackets are the decisions of track issue #55.
      money": no paid call until the user says the balance has been topped up. *The same day* the user
      raised the cap to **USD 1.60** (answering "Raise to USD 1.60"), after the limit of decision points
      went from 3 to 6 and the debrief gained a question (`resolve_debrief_v2`): about USD 1.08 off-peak
-     on the mock's calls. The top-up condition still holds.
+     on the mock's calls. *The top-up condition was met on 2026-11-01:* the user said "I have topped up
+     up to 5 us dollar in my deepseek api", and the balance endpoint showed USD 5.17. The cap stays
+     USD 1.60.
 2. **Approved by the supervisor, 2026-10-24** — Ethics sign-off for perceived
    attractiveness as a factor (#55, 3). *The user decided on 2026-10-24* that
    attractiveness (both directions) is **in** RF-10's design, because bias can

@@ -157,6 +157,17 @@ a pilot (`--limit 24`), read its replays for sidesteps and later decisions, then
   Recommended cap: **USD 1.60**. **The user raised the cap to USD 1.60** (recorded in `CLAUDE.md`) and
   answered "Wording is fine" to `resolve_debrief_v2`'s question. The top-up condition still holds.
 
+### 2026-11-01 06:53 UTC — Top-up, balance, prices
+- The user: "I have topped up up to 5 us dollar in my deepseek api, so now help me work on GitHub
+  issue #127". The top-up condition is met; recorded in `CLAUDE.md` (Budget and pending item 1).
+- Balance (`GET /user/balance`, the key not printed): **USD 5.17** (5.17 topped up, 0.00 granted).
+- Pricing page re-read 06:50 UTC: every price, both model versions and the peak hours as in
+  `deepseek_pricing.yaml`; `date_checked` 2026-11-01 (`docs/pricing-check.md`; `test_llm.py` pins
+  the date). Sunday, so off-peak all day.
+- The run order is shuffled, so `--limit 24` takes a mix of the three conditions (in the mock's
+  order the first 24 were 3 independent, 11 non-verbal, 10 talk).
+- Next: the pilot, `--client deepseek --confirm --limit 24`, then read its replays.
+
 ## Open questions / risks
 - ~~For the user: the scale, the execution, the meaning of `[]`, and the cap.~~ Decided 2026-11-01 (above).
 - Prices were last checked 2026-10-26 (`configs/llm/deepseek_pricing.yaml`): re-check before paying.
