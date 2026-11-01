@@ -96,10 +96,20 @@ cap is 0 until the user records the approval and cap in `CLAUDE.md` (pending ite
   enumeration lists needed the new execution and config (`AS_PROMPTED_TURNS`; the ethnicity
   configs list), then all pass (48 passed, 11 skipped in the two files rerun).
 
+### 2026-11-01 — The user's decisions
+Asked in four questions; the answers, word for word where given:
+- **Paid runs:** "Approve cap of USD 1.20, but do not do the run first as I have not top up the
+  money". Recorded in `CLAUDE.md` (pending item 1, #127 only); `budget.cap_usd: 1.20`. **No paid
+  call until the user says the balance has been topped up** (last checked USD 0.17, 2026-10-29).
+- **Scale:** 3 conditions x 4 repeats (816 sessions), as built.
+- **Executor:** `keep_line_replan`, as built.
+- **`[]` mid-sidestep:** keep the line where the agent is now, as built.
+
+Next, once the user says the balance is topped up: re-check the pricing page, check the balance,
+a pilot (`--limit 24`), read its replays for sidesteps and later decisions, then the rest off-peak.
+
 ## Open questions / risks
-- **For the user:** the scale (repeats, which conditions), the execution (`keep_line_replan` or
-  `keep_line`), the meaning of `[]`, and the cap. Until the approval and cap are in `CLAUDE.md`,
-  no paid call.
+- ~~For the user: the scale, the execution, the meaning of `[]`, and the cap.~~ Decided 2026-11-01 (above).
 - Prices were last checked 2026-10-26 (`configs/llm/deepseek_pricing.yaml`): re-check before paying.
 - The mock never sidesteps, so the rehearsal checks bookkeeping and call counts, not behaviour; the
   pilot's replays must be read for sidesteps and later decisions before the rest is paid for.

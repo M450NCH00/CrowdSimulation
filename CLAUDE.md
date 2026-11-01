@@ -205,7 +205,7 @@ The user's notes from the meeting, word for word:
   each simulator. Rules may be more specific, for example "keep left".
 
 ## Pending sign-offs
-Items 1 and 5 are still pending (item 1 was approved for issues #64, #65, #98, #100, #101, #104, #66, #67, #108, #110, #115, #117 and #119 only).
+Items 1 and 5 are still pending (item 1 was approved for issues #64, #65, #98, #100, #101, #104, #66, #67, #108, #110, #115, #117, #119 and #127 only).
 **Do not treat any of them as approved** until the user records the
 supervisor's answer in this file, with a date. Items 2 and 3, the ethics
 sign-offs for perceived attractiveness and real ethnicity, were recorded by the
@@ -298,6 +298,13 @@ used in this track). Numbers in brackets are the decisions of track issue #55.
      rf36_crowd_encounters_non_verbal`; 72 sessions, non-verbal condition only, about USD 0.11 to 0.12
      off-peak from RF-35's measured cost per call, a pilot first, `WORK_LOG-119.md`). The same answer
      keeps D5 as written (a bystander coming into view prompts again).
+   - **Approved for issue #127 only, 2026-11-01:** the user approved paid runs for RF-39's run of round 1's
+     head-on sessions with the sidestep (`resolve_v8`) in all three conditions, every cell 4 times, under
+     `protocol.execution: keep_line_replan` (#127), and only for it, with a cap of **USD 1.20** on that
+     experiment's own calls (`experiment_name: rf39_round1_head_on_sidestep_reprompt`; 816 sessions, about
+     USD 0.77 to 0.86 off-peak from RF-29's and RF-30's measured costs, a pilot first, `WORK_LOG-127.md`).
+     The user's words: "Approve cap of USD 1.20, but do not do the run first as I have not top up the
+     money": no paid call until the user says the balance has been topped up.
 2. **Approved by the supervisor, 2026-10-24** — Ethics sign-off for perceived
    attractiveness as a factor (#55, 3). *The user decided on 2026-10-24* that
    attractiveness (both directions) is **in** RF-10's design, because bias can

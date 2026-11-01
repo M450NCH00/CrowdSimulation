@@ -133,7 +133,7 @@ def test_rf39s_config_is_rf30s_sessions_with_resolve_v8_all_three_conditions_and
     assert new.protocol.execution == X.EXECUTION_KEEP_LINE_REPLAN
     assert {k: v for k, v in new.protocol.as_dict().items() if k != "execution"} == {k: v for k, v in rf30.protocol.as_dict().items() if k != "execution"}
     assert new.llm == rf30.llm and new.resolution_gate == rf30.resolution_gate
-    assert new.budget["cap_usd"] == 0.0 and new.budget["over_cap"] == "stop_at_cap"  # no paid run approved yet
+    assert new.budget["cap_usd"] == 1.20 and new.budget["over_cap"] == "stop_at_cap"  # the cap CLAUDE.md records for #127
     sessions = E.plan(new).sessions
     assert len(sessions) == 816
     for condition in new.conditions:
