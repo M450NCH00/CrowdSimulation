@@ -125,6 +125,30 @@ meant a conversation: the simulation pauses, A is asked, B hears all of A's mess
   380 passed, 12 skipped; `test_llm.py` 45 passed. Committed `3a876e41`.
 - Next: the pilot, `--client deepseek --confirm --limit 24`, at 04:00 UTC (off-peak), then its replays.
 
+### 2026-11-02 04:10 UTC — Pilot (24 sessions, USD 0.0392, off-peak)
+- Started 04:01:32, ended 04:10:04 UTC. 10 silent, 6 non-verbal, 8 talk; no transport error, no session
+  aborted. Model fingerprint `bc19ba97...` throughout, as in RF-39.
+- **The pause works as the user decided.** In talk, B hears A's message in full in the same pause, with
+  the note (`facing`); A hears B's answer at its next decision point, 1 s later, asked because of it
+  (`heard:n`). 32 messages, none unheard. E.g. `T_..b7fe7ead_r2`: "Hi! Fancy seeing you here." / "Sorry,
+  I can't stop, I'm on my way to the emergency room." / (next decision) "Oh no, go ahead, don't let me
+  keep you!" / "Thanks, I'm coming through!". Both still wave each other on at times: data, not a fault.
+- **Silent:** no signal and no message in any of its 77 readable replies (80 decisions), no flag; asked
+  again as in non-verbal.
+- **Unreadable:** 6 of 159 decisions after the retry (3.8%; RF-39's full run 112 of 3,987, 2.8%):
+  `start: "other_passes"` 3, `until` 5 m with the other at 5.0 m 1, `until: {"after_seconds": 4}` 1,
+  bad JSON 1. The same kinds as before; nothing in `resolve_v9`'s new wording.
+- **Debriefs:** 47 of 48, none unreadable; the missing one is an agent whose only reply was unreadable
+  (nothing to debrief). `side_basis`: where they were 24, more room 16, custom or rule 4, either side 3.
+- **Resolved by the LLM:** silent 6 of 10, non-verbal 5 of 6, talk 4 of 8 (too few to read).
+- **Cost:** 213 calls, USD 0.0392; projected for 816 **about USD 1.33**, inside the cap of USD 1.80.
+- Decision [mine, within the approved plan]: nothing to fix. The rest split around peak hours (double
+  rate): 220 sessions now (04:14, about 80 min at the pilot's pace), the remaining 572 from 10:01 UTC.
+
+### 2026-11-02 05:30 UTC — Second batch (220 sessions, off-peak)
+- 04:13:26 to 05:30:28 UTC; 244 of 816 done, USD 0.3781 in the ledger (2,124 calls, all off-peak, no
+  error). Projected for 816: about USD 1.26. The remaining 572 scheduled from 10:01 UTC.
+
 ## Open questions / risks
 - ~~Hearing range in the pause~~: decided 2026-11-02, always heard within the encounter (a departure
   from D2 the report must state).
