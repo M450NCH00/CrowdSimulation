@@ -149,6 +149,17 @@ meant a conversation: the simulation pauses, A is asked, B hears all of A's mess
 - 04:13:26 to 05:30:28 UTC; 244 of 816 done, USD 0.3781 in the ledger (2,124 calls, all off-peak, no
   error). Projected for 816: about USD 1.26. The remaining 572 scheduled from 10:01 UTC.
 
+### 2026-11-02 13:40 UTC — The run is complete (816 of 816)
+- The remaining 572: 10:01:32 to 13:40:02 UTC (the last paid call 13:11, then replays and tables).
+  No sleep events during the run (Kernel-Power 506/507: last at 00:01 UTC).
+- **Spend:** USD 1.2261 in the ledger (5,420 decision calls, 1,631 debriefs; 7,051 calls, all off-peak,
+  no error), cap USD 1.80. Balance (`GET /user/balance`): **USD 2.96** (4.18 before). Recorded in
+  `CLAUDE.md`'s Budget.
+- **Runner's headline** (`report.md`), resolved by the LLM: silent 64%, non-verbal 54%, talk 58%
+  (RF-39: independent 37%, non-verbal 60%, talk 61%). Collisions 270 of 816. Unreadable decisions after
+  the retry: 121. Not read yet: the gate, `asked_first`, dances, what talk said; the report comes next.
+- `.gitignore`: RF-40's replay `interactions.jsonl` and `pair_interactions.jsonl`, as RF-39's.
+
 ## Open questions / risks
 - ~~Hearing range in the pause~~: decided 2026-11-02, always heard within the encounter (a departure
   from D2 the report must state).
