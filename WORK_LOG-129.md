@@ -160,6 +160,23 @@ meant a conversation: the simulation pauses, A is asked, B hears all of A's mess
   the retry: 121. Not read yet: the gate, `asked_first`, dances, what talk said; the report comes next.
 - `.gitignore`: RF-40's replay `interactions.jsonl` and `pair_interactions.jsonl`, as RF-39's.
 
+### 2026-11-02 — Analysis and report
+- Ran `analysis.gate`, `analysis.lateral`, `analysis.sidestep_reprompt`, `analysis.compare` (RF-39
+  non-verbal and talk) and the factor report (`python -m analysis <outcomes.csv>`; a folder is refused).
+- New module `analysis/turn_taking.py` (standard library; 6 tests in `analysis/tests/test_turn_taking.py`;
+  the analysis suite 97 passed): talk by decision number; a heard side against the listener's next
+  move, by the message's frame; speakers' words against their own moves; who is asked first.
+- Written up in `runs/rf40_round1_head_on_turn_taking/comparison_report.md`. Main results: the gate
+  passes (123 of 192 first runs, 0.64); silent 0.64 against RF-39's independent 0.36 (p < 0.0001),
+  non-verbal and talk no better than silent; at the first pause 4 of 499 talk replies name a side
+  (greetings instead); a heard side is followed by a fitting move in 35 of 100 (coin p = 0.004);
+  "coming through on your X" contradicts the speaker's own move in 16 of 27; who is asked first: no
+  effect (talk p = 0.10).
+- Coding choices [mine]: the frame and "restates the side" keyword matches; "fits" compares with the
+  speaker's side at the decision it spoke.
+- Claims re-read against the tables: two corrected before commit (decision points 5,256, not calls
+  5,420; 124 side messages heard, 100 of them with both aside).
+
 ## Open questions / risks
 - ~~Hearing range in the pause~~: decided 2026-11-02, always heard within the encounter (a departure
   from D2 the report must state).
@@ -167,4 +184,8 @@ meant a conversation: the simulation pauses, A is asked, B hears all of A's mess
 - ~~`resolve_v9`'s wording; the gate~~: accepted by the user, 2026-11-02.
 - ~~No paid call without approval~~: approved for #129, cap USD 1.80 (`CLAUDE.md`).
 
-## Summary (fill in at the end)
+## Summary
+RF-40 built the turn-taking exchange (`protocol.exchange: turn_taking`, `always_heard`), the silent
+condition and `resolve_v9`, and ran 816 sessions for USD 1.2261 of the USD 1.80 cap (balance USD 2.96).
+Head-on passes the gate at 0.64. Being asked again, not signals or words, is what resolves; talk does
+not coordinate a side (report: `runs/rf40_round1_head_on_turn_taking/comparison_report.md`).
