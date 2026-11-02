@@ -114,6 +114,17 @@ meant a conversation: the simulation pauses, A is asked, B hears all of A's mess
   04:00 to 06:00 window, the rest from 10:00 UTC.
 - Mock rerun into `runs_mock/rf40_always_heard/` (a resolution run resumes and never overwrites).
 
+### 2026-11-02 01:30 UTC — Mock rehearsal with always heard (816 of 816)
+- Started 00:34, finished 01:30 UTC (with the related tests running beside it).
+- **Heard:** of 113 messages, 0 heard by nobody (the first mock: 56). Decision points asked because
+  of a heard message: 92 (the first mock: 36). Calls a session: silent 9.99, non-verbal 11.25, talk
+  11.52 (was 11.31).
+- **Cost** (off-peak, RF-39's cost a call): the mock's 8,909 calls give **USD 1.57**; scaled by RF-39's
+  real calls against its mock's, **USD 1.20**. Inside the cap of USD 1.80.
+- Related tests (protocol, perception, pairwise, ethnicity, v6, RF-32, RF-34, RF-39, RF-40, hygiene):
+  380 passed, 12 skipped; `test_llm.py` 45 passed. Committed `3a876e41`.
+- Next: the pilot, `--client deepseek --confirm --limit 24`, at 04:00 UTC (off-peak), then its replays.
+
 ## Open questions / risks
 - ~~Hearing range in the pause~~: decided 2026-11-02, always heard within the encounter (a departure
   from D2 the report must state).
