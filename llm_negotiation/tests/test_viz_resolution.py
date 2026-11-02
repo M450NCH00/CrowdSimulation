@@ -13,6 +13,7 @@ import shutil
 
 import pytest
 
+from negsim.configutil import PACKAGE_ROOT
 from negsim.llm.mock import MockClient
 from negsim.resolution import experiment as E
 from negsim.viz import viewer
@@ -125,3 +126,51 @@ def test_a_step_in_words(step, words):
 def test_why_a_decision_point_fired_in_words():
     assert viewer._why(["trigger", "perceives:1"]) == "the encounter begins"
     assert viewer._why(["other_moved_left:1", "signalled:1", "plan_failing"]) == "agent 1 moved left, agent 1 signalled, its plan is failing"
+
+
+# --- the turn-taking exchange, and every session of a condition at once (issue #129) ---------------
+
+RF40 = PACKAGE_ROOT / "runs" / "rf40_round1_head_on_turn_taking"
+RF40_TALK = RF40 / "replay" / "T_head_on_02dfbadb_9950986f_r1" / "plan_only"
+
+
+def test_a_turn_taking_session_shows_the_turns_what_was_heard_and_who_was_asked_first(tmp_path):
+    record = read_json(RF40 / "sessions" / "T_head_on_02dfbadb_9950986f_r1.json")
+    _, data = page(tmp_path, RF40_TALK)
+    run = data["runs"][0]
+    decisions = run["llm"]["decisions"]
+    assert [d["turn"] for d in decisions] == [p["turn"] for p in sorted(record["decision_points"], key=lambda p: (p["time_s"], p["turn"]))]
+    # Within a pause the one asked first comes first.
+    first = decisions[0]
+    assert first["turn"] == 0 and first["agent"] == record["encounter"]["first_asked"]
+    heard = [text for d in decisions for text in d["heard"]]
+    # Word for word as the prompt put it (resolve_v9's heard_seen_facing), after who said it.
+    assert heard and all(text.startswith("agent ") and "is facing you: their left is your right" in text for text in heard)
+    prompts = [p["prompt"]["messages"][-1]["content"] for p in record["decision_points"]]
+    assert all(any(text.split(": ", 1)[1] in prompt for prompt in prompts) for text in heard)
+    summary = dict(run["summary"])
+    assert summary["Asked first"] == f"agent {record['encounter']['first_asked']}"
+    assert summary["Exchange"].startswith("turn-taking") and "everyone in the encounter hears" in summary["Exchange"]
+    assert run["llm"]["end"] == viewer._words(record["encounter"]["end"]["reason"])
+    assert any("turn 2 in the pause" in event["text"] for event in run["events"] if event["type"] == "decision")
+
+
+def test_a_real_time_session_shows_no_turn_and_no_exchange_rows(experiment, session, tmp_path):
+    _, data = page(tmp_path, experiment / session["replays"]["plan_only"].replace("\\", "/"))
+    run = data["runs"][0]
+    assert all(d["turn"] is None for d in run["llm"]["decisions"])
+    assert "Exchange" not in dict(run["summary"]) and "Asked first" not in dict(run["summary"])
+
+
+def test_the_replay_folder_holds_every_session_and_a_prefix_and_mode_keep_one_condition():
+    folders = viewer.run_folders(RF40 / "replay")
+    assert len(folders) == 2 * 816 and {folder.name for folder in folders} == {"plan_only", "plan_orca"}
+    talk = viewer.keep(folders, prefix="T_", mode="plan_only")
+    assert len(talk) == 272 and all(folder.parent.name.startswith("T_") and folder.name == "plan_only" for folder in talk)
+    assert len(viewer.keep(folders, prefix="S_")) == 2 * 272
+    assert viewer.default_output([RF40 / "replay"], "T_", "plan_only") == viewer.VIEWS_DIR / "rf40_round1_head_on_turn_taking__replay__T__plan_only.html"
+
+
+def test_a_prefix_that_matches_nothing_is_refused(tmp_path, capsys):
+    assert viewer.main([str(RF40 / "replay"), "--prefix", "Z_", "--no-open", "--out", str(tmp_path / "v.html")]) == 2
+    assert "matches --prefix" in capsys.readouterr().err

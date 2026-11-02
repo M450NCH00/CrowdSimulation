@@ -177,6 +177,18 @@ meant a conversation: the simulation pauses, A is asked, B hears all of A's mess
 - Claims re-read against the tables: two corrected before commit (decision points 5,256, not calls
   5,420; 124 side messages heard, 100 of them with both aside).
 
+### 2026-11-02 14:46 UTC — The viewer, for RF-40 (the user's request)
+- `negsim/viz/viewer.py`: a turn-taking session shows who was asked first and the exchange (summary),
+  each decision's turn in its pause, and what the agent heard, the line word for word as its prompt
+  gave it (the session's core template, `view.heard_seen*`; the note on which way the speaker faced).
+  The page sorts decisions within a pause by turn.
+- Every session of one condition at once: the viewer finds run folders two levels down (an
+  experiment's `replay` folder), and `--prefix` (`T_`, `S_`, `N_`) and `--mode` keep some of them; the
+  picker shows each session's end. Each viewer of RF-40's 272 sessions, `plan_only`, is about 6 MB.
+- Tests: 4 new in `tests/test_viz_resolution.py` (on RF-40's committed run); the viewer tests 73
+  passed; repo hygiene with them 24 passed (26 min: the key scan reads every file under `runs/`).
+  The page rendered in headless Edge with no error; the script parses (`node --check`).
+
 ## Open questions / risks
 - ~~Hearing range in the pause~~: decided 2026-11-02, always heard within the encounter (a departure
   from D2 the report must state).

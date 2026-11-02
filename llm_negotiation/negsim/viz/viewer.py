@@ -23,6 +23,16 @@ session's replay folder to see both modes, with a picker:
 
     python -m negsim.viz.viewer runs/rf10_round1_head_on/replay/<session_id>
 
+Every session of an experiment's replays at once, with a picker (issue #129): give the replay
+folder, and ``--prefix`` to keep the sessions whose name starts with it (``T_`` talk, ``S_``
+silent, ``N_`` non-verbal, ``I_`` independent) and ``--mode`` to keep one replay mode:
+
+    python -m negsim.viz.viewer runs/rf40_round1_head_on_turn_taking/replay --prefix T_ --mode plan_only
+
+A session of a turn-taking exchange (``protocol.exchange: turn_taking``) also shows who was asked
+first, each decision's turn in its pause, and what the agent heard before it decided, with the
+note on which way the speaker faced (``resolve_v9``).
+
 A row of ``trajectory.csv`` gives an agent's position at the start of a step and the
 velocity it moved with during that step, so between two consecutive steps an agent moves in
 a straight line and drawing it that way is exact. Where a run logged only every n-th step
@@ -86,15 +96,30 @@ class ViewerError(ValueError):
 
 
 def run_folders(path: Path | str) -> list[Path]:
-    """The run folders at ``path``: the folder itself, or every run folder directly inside it."""
+    """The run folders at ``path``: the folder itself, every run folder directly inside it, or
+    else every run folder one level further down (an experiment's ``replay`` folder: a folder per
+    session, a run folder per mode; issue #129)."""
     path = Path(path)
     if (path / CONFIG_FILE).is_file():
         return [path]
     if path.is_dir():
-        found = sorted(child for child in path.iterdir() if (child / CONFIG_FILE).is_file())
+        children = sorted(child for child in path.iterdir() if child.is_dir())
+        found = [child for child in children if (child / CONFIG_FILE).is_file()]
+        if not found:
+            found = [grandchild for child in children for grandchild in sorted(child.iterdir()) if (grandchild / CONFIG_FILE).is_file()]
         if found:
             return found
     raise ViewerError(f"{path}: not a run folder (it has no {CONFIG_FILE}) and holds no run folders")
+
+
+def keep(folders: Iterable[Path], prefix: Optional[str] = None, mode: Optional[str] = None) -> list[Path]:
+    """The run folders whose own name or whose parent's (a session's, for a replay) starts with
+    ``prefix``, and, for ``mode``, the replays of that mode (a replay folder is named after it)."""
+    return [
+        folder for folder in folders
+        if (prefix is None or folder.name.startswith(prefix) or folder.parent.name.startswith(prefix))
+        and (mode is None or folder.name == mode)
+    ]
 
 
 def _read_json(path: Path) -> Any:
@@ -581,10 +606,42 @@ def _distance_to_partner(point: Mapping[str, Any]) -> Optional[float]:
     return None
 
 
+def _heard_lines(record: Mapping[str, Any]) -> Mapping[str, str]:
+    """The core template's lines for a heard message (``view.heard_seen*``), so that the viewer
+    shows the note beside a message word for word as the agent read it (issue #129); nothing if
+    the template cannot be read."""
+    key = ((record.get("templates") or {}).get("core") or {}).get("key")
+    try:
+        from ..resolution.prompt import CoreTemplate
+
+        return (CoreTemplate.load(key).data.get("view") or {}) if key else {}
+    except Exception:  # an unknown or unreadable template: the message is shown without its note
+        return {}
+
+
+def _heard(point: Mapping[str, Any], lines: Mapping[str, str]) -> list[str]:
+    """What the agent heard before it decided (issue #129): who said it, and the line its prompt
+    gave, with the note on which way the speaker faced when there was one."""
+    view = point.get("view") or {}
+    agent_of = {label: agent for agent, label in ((view.get("labels") or {}).get("label_of_agent") or {}).items()}
+    shown = []
+    for heard in view.get("heard") or []:
+        label, message = heard.get("label"), heard.get("message", "")
+        if label is None:
+            where = ", ".join(_words(part) for part in (heard.get("direction"), heard.get("band")) if part)
+            shown.append(f"someone ({where}): “{message}”")
+            continue
+        line = lines.get(f"heard_seen_{heard['frame']}" if heard.get("frame") else "heard_seen")
+        text = line.format(n=label, message=message).lstrip("- ") if line else f"Person {label} says: “{message}”"
+        shown.append(f"agent {agent_of[label]}: {text}" if label in agent_of else text)
+    return shown
+
+
 def _decisions(record: Mapping[str, Any], driver: Mapping[str, Any]) -> list[dict[str, Any]]:
     """Every decision point, with what the replay made of its plan: when each step ran."""
     played = {(entry["agent_id"], entry["decision_point"]): entry for entry in driver.get("decisions") or []}
     cap = record.get("max_decision_points_per_agent")
+    lines = _heard_lines(record)
     shown = []
     for point in record.get("decision_points") or []:
         agent, number = point["agent_id"], point["number"]
@@ -612,9 +669,12 @@ def _decisions(record: Mapping[str, Any], driver: Mapping[str, Any]) -> list[dic
                 "message": parsed.get("message") or "",
                 "reason": parsed.get("reason") or "",
                 "outcome": _words(entry.get("outcome") or entry.get("state")),
+                "turn": point.get("turn"),  # issue #129: its place in a pause (0: asked first); None in real time
+                "heard": _heard(point, lines),
             }
         )
-    shown.sort(key=lambda item: (item["t"], item["agent"]))
+    # In a pause everyone is asked at the same time: the turn gives the order.
+    shown.sort(key=lambda item: (item["t"], item["turn"] if item["turn"] is not None else -1, item["agent"]))
     return shown
 
 
@@ -679,6 +739,7 @@ def _add_resolution(run_dir: Path, config: dict, outcome: dict, run: dict[str, A
         "view": {key: view.get(key) for key in ("half_angle_deg", "range_m", "detail_range_m", "hearing_range_m", "walls_block_sight")},
         "decisions": decisions,
         "debriefs": debriefs,
+        "end": _words(((record.get("encounter") or {}).get("end") or {}).get("reason")) or None,
     }
 
     ids = [agent["id"] for agent in run["agents"]]
@@ -704,12 +765,15 @@ def _add_resolution(run_dir: Path, config: dict, outcome: dict, run: dict[str, A
             + ("; not resolved by the LLM" if end.get("not_resolved_by_llm") else "")
         ) if encounter else "none"],
         ["Decision points", f"{len(decisions)}, at most {record.get('max_decision_points_per_agent', '–')} per agent"],
+        *_exchange_rows(record),
         ["Situation", ", ".join(_words(value) for value in situation.values()) or "–"],
     ]
 
     events = []
     for item in decisions:
         distance = f", {item['distance_m']:.1f} m away" if item["distance_m"] is not None else ""
+        if item["turn"] is not None:
+            distance += f", turn {item['turn'] + 1} in the pause"
         said = item["intent"] if item["readable"] else "(its reply could not be read)"
         events.append({  # a moment on the timeline; how long the plan ran is in run["llm"]
             "type": "decision", "t": item["t"], "t_end": None, "agents": [item["agent"]],
@@ -741,6 +805,20 @@ def _add_resolution(run_dir: Path, config: dict, outcome: dict, run: dict[str, A
         })
     run["events"] = sorted(run["events"] + events, key=lambda item: item["t"])
     run["conversation"].sort(key=lambda turn: turn["t"])
+
+
+def _exchange_rows(record: Mapping[str, Any]) -> list[list[str]]:
+    """How signals and words were taken in, and who was asked first (issue #129). Nothing for a
+    record of the real-time exchange, which names neither."""
+    protocol = record.get("protocol") or {}
+    if protocol.get("exchange") != "turn_taking":
+        return []
+    heard = "everyone in the encounter hears what is said" if protocol.get("always_heard") else "heard within the hearing range"
+    rows = [["Exchange", f"turn-taking: the simulation pauses and those due are asked one at a time; {heard}"]]
+    first = (record.get("encounter") or {}).get("first_asked")
+    if first is not None:
+        rows.append(["Asked first", f"agent {first}"])
+    return rows
 
 
 # --- a negotiation run (issue #24) -----------------------------------------------------------------
@@ -873,24 +951,35 @@ def render(runs: list[dict[str, Any]], title: str) -> str:
     return template.replace(TITLE_PLACEHOLDER, safe_title, 1).replace(DATA_PLACEHOLDER, data, 1)
 
 
-def default_output(paths: list[Path]) -> Path:
+def default_output(paths: list[Path], prefix: Optional[str] = None, mode: Optional[str] = None) -> Path:
     """Where the viewer goes without ``--out``: ``views/``, named after what it shows."""
     if len(paths) == 1:
         path = paths[0].resolve()
-        name = f"{path.parent.name}__{path.name}" if (path / CONFIG_FILE).is_file() else path.name
+        if (path / CONFIG_FILE).is_file():
+            name = f"{path.parent.name}__{path.name}"
+        elif path.name == "replay":  # an experiment's replays: named after the experiment
+            name = f"{path.parent.name}__replay"
+        else:
+            name = path.name
     else:
         name = "viewer"
+    name += "".join(f"__{part.rstrip('_')}" for part in (prefix, mode) if part)
     return VIEWS_DIR / f"{name}.html"
 
 
-def build_viewer(paths: Iterable[Path | str], output: Optional[Path | str] = None) -> Path:
-    """Write the viewer for the runs at ``paths`` and return where it was written."""
+def build_viewer(
+    paths: Iterable[Path | str], output: Optional[Path | str] = None, prefix: Optional[str] = None, mode: Optional[str] = None
+) -> Path:
+    """Write the viewer for the runs at ``paths`` and return where it was written. ``prefix`` and
+    ``mode`` keep only some of them (``keep``)."""
     paths = [Path(path) for path in paths]
     if not paths:
         raise ViewerError("give at least one run folder or experiment folder")
-    folders = [folder for path in paths for folder in run_folders(path)]
+    folders = keep([folder for path in paths for folder in run_folders(path)], prefix, mode)
+    if not folders:
+        raise ViewerError(f"no run folder at {', '.join(map(str, paths))} matches --prefix {prefix!r} and --mode {mode!r}")
     runs = [load_run(folder) for folder in folders]
-    output = Path(output) if output is not None else default_output(paths)
+    output = Path(output) if output is not None else default_output(paths, prefix, mode)
     title = runs[0]["key"] if len(runs) == 1 else f"{runs[0]['experiment']} ({len(runs)} runs)"
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(render(runs, f"Run viewer: {title}"), encoding="utf-8", newline="\n")
@@ -902,9 +991,11 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser.add_argument("paths", nargs="+", type=Path, help="run folders, or experiment folders holding run folders")
     parser.add_argument("--out", type=Path, help="where to write the viewer (default: views/<name>.html)")
     parser.add_argument("--no-open", action="store_true", help="write the file but do not open it in the browser")
+    parser.add_argument("--prefix", help="keep the runs (or sessions) whose name starts with this, e.g. T_ for talk sessions")
+    parser.add_argument("--mode", help="keep the replays of one mode, e.g. plan_only")
     args = parser.parse_args(argv)
     try:
-        output = build_viewer(args.paths, args.out)
+        output = build_viewer(args.paths, args.out, args.prefix, args.mode)
     except (ViewerError, json.JSONDecodeError, KeyError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2

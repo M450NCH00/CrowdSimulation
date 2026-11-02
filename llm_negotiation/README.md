@@ -237,7 +237,13 @@ python -m negsim.viz.viewer runs\si1_head_on_side_preference                    
 python -m negsim.viz.viewer runs\si1_bottleneck_handoff\001_opposing_no_directive     # one run
 python -m negsim.viz.viewer runs_mock\c1_smoke                                        # your own mock runs
 python -m negsim.viz.viewer runs\rf10_round1_head_on\replay\T_head_on_02dfbadb_02604456_r1   # one resolution session, both replays
+python -m negsim.viz.viewer runs\rf40_round1_head_on_turn_taking\replay --prefix T_ --mode plan_only   # every talk session, one picker
 ```
+
+`--prefix` keeps the sessions whose name starts with it (`T_` talk, `S_` silent, `N_` non-verbal,
+`I_` independent) and `--mode` one replay mode (issue #129). A session of the turn-taking exchange
+also shows who was asked first, each decision's turn in its pause, and what the agent heard, with
+the note on which way the speaker faced, word for word as its prompt gave it.
 
 It writes one HTML file to `views\` (git ignores the folder; `--out FILE` puts it somewhere
 else) and opens it in the default browser (`--no-open` does not). The file holds the run

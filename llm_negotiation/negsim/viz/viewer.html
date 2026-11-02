@@ -498,8 +498,10 @@
       const li = el("li", { style: "border-left-color:" + (agent ? colourOf(agent) : state.colours.muted) });
       li.dataset.index = String(index);
       const where = d.distance_m != null ? " · " + fmt(d.distance_m, 1) + " m away" : "";
-      li.append(el("div", { class: "head" }, "agent " + d.agent + " · decision " + d.number + " of " + d.cap + " · " + fmt(d.t, 1) + " s" + where));
+      const turn = d.turn != null ? " · turn " + (d.turn + 1) + " in the pause" : "";
+      li.append(el("div", { class: "head" }, "agent " + d.agent + " · decision " + d.number + " of " + d.cap + " · " + fmt(d.t, 1) + " s" + where + turn));
       li.append(el("div", { class: "what" }, "Why now: " + d.why));
+      (d.heard || []).forEach((text) => li.append(el("div", { class: "what" }, "Heard: " + text)));
       if (!d.readable) { li.append(el("div", null, "Its reply could not be read; it carries on.")); list.append(li); return; }
       li.append(el("div", { class: "intent" }, d.intent));
       const steps = el("ol");
@@ -1151,7 +1153,7 @@
   // --- start -------------------------------------------------------------------------------------------------
   try {
     const picker = $("picker");
-    DATA.runs.forEach((run, index) => picker.append(el("option", { value: String(index) }, run.run_id + " · " + run.status)));
+    DATA.runs.forEach((run, index) => picker.append(el("option", { value: String(index) }, run.run_id + " · " + ((run.llm && run.llm.end) || run.status))));
     $("picker-wrap").hidden = DATA.runs.length < 2;
 
     const params = new URLSearchParams(location.hash.replace(/^#/, ""));
