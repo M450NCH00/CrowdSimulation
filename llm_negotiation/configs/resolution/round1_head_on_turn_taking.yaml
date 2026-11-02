@@ -3,8 +3,10 @@
 #   python run_experiment.py configs/resolution/round1_head_on_turn_taking.yaml --plan
 #   python run_experiment.py configs/resolution/round1_head_on_turn_taking.yaml --out runs_mock/rf40   # mock rehearsal
 #
-# NO PAID RUN IS APPROVED: budget.cap_usd is 0 until the user records the approval and the cap for
-# issue #129 in CLAUDE.md (pending item 1). This config names the mock client.
+# PAID RUN: approved by the user for issue #129 only, 2026-11-02, cap USD 1.80 (CLAUDE.md, pending
+# item 1). This config names the mock client; the paid run is
+#   python run_experiment.py configs/resolution/round1_head_on_turn_taking.yaml --client deepseek --confirm
+# off-peak, after a pilot with --limit. The cost: about USD 1.2 to 1.6 off-peak (WORK_LOG-129.md).
 #
 # RF-39's config (configs/resolution/round1_head_on_sidestep_reprompt.yaml) with these changes, the
 # user's decisions of 2026-11-01 (issue #129):
@@ -12,13 +14,19 @@
 #   what one signals or says is seen or heard at once, in full, and whoever perceives it (having been
 #   prompted before, with decision points left) is asked next in the same pause. In RF-39's talk
 #   dances, 96 of 108 replies naming a side were never said before the encounter ended.
+# - protocol.always_heard: true (the user's decision of 2026-11-02). In the pause everyone in the
+#   encounter hears what is said, whatever the distance, a departure from D2's hearing range (8.9 m
+#   quiet, 3.2 m busy), which still holds for anyone outside it. With D2's range, 56 of the mock's
+#   113 messages were heard by nobody. An answer reaches the first speaker at its next decision
+#   point (D5), not in the same pause (the user's decision, 2026-11-02).
 # - who is asked first: counterbalanced, person 1 in odd repeats and person 2 in even ones
 #   (experiment.first_asked; outcomes.csv's first_asked column), analysed as a factor.
 # - conditions: silent, non_verbal, talk. Silent (no signal, no talk, asked again under D5) replaces
 #   independent. RF-39's independent sessions are the one-decision reference, if needed.
 # - templates.core: resolve_v9 (resolve_v8 written for the paused exchange, with the silent section
 #   and a note beside a heard message on which way the speaker faces; the message is never
-#   rewritten). The wording is the assistant's draft, for the user to review before a paid run.
+#   rewritten). The wording is the assistant's draft, accepted by the user on 2026-11-02, with
+#   RF-10's gate carried over.
 # Everything else is RF-39's: the design (32 cells x 2 geometries x 4 repeats and 16 in pairs, per
 # condition), the people (drawn by unit, so every condition of a cell meets the same people as in
 # RF-39), keep_line_replan, 6 decision points, resolve_debrief_v2, the model and the factors.
@@ -123,6 +131,7 @@ protocol:
   speech_words_per_second: 2.5      # [placeholder] how fast a message is said
   execution: keep_line_replan       # issue #127: keep_line, and the line is also kept across a later decision (a waiting first step, [])
   exchange: turn_taking            # issue #129: a pause, one at a time, signals and words taken in at once
+  always_heard: true                # issue #129 (the user's decision of 2026-11-02): in the pause, everyone in the encounter hears
   no_conflict_waits_for_plans: true # issue #65: no_conflict does not end the encounter while a plan runs
 
 templates:
@@ -144,6 +153,6 @@ llm:
   transport_retries: 2
 
 budget:
-  cap_usd: 0.00           # no paid run approved for #129 yet (CLAUDE.md, pending item 1)
+  cap_usd: 1.80           # the cap CLAUDE.md records for #129 (approved by the user, 2026-11-02)
   ledger: spend_ledger.jsonl
   over_cap: stop_at_cap

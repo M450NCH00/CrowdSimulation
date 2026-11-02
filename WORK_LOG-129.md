@@ -94,12 +94,31 @@ meant a conversation: the simulation pauses, A is asked, B hears all of A's mess
   costed as non-verbal): the mock's calls give **USD 1.56**; scaled by RF-39's real calls against its
   mock's (0.77, 0.75), **USD 1.19**. Recommended cap **USD 1.80**, a pilot first. Balance USD 4.18.
 
+### 2026-11-02 00:33 UTC — The user's answers; approval and cap
+- The user (pasting the questions of the previous session): "I approve the run", and on whether the
+  first speaker can answer in the same pause: "I want it so that A only hears it in the next prompt,
+  because after B reply, A will observe that B has replied and then reply back". **As built**: each
+  member at most once a pause; B's reply is made one turn after A's look, so at A's next decision point
+  (D5's 1 s gap) `heard:B` makes A due, and its prompt carries B's words. Only D5's own gate (a conflict
+  still predicted, or the plan ended) can keep A from being asked. Two tests pin it.
+- Asked the rest (AskUserQuestion): **hearing range** "Always heard"; **cap** "USD 1.80"; **resolve_v9's
+  wording and RF-10's gate** "Accept both". Recorded in `CLAUDE.md` (pending item 1, #129 only).
+- **Built** `protocol.always_heard` (false by default, left out of records when off, refused without
+  `turn_taking`): in a pause everyone in the encounter hears a message whatever the distance
+  (`Exchange.say(..., always=members)`); anyone outside the encounter still within D2's range. A
+  departure from D2, stated in `encounter-protocol.md` section 4 and `resolution.md` (D3's amendment).
+  The config sets it, and `cap_usd: 1.80`. Tests: 3 new in `test_rf40_turn_taking.py`.
+- Pricing page re-read 00:37 UTC: no change (`date_checked` 2026-11-02, `docs/pricing-check.md`).
+  Balance (`GET /user/balance`, the key not printed): **USD 4.18**.
+- Timing [mine]: Monday; peak 01:00 to 04:00 and 06:00 to 10:00 UTC (double rate). The pilot in the
+  04:00 to 06:00 window, the rest from 10:00 UTC.
+- Mock rerun into `runs_mock/rf40_always_heard/` (a resolution run resumes and never overwrites).
+
 ## Open questions / risks
-- **Hearing range in the pause** (for the user): a message is heard only within 8.9 m (quiet) or
-  3.2 m (busy), as D2 says. At the first decision (about 9 to 10 m apart) a message in a busy cell is
-  not heard at all. The user expected B always to hear A. Kept as D2 has it until the user decides.
-- An answer reaches the first speaker only at its next decision point (each member once a pause).
-- `resolve_v9`'s wording is mine; the gate is RF-10's carried over.
-- No paid call without the user's recorded approval and cap for #129.
+- ~~Hearing range in the pause~~: decided 2026-11-02, always heard within the encounter (a departure
+  from D2 the report must state).
+- ~~An answer reaches the first speaker only at its next decision point~~: the user's choice, 2026-11-02.
+- ~~`resolve_v9`'s wording; the gate~~: accepted by the user, 2026-11-02.
+- ~~No paid call without approval~~: approved for #129, cap USD 1.80 (`CLAUDE.md`).
 
 ## Summary (fill in at the end)

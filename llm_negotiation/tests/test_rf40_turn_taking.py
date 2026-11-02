@@ -173,6 +173,44 @@ def test_a_listener_is_asked_in_the_same_pause_whatever_the_time_since_its_last_
         assert len({p["time_s"] for p in points}) == 1
 
 
+def test_always_heard_is_only_for_a_paused_exchange_and_left_out_of_the_record_when_off():
+    assert not P.ProtocolSettings().always_heard and "always_heard" not in TURN.as_dict()
+    with pytest.raises(ConfigError, match="turn_taking"):
+        P.ProtocolSettings(always_heard=True)
+    with pytest.raises(ConfigError, match="true or false"):
+        P.ProtocolSettings(exchange=P.EXCHANGE_TURN_TAKING, always_heard="yes")
+    assert P.ProtocolSettings.from_mapping({"exchange": "turn_taking", "always_heard": True}).as_dict()["always_heard"] is True
+
+
+def test_with_always_heard_the_other_hears_a_message_said_beyond_the_hearing_range():
+    # At the trigger the two are beyond D2's range (the default view): without always_heard the
+    # message reaches nobody; with it, the other hears it in the same pause, from where it was said.
+    a, b = HEAD_ON["agents"]
+    said = "I'll keep to my left."
+    answers = {a: [answer(WALK, message=said)], b: [answer(WALK)]}
+    _, ranged, _ = session_on(HEAD_ON, "talk", answers, settings=TURN, core=V9, first_asked=a)
+    assert ranged["utterances"][0]["heard_by"] == {}
+    always = replace(TURN, always_heard=True)
+    _, record, _ = session_on(HEAD_ON, "talk", answers, settings=always, core=V9, first_asked=a)
+    assert record["protocol"]["always_heard"] is True and list(record["utterances"][0]["heard_by"]) == [str(b)]
+    opening = by_step(record)[record["decision_points"][0]["step"]]
+    assert [p["agent_id"] for p in opening] == [a, b] and opening[1]["trigger_reasons"][-1] == f"{P.REASON_HEARD}:{a}"
+    assert [h["message"] for h in opening[1]["view"]["heard"]] == [said]
+
+
+def test_the_first_speaker_hears_the_answer_at_its_next_decision_point_not_in_the_same_pause():
+    # The user's decision of 2026-11-02: a answers only after it notices b's reply, at its next
+    # decision point (D5's gap), asked because it heard b.
+    a, b = HEAD_ON["agents"]
+    answers = {a: [answer(WALK, message="Which way?"), answer(WALK)], b: [answer(WALK, message="I'll go to my left.")]}
+    _, record, _ = session_on(HEAD_ON, "talk", answers, settings=replace(TURN, always_heard=True), core=V9, first_asked=a)
+    first, *later = points_of(record, a)
+    assert later, "a is asked again after b's answer"
+    assert later[0]["step"] > first["step"] and f"{P.REASON_HEARD}:{b}" in later[0]["trigger_reasons"]
+    assert later[0]["time_s"] - first["time_s"] >= TURN.min_gap_s - 1e-9
+    assert "I'll go to my left." in [h["message"] for h in later[0]["view"]["heard"]]
+
+
 # --- the silent condition -------------------------------------------------------------------------
 
 
@@ -202,7 +240,7 @@ def raw(path):
 
 def test_the_template_and_the_exchange_must_agree_and_the_template_must_offer_each_condition():
     nine_real = raw(CONFIG)
-    del nine_real["protocol"]["exchange"]
+    del nine_real["protocol"]["exchange"], nine_real["protocol"]["always_heard"]
     with pytest.raises(ConfigError, match="turn_taking exchange"):
         E.ResolutionConfig.from_raw(nine_real)
     eight_turn = raw(RF39)
@@ -220,9 +258,9 @@ def test_rf40s_config_is_rf39s_sessions_with_turn_taking_silent_and_resolve_v9()
     assert new.experiment_name == "rf40_round1_head_on_turn_taking"
     assert new.conditions == ("silent", "non_verbal", "talk")
     assert new.templates == {**rf39.templates, "core": "resolve_v9"}
-    assert new.protocol == replace(rf39.protocol, exchange=P.EXCHANGE_TURN_TAKING)
+    assert new.protocol == replace(rf39.protocol, exchange=P.EXCHANGE_TURN_TAKING, always_heard=True)
     assert new.llm == rf39.llm and new.resolution_gate == rf39.resolution_gate and new.design == rf39.design
-    assert new.budget["cap_usd"] == 0.0  # no paid run approved for #129 yet
+    assert new.budget["cap_usd"] == 1.80  # CLAUDE.md's cap for #129 (2026-11-02)
     sessions = E.plan(new).sessions
     assert len(sessions) == 816 and Counter(s.condition for s in sessions) == {"silent": 272, "non_verbal": 272, "talk": 272}
     # The same people as RF-39's sessions of the same cell (silent: as RF-39's non-verbal ones).

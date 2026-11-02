@@ -186,7 +186,10 @@ exchange** (`protocol.exchange: turn_taking`): the simulation pauses, those due 
 time, who goes first counterbalanced over a cell's repeats, and a signal or message is taken in at
 once, in full, by whoever perceives it, who is asked next; (3) a heard message from someone in view
 carries a note on which way they face ("their left is your right"), the message never rewritten.
-`resolve_v9` is written for this. The earlier runs keep independent, speech in simulated time and
+`resolve_v9` is written for this. *Amended 2026-11-02, the user's decisions:* in the pause everyone in
+the encounter hears a message whatever the distance (`protocol.always_heard`, a departure from D2's
+hearing range), and an answer reaches the first speaker at its next decision point, not in the same
+pause. The earlier runs keep independent, speech in simulated time and
 their templates (`encounter-protocol.md`, section 4). (#55's "silent condition", item 4 of
 `CLAUDE.md`'s pending sign-offs, was what became non-verbal: not this one.)
 

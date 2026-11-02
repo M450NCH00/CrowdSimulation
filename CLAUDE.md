@@ -214,7 +214,7 @@ The user's notes from the meeting, word for word:
   each simulator. Rules may be more specific, for example "keep left".
 
 ## Pending sign-offs
-Items 1 and 5 are still pending (item 1 was approved for issues #64, #65, #98, #100, #101, #104, #66, #67, #108, #110, #115, #117, #119 and #127 only).
+Items 1 and 5 are still pending (item 1 was approved for issues #64, #65, #98, #100, #101, #104, #66, #67, #108, #110, #115, #117, #119, #127 and #129 only).
 **Do not treat any of them as approved** until the user records the
 supervisor's answer in this file, with a date. Items 2 and 3, the ethics
 sign-offs for perceived attractiveness and real ethnicity, were recorded by the
@@ -319,6 +319,14 @@ used in this track). Numbers in brackets are the decisions of track issue #55.
      on the mock's calls. *The top-up condition was met on 2026-11-01:* the user said "I have topped up
      up to 5 us dollar in my deepseek api", and the balance endpoint showed USD 5.17. The cap stays
      USD 1.60.
+   - **Approved for issue #129 only, 2026-11-02:** the user said "I approve the run" for RF-40's run of
+     round 1's head-on sessions in the silent, non-verbal and talk conditions under the turn-taking
+     exchange (#129), and only for it, and chose the recommended cap of **USD 1.80** on that experiment's
+     own calls (`experiment_name: rf40_round1_head_on_turn_taking`; 816 sessions, about USD 1.2 to 1.6
+     off-peak from RF-39's measured cost per call, a pilot first, `WORK_LOG-129.md`). The same day the
+     user decided that everyone in the encounter hears a message said in the pause, whatever the
+     distance (`protocol.always_heard`), that an answer reaches the first speaker only at its next
+     decision point, and accepted `resolve_v9`'s wording and RF-10's gate (0.50) as drafted.
 2. **Approved by the supervisor, 2026-10-24** — Ethics sign-off for perceived
    attractiveness as a factor (#55, 3). *The user decided on 2026-10-24* that
    attractiveness (both directions) is **in** RF-10's design, because bias can

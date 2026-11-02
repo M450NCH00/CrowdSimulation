@@ -50,7 +50,7 @@ from __future__ import annotations
 import math
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Mapping, Optional, Sequence
+from typing import Any, Collection, Mapping, Optional, Sequence
 
 from ..avoidance.perception import heading_of, perceive
 from ..configutil import PACKAGE_ROOT, ConfigError, as_bool, as_number, check_keys, load_yaml
@@ -263,7 +263,9 @@ class Exchange:
         self.utterances: list[Utterance] = []
         self.signals: list[SignalMade] = []
 
-    def say(self, time_s: float, speaker: int, message: str, bodies: Sequence[Body]) -> Optional[Utterance]:
+    def say(self, time_s: float, speaker: int, message: str, bodies: Sequence[Body], always: Collection[int] = ()) -> Optional[Utterance]:
+        """``always`` (issue #129): those who hear it whatever the distance; everyone else within
+        ``hearing_range_m``."""
         if not message:
             return None
         by_id = {b.agent_id: b for b in bodies}
@@ -271,7 +273,8 @@ class Exchange:
         heard_by = {
             b.agent_id: voice_from(b, voice, self.settings)
             for b in bodies
-            if b.agent_id != speaker and math.dist(b.position, voice.position) <= self.settings.hearing_range_m + _EPS
+            if b.agent_id != speaker
+            and (b.agent_id in always or math.dist(b.position, voice.position) <= self.settings.hearing_range_m + _EPS)
         }
         utterance = Utterance(time_s, speaker, message, heard_by)
         self.utterances.append(utterance)

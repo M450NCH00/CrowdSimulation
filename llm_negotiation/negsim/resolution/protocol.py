@@ -165,10 +165,14 @@ class ProtocolSettings:
     distance_to_partner: bool = False
     #: Issue #129 (the user's decision, 2026-11-01): how signals and words are taken in (``EXCHANGES``).
     exchange: str = EXCHANGE_REAL_TIME
+    #: Issue #129 (the user's decision, 2026-11-02): in a paused exchange, everyone in the encounter
+    #: hears what is said, whatever the distance; people outside it still within D2's hearing range.
+    #: In RF-40's mock, 56 of 113 messages said in a pause, often 9 to 10 m apart, were heard by nobody.
+    always_heard: bool = False
 
     KEYS = (
         "max_decision_points", "min_gap_s", "no_conflict_end_s", "max_prompted", "speech_words_per_second", "execution",
-        "no_conflict_waits_for_plans", "orca_within_groups", "distance_to_partner", "exchange",
+        "no_conflict_waits_for_plans", "orca_within_groups", "distance_to_partner", "exchange", "always_heard",
     )
 
     def __post_init__(self) -> None:
@@ -188,6 +192,10 @@ class ProtocolSettings:
             raise ConfigError(f"protocol.distance_to_partner: true or false, got {self.distance_to_partner!r}")
         if self.exchange not in EXCHANGES:
             raise ConfigError(f"protocol.exchange: one of {EXCHANGES}, got {self.exchange!r}")
+        if not isinstance(self.always_heard, bool):
+            raise ConfigError(f"protocol.always_heard: true or false, got {self.always_heard!r}")
+        if self.always_heard and self.exchange != EXCHANGE_TURN_TAKING:
+            raise ConfigError("protocol.always_heard: only for protocol.exchange turn_taking (issue #129)")
 
     @classmethod
     def from_mapping(cls, raw: Any, where: str = "protocol") -> "ProtocolSettings":
@@ -204,6 +212,7 @@ class ProtocolSettings:
             orca_within_groups=block.get("orca_within_groups", default.orca_within_groups),
             distance_to_partner=block.get("distance_to_partner", default.distance_to_partner),
             exchange=as_choice(block.get("exchange", default.exchange), f"{where}.exchange", EXCHANGES),
+            always_heard=block.get("always_heard", default.always_heard),
         )
 
     def decision_points_for(self, condition: str) -> int:
@@ -222,6 +231,8 @@ class ProtocolSettings:
             del described["distance_to_partner"]
         if self.exchange == EXCHANGE_REAL_TIME:  # issue #129: likewise
             del described["exchange"]
+        if not self.always_heard:  # issue #129: likewise
+            del described["always_heard"]
         return described
 
     @property
@@ -689,7 +700,8 @@ class EncounterSession:
                     words = max(1, len(parsed.message.split()))
                     self._pending_speech.append((now + words / self.settings.speech_words_per_second, agent, parsed.message))
                 else:
-                    said = self.exchange.say(made_at, agent, parsed.message, bodies)
+                    always = self.members if self.settings.always_heard else ()
+                    said = self.exchange.say(made_at, agent, parsed.message, bodies, always=always)
         else:
             member.perceiver.looks.pop()  # it made no decision: its next view is from its last look
             if plan is None:
