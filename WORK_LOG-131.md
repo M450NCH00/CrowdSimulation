@@ -69,6 +69,12 @@ Asked with a recommendation each; the user's answers, recorded as AS1 to AS9 in 
   - #55: the order confirmed (RF-41 after RF-45), the decisions, and the meeting's date not recorded.
 - **Tests:** the 8 test files that read `CLAUDE.md`, `README.md` or `architecture.md` (outside repo hygiene and avoidance runs) gave 301 passed, 12 skipped. Repo hygiene and avoidance runs are running in the background (about 25 minutes).
 
+### 2026-11-25 05:39 UTC — Tests, push and PR
+- `test_repo_hygiene.py` and `test_avoidance_runs.py`: 88 passed in 706.73 s (with the new `refs/` files present).
+- **Pushed:**
+  - `feat/129-rf40-turn-taking-talk` as a fast-forward (6 commits of RF-40's run, report and viewer, already on this branch's history; no force), so that the PR shows only #131's changes;
+  - then this branch, and the PR opened against `feat/129-...`.
+
 ## Open questions / risks
 - ~~The meeting's date~~: the user chose "November 2026", with no exact date.
 - Pushing this branch needs `feat/129-rf40-turn-taking-talk` pushed first (it is 6 commits ahead of origin), or the PR will carry RF-40's commits.
