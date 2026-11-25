@@ -1,0 +1,367 @@
+{
+  "codebook": "hallucination",
+  "version": 1,
+  "status": "written on 2026-11-25 (issue #134, RF-45) after the user agreed the definition and before anything was counted. Never edited once a result rests on it: a change is hallucination_v2.",
+  "description": "Flags decision points whose reply rests on something not in that decision point's prompt (categories 1, 2, 7) or chooses something not possible (5), and self-contradiction (3, 4). Patterns are Python regular expressions, matched case-insensitively on the reply's reason and intent (and, where stated, its message). '{other}' is replaced by the 'other' pattern below; '{link}' by 'link'. A match is a CLAIM; analysis/hallucination.py then checks the claim against the view's structured fields and flags it only when they do not support it. Coding choices are the assistant's; their precision and recall come from the hand check.",
+  "other": "(?:he|she|they|person \\d+|the other (?:person|pedestrian|walker|guy|man|woman|lady)|the (?:guy|man|woman|lady|gentleman|girl|boy|person|pedestrian|student|classmate|stranger|uncle|auntie))",
+  "link": "(?:'s|'re|'ve| is| are| was| were| has| have| had| just| already| now| clearly| also| still| seems to be| appears to be| seem to be| appear to be)*",
+  "skip_before": "(?:\\bif|\\bunless|\\bin case|\\bwhether|\\bwait(?:ing)? (?:for|to see)|\\bnot|n't|\\bno\\b|\\bnever|\\bwithout|\\bwould|\\bmight|\\bmay|\\bcould|\\bwill|'ll|\\bexpect|\\bhope|\\bshould|\\bin case)\\W+(?:\\w+\\W+){0,3}$",
+  "categories": {
+    "1": {
+      "name": "misperceived the other",
+      "headline": true,
+      "rules": {
+        "signal_wave": {
+          "text": [
+            "reason",
+            "intent",
+            "message"
+          ],
+          "needs": {
+            "signal": "wave_on"
+          },
+          "patterns": [
+            "\\b{other}{link}\\s+(?:waved|waving|waves)\\b",
+            "\\b(?:his|her|their) wave\\b"
+          ]
+        },
+        "signal_nod": {
+          "text": [
+            "reason",
+            "intent",
+            "message"
+          ],
+          "needs": {
+            "signal": "nod"
+          },
+          "patterns": [
+            "\\b{other}{link}\\s+(?:nodded|nodding|nods)\\b",
+            "\\b(?:his|her|their) nod\\b"
+          ]
+        },
+        "signal_eye_contact": {
+          "text": [
+            "reason",
+            "intent"
+          ],
+          "needs": {
+            "signal": "eye_contact"
+          },
+          "patterns": [
+            "\\b{other}{link}\\s+(?:made|making|makes|making) eye contact\\b",
+            "\\b{other}{link}\\s+(?:met|meets|caught|catches) my (?:eye|gaze)\\b"
+          ]
+        },
+        "signal_hand": {
+          "text": [
+            "reason",
+            "intent",
+            "message"
+          ],
+          "needs": {
+            "signal": "hold_up_hand"
+          },
+          "patterns": [
+            "\\b{other}{link}\\s+(?:held|holds|holding|raised|raises|raising|put|puts) up (?:a|his|her|their) hand\\b",
+            "\\b(?:his|her|their) (?:raised |held-up )?hand (?:is )?(?:up|raised)\\b"
+          ]
+        },
+        "speech": {
+          "text": [
+            "reason",
+            "intent"
+          ],
+          "needs": {
+            "heard": true
+          },
+          "patterns": [
+            "\\b{other}{link}\\s+(?:said|says|saying|asked|asks|asking|told|tells|telling|called out|calls out|offered|offers|suggested|suggests|replied|replies|answered|agreed|agrees|promised|thanked|apologi[sz]ed|greeted|shouted|announced)\\b",
+            "\\b(?:his|her|their) (?:message|words|request|offer|reply|answer|greeting|suggestion)\\b"
+          ]
+        },
+        "stopped": {
+          "text": [
+            "reason",
+            "intent"
+          ],
+          "needs": {
+            "motion": "still"
+          },
+          "patterns": [
+            "\\b{other}{link}\\s+(?:stopped|standing still|stood still|halted|frozen|stationary|come to a (?:stop|halt))\\b"
+          ]
+        },
+        "slowed": {
+          "text": [
+            "reason",
+            "intent"
+          ],
+          "needs": {
+            "change": "slowed_down"
+          },
+          "patterns": [
+            "\\b{other}{link}\\s+(?:slowing|slowed)(?: down)?\\b"
+          ]
+        },
+        "sped_up": {
+          "text": [
+            "reason",
+            "intent"
+          ],
+          "needs": {
+            "change": "sped_up"
+          },
+          "patterns": [
+            "\\b{other}{link}\\s+(?:sped up|speeding up|speeds up|sped|speeding)\\b"
+          ]
+        },
+        "moved_side": {
+          "text": [
+            "reason",
+            "intent"
+          ],
+          "needs": {
+            "lateral": "claimed"
+          },
+          "patterns": [
+            "\\b{other}{link}\\s+(?:moving|moved|moves|stepping|stepped|steps|drifting|drifted|drifts|shifting|shifted|shifts|veering|veered|veers|edging|edged|edges|sidestepping|sidestepped|swerving|swerved|going|gone|went|heading|headed|keeping|kept|staying)\\s+(?:over |across |slightly |a (?:little|bit) )*(?:to(?:wards)?\\s+|into\\s+|onto\\s+)?(?P<whose>my|his|her|their)\\s+(?P<side>left|right)\\b"
+          ]
+        },
+        "moved_into_line": {
+          "text": [
+            "reason",
+            "intent"
+          ],
+          "needs": {
+            "lateral": "any"
+          },
+          "patterns": [
+            "\\b{other}{link}\\s+(?:moving|moved|stepping|stepped|drifting|drifted|shifting|shifted|veering|veered|edging|edged|swerving|swerved|cutting|cut)\\s+(?:over |back |right )?(?:into|across|towards|toward) my (?:line|path|lane|way|side)\\b"
+          ]
+        },
+        "position_side": {
+          "text": [
+            "reason",
+            "intent"
+          ],
+          "needs": {
+            "position": "claimed"
+          },
+          "patterns": [
+            "\\b{other}{link}\\s+(?:on|to|at|over on|slightly to|a (?:little|bit) to) my (?P<side>left|right)\\b"
+          ]
+        },
+        "trait_cane": {
+          "text": [
+            "reason",
+            "intent",
+            "message"
+          ],
+          "needs": {
+            "trait": "cane"
+          },
+          "patterns": [
+            "\\b(?:his|her|their) (?:cane|walking stick|stick|crutch(?:es)?|walker)\\b",
+            "\\b{other}{link}\\s+(?:using|with|on|leaning on) (?:a |his |her |their )?(?:cane|walking stick|crutch(?:es)?|walker)\\b"
+          ]
+        },
+        "trait_suitcase": {
+          "text": [
+            "reason",
+            "intent",
+            "message"
+          ],
+          "needs": {
+            "trait": "suitcase"
+          },
+          "patterns": [
+            "\\b(?:his|her|their) (?:suitcase|luggage|trolley|bag|bags)\\b",
+            "\\b{other}{link}\\s+(?:pulling|dragging|wheeling|carrying|with|towing|lugging) (?:a |his |her |their |the )?(?:large |big |heavy )?(?:suitcase|luggage|trolley|bag)\\b"
+          ]
+        },
+        "trait_phone": {
+          "text": [
+            "reason",
+            "intent",
+            "message"
+          ],
+          "needs": {
+            "trait": "phone"
+          },
+          "patterns": [
+            "\\b(?:his|her|their) phone\\b",
+            "\\b{other}{link}\\s+(?:on|looking at|staring at|glued to|busy with|absorbed in|texting|scrolling)(?: (?:his|her|their|the|a))? (?:phone|screen)\\b",
+            "\\b{other}{link}\\s+(?:distracted|texting|scrolling)\\b"
+          ]
+        },
+        "trait_elderly": {
+          "text": [
+            "reason",
+            "intent",
+            "message"
+          ],
+          "needs": {
+            "older": true
+          },
+          "patterns": [
+            "\\b(?:the|this|an|a|that) (?:elderly|old|older|senior|aged) (?:man|woman|lady|gentleman|person|pedestrian|uncle|auntie)\\b",
+            "\\b{other}{link}\\s+(?:elderly|old|older|a senior|frail)\\b"
+          ]
+        },
+        "misread_heard_side": {
+          "text": [
+            "reason",
+            "intent"
+          ],
+          "needs": {
+            "heard_side": true
+          },
+          "tag": "misread_heard_side",
+          "patterns": [
+            "(?:that'?s|that is|which is|meaning|i\\.e\\.,?|so) (?:on )?my (?P<side>left|right)\\b",
+            "\\((?:i\\.e\\.,? |that'?s |= ?)?my (?P<side>left|right)\\)"
+          ]
+        }
+      }
+    },
+    "2": {
+      "name": "misremembered itself",
+      "headline": true,
+      "rules": {
+        "own_move": {
+          "text": [
+            "reason",
+            "intent"
+          ],
+          "needs": {
+            "history_side": "claimed"
+          },
+          "patterns": [
+            "\\b(?:i'?ve|i have|i had|i already|i just|i)\\s+(?:already\\s+|just\\s+)?(?:stepped|moved|shifted|edged|veered|drifted|sidestepped|gone)\\b\\s+(?:over |across |slightly |a (?:little|bit) )*(?:to(?:wards)?\\s+)?(?:my|the)\\s+(?P<side>left|right)\\b",
+            "\\bsince i (?:stepped|moved|shifted|edged|veered|drifted|sidestepped)\\s+(?:over |across |slightly |a (?:little|bit) )*(?:to(?:wards)?\\s+)?(?:my|the)\\s+(?P<side>left|right)\\b"
+          ]
+        },
+        "own_position": {
+          "text": [
+            "reason",
+            "intent"
+          ],
+          "needs": {
+            "own_position": "claimed"
+          },
+          "patterns": [
+            "\\bi'?m (?:already |now |still )?(?:on|at|near|by|hugging|close to|over on|right by|against) (?:the|my) (?P<side>left|right)(?: side| wall| edge| half)\\b",
+            "\\bi am (?:already |now |still )?(?:on|at|near|by|hugging|close to|over on|right by|against) (?:the|my) (?P<side>left|right)(?: side| wall| edge| half)\\b"
+          ]
+        },
+        "own_signal": {
+          "text": [
+            "reason",
+            "intent"
+          ],
+          "needs": {
+            "history_signal": "claimed"
+          },
+          "patterns": [
+            "\\b(?:i'?ve|i have|i had|i already|i just|i)\\s+(?:already\\s+|just\\s+)?(?P<signal>waved|nodded|made eye contact|held up my hand|raised my hand)\\b"
+          ]
+        },
+        "own_speech": {
+          "text": [
+            "reason",
+            "intent"
+          ],
+          "needs": {
+            "history_message": true
+          },
+          "patterns": [
+            "\\b(?:i'?ve|i have|i had|i already|i just)\\s+(?:already\\s+)?(?:said|told|asked|greeted|called out|offered|apologi[sz]ed|thanked)\\b",
+            "\\bas i (?:said|told (?:him|her|them)|asked)\\b"
+          ]
+        }
+      }
+    },
+    "3": {
+      "name": "says one thing, plans another",
+      "headline": false,
+      "rules": {
+        "intent_against_plan": {
+          "reuse": "analysis.intent (RF-8): code_intent with intent_v2 against code_plan"
+        }
+      }
+    },
+    "4": {
+      "name": "says a side it does not take",
+      "headline": false,
+      "rules": {
+        "speech_against_move": {
+          "reuse": "analysis.turn_taking (RF-40): words_match_move on the message"
+        }
+      }
+    },
+    "5": {
+      "name": "not an available action",
+      "headline": true,
+      "rules": {
+        "unreadable": {
+          "reuse": "the decision point's parse_error after the retry"
+        }
+      }
+    },
+    "6": {
+      "name": "made-up source",
+      "headline": false,
+      "rules": {
+        "debrief_source": {
+          "reuse": "not recounted: RF-14 (literature/rule-verification/references-check.md)"
+        }
+      }
+    },
+    "7": {
+      "name": "misstated the setting",
+      "headline": true,
+      "rules": {
+        "no_room": {
+          "text": [
+            "reason",
+            "intent",
+            "message"
+          ],
+          "needs": {
+            "room": "absent"
+          },
+          "patterns": [
+            "\\b(?:no|not enough|too little|barely any|hardly any|little) (?:room|space)\\b(?! (?:for (?:error|doubt)))",
+            "\\btoo narrow\\b",
+            "\\b(?:can'?t|cannot|can not|couldn'?t|won'?t be able to) (?:get |squeeze |fit )?(?:past|by|through|around)\\b",
+            "\\bno way (?:past|through|around|to pass)\\b",
+            "\\b(?:completely |fully )?blocked\\b",
+            "\\bnowhere (?:to go|to move|left)\\b"
+          ]
+        },
+        "wall_close": {
+          "text": [
+            "reason",
+            "intent"
+          ],
+          "needs": {
+            "wall": "close"
+          },
+          "patterns": [
+            "\\b(?:the )?wall (?:is )?(?:right |just |already )?(?:next to|beside|against|touching|right by) me\\b",
+            "\\b(?:against|hugging|pressed (?:against|to)|up against|pinned (?:against|to)) the (?:(?P<side>left|right) )?wall\\b",
+            "\\b(?:already |right )?(?:at|against) the wall\\b"
+          ]
+        }
+      }
+    }
+  },
+  "thresholds": {
+    "straight_ahead_deg": 5.0,
+    "lateral_m": 0.05,
+    "room_margin_m": 0.05,
+    "wall_close_m": 0.3,
+    "position_margin_m": 0.1,
+    "older_age": 60
+  }
+}
