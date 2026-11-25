@@ -93,6 +93,27 @@ The user answered "Yes start" to these, proposed by the assistant:
   decision points left to RF-51, the amendment to AS8/AS9 in section 10, and section 11's deadlock
   placeholder. This is the one existing file edited, as task 4 asks.
 
+### 2026-11-25 09:53 UTC — the full suite: three failures, none from the grid
+- What I ran: the whole negsim suite (`uv run ... python -m pytest`, from 09:34 UTC):
+  **2359 passed, 12 skipped, 3 failed** in 15 min 26 s. Separately, `tests/test_grid.py` with
+  `tests/test_repo_hygiene.py`: 45 passed.
+- The three failures, and why they are not this branch's:
+  - `test_personas_and_prompts.py::test_every_template_file_matches_its_pinned_hash` and
+    `::test_prompts_never_contain_a_personal_name_field`: `resolve_v9`'s entry in
+    `negsim/negotiation/templates/MANIFEST.json` has no `"kind": "resolution"` (`resolve_v8`'s has),
+    so the tests load it as a negotiation template. Written that way in RF-40's commit `85a577386`
+    (2026-11-01); this branch changes nothing under `negsim/negotiation/` (`git diff --stat` against
+    the base is empty there). Not fixed here: it is an existing file outside the grid (AS1), and
+    RF-40's branch, which has no PR yet, is where it belongs. For the user.
+  - `test_encounter_protocol.py::test_stop_at_cap_...`: the known failure at DeepSeek's peak hours
+    (01-04 and 06-10 UTC on weekdays), a `cost.json` gap from #64's code (`WORK_LOG-66.md`). It ran at
+    about 09:35 UTC.
+- A check of the two template tests on a clean checkout of the base, in a scratch worktree, failed
+  to check out (Windows path length: "Filename too long" under `runs/rf28_...`). The half-made
+  worktree was removed and pruned. The cause above is read from the manifest and its history instead.
+- `git diff --stat origin/feat/129-rf40-turn-taking-talk`: only new files, plus
+  `docs/action-space.md` (task 4) and this log.
+
 ## Open questions / risks
 1. **Deadlock window** 3.0 s (10 ticks) instead of the agreed 16 ticks: see 09:26. For the user.
 2. **Crossing paths blocked** is RF-50's assumption, not Burstedde et al.'s; agreed by the user
@@ -105,5 +126,30 @@ The user answered "Yes start" to these, proposed by the assistant:
    rates compare with round 1's by rate only (section 3).
 6. **README status lines** (root `README.md`, `llm_negotiation/README.md`) are not updated: under
    the user's AS1 rule ("ask the user before changing any existing file for it"), asked at the end.
+7. **`resolve_v9` has no `kind` in the template manifest** (RF-40's commit `85a577386`): two
+   existing tests fail on the base branch. A one-line fix on RF-40's branch; for the user.
 
 ## Summary (fill in at the end)
+**What changed.** A grid corridor as an add-on world, with no model call (USD 0):
+- `negsim/grid/` (new; entry point `python -m negsim.grid`): the corridor of AS6, moves in the
+  walker's own frame, a parallel tick with AS7's clash rule plus RF-50's crossing-paths rule,
+  slower walkers, arrival, deadlock and time limit;
+- the measures: passed, passing distance (the gap when level), blocked face to face, squeezed past,
+  the dance, deadlock, resolved, ticks to pass, per-person counts;
+- a text print, scripted walkers, round 1's cases on the grid;
+- `configs/grid/corridor_v1.yaml` (tagged values), `tests/test_grid.py` (38 tests);
+- `docs/action-space.md`: section 8.1 as built, 8.2 left to RF-51, AS8 withdrawn and AS9 amended
+  (section 10), the deadlock placeholder (section 11).
+
+**Why.** The supervisor's point 1 (SV7): a grid limits the action space and removes angles. The user
+moved the grid ahead of RF-41 (dropped), RF-46 and the menu on 2026-11-25.
+
+**How it was verified.**
+- The scripted walkers give their expected outcomes on both geometries over 5 seeds (tested); over
+  20 seeds, `python -m negsim.grid scripts` gives the table in section 8.1.
+- Each clash rule, slow walkers, arrival and seed rebuild are tested directly; 40 random seeds per
+  geometry keep the invariants (one person a cell, inside the grid, at most one row and lane a tick,
+  no swaps).
+- `analysis.lateral.when_level` reads a grid trajectory unchanged.
+- Full suite: 2359 passed, 12 skipped, 3 failed, all three pre-existing (09:53 entry). AS1: the diff
+  against the base lists only new files, plus `docs/action-space.md` (task 4) and this log.
