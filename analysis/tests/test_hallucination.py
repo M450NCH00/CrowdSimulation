@@ -140,6 +140,12 @@ def test_no_room_checked_against_the_widths():
     assert ("7", "no_room") not in flags(point(reason="There is no room on my left.", place=tight))
 
 
+def test_a_little_room_is_giving_room_not_a_claim_of_none():
+    # hallucination_v1 took "a little room" as "no room"; v2 fixes it (WORK_LOG-134.md)
+    assert ("7", "no_room") not in flags(point(intent="Make a little room for her"))
+    assert ("7", "no_room") in flags(point(reason="There is little room to pass."))
+
+
 def test_wall_beside_me():
     assert ("7", "wall_close") in flags(point(reason="I'm against the wall already."))
     hugging = ["- You are in a passage 1.75 m wide. The wall on your left is 0.30 m from you, the wall on your right 1.45 m."]

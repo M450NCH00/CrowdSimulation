@@ -26,8 +26,8 @@ earlier prompt except the history lines this one repeats. A claim is supported w
 structured fields show it (``seen``: signal, motion, changes, factor lines, age, bearing;
 ``heard``; ``history``; ``place``; ``me``).
 
-**How claims are found:** the keyword codebook ``codebooks/hallucination_v1.json`` (frozen; a
-change is ``_v2``) on the reply's reason and intent (and its message, where a rule says so). A
+**How claims are found:** the keyword codebook ``codebooks/hallucination_v2.json`` (frozen; a
+change is ``_v3``; v2 is v1 with one fix, ``WORK_LOG-134.md``) on the reply's reason and intent (and its message, where a rule says so). A
 match preceded in its sentence by a hedge or negation ("if he waves", "he didn't stop") is
 skipped. The patterns are the assistant's coding choices: their precision and recall come from
 the hand check (``hand_check_judgements.json``), reported beside every share.
@@ -55,7 +55,7 @@ from .sidestep_reprompt import WALLS, fisher_exact
 from .turn_taking import OTHER_SIDE, OWN, YOURS, frame_of, words_match_move
 
 CODEBOOKS = Path(__file__).resolve().parent / "codebooks"
-CODEBOOK = "hallucination_v1"
+CODEBOOK = "hallucination_v2"  # v1 took "a little room" (giving room) as "no room"; WORK_LOG-134.md
 HEADLINE = ("1", "2", "5", "7")
 CONTRADICTION = ("3", "4")
 CATEGORIES = ("1", "2", "3", "4", "5", "7")
@@ -492,7 +492,7 @@ NAMES = {"1": "misperceived the other", "2": "misremembered itself", "3": "says 
 
 def markdown(summary: Mapping[str, Any], hand: Optional[Mapping[str, Any]]) -> str:
     out = ["# Hallucinated decisions (RF-45): tables", "",
-           "Written by `python -m analysis.hallucination`; codebook `hallucination_v1`. Shares are flagged decision points, "
+           "Written by `python -m analysis.hallucination`; codebook `hallucination_v2`. Shares are flagged decision points, "
            "with Wilson 95% intervals. The headline counts categories 1, 2, 5 and 7, of all decision points; "
            "self-contradiction counts 3 and 4, of readable ones. Each category's denominator is the decision points it can "
            "be judged on (3: an intent the RF-8 codebook can place; 4: a message stating the speaker's own side).", ""]
