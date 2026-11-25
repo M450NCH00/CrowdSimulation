@@ -65,6 +65,8 @@ START_AFTER_SECONDS = "after_seconds"
 
 #: The kinds of basis of D8.
 DEBRIEF_KINDS = ("law_or_guidance", "published_study", "local_custom", "habit", "common_sense", "none")
+#: Issue #127 (``resolve_debrief_v2``): why the agent moved to that side and not the other.
+SIDE_BASES = ("custom_or_rule", "where_they_were", "more_room", "what_they_did", "either_side", "did_not_move_aside")
 SOURCE_UNCHECKED = "unchecked"
 
 
@@ -403,16 +405,25 @@ class DebriefReply:
     applies_to: str
     source_status: str = SOURCE_UNCHECKED  # every source is stored unchecked; RF-14 checks it
     flags: tuple[str, ...] = field(default_factory=tuple)
+    #: Issue #127: whether the template asked why that side (``resolve_debrief_v2``), and the answer.
+    side_asked: bool = False
+    side_basis: Optional[str] = None  # one of SIDE_BASES, or None if missing or unknown (flagged)
+    side_detail: Optional[str] = None
 
     def as_dict(self) -> dict[str, Any]:
-        return {
+        described = {
             "basis": self.basis, "kind": self.kind, "source": self.source,
             "applies_to": self.applies_to, "source_status": self.source_status, "flags": list(self.flags),
         }
+        if self.side_asked:  # only then, so that earlier records are written as before
+            described |= {"side_basis": self.side_basis, "side_detail": self.side_detail}
+        return described
 
 
-def parse_debrief(raw: Optional[str]) -> DebriefReply:
-    """Read a debrief reply. ``source`` may be ``"none"`` (or null): no source is named."""
+def parse_debrief(raw: Optional[str], side: bool = False) -> DebriefReply:
+    """Read a debrief reply. ``source`` may be ``"none"`` (or null): no source is named. With
+    ``side`` (issue #127, ``resolve_debrief_v2``) also ``side_basis`` and ``side_detail``; a
+    missing or unknown side basis is flagged, not refused, so that the rest of the debrief is kept."""
     data = _object(raw)
     basis = _text(data, "basis", required=True)
     if not basis:
@@ -429,4 +440,15 @@ def parse_debrief(raw: Optional[str]) -> DebriefReply:
     if not applies_to:
         raise _fail("empty_applies_to")
     flags = ("source_but_kind_none",) if source is not None and kind == "none" else ()
-    return DebriefReply(basis, kind, source, applies_to, SOURCE_UNCHECKED, flags)
+    if not side:
+        return DebriefReply(basis, kind, source, applies_to, SOURCE_UNCHECKED, flags)
+    side_basis = data.get("side_basis")
+    if side_basis is None:
+        flags += ("no_side_basis",)
+    elif not isinstance(side_basis, str) or side_basis.strip().lower() not in SIDE_BASES:
+        flags += ("unknown_side_basis",)
+        side_basis = None
+    else:
+        side_basis = side_basis.strip().lower()
+    side_detail = _text(data, "side_detail", required=False)
+    return DebriefReply(basis, kind, source, applies_to, SOURCE_UNCHECKED, flags, True, side_basis, side_detail)

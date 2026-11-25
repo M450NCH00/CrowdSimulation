@@ -100,8 +100,16 @@ MODES = (MODE_PLAN_ONLY, MODE_PLAN_ORCA)
 #: from where it is, where ``as_prompted`` steers it towards the path's lookahead point, back to the
 #: line it started on. Under ``as_prompted`` a sidestep followed by such a step was undone (RF-29:
 #: 53 of 108 colliding agents gave back over half of it before the two were level).
+#: ``keep_line_replan`` (issue #127) is ``keep_line`` and, besides, the line is kept across a later
+#: decision too: once the agent has carried out a step in the encounter, it keeps its line while a
+#: new plan's first step has not begun (a ``start`` still to come) and after a plan of no steps
+#: (``[]``, "carry on as you are"), where ``keep_line`` keeps it only once the current plan has
+#: begun a step, and otherwise steers the agent back to its path, giving back a sidestep.
 EXECUTION_RF4, EXECUTION_AS_PROMPTED, EXECUTION_KEEP_LINE = "rf4", "as_prompted", "keep_line"
-EXECUTIONS = (EXECUTION_RF4, EXECUTION_AS_PROMPTED, EXECUTION_KEEP_LINE)
+EXECUTION_KEEP_LINE_REPLAN = "keep_line_replan"
+EXECUTIONS = (EXECUTION_RF4, EXECUTION_AS_PROMPTED, EXECUTION_KEEP_LINE, EXECUTION_KEEP_LINE_REPLAN)
+#: The executions under which a step without a turn keeps the agent's line (issue #101).
+KEEPS_LINE = (EXECUTION_KEEP_LINE, EXECUTION_KEEP_LINE_REPLAN)
 
 # The states of a plan.
 WAITING = "waiting"  # given, its first step not yet started; or (resolve_v5) a later step's start not yet come
@@ -287,7 +295,7 @@ class PlanDriver:
         self.mode, self.scenario, self.agents, self.execution = mode, scenario, agents, execution
         #: Whether a turn walks at its angle off the step's start direction and the line is kept
         #: between steps (issue #64), as both ``as_prompted`` and ``keep_line`` do.
-        self._as_prompted = execution in (EXECUTION_AS_PROMPTED, EXECUTION_KEEP_LINE)
+        self._as_prompted = execution in (EXECUTION_AS_PROMPTED, *KEEPS_LINE)
         #: Issue #110: ORCA still keeps apart two members of one group (the run's ``group``) in
         #: ``plan_only``; the plans alone decide only between members of different groups.
         self.orca_within_groups = bool(orca_within_groups)
@@ -356,6 +364,13 @@ class PlanDriver:
         """Whether the encounter is under its plans: begun, and not yet handed back to ORCA."""
         return self.started_step is not None and self.released_step is None
 
+    def _stepped_before(self, agent: int) -> bool:
+        """Under ``keep_line_replan`` (issue #127): whether an earlier plan of ``agent`` in this
+        encounter began a step, so that a later plan keeps the line that step took it to."""
+        return self.execution == EXECUTION_KEEP_LINE_REPLAN and any(
+            plan.agent_id == agent and plan.records for plan in self.decisions
+        )
+
     def decisions_record(self) -> list[dict[str, Any]]:
         """Every plan given, in order, in the form a replay schedules from. With more than two
         agents each also names its partner (``partner_id``)."""
@@ -410,9 +425,10 @@ class PlanDriver:
         step = None if plan is None else plan.step
         if step is not None:
             velocity = self._step_velocity(simulation, agent, plan, step, own_speed)
-        elif self._as_prompted and self.active and plan is not None and plan.records:
+        elif self._as_prompted and self.active and plan is not None and (plan.records or self._stepped_before(i)):
             # Issue #64: between steps and after the last, until the encounter is over, keep the
-            # line a step took the agent to: walk parallel to the path, at its own speed.
+            # line a step took the agent to: walk parallel to the path, at its own speed. Issue
+            # #127: under keep_line_replan, also before a later plan's first step and after [].
             heading = agent.spec.path.heading_at(agent.path_s)
             velocity = (own_speed * math.cos(heading), own_speed * math.sin(heading))
         elif self.mode == MODE_PLAN_ORCA or not self.active:
@@ -583,7 +599,7 @@ class PlanDriver:
             return self._sidestep_velocity(simulation, plan, step, speed)
         if step.turn is not None and self._as_prompted:
             ux, uy = plan._tangent  # the path's direction where the step began (issue #64)
-        elif step.turn is None and self.execution == EXECUTION_KEEP_LINE:
+        elif step.turn is None and self.execution in KEEPS_LINE:
             # Issue #101: a step without a turn keeps the agent's line, parallel to its path.
             heading = agent.spec.path.heading_at(agent.path_s)
             ux, uy = math.cos(heading), math.sin(heading)

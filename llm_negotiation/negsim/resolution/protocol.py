@@ -65,6 +65,7 @@ from __future__ import annotations
 import math
 from dataclasses import asdict, dataclass, field, replace
 from datetime import datetime, timezone
+from functools import partial
 from typing import Any, Mapping, Optional, Sequence
 
 from ..avoidance.simulation import STATUS_COLLISION, STATUS_COMPLETED, STATUS_DEADLOCK
@@ -752,7 +753,7 @@ class EncounterSession:
             try:
                 reply = request_with_retry(
                     self.client, messages, self.llm.model, self.llm.temperature, self.llm.max_tokens, self.llm.thinking,
-                    metadata, parse_debrief, self.debrief_template.retry(),
+                    metadata, partial(parse_debrief, side=self.debrief_template.side_question), self.debrief_template.retry(),
                 )
             except Exception as exc:
                 raise _Stopped(exc) from exc

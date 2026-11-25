@@ -767,6 +767,8 @@ def debrief_rows(record: Mapping[str, Any]) -> list[dict[str, Any]]:
             "session_id": record["session_id"], "agent_id": debrief["agent_id"], "parse_error": debrief.get("parse_error"),
             "basis": parsed.get("basis"), "kind": parsed.get("kind"), "source": parsed.get("source"),
             "applies_to": parsed.get("applies_to"), "check_status": parsed.get("source_status", "unchecked"),
+            # Issue #127: why that side, when the debrief asked it (resolve_debrief_v2).
+            **({"side_basis": parsed.get("side_basis"), "side_detail": parsed.get("side_detail")} if "side_basis" in parsed else {}),
         })
     return rows
 

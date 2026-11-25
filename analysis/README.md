@@ -36,6 +36,14 @@ reads the `plan_only` replays of the same sessions and writes `analysis/lateral.
 walkers' lateral separation when level along the corridor, and how far each moved aside, by
 outcome (resolved, collision, near miss). Head-on cases only.
 
+**The sidestep with a second chance** (issue #127, RF-39): `python -m analysis.sidestep_reprompt
+llm_negotiation/runs/<experiment>` reads every repeat of the design's sessions and writes
+`analysis/sidestep_reprompt.md` and `.json`: how the first plans stepped (a pavement dance or
+not) and how many of each resolved, per condition; how a dance at the start ended in non-verbal
+and talk (who changed side, whether a side was said or pointed to); each agent's first side
+across a cell's repeats against a weighted coin; and the side against the room the agent was told
+it had and the debrief's `side_basis`. Head-on cases only.
+
 An `outcomes.csv` written before issue #63 lacks two kinds of column the analysis needs (what each
 agent was told of the other, and the encounter's order). Running its experiment again rebuilds its
 tables from the session records, with no LLM call; the analysis says so when it meets one.

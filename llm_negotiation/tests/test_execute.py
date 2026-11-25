@@ -316,7 +316,7 @@ def _row(result, agent, step):
 #: The executions under which a turn holds its angle and the line is kept after the last step:
 #: ``as_prompted`` (issue #64) and ``keep_line`` (issue #101, which differs only for a later step
 #: without a turn).
-AS_PROMPTED_TURNS = (X.EXECUTION_AS_PROMPTED, X.EXECUTION_KEEP_LINE)
+AS_PROMPTED_TURNS = (X.EXECUTION_AS_PROMPTED, X.EXECUTION_KEEP_LINE, X.EXECUTION_KEEP_LINE_REPLAN)  # issue #127: keep_line_replan too
 
 
 def test_a_turn_holds_its_angle_as_prompted_and_settles_near_the_path_under_rf4():

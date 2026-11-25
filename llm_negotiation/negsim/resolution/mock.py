@@ -76,11 +76,24 @@ DEBRIEF_PATHS: dict[str, str] = {
     "none": json.dumps({"basis": "Nothing in particular.", "kind": "none", "source": "none", "applies_to": "my decision"}),
 }
 DEBRIEF_PATH_NAMES = tuple(DEBRIEF_PATHS)
+#: Issue #127: the side answers a debrief that asks why that side (``resolve_debrief_v2``) gets, in turn.
+DEBRIEF_SIDES = (
+    {"side_basis": "either_side", "side_detail": "A mock answer: either side would have done."},
+    {"side_basis": "custom_or_rule", "side_detail": "A mock answer: I keep to one side by habit."},
+)
+
+
+def _debrief_answer(request: LLMRequest, index: int) -> str:
+    """The debrief path ``index``; with the side keys added when the question asks for them, so
+    that a debrief under ``resolve_debrief_v1`` is answered as before."""
+    answer = DEBRIEF_PATHS[DEBRIEF_PATH_NAMES[index % len(DEBRIEF_PATH_NAMES)]]
+    if '"side_basis"' not in request.messages[-1]["content"]:
+        return answer
+    return json.dumps({**json.loads(answer), **DEBRIEF_SIDES[index % len(DEBRIEF_SIDES)]})
 
 
 def debrief_paths_v1(request: LLMRequest) -> str:
-    index = int(request.metadata.get("path_index", 0))
-    return DEBRIEF_PATHS[DEBRIEF_PATH_NAMES[index % len(DEBRIEF_PATH_NAMES)]]
+    return _debrief_answer(request, int(request.metadata.get("path_index", 0)))
 
 
 def resolution_rehearsal_v1(request: LLMRequest) -> str:
@@ -92,7 +105,7 @@ def resolution_rehearsal_v1(request: LLMRequest) -> str:
     slot, number = int(meta.get("agent_slot", 0)), int(meta.get("decision_point") or 1)
     index = int(meta.get("path_index", 0)) + 7 * slot + 3 * (number - 1)
     if meta.get("kind") == "debrief":
-        return DEBRIEF_PATHS[DEBRIEF_PATH_NAMES[(int(meta.get("path_index", 0)) + slot) % len(DEBRIEF_PATH_NAMES)]]
+        return _debrief_answer(request, int(meta.get("path_index", 0)) + slot)
     return resolve_paths_v1(replace(request, metadata={**meta, "path_index": index}))
 
 

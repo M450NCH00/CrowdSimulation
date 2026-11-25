@@ -371,6 +371,11 @@ class DebriefTemplate:
     def retry(self) -> str:
         return " ".join(self.data["retry"].split())
 
+    @property
+    def side_question(self) -> bool:
+        """Whether the debrief asks why that side (``resolve_debrief_v2``, issue #127)."""
+        return bool(self.data.get("side_question", False))
+
     def text(self, decisions: Sequence[Any]) -> str:
         """The debrief question, with each decision (a :class:`~negsim.resolution.reply.ParsedReply`)."""
         if not decisions:
