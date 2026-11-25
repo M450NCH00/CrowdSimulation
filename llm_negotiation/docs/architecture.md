@@ -988,6 +988,49 @@ the core templates or another scenario's code.
 passage, "excuse me" from behind, boarding a train, the escalator, queue cutting. Scenarios with
 cars are dropped for now.
 
+### 8.8 The supervisor's suggestions of November 2026, and the action space (issue #131)
+
+From the supervisor meeting of November 2026, held after RF-40 (#129); the exact date is not
+recorded. The user's notes are in the root `CLAUDE.md` ("Supervisor decisions"), word for word.
+As in section 8.6, these are the supervisor's points, numbered **SV**, continuing from SV6. Each
+is phrased "can ...", so they are recorded as suggestions, not instructions.
+`WORK_LOG-131.md` records how they were written down.
+
+**SV7. A grid environment**, to limit the action space and get rid of angles when turning left
+or right. RF-50 to RF-52 (#139 to #141).
+
+**SV8. Search on left and right orientation.** DeepSeek takes the other person's left and right
+for its own, although it is told they face each other. RF-40 measured this: "on your right" was
+said the wrong way round in 16 of 27. RF-43 (#132).
+
+**SV9. Test absolute positioning.** RF-48 (#137) and RF-51 (#140); run in RF-49 (#138) and RF-52.
+
+**SV10. Output qualitative words instead of numbers**, and **SV11. describe the actions and let
+the agent choose**, instead of deciding angles. RF-47 (#136).
+
+**SV12. Measure the share of hallucinated decisions.** RF-45 (#134), then a measure in every
+later run.
+
+**SV13. Behave like the person, with no need to speak like them.** RF-46 (#135).
+
+**SV14. See how the YC Labs "Agents in Games" study models its agents' decisions.** RF-44 (#133).
+
+The user's decisions on how to act on them (2026-11-25, on their own authority) are numbered
+**AS1 to AS9** and recorded in `action-space.md`:
+
+- **AS1:** the grid is an add-on that modifies no existing code.
+- **AS2:** the conditions of the runs.
+- **AS3:** the menu and the amounts behind its words.
+- **AS4:** the menu extends existing code behind a template flag.
+- **AS5:** the absolute frame: compass walls, heading not told, provisional until RF-43.
+- **AS6:** grid cells of 0.4 m, 5 lanes.
+- **AS7:** the clash rule (Burstedde et al. 2001).
+- **AS8:** RF-41 runs after RF-45.
+- **AS9:** the order of work.
+
+The resolution design (D1 to D17, section 8.7) is unchanged. The variants are new templates
+beside `resolve_v9`, not edits to it.
+
 ## 9. Fictional groups and meetings inside a passage (issue #32)
 
 Two additions, each from the person to the log. **A fictional group** (`ethnic_group`): a
