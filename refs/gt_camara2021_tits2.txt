@@ -1,0 +1,1559 @@
+                                                                                                            eprints@whiterose.ac.uk
+                                                                                                     https://eprints.whiterose.ac.uk
+                                                                        Universities of Leeds, Sheffield and York
+
+Deposited via The University of Leeds.
+White Rose Research Online URL for this paper:
+https://eprints.whiterose.ac.uk/id/eprint/162669/
+Version: Accepted Version
+
+Article:
+Camara, F, Bellotto, N, Cosar, S et al. (2021) Pedestrian Models for Autonomous Driving
+Part II: High-Level Models of Human Behaviour. IEEE Transactions on Intelligent
+Transportation Systems, 22 (9). pp. 5453-5472. ISSN: 1524-9050
+https://doi.org/10.1109/TITS.2020.3006767
+
+© 2020 IEEE. All rights reserved. Personal use of this material is permitted. Permission
+from IEEE must be obtained for all other uses, in any current or future media, including
+reprinting/republishing this material for advertising or promotional purposes, creating new
+collective works, for resale or redistribution to servers or lists, or reuse of any copyrighted
+component of this work in other works.
+
+Reuse
+Items deposited in White Rose Research Online are protected by copyright, with all rights reserved unless
+indicated otherwise. They may be downloaded and/or printed for private study, or other acts as permitted by
+national copyright laws. The publisher or other rights holders may allow further reproduction and re-use of
+the full text version. This is indicated by the licence information on the White Rose Research Online record
+for the item.
+Takedown
+If you consider content in White Rose Research Online to be in breach of UK law, please notify us by
+emailing eprints@whiterose.ac.uk including the URL of the record and the reason for the withdrawal request.
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS                                                                                     1
+
+   Pedestrian Models for Autonomous Driving
+Part II: High-Level Models of Human Behaviour
+
+Fanta Camara1,2, Nicola Bellotto2, Serhan Cosar3, Florian Weber4, Dimitris Nathanael5, Matthias Althoff6,
+   Jingyuan Wu7, Johannes Ruenz7, Andre´ Dietrich8, Gustav Markkula1, Anna Schieben9, Fabio Tango10,
+                                      Natasha Merat1 and Charles Fox1,2,11
+
+   Abstract--Autonomous vehicles (AVs) must share space with                                           Game       Level 5: Full Automation
+pedestrians, both in carriageway cases such as cars at pedestrian                                      Theory        Level 4: `Mind off'
+crossings and off-carriageway cases such as delivery vehicles                                        Signalling
+navigating through crowds on pedestrianized high-streets. Unlike                                                     Level 3: `Eyes off'
+static obstacles, pedestrians are active agents with complex, inter-                                 Interaction    Level 2: `Hands off'
+active motions. Planning AV actions in the presence of pedestrians                                   Prediction
+thus requires modelling of their probable future behaviour as                                         Tracking       Level 1: `Hands on'
+well as detecting and tracking them. This narrative review article                                  Recognition   Level 0: No Automation
+is Part II of a pair, together surveying the current technology
+stack involved in this process, organising recent research into                                      Detection
+a hierarchical taxonomy ranging from low-level image detection                                        Sensing
+to high-level psychological models, from the perspective of an
+AV designer. This self-contained Part II covers the higher levels          Fig. 1. Main structure of the review.
+of this stack, consisting of models of pedestrian behaviour, from
+prediction of individual pedestrians' likely destinations and paths,       trajectory prediction, interaction of pedestrians, and behavioral
+to game-theoretic models of interactions between pedestrians and           modelling of pedestrians, and also experimental resources to
+autonomous vehicles. This survey clearly shows that, although              validate all the types of models. Interacting with pedestrians
+there are good models for optimal walking behaviour, high-level            is a particular type of social intelligence. Autonomous vehi-
+psychological and social modelling of pedestrian behaviour still           cles will need to utilize many different levels of models of
+remains an open research question that requires many conceptual            pedestrians, each addressing different aspects of perception
+issues to be clarified. Early work has been done on descriptive and        and action. Each of these models can be based on empirical
+qualitative models of behaviour, but much work is still needed             science results or obtained via machine learning. In contrast to
+to translate them into quantitative algorithms for practical AV            the models of Part I, Part II requires models from higher levels
+control.                                                                   of the technology stack, as researched by psychologists and
+                                                                           taught in advanced driver training programmes. For instance,
+   Index Terms--Review, survey, pedestrians, autonomous vehi-              drivers often try to infer the personality of other humans,
+cles, sensing, detection, tracking, trajectory prediction, pedestrian      predict their likely behaviours, and interact with them to
+interaction, microscopic and macroscopic behaviour models,                 communicate mutual intentions [102]. Between the high level
+game-theoretic models, signalling models, eHMI, datasets.                  surveyed in this Part II and the low levels of Part I, researchers
+                                                                           infer psychological information from perceptual information.
+                          I. INTRODUCTION                                  As an example, researchers build systems to recognize the
+                                                                           body language, gestures, and demographics information of
+   To operate successfully in the presence of pedestrians,                 pedestrians to better predict their likely goals and behaviours.
+autonomous vehicles require input from a huge variety of                   Despite the importance of bridging the research between the
+models that have to work seamlessly together. These models                 higher and lower levels, their connection is still thin, both
+range from simple visual models for detection of pedestrians,              conceptually and in terms of actual implementations.
+to predicting their future movements using psychological and
+sociological methods. Part I of this two-part survey [33] cov-                While prediction of likely future pedestrian trajectories is
+ered models for sensing, detection, recognition, and tracking              becoming increasingly well understood, models for actively
+of pedestrians. Part II here reviews models for pedestrian                 controlling pedestrian interactions ­ including game-theoretic
+                                                                           models ­ are still in their infancy. Active control here means
+   This project has received funding from EU H2020 interACT (723395).      that the vehicle's own future actions are taken into account
+   1 Institute for Transport Studies (ITS), University of Leeds, UK        in predicting how the pedestrian will respond, and vice versa.
+   2 Lincoln Centre for Autonomous Systems, University of Lincoln, UK      One reason is that sufficient data to rigorously study interac-
+   3 Institute of Engineering Sciences, De Montfort University, UK         tion between pedestrians has only recently become available
+   4 Bayerische Motoren Werke Aktiengesellschaft (BMW), Germany
+   5 School of Mechanical Engineering, Nat. Tech. University of Athens
+   6 Department of Computer Science, Technische Universita¨t Mu¨nchen
+   7 Robert Bosch GmbH, Germany
+   8 Chair of Ergonomics, Technische Universita¨t Mu¨nchen (TUM), Germany
+   9 DLR (German Aerospace Center), Germany
+   10 Centro Ricerche Fiat (CRF), Italy
+   11 Ibex Automation Ltd, UK
+   Manuscript received 2019-03-11; Revisions: 2019-10-21, 2020-03-26.
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS                                                                                  2
+
+                                                                         TABLE I
+                          PROPOSED MAPPING FROM SAE LEVELS TO PEDESTRIAN MODEL REQUIREMENTS.
+
+SAE LEVEL  DESCRIPTION                                                           MODEL REQUIREMENTS                           SECTION
+0          No Automation. Automated system issues warnings and may mo-           Sensing                                      Part I [33] Sec. II
+           mentarily intervene, but has no sustained vehicle control.
+
+1          Hands on. The driver and the automated system share control of +Detection                                          Part I [33] Sec. III
+
+           the vehicle. For example, adaptive cruise control (ACC), where the
+
+           driver controls steering and the automated system controls speed.
+
+           The driver must be ready to resume full control when needed.
+
+2          Hands off. The automated system takes full control of the vehicle +Recognition                                     Part I [33] Sec. IV
+                                                                                                                              Part I [33] Sec. V
+           (steering and speed). The driver must monitor and be prepared to +Tracking
+
+           intervene immediately. Occasional contact between hand and wheel
+
+           is often mandatory to confirm that the driver is ready to intervene.
+
+3          Eyes off. Driver can safely turn attention away from the driving +Unobstructed Walking Models, Known Goals Sec. II-A
+
+           tasks, e.g. use a phone or watch a movie. Vehicle will handle +Behaviour Prediction, Known Goals                   Sec. II-B
+
+           situations that call for an immediate response, like emergency +Behaviour Prediction, Unknown Goals                Sec. II-C
+
+           braking. The driver must still be prepared to intervene within some
+
+           limited time.
+
+4          Mind off. No driver attention is required for safety, except in limited +Event/Activity Models                     Sec. II-D
+
+           spatial areas (geofenced) or under special circumstances, like traffic +Effects of Pedestrian Class on Trajectory  Sec. II-E
+
+           jams.Outside of these areas or circumstances, the vehicle must be +Pedestrian Interaction Models                   Sec. III
+
+           able to safely abort or transfer control to the human.                +Game Theoretic and Signalling Models        Sec. IV
+
+5          Full automation. No human intervention is required at all, fully +Extreme Robustness and Reliability
+
+           automated driving.
+
+Note: `+X' means that `X' is required in addition to the requirements of the previous level.
+
+as presented in Sec. V on experimental resources. Another           more high-dimensional problem, with dimensions including
+reason is that one first has to be able to reliably sense, detect,  goals, obstacles, various state variables of pedestrians, and
+recognize, and track pedestrians in order to gather enough data     road geometry. A further reason is that less labelled data is
+for modelling interaction and game-theoretic models. A third        available for training prediction models. A promising future
+reason is that interaction and game-theoretic models are only       direction is to combine empirical science results with machine
+relevant in crowded environments, while many situations do          learning to better safeguard techniques using machine learning
+not require much interaction. However, crowded environments         and to avoid over-fitting.
+are those that are typically most relevant for autonomous
+driving. Fig. 1 shows the review structure.                            While similar concepts apply to modelling human drivers
+                                                                    and their vehicles for interactions with AVs, this article
+   To assess the maturity of the methods presented, the level       presents a review of the state of the art specifically in
+of autonomy is used, as defined by the Society of Automotive        modelling human pedestrians for social decision-making. In
+Engineers (SAE) ­ the same measure has already been used in         some cases it goes beyond modelling aspects to also cover
+Part I [33]. For the convenience of the reader, the five SAE lev-   more conceptual aspects or empirical psychological findings,
+els are briefly presented, ranging from simple driver assistance    when the studies in question are judged to have very direct
+tools to full self-driving [183]. Requirements for pedestrian       applicability to mathematical models. Results from human
+modelling increase with each level, with lower levels typically     driving cannot be directly translated to pedestrians due to the
+requiring lower and more mature levels of pedestrian models,        variability in locomotion, the differences in shape, the changes
+such as detection and tracking, while higher levels require         in postures and the less-structured environment.
+models for psychological and social understanding to fully
+interact with pedestrians in a human-like way [30]. Table I            Pedestrians are defined as humans moving on and near
+gives an overview of SAE levels and requirements mappings.          public highways including roads and pedestrianised areas, who
+                                                                    walk using their own locomotive power. This excludes, for
+   While many papers propose pedestrian models at various           example, humans moving on cycles, wheelchairs and other
+levels, no unifying theory has yet been produced which would        mobility devices, skates and skateboards, or those transported
+make it possible to easily transfer results across all levels       by other humans. This review does not cover interactions of
+from detection to prediction. This review uncovers bottlenecks      traffic participants without pedestrians: a survey on trajectory
+in transferring results to facilitate closing existing research     prediction of on-road vehicles is provided in [123] and a
+gaps. Also, many existing studies only consider results from        survey on vision-based trajectory learning is provided in [146].
+empirical science or those obtained via machine learning. This
+survey provides an overview considering both possibilities.            This Part II is organized as shown in Fig. 2. In Sec. II,
+While machine learning results work particularly well for           methods for predicting the movements of pedestrians are
+detection and recognition, they are not yet performing so           reviewed. In particular, we consider models and methods for
+well for prediction. Some reasons are that prediction is a          unstructured environments, for prediction around obstacles, to
+                                                                    estimate destinations, and for the prediction of events such as
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS                                                                            3
+
+Fig. 2. Structure of the paper.
+
+crossing the road. These methods are enhanced in Sec. III         Trajectory   Unobstructed Walking Models with Known Goals
+for groups of pedestrians interacting with each other. This            &            Behaviour Prediction with Known Goals
+section considers the complete variety of researched models
+from macroscopic models only considering flow of people           Interaction      Behaviour Prediction with Unknown Goals
+to microscopic models that consider individual pedestrians.         Models                      Event/Activity Models
+In many situations, interaction models do not require game
+theory, because pedestrians often have different goals. How-                    Microscopic Models: Two Agents' Interactions
+ever, there are also many situations, where pedestrians have                        Microscopic Models: Group Interactions
+competing goals, e.g., when several pedestrians have to pass a                      Macroscopic Models: Crowd Interactions
+narrow passage. In such situations, the game theoretic models                                  Game Theoretic Models
+presented in Sec. IV can be very useful. Finally, Sec. V                                   Signalling Interaction Models
+surveys available resources: datasets and simulators, both for
+pedestrians and vehicles.                                         Fig. 3. Pedestrian behaviour prediction and interaction models.
+
+     II. BEHAVIOUR MODELS WITHOUT INTERACTION                     consists in considering human locomotion as a nonholonomic
+                                                                  motion [161], using the unicycle model (1) where the pedes-
+   The tracking models reviewed in Part I are kinematic in        trian walking trajectory is represented by the trajectory of their
+that they assume that pedestrians move in physical and/or pose    center of gravity, 2D coordinates (x, y) and by the angle ,
+space in motion described by kinematic models. This is a very
+basic assumption ­ human drivers typically have much more                      x = u1 cos 
+complex understandings and hence predictions of pedestrian
+behavior which they use to drive safely in their presence                      y = u1 sin                                          (1)
+[102]. These range from slightly more advanced kinematic
+understandings such as edestrians tend to walk in straight lines                = u2
+to models of how they are likely to interact with static objects
+in their environment, and predictions of pedestrians' likely      where u1 is the forward velocity and u2 is the angular velocity.
+destinations from reading the street scene.                       Assuming known origin and destination with inverse optimal
+                                                                  control, one can reliably predict human walking paths using
+   This section reviews such models starting from simple          this model [9] [155].
+unobstructed path models to uncertain destination models and
+more advanced event/activity models. These models do not yet      B. Behaviour Prediction with Known Goals
+consider interaction with other agents. Figure 3 summarizes
+the classes of models presented in this section. A previous          Here, the likely behaviour of a pedestrian in a static en-
+review was proposed by Ridel et al. [172], which mainly con-      vironment is considered, given a map. Pedestrians are likely
+sidered pedestrian crossing intent and offered a restricted view  to route around obstacles, and to stop at the edges of roads
+of the different models developed for trajectory prediction.      before crossing. This section does not consider social effects
+                                                                  of other agents ­ this is presented later in Sec. III.
+A. Unobstructed Walking Models with Known Goals
+                                                                     1) Dynamic Graphical Models: Dynamic Graphical Mod-
+   Given a start location and orientation, and a goal location,   els (DGM) are Graphical Models of a particular topology,
+humans do not typically turn towards the goal on the spot         containing some Markovian sequence of variables over time.
+(which would waste time) and then walk in a straight line,        DGMs include simple Markov and Hidden Markov Models
+but rather set off walking in their initial heading and adjust    and also more complex models. The method in [145] used
+their orientation gradually as they walk, resulting in smooth,    tracking in a DGM based on particle filter approximation to
+curved trajectories from origin to destination [72]. Models       infer beliefs over future pedestrian trajectories and combined
+from optimal control theory as also used in robotics [50] define  this with a GNSS (Global Navigation Satellite System) mod-
+cost functions for travel time, speed, and accelerations, to      ule that provides information about the hazardous areas and
+reproduce these characteristic curved trajectories. The model     people.
+in [72] instead achieves curved trajectories by modelling the
+rate of turning of the pedestrian as a function of the visual        2) Gaussian Process Methods: Habibi et al. [88] proposed
+angle and distance to the goal. A simple kinematic model          a context-based approach to pedestrian trajectory prediction
+                                                                  using Gaussian Processes [166]. This model incorporates
+                                                                  context features such as the pedestrian's distance to the traffic
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS              4
+
+light, the distance to the curbside, and the curbside orientation    a soft-maximum version of Markov decision process (MDP)
+in the transition learning phase to improve the prediction.          that accounts for decision uncertainty into the trajectories
+A context-based augmented semi non-negative sparse coding            distribution. The cost function is a linear combination of the
+(CASNSC) algorithm is used to predict pedestrian trajectories.       features (e.g obstacles) in the environment. People's motion
+                                                                     can be modeled by an MDP and by choosing a certain path,
+   3) Deep Learning Methods: Bock et al. [24] developed a            there is an immediate reward. The model is conditioned on
+Recurrent Neural Network (LSTM) model to learn pedestrian            a known destination location but the model reasons about all
+behaviour patterns at intelligent intersections using camera         possible destinations and the real destination is not known at
+data from the onboard vehicle and the infrastructure. The            the prediction time. The destination is inferred in a Bayesian
+model can predict trajectories for a horizon of 5s.                  way, by computing the prior distributions over destinations
+                                                                     using previous observed trajectories. When there is no previous
+   4) Other Methods: Kruse et al. [121] was one of the first         data, features (door, chair etc.) in the environment are used
+attempts to statistically infer human motion patterns from data      to model the destination. In [113], Kitani et al. extended
+and incorporate them in a robot motion planner for obstacle          [232], [233] by incorporating visual features to forecast future
+avoidance. Garzo´n et al. [77] presented a pedestrian trajectory     activities and destinations. The observations provided by the
+prediction model based on two path planning algorithms that          vision system (e.g. tracking algorithm) are assumed to be noisy
+require a set of possible goals, a map and the initial position. It  and uncertain therefore they used a hidden variable Markov de-
+then computes similarities between the obtained and observed         cision process (hMDP) where the agent knows its own states,
+trajectories into probabilities. This model is run along with a      action and reward but observes only noisy measurements.
+pedestrian detector and tracker. Tamura et al. [198] proposed        Negative Log-Loss (NLL) is used as a probabilistic metric and
+a pedestrian behaviour model that is based on social forces          Modified Hausdorff Distance (MHD) as a physical measure of
+and takes into account the intention of the pedestrian in the        the distance between two trajectories. Vasquez [210] extends
+trajectory prediction by defining a set of subgoals. In [170]        the work of Ziebart [233] and Kitani [113] while reducing
+the uncertain goals are used as latent variables to guide the        computational costs.
+motion prediction of pedestrians. Their positions are predicted
+by combining forward propagation of a physical model with               Bennewitz et al. [18], [17] proposed a learning method for
+local a priori information (e.g., obstacles and different road       human motion recognition using the expectation maximization
+types) from the start position, and by planning the trajectory       (EM) and a hidden Markov model (HMM) for clustering and
+from a goal position. The distribution over the destinations is      predicting human trajectories and incorporating them into a
+modeled with a particle filter.                                      robot path planner. In [221], Wu et al. presented a model that
+                                                                     uses Markov chains for pedestrian motion prediction (able to
+   In [209], Vasishta et al. presented a model based on the          deal with non-Gaussian distribution and several constraints).
+principle of natural vision that incorporates contextual in-         A heuristic method is proposed to automatically infer the
+formation extracted from the environment to the pedestrian           positions of several potential goals on a generic semantic map.
+behavior and it especially tries to predict hazardous behavior       It also incorporates policies to predict the pedestrian motion
+such as crossing in non authorized areas. The aforementioned         direction and takes into account other traffic participants by
+model in [72] considers goals and obstacles as distance-             incorporating a collision checking approach. Borgers et al.
+dependent attractors and repellers in heading angle space. The       [29] presented a model that predicts pedestrians' route choice
+contributions from the goal and obstacles are linearly com-          based on Markov chains. Similarly, Bai et al. [11] presented a
+bined, yielding a momentary rate of acceleration of heading,         real-time approximate POMDP (Partially Observable Markov
+which results in human-like trajectories for simultaneous goal-      Decision Process) controller, DESPOT, for use in high-street
+seeking and obstacle avoidance. In [57], Dias et al. developed       type environments. The method is intention-aware in the sense
+a model simulating pedestrian behaviour around corners, using        of inferring pedestrian destinations and route plans from their
+minimum jerk theory and one-thirds power law concept. Their          observed motion over time, and accounting for the value of
+model uses Monte Carlo simulation to generate pedestrian             this information against the value of making progress while
+trajectories with turning maneuvers, which were comparable           planning a robot's own route around them. Karasev et al.
+to empirical trajectories.                                           [110] presented a long-term prediction model that incorporates
+                                                                     environmental constraints with the intent modeled by a policy
+C. Behaviour Prediction with Unknown Goals                           in a MDP framework. The pedestrian state is estimated using
+                                                                     a Rao-Blackwellized filter and pedestrian intent by planning
+   Many of the above models assume known probable des-               according to a stochastic policy. This model assumes that
+tinations for pedestrians, which enable routing to act not           pedestrians behave rationally.
+just around local obstacles, but to predict entire long-term
+trajectories, such as for pedestrians intending to cross the road.      2) Deep Learning Methods: Hug et al. [98] proposed a
+However, in reality a pedestrian's destination is rarely given.      LSTM-MDL model combined with a particle filter method
+                                                                     for multi-modal trajectory prediction, and tested on Stanford
+   1) Dynamic Graphical Models: Ziebart et al. [233] pre-            Drone Dataset (SDD) [176]. Rehder et al. [171] proposed
+sented a pedestrian trajectory prediction model that takes into      a method to infer pedestrian destinations. The trajectory
+account hindrance due to robot motion, as is required in off-        prediction is computed as a goal-oriented motion planning.
+carriageway interactions such as last mile AVs in pedestri-          The whole system is based on deep-learning and trained
+anized areas. A maximum entropy inverse optimal control
+technique, introduced in [232], is used and is equivalent to
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS                        5
+
+via inverse reinforcement learning. A general introduction on                     Body heading is used above in basic path planning models,
+reinforcement learning in robotics can be found in [115]. Deo                  but head-turning events are distinct from body heading, and
+et al. [56] presented a framework for multi-modal pedestrian                   are discrete events which occur when a pedestrian turns
+trajectory forecasting in structured environments. They used                   their head to look around rather than to orient their body.
+a convolutional neural network to compute both the reward                      Such an activity model is used in [116] to enhance path
+maps of the path states and the possible goal states for MDPs.                 prediction of pedestrians while intending to cross a street. For
+The derived policy information is then fed into a recurrent                    low-level occupancy prediction, a dynamic Bayesian network
+neural network, combined with track history, to generate pos-                  (DFBN) is used on top of a switching linear dynamic system
+sible future trajectories. Goldhammer et al. [81] developed a                  (SLDS) anticipating the changes of pedestrian dynamics. As
+Multilayer Perceptron (MLP) neural network with polynomial                     in [116], studies [189], [190] also model head orientation by
+least square approximation to predict pedestrian trajectories                  an event/activity model to enhance the underlying prediction
+based on camera data. A long-term prediction model using                       approach.
+RNNs is proposed in [22].
+                                                                                  2) Gaussian Process Methods: Quintero et al. [162] [163]
+   3) Other Methods: Cosgun et al. [52] presented a person-                    proposed a pedestrian path prediction method up to 1s ahead
+following service robot with a task dependent motion planner.                  based on balanced Gaussian Process dynamical models (B-
+The robot can track and predict the future trajectory of the                   GPDMs) and na¨ive Bayes classifiers. GPDM is used to
+person by maximizing its reward at future steps while avoiding                 transform a sequence of timed feature vectors into a low
+entering into the human's personal space. Koschi et al. [117]                  dimensional latent space and it can predict the next position
+proposed a set-based method to predict all possible behaviours                 based on the current one. The na¨ive Bayes classifiers are used
+of pedestrians using reachability analysis [5] for pedestrian                  to classify pedestrian actions based on 3D joint positions.
+occupancy. Pedestrians are described as point mass with a
+certain maximum velocity and maximum acceleration. A rule-                        3) Feature Selection Methods: Bonnin et al. [27] proposed
+based occupancy is applied that does not allow a pedestrian to                 a generic context-based model to predict pedestrians behavior
+obstruct traffic, e.g. pedestrians are given priority at crosswalks            according to features describing their local urban environment.
+and their trajectory is assumed to be evasive.                                 To learn about interactions between autonomous vehicles and
+                                                                               pedestrian interactions, in [39], Camara et al. collected data
+D. Event/Activity Models                                                       from real-world pedestrian-vehicle interactions at an unsignal-
+                                                                               ized intersection. The actions of pedestrians and vehicles
+   Pedestrian event models consider stereotypical sequences                    were ordered into sequences of events comprising descriptive
+of behaviours of individual pedestrians. These may give addi-                  features and the study revealed the most predictive features in
+tional information about route choice, beyond that available                   a crossing scenario such as the head direction, the position on
+from static classification of the pedestrian. For example, a                   the pavement, hand gestures etc. In [38], these features were
+commuter, or class of commuters, who engage in similar                         filtered over time to predict whether the pedestrian would first
+actions every day, such as road crossing in a certain way                      cross the intersection or not. Vo¨lz et al. [213] [214] proposed
+then checking their phone, may reveal information about their                  a model that can predict whether or not a pedestrian will cross
+identity to enable re-identification1 which is in turn predictive              the street with a set of features learnt from a database of
+of their future destinations. These models look for features                   LIDAR pedestrian trajectories that are used as inputs for a
+predictive of route choice in static environments and do not                   support vector machine (SVM).
+consider social factors.
+                                                                               E. Effects of Pedestrian Class on Trajectory
+   1) Dynamic Graphical Methods: Duckworth et al. [65]
+[64] developed on a mobile robot an unsupervised qualita-                         The models reviewed so far consider all pedestrians to
+tive spatio-temporal relations (QSR) model to learn motion                     be alike, but human drivers interacting with pedestrians may
+patterns using a graph representation and is able to predict                   consider their attributes as members of stereotypical classes.
+people's future behaviour. Dondrup et al. [63] presented a                     Membership of various demographic and psychological state
+ROS-based real-time human perception framework for mobile                      classes may be predictive of their behaviour. This section first
+robots using laser and RGB-D data and tracking people with                     reviews findings from the psychological literature suggesting
+a Kalman filter approach. Human trajectories are converted                     what such classes could be usefully predictive of behaviour,
+into QSR (Qualitative Spatial Relations) and used for a Hid-                   if it was possible to classify them automatically from au-
+den Markov Model (HMM) to classify the behaviour of the                        tonomous vehicles. Rasouli and Tsotsos reviewed pedestrian
+different people encountered [62]. In [187], Schneider and                     demographics for interactions with autonomous vehicles and
+Gavrila presented a comparative study on Bayesian filters                      argued that knowing such information could help AVs, cf. Sec.
+(EKF and IMM) for short-term (<2s) pedestrian trajectory                       III. 1. in [169]. Figure 4 presents a set of pedestrian attributes
+prediction, in particular they used stereo camera images to                    used for behaviour modelling.
+apply these methods to four different types of behaviour:
+crossing, stopping, bending in and starting.                                         a) Effects of Age and Gender: Wilson et al. [219]
+                                                                               performed a large-scale study on adult pedestrian crossing
+   1Identity here is distinct from personal information as defined by privacy  behavior and concluded that elderly people take more time
+laws such as the EU General Data Protection Regulation (GDPR).                 and have more head movements during the crossing. Evans
+                                                                               et al. [71] used the Theory of Planned Behavior (TPB) [1]
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS                 6
+
+                        Pedestrian Attributes                           behavior is studied. The results show a third of the observed
+                                                                        pedestrians were distracted by their mobile phone and that
+Age Gender Distraction  Social Group             Cultural  Road Safety  distracted pedestrians are more likely to have unsafe crossing
+                        Membership             Membership  Adaptation   behaviour and walk much faster than undistracted pedestrians.
+
+Fig. 4. Pedestrian behaviour attributes.                                      c) Social Group Membership: Group membership can
+                                                                        affect road crossing. Three strangers in a group are less likely
+via a questionnaire to predict adolescents' intentions during a         to assert in a crossing than three friends. In particular, group
+hazardous road-crossing scenario. Their results show that older         size influences a lot crossing behavior [169]. Zeedyk et al.
+and male adolescents had stronger intentions to cross and that          [226] performed a study with adult-child pairs while crossing
+moral norms do not have any influence on crossing decisions.            the road at a pedestrian crossing. They found that adults were
+Pedestrians who considered themselves as safe pedestrians               more likely to hold girls' hands than boys.
+were less likely to cross and the anticipated affective reactions
+were important. Bernhoft and Carstensen [21] compared the                     d) Cultural Membership: In contrast to the above mem-
+crossing preferences and behaviour of elderly pedestrians and           bership of short-term, physically present groups, it is also
+cyclists (age 70+) to younger people aged 40-49. It was                 possible to consider `cultural membership' of a pedestrian
+found that elderly people have a preference for road facilities         to any long-term, non-physically present group that may be
+that they consider to be safer such as pavements, pedestrian            usefully predictive of behaviour. For example, it might be
+crossings, signalized intersections, cycle paths. The differences       possible for a human driver or autonomous vehicle to classify
+between the two groups are said to be related to health and             pedestrians as members of religious, sporting, or musical
+physical abilities of the people rather than their differences in       (sub)cultures as a probabilistic function of features of their
+age and gender.                                                         clothing such as shape and colour of garments or symbols
+                                                                        displayed on them; and that members of such groups show
+   Several studies have shown that older pedestrians have a             statistically significant differences in assertiveness, politeness,
+larger accident rate than younger people [219]. Gorrini et              and other road interaction behaviours (cf. [169]). In Sociol-
+al. [83] also found differences in adults and elderly people            ogy, classifications of individuals into cultures is notoriously
+crossing behaviour. The study of Oxley et al [153] showed               problematic and politicised. But for the purpose of predicting
+that older pedestrians have more risky crossing behavior in             road interactions, any classification derived from observable
+complex traffic environments than younger people. Not sur-              features may be usefully considered if it improves predictions.
+prisingly, many authors have found decreasing crossing speeds
+with age [10] [130], [202], compensated for by requiring larger               e) Road Safety Adaptation: Related to the possible pre-
+time gaps in traffic before commencing crossing [130]. In               dictiveness of cultural clothing is the effect of road safety
+addition, Avineri et al. [10] found lower crossing speeds for           clothing on behaviour. Human drivers are more likely to yield
+female than male pedestrians, and that the fear of falling in           to pedestrians wearing high-visibility clothing [92], so it is also
+elderly pedestrians has an effect on the number of downward             possible that knowing this fact will make a pedestrian wearing
+head pitches during crossing. Holland and Hill [95] used the            such clothing more likely to behave assertively. This is an
+TPB for pedestrians' intention analysis while crossing the              example of risk compensation adaptation, a well-known effect
+road. The results showed that women perceived more risk and             in road safety in which the owners of safety improvements
+were less likely to cross than men. In [96], they also studied the      make economic decisions whether to use them to reduce
+effect of gender on pedestrian crossing behaviour and showed            accidents or alternatively to gain some other advantage at the
+that men with a driving experience make safer crossings than            cost of retaining the original accident rates [180].
+non-drivers and that older women were found to make more
+unsafe crossing decisions than younger women.                           F. Discussion
+
+      b) Distraction: Distraction of pedestrians from traffic              Single pedestrian unobstructed walking path and behaviour
+environments would ideally be defined via their mental state            prediction around obstacles for known origins and destinations
+i.e., thinking about a problem unrelated to their environment;          has well-established solutions. Their main strength lies in their
+or approximated in practice via observable proxies. While it            simplicity and ease of implementation but their applicability
+is possible that mental distraction might be measurable via             to solve real AV problems is very limited due to the strong
+hard-to-observe proxies such as gaze direction or high-level            assumptions (e.g static obstacles, known origin-destination of
+body language, it may be more practical to look instead for             pedestrians) which are not easily verified in the real world.
+known causes of distraction. Schwebel et al. [191] performed            But when ­ as is usual in real-time systems ­ the destinations
+a study in a semi-immersive virtual pedestrian street with              of pedestrians are not known in advance, trajectory prediction
+college students, finding an impact of talking on mobile phones         is harder and remains an open research area.
+on crossing behaviour. Walker et al. [215] showed that male
+pedestrians using a personal music device were more cautious               Uncertain destination models may use known destination
+in crossing than those who were not distracted. In [200],               models as a subcomponent and average over them weighted
+the effects of personal electronic device usage on crossing             by predictions about what the destination is. To predict what
+                                                                        a pedestrian's destination will be, many medium and high-
+                                                                        level sources of information may be relevant and useful, if
+                                                                        suitable models can be found. These models split roughly
+                                                                        into short-term models for prediction horizons around 1-2s
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS                                                                   7
+
+and long-term models predicting for a horizon of around 5-           Pedestrian  Microscopic         Proxemics
+6s. Event-based models of activity assume that behaviour often    Micro & Macro     Models       Physical Models
+contains repeated stereotypical chunks of behavior, which once                                Cellular-based Models
+recognised in early stages can predict their later stages. The         Models    Macroscopic    Queuing Networks
+major emerging long-term prediction methods rely on neural                          Models
+network (`deep learning) methods. There is a need to verify
+how the data-driven methods such as [6] can be actually           Fig. 5. Pedestrian microscopic and macroscopic models.
+applied online for real-time systems. These models can help
+AVs to more accurately predict single pedestrian behaviour for    simulation models. Figure 5 presents a summary of pedestrian
+shorter or longer time horizons, e.g. to know precisely whether   microscopic and macroscopic models.
+a pedestrians trajectory would interfere with the AV's own
+path. But their main challenges lie in their computational cost,  A. Microscopic Models
+which increases significantly with the number of destination
+guesses, with longer time horizons and the amount of data            This section first describes pedestrian behaviour models at
+needed for learning pedestrian motion patterns. Moreover,         the microscopic level. It then presents pedestrian interaction
+deep learning models are sometimes referred to as `black-         models using these behaviour models for two agents' interac-
+box models, in the sense that AI developers cannot fully          tions and group behaviour modelling.
+explain some decisions (e.g. feature selection) made by the
+neural networks, rendering them potentially problematic for          1) Behaviour Models: Microscopic models are divided into
+investigating the causes of incidents involving AVs and for       three main groups: physical models, cellular-based models and
+determining their liabilities [43][84].                           queuing network models. Each model is generally structured
+                                                                  by two terms: one term that represents the attractive effects
+   Single pedestrians destinations and behaviours may be in-      of pedestrians toward their goal and the other repulsive ef-
+formed by their class memberships, including their demo-          fects among and between pedestrians and the obstacles [42].
+graphics and other visible features, such as clothing types.      Proxemics is first described in this section.
+There are many recent sociological studies giving evidence
+of these effects, but they have not yet been translated into            a) Proxemics: The Psychology theory of Proxemics [91]
+algorithms suitable for autonomous vehicle use, which would       studies human preferences (utilities) for having other humans
+be a promising new research area. It is conjectured that          in their proximity. Proxemics typically identifies four radial
+additional information about pedestrians' emotion states would    comfort zones, whose radii differ between cultures, for inti-
+be similarly informative (e.g. angry pedestrians more likely      mate, personal, social, and public space. These zones can be
+to assert themselves in competitions for road space), but no      described by eight dimensions [91]:
+studies were found in this area. Traditionally, emotional state
+has been difficult to capture and record, so that manually           1) postural-sex identifiers
+annotation of data sets are too small for machine learning           2) sociofugal-sociopetal orientation (SFP axis)
+to use. But as machine vision for face and body language             3) kinesthetic factors
+recognition continues to improve (cf. Part I [33] Sect. IV),         4) touch code
+they are expected to produce big data sets which will enable         5) retinal combinations
+machine learning to operate and inform destination and be-           6) thermal code
+haviour predictions.                                                 7) olfaction code
+                                                                     8) voice loudness scale
+           III. PEDESTRIAN INTERACTION MODELS
+                                                                     This model has been empirically tested with participants
+   So far, only path prediction models for single pedestrians in  [217]. The theory is of great interest to pedestrian interaction
+static environments ignoring interactions with other pedestri-    models because it provides a possibly hard-wired negative
+ans have been reviewed. This section will consider models of      utility not just for actual collisions with pedestrians but also
+interaction between pedestrians. In Social Science, pedestrian    for simply feeling too close to them. In particular, this provides
+behavior models have been studied for a long time: a survey       a method for an AV to inflict a real negative utility on a
+is provided in [42] [201]. These models can be classified in      pedestrian without touching them or risking their physical
+two categories, namely microscopic models and macroscopic         harm. Binary proxemics is the simplest case used in simple
+models, as reviewed in [211]. Microscopic models model            models, in which a negative utility is assigned to actually
+only each pedestrian individually. Macroscopic models do not      hitting someone, and zero utility is assigned to not hitting
+model individual pedestrians and instead model the behaviour      anyone. Zonal proxemics is more subtle, it relies on the eight
+of a single aggregate entity such as a crowd or a flow.           proxemic dimensions defined above. It assigns different utili-
+Papadimitriou et al. [154] presented a review on pedestrian       ties to the presence of a person in four different zones around
+behavior models and a study on pedestrian and crowd dynam-        an individual which are defined as the intimate distance, the
+ics was proposed by Vizzari and Bandini in [212]. Bellomo         personal distance, social distance and the public distance [90].
+et al. [15] reviewed mathematical models of vehicular traffic     Gorrini et al. [82] studied the proxemics behaviour of groups
+and crowds while Duives et al. [66] surveyed pedestrian crowd     of pedestrians in interaction and showed that it has negative
+                                                                  effects in walking speed for evacuation scenarios. Manenti et
+                                                                  al. [139] presented an agent-based pedestrian behaviour model
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS              8
+
+that takes into account proxemics and group behaviour. Their         and performs a Turing test with human participants to validate
+model was tested with groups of people and in a simulated            the human-like behavior of the model. Chen et al. [48] used an
+environment. A detailed review on proxemics models for robot         extended Kalman filter to predict future motions of pedestrians
+navigation among humans is proposed in [173].                        and estimate the time-to-collision range (TTCR) for collision
+                                                                     risk level identification.
+      b) Physical Models: These are splitted into three sub-
+categories. The utility maximization model, as used in [114],              b) Gaussian Process Methods: Kawamoto et al. [112]
+assumes that pedestrian behaves such as to maximize their            proposed a method to learn pedestrian dynamics with krig-
+utility, for example their speed of motion and approach or           ing, the most traditional form of Gaussian Processes. Their
+avoidance of some objects or persons. In the magnetic force          work can predict pedestrian movement using spatial kriging
+model proposed by [151], the pedestrian behavior is deter-           and spatio-temporal kriging. Social interaction is modeled
+mined by the equation of motion of the magnetic field. Pedes-        by spatio-temporal correlation of pedestrian dynamics and
+trians are positive poles and their destinations are negative        correlation is estimated by kriging.
+poles. In the social force model, introduced by Helbing [93],
+each pedestrian has a desired velocity, a target time and a                c) Deep Learning Methods: Alahi et al. [2] predicted
+target destination which are affected by social forces such as       pedestrian trajectories in crowded spaces using a social LSTM,
+the interaction with other pedestrians and the effects of the        a variant of recurrent neural network model that can learn
+environment. In [133] social forces are described as individual      human movement (velocity, acceleration, gait...) taking into
+forces (fidelity, constancy) and group forces (attraction, repul-    account social human motion conventions and predict their fu-
+sion, coherence). Most of the time, social forces are modeled        ture trajectories. This technique is opposed to traditional social
+such that to minimize an energy objective which include terms        forces methods and outperforms most the state-of-art methods
+for individual and group forces.                                     on public datasets (ETH and UCY). Long Short-Term Memory
+                                                                     (LSTM) can learn and reproduce long sequences, it is a data-
+      c) Cellular-based Models: These represent a cost model         driven technique. One LSTM is used for each person and the
+such as Blue and Adler's cellular automata model [23] and            interaction among people is modeled by a social pooling layer
+used for motion prediction. Cellular Automata (CA) is a              which allows the share of states between neighboring LSTMs.
+discrete, time based modelling formalism on a regular cell           Although group behavior is not modeled, the social LSTM can
+grid. It describes the walk of a pedestrian according to rules       predict it very well. Similarly to the previous method, Chen
+of a cell occupancy, e.g. a cell can be occupied only if it is free  et al. [49] developed a long-term pedestrian prediction model
+and a pedestrian can have three possible movements: lateral,         using RNNs for pedestrian trajectory prediction.
+longitudinal or mitigation of the conflicts. The benefit cost
+model, developed by Gipps and Marksjo [79], is a discrete                  d) Road Crossing Models: This section extends the
+and deterministic model where the space is divided into a            event-activity models from section II-D by adding interaction
+grid of cells and each agent is described as a particle in a         between pedestrians and vehicles. When microscopic models
+cell. A benefit value, equivalent to the pedestrian utility, is      of pedestrian movement are included in larger-scale traffic
+arbitrarily assigned to each cell. In [60] a cellular automata       simulations together with vehicles, they are typically extended
+model simulates multi-agent interactions.                            with specific provisions to account for pedestrian's decisions
+                                                                     on where and when to initiate road crossing, when this is
+      d) Queuing Network Models: They have been developed            needed for the pedestrians to reach their goals. Other, so called
+for studies of evacuation dynamics [134]. These are evaluated        gap acceptance models, have instead described probabilities of
+by Monte Carlo simulation methods for discrete events. Each          pedestrians crossing in a certain gap between vehicles, using
+pedestrian is represented as an individual flow entity inter-        generalised linear models, with predictors including both the
+acting with other objects, facilities are modeled as a network       available gap itself, as well as other factors such as age and
+of arches for openings and of nodes for rooms. In [13], a            gender of the pedestrians, number of pedestrians waiting to
+queuing network model is compared to a social force model            cross, and time spent waiting [195], [188].
+for pedestrian crossing movement prediction.
+                                                                        Markkula et al. [140] proposed another type of model for
+   2) Two Agents' Interaction: These models are those involv-        pedestrians road crossing decision, modelled as the result of a
+ing only two agents with mutually influencing behaviours,            number of perceptual decisions concerning the available gap,
+rather than larger groups of agents. They may be simpler             but also car yielding, explicit communicative signals from the
+than larger group models but sometimes provide a foundation          car, and eye contact with the driver. These decisions were
+for extension to larger group models, hence they are here            described as several interconnected evidence accumulation
+presented first.                                                     processes, and it was shown that empirically observed bimodal
+                                                                     distributions of pedestrian waiting time were qualitatively
+      a) Dynamic Graphical Models: The method in [31] uses           reproduced by the model. In [40], Camara et al. proposed
+POMDPs (Partially Observable Markov Decision Processes)              a heuristic model for pedestrian crossing intention estimation.
+with a time-indexed state space to model interactions and they       Their method is based on a distance ratio model that computes
+used the example of an elevator-riding task to test the model.       the pedestrian crossing probability over time until the curbside.
+In [179], Rudenko et al. proposed a method that uses MDPs            Their results showed that this heuristic model is sufficient for
+with a joint random walk stochastic policy sampling algorithm        most of the crossing scenarios present in the dataset used and
+to predict motion and social forces to model interactions. The       that the remaining scenarios would require higher level models
+model in [120] learns features from observed pedestrian be-          such as game theory.
+haviors using a Markov Chain Monte Carlo (MCMC) sampling
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS           9
+
+      e) Other Methods: Discrete choice models [8], [28] offer    Short-Term Memory using 3D lidar data from a mobile robot.
+a framework to model pedestrian walking along link levels,        Shi et al. [193] developed a long-term pedestrian trajectory
+where their paths are composed of a sequence of straight          prediction model for crowded environments using LSTM.
+lines in absence of obstacles. For example, the model in [28]     In [224], Yi et al. proposed a deep neural network model called
+predicts pedestrian behaviour in the presence of other people     behavior-CNN that is trained with crowded scenes video data.
+in shopping street areas.                                         A pedestrian behavior model is encoded from the previous
+                                                                  frames and used as an input for the CNN model to predict their
+   3) Group Interaction: A group is here considered to be a       future walking path and destination as well as a predictor for a
+collection of more than two pedestrians, but smaller and more     tracking system. Radwan et al. [164] presented an interaction-
+cohesive than a crowd. These models are developed primarily       aware TCNN, a convolutional neural network model that can
+for use by non-carriageway autonomous vehicles, such as           predict interactive motion of multiple pedestrians in urban
+delivery robots, navigating through crowded pedestrianized        areas.
+areas, needing to cut their way between groups.
+                                                                     Amirian et al. [6] predicted the motion of pedestrians over
+      a) Dynamic Graphical Models: In [19] a real-time            a few seconds, given a set of observations of their own past
+pedestrian path prediction is performed in cluttered environ-     motion and of those of the pedestrians sharing the same
+ments without making any assumption on pedestrian motion or       space, using a Generative Adversarial Network (GAN)-based
+pedestrian density. Pedestrian motion and movements patterns      trajectory sampler. The reason for this choice is that such a
+are learnt from 2D trajectories. Bera et al. used sparse and      method naturally encompasses the uncertainty and the poten-
+noisy trajectories data from indoor and outdoor crowd videos.     tial multi-modality of the pedestrian steering decision, which
+By combining local movements (microscopic and macroscopic         is of great importance when using this predictive distribution
+motion models) and global movements (movement flow), the          as a belief in higher level decision-making processes. Lee et
+patterns help improve the accuracy of the long-term prediction.   al. [122] developed DESIRE a trajectory prediction framework
+An ensemble Kalman filter (EnKF) was used to predict the          for multiple interacting agents based on deep neural networks.
+next state based on current observation and EM algorithm to       A conditional variational auto-encoder is used to generate
+maximize the likelihood of the state. Pedestrian clusters are     hypothetical future trajectories. An RNN is then used to
+computed based on their positions, velocities, inter-pedestrian-  score and rank those features in an inverse optimal control
+distances, orientations etc. Global movement patterns are the     manner and taking into account the scene context. Gupta et
+past movement and intended velocity of pedestrians. Local         al. [85] proposed a socially-aware GAN with RNNs for pedes-
+movement patterns are obtained by fitting the best motion         trian motion sequence prediction in dynamic environments.
+model to pedestrian clusters and individual motions. In [20],     However, their model assumes that people influence each
+the same authors implemented a tracking algorithm built on        other uniformly. A detailed analysis and improvement of this
+top of [19]. Deo et al. in [55] uses VGMMs to model               GAN method is proposed in [118]. With a similar method,
+pedestrian trajectory using pedestrian origins and destinations.  called SoPhie, Sadeghian et al. [181] developed a GAN-based
+Their model is tested on a dataset of a crowded unsignalized      trajectory prediction model that focuses on the most important
+intersection in a university campus. Pellegrini et al. [156]      agents for each interacting agent.
+introduced a linear trajectory avoidance (LTA) model which
+has similarities with the social force model. In [157], the             d) Other Methods: Moussaid et al. [148] presented
+same authors extended the LTA model with a stochastic             a heuristics-based model to predict pedestrian behavior in
+version taking into account group behavior and allows mul-        crowded environments. Based on the idea that visual informa-
+tiple hypotheses about the pedestrian position. Zhou et al.       tion is very important for pedestrians [12], [204], they found
+[231] proposed a mixture model of dynamic pedestrian-agents       that two simple heuristics can model the interaction among
+(MDA) for pedestrian trajectory prediction in crowds.             people: the desired walking direction and speed of pedestrians
+                                                                  are sufficient. Bonneaud and Warren [26] proposed a related
+      b) Gaussian Process Methods: Henry et al. [94] used         type of model, extending the behavioral dynamics model by
+inverse reinforcement learning (IRL) to learn human-like navi-    [72] to goal-seeking and obstacle avoidance in crowds, and
+gation behavior in crowds. The model estimates environmental      found that the model was able to reproduce qualitative crowd
+features using Gaussian Processes and extends Maximum             phenomena like lane formation. The model in [101] learns
+Entropy Inverse Reinforcement Learning (MaxEnt IRL) of            behavioral patterns from pedestrian trajectories in a mall. It
+[232] by assuming that features in the environment are par-       assumes that a robot can model interactions using social forces
+tially observable and dynamic. The proposed approach was          and segment pedestrian trajectories into sub-goals to estimate
+developed for mobile robot motion planning, but it could be       their future positions.
+used for human motion prediction. In [203], Trautman and
+Krause proposed to solve the freezing robot problem, where        B. Macroscopic Models
+a robot motion planner gets stuck and cannot find any proper
+move to perform, by a model based on Gaussian Processes, a           In macroscopic models, the crowd is modeled as a single
+statistical model that is able to estimate crowd interaction.     ontological object, replacing and simplifying the representa-
+                                                                  tion of multiple microscopic pedestrians. The crowd behaves
+      c) Deep Learning Methods: The subsequent models may         as a continuous fluid with a flow average speed [199].
+not explicitly consider interaction, but they learn interaction
+implicitly through machine learning techniques. The model            The first macroscopic models of pedestrians are due to
+in [196] implemented a real-time Temporal 3DOF-Pose Long-         Hughes and Henderson [99]. The fluid dynamic model classi-
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS            10
+
+fies pedestrians into groups which are characterized by average       Game theory provides an alternative and stronger framework
+features, their position, speed and intended velocity. In [14],    which can compute the infinite limit of these higher order
+pedestrian flows are modeled in simulations for crowded en-        models directly, via analytic solutions.
+vironments. Crowd modelling has also an established commu-
+nity focused on models for evacuation, as reviewed in [184].          Isaacs [106] introduced vehicle-pedestrian interactions as
+In [4] Ali et al. used Lagrangian Particle Dynamics to segment     the famous `homicidal taxi driver problem which considered
+high density crowd flows. This method, based on Lagrangian         the inverse of the modern AV interaction problem: how an
+Coherent Structures (LCS) from fluid dynamics and particle         AV controller should act in order to hit a pedestrian 2he
+advection, is capable of detecting instabilities in the crowd.     application to pedestrians was accidental as the taxi scenario
+                                                                   was used initially as a declassification technique to publish
+   Smooth Particle Hydrodynamics (SPH) is a hybrid of mi-          missile-defence algorithms, requiring control of one missile to
+croscopic and macroscopic models. Pedestrians are considered       hit another. Game theory is in common use in descriptive road
+individually, but at each time they are aggregated into a density  user modelling as reviewed in [67], where applications include
+where each particle is moved according to the macroscopic          modelling of lane changes and merging onto motorways, route
+velocity. Etikyala et al. [70] reviewed smooth particle hydrody-   selection and departure time in congested networks, and socio-
+namics pedestrian flow models while [225] proposed a generic       economic choices such as purchasing large vehicles or using
+SPH framework for modeling pedestrian flow.                        conventions such as headlight dipping. It has been applied to
+                                                                   AV-vehicle interactions in [165] though here only pedestrian
+C. Discussion                                                      models are considered.
+
+   The theory of proxemics has been well studied in psychol-          The use of game theory for active control of AVs is less
+ogy and now being more and more used for VR experiments            common. Descriptive models may be incomplete as active con-
+[152] [58] and computer scientists are just beginning to apply     trollers, in particular by allowing for multiple Nash Equilibria
+it to make more detailed models of the utility of pedestrian's     to exist without selecting between them. A Nash equilibrium
+personal space than simply collisions and non-collisions. In       is a set of probabilistic strategies to be played by each of the
+general, microscopic models are preferred to macroscopic           players, such that no player would change their strategy if
+models, in particular the social force model is very popular for   they knew the strategies of the other players. It is generally
+pedestrian interaction modelling, while macroscopic models         agreed in Game Theory that it is not optimal for players to
+are more suited for crowd behaviour modeling, especially in        employ strategies which are not Nash equilibria, though there
+the specialised domain of emergency evacuation modeling.           is still philosophical debate over what strategy is optimal when
+Physical models bring interesting results when there are a         multiple equilibria exist.
+lot of interactions, e.g. modelling pedestrian movement in
+cities [177]. Cellular-based models are useful for modelling          1) Two Agents' Game Theory Interactions: Hoogendoorn
+pedestrians with minimal movement choices and when rep-            and Bovy [97] give a purely theoretic construction (left as an
+resenting their collisions is not required. Two agents' and        exercise to the reader) for a continuous (`differential) game
+group interaction models offer more precise pedestrian models      theory solution to pedestrian interactions, based on similar
+but they require more computational resources, in particu-         control theory models to those reviewed in Sec. II-A. They
+lar dynamic graphical, Gaussian Process and deep learning          also provide an implementation of a second-order truncation of
+models. More computational research is needed in interaction       this model which is found to be sufficient to produce flows of
+modelling: psychology/human factors studies and theories are       pedestrians in crowded environments similar to those observed
+more mature, but their results have not yet been quantified to     in some Japanese crossings.
+the extent of enabling translation into algorithms for AVs.
+                                                                      The methods in [141] and [206] predict selection of pedes-
+     IV. GAME THEORETIC AND SIGNALLING MODELS                      trian trajectories from a finite set as a higher-order model.
+                                                                   For a small set of known origins and destinations, optimal
+A. Game Theory Interaction Models                                  free space trajectories are computed from control theory, and
+                                                                   actual trajectories from a video set are compared to them
+   The models in section II predict the behavior of a single       and assigned costs according to their deviations from them.
+pedestrian X from the point of view of an external observer O      These models assume that the choice of the entire continuous
+(i.e. the experimenter), when no other pedestrians are present.    trajectory is drawn from a finite set of previously observed
+We call this a first-order model of pedestrian behaviour.          and costed trajectories as a single decision at the start of
+                                                                   the interaction and does not model responses to the other
+   The models in section III all further allow O to also model     agent during the interaction. They are used only as descriptive
+Xs own first-order model of another pedestrian Y s behaviour,      models rather than as real-time control because they require
+which X can use to plan to avoid Y . We call this a second-        each pedestrian's final goal location to be known in advance
+order model of behaviour.                                          to form the cost matrix ­ which is only obtainable by looking
+                                                                   ahead in the data to see what happened post hoc. The authors
+   We could then imagine third and higher order models. For        state that (in the context of AV control), `few researchers
+example, O might model X's belief about Y 's belief about          have considered interaction between (pedestrian) objects, thus
+X's belief about Y 's belief, as both agents try to `out-think     neglecting that humans give way to each other'. Turnwald et
+each other during their planning. This would lead to an infinite
+computational regress.                                                2T
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS              11
+
+al. [205] adds an alternative model where one player chooses         evacuations with game theory. In [192] a model of pedestrian
+their trajectory first then the second chooses theirs in response    behavior in an evacuation used game theory and showed that
+to seeing their initial motion.                                      pedestrians get greater benefits by cooperating.
+
+   Ma et al. [135] proposed a long-term game-theoretic pre-          B. Signalling Interaction Models
+diction of interacting pedestrian trajectories from a single
+starting image. For each future time in the prediction sequence,        Signalling models extend interaction models by allowing
+fictitious play is used to converge the probabilities of each        both the pedestrian and the AV to model and predict each
+pedestrian's actions to one (of possibly many) Nash equi-            other's actions of giving and receiving pure information, rather
+librium. The fictitious play assumes that each pedestrian has        than communicating only through their physical poses.
+a known destination goal, some known visual features (age,
+gender, initial body heading etc) and a known utility function.         Nathanael et al. [149] has proposed a stratified model of
+The utility function scores vectors of word-state features which     mutual awareness between pedestrians and vehicles including
+contain all of (1) the pedestrian's own future trajectory (which     AVs. The actor's awareness is divided into three levels, i.e.,
+may include control theory style costs); (2) probabilistic           (1) unaware of the others, (2) factually aware of the other,
+beliefs about the other agents' trajectories; (3) the pedestrian's   or (3) aware and actively attending to the other. When one
+own visual features (age, heading etc); (4) proximity to static      of the two agents is unaware of the other, the interaction
+obstacles; (5) the pedestrian's distance to their goal. Unusually,   may be as simple as collision avoidance by the one aware,
+the utility functions are learned entirely automatically from        relying only on bodily and kinematic cues. When both agents
+video data of actualized trajectories, rather than set by theories.  are aware of each other, the interaction takes the form of
+Where theory-like behaviours such as proxemics and social            mutual coordination through implicit cues, whereas when both
+forces are observed in simulations, they arise entirely from this    agents are attentive to each other (as evidenced through eye
+learning process. The functions are assumed to be a weighted         contact between human actors), the interaction may involve
+linear function of the features and a reinforcement-learning-        direct communication through explicit signals, such as ges-
+style model is used to obtain per-state values from the full         tures, nodding etc. In addition attentiveness, as opposed to
+trajectories during learning. A (deep learning) classifier is used   mere awareness, designates that any physical action from an
+to obtain the visual demographic and heading features from           attentive agent is a response explicitly addressed to the agent
+annotated training examples. Performance is degraded when            at the focus of attention (i.e. it also has a signalling function).
+the pedestrian's goal locations are not known and are set to
+be completely uncertain in the feature vectors.                         This line of research raises an epistemological question
+                                                                     about signalling-based interaction. Some of the models above
+   In [75], Fox et al. presented a version of the game-              involve the concepts not just of an agent (1) knowing that the
+theoretic `game of chicken' for autonomous vehicle-pedestrian        other agent is there, and (2) acting to show the other agent that
+interactions at unsignalized intersections. The obtained dis-        they are present; but also higher-order knowing and showing
+crete model called the `sequential chicken' model allows two         these facts. This includes (3) knowing that the other knows
+players to choose a set of two speeds: decelerate or continue.       they are there and (4) showing the other that they know that
+A new method to compute Nash equilibria is presented, called         the other knows they are there. But also includes arbitrarily
+`meta-strategy convergence, used for equilibrium selection.          higher orders, such as `knowing that the other has showed that
+Camara et al. [41], [34] evaluated the model [75] by fitting         they know that they know that the other knows and so on.
+one parameter  to controlled laboratory experiments where            There appears to be a potentially infinite regress here, though
+pedestrians were asked to play sequential chicken. This be-          intuitively most humans find it difficult to comprehend many
+havioural parameter  was found to be a ratio between the             more levels than the four mentioned here. But it is difficult
+utility of avoiding a collision and the utility of saving time. A    to argue for why any cut-off should occur at this or other
+summary of the work using the sequential chicken model is            specific level. Intuitively: when two agents make eye contact,
+provided in [37].                                                    they assume that they both then come to know the infinite
+                                                                     stack of such statements about each other.
+   2) Small Group Game Theory Models: Vascon et al. [208]
+proposed a game theory model for detecting conversational               1) Signals from Pedestrian to Vehicle: The need for precise
+groups of pedestrians from video data, based on the socio-           eye contact as opposed to simple head direction or gaze
+psychological concept of an F -formation and the empirical           towards the vehicle is controversial. Considering gaze or head
+geometries of these formations. Johora and Mu¨ller [109]             orientation towards vehicles, there is evidence that pedestrians
+proposed a three-layer trajectory prediction model composed          who initiate crossings without looking at the oncoming vehicle
+of a trajectory planner, a force-based (social force) model and      tend to make drivers more attentive to them by keeping larger
+a game theoretic decision model. The game theory model               safety margins [111]. On the other hand, eye contact between
+is based on Stackelberg games, a sequential leader-follower          pedestrian and driver tends to increase the probability of the
+game where pedestrians have three different possible actions:        vehicle yielding for pedestrians [87]. The apparent controversy
+continue, decelerate and deviate and the car has two possible        between these findings may be attributed to profound differ-
+actions: continue and decelerate. This model is able to handle       ences in the function of these two behavioural traits. While
+several interactions at the same time.                               head orientation towards vehicles typically signifies pedestrian
+                                                                     situational awareness to drivers, eye contact most probably
+   3) Crowd Game Theory Models: Mesmer et al. [143]                  signifies driver awareness of the pedestrian to the latter [168].
+modelled pedestrians' decision-making and interactions during
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS            12
+
+In addition, eye contact is reported to play a non-trivial role    understand exactly which information needs to be transferred
+in the social dynamics between the two. Nathanael et al.           when interacting with an AV. Schieben et al. [185] propose the
+[149] in a naturalistic study of driver pedestrian interaction     following information to be considered by the design team.
+reported that pedestrian head turning towards a vehicle was
+sufficient for drivers to confidently infer pedestrians intent        · Information about the vehicle automation status
+in 52% of interaction cases observed. In retrospective think-         · Information about next manoeuvres
+aloud sessions of their interaction with pedestrians, drivers         · Information about perception of environment
+mentioned pedestrian active head movement and orientation             · Information about cooperation capabilities
+as an important indication of pedestrian awareness of their
+vehicle. Mutual eye contact between driver and pedestrian             To transfer the relevant information, two means of com-
+was observed only in 13% of interaction cases, accompanied         munications can be used for shaping the communication
+by explicit signalling in 2% of total cases. This is consistent    language of an AV. First, pedestrians might benefit from direct
+with recent research [167] that reported head orientation/gaze     communication through the means of external human machine
+towards vehicles as the most prominent cues for predicting         interfaces (eHMIs) [132], [178]. Secondly, also careful design
+pedestrian intent. In addition, computational models have          of vehicle movement can be used to explicitly communicate.
+shown that head direction is a useful trait for pedestrian path    Risto et al. introduced the term `movement gestures and found
+prediction and state of situation awareness such as in [39]        `advancing', `slowing early and `stopping short as commonly
+which argued that if a pedestrian looks at the vehicle, they are   used gestures [175]. Consistent with this, Portouli et al. [160]
+less likely to cross the road.                                     in the context of driver-driver interaction have shown that
+                                                                   `edging was explicitly used by drivers trying to enter a two-
+   Matthews et al. [142] studied pedestrians' behavior with an     way street as a sign of their intent to inform oncoming
+autonomous goal car equipped with an Intent Communication          cars. Studies of human robot interaction have shown that
+System (ICS) based on Decentralized MDP to model the               allowing humans to anticipate robot movements by explicit
+uncertainty associated with pedestrian's behavior. Another         communication through movements of the robots head raises
+important factor to take into account is the poor pedestrian       perceived intelligence of the robot even if it did not succeed
+signal settings. It has been proven that signal indication and     completing its intended tasks [197], thus overcoming potential
+timing affect significantly pedestrian behavior and their cross-   machine error through the means of explicit communication.
+ing decisions [3] [103] [104]. Pedestrians can have sudden         These studies might suggest similar devices such as head-like
+speed change while crossing, and such sudden behavioral            and eye-like displays for AVs.
+changes may not be expected by conflicting vehicles, which
+may lead to hazardous situations. In [104], Iryo-Asano and            While Clamann et al. [51] found mixed influences of explicit
+Alhajyaseen proposed a discrete choice model and Monte             communication through novel eHMI on crossing behavior in
+Carlo simulation for generating pedestrian speed profiles at       dynamic traffic situations and argued that pedestrians will
+crosswalks. In [105], the same authors modelled pedestrian         largely rely on legacy behavior and not on eHMIs, Habibovic
+behaviour after the onset of pedestrian flashing green (PFG)       et al. [89] found that traffic participants feel calmer, more
+via a Monte Carlo simulation. Their results showed a higher        in control and safer when an eHMI was present on an AV.
+probability of pedestrian stopping at longer crosswalks and a      Petzoldt, Schleinitz, and Banse [158] found that an eHMI can
+significant difference in pedestrian speeds.                       help to convey the intention of a vehicle to give priority to a
+                                                                   pedestrian. They also observed that pedestrians needed more
+   Some early steps have however been taken towards mod-           time to understand the intention of a vehicle without eHMI
+elling at least some levels of explicit knowing and showing of     in mixed traffic situations [158]. Communicating the intent
+beliefs about each other via signalling behaviour.                 and awareness of automated vehicles has been considered in a
+                                                                   positive way [137] [138]. Habibovic et al [89], [7] argued that,
+   2) Signals from Vehicle to Pedestrian: Beyond understand-       for safety reasons, communication should never be command-
+ing pedestrians signalling behavior, game theoretic models         based. The vehicle should communicate solely its intentions.
+may also enable the AV to give signals to the pedestrians,
+creating a higher level information game with both players            Communication can be directed or undirected. Pedestrians
+communicating through both their physical actions and also         usually assume that any AVs communication is referring to
+their signals. The full game theory of such interactions has not   themselves, hence using eHMIs with multiple pedestrians
+yet been worked out, and will form part of a complex socio-        present has to be carried out in a way that minimizes mis-
+technical system [175], but there has been notable activity ­      communication (i.e. either letting all pedestrians pass or not
+especially via company patents ­ in researching displays and       displaying a signal at all). Directed signalling minimizes this
+other mechanisms for the signalling itself.                        risk as other road users do not visually perceive the signal
+                                                                   of the eHMI. Dietrich et al. [59] found that pedestrians were
+   Lundgren et al. [132] showed that the lack of two-way           not able to distinguish whether an undirected light signal was
+communication between driver and pedestrian may reduce             addressed to themselves or other traffic participants.Therefore,
+pedestrians' confidence to cross the street and their perceived    AVs should either use directed communication in ambiguous
+feeling of safety, when crossing. Lichtentha¨ler et al. [129] re-  situations involving multiple pedestrians or no communication
+viewed robot trajectories among humans, including identifying      at all, as pedestrians will base their crossing decision on the
+needs for additional gestures or motion information such as        approaching vehicles kinematics if no eHMI is present. The
+gaze to communicate intention, which is relevant for last mile     color of the visual eHMI stimulus may be of importance [218].
+delivery. Researchers are currently conducting studies to better
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS              13
+
+   The most common eHMI display types are projection, high           industry and involve some form of visual communication
+resolution displays and direct light. Semantics used include         as the visual channel is the currently most used channel
+animations, concrete iconography, or text. For instance, Habi-       of communication in traffic as well as the best suited for
+bovic et al. developed a communication concept based on              communication at larger distances in busy environments.
+external light signals on the top of the windshield [89]. Using
+various light animations, the intention of the AV as well as                          V. EXPERIMENTAL RESOURCES
+the current driving mode such as `I'm about to yield', `I'm
+resting, and `I'm about to start are displayed on the LED            A. Pedestrian Datasets
+light bar. Clamann et al. [51] empirically examines similar
+models efficacy for giving signals to pedestrians. Further              Large data sets are important resources for training and
+eHMI concepts include mimicking eye contacts by adding               testing models at all levels, especially when they are annotated
+visible `eyes to AVs ­ based on the well-known tendency              with `ground truth information by humans. Their use has been
+for humans to perceive and design faces in cars­ which can           common for low-level models such as detection and tracking,
+communicate detection and awareness of pedestrians through           though there is currently a shortage of high quality annotated
+eye contact [44], as well as a virtual driver's mimicking            data for the higher-level models such as social interactions.
+furthermore facial expressions or hand signals. In addition to
+the pure visual-based communication between AVs and other               Major visual pedestrian datasets include the Caltech Pedes-
+TPs, some concepts also consider a combination of light and          trian Benchmark [61], ETH [69], TUD-Brussels [220], Daim-
+audio signals, as in the Google, Uber concepts and Mercedes-         ler [68], Stanford Drone Dataset [176], UCY Zara pedestrian
+Benz concept car F015.                                               dataset [125] and INRIA [53]. CityPersons [228] is a large
+                                                                     dataset for pedestrian detection. Town Center Dataset [16] is
+C. Discussions                                                       a video dataset composed of 71.5k annotations.
+
+   Game Theory has a long history of use in V2V (vehicle                Datasets used for pedestrian re-identification, i.e. having
+to vehicle) interactions in classical transport studies, as mi-      many images of the same people with identifiers include
+croscopic models underlying simulations of traffic flows and         for example CUHK01 [127], CUHK02 [126] and CUHK03
+infrastructure design. Also multi-robot game theory systems          [128], collected at a university campus and composed of
+are quite mature in robotics. These two streams have not             thousands of bounding boxes of unique people. DUKEMTMC
+generally been unified or applied to AV-pedestrian modelling,        [174] and DUKEMTMC-reID [230] datasets have been de-
+though this is beginning to emerge as an early research area.        veloped in the Duke university campus and are used for
+Like other sophisticated methods, game theoretic models can          tracking and re-identifying multiple people with multi-camera
+be computationally expensive and it remains unclear which of         systems. MARKET-1501 [229] dataset provides 35k images
+their theoretical solutions will have computationally tractable      of 1500 individuals but also comes with a 500k dataset of
+algorithms.                                                          non-pedestrian street window distractors for training classi-
+                                                                     fiers. Multi-Object Tracking Benchmark [144] collects diverse
+   Signalling models remain a distant research frontier. Phys-       datasets and publishes new data. Several releases have already
+ical actuators for eHMI signalling are currently being in-           appeared: MOT15, MOT16 and MOT17.
+vestigated by car manufacturers and recent years have seen
+much patent activity in the area. But how to best use them              PETA benchmark [54] is a mixture of several public
+to transmit information is not understood. There are currently       datasets (e.g VIPER, SARC3D, PRID, MIT, I-LID, GRID,
+no game-theoretic models using knowing and showing with              CAVIAR4REID, 3DPES), which has been used to recognize
+explicit signalling but this would appear to be a fruitful area for  pedestrian attributes at far distance. The benchmark has been
+future research. Eye contact is a particular form of signalling,     tested with an SVM method. Social ground truth annotations
+but even in high level psychology research there remains an          are much rarer. [38] and [39] collected high quality human
+ongoing and lively debate about whether it is relevant or            annotations of physical and social events during pedestrian-
+useful. The signalling methods reviewed here are mainly from         vehicle interactions, including the presence and timings of
+qualitative studies, some work is still needed to implement          the agents communicating with each other via eye contact,
+their findings in algorithms for AVs.                                hand gestures, positions and speeds, and the final `winners' of
+                                                                     interactions which compete for road space during crossings.
+   Most of the eHMI concepts presented here do not yet
+include detailed user studies and thus there remains a need for         Yang et al. [223] pointed out that in mixed urban scenarios,
+thorough evaluation including the behavioral and emotional           intelligent vehicles (IVs) have to cope with a certain number
+responses of pedestrians in realistic environments. Different        of surrounding pedestrians. Therefore, it is necessary to under-
+findings might be due to different eHMI concepts, diverse            stand how vehicles and pedestrians interact with each other.
+traffic scenarios, as well as different communication strategies.    They proposed a novel pedestrian trajectory dataset composed
+While research is still lacking in full understanding of the         of CITR dataset and DUT dataset, so that the pedestrian mo-
+effects of eHMI on traffic, a large number of conceptual             tion models can be further calibrated and verified, especially
+solutions have been proposed. Their influence on pedestrians,        when the vehicle's influence on pedestrians plays an important
+regarding their safety, experience and acceptance remains            role. In particular, the final trajectories of pedestrians and
+unclear. Most of these conceptual solutions are proposed by          vehicles were refined by Kalman filters with linear point-mass
+                                                                     model and nonlinear bicycle model, respectively, in which xy-
+                                                                     velocity of pedestrians and longitudinal speed and orientation
+                                                                     of vehicles were estimated.
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS             14
+
+   Zhan et al. proposed INTERACTION dataset [227] which             Berkeley DeepDrive Video (BDDV) dataset [222], currently
+contains naturalistic motions of various traffic participants in a  the largest vehicle dataset publicly available with 10k hours of
+variety of highly interactive driving scenarios. Trajectory data    driving videos around the world. KITTI dataset [78] provides
+was collected using drones and traffic cameras, containing data     a one hour video of a vehicle driving in an urban environ-
+from multiple countries (USA, China, Germany and Bulgaria).         ment. Caesar et al. [32] presented nuScenes a dataset for
+There are four different driving scenarios, with their seman-       autonomous driving composed of multiple sensor data (RGB,
+tic maps provided: roundabouts, un-signalized intersection,         LIDAR, RADAR) from two cities and containing 1k scenes.
+signalized intersection, merging and lane changing. Chang           A summary of vehicle datasets is given in the supplementary
+et al. proposed Argoverse [45] containing two datasets and          material Sec. III Table III.
+HD maps recorded from a self-driving car. Argoverse 3D
+Tracking is for 3D object annotations, it contains a collection     C. Pedestrian and Driving Simulators
+of 11,052 tracks, and Argoverse Motion Forecasting is a
+curated collection of 324,557 scenarios, each 5 seconds long,          Three types of relevant simulation research work exist:
+for trajectory prediction. Each scenario contains the 2D, birds-    pedestrian, vehicle, and combined pedestrian-vehicle. Hard-
+eye-view centroid of each tracked object. ApolloScape dataset       ware designs and source code for commonly used simulators
+[216] was recorded in urban areas in China using various            are often not made public, making it difficult for others
+sensors. The dataset contains different road road users (ve-        researchers to investigate and replicate experiments. So there
+hicles, pedestrians, bicycles). The ApolloScape LeaderBoard         remains a clear need for more open-source simulators. The
+shows the ranking and performance of the models tested              open source Godot game and VR engine3 has recently matured
+on the dataset for different tasks, such as scene parsing,          so may soon be used for this purpose. A summary of the
+detection/tracking, trajectory prediction, self-localisation. The   simulators is included in the supplementary material Sec. III
+Intersection Drone (InD) dataset [25] contains naturalistic         Table IV.
+vehicle trajectories recorded using a drone at four German
+intersections. It provides the trajectories for thousands of road         a) Pedestrian Simulators: Pedestrian simulators are VR
+users and their types (e.g car, pedestrian, bicycle, truck), and    (Virtual Reality) based environments where pedestrian partic-
+can be used for example for road user prediction.                   ipants encounter virtual vehicles in order to study pedestrian
+                                                                    perception and decision making subject to various oncoming
+   Person detection in off-road agricultural vehicle environ-       vehicle behaviors [186]. For example, Camara et al. [35], [36]
+ments has become popular in recent years. Results from these        used a HTC Vive VR headset for pedestrians interacting with
+studies are not well known in transport research but may            a game theoretic autonomous vehicle. Results showed that
+transfer to on-carriageway and on-pavement AVs as they deal         VR is a reliable setup for measuring human behaviour for
+with similar types of pedestrian interactions. The National         the development and testing of AV technology. Mahadevan
+Robotics Engineering Center (NREC) Agricultural Person              et al. [136] presented OnFoot, a VR pedestrian simulator
+Detection Dataset [159] consists of labeled stereo video of         that studies pedestrian interactions with autonomous vehicles
+people in orange and apple orchards taken from a tractor            in a mixed traffic environment. The Technical University of
+and a pickup truck, along with vehicle position data. The           Munich also developed a pedestrian simulator [73] composed
+dataset combines a total of 76k labeled person images and           of a head-mounted display, a motion capture system and a
+19k sampled person-free images. Gabriel et al. [76] present a       driving simulator software. This setup could be connected to a
+dataset that focuses on action/intention recognition problems       driving simulator enabling multi-agent studies while extracting
+for human interactions with small robots in agriculture, in-        the participants gait during the crossing process. The current
+cluding ten actors performing nine gestures and four activities.    setup utilizes Unity (with a VIVE HMD) and is sometimes
+Stereo camera images, thermal camera images and Lidar point         coupled with VIVE Trackers for a virtual self-representation
+cloud data are recorded on grassland, under varying lighting        to create an immersive virtual environment enabling fast im-
+conditions and distances. Kragh et al. [119] presents a multi-      plementations and evaluation of eHMI concepts [59]. PedSim
+modal dataset for obstacle detection in agriculture containing      [80] is a free crowd simulation software.
+2h of raw sensor data from a tractor-mounted sensor system in
+a grass mowing scenario, including moving humans scattered                b) Vehicle Simulators: Vehicle simulators are physical
+in the field.                                                       platforms where drivers encounter virtual pedestrians (dum-
+                                                                    mies) in order to study driver yielding behaviors in specific
+   A summary of pedestrian datasets is given in the supple-         interaction scenarios. Simulators such as [150] studied driver-
+mentary material Sect. III Table II.                                pedestrian interactions in mixed traffic environments using a
+                                                                    driving simulator (DriveSafetys DS-600c Research Simulator).
+B. Vehicle Datasets                                                 JARI-ARV (Augmented Reality Vehicles) [108] is a road
+                                                                    running driving simulator and JARI-OVDS (Omnidirectional
+   To train and test models of pedestrians interacting with         View Driving Simulator is a driving simulator with 360-degree
+vehicles, it is most likely useful to provide similar big data      spherical screen and a rocking device. The University of Iowa
+about vehicles as well as about pedestrians. This may include       [207] has developed a driving simulator. A previous review on
+ground truth information on vehicle location and motion,            driving simulators is presented in [194].
+but also high level social annotations to use in studies of
+interaction with pedestrians. Visual data available includes the       3www.godotengine.org
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS           15
+
+      c) Pedestrian-Vehicle Simulators: Micro or macro sim-       not usually walk in straight lines, but optimise gradual turning
+ulations model both pedestrian and vehicle behavior. Most         during walking to move in smooth curves. There has been
+of these simulations rely on sets of behavioral rules for         some recent research success in inferring likely destinations
+both agents. These simulators are primarily used for road         from historical data and partial trajectories.
+design purposes and for policy decisions such as the cellular
+automata-based simulators proposed in [74] and [131] where           When interaction with other agents is included, models of
+vehicle-pedestrian crossing behaviour is studied at crosswalks.   pedestrians rapidly become more complex and much less well
+Feliciani et al. [74] further evaluated the necessity of intro-   understood. Suboptimal models include only finite orders of
+ducing a new crosswalk and/or switching to a traffic light.       epistemological models of pedestrians beliefs, raising the open
+Chao et al. [46] developed a microscopic-based traffic simu-      question of how to handle higher order beliefs about beliefs.
+lator based on a force model to represent the behaviour and       Recent game theory approaches have just begun to find optimal
+interactions between the road users, and aimed for autonomous     behaviours in these higher-order belief cases but only under
+vehicle development and testing. Chen et al. [47] proposed a      various simplifying assumptions.
+simulation platform composed of several behaviour models at
+crosswalks for vehicle-pedestrian conflicts assessment. Gupta        There has been a general shift away from psychology-
+et al. [86] developed a simulation model, using Matlab and        informed models, using empirical findings such as demograph-
+the open-source SUMO (Simulation of Urban Mobility), for          ics predicting behaviours, to purely big-data-driven models
+autonomous vehicle-pedestrian negotiations at unmarked in-        which learn aspects of such theories internally as black boxes,
+tersections, considering different pedestrian behaviours. Com-    usually aiming only to predict the behaviour rather than give
+mercial products include STEPS [147] software for and Legion      theoretical explanations of it.
+[124] simulating pedestrian dynamics. VirtuoCity is an exam-
+ple of physical vehicle-pedestrian simulators. It is composed of     The role of signalling between pedestrians and vehicles
+a pedestrian simulator, HIKER [182], which is a virtual reality   during interactions has been studied qualitatively, but is not
+`CAVE-based' environment for pedestrian behavior analysis,        yet understood at the algorithmic level. Psychologists and
+a driving simulator [107] and a truck simulator for driver        road safety designers have evaluated and commercialised many
+behaviour understanding. IFSTTAR [100] also possesses a           signalling mechanisms, such as flashing of headlights, use of
+pedestrian simulator and developed a driving simulator for        horns, and custom communication light signals. Finding algo-
+driver behavior analysis and human-machine interactions, an       rithmic strategies to make optimal use of them, and to process
+immersive simulator for cars, motorcycles and pedestrians         information from receiving signals from others, suitable for
+behavior simulation, a driving simulator with human assistive     real-time AV control, remains an open and important question.
+devices and a bicycle simulator.
+                                                                                               REFERENCES
+                         VI. CONCLUSIONS
+                                                                     [1] I. Ajzen. Attitudes and personality traits. Attitudes, Personality, and
+   Pedestrian sensing, detection and kinematic tracking are               Behavior, pages 2­24, 1988.
+now well understood and have mature models as reviewed
+in Part I [33]. Moving from simple kinematic tracking and            [2] A. Alahi, K. Goel, V. Ramanathan, A. Robicquet, L. Fei-Fei, and
+prediction of pedestrian motions can however depend on                    S. Savarese. Social lstm: Human trajectory prediction in crowded
+extremely high-level models of the state transition required              spaces. In Proc. of IEEE CVPR, pages 961­971, 2016.
+by tracking and prediction. Going far beyond simple random
+velocity walk models, the present review has shown that there        [3] W. K. Alhajyaseen and M. Iryo-Asano. Studying critical pedestrian
+is much scope here to integrate models of pedestrians as                  behavioral changes for the safety assessment at signalized crosswalks.
+intelligent, goal-based, psychological, active, and interactive           Safety Science, 91:351 ­ 360, 2017.
+agents at several levels.
+                                                                     [4] S. Ali and M. Shah. A Lagrangian particle dynamics approach for
+   Unlike the more mature methods reviewed in Part I, this                crowd flow segmentation and stability analysis. In Proc. of IEEE CVPR,
+review does not recommend particular software implementa-                 pages 1­6, 2007.
+tions for algorithms at these levels, because they remain active
+research areas rather than completed and standardizable tools.       [5] M. Althoff. Reachability analysis and its application to the safety
+This review finds that many conceptual issues first need to be            assessment of autonomous cars. PhD thesis, Technische Universita¨t
+cleared, before mathematical interfaces ­ such as probabilities           Mu¨nchen, 2010.
+­ can be created to link models at these layers, and only
+then standardized software development can become a reality.         [6] J. Amirian, J.-B. Hayet, and J. Pettre´. Social ways: Learning multi-
+(The only exception to this would be for entirely end-to-end              modal distributions of pedestrian trajectories with GANs. In Proc. of
+machine learning systems, which are not generally considered              IEEE CVPR Workshops, 2019.
+to be safe or practical due to their lack of transparency.)
+                                                                     [7] J. Andersson, A. Habibovic, M. Klingega°rd, C. Englund, and
+   At the level of single pedestrian modelling, there now exist           V. Malmsten-Lundgren. Hello Human, can you read my mind? ERCIM
+good control theoretic models of optimal walking behaviour                News, (109):36­37, 2017.
+from known origin to known destination. Here, pedestrians do
+                                                                     [8] G. Antonini, M. Bierlaire, and M. Weber. Discrete choice models
+                                                                          of pedestrian walking behavior. Transportation Research Part B:
+                                                                          Methodological, 40(8):667 ­ 687, 2006.
+
+                                                                     [9] G. Arechavaleta, J.-P. Laumond, H. Hicheur, and A. Berthoz. On the
+                                                                          nonholonomic nature of human locomotion. Autonomous Robots, 25(1-
+                                                                          2):25­35, 2008.
+
+                                                                   [10] E. Avineri, D. Shinar, and Y. O. Susilo. Pedestrians behaviour in cross
+                                                                          walks: The effects of fear of falling and age. Accident Analysis &
+                                                                          Prevention, 44(1):30 ­ 34, 2012.
+
+                                                                   [11] H. Bai, S. Cai, N. Ye, D. F. C. Hsu, and W. S. Lee. Intention-aware
+                                                                          online pomdp planning for autonomous driving in a crowd. Proc. of
+                                                                          IEEE ICRA, pages 454­460, 2015.
+
+                                                                   [12] M. Batty. Predicting where we walk. Nature, 388(6637):1920, 1997.
+                                                                   [13] D. Bauer. Comparing pedestrian movement simulation models for a
+
+                                                                          crossing area based on real world data. In Pedestrian and Evacuation
+                                                                          Dynamics, pages 547­556. Springer, 2011.
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS                           16
+
+[14] D. Bauer, S. Seer, and N. Bra¨ndle. Macroscopic pedestrian flow              [38] F. Camara, O. Giles, R. Madigan, M. Rothmu¨ller, P. Holm Rasmussen,
+      simulation for designing crowd control measures in public transport               S. A. Vendelbo-Larsen, G. Markkula, Y. M. Lee, L. Garach, N. Merat,
+      after special events. In Proc. of the Summer Computer Simulation                  and C. W. Fox. Filtration analysis of pedestrian-vehicle interactions for
+      Conference, pages 1035­1042, 2007.                                                autonomous vehicles control. In Proc. of the International Conference
+                                                                                        on Intelligent Autonomous Systems (IAS-15) Workshops, 2018.
+[15] N. Bellomo and C. Dogbe. On the modeling of traffic and crowds:
+      A survey of models, speculations, and perspectives. SIAM review,            [39] F. Camara, O. Giles, R. Madigan, M. Rothmller, P. H. Rasmussen,
+      53(3):409­463, 2011.                                                              S. A. Vendelbo-Larsen, G. Markkula, Y. M. Lee, L. Garach, N. Merat,
+                                                                                        and C. W. Fox. Predicting pedestrian road-crossing assertiveness for
+[16] B. Benfold and I. Reid. Stable multi-target tracking in real-time                  autonomous vehicle control. In Proc. of IEEE ITSC, pages 2098­2103,
+      surveillance video. In Proc. of IEEE CVPR, pages 3457­3464, 2011.                 2018.
+
+[17] M. Bennewitz, W. Burgard, G. Cielniak, and S. Thrun. Learning motion         [40] F. Camara, N. Merat, and C. W. Fox. A heuristic model for pedestrian
+      patterns of people for compliant robot motion. International Journal              intention estimation. In Proc. of IEEE ITSC, pages 3708­3713, 2019.
+      of Robotics Research, 24(1):31­48, 2005.
+                                                                                  [41] F. Camara, R. Romano, G. Markkula, R. Madigan, N. Merat, and
+[18] M. Bennewitz, W. Burgard, and S. Thrun. Learning motion patterns of                C. Fox. Empirical game theory of pedestrian interaction for au-
+      persons for mobile service robots. In Proc. of IEEE ICRA, volume 4,               tonomous vehicles. In Proc. of Measuring Behavior, 2018.
+      pages 3601­3606, 2002.
+                                                                                  [42] C. Caramuta, G. Collodel, C. Giacomini, C. Gruden, G. Longo, and
+[19] A. Bera, S. Kim, T. Randhavane, S. Pratapa, and D. Manocha. GLMP                   P. Piccolotto. Survey of detection techniques, mathematical models and
+      - realtime pedestrian path prediction using global and local movement             simulation software in pedestrian dynamics. Transportation Research
+      patterns. In Proc. of IEEE ICRA, pages 5528­5535, 2016.                           Procedia, 25(Supplement C):551 ­ 567, 2017.
+
+[20] A. Bera and D. Manocha. Pedlearn: Realtime pedestrian tracking,              [43] D. Castelvecchi. Can we open the black box of AI? Nature News,
+      behavior learning, and navigation for autonomous vehicles. In Proc.               538(7623):20, 2016.
+      of IROS 9th International workshop on Planning, Perception and
+      Navigation for Intelligent Vehicles, 2017.                                  [44] C.-M. Chang, K. Toda, D. Sakamoto, and T. Igarashi. Eyes on a Car:
+                                                                                        An Interface Design for Communication Between an Autonomous Car
+[21] I. M. Bernhoft and G. Carstensen. Preferences and behaviour of                     and a Pedestrian. In Proc. of ACM AutomotiveUI, pages 65­73, 2017.
+      pedestrians and cyclists by age and gender. Transportation Research
+      Part F: Traffic Psychology and Behaviour, 11(2):83 ­ 95, 2008.              [45] M.-F. Chang, J. W. Lambert, P. Sangkloy, J. Singh, S. Bak, A. Hartnett,
+                                                                                        D. Wang, P. Carr, S. Lucey, D. Ramanan, and J. Hays. Argoverse: 3d
+[22] A. Bhattacharyya, M. Fritz, and B. Schiele. Long-term on-board                     tracking and forecasting with rich maps. In Proc. of IEEE CVPR, 2019.
+      prediction of pedestrians in traffic scenes. In Proc. of 1st Conference
+      on Robot Learning, 2017.                                                    [46] Q. Chao, X. Jin, H.-W. Huang, S. Foong, L.-F. Yu, and S.-K. Yeung.
+                                                                                        Force-based heterogeneous traffic simulation for autonomous vehicle
+[23] V. J. Blue and J. L. Adler. Cellular automata microsimulation for                  testing. In Proc. of ICRA, pages 8298­8304. IEEE, 2019.
+      modeling bi-directional pedestrian walkways. Transportation Research
+      Part B: Methodological, 35(3):293 ­ 312, 2001.                              [47] P. Chen, W. Zeng, and G. Yu. Assessing right-turning vehicle-
+                                                                                        pedestrian conflicts at intersections using an integrated microscopic
+[24] J. Bock, T. Beemelmanns, M. Klo¨sges, and J. Kotte. Self-learning                  simulation model. Accident Analysis & Prevention, 129:211­224, 2019.
+      trajectory prediction with recurrent neural networks at intelligent inter-
+      sections. In Proc. of VEHITS, 2017.                                         [48] Z. Chen, C. Wu, N. Lyu, G. Liu, and Y. He. Pedestrian-vehicular
+                                                                                        collision avoidance based on vision system. In Proc. of IEEE ITSC,
+[25] J. Bock, R. Krajewski, T. Moers, L. Vater, S. Runde, and L. Eckstein.              pages 11­15, 2014.
+      The ind dataset: A drone dataset of naturalistic vehicle trajectories at
+      german intersections. arXiv preprint arXiv:1911.07602, 2019.                [49] B. Cheng, X. Xu, Y. Zeng, J. Ren, and S. Jung. Pedestrian trajectory
+                                                                                        prediction via the social-grid LSTM model. The Journal of Engineer-
+[26] S. Bonneaud and W. H. Warren. A behavioral dynamics approach to                    ing, 2018(16):1468­1474, 2018.
+      modeling realistic pedestrian behavior. In Proc. of 6th International
+      Conference on Pedestrian and Evacuation Dynamics, pages 1­14,               [50] H. Choset, K. Lynch, S. Hutchinson, G. Kantor, W. Burgard,
+      2012.                                                                             L. Kavraki, and S. Thrun. Principles of Robot Motion: Theory,
+                                                                                        Algorithms, and Implementations. MIT Press, 2005.
+[27] S. Bonnin, T. H. Weisswange, F. Kummert, and J. Schmuedderich.
+      Pedestrian crossing prediction using multiple context-based models. In      [51] M. Clamann, M. Aubert, and M. L. Cummings. Evaluation of vehicle-
+      Proc. of IEEE ITSC, pages 378­385, 2014.                                          to-pedestrian communication displays for autonomous vehicles. In
+                                                                                        Proc. of TRB, 2017.
+[28] A. Borgers, A. Kemperman, and H. Timmermans. Modeling Pedestrian
+      Movement in Shopping Street Segments, chapter Chapter 5, pages 87­          [52] A. Cosgun, D. A. Florencio, and H. I. Christensen. Autonomous person
+      111. 2009.                                                                        following for telepresence robots. In Proc. of IEEE ICRA, pages 4335­
+                                                                                        4342, 2013.
+[29] A. Borgers and H. Timmermans. A model of pedestrian route
+      choice and demand for retail facilities within innercity shopping areas.    [53] N. Dalal and B. Triggs. Histograms of oriented gradients for human
+      Geographical Analysis, 18(2):115­128, 2010.                                       detection. In IEEE CVPR, volume 1, pages 886­893 vol. 1, 2005.
+
+[30] R. Brooks. The big problem with self-driving cars is people and we'll        [54] Y. Deng, P. Luo, C. C. Loy, and X. Tang. Pedestrian attribute
+      go out of our way to make the problem worse. IEEE Spectrum, 2017.                 recognition at far distance. In Proc. of the 22nd ACM international
+                                                                                        Conference on Multimedia, pages 789­792. ACM, 2014.
+[31] F. Broz, I. Nourbakhsh, and R. Simmons. Planning for human-robot
+      interaction using time-state aggregated pomdps. In Proc. of the 23rd        [55] N. Deo and M. M. Trivedi. Learning and predicting on-road pedestrian
+      National Conference on Artificial Intelligence, volume 3, pages 1339­             behavior around vehicles. In Proc. of IEEE ITSC, pages 1­6, 2017.
+      1344, 2008.
+                                                                                  [56] N. Deo and M. M. Trivedi. Trajectory forecasts in unknown
+[32] H. Caesar, V. Bankiti, A. H. Lang, S. Vora, V. E. Liong, Q. Xu, A. Kr-             environments conditioned on grid-based plans. arXiv preprint
+      ishnan, Y. Pan, G. Baldan, and O. Beijbom. nuScenes: A multimodal                 arXiv:2001.00735, 2020.
+      dataset for autonomous driving. arXiv preprint arXiv:1903.11027,
+      2019.                                                                       [57] C. Dias, M. Abdullah, M. Sarvi, R. Lovreglio, and W. Alhajyaseen.
+                                                                                        Modeling and simulation of pedestrian movement planning around
+[33] F. Camara, N. Bellotto, S. Cosar, D. Nathanael, M. Althoff, J. Wu,                 corners. Sustainability, 11(19):5501, 2019.
+      J. Ruenz, A. Dietrich, and C. W. Fox. Pedestrian models for au-
+      tonomous driving Part I: low-level models, from sensing to tracking.        [58] P. Dickinson, K. Gerling, K. Hicks, J. Murray, J. Shearer, and J. Green-
+      IEEE Transactions on Intelligent Transportation Systems, 2020.                    wood. Virtual reality crowd simulation: effects of agent density on user
+                                                                                        experience and behaviour. Virtual Reality, 2018.
+[34] F. Camara, S. Cosar, N. Bellotto, N. Merat, and C. W. Fox. Towards
+      pedestrian-AV interaction: method for elucidating pedestrian prefer-        [59] A. Dietrich, J.-H. Willrodt, K. Wagner, and K. Bengler. Projection-
+      ences. In Proc. of IEEE/RSJ IROS Workshops, 2018.                                 based external human machine interfaces enabling interaction between
+                                                                                        automated vehicles and pedestrians. In Driving Simulation Conference,
+[35] F. Camara, P. Dickinson, N. Merat, and C. W. Fox. Towards game                     2018.
+      theoretic AV controllers: measuring pedestrian behaviour in virtual
+      reality. In Proc. of IEEE/RSJ IROS Workshops, 2019.                         [60] J. Dijkstra, H. J. Timmermans, and A. Jessurun. A multi-agent cellular
+                                                                                        automata system for visualising simulated pedestrian activity. In Theory
+[36] F. Camara, P. Dickinson, N. Merat, and C. W. Fox. Examining                        and Practical Issues on Cellular Automata, pages 29­36. Springer,
+      pedestrian behaviour in virtual reality. In Transport Research Arena              2001.
+      (TRA) (Conference canceled), 2020.
+                                                                                  [61] P. Dolla´r, C. Wojek, B. Schiele, and P. Perona. Pedestrian detection:
+[37] F. Camara and C. W. Fox. Game theory for self-driving cars. In                     A benchmark. In Proc. of CVPR, 2009.
+      UK-RAS Conference, 2020.
+                                                                                  [62] C. Dondrup, N. Bellotto, M. Hanheide, K. Eder, and U. Leonards. A
+                                                                                        computational model of human-robot spatial interactions based on a
+                                                                                        qualitative trajectory calculus. Robotics, 4(1):63­102, 2015.
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS                                                                                              17
+
+[63] C. Dondrup, N. Bellotto, F. Jovan, and M. Hanheide. Real-time                [88] G. Habibi, N. Jaipuria, and J. P. How. Context-aware pedestrian motion
+      multisensor people tracking for human-robot spatial interaction. In
+      Proc. of ICRA Workshop on Machine Learning for Social Robotics,             prediction in urban intersections. In Proc. of IEEE ITSC, 2018.
+      2015.
+                                                                                  [89] A. Habibovic, V. M. Lundgren, J. Andersson, M. Klingega°rd,
+[64] P. Duckworth, M. Al-Omari, J. Charles, D. C. Hogg, and A. G. Cohn.
+      Latent dirichlet allocation for unsupervised activity analysis on an        T. Lagstro¨m, A. Sirkka, J. Fagerlo¨nn, C. Edgren, R. Fredriksson,
+      autonomous mobile robot. In Proc. of AAAI, 2017.
+                                                                                  S. Krupenia, D. Salua¨a¨r, and P. Larsson. Communicating Intent of
+[65] P. Duckworth, Y. Gatsoulis, F. Jovan, N. Hawes, D. C. Hogg, and
+      A. G. Cohn. Unsupervised learning of qualitative motion behaviours          Automated Vehicles to Pedestrians. Frontiers in Psychology, 9:1336,
+      by a mobile robot. In Proc. of AAMAS, pages 1043­1051, 2016.
+                                                                                  2018.
+[66] D. C. Duives, W. Daamen, and S. P. Hoogendoorn. State-of-the-art
+      crowd motion simulation models. Transportation Research Part C:             [90] E. T. Hall. A system for the notation of proxemic behavior. American
+      Emerging Technologies, 37:193­209, 2013.
+                                                                                  Anthropologist, 65(5):1003­1026, 1963.
+[67] R. Elvik. A review of game-theoretic models of road user behaviour.
+      Accident Analysis & Prevention, 62:388 ­ 396, 2014.                         [91] E. T. Hall. The hidden dimension. 1969.
+
+[68] M. Enzweiler and D. M. Gavrila. Monocular pedestrian detection:              [92] W. A. Harrell. The impact of pedestrian visibility and assertiveness on
+      Survey and experiments. IEEE Transactions on Pattern Analysis and
+      Machine Intelligence, 31(12):2179­2195, 2008.                               motorist yielding. The Journal of Social Psychology, 133(3):353­360,
+
+[69] A. Ess, B. Leibe, and L. V. Gool. Depth and appearance for mobile            1993.
+      scene analysis. In Proc. of IEEE ICCV, pages 1­8, 2007.
+                                                                                  [93] Helbing and Molna´r. Social force model for pedestrian dynamics.
+[70] R. Etikyala, S. Go¨ttlich, A. Klar, and S. Tiwari. Particle methods
+      for pedestrian flow models: from microscopic to nonlocal continuum          Physical Review E, 51:4282­4286, 1995.
+      models. Mathematical Models and Methods in Applied Sciences,
+      24(12):2503­2523, 2014.                                                     [94] P. Henry, C. Vollmer, B. Ferris, and D. Fox. Learning to navigate
+
+[71] D. Evans and P. Norman. Predicting adolescent pedestrians road-              through crowded environments. In Proc. of IEEE ICRA, pages 981­
+      crossing intentions: an application and extension of the theory of
+      planned behaviour. Health Education Research, 18(3):267­277, 2003.          986, 2010.
+
+[72] B. R. Fajen and W. H. Warren. Behavioral dynamics of steering,               [95] C. Holland and R. Hill. The effect of age, gender and driver status on
+      obstable avoidance, and route selection. Journal of Experimental
+      Psychology: Human Perception and Performance, 29(2):343, 2003.              pedestrians intentions to cross the road in risky situations. Accident
+
+[73] I. Feldstein, A. Dietrich, S. Milinkovic, and K. Bengler. A pedestrian       Analysis & Prevention, 39(2):224 ­ 237, 2007.
+      simulator for urban crossing scenarios. volume 49, pages 239 ­ 244,
+      2016. Proc. of IFAC Symposium on Analysis, Design, and Evaluation           [96] C. Holland and R. Hill. Gender differences in factors predicting unsafe
+      ofHuman-Machine Systems.
+                                                                                  crossing decisions in adult pedestrians across the lifespan: A simulation
+[74] C. Feliciani, L. Crociani, A. Gorrini, G. Vizzari, S. Bandini, and
+      K. Nishinari. A simulation model for non-signalized pedestrian              study. Accident Analysis and Prevention, 42(4):1097 ­ 1106, 2010.
+      crosswalks based on evidence from on field observation. Intelligenza
+      Artificiale, 11(2):117­138, 2017.                                           [97] S. Hoogendoorn and P. HL Bovy. Simulation of pedestrian flows by
+
+[75] C. W. Fox, F. Camara, G. Markkula, R. Romano, R. Madigan, and                optimal control and differential games. Optimal Control Applications
+      N. Merat. When should the chicken cross the road?: Game theory for
+      autonomous vehicle - human interactions. In Proc. of VEHITS, 2018.          and Methods, 24(3):153­172, 2003.
+
+[76] A. Gabriel, S. Cosar, N. Bellotto, and P. Baxter. A dataset for action       [98] R. Hug, S. Becker, W. Hu¨bner, and M. Arens. Particle-based pedestrian
+      recognition in the wild. In Proc. of TAROS, pages 362­374, 2019.
+                                                                                  path prediction using LSTM-MDL models. CoRR, abs/1804.05546,
+[77] M. Garzo´n, D. Garzo´n-Ramos, A. Barrientos, and J. d. Cerro. Pedes-
+      trian trajectory prediction in large infrastructures. In Proc. of Interna-  2018.
+      tional Conference on Informatics in Control, Automation and Robotics,
+      pages 381­389, 2016.                                                        [99] R. L. Hughes. A continuum theory for the flow of pedestrians.
+
+[78] A. Geiger, P. Lenz, C. Stiller, and R. Urtasun. Vision meets robotics:       Transportation Research Part B: Methodological, 36(6):507 ­ 535,
+      The KITTI dataset. International Journal of Robotics Research,
+      32(11):1231­1237, 2013.                                                     2002.
+
+[79] P. Gipps and B. Marksjo¨. A micro-simulation model for pedestrian            [100] IFSTARR.    Simulators, 2018.                    http://www.ifsttar.fr/en/
+      flows. Mathematics and Computers in Simulation, 27(2):95 ­ 105,
+      1985.                                                                       exceptional-facilities/simulators/.
+
+[80] C. Gloor. Pedsim : Pedestrian crowd simulator, 2012.                         [101] T. Ikeda, Y. Chigodo, D. Rea, F. Zanlungo, M. Shiomi, and T. Kanda.
+[81] M. Goldhammer, S. Khler, K. Doll, and B. Sick. Camera based
+                                                                                  Modeling and prediction of pedestrian behavior based on the sub-goal
+      pedestrian path prediction by means of polynomial least-squares ap-
+      proximation and multilayer perceptron neural networks. In Proc. of          concept. In Proc. of Robotics: Science and Systems, 2012.
+      SAI Intelligent Systems Conference (IntelliSys), pages 390­399, 2015.
+[82] A. Gorrini, S. Bandini, and M. Sarvi. Group dynamics in pedes-               [102] I. Institute for Advanced Motorists. How to Be A Better Driver:
+      trian crowds: Estimating proxemic behavior. Transportation Research
+      Record, 2421(1):51­56, 2014.                                                Advanced Driving the Essential Guide. Motorbooks, 2007.
+[83] A. Gorrini, L. Crociani, G. Vizzari, and S. Bandini. Observation results
+      on pedestrian-vehicle interactions at non-signalized intersections to-      [103] M. Iryo-Asano and W. K. Alhajyaseen. Analysis of pedestrian
+      wards simulation. Transportation Research Part F: Traffic Psychology
+      and Behaviour, 59:269­285, 2018.                                            clearance time at signalized crosswalks in Japan. Procedia Computer
+[84] D. Gunning. Explainable artificial intelligence (XAI). Defense
+      Advanced Research Projects Agency (DARPA), 2, 2017.                         Science, 32:301 ­ 308, 2014.
+[85] A. Gupta, J. Johnson, L. Fei-Fei, S. Savarese, and A. Alahi. Social gan:
+      Socially acceptable trajectories with generative adversarial networks. In   [104] M. Iryo-Asano and W. K. Alhajyaseen. Modeling pedestrian crossing
+      Proc. of IEEE CVPR, pages 2255­2264, 2018.
+[86] S. Gupta, M. Vasardani, and S. Winter. Negotiation between vehicles          speed profiles considering speed change behavior for the safety as-
+      and pedestrians for the right of way at intersections. IEEE Transactions
+      on Intelligent Transportation Systems, 20(3):888­899, 2018.                 sessment of signalized intersections. Accident Analysis & Prevention,
+[87] N. Guguen, S. Meineri, and C. Eyssartier. A pedestrians stare and
+      drivers stopping behavior: A field experiment at the pedestrian crossing.   108:332 ­ 342, 2017.
+      Safety Science, 75:87 ­ 89, 2015.
+                                                                                  [105] M. Iryo-Asano, W. K. M. Alhajyaseen, and H. Nakamura. Analysis and
+
+                                                                                  modeling of pedestrian crossing behavior during the pedestrian flash-
+
+                                                                                  ing green interval. IEEE Transactions on Intelligent Transportation
+
+                                                                                  Systems, 16(2):958­969, 2015.
+
+                                                                                  [106] R. Isaacs. Games of pursuit. 1951.
+
+                                                                                  [107] A. Jamson, A. Horrobin, and R. Auckland. Whatever happened to the
+
+                                                                                  lads? design and development of the new University of Leeds driving
+
+                                                                                  simulator. In Proc. of Driving Simulator Conference, 2007.
+
+                                                                                  [108] JARI. Simulators, 2018. http://www.jari.or.jp/.
+
+                                                                                  [109] F. T. Johora and J. Mu¨ller. Modeling interactions of multimodal road
+
+                                                                                  users in shared spaces. In Proc. of IEEE ITSC, 2018.
+
+                                                                                  [110] V. Karasev, A. Ayvaci, B. Heisele, and S. Soatto. Intent-aware long-
+
+                                                                                  term prediction of pedestrian motion. In Proc. of IEEE ICRA, pages
+
+                                                                                  2543­2549, 2016.
+
+                                                                                  [111] A. Katz, D. Zaidel, and A. Elgrishi. An experimental study of driver
+
+                                                                                  and pedestrian interaction during the crossing conflict. Human Factors,
+
+                                                                                  17(5):514­527, 1975.
+
+                                                                                  [112] K. Kawamoto, Y. Tomura, and K. Okamoto. Learning pedestrian
+
+                                                                                  dynamics with kriging. In Proceedings IEEE/ACIS International
+
+                                                                                  Conference on Computer and Information Science, pages 1­4, 2016.
+
+                                                                                  [113] K. M. Kitani, B. D. Ziebart, J. A. Bagnell, and M. Hebert. Activity
+
+                                                                                  forecasting. In Proc. of ECCV, pages 201­214, 2012.
+
+                                                                                  [114] K. Kitazawa and M. Batty. Pedestrian behaviour modelling. In Proc. of
+
+                                                                                  the International Conference on Developments in Design and Decision
+
+                                                                                  Support Systems in Architecture and Urban Planning, 2004.
+
+                                                                                  [115] J. Kober, J. A. Bagnell, and J. Peters. Reinforcement learning in
+
+                                                                                  robotics: A survey. International Journal of Robotics Research,
+
+                                                                                  32(11):1238­1274, 2013.
+
+                                                                                  [116] J. F. P. Kooij, N. Schneider, F. Flohr, and D. M. Gavrila. Context-based
+
+                                                                                  pedestrian path prediction. In Proc. of ECCV, pages 618­633, 2014.
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS                           18
+
+[117] M. Koschi, C. Pek, M. Beikirch, and M. Althoff. Set-based prediction        [141] A. Martin. Interactive motion prediction using game theory. Master's
+        of pedestrians in urban environments considering formalized traffic               thesis, 2013. Technical University of Munich.
+        rules. In Proc. of IEEE ITSC, 2018.
+                                                                                  [142] M. Matthews, G. Chowdhary, and E. Kieson. Intent communication
+[118] P. Kothari and A. Alahi. Adversarial loss for human trajectory                      between autonomous vehicles and pedestrians. CoRR, abs/1708.07123,
+        prediction. In Proc. of hEART, 2019.                                              2017.
+
+[119] M. Kragh, P. Christiansen, M. Laursen, M. Larsen, K. Steen, O. Green,       [143] B. L. Mesmer and C. L. Bloebaum. Modeling decision and game theory
+        H. Karstoft, and R. Jørgensen. Fieldsafe: Dataset for obstacle detection          based pedestrian velocity vector decisions with interacting individuals.
+        in agriculture. Sensors, 17, 2017.                                                Safety Science, 87:116 ­ 130, 2016.
+
+[120] H. Kretzschmar, M. Kuderer, and W. Burgard. Learning to predict             [144] A. Milan, L. Leal-Taixe´, I. D. Reid, S. Roth, and K. Schindler. MOT16:
+        trajectories of cooperatively navigating agents. In Proc. of IEEE ICRA,           A benchmark for multi-object tracking. CoRR, abs/1603.00831, 2016.
+        pages 4015­4020, 2014.
+                                                                                  [145] A. Mo¨gelmose, M. M. Trivedi, and T. B. Moeslund. Trajectory analysis
+[121] E. Kruse, R. Gutsche, and F. M. Wahl. Acquisition of statistical motion             and prediction for improved pedestrian safety: Integrated framework
+        patterns in dynamic environments and their application to mobile robot            and evaluations. In Proc. of IEEE IV, pages 330­335, 2015.
+        motion planning. In Proc. of IEEE/RSJ IROS, volume 2, pages 712­717
+        vol.2, 1997.                                                              [146] B. T. Morris and M. M. Trivedi. A survey of vision-based trajectory
+                                                                                          learning and analysis for surveillance. IEEE Transactions on Circuits
+[122] N. Lee, W. Choi, P. Vernaza, C. B. Choy, P. H. Torr, and M. Chandraker.             and Systems for Video Technology, 18(8):1114­1127, 2008.
+        Desire: Distant future prediction in dynamic scenes with interacting
+        agents. In Proc. of IEEE CVPR, pages 336­345, 2017.                       [147] Mott-Macdonald. Steps, simulation pedestrian dynamics, 1997. https:
+                                                                                          //www.stepsmottmac.com/.
+[123] S. Lefe`vre, D. Vasquez, and C. Laugier. A survey on motion prediction
+        and risk assessment for intelligent vehicles. ROBOMECH Journal,           [148] M. Moussa¨id, D. Helbing, and G. Theraulaz. How simple rules
+        1(1):1, 2014.                                                                     determine pedestrian behavior and crowd disasters. Proc. of the
+                                                                                          National Academy of Sciences, 108(17):6884­6888, 2011.
+[124] Legion. Legion for aisun, 1997. http://www.legion.com/
+        legion-for-aimsun-%E2%80%93-vehicle-pedestrian-simulation.                [149] D. Nathanael, E. Portouli, V. Papakostopoulos, K. Gkikas, and
+                                                                                          A. Amditis. Naturalistic observation of interactions between car drivers
+[125] A. Lerner, Y. Chrysanthou, and D. Lischinski. Crowds by example. In                 and pedestrians in high density urban settings. In Proc. of the 20th
+        Computer Graphics Forum, volume 26, pages 655­664. Wiley Online                   Congress of the International Ergonomics Association, pages 389­397,
+        Library, 2007.                                                                    2019.
+
+[126] W. Li and X. Wang. Locally aligned feature transforms across views.         [150] H. Obeid, H. Abkarian, M. Abou-Zeid, and I. Kaysi. Analyzing driver-
+        In Proc. of IEEE CVPR, pages 3594­3601, 2013.                                     pedestrian interaction in a mixed-street environment using a driving
+                                                                                          simulator. Accident Analysis & Prevention, 108:56­65, 2017.
+[127] W. Li, R. Zhao, and X. Wang. Human reidentification with transferred
+        metric learning. In Proc. of Asian Conference on Computer Vision,         [151] S. Okazaki. A study of pedestrian movement in architectural space,
+        pages 31­44. Springer, 2012.                                                      part 1: Pedestrian movement by the application on of magnetic models.
+                                                                                          Trans. AIJ, 283:111­119, 1979.
+[128] W. Li, R. Zhao, T. Xiao, and X. Wang. Deepreid: Deep filter pairing
+        neural network for person re-identification. In Proc. of IEEE CVPR,       [152] A. Olivier, J. Bruneau, R. Kulpa, and J. Pettr. Walking with vir-
+        pages 152­159, 2014.                                                              tual people: Evaluation of locomotion interfaces in dynamic environ-
+                                                                                          ments. IEEE Transactions on Visualization and Computer Graphics,
+[129] C. Lichtentha¨ler and A. Kirsch. Towards legible robot navigation - how             24(7):2251­2263, 2018.
+        to increase the intend expressiveness of robot navigation behavior. In
+        Int. Conf. Soc. Robot. Embodied Commun. Goals Intention, 2013.            [153] J. Oxley, B. Fildes, E. Ihsen, R. Day, and J. Charlton. An investigation
+                                                                                          of road crossing behaviour of older pedestrians. Transportation
+[130] R. Lobjois and V. Cavallo. The effects of aging on street-crossing                  Research Board, 1995.
+        behavior: from estimation to actual crossing. Accident Analysis &
+        Prevention, 41(2):259­267, 2009.                                          [154] E. Papadimitriou, G. Yannis, and J. Golias. A critical assessment of
+                                                                                          pedestrian behaviour models. Transportation Research Part F: Traffic
+[131] L. Lu, G. Ren, W. Wang, C.-Y. Chan, and J. Wang. A cellular                         Psychology and Behaviour, 12(3):242 ­ 255, 2009.
+        automaton simulation model for pedestrian and vehicle interaction
+        behaviors at unsignalized mid-block crosswalks. Accident Analysis &       [155] A. V. Papadopoulos, L. Bascetta, and G. Ferretti. Generation of human
+        Prevention, 95:425­437, 2016.                                                     walking paths. In Proc. of IEEE/RSJ IROS, pages 1676­1681, 2013.
+
+[132] V. M. Lundgren, A. Habibovic, J. Andersson, T. Lagstro¨m, M. Nilsson,       [156] S. Pellegrini, A. Ess, K. Schindler, and L. van Gool. You'll never
+        A. Sirkka, J. Fagerlo¨nn, R. Fredriksson, C. Edgren, S. Krupenia,                 walk alone: Modeling social behavior for multi-target tracking. Proc.
+        and D. Salua¨a¨r. Will There Be New Communication Needs When                      of IEEE ICCV, pages 261­268, 2009.
+        Introducing Automated Vehicles to the Urban Context? In Advances
+        in Human Aspects of Transportation: Proceedings of the AHFE 2016          [157] S. Pellegrini, A. Ess, and L. Van Gool. Predicting Pedestrian Trajec-
+        International Conference on Human Factors in Transportation, pages                tories, pages 473­491. Springer London, 2011.
+        485­497. Springer International Publishing, 2017.
+                                                                                  [158] T. Petzoldt, K. Schleinitz, and R. Banse. Laboruntersuchung zur
+[133] W. Luo, X. Zhao, and T. Kim. Multiple object tracking: A review.                    potenziellen Sicherheitswirkung einer vorderen Bremsleuchte in PKW.
+        CoRR, abs/1409.7618, 2014.                                                        Zeitschrift fu¨r Verkehrssicherheit, 63(1):19­24, 2017.
+
+[134] G. G. Lvs. Modeling and simulation of pedestrian traffic flow.              [159] Z. Pezzementi, T. Tabor, P. Hu, J. K. Chang, D. Ramanan, C. Welling-
+        Transportation Research Part B: Methodological, 28(6):429 ­ 443,                  ton, B. P. Wisely Babu, and H. Herman. Comparing apples and oranges:
+        1994.                                                                             Off-road pedestrian detection on the national robotics engineering
+                                                                                          center agricultural person-detection dataset. Journal of Field Robotics,
+[135] W. Ma, D. Huang, N. Lee, and K. M. Kitani. Forecasting interactive                  35(4):545­563, 2018.
+        dynamics of pedestrians with fictitious play. In Proc. of IEEE CVPR,
+        2017.                                                                     [160] E. Portouli, D. Nathanael, K. Gkikas, A. Amditis, and P. Loizos.
+                                                                                          Field observations of interactions among drivers at unsignalized urban
+[136] K. Mahadevan, E. Sanoubari, S. Somanath, J. E. Young, and E. Sharlin.               intersections. In Proc. of the 20th Congress of the International
+        AV-Pedestrian interaction design using a pedestrian mixed traffic                 Ergonomics Association, 2019.
+        simulator. In Proc. of the Conference on Designing Interactive Systems,
+        pages 475­486. ACM, 2019.                                                 [161] A. Puydupin-Jamin, M. Johnson, and T. Bretl. A convex approach
+                                                                                          to inverse optimal control and its application to modeling human
+[137] K. Mahadevan, S. Somanath, and E. Sharlin. Can Interfaces Facilitate                locomotion. In Poc. of IEEE ICRA, pages 531­536, 2012.
+        Communication in Autonomous Vehicle-Pedestrian Interaction? In
+        Proc. of ACM/IEEE HRI, 2018.                                              [162] R. Quintero, I. P. Alonso, D. Ferna´ndez-Llorca, and M. Sotelo. Pedes-
+                                                                                          trian path, pose, and intention prediction through Gaussian process dy-
+[138] K. Mahadevan, S. Somanath, and E. Sharlin. Communicating aware-                     namical models and pedestrian activity recognition. IEEE Transactions
+        ness and intent in autonomous vehicle-pedestrian interaction. In Proc.            on Intelligent Transportation Systems, pages 1­12, 2018.
+        of the CHI Conference on Human Factors in Computing Systems, page
+        429. ACM, 2018.                                                           [163] R. Quintero, I. Parra, D. F. Llorca, and M. Sotelo. Pedestrian
+                                                                                          intention and pose prediction through dynamical models and behaviour
+[139] L. Manenti, S. Manzoni, G. Vizzari, K. Ohtsuka, and K. Shimura.                     classification. In Proc. of IEEE ITSC, pages 83­88, 2015.
+        Towards an agent-based proxemic model for pedestrian and group
+        dynamic. In Proc. of the 11th WOA Workshop, volume 621, 2010.             [164] N. Radwan, A. Valada, and W. Burgard. Multimodal interaction-
+                                                                                          aware motion prediction for autonomous street crossing. arXiv preprint
+[140] G. Markkula, R. Romano, R. Madigan, C. W. Fox, O. T. Giles, and                     arXiv:1808.06887, 2018.
+        N. Merat. Models of human decision-making as tools for estimating
+        and optimizing impacts of vehicle automation. Transportation Research     [165] H. A. Rakha, I. Zohdy, and R. K. Kamalanathsharma. Agent-based
+        Record, 2018.                                                                     game theory modeling for driverless vehicles at intersections. 2013.
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS                           19
+
+[166] C. E. Rasmussen and C. K. I. Williams. Gaussian Processes for               [190] A. T. Schulz and R. Stiefelhagen. Pedestrian intention recognition
+        Machine Learning (Adaptive Computation and Machine Learning). The                 using latent-dynamic conditional random fields. In Proc. of IEEE IV,
+        MIT Press, 2005.                                                                  pages 622­627, 2015.
+
+[167] A. Rasouli, I. Kotseruba, and J. K. Tsotsos. Agreeing to cross: How         [191] D. C. Schwebel, D. Stavrinos, K. W. Byington, T. Davis, E. E. ONeal,
+        drivers and pedestrians communicate. Proc. of IEEE IV, pages 264­                 and D. de Jong. Distraction and pedestrian safety: How talking on
+        269, 2017.                                                                        the phone, texting, and listening to music impact crossing the street.
+                                                                                          Accident Analysis & Prevention, 45:266 ­ 271, 2012.
+[168] A. Rasouli and J. K. Tsotsos. Joint attention in driver-pedestrian
+        interaction: from theory to practice. CoRR, abs/1802.02522, 2018.         [192] D. Shi, W. Zhang, and B. Wang. Modeling pedestrian evacuation by
+                                                                                          means of game theory. Journal of Statistical Mechanics: Theory and
+[169] A. Rasouli and J. K. Tsotsos. Autonomous vehicles that interact with                Experiment, (4), 2017.
+        pedestrians: A survey of theory and practice. IEEE Transactions on
+        Intelligent Transportation Systems, 21(3):900­918, 2020.                  [193] X. Shi, X. Shao, Z. Guo, G. Wu, H. Zhang, and R. Shibasaki. Pedes-
+                                                                                          trian trajectory prediction in extremely crowded scenarios. Sensors,
+[170] E. Rehder and H. Kloeden. Goal-directed pedestrian prediction. Proc.                19(5):1223, 2019.
+        of IEEE ICCV Workshop, pages 139­147, 2015.
+                                                                                  [194] J. J. J. Slob. State-of-the-art driving simulators, a literature survey.
+[171] E. Rehder, F. Wirth, M. Lauer, and C. Stiller. Pedestrian prediction by             Technical report, 2008.
+        planning using deep neural networks. In Proc. of IEEE ICRA, pages
+        5903­5908, 2018.                                                          [195] D. Sun, S. Ukkusuri, R. Benekohal, and S. Travis Waller. Modeling of
+                                                                                          motorist-pedestrian interaction at uncontrolled mid-block crosswalks.
+[172] D. Ridel, E. Rehder, M. Lauer, C. Stiller, and D. Wolf. A literature                51, 2003.
+        review on the prediction of pedestrian behavior in urban scenarios. In
+        Proc. of IEEE ITSC, pages 3105­3112, 2018.                                [196] L. Sun, Z. Yan, S. M. Mellado, M. Hanheide, and T. Duckett. 3DOF
+                                                                                          pedestrian trajectory prediction learned from long-term autonomous
+[173] J. Rios-Martinez, A. Spalanzani, and C. Laugier. From proxemics                     mobile robot deployment data. In Proc. of IEEE ICRA, 2018.
+        theory to socially-aware navigation: A survey. International Journal
+        of Social Robotics, 7(2):137­153, 2015.                                   [197] L. Takayama, D. Dooley, and W. Ju. Expressing thought: improving
+                                                                                          robot readability with animation principles. Proc. of ACM/IEEE HRI,
+[174] E. Ristani, F. Solera, R. Zou, R. Cucchiara, and C. Tomasi. Performance             2011.
+        measures and a data set formulti-target, multi-camera tracking. In Proc.
+        of ECCV Workshops, pages 17­35, 2016.                                     [198] Y. Tamura, P. D. Le, K. Hitomi, N. P. Chandrasiri, T. Bando, A. Ya-
+                                                                                          mashita, and H. Asama. Development of pedestrian behavior model
+[175] M. Risto, C. Emmenegger, E. Vinkhuyzen, M. Cefkin, and J. Hollan.                   taking account of intention. In Proc. of IEEE/RSJ IROS, pages 382­
+        Human-vehicle interfaces: The power of vehicle movement gestures in               387, 2012.
+        human road user coordination. In Proc. of the 9th International Driving
+        Symposium on Human Factors in Driver Assessment, pages 186­192,           [199] K. Teknomo. Microscopic pedestrian flow characteristics: Development
+        2017.                                                                             of an image processing data collection and simulation model. arXiv
+                                                                                          preprint arXiv:1610.00029, 2016. PhD Thesis.
+[176] A. Robicquet, A. Sadeghian, A. Alahi, and S. Savarese. Learning social
+        etiquette: Human trajectory understanding in crowded scenes. In Proc.     [200] L. L. Thompson, F. P. Rivara, R. C. Ayyagari, and B. E. Ebel. Impact of
+        of ECCV, pages 549­565, 2016.                                                     social and technological distraction on pedestrian crossing behaviour:
+                                                                                          an observational study. Injury Prevention, 19(4):232­237, 2013.
+[177] N. Ronald, L. Sterling, and M. Kirley. A conceptual framework for
+        specifying and developing pedestrian models. 2020.                        [201] H. Timmermans. Pedestrian behavior: models, data collection and
+                                                                                          applications. Emerald, 2009.
+[178] D. Rothenbu¨cher, J. Li, D. Sirkin, B. Mok, and W. Ju. Ghost driver:
+        A field study investigating the interaction between pedestrians and       [202] I. Tournier, A. Dommes, and V. Cavallo. Review of safety and mobility
+        driverless vehicles. In Proc. of IEEE RO-MAN, pages 795­802, 2016.                issues among older pedestrians. Accident Analysis & Prevention,
+                                                                                          91:24­35, 2016.
+[179] A. Rudenko, L. Palmieri, and K. O. Arras. Joint long-term prediction
+        of human motion using a planning-based social force approach. In          [203] P. Trautman and A. Krause. Unfreezing the robot: Navigation in dense,
+        Proc. of IEEE ICRA, 2018.                                                         interacting crowds. In Proc. of IEEE/RSJ IROS, pages 797­803, 2010.
+
+[180] C. Rudin-Brown and S. Jamson. Behavioural adaptation and road               [204] A. Turner and A. Penn. Encoding natural movement as an agent-based
+        safety: Theory, evidence and action. CRC Press, 2013.                             system: An investigation into human pedestrian behaviour in the built
+                                                                                          environment. 29:473­490, 2002.
+[181] A. Sadeghian, V. Kosaraju, A. Sadeghian, N. Hirose, H. Rezatofighi,
+        and S. Savarese. Sophie: An attentive GAN for predicting paths            [205] A. Turnwald, D. Althoff, D. Wollherr, and M. Buss. Understanding
+        compliant to social and physical constraints. In Proc. of IEEE CVPR,              human avoidance behavior: Interaction-aware decision making based
+        pages 1349­1358, 2019.                                                            on game theory. International Journal of Social Robotics, 8(2):331­
+                                                                                          351, 2016.
+[182] E. Sadraei, R. Romano, N. Merat, J. Pedro, Y. M. Lee, R. Madigan,
+        C. Uzondu, W. Lyu, and A. Tomlinson. Vehicle-pedestrian interac-          [206] A. Turnwald, W. Olszowy, D. Wollherr, and M. Buss. Interactive
+        tion: A distributed simulation study. In Proc. of Driving Simulation              navigation of humans from a game theoretic perspective. In Proc.
+        Conference, 2020.                                                                 of IEEE/RSJ IROS, pages 703­708, 2014.
+
+[183] SAE International. Taxonomy and definitions for terms related to            [207] University of Iowa. Driving simulator, 2018. https://www.nads-sc.
+        driving automation systems for on-road motor vehicles, 2018.                      uiowa.edu/.
+
+[184] A. Schadschneider, W. Klingsch, H. Klu¨pfel, T. Kretz, C. Rogsch, and       [208] S. Vascon, E. Z. Mequanint, M. Cristani, H. Hung, M. Pelillo, and
+        A. Seyfried. Evacuation Dynamics: Empirical Results, Modeling and                 V. Murino. A game-theoretic probabilistic approach for detecting
+        Applications, pages 3142­3176. Springer New York, 2009.                           conversational groups. In Proc. of the Asian Conference on Computer
+                                                                                          Vision, pages 658­675, 2014.
+[185] A. Schieben, M. Wilbrink, C. Kettwich, R. Madigan, T. Louw, and
+        N. Merat. Designing the interaction of automated vehicles with other      [209] P. Vasishta, D. Vaufreydaz, and A. Spalanzani. Natural Vision Based
+        traffic participants: A design framework based on human needs and                 Method for Predicting Pedestrian Behaviour in Urban Environments.
+        expectations. Cognition, Technology and Work, 2018.                               In Proc. of IEEE ITSC, 2017.
+
+[186] H. Schmidt, J. Terwilliger, D. AlAdawy, and L. Fridman. Hacking             [210] D. Vasquez. Novel planning-based algorithms for human motion
+        nonverbal communication between pedestrians and vehicles in virtual               prediction. In Proc. of IEEE ICRA, pages 3317­3322, 2016.
+        reality. In Proc. of Driving Assessment Conference, 2019.
+                                                                                  [211] H. Vermuyten, J. Belin, L. D. Boeck, G. Reniers, and T. Wauters. A
+[187] N. Schneider and D. M. Gavrila. Pedestrian path prediction with                     review of optimisation models for pedestrian evacuation and design
+        recursive Bayesian filters: A comparative study. In Proc. of German               problems. Safety Science, 87:167 ­ 178, 2016.
+        Conference on Pattern Recognition, pages 174­183, 2013.
+                                                                                  [212] G. Vizzari and S. Bandini. Studying pedestrian and crowd dynamics
+[188] B. Schroeder, N. Rouphail, K. Salamati, E. Hunter, B. Phillips,                     through integrated analysis and synthesis. IEEE Intelligent Systems,
+        L. Elefteriadou, T. Chase, Y. Zheng, V. P. Sisiopiku, S. Mamidi-                  28(5):56­60, 2013.
+        palli, et al. Empirically-based performance assessment & simulation
+        of pedestrian behavior at unsignalized crossings. Technical report,       [213] B. Vo¨lz, H. Mielenz, G. Agamennoni, and R. Siegwart. Feature
+        Southeastern Transportation Research, Innovation, Development and                 relevance estimation for learning pedestrian behavior at crosswalks.
+        Education, 2014.                                                                  In Proc. of IEEE ITSC, pages 854 ­ 860, 2015.
+
+[189] A. T. Schulz and R. Stiefelhagen. A controlled interactive multiple         [214] B. Vo¨lz, H. Mielenz, I. Gilitschenski, R. Siegwart, and J. Nieto.
+        model filter for combined pedestrian intention recognition and path               Inferring pedestrian motions at urban crosswalks. IEEE Transactions
+        prediction. In Proc. of IEEE ITSC, pages 173­178, 2015.                           on Intelligent Transportation Systems, 20(2):544­555, 2018.
+
+                                                                                  [215] E. J. Walker, S. N. Lanthier, E. F. Risko, and A. Kingstone. The effects
+                                                                                          of personal music devices on pedestrian behaviour. Safety Science,
+                                                                                          50(1):123 ­ 128, 2012.
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS                             20
+
+[216] P. Wang, X. Huang, X. Cheng, D. Zhou, Q. Geng, and R. Yang. The
+        apolloscape open dataset for autonomous driving and its application.
+        IEEE Transactions on Pattern Analysis and Machine Intelligence, 2019.
+
+[217] O. M. Watson and T. D. Graves. Quantitative research in proxemic
+        behavior. American Anthropologist, 68(4):971­985, 1966.
+
+[218] A. Werner. New colours for autonomous driving: An evaluation
+        of chromaticities for the external lighting equipment of autonomous
+        vehicles. Colour Turn, (1), 2019.
+
+[219] D. Wilson, D. Wilson, and G. Grayson. Age-related Differences in
+        the Road Crossing Behaviour of Adult Pedestrians. Road User Char-
+        acteristics Division, Safety Department, Transport and Road Research
+        Laboratory, 1980.
+
+[220] C. Wojek, S. Walk, and B. Schiele. Multi-cue onboard pedestrian
+        detection. In Proc. of IEEE CVPR, pages 794­801, 2009.
+
+[221] J. Wu, J. Ruenz, and M. Althoff. Probabilistic map-based pedestrian
+        motion prediction taking traffic participants into consideration. In Proc.
+        of IEEE IV, pages 1285­1292, 2018.
+
+[222] H. Xu, Y. Gao, F. Yu, and T. Darrell. End-to-end learning of driving
+        models from large-scale video datasets. In Proc. of IEEE CVPR, pages
+        3530­3538, 2017.
+
+[223] D. Yang, L. Li, K. Redmill, and U¨ . O¨ zgu¨ner. Top-view trajectories:
+        A pedestrian dataset of vehicle-crowd interaction from controlled
+        experiments and crowded campus. In Proc. of IEEE IV, 2019.
+
+[224] S. Yi, H. Li, and X. Wang. Pedestrian behavior understanding and
+        prediction with deep neural networks. In Proc. of ECCV, pages 263­
+        279, 2016.
+
+[225] Y. Yuan, B. Goi-Ros, H. H. Bui, W. Daamen, H. L. Vu, and S. P.
+        Hoogendoorn. Macroscopic pedestrian flow simulation using smoothed
+        particle hydrodynamics (SPH). Transportation Research Part C:
+        Emerging Technologies, 111:334 ­ 351, 2020.
+
+[226] M. Zeedyk and L. Kelly. Behavioural observations of adult-child pairs
+        at pedestrian crossings. Accident Analysis & Prevention, 35(5):771 ­
+        776, 2003.
+
+[227] W. Zhan, L. Sun, D. Wang, H. Shi, A. Clausse, M. Naumann,
+        J. Ku¨mmerle, H. Ko¨nigshof, C. Stiller, A. de La Fortelle, and
+        M. Tomizuka. INTERACTION Dataset: An INTERnational, Adversar-
+        ial and Cooperative moTION Dataset in Interactive Driving Scenarios
+        with Semantic Maps. arXiv:1910.03088 [cs, eess], 2019.
+
+[228] S. Zhang, R. Benenson, and B. Schiele. Citypersons: A diverse dataset
+        for pedestrian detection. In Proc. of IEEE CVPR, pages 4457­4465,
+        2017.
+
+[229] L. Zheng, L. Shen, L. Tian, S. Wang, J. Wang, and Q. Tian. Scalable
+        person re-identification: A benchmark. In Proc. of IEEE ICCV, 2015.
+
+[230] Z. Zheng, L. Zheng, and Y. Yang. Unlabeled samples generated by
+        GAN improve the person re-identification baseline in vitro. In Proc.
+        of IEEE ICCV, pages 3774­3782, 2017.
+
+[231] B. Zhou, X. Wang, and X. Tang. Understanding collective crowd
+        behaviors: Learning a mixture model of dynamic pedestrian-agents.
+        In Proc. of IEEE CVPR, pages 2871­2878, 2012.
+
+[232] B. D. Ziebart, A. Maas, J. A. Bagnell, and A. K. Dey. Maximum
+        entropy inverse reinforcement learning. In Proc. of AAAI, pages 1433­
+        1438, 2008.
+
+[233] B. D. Ziebart, N. Ratliff, G. Gallagher, C. Mertz, K. Peterson, J. A.
+        Bagnell, M. Hebert, A. K. Dey, and S. Srinivasa. Planning-based
+        prediction for pedestrians. In Proc. of IEEE/RSJ IROS, pages 3931­
+        3936, 2009.
+

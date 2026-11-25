@@ -1,0 +1,493 @@
+            When Should the Chicken Cross the Road?
+
+      Game Theory for Autonomous Vehicle - Human Interactions
+
+C. W. Fox1,2,3, F. Camara3,2, G. Markkula3, R. A. Romano3, R. Madigan3 and N. Merat3
+
+                                                 1Ibex Automation Ltd, U.K.
+                              2School of Computer Science, University of Lincoln, U.K.
+                              3Institute for Transport Studies, University of Leeds, U.K.
+
+Keywords: Autonomous Vehicles, Human Factors, Game Theory.
+
+Abstract:  Autonomous vehicle localization, mapping and planning in un-reactive environments are well-understood, but
+           the human factors of complex interactions with other road users are not yet developed. This study presents an
+           initial model for negotiation between an autonomous vehicle and another vehicle at an unsigned intersections
+           or (equivalently) with a pedestrian at an unsigned road-crossing (jaywalking), using discrete sequential game
+           theory. The model is intended as a basic framework for more realistic and data-driven future extensions. The
+           model shows that when only vehicle position is used to signal intent, the optimal behaviors for both agents
+           must include a non-zero probability of allowing a collision to occur. This suggests extensions to reduce this
+           probability in future, such as other forms of signaling and control. Unlike most Game Theory applications in
+           Economics, active vehicle control requires real-time selection from multiple equilibria with no history, and we
+           present and argue for a novel solution concept, meta-strategy convergence, suited to this task.
+
+1 INTRODUCTION                                             sensors, and maps. They have to deal with other
+                                                           agents, currently human drivers and pedestrians and
+Automated vehicle (AV) localization, mapping, and          eventually other autonomous vehicles, all of which
+planning have recently become practically feasible         may be at least as "intelligent" and "rational" as they
+due to price falls in computer processing power. The       are, and in competition with them for space, time and
+problem of simultaneous localization and mapping           priority on the road. Recent studies have shown (Ma-
+(SLAM) is well understood (Thrun et al., 2005),            digan et al., tion) that in trials of autonomous mi-
+and despite its exact solution being NP-hard (Soto-        nibuses, pedestrians knowingly obstruct autonomous
+Alvarez and Honkamaa, 2014), good approximati-             vehicles around once every three hours ­ enough to
+ons exist such as particle filtering, which make use       occur once every day on a long commute. Once hu-
+of large compute power to draw samples near soluti-        man road users know that AV safety systems are pro-
+ons. Route planning in non-interactive environments        grammed to stop if any obstacle is in their path, they
+also has well known tractable solutions such as the        can quickly take advantage of this to push in front of
+A-star algorithm. Given a route, localizing and cont-      the AV and take priority. If this becomes common
+rol to follow that route then becomes a similar task to    knowledge across a whole city, AVs will make little
+that performed by the 1959 General Motors Firebird-        or no progress because they will be forced to yield at
+III self-driving car (Bidwell et al., 1959), which used    every single interaction.
+electromagnetic sensing to follow a wire built into the
+road. Such path following, using wires or SLAM, can            Understanding and predicting other agents' beha-
+then be augmented with simple safety logic to stop         vior, especially when that includes understanding and
+the vehicle if any obstacle is in its way, as detected by  predicting their understandings and predictions of on-
+any range sensor. Free and open source systems for         eself, and of one's understanding and predictions of
+this level of `self-driving' are now widely available      them, ad infinitum, is a massively more complex pro-
+(Kato et al., 2015).                                       blem than inferring locations and maps. It may even
+                                                           be formally uncomputable as it requires predictions
+    In contrast, problems that these vehicles will face    of and actions based on one's future behavior (via the
+around interacting with other road users are much har-     other party's models of it), which are well known in
+der both to formulate and solve. Autonomous vehi-          Computer Science to lead to paradox and uncomputa-
+cles do not just have to deal with inanimate objects,      bility as in Go¨del's theorem and the Halting problem
+
+                                                                                                                                         431
+
+Fox, C., Camara, F., Markkula, G., Romano, R., Madigan, R. and Merat, N.
+When Should the Chicken Cross the Road?.
+DOI: 10.5220/0006765404310439
+In Proceedings of the 4th International Conference on Vehicle Technology and Intelligent Transport Systems (VEHITS 2018), pages 431-439
+ISBN: 978-989-758-293-6
+Copyright c 2019 by SCITEPRESS ­ Science and Technology Publications, Lda. All rights reserved
+VEHITS 2018 - 4th International Conference on Vehicle Technology and Intelligent Transport Systems
+
+(Velupillai, 2009).                                        ded by changing the rules of the game to produce
+                                                           a single unambiguous equilibrium which all players
+    Game Theory provides some framework for ma-            can usefully use. For cases where the equilibrium
+naging such self-referential decisions, but appears to     selection problem cannot be avoided in these ways,
+be incomplete as a prescriptive theory when multiple       many different solution concepts (aka. `equilibrium
+equilibria are present. Solutions may be formally          refinements') have been proposed and debated (Bin-
+computationally intractable (NP-hard) in some cases        more, 2007) for choosing between them. Two of these
+(Papadimitriou and Roughgarden, 2005). And when            are widely acknowledged to be `rational' when app-
+multiple equilibria are present, it is not clear whether   lied in order: 1. Dominance - Clearly, if an equili-
+game theory or any other rational line of argument         brium is worse for all players than at least one other,
+will ever be able to even formulate the problems, let      then we discard it without question; 2. Evolutionary
+alone solve them. A simple example of game theory          stability / symmetry (ESS) - Assume everyone in the
+is the classic game `Chicken', in which two cars           world was to use the same equilibrium as me. Discard
+each drive straight towards each other at speed or         equilibria where this would not work. These concepts
+swerve away, and the nominal loser (the `chicken')         help to reduce the number of potential multiple equi-
+is the one to swerve, but both players are much            libria but do not guarantee reduction to a unique one.
+bigger losers if they both do not swerve, and collide.     To discard further equilibria, more controversial con-
+The classic formal Chicken model makes the strong          cepts have been debated (Binmore, 2007) including:
+and unrealistic assumption that the straight/swerve        1. Trembling hand stability - Assume other player has
+decision is made as a pair of simultaneous action          a small epsilon probability of making a mistake; pre-
+selections, (aY , aX ) by both players (Y and X) so that   fer equilibria that we converge back to if that happens;
+the payoff values given the actions can be represented     2. Basin size (aka. `risk dominance'). Assume both
+as a 2×2 matrix of pairs (vYaY ,aX , vXaY ,aX ) :          players use fictitious play starting from maximum en-
+                                                           tropy strategies. Consider which equilibrium attracts
+         Y\X       aX =swerve  aX =straight                from the most start points, and this thus most likely
+                      (0,0)       (-1, +1)                 to occur. 3. Social maximum (aka. `payoff domi-
+      aY =swerve                                           nance') Choose the equilibrium with the largest sum
+     aY =straight    (+1, -1)  (-100,-100)                 of payoffs to all players (even if I am worse off than
+                                                           in others). 4. Other arbitrary conventions. Such as
+    The central concept of game theory is equilibrium      using the action with the first letter in the alphabet.
+(Nash et al., 1950) which for a 2×2 matrix game as         These work only if all players agree to use them in
+above describes any pair of strategies for the two play-   advance or can be argued to possess social knowledge
+ers such that if either player knew the other's they       to make them confident that others will choose the
+would not change their own. Conceptually, if equili-       same ones as them. This appears to be the point where
+bria exist then one can usually be found via `fictitious   the mathematics of Game Theory ends, and philoso-
+play', i.e. each player simulates her and her oppo-        phical debate about the meaning of `rationality' takes
+nent's behaviour in a virtual world where they know        its place (Binmore, 2007). However, as autonomous
+each other's strategies, until they converge. Strategies   vehicle engineers building real-time control systems,
+are probability distributions over actions. If a game      we must make some action selection in these situati-
+has only one equilibrium then it is optimal for both       ons, somehow.
+players to play its strategies. When there are multi-
+ple equilibria, the question of what to do is less clear.      Chicken is intended as a simple educational exam-
+Historically, Game Theory has focused on description       ple game and not as a model of real vehicles. This
+of observed behaviors (how do people act? Why did          study modifies it into a general and more realistic
+the chicken cross the road?) and mechanism design          vehicle interaction problem, where an AV competes
+(how can government make them act?) rather than            for priority with another vehicle or a pedestrian step-
+prescription (when should we act? When should the          ping out in front of it, and allowing them to negotiate
+chicken cross the road?) of real-time action selection     with one another by observing each others' behaviour
+by agents. This is due to its roots in economics and       over time. Initially we consider the simplest possible
+mathematics rather than robotics. This distinction be-     model of this class of problems, of an AV and another
+comes crucial when multiple equilibria are present in      similar vehicle approaching an unmarked intersection
+a game. The descriptive school would say that any          at speed as in fig. 1(left). This would also apply to the
+of the equilibria are valid descriptions of what might     case of two pedestrians meeting each other and nego-
+be observed in human behavior data (Ciliberto and          tiating for space. We then extend it to cases where the
+Tamer, 2009). The `mechanism design' school typi-          two players have asymmetric penalties in the event of
+cally argues (Palfrey, 1990) that the problem of equi-
+librium selection is `unpleasant' and should be avoi-
+
+432
+                                                          When Should the Chicken Cross the Road?
+
+                 Figure 1: Scenario and model.            or different types of vehicle.) Assume discrete alter-
+                                                          nating turns one per second, in which one vehicle can
+collision ­ modeling an AV encountering a potential       choose either a 1m/s or 2m/s speed, i.e. move either
+jaywalker stepping into the road, or an AV encounte-      one box forward or two boxes forward. (This ensures
+ring a physically larger or smaller vehicle such as an    a finite game, because the vehicles are guaranteed
+armored SUV or cyclist at an intersection. The model      to move closer to the intersection at each step.
+proposed here is intended to be the simplest possible     Formally, y and x are decreasing variants.) 2m/s is a
+which captures the dynamics of interest common to         slow real world speed but is chosen to coincide with
+these cases, but which can also serve as a foundation     simple integer movements of 1 or 2 boxes per turn.
+for many more complex ones.                               (The reader may wish to multiply all distances and
+                                                          speeds by 10 if they wish to think in more real-world
+    Game theory is used extensively in macroscopic        units.) Write y for Y's distance in meters to the
+traffic modeling via Wardrop equilibrium in flow net-     intersection, x for X's distance in meters. Assume a
+works (Bolland et al., 1979) with focus on route se-      crash occurs if the vehicles are in the same square
+lection in large, economy-like, markets of many road      or if one vehicle is in the intersection square and the
+users rather than microscopic pairwise interactions.      other moves through it in a single step. (This may
+Where game theory has been applied to pairwise traf-      be implemented by treating (y, x)  {(0, 0), (1, 1)} as
+fic decisions, it has mostly been at the level of simple  crash states, and all other states with one agent at 0
+single-shot games as reviewed in (Elvik, 2014). In a      or 1 as non-crash endgame states, avoiding the need
+few cases such as lane-changing (Meng et al., 2016;       to model negative positions beyond the intersection.)
+Kim and Langari, 2014) and merging (Kita, 1999) it        We assign (negative) utility Ucrash to each player for
+has been extended to sequential games as used here,       a crash; otherwise -UtimeT where T is the number
+but not for AV-pedestrian interactions as here. The       of seconds it takes to reach the intersection from the
+meta-strategy convergence concept used here is no-        start of the game, and Utime is the (positive) value of
+vel to our knowledge, as is the use of the sequential     saving one second of travel time. Assume that both
+model as a foundation for AV-human intersection and       players have identical utility functions, and know this
+jaywalking control.                                       to be the case. This game can be played, for example,
+                                                          as a board game between two human players. The
+2 METHODS                                                 turn-taking model can be solved by a standard (Rich
+                                                          and Knight, 1991) backward induction max-max
+Turn-taking model. In the simplest possible model we      tree search as in algorithm 1, where the boolean b
+set up two symmetric agents (vehicles or pedestrians)     represents which player's turn is current, t is time
+approaching an intersection as a chess-like, discrete     elapsed, y and x are the two players' positions,
+space, discrete speed, and discrete time, turn-taking     and the results are expected value pairs for the two
+game, as in fig. 1(right). This does not yet use any      players, vy,x,t,b =(vYy,x,t,b, vXy,x,t,b).
+Game Theory because the players' decisions are not
+made at the same time. We will use it to introduce            Sequential chicken model. If we replace turn-
+notation and as a base to grow more detailed models.      taking by simultaneous action selection by both
+We assume a (1 meter) grid world, with two straight       players at each discrete 1s turn, the model transforms
+roads at right angles meeting at the intersection.        into a sequence of Game Theoretic matrix games
+Assume one vehicle on each road, labeled1 Y and X.        ("sub-games"). This is equivalent to a board game
+(We will later consider one player to be a pedestrian     where both players write down their speed choice (1
+                                                          or 2) in secret then reveal them and make the moves
+    1We use the convention of writing Y before X, and     together rather than in turns. The payoffs of any
+the orientation of the grid world of fig. 1, to match     sub-game at state (y > 1, x > 1,t) become recursive
+(row,column) matrix notation.                             functions of the next states, (y - aY , x - aX ,t + 1),
+                                                          where aY , aX  {1, 2} are the speed selection actions
+                                                          for speeds of 1m/s and 2m/s. As in the turn-taking
+                                                          model, these inductive values are based on the end-
+                                                          game states when one or both vehicles have reached
+                                                          the intersection (considered to occur at square 0 or
+                                                          1). Consider the value vy,x,t = (vYy,x,t , vXy,x,t ) of the
+                                                          sub-game when the game is in state (y, x,t). The in-
+                                                          duction relation for this sub-game's payoff matrix is,
+
+                                                          433
+VEHITS 2018 - 4th International Conference on Vehicle Technology and Intelligent Transport Systems
+
+vy,x,t = v(  v(y - 1, x - 1,t + 1)  v(y - 1, x - 2,t + 1)  )  not fully disambiguated by dominance and ESS so-
+             v(y - 2, x - 1,t + 1)  v(y - 2, x - 2,t + 1)     lutions concepts. We propose a novel (to our know-
+                                                              ledge) solution concept for use in solving this and ot-
+and is computable via standard matrix Game Theory.            her models, which we call meta-strategy convergence.
+Optimal mixed strategies, where they exist, and re-           This is based on everything we currently know about
+sulting state probabilities given an initial start state,     the `rational' process of equilibrium pruning and se-
+for this model are shown in fig. 2.                           lection, including the absence of information in some
+                                                              cases, and on a temporal ordering of rational reaso-
+Algorithm 1                                                   ning. After removing dominated and non-ESS equili-
+                                                              bria, we know of no good remaining solution concepts
+world_value((y,x,t,b)) =                                      under the assumption that the other player is also ra-
+                                                              tional. (Trembling hand, basins etc. make a diffe-
+if y==x==0 or y==x==1                                         rent assumption about a fallible opponent, but for AVs
+                                                              which will eventually interact with other autonomous
+or (y==1 and x==0) or (y==0 and x==1)                         vehicles, we want all players to be completely mecha-
+                                                              nized and rational.) In the absence of any other way
+or (y==0 and x==-1) or (y==-1 and x==0):                      to select from the remaining equilibria's strategies, we
+                                                              form a new meta-strategy which chooses one of them
+     (-100,-100)                    #crash                    from a flat (maximum entropy) prior. By symmetry,
+                                                              there is no way to prefer any over any other, hence
+if y<=0 or x<=0:                                              their selection probabilities must be equal, given this
+                                                              state of knowledge. Curiously, this is equivalent to a
+     (-t-y/2 , -t-x/2)              #someone arrives          new strategy which averages the action probabilities
+                                                              from each remaining strategy, yet is not itself in that
+if b:                               #recursion                set, because it is an average between them. Hence,
+                                                              it is not a member of any equilibrium and cannot be
+     mymax(world_value((y-2,x,t+1,False)),                    an optimal strategy itself. However, we have deri-
+                                                              ved it step-by-step over time in a completely rational
+             world_value((y-1,x,t+1,False)))                  way. It is our best solution so far at this new point in
+                                                              time. As it is our best rational solution at this time,
+if not b:                           #recursion                the other player will also compute that we have re-
+                                                              ached it. We then consider, as in standard fictitious
+     yourmax(world_value((y, x-2, t+1, True)),                play, what the other player will do next. They will ap-
+                                                              ply fictitious play to modify their strategy in response.
+             world_value((y, x-1, t+1, True)))                Then we will modify ours, and they will modify theirs
+                                                              again. This will iterate until we converge, unambigu-
+    Asymmetric utility model. A final model asks what         ously, onto a specific and uniquely defined one of the
+happens if the two players have different collision uti-      original equilibria. This contains the rational strate-
+lities. This occurs for example if one player has a he-       gies for both players, and can be reached determinis-
+avier/safer car than the other, such as an SUV (Sports        tically by both of them without the need for any pre-
+Utility Vehicle). Or if one player is a weaker road user      established conventions or communications. Like all
+such as a cyclist, or a pedestrian negotiating to cross       solution concepts, this is something of a philosophi-
+the road in a conflict zone in front of our AV. Will          cal rather than purely mathematical argument. It is
+even a small change in these utilities break the sym-         the best argument currently known to us so we consi-
+metry of the sequential chicken model and tip the ba-         der it to be rational for the AV control tasks.
+lance of who yields? If so, this would give a rational
+justification for the purchase of heavy vehicles such             Temporal gauge invariance. The state values of
+as SUVs: the intent of such purchases is not to actu-         the game theoretic models above are presented as
+ally get into collisions and benefit from reduced da-         functions of (y, x,t) but our current implementation
+mage, but rather to maintain the possibility, however         makes use of an approximation to reduce the num-
+remote, of such a disaster, and exploit the backward          ber of sub-games to be solved and thus the compu-
+induction from it to obtain concessions in more be-           tation time. Because both player's utilities are li-
+nign possible worlds, namely of the other player yiel-        near functions of time, we may (up to a small er-
+ding. Purchase of an SUV would then be rational,              ror in the ratio of crash to delay utilities) choose dif-
+reducing the cost of time delays to the owner. (There         ferent gauges to measure time, such as considering
+is of course then a higher level game when the other
+road users can buy similar vehicles, beyond the scope
+of our present model.) For simplicity we retain the as-
+sumption that both players have the same time delay
+utilities, Utime as in the previous model, but we now
+consider scenarios where one player is stronger than
+the other, as (UcYrash,UcXrash) = (Ucrash, rUcrash), for ra-
+tios r  [1, 100]. When utilities become asymmetric it
+is possible that more equilibria will be present, so we
+switch to numerical computation of them using the
+Lemke-Howson algorithm.
+
+    Meta-strategy convergence. The asymmetric chic-
+ken model may have multiple equilibria which are
+
+434
+                                                             When Should the Chicken Cross the Road?
+
+P(aY  =  1|y, x,t)  =                   vYy-1,x-2,t+1        - vYy-2,x-2,t+1
+                       vYy-1,x-2,t+1 + vYy-2,x-1,t+1         - vYy-1,x-1,t+1 - vYy-2,x-2,t+1
+
+        P(yinit , xinit ,tinit ) = 1, P(yinit , x = xinit ,tinit ) = 0, P(y = yinit , xinit ,tinit ) = 0
+
+P(y, x,t) =   P(aY = y, aX = x|y - y, x - x,t - 1)P(y - y, x - x,t - 1)
+                  y1,2 x1,2
+
+Figure 2: Strategy selection (1) and backward induction state probability (2-3) equations.
+
+the time of every turn game to be t = 0. When the            Figure 3: State values for turn-taking game.
+first player, say Y , reaches the intersection, we as-
+sign values (vY0,x, v0X,x) = (0, -Utimex/2) as it will take
+X a further x/2 seconds to reach the intersection at
+maximum speed 2m/s now the road is clear. (Also
+(vY1,x, v1X,x) = (0, -Utime(x - 1)/2) to handle the other
+required end states in the same way.) This simplifies
+all state values and functions of them to be functions
+only of (y, x). Removing dependence on t also makes
+it simpler to visualize results as 2D (y, x) matrices.
+
+3 RESULTS
+
+Assume Ucrash = -20 and Utime = 1 throughout. (This           Figure 4: Simulation of turn taking game, differing starts.
+values a crash as being equally bad as a 100 second
+delay reaching the intersection. In the real world the          Figure 5: Simulation of turn taking game, equal starts.
+crash penalty would be much larger, but smaller ones         vehicles start at identical distances y = x = 10. In this
+produce more easily visualizable results for our pre-        case, the outcome is different from the turn-taking
+sent purpose.)                                               model, because the game is fully symmetric but the
+                                                             symmetry is no longer broken by turn-taking. This
+    Turn-taking model. The value function for Y in           means that both players must employ a policy consis-
+the turn-taking model is shown in fig. 3. The game           ting of mixed strategies until the symmetry is broken
+is symmetric so X has the same function when the
+player's names are swapped. The turn taking mo-
+del is fully deterministic, because full information is
+available to each player when it is their turn. Fig. 4
+and 5 show simulated runs beginning at asymmetric
+(y = x) and symmetric (y = x) starting states.When
+the vehicles start with very different differences, e.g.
+(y = 12, x = 8) they both proceed at full speed (2m/s)
+and avoid each other. When started at identical dis-
+tances, such as (y = 10, x = 10), the initial turn-taking
+advantage becomes the tie-breaker, in both parties in-
+terests. Collisions never occur in the turn-taking mo-
+del due to its determinism.
+
+    Sequential chicken model. Fig. 6 shows the value
+matrix for games with vehicles at up to 20m from the
+intersection, and fig. 7 show the optimal strategies.
+
+    Fig. 8 shows the state space probabilities and fig.
+9 shows a stochastic sample, starting with large time
+(2 seconds) gap between the vehicles. All probabili-
+ties in the state space are very close to 0 or 1, so the
+outcome is almost deterministic as in the turn-taking
+model of the same setting.
+
+    Fig. 10 shows state space probabilities when the
+
+                                                                                                           435
+VEHITS 2018 - 4th International Conference on Vehicle Technology and Intelligent Transport Systems
+
+     Figure 6: Sequential chicken state values.               Figure 9: Sequential chicken simulation, from asymmetric
+                                                              start (12,10).
+
+     Figure 7: Sequential chicken optimal strategy.           Figure 10: Sequential chicken state probabilities, from sym-
+                                                              metric start (10,10).
+
+Figure 8: Sequential chicken state probabilities, from asym-  Figure 11: Sequential chicken typical simulation, from
+metric start (12,10).                                         symmetric start (10,10).
+
+by one of them. The optimal policy is to yield with           to yield at the same time, prolonging the conflict and
+an increasing probability as distance to collision de-        costing them both a delay. Very occasionally a col-
+creases, as seen in fig. 7. Fig. 11 is a typical sample       lision will occur as a result of this process, when the
+simulation drawn from the above state probabilities.          players fail to negotiate priority before both reaching
+The most common outcome is for one vehicle to yield           the intersection together. This is rare, but must have a
+at a random time, with yield probability increasing as        non-zero probability, computed and denoted as Pcrash.
+the vehicles draw closer.
+                                                                  The collision probability with Ucrash = -20 is
+    Occasionally, as in fig. 12, both players choose          1.79%, and with Ucrash = -100 it lowers to 0.7%. It
+                                                              is interesting to test how choice of this scaling (versus
+
+436
+                                                              When Should the Chicken Cross the Road?
+
+Figure 12: Sequential chicken atypical simulation, from       suggests that for these realistic penalties, the precise
+symmetric start (10,10).                                      choice of shared collision penalty values is unimpor-
+                                                              tant as long as it is over 1000 times worse than a 1
+                                                              second time delay penalty.
+
+                                                                  Asymmetric utility model. As hypothesized, asym-
+                                                              metric collision penalties (such as our AV encounte-
+                                                              ring a strong SUV or a weak cyclist or pedestrian)
+                                                              have a large effect on who must yield, and with a
+                                                              very small change in the probability of actual colli-
+                                                              sion. This small change is the key to breaking sym-
+                                                              metry and ensuring strong probability of the weaker
+                                                              player yielding fig. 12.
+
+                             Figure 13.                       4 CONCLUSION
+
+                             Figure 14.                       In all the models, when one agent has any small ad-
+the fixed Utime=1) affects the residual collision proba-      vantage it is usually ­ but probabilistically ­ optimal
+bility, because if it has a large effect then any realis-     for both agents for the strong one to take the priority
+tic model will require scaling calibration against some       and the weak one to yield.
+empirical data. Assuming that both players continue
+to share the same utility function, and know this to              It is essential that there is some small but strictly
+be the case, fig. 12 shows the effect of varying the          non-zero probability of collision being allowed to
+collision utility scale while keeping the time utilities      occur as a consequence of both sides' optimal strate-
+fixed.                                                        gies. It is impossible for an AV to make any progress
+                                                              at all if this is not the case, because given this kno-
+    This suggests that choices in range [-1000,0] do          wledge, every single other road user could dominate
+have large effects on the collision probability, but pen-     them in any conflict - even pedestrians jumping out in
+alties worse than -1000 are much the same as each ot-         front of them for fun as seen in real-world trials (Ma-
+her in this effect. In real life, the cost of crashing a car  digan et al., tion). Under these models, it is essential
+(even very slightly) is almost always vastly larger than      that AVs are programmed with a non-zero probability
+that of losing a few seconds journey time. This graph         of deliberately causing a collision. This may be le-
+                                                              gally difficult, as such programming may be argued
+                                                              to constitute not only manslaughter but also murder,
+                                                              being rationally pre-meditated by the software engi-
+                                                              neer.
+
+                                                                  These results are interesting as they suggests that
+                                                              purchasing SUVs, or armoring our autonomous vehi-
+                                                              cle like an SUV, is a very rational strategy, not in order
+                                                              to better survive the rare collisions that do occur, but
+                                                              to ensure a high probability of other vehicles getting
+                                                              out of our way to save our time and money on delays.
+                                                              By adding armor to our own vehicle we can make the
+                                                              optimal strategy for the other player yielding tend to-
+                                                              wards certainty at every encounter. This also models
+                                                              what will happen when our AV encounters a pede-
+                                                              strian. The larger cost of collision to the pedestrian
+                                                              than to our AV gives us a strong position, from which
+                                                              we can act aggressively and be confident that the pe-
+                                                              destrian will yield. The answer to `When should the
+                                                              chicken cross then road?' is `quite rarely if there is a
+                                                              car coming, but with non-zero probability'.
+
+                                                                  We found that the way in which the models quan-
+                                                              tize time is important. The turn-taking model arti-
+                                                              ficially removed most of the subtly of game theory
+
+                                                              437
+VEHITS 2018 - 4th International Conference on Vehicle Technology and Intelligent Transport Systems
+
+by breaking its symmetry via the turn taking mecha-         gative utilities in assertive pedestrians in place of ac-
+nism itself. This suggests that such a quantization is      tually hitting them.
+not a good model for the real world, it hides the main
+problem of the scenario from the start. A related mo-       ACKNOWLEDGEMENTS
+deling issue around time relates to Zeno's Paradox. In
+the models presented here, time ticks are discrete and      This project has received funding from the European
+of equal length. It might be argued that two Zeno-like      Union's Horizon 2020 Research and Innovation pro-
+players could choose to define each of their ticks to       gramme under grant agreement InterACT No 723395.
+have half the duration of the previous one, and thus
+create an infinite number of ticks which would be cer-      REFERENCES
+tain to eventually lead to an asymmetric yield and
+avoidance of collision. Formal mathematical analy-          Bidwell, J., Cataldo, R., and Van House, R. (1959). Chassis
+sis of this claim could form future work, though in               and control details of Firebird III. Technical report,
+practice, any human or machine compute system has                 SAE Technical Paper.
+some finite limit on its computation speed.
+                                                            Binmore, K. (2007). Playing for real: a text on game the-
+    Extended models should handle speed more re-                  ory. Oxford university press.
+alistically. Rather than just two discrete speeds, a
+continuum of speeds should be available, including          Bolland, J., Hall, M., Van Vliet, D., and Willumsen, L.
+stopping at a complete halt. Continuous speeds may                (1979). Saturn: Simulation and assignment of traffic
+require sampling approximations to compute over,                  in urban road networks. In Proceedings of the Inter-
+while complete halts allow for potentially infinite               national Symposium on Traffic Control Systems, Ber-
+time games which require further consideration to                 keley, Calif. D, volume 2, pages 99­114.
+model. Human drivers when faced with, for example,
+a busy motorway merge, may gradually slow down              Ciliberto, F. and Tamer, E. (2009). Market structure and
+towards a halt at the end of the slip-road, while dri-            multiple equilibria in airline markets. Econometrica,
+vers in their path may do the same. Perhaps under a               77(6):1791­1828.
+continuous speed model this behavior can be shown
+to converge safely as everyone slows down towards a         Elvik, R. (2014). A review of game-theoretic models of
+halt and reduces both the probability and penalty of              road user behaviour. Accident Analysis & Prevention,
+collisions. Nevertheless, the underlying logic must               62:388­396.
+still hold - that there must be a credible threat of
+a non-zero probability of causing some collision, in        Kato, S., Takeuchi, E., Ishiguro, Y., Ninomiya, Y., Takeda,
+order that the other party cannot take advantage of               K., and Hamada, T. (2015). An open approach to au-
+the AV every time. Future models should add furt-                 tonomous vehicles. IEEE Micro, 35(6):60­68.
+her realistic details to the framework. Real drivers
+do not know each other's utility functions and must         Kim, C. and Langari, R. (2014). Game theory based auto-
+infer them in an information game during the inte-                nomous vehicles operation. International Journal of
+raction. This could include giving and reading signals            Vehicle Design, 65(4):360­383.
+about utility such as the model, age, colour and clean-
+liness of their cars, their lateral positions on the road,  Kita, H. (1999). A merging­giveway interaction model of
+their facial expressions and hand gestures as well as             cars in a merging section: a game theoretic analysis.
+more formal car signaling via light flashing and horn             Transportation Research Part A: Policy and Practice,
+usage. Real drivers may not have Markovian time de-               33(3):305­312.
+lay utilities and more detailed models should allow for
+time dimensioned value functions v(y, x,t) rather than      Madigan, R., Nordhoff, S., Fox, C., Ezzati Amini, R.,
+than simpler v(y, x) used here. Traffic regulations and           Louw, T., Wilbrink, M., Schieben, A., and Merat, N.
+conventions such as legally binding and non-binding               (in preparation). Understanding interactions between
+signs and lights, and the cost of public humiliation or           automated vehicles and other road users. Manuscript
+legal action for being seen or recorded breaking them             in preparation.
+should be added to modify utilities. Such models sug-
+gest new signaling conventions for autonomous vehi-         Meng, F., su, J., Liu, C., and Chen, W.-H. (2016). Dyn-
+cles, such as use of V2V radio communications and                 amic decision making in lane change: Game theory
+virtual currencies to aid negotiations; or the use of             with receding horizon. In Conference: 11th UKACC
+small AV-mounted water-pistols to induce small ne-                International Conference on Control.
+
+                                                            Nash, J. F. et al. (1950). Equilibrium points in n-person ga-
+                                                                  mes. Proceedings of the national academy of sciences,
+                                                                  36(1):48­49.
+
+                                                            Palfrey, T. R. (1990). Implementation in Bayesian equili-
+                                                                  brium: the multiple equilibrium problem in mecha-
+                                                                  nism design.
+
+                                                            Papadimitriou, C. H. and Roughgarden, T. (2005). Com-
+                                                                  puting equilibria in multi-player games. In Procee-
+                                                                  dings of the sixteenth annual ACM-SIAM symposium
+                                                                  on Discrete algorithms, pages 82­91. Society for In-
+                                                                  dustrial and Applied Mathematics.
+
+438
+                                                           When Should the Chicken Cross the Road?
+
+Rich, E. and Knight, K. (1991). Artificial intelligence.
+      McGraw-Hill, New.
+
+Soto-Alvarez, M. and Honkamaa, P. (2014). Multi-
+      ple hypotheses data association propagation for ro-
+      bust monocular-based SLAM algorithms. In Acou-
+      stics, Speech and Signal Processing (ICASSP), 2014
+      IEEE International Conference on, pages 6543­6547.
+      IEEE.
+
+Thrun, S., Burgard, W., and Fox, D. (2005). Probabilistic
+      robotics. MIT press.
+
+Velupillai, K. V. (2009). Uncomputability and undecida-
+      bility in economic theory. Applied Mathematics and
+      Computation, 215(4):1404­1416.
+
+                                                           439
+

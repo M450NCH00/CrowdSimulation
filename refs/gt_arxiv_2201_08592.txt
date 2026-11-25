@@ -1,0 +1,712 @@
+arXiv:2201.08592v3 [physics.soc-ph] 22 Jul 2022  Pedestrians in static crowds are not grains, but
+                                                 game players
+
+                                                 Thibault Bonnemain 1*, Matteo Butano 2, Théophile Bonnet3,2,¤, Iñaki
+                                                 Echeverría-Huarte 4, Antoine Seguin5, Alexandre Nicolas 6, Cécile
+                                                 Appert-Rolland 3, Denis Ullmo 2
+
+                                                 1 Department of Mathematics, Physics and Electrical Engineering, Northumbria
+                                                 University, Newcastle upon Tyne, United Kingdom
+                                                 2 Université Paris-Saclay, CNRS, LPTMS, 91405, Orsay, France
+                                                 3 Université Paris-Saclay, CNRS, IJCLab, 91405, Orsay, France
+                                                 4 Laboratorio de Medios Granulares, Departamento de Física y Matemática
+                                                 Aplicada, Univ. Navarra, 31080, Pamplona, Spain
+                                                 5 Université Paris-Saclay, CNRS, FAST, 91405, Orsay, France
+                                                 6 Institut Lumière Matière, CNRS & Université Claude Bernard Lyon 1, 69622,
+                                                 Villeurbanne, France
+
+                                                 ¤Current address : Université Paris-Saclay, CEA, Service d'Etudes des Réacteurs
+                                                 et de Mathématiques Appliquées, 91191, Gif-sur-Yvette, France
+                                                 * Corresponding author : thibault.bonnemain@northumbria.ac.uk
+
+                                                     ABSTRACT
+
+                                                    The local navigation of pedestrians amid a crowd is generally believed to involve
+                                                 no anticipation beyond (at best) the avoidance of the most imminent collisions. We
+                                                 show that current models rooted in this belief fail to reproduce some key features
+                                                 experimentally evidenced when a dense static crowd is crossed by an intruder. We
+                                                 identify the missing ingredient as the pedestrians' ability to plan their motion well
+                                                 beyond the next interaction, whence they may accept to move towards denser regions
+                                                 for a short time. To account for this effect, we introduce a minimal model based
+                                                 on mean-field game theory, which proves remarkably successful in replicating the
+                                                 aforementioned observations as well as other daily-life situations involving collective
+
+                                                                                                    1
+behaviour in dense crowds, such as partial metro boarding. This demonstrates the
+ability of game approaches to capture the anticipatory effects at play in operational
+crowd dynamics.
+
+                                                   2
+I. INTRODUCTION
+
+   Although crowd disasters (such as the huge stampedes that grieved the Hajj
+in 1990, 2006 and 2015 [1]) are more eye-catching to the public, the dynamics of
+pedestrian crowds are also of great relevance in less dire circumstances. They are
+central when it comes to designing and dimensioning busy public facilities, from
+large transport hubs to entertainment venues, and optimising the flows of people.
+Modelling pedestrian motion in these settings is a multi-scale endeavour, which re-
+quires determining where people are heading for (strategic level), what route they
+will take (tactical level), and finally how they will move along that route in response
+to interactions with other people (operational level) [2]. The strategic and tactical
+levels typically involve some planning in order to make a choice among a discrete or
+continuous set of options, such as targeted activities, destinations [2], paths (possi-
+bly knowing their expected level of congestion) [3], or, in the context of evacuations,
+egress alternatives [3, 4]. These choices are often handled as processes of maximisa-
+tion (minimisation) of a utility (cost), which may depend on lower-level information
+such as pedestrian density or streaming velocity [5, 6].
+
+   The operational level deals with much shorter time scales and is generally believed
+to involve no planning ahead. Anticipatory effects are thus merely neglected in so-
+called reactive models, especially at high densities, possibly with the lingering idea
+that mechanical forces then prevail. For example, the popular social force model of
+Helbing and Molnar [7], still at the heart of several commercial software products,
+combines contact forces and pseudo-forces ("social" forces) which, in the original
+implementation, are only functions of the agents' current positions (and possibly
+orientations). Some degree of anticipation has since been introduced into these mo-
+dels to better describe collision avoidance, e.g., by making the pseudo-forces depend
+on future positions rather than current ones [8, 9]. In a dual approach, the most
+imminent collisions can be avoided by scanning the whole velocity space [10­12] or
+a subset of it [13] in search of the optimal velocity. In order to handle navigation
+through dense crowds, anticipated collisions beyond the most imminent one [14]
+or, at a more coarse-grained scale, local density inhomogeneities [5] can be taken
+into account in the optimisation. All these dynamic models, at best premised on
+
+                                                   3
+a constant-velocity hypothesis, owe their high computational tractability to their
+relative shortsightedness : The simulated agents do not plan ahead in interaction
+with their counterparts.
+
+   In this paper, we argue that, even at the operational level, crowds in some daily-
+life circumstances display signs of anticipation that may elude the foregoing short-
+sighted models ; this will be exemplified by the recently studied response of a dense
+static crowd when crossed by an `intruder' [15, 16]. We purport to show that a
+minimal game theoretical approach, made tractable thanks to an elegant analogy
+between its mean-field formulation [17­19] and Schrödinger's equation [20, 21], can
+replicate the empirical observations for this example case, provided that it accounts
+for the anticipation of future costs. Beyond that particular example, the approach
+efficiently captures certain behaviours of crowds at the interface between the ope-
+rational and tactical levels that are crucial to consider in attempts to improve the
+security of dense crowds.
+
+II. CROSSING A STATIC CROWD
+
+   Crossing a static crowd is a common experience in busy premises, from standing
+concerts and festivals to railway stations. Recently, small-scale controlled experi-
+ments [15, 22] shed light on trends that robustly emerged in the response of a crowd
+crossed by a cylindrical intruder, as displayed in Fig. 1 (right column). The induced
+response consists of a fairly symmetric density field around the intruder, displaying
+depleted zones both upstream and downstream from the intruder, as well as higher-
+density regions on the sides. Indeed the crowd's displacements are mostly transverse :
+pedestrians tend to simply step aside. Incidentally, a qualitatively similar response
+was filmed at much larger scale in a dense crowd of protesters in Hong-Kong, which
+split open to let an ambulance through [23].
+
+   Such features strongly depart from the mechanical response observed e.g. in expe-
+riments [24, 25] or simulations [26] of penetration into a granular mono-layer below
+jamming, where grains are pushed forward by the intruder (see Figs. 1 (left column))
+and accumulate downstream, instead of moving crosswise. More worryingly, these
+"mechanical" features [27] are also observed in simulations of pedestrian dynamics
+
+                                                   4
+performed with the social-force model [7], which rests on tangential and normal
+forces at contact and radial repulsive forces for longer-ranged interactions.
+
+   Introducing collision anticipation in the pedestrian model helps reproduce the
+opening of an agent-free `tunnel' ahead of the intruder, as illustrated with a `time to
+(first) collision' model (second column of Fig. 1) directly inspired from [12], details
+of which can be found in SI. However, even though the displacements need not align
+with the contact forces in this agent-based model, the displacement pattern diverges
+from the experimental observations, with streamwise (walk-away) moves that prevail
+over transverse (step-aside) ones. Indeed, such models rely on `short-sighted' agents,
+who do not see past the most imminent collision expected from constant-velocity
+extrapolation.
+
+   Results may vary with the specific collision-avoidance model and the selected
+parameters. Yet, our inability to reproduce prominent experimental features suggests
+that an ingredient is missing in these approaches based on short-time (first-collision)
+anticipation.
+
+III. A GAME THEORETICAL APPROACH TO ACCOUNT FOR LOW-
+LEVEL PLANNING
+
+   To bring in the missing piece, we start by noticing that the observed behaviours
+are actually most intuitive : Pedestrians anticipate that it will cost them less effort to
+step aside and then resume their positions, even if it entails enduring high densities
+for some time, than to endlessly run away from an intruder that will not deviate
+from its course. But accounting for this requires a change of paradigm compared
+to the foregoing approaches. Game theory is an adequate framework to handle the
+conflicting impulses of interacting agents endowed with planning capacities : agents
+are now able to optimise their strategy taking into account the choices (or strategies)
+of others. So far, its use in pedestrian dynamics has mostly been restricted to eva-
+cuation tactics in discrete models [4, 28, 29]. Unfortunately, the problem becomes
+intractable when the number of interacting agents grows.
+
+   To overcome this quandary, we turn to Mean Field Games (MFG), introduced
+by Lasry and Lions [17, 18] as well as Huang et al. [19] in the wake of the mean-
+
+                                                   5
+ Figure 1 ­ Density (middle row) and velocity (bottom row) fields induced in a
+   static crowd by a cylindrical intruder that crosses it ; the transparency of the
+
+velocity arrows is linearly related to the local density. (Column 1) Simulations of a
+  mono-layer of vibrated disks. (Column 2) Simulations of an agent-based model
+  wherein agents may anticipate the most imminent collision. All fields have been
+
+averaged over many realisations. The snapshot illustrating the agent-based model
+      was rendered using the Chaos visualisation software developed by INRIA
+
+ (https ://project.inria.fr/crowdscience/project/ocsr/chaos/). (Column 3) Results
+       of the mean-field game introduced in this paper. (Column 4) Controlled
+
+    experiments of [15]. Note the relatively symmetrical density dip in front and
+ behind the intruder, as well as the transverse moves. (Columns 1-3) The crowd's
+  density and intruder's size have been adjusted to match the experimental data
+(average density of 2.5 ped/m2). Details of simulations and videos showcasing time
+
+                                                   6
+                                   evolution can be found in SI.
+field approximations of statistical mechanics, and since used in a variety of fields,
+
+ranging from finance [30­32] to economics [33­35], epidemiology [36­38], sociology
+
+[36, 39, 40], or engineering [41­43]. While applications of MFG to crowd dynamics
+
+have already been proposed [3, 44­46], our goal here is to demonstrate the practical
+
+relevance of this approach at the operational level, using an elementary MFG belon-
+
+ging to one of the first class of models introduced by Lasry and Lions [17], and which
+
+can be thoroughly analysed thanks to its connection with the nonlinear Schrödinger
+
+equation.
+
+In the mean field approximation, the "N-player" game is replaced by a generalized
+
+Nash equilibrium [47] where indiscriminate microscopic agents play against a macro-
+
+scopic state of the system (a density field) formed by the infinitely many remaining
+
+agents. Consider a large set of pedestrians, the agents of our game, characterised by
+
+their spatial position (state variable) Xi  (xi, yi)  R2, which we assume follows
+
+Langevin dynamics, viz.,
+
+                               dXti = atidt + dWti ,        (1)
+
+where the drift velocity (control variable) ait reflects the agent's strategy. In (1), 
+is a constant and components of Wi are independent white noises of variance one
+accounting for unpredictable events. All agents are supposed identical, apart from
+their initial positions Xi(t = 0) and realisations of Wi.
+
+   Each agent strives to adapt their velocity ati in order to minimise a cost functional
+that we assume to take the simple form
+
+           c[ai](t, xit) =     T µa2                        (2)
+                               2 - (gmt(x) + U0(x-vt)) d ,
+                            t
+
+where the average denoted by · is performed over all realizations of the noise for
+trajectories starting at xti at time t. In this expression, the term µa2/2, akin to a ki-
+netic energy, represents the efforts required by the agent to enact their strategy (how
+much/how fast they have to move in this case), while the interactions with the other
+agents via the empirical density m(e)(t, x) = i (x - Xi(t))/N are controlled by a
+parameter g < 0. Finally, the space occupied by the intruding cylinder, which moves
+at a velocity v = (0, v), is characterised by a `potential' U0(x) = V0( x - R) that
+tends to V0  - inside the radius R of the cylinder and is zero elsewhere. Agents
+need to balance those three terms over the whole duration T of the game, which
+
+                                      7
+enables them to make costly, but temporary moves if they lower the overall cost. For
+example, depending on the parameters, stepping aside into a high density region (a
+cost-inefficient strategy a priori ) to let the intruder through may prove overall more
+efficient than running away from it ; the first strategy implies paying a high cost
+upfront, but nothing afterwards, while the second implies paying a comparatively
+low cost that however extends over the whole duration of the game, resulting in a
+potentially worse pay-off.
+
+   In the presence of many agents, the density self-averages to m(t, x) = m(e)(t, x) noise
+and the optimization problem (2) does not feature explicit coupling between
+agents anymore. It can then be solved by introducing the value function u(t, x) =
+min c[a](t, x), which obeys a Hamilton-Jacobi-Bellman [HJB] equation [18, 48], with
+
+ a(·)
+
+an optimal control given by a(t, x) = -u(t, x)/µ. Consistency imposes that
+m(t, x) is solution of the Fokker-Planck [FP] equation associated with (1), given the
+drift velocity a(t, x) = a(t, x). As such, MFG can be reduced to a system of two
+coupled partial differential equations [17, 18, 20, 21].
+
+  tu(t, x)  =  1   [u(t, x)]2  -  2           +  gm(t, x)  +  U0(x  -  vt)  [HJB]
+               2µ                    u(t, x)                                         ,
+
+                                  2                                          [FP]
+
+                                                                                    (3)
+tm(t, x)    =  1                    +  2
+                  [m(t, x)u(t, x)]        m(t, x)
+
+               µ                       2
+
+   The atypical "forward-backward" structure of Eqs. (3), highlighted by the oppo-
+site signs of Laplacian terms in the two equations, accounts for anticipation. The
+boundary conditions epitomise this structure : based on (2), the value function has
+terminal condition u(t = T, x) = 0, while the density of agents evolves from a fixed
+initial distribution m(t = 0, x) = m0(x). In previous work, we have evinced a for-
+mal, but insightful mapping of these MFG equations onto a nonlinear Schrödinger
+equation (NLS) [20, 21, 49], which has been studied for decades in fields ranging
+from non-linear optics [50] to Bose-Einstein condensation [51] and fluid dynamics
+[52].
+
+   We perform a change of variables (u(t, x), m(t, x))  ((t, x), (t, x)) through
+u(t, x) = -µ2 log (t, x), m(t, x) = (t, x)(t, x) [21]. The first relation is the usual
+Cole-Hopf transform [53] ; the second corresponds to an "Hermitization" of Eqs. (3).
+
+                                       8
+In terms of the new variables (, ), the MFG equations read
+
+                             =  µ4     +  (U0  +  g)
+              -µ2t                   
+
+                                 2                         .           (4)
+
+                  +µ2t       =  µ4     +  (U0  +  g)
+                                     
+              
+                                 2
+
+Except for the missing imaginary factor associated with time derivation, these equa-
+
+tions have exactly the structure of NLS describing the evolution of a quantum
+
+state (t, x) of a Bose-Einstein condensate, with formal correspondence   ,
+   and   ||||2  m  . This system, however, retains the forward-
+
+backward structure of MFG evidenced by mixed initial and final boundary condi-
+
+tions (T, x) = 1, (0, x) (0, x) = m0(x). Several methods have been developed to
+deal with NLS and most can be leveraged to tackle the MFG problem [21, 54].
+
+Self-consistent solutions of Eqs. (4) are obtained by iteration over a backward-
+
+forward scheme. A video illustrating the evolution of the agents' density for a parti-
+
+cular set of parameters, as well as details about the numerical scheme, can be found
+
+in SI.
+
+Focusing on the permanent regime (a.k.a. the ergodic state [55]) , rather than
+
+on the transients associated with the intruder's entry or exit, further simplifies the
+
+resolution. In this regime, defined by time-independent density and velocity fields
+
+in the intruder's frame, the auxiliary functions  and  are not constant in time,
+
+but they assume the trivial dynamics (t, x) = exp[t/µ2]er and exp[-t/µ2]er
+
+where, in the frame of the intruder, er and er satisfy
+
+         µ4          µ2v
+              er  -       ·  er  +  [U0(x)  +  gmer]er  =     -er,
+          2
+        
+
+          µ4                                                        ,  (5)
+           2
+              er  +  µ2v  ·  er  +  [U0(x)  +  gmer]er  =  -er
+        
+        
+
+(with mer = erer independent of time). Far from the intruder U0(x) = 0, m m0
+
+and pedestrians have constant velocity -v in the intruder frame. This imposes the
+asymptotic solutions er(x) = er(x) = m0, from which  = -gm0.
+
+IV. RESULTS
+
+   The ergodic Eqs. (5) have two remarkable features : (i) They give direct access to
+the permanent regime, and are straightforward to implement numerically since time
+
+                                                   9
+dependence has disappeared. (ii) The solutions of Eqs. (5) are entirely specified by
+two dimensionless parameters.
+
+   Indeed, the intruder is characterised by its radius R and its velocity v. In the same
+way, pedestrians are characterized by a length scale  = |µ4/2gm0|, the distance
+over which the crowd density tends to recover its bulk value from a perturbation,
+a.k.a healing length, and a velocity scale cs = |gm¯ 0/2µ|, the typical speed at
+which pedestrians tend to move1. Up to a scaling factor, solutions of Eqs. (5) can
+be expressed as a function of the two ratios /R and cs/v instead of depending on
+the full set of parameters (R, v, µ, , m0, g), which facilitates the exploration of the
+parameter space.
+
+   Figure 2 presents typical density and velocity fields simulated in the ergodic
+state, for parameters selected in each quadrant of the reduced space parametrised
+by log cs/v and log /R on the horizontal and vertical axis respectively. Intuitively,
+one understands that cs governs the cost of motion for the agents while  gives
+the extent of the perturbation caused by the presence of the intruder. The main
+visual difference between the small and large cs/v cases is the change in rotational
+symmetry, a fact that reflects a more fundamental change in strategy. For large values
+of cs/v pedestrians do not mind moving, and they rather try to avoid congested areas
+for as long as possible, thus creating circulation around the intruder, as shown in the
+velocity plots. On the other hand, for small values of cs/v, moving fast costs more ;
+therefore, in order to avoid the intruder, pedestrians have to move earlier, and will
+accept to temporarily side-step into a more crowded area, thereby causing a stretch
+of the density along the vertical direction. The experimental observations of [15] are
+best reproduced for small cs/v and small /R (cs = 0.11 and  = 0.15), as shown
+in the third column of Fig. 1. Considering the minimalism of our MFG model, the
+obtained agreement is especially satisfying.
+
+V. DISCUSSION
+
+   The data plotted in Fig. 1 (third column) demonstrate that even basic MFG
+models can naturally capture and semi-quantitatively reproduce prominent features
+
+   1. Note that µcs = µ2 has the dimension of an action and plays the role of in the original
+nonlinear Schrödinger equation.
+
+                                                   10
+Figure 2 ­ Typical density and velocity fields induced by the crossing intruder in
+    the ergodic state, as predicted by the MFG model in different regions of the
+   parameter space. Parameters taken in the small cs/v and small /R quadrant
+               display good visual agreement with the experimental data.
+
+of the response of static crowds [15], which may be out of reach of more short-sighted
+pedestrian dynamics models.
+
+   Beyond this particular example, MFG are also applicable to a broader array of
+crowd-related problems. This will now be illustrated by exploring the daily-life situa-
+tion of people waiting to board the coach in an underground station. This is readily
+achieved by suitably modifying the external potential U0(x) and the geometry of the
+system, as shown on Fig. 3, and introducing a terminal cost cT (x) [21, 54] that is lo-
+wer aboard the metro than on the platform. By solving the time dependent equations
+(4), we manage to reproduce the boarding process in a qualitatively realistic way,
+up to the decision made by some agents to stay on the platform rather than board
+the overcrowded metro. We believe this last point to be particularly interesting since
+this "passive" behaviour emerges naturally from our (anticipatory) game theoretical
+model, something that would be essentially impossible to implement without an ad
+hoc treatment in traditional approaches of crowd dynamics at the tactical level.
+
+   To conclude, let us recall that the foregoing results have been obtained with a
+simple, generic MFG model which depends linearly on density via gm(t, x). This
+approximation can be refined and the MFG formalism is flexible enough to incor-
+porate further elements to make it truer to life, including time-discounting effects
+
+                                                   11
+  Figure 3 ­ Boarding a crowded metro coach at rush hour. Left : Morning rush
+   hour of November 18, 2021, on the platform of Metro A in Lyon, France. The
+ doors are about to close and the gap between boarding passengers and those who
+   preferred to wait for the next metro is clearly visible. Right : Snapshot from a
+ MFG simulation at t = 0.9T . Players start uniformly distributed on the platform
+  and would like to get on the coach before the doors close, at t = T . Just before
+that moment, the players closest to the doors choose to rush towards the coach and
+
+     cram themselves in it despite the high density. Others prefer to stay on the
+                     platform (see SI for a movie of the whole process).
+
+[56, 57] and congestion [44, 58, 59]. Higher quantitative accuracy will be within reach
+of these more sophisticated approaches, possibly at the expense of less transparent
+outcomes compared to the elementary model used here. For sure, MFG will struggle
+to capture a variety of problems of crowd dynamics at the operational level, notably
+those for which the granularity of the crowd is central. However, the fact that even
+the simplest of the Mean Field Game models is able to capture qualitative features
+that are missed not only by "off-the-shelf" commercial software, but also by a state-
+of-the-art `time to (first) collision' model including some anticipation, bolster the
+claim that optimization and anticipation are essential ingredients for the description
+of crowd dynamics at the operational level, and justifies to claim entry for Mean
+Field Game based approaches into the toolkit of practitioners of the field.
+
+                                                   12
+METHODS
+
+Simulations
+
+The granular response (first column of Fig. 1) to the penetration of an intru-
+
+der of diameter D = 2d = 0.74 m was obtained by simulating the dynamics of a
+
+two-dimensional layer of identical frictionless grains of diameter d = 0.37 m with mo-
+
+lecular dynamics. The interactions between grains were given by Hertzian contact
+
+forces  Fij  =  k 3/2  -    d  ,  where    is  the  interpenetration  of  the  grains,  k  is  the
+                          
+                          dt
+
+stiffness of the contact, and  is a damping coefficient.
+
+The agent-based simulation (second column of Fig. 1) is performed with a model
+
+based on anticipated times to collision (TTC), inspired by [12]. In this model, at
+
+each time step every agent i selects their desired velocity vp as the minimum of
+an individual cost function (or pseudo-energy) Ei[vp] ; velocities vp that lead to a
+collision with another agent j within a very short time horizon ij (if j keeps their
+current velocity) are penalized by a cost EiTTC (reproduced from [9]) in Ei which
+becomes very large when one of the TTC ij gets small. In addition to this TTC
+term, the total cost Ei includes (i) a driving term Etarget, which assesses whether
+
+vp brings the agent closer to the destination, (ii) a term constraining the agent's
+speed, Espeed  vp(vp - vppref)2, where vppref is a comfortable walking speed, (iii) a
+term penalizing sudden changes in velocity, (iv) a repulsion term, Ecore-repulsion that
+
+is activated as soon as another agent steps into the private sphere of agent i and
+
+then grows as the inverse of their mutual distance f .
+
+MFG simulations are realised by numerically solving either Eqs. (4) or (5).
+
+Further details about the different algorithms can be found in the SI.
+
+Smoothing of the density and velocity fields
+
+The smooth velocity fields v~ shown on Fig. 1 were obtained by convoluting the
+
+discrete instantaneous experimental or numerical fields v(r) = i vi(r-ri) (where
+
+the sum runs over all particles i and  denotes a Dirac distribution) with a Gaussian
+
+kernel  (r)  =    1    ·  exp  - 1 r2    with rc  20cm, viz., v~(r) =     d2r (r - r )v(r ).
+                2rc2              2 rc2
+
+(In practice, the Gaussian kernel was truncated at 3rc). The coordinates r were then
+
+                                               13
+re-centered around the intruder's position at each time frame and the resulting fields
+were averaged over time. A similar smoothing process was used for the density fields.
+
+    DATA AVAILABILITY
+
+   All study data are included in this article or the SI. Movies S1­S4 have been
+deposited in the Open Science Framework (OSF) (Movie S1, https://osf.io/cgs7y/ ;
+Movie S2, https://osf.io/te64f/ ; Movie S3, https://osf.io/vjzby/ ; Movie S4, https:
+//osf.io/b7ep8/).
+
+ [1] D. Helbing, A. Johansson, and H. Z. Al-Abideen, "Dynamics of crowd disasters : An
+      empirical study," Physical review E, vol. 75, no. 4, p. 046109, 2007.
+
+ [2] S. P. Hoogendoorn and P. H. Bovy, "Pedestrian route-choice and activity scheduling
+      theory and models," Transportation Research Part B : Methodological, vol. 38, no. 2,
+      pp. 169­190, 2004.
+
+ [3] Y.-Q. Jiang, W. Zhang, and S.-G. Zhou, "Comparison study of the reactive and pre-
+      dictive dynamic models for pedestrian flow," Physica A : Statistical Mechanics and its
+      Applications, vol. 441, pp. 51­61, 2016.
+
+ [4] B. L. Mesmer and C. L. Bloebaum, "Incorporation of decision, game, and bayesian
+      game theory in an emergency evacuation exit decision model," Fire Safety Journal,
+      vol. 67, pp. 121­134, 2014.
+
+ [5] A. Best, S. Narang, S. Curtis, and D. Manocha, "Densesense : Interactive crowd
+      simulation using density-dependent filters," in Proceedings of the ACM SIG-
+      GRAPH/Eurographics Symposium on Computer Animation, pp. 97­102, 2014.
+
+ [6] A. van Goethem, N. Jaklin, A. C. IV, and R. Geraerts, "On streams and incentives
+      - a synthesis of individual and collective crowd motion," in Proceedings of the 28th
+      International Conference on Computer Animation and Social Agents (CASA), 2015.
+
+ [7] D. Helbing and P. Molnar, "Social force model for pedestrian dynamics," Physical
+      review E, vol. 51, no. 5, p. 4282, 1995.
+
+                                                   14
+ [8] F. Zanlungo, T. Ikeda, and T. Kanda, "Social force model with explicit collision pre-
+      diction," EPL (Europhysics Letters), vol. 93, no. 6, p. 68005, 2011.
+
+ [9] I. Karamouzas, B. Skinner, and S. J. Guy, "Universal power law governing pedestrian
+      interactions," Physical review letters, vol. 113, no. 23, p. 238701, 2014.
+
+[10] J. van den Berg, M. C. Lin, and D. Manocha, "Reciprocal velocity obstacles for real-
+      time multi-agent navigation," in Proceedings of the 2008 IEEE International Confe-
+      rence on Robotics and Automation, pp. 1928­1935, 2008.
+
+[11] S. Paris, J. Pettré, and S. Donikian, "Pedestrian reactive navigation for crowd simu-
+      lation : a predictive approach," in Computer Graphics Forum, vol. 26, pp. 665­674,
+      Wiley Online Library, 2007.
+
+[12] I. Karamouzas, N. Sohre, R. Narain, and S. J. Guy, "Implicit crowds : Optimiza-
+      tion integrator for robust crowd simulation," ACM Transactions on Graphics (TOG),
+      vol. 36, no. 4, pp. 1­13, 2017.
+
+[13] M. Moussaïd, D. Helbing, and G. Theraulaz, "How simple rules determine pedes-
+      trian behavior and crowd disasters," Proceedings of the National Academy of Sciences,
+      vol. 108, no. 17, pp. 6884­6888, 2011.
+
+[14] J. Bruneau and J. Pettré, "EACS : Effective Avoidance Combination Strategy," Com-
+      puter Graphics Forum (CGF), vol. 36, no. 8, pp. 108­122, 2017.
+
+[15] A. Nicolas, M. Kuperman, S. Ibañez, S. Bouzat, and C. Appert-Rolland, "Mechanical
+      response of dense pedestrian crowds to the crossing of intruders," Scientific reports,
+      vol. 9, no. 1, p. 105, 2019.
+
+[16] B. Kleinmeier, G. Köster, and J. Drury, "Agent-based simulation of collective coope-
+      ration : from experiment to model," Journal of the Royal Society Interface, vol. 17,
+      no. 171, p. 20200396, 2020.
+
+[17] J.-M. Lasry and P.-L. Lions, "Jeux à champ moyen. I ­ le cas stationnaire," Comptes
+      Rendus Mathematique, vol. 343, pp. 619­625, Nov. 2006.
+
+[18] J.-M. Lasry and P.-L. Lions, "Jeux à champ moyen. II ­ horizon fini et contrôle opti-
+      mal," Comptes Rendus Mathematique, vol. 343, pp. 679­684, Nov. 2006.
+
+[19] M. Huang, R. P. Malhamé, P. E. Caines, and others, "Large population stochastic dy-
+      namic games : closed-loop McKean-vlasov systems and the nash certainty equivalence
+      principle," Communications in Information & Systems, vol. 6, no. 3, pp. 221­252,
+
+                                                   15
+      2006.
+[20] O. Guéant, "Mean field games equations with quadratic hamiltonian : a specific ap-
+
+      proach," Math. Models Methods Appl. Sci., vol. 22, p. 1250022, 2012.
+[21] D. Ullmo, I. Swiecicki, and T. Gobron, "Quadratic mean field games," Physics Reports,
+
+      vol. 799, pp. 1­35, 2019.
+[22] C. Appert-Rolland, J. Pettré, A.-H. Olivier, W. Warren, A. Duigou-Majumdar, E. Pin-
+
+      sard, and A. Nicolas, "Experimental study of collective pedestrian dynamics," Collec-
+      tive Dynamics, vol. 5, pp. 1­8, 2020.
+[23] https://twitter.com/AmichaiStein1/status/1140374111258140673?
+      ref_src=twsrc%5Etfw%7Ctwcamp%5Etweetembed%7Ctwterm%
+      5E1140374111258140673%7Ctwgr%5E%7Ctwcon%5Es1_&ref_url=
+      https%3A%2F%2Fwww.indiatimes.com%2Ftrending%2Fhuman-interest%
+      2Fcrowd-of-protesters-in-hong-kong-parts-like-the-red-sea-to-make-way-for-ambulance-wins-hearts-
+      html, 2019.
+[24] A. Seguin, Y. Bertho, P. Gondret, and J. Crassous, "Dense granular flow around a
+      penetrating object : Experiment and hydrodynamic model," Physical review letters,
+      vol. 107, no. 4, p. 048001, 2011.
+[25] A. Seguin, Y. Bertho, F. Martinez, J. Crassous, and P. Gondret, "Experimental ve-
+      locity fields and forces for a cylinder penetrating into a granular medium," Physical
+      Review E, vol. 87, no. 1, p. 012201, 2013.
+[26] A. Seguin, A. Lefebvre-Lepot, S. Faure, and P. Gondret, "Clustering and flow around
+      a sphere moving into a grain cloud," The European Physical Journal E, vol. 39, no. 6,
+      pp. 1­7, 2016.
+[27] M. D. Raj and V. Kumaran, "Moving efficiently through a crowd : A nature-inspired
+      traffic rule," Physical Review E, vol. 104, no. 5, p. 054609, 2021.
+[28] S. Heliövaara, H. Ehtamo, D. Helbing, and T. Korhonen, "Patient and impatient pe-
+      destrians in a spatial game for egress congestion," Physical Review E, vol. 87, no. 1,
+      p. 012802, 2013.
+[29] S. Bouzat and M. Kuperman, "Game theory in models of pedestrian room evacuation,"
+      Physical Review E, vol. 89, no. 3, p. 032806, 2014.
+
+                                                   16
+[30] A. Lachapelle, J. Salomon, and G. Turinici, "A monotonic algorithm for a mean field
+      games model in economics," Les Cahiers de la Chaire (Finance & Développement
+      Durable), vol. 16, 2009.
+
+[31] P. Cardaliaguet and C.-A. Lehalle, "Mean field game of controls and an application
+      to trade crowding," Math Finan Econ, vol. 12, pp. 335­363, 2017.
+
+[32] R. Carmona, F. Delarue, and A. Lachapelle, "Control of McKean­vlasov dynamics ver-
+      sus mean field games," Mathematics and Financial Economics, vol. 7, no. 2, pp. 131­
+      166, 2013.
+
+[33] Y. Achdou, P.-N. Giraud, J.-M. Lasry, and P.-L. Lions, "A long-term mathematical
+      model for mining industries," Appl. Math. Optim., vol. 74, p. 579­618, 2016.
+
+[34] O. Guéant, J.-M. Lasry, and P.-L. Lions, "Mean field games and applications," in
+      Paris-Princeton Lectures on Mathematical Finance 2010, Springer, 2011.
+
+[35] Y. Achdou, F. J. Buera, J.-M. Lasry, P.-L. Lions, and B. Moll, "Partial differential
+      equation models in macroeconomics," Phil. Trans. R. Soc., vol. A 2014, pp. 372,, 2014.
+
+[36] L. Laguzet and G. Turinici, "Individual vaccination as nash equilibrium in a sir model
+      with application to the 2009-2010 influenza a (h1n1) epidemic in france," Bull Math
+      Biol, vol. 77, pp. 1955­1984, 2015.
+
+[37] R. Djidjou-Demasse, Y. Michalakis, M. Choisy, M. T. Sofonea, and S. Alizon, "Optimal
+      covid-19 epidemic control until vaccine deployment," medRxiv, 2020.
+
+[38] R. Elie, E. Hubert, and G. Turinici, "Contact rate epidemic control of covid-19 : an
+      equilibrium view," Mathematical Modelling of Natural Phenomena, vol. 15, p. 35, 2020.
+
+[39] A. Lachapelle and M.-T. Wolfram, "On a mean field game approach modeling conges-
+      tion and aversion in pedestrian crowds," Transportation Research Part B : Methodo-
+      logical, vol. 45, pp. 1572­1589, Dec. 2011.
+
+[40] Y. Achdou, M. Bardi, and M. Cirant, "Mean field games models of segregation," Ma-
+      thematical Models and Methods in Applied Sciences, vol. 27, no. 01, pp. 75­113, 2017.
+
+[41] A. C. Kizilkale and R. P. Malhamé, "Load shaping via grid wide coordination of
+      heating-cooling electric loads : A mean field games based approach." submitted paper
+      to IEEE Transactions on Automatic Control., 2016.
+
+[42] A. C. Kizilkale, R. Salhab, and R. P. Malhamé, "An integral control formulation of
+      mean field game based large scale coordination of loads in smart grids," Automatica,
+
+                                                   17
+      vol. 100, pp. 312­322, 2019.
+[43] F. Mériaux, V. S. Varma, and S. Lasaulce, "Mean field energy games in wireless net-
+
+      works," CoRR, vol. abs/1301.6793, 2013.
+[44] O. Guéant, "Existence and uniqueness result for mean field games with congestion
+
+      effect on graphs," Applied Mathematics & Optimization, vol. 72, p. 291­303, 2015.
+[45] A. Lachapelle and M.-T. Wolfram, "On a mean field game approach modeling conges-
+
+      tion and aversion in pedestrian crowds," Transportation research part B : methodolo-
+      gical, vol. 45, no. 10, pp. 1572­1589, 2011.
+[46] Y.-Q. Jiang, R.-Y. Guo, F.-B. Tian, and S.-G. Zhou, "Macroscopic modeling of pedes-
+      trian flow based on a second-order predictive dynamic model," Applied Mathematical
+      Modelling, vol. 40, no. 23-24, pp. 9806­9820, 2016.
+[47] D. M. Kreps, "Nash equilibrium," in Game Theory, pp. 167­177, Springer, 1989.
+[48] R. Bellman, Dynamic Programming. Rand Corporation research study, Princeton
+      University Press, 1957.
+[49] T. Bonnemain, T. Gobron, and D. Ullmo, "Universal behavior in non-stationary mean
+      field games," Physics Letters A, vol. 384, no. 25, p. 126608, 2020.
+[50] D. J. Kaup, "Perturbation theory for solitons in optical fibers," Phys. Rev. A, vol. 42,
+      pp. 5689­5694, Nov 1990.
+[51] L. Pitaevskii and S. Stringari, Bose-Einstein condensation and superfluidity, vol. 164.
+      Oxford University Press, 2016.
+[52] C. Kharif, E. Pelinovsky, and A. Slunyaev, Rogue Waves in the Ocean. Advances in
+      Geophysical and Environmental Mechanics and Mathematics, Springer Berlin Heidel-
+      berg, 2008.
+[53] E. Hopf, "The partial differential equation ut + uux = µxx," Communications on Pure
+      and Applied Mathematics, vol. 3, no. 3, pp. 201­230, 1950.
+[54] T. Bonnemain, T. Gobron, and D. Ullmo, "Schrödinger approach to Mean Field Games
+      with negative coordination," SciPost Phys., vol. 9, p. 59, 2020.
+[55] P. Cardaliaguet, J. Lasry, P. Lions, and A. Porretta, "Long time average of mean field
+      games with a nonlocal coupling," SIAM Journal on Control and Optimization, vol. 51,
+      no. 5, pp. 3558­3591, 2013.
+
+                                                   18
+[56] S. Frederick, G. Loewenstein, and T. O'donoghue, "Time discounting and time prefe-
+      rence : A critical review," Journal of economic literature, vol. 40, no. 2, pp. 351­401,
+      2002.
+
+[57] D. A. Gomes, L. Nurbekyan, and E. Pimentel, "Economic models and mean-field games
+      theory," Publicaoes Matematicas, IMPA, Rio, Brazil, 2015.
+
+[58] C. Dogbé, "Modeling crowd dynamics by the mean-field limit approach," Mathematical
+      and Computer Modelling, vol. 52, pp. 1506­1520, Nov. 2010.
+
+[59] Y. Achdou and A. Porretta, "Mean field games with congestion," Annales de l'Institut
+      Henri Poincaré C, Analyse non linéaire, vol. 35, no. 2, pp. 443 ­ 480, 2018.
+
+    ACKNOWLEDGMENTS
+
+   We acknowledge financial support for the internship of Theophile Bonnet by
+the "Investissements d'Avenir" of LabEx PALM (ANR-10-LABX-0039-PALM),
+in the frame of the PERCEFOULE project, as well as funding from the Hu-
+bert Curien Partnership France-Malaysia Hibiscus (PHC- Hibiscus) programme
+[203.PKOMP.6782005].
+
+    AUTHOR CONTRIBUTIONS
+
+   T. Bonnemain, M. Butano and D. Ullmo provided expertise in MFG ; I. Echeverría-
+Huarte, A. Nicolas, and C. Appert-Rolland provided expertise in crowd and pedes-
+trian dynamics ; A. Seguin provided expertise in granular materials ; T. Bonnemain
+and T. Bonnet worked on the time-dependent MFG simulations ; M. Buttano worked
+on the ergodic state MFG simulations ; D. Ullmo and C. Appert-Rolland supervised
+trainees on MFG and provided financial support ; A. Seguin worked on the granular
+material simulations ; I. Echeverría-Huarte and A. Nicolas worked on TTC simula-
+tions ; All contributors participated to the discussion regarding the physics of crowd
+dynamics and to the writing of the paper.
+
+                                                   19
+COMPETING INTERESTS
+
+The authors declare no competing interests.
+
+                                               20
+
