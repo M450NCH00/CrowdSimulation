@@ -1,0 +1,216 @@
+{
+  "log_schema_version": 1,
+  "experiment_name": "c0_no_llm_doorway",
+  "run_id": "011_hospital-vs-grocery_agent1_back",
+  "run_index": 11,
+  "condition": "C0",
+  "seed": 24011,
+  "repeat": 1,
+  "created_utc": "2026-10-13T08:13:18+00:00",
+  "git": {
+    "commit": "50123f6d2e2387a3a89d328858510088af4b59fb",
+    "dirty": false
+  },
+  "software": {
+    "negsim_version": "0.1.0",
+    "python": "3.13.3"
+  },
+  "scenario_file": "configs/scenarios/doorway.yaml",
+  "scenario_variant": "agent1_back",
+  "scenario": {
+    "type": "doorway",
+    "description": "Two agents start on the same side of a wall and must both pass through one doorway. Their straight paths cross just beyond it.",
+    "dt_s": 0.2,
+    "max_time_s": 15.0,
+    "goal_tolerance_m": 0.1,
+    "geometry": {
+      "door_width": 0.4,
+      "wall_thickness": 0.1,
+      "wall_extent": 1.5,
+      "start_distance": 2.0,
+      "start_lateral": 0.5,
+      "goal_distance": 1.0,
+      "goal_lateral": 0.2,
+      "start_heading_deg": 10.0
+    },
+    "swap_sides": false,
+    "start_offsets_m": [
+      0.0,
+      0.25
+    ],
+    "region": {
+      "kind": "doorway",
+      "width_m": 0.4,
+      "length_m": 0.1
+    },
+    "conflict": {
+      "predictor": "heading_ray",
+      "safety_margin_m": 0.05,
+      "zone_half_length_m": 0.25
+    },
+    "observation": {
+      "max_range_m": null,
+      "walls_block_sight": false
+    },
+    "deadlock": {
+      "window_s": 3.0,
+      "speed_eps_mps": 0.01
+    },
+    "controller": {
+      "backend": "path_tracking",
+      "lookahead": 0.3
+    },
+    "agents": [
+      {
+        "agent_id": 0,
+        "side": "north",
+        "radius_m": 0.1,
+        "max_speed_mps": 0.3,
+        "max_turn_rate_radps": 1.0,
+        "initial_speed_mps": 0.3,
+        "start": {
+          "x": -2.0,
+          "y": 0.5,
+          "theta_rad": -0.17453292519943295
+        },
+        "goal": {
+          "x": 1.0,
+          "y": -0.2
+        },
+        "path": [
+          [
+            -2.0,
+            0.5
+          ],
+          [
+            1.0,
+            -0.2
+          ]
+        ],
+        "path_length_m": 3.0805843601498726,
+        "region_entry_s_m": 2.0023798340974173,
+        "region_exit_s_m": 2.105065979435746
+      },
+      {
+        "agent_id": 1,
+        "side": "south",
+        "radius_m": 0.1,
+        "max_speed_mps": 0.3,
+        "max_turn_rate_radps": 1.0,
+        "initial_speed_mps": 0.3,
+        "start": {
+          "x": -2.25,
+          "y": -0.5,
+          "theta_rad": 0.17453292519943295
+        },
+        "goal": {
+          "x": 1.0,
+          "y": 0.2
+        },
+        "path": [
+          [
+            -2.25,
+            -0.5
+          ],
+          [
+            1.0,
+            0.2
+          ]
+        ],
+        "path_length_m": 3.324530041975858,
+        "region_entry_s_m": 2.250451105337504,
+        "region_exit_s_m": 2.3527443373982995
+      }
+    ],
+    "obstacles": [
+      {
+        "xmin": -0.05,
+        "ymin": 0.2,
+        "xmax": 0.05,
+        "ymax": 1.5
+      },
+      {
+        "xmin": -0.05,
+        "ymin": -1.5,
+        "xmax": 0.05,
+        "ymax": -0.2
+      }
+    ]
+  },
+  "participants": [
+    {
+      "agent_id": 0,
+      "task": "the hospital",
+      "task_type": "hospital",
+      "persona": null,
+      "side": "north"
+    },
+    {
+      "agent_id": 1,
+      "task": "the supermarket",
+      "task_type": "grocery",
+      "persona": null,
+      "side": "south"
+    }
+  ],
+  "assignment": {
+    "agent_0": {
+      "persona": null,
+      "overrides": {},
+      "task_type": "hospital"
+    },
+    "agent_1": {
+      "persona": null,
+      "overrides": {},
+      "task_type": "grocery"
+    },
+    "swap_sides": false,
+    "first_speaker": null
+  },
+  "negotiation": {
+    "enabled": false,
+    "prompt_template": null,
+    "max_messages_per_agent": 4,
+    "first_speaker": null,
+    "timing": {
+      "mode": "pre_conflict",
+      "seconds_per_message": 1.0
+    },
+    "info_variant": "default",
+    "info_fields": [],
+    "visibility": {
+      "age": true,
+      "gender": true,
+      "backstory": false,
+      "task": false,
+      "speed": true,
+      "size": true
+    },
+    "rendered_system_prompts": null
+  },
+  "llm": {
+    "client": null,
+    "model": null,
+    "temperature": null,
+    "max_tokens": null,
+    "thinking": null,
+    "json_mode": null,
+    "seed_parameter": null
+  },
+  "arbitration": {
+    "policy": "strategy1",
+    "tie_break": "lower_index"
+  },
+  "scoring": {
+    "ground_truth": "task_priority",
+    "priority_order": [
+      "hospital",
+      "airport",
+      "grocery"
+    ]
+  },
+  "budget": {
+    "cap_usd": 0.5,
+    "ledger": "spend_ledger.jsonl"
+  }
+}

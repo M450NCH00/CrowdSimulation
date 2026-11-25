@@ -1,0 +1,636 @@
+Proceedings of the Twenty-Eighth International Joint Conference on Artificial Intelligence (IJCAI-19)
+
+Priority Inheritance with Backtracking for Iterative Multi-agent Path Finding
+
+       Keisuke Okumura1 , Manao Machida2 , Xavier De´fago1 and Yasumasa Tamura1
+                                         1Tokyo Institute of Technology
+                                                 2NEC Corporation
+
+okumura.k@coord.c.titech.ac.jp, manao-machida@ap.jp.nec.com, {defago, tamura}@c.titech.ac.jp
+
+                         Abstract                                     That is, whenever an agent reaches a goal, it receives a
+                                                                      new one. This rules out any simple adaptation of offline
+      The Multi-agent Path Finding (MAPF) problem                     and computationally-intensive optimal solutions due to pro-
+      consists in all agents having to move to their own              hibitive computations, and new goals typically appearing at
+      destinations while avoiding collisions. In practical            runtime. Furthermore, centralized solutions being inherently
+      applications to the problem, such as for navigation             problematic for systems with many agents due to scalabil-
+      in an automated warehouse, MAPF must be solved                  ity concerns, decoupled algorithms such as prioritized route
+      iteratively. We present here a novel approach to it-            planning are adequate, especially if fully decentralized. De-
+      erative MAPF, that we call Priority Inheritance with            centralized solutions are highly attractive to multi-agent/robot
+      Backtracking (PIBT). PIBT gives a unique priority               systems for many reasons, including a higher potential for
+      to each agent every timestep, so that all movements             robustness and fault-tolerance, better scalability, and lower
+      are prioritized. Priority inheritance, which aims at            production cost [Yan et al., 2013]. Finally, implementations
+      dealing effectively with priority inversion in path             without global communication are preferable since they pro-
+      adjustment within a small time window, can be ap-               vide better potential for scalability and concurrency.
+      plied iteratively and a backtracking protocol pre-
+      vents agents from being stuck. We prove that, re-                  In this paper, we present a novel algorithm for iterative
+      gardless of their number, all agents are guaranteed             Multi-agent Path Finding (iterative MAPF), called Priority
+      to reach their destination within finite time, when             Inheritance with Backtracking (PIBT), which focuses on the
+      the environment is a graph such that all pairs of ad-           adjacent movements of multiple agents based on prioritized
+      jacent nodes belong to a simple cycle of length 3               planning in a short time window. Priority inheritance is a
+      or more (e.g., biconnected). Our implementation                 well-known approach to deal effectively with priority inver-
+      of PIBT can be fully decentralized without global               sion in real-time systems [Sha et al., 1990], and is applied
+      communication. Experimental results over vari-                  here to path adjustment. When a low-priority agent X im-
+      ous scenarios confirm that PIBT is adequate both                pedes the movement of a higher-priority agent Y, agent X
+      for finding paths in large environments with many               temporarily inherits the higher-priority of Y. To avoid a sit-
+      agents, as well as for conveying packages in an au-             uation where agents are stuck waiting, priority inheritance is
+      tomated warehouse.                                              executed in combination with a backtracking protocol. Since
+                                                                      PIBT assumes that agents can only communicate when lo-
+1 Introduction                                                        cated within two hops of each other (e.g., Manhattan distance
+                                                                      2 in a grid environment), it can be implemented in a fully
+In systems using physical moving agents, it is essential to al-       decentralized way and inherits the above characteristics.
+low agents to reach their own destinations smoothly without
+collisions, by providing valid paths while minimizing excess             Our main contributions are two-folds: 1) we propose an al-
+travel time. This problem, known as Multi-agent Path Find-            gorithm ensuring that every agent always reaches its destina-
+ing (MAPF), is however computationally difficult due to the           tion within finite time as long as the environment satisfies the
+search space growing exponentially as the number of agents            condition that all pairs of adjacent nodes belong to a simple
+increases. MAPF is an important problem due to its appli-             cycle of length 3 or more (includes undirected biconnected
+cations in various domains, e.g., traffic control [Dresner and        graphs); and 2) we evaluate that algorithm in various envi-
+Stone, 2008], automated warehouse [Wurman et al., 2008],              ronments, showing its practicality. In particular, experimental
+or airport surface operation [Morris et al., 2016], etc.              results over various scenarios confirm its adequateness both
+                                                                      for finding paths in large environments with many agents, as
+   Previous research on MAPF focuses on solving a "one-               well as for conveying packages in an automated warehouse.
+shot" version of the problem, i.e., to make agents reach their
+goal from their initial position only once. In practical ap-             The paper is organized as follows. Section 2 reviews ex-
+plications, such as conveying packages in a warehouse [Ma             isting algorithms for MAPF and a variant called Multi-agent
+et al., 2017], MAPF must however be solved iteratively.               Pickup and Delivery (MAPD). Section 3 defines iterative
+                                                                      MAPF, which provides an abstract framework for multiple
+
+                                                                 535
+Proceedings of the Twenty-Eighth International Joint Conference on Artificial Intelligence (IJCAI-19)
+
+moving agents. Section 4 presents the PIBT algorithm and its          a delivery location. The paper proposes two decoupled algo-
+theoretical analysis. Section 5 presents empirical results on         rithms based on HCA for MAPD, called respectively Token
+both path finding (MAPF) and pickup and delivery (MAPD).              Passing (TP) and Token Passing with Task Swap. These algo-
+Section 6 concludes the paper and discusses future work.              rithms can easily be adapted to be decentralized but require
+                                                                      a certain amount of non-task endpoints where agents do not
+2 Related Work                                                        block other agents' motion.
+
+Many complete MAPF algorithms exist, such as A with Op-               3 Problem Definition
+erator Decomposition [Standley, 2010], Enhanced Partial Ex-
+pansion A [Goldenberg et al., 2014], Increasing Cost Tree             The problem of iterative Multi-agent Path Finding (itera-
+Search [Sharon et al., 2013], Conflict-based Search [Sharon           tive MAPF) is a generalization of problems addressing mul-
+et al., 2015], M [Wagner and Choset, 2015], etc.                      tiple moving agents, including both Multi-agent Path Find-
+                                                                      ing (MAPF) and Multi-agent Pickup and Delivery (MAPD).
+   Finding an optimal solution is however NP-hard [Yu and             Since iterative MAPF is an abstract model we do not intend to
+LaValle, 2013], and optimal algorithms do not scale in the            solve it directly, rather, it is necessary to embody task creation
+number of agents and are too costly for iterative use, hence          according to target domains.
+the need for sub-optimal solvers, e.g., FAR [Wang et al.,
+2008], MAPP [Wang and Botea, 2011], Tree-based Agent                     The system consists of a set of agents, A = {a1, . . . , an},
+Swapping Strategy [Khorshid et al., 2011], BIBOX [Surynek,            and an environment given as a graph G = (V, E), where
+2009], CBS variants [Barer et al., 2014; Cohen et al., 2016].         agents occupy nodes in V and move along edges in E. Con-
+                                                                      sidering practical situations, G must be a simple (neither
+   Push and Swap/Rotate [Luna and Bekris, 2011; de Wilde              loops nor multi-edges) and strongly-connected (every node
+et al., 2013], which partly inspired our proposal, are sub-           is reachable from every other node) directed graph. This in-
+optimal centralized approaches that allow one agent to push           cludes all simple undirected graphs that are connected.
+another away from its path. However, they only allow a sin-
+gle agent or a pair of agents to move at each timestep. En-              Let vi(t) denote the node occupied by agent ai at discrete
+hanced Push and Swap include Parallel Push and Swap [Sajid            time t. The initial position of agent ai is vi(0) and given
+et al., 2012] where all agents can move simultaneously, or            as input. At each timestep, ai selects one node vi(t + 1) 
+Push-Swap-Wait [Wiktor et al., 2014] which takes a decen-             {v|v  V, (vi(t), v)  E}  {vi(t)} as its location for the
+tralized approach in narrow passages. DisCoF [Zhang et al.,           next timestep. Agents must avoid 1) collision: vi(t) = vj(t);
+2016] combines decoupled prioritized planning with fallback           and 2) intersection with others: vi(t) = vj(t + 1)  vj(t +
+to coupled push and swap in case of conflicts. PIBT, the pro-         1) = vj(t). We do not prohibit rotations, so vi(t + 1) =
+posed method, can be seen as a combination of safe "push"             vj(t)  vj(t + 1) = vk(t)  · · ·  vl(t + 1) = vi(t) is possible.
+operations, thanks to backtracking and dynamic priorities.
+                                                                         Let  = {1, 2, . . . } be a dynamic set of tasks with new
+   Prioritized planning is computationally cheap and hence            tasks being added over time, i.e., not all tasks are known
+attractive for MAPF. Hierarchical Cooperative A (HCA)                 initially. A task is defined as a finite set of goals j =
+and Windowed HCA (WHCA) [Silver, 2005] are decou-                     {g1, g2, . . . , gm} where gk  V , possibly with dependencies
+pled approaches in that they plan a path for each agent               as a partial order on gk. Let tj be the timestep when j is
+one after the other while avoiding collisions with previously         added to . An agent is free when it has no assigned task. A
+computed paths. WHCA uses a limited lookahead win-                    task j   can only be assigned to free agents. When j is
+dow. Our proposal, PIBT, is based on WHCA with a win-                 assigned to ai, ai starts visiting goals in j. When all goals
+dow size of one. Decentralized solutions, i.e., where each            have been visited, j is completed and ai becomes free.
+agent computes its own path based on information from
+other agents, are inherently decoupled. Decentralized solu-              Let now (ai, j) = (vi(t), vi(t + 1), . . . ) be the path of
+tions for MAPF [Velagapudi et al., 2010; C a´p et al., 2015;          ai when j is assigned at timestep t until ai completes j.
+Chouhan and Niyogi, 2015] are hence usually prioritized.              When ai is free, it is assigned a dummy task ¯l with path
+The negotiation process for ordering priorities studied by            (ai, ¯l), where index l is for the uniqueness of . The path
+Azarm et al. [Azarm and Schmidt, 1997] solves conflicts by            must ensure no collision and no intersection, with the follow-
+having involved robots try all priority orderings, and deals          ing additional condition; gk  (ai, j), gk  j. The
+with congestion by limiting negotiation to at most 3 robots           service time ((ai, j), tj) is defined as the time elapsed
+and letting others wait. A recent theoretical analysis of pri-        from start (tj) to the completion of j by ai. Note that
+oritized planning [Ma et al., 2018] identifies instances that         ((ai, j), tj) does not usually equal to |(ai, j)| because
+fail for any order of static priorities. That study, which also       j is not always assigned immediately.
+presents a centralized approach called Priority-Based Search,
+actually provides a very strong case for planning based on               We say that iterative MAPF has a solution if and only if
+dynamic priorities, such as the approach taken with PIBT.             the service times of all tasks are finite. Iterative MAPF is a
+                                                                      generic problem which, depending on its concrete instance,
+   The problem of Multi-agent Pickup and Delivery                     can rely on an objective function of the following general
+(MAPD) [Ma et al., 2017] abstracts real scenarios such as
+an automated warehouse, and consists of both allocation and
+route planning. Agents are assigned to a task from a stream of
+delivery tasks and must consecutively visit both a pickup and
+
+                                                                 536
+                     Proceedings of the Twenty-Eighth International Joint Conference on Artificial Intelligence (IJCAI-19)
+
+                     high      high                                               priority: high
+
+                     a2        a2                                                    a6 a5 a2                             a6 a5 a2
+
+ a1                  a0    a1      a0 a1 a0 a2                                     a1 a0 a4 a3                        a1 a0 a4 a3
+
+medium  priority: low medium   low (as high)                                      medium low                               low (as high)
+                                                                                    (a) initial priority inheritance  (b) backtracking and PI again
+(a) stuck agent            (b) priority inheritance  (c) one timestep later
+
+Figure 1: Examples of priority inheritance. Without inheritance                   a6 a5 a2                            a1    a6 a2
+(1a), a stuck agent (a0) cannot give way to a high-priority agent
+(a2) without risking collision into a third agent (a1). With priority             a1 a0 a4 a3                         a0 a4 a5 a3
+inheritance (1b), a0 temporarily inherits the priority of a2, forcing
+a1 to give way, and solving the situation (1c).
+
+                                                                                  (c) backtracking                        (d) one timestep later
+
+form.                  n                                                          Figure 2: Example of PIBT. Flows of back tracking are drawn as
+        minimize                                                                  doubled-line arrows. Since a2 is stuck (2a), back tracking returns
+                                       ((ai, j), tj)                              invalid to a3, subsequently a4. a4 executes other priority inheritance
+                i ,                                                               to a0 (2b). a4, a0, a5 and a6 wait for the results of back tracking (2c)
+                      i=1 j i{¯l}                                                 and then start moving (2d).
+        s.t.
+                      = 1  2  · · ·  n
+                     i  i = , i = i  {1, . . . , n}                               agent (a2). This is typically addressed by priority inheri-
+                                                                                  tance [Sha et al., 1990] (Fig. 1b). The rationale is that, a
+where i is the set of tasks allocated to ai. Concrete instances                   low-priority agent (a0) temporarily inherits the higher prior-
+of iterative MAPF include route planning and task allocation,                     ity of agents (a2) claiming resources it holds, thus forcing
+                                                                                  medium-priority agents (a1) out of the way (Fig. 1c).
+for which objective functions are described in Section 5.
+   Depending on context, i is determined a priori. For in-                        Backtracking
+
+stance, in the literature on MAPF, i is provided as {i =                          Priority inheritance deals effectively with priority inversion,
+{gi}} where gi is a goal node of ai. A start node is de-                          but it does not completely ensure deadlock-freedom. For in-
+fined by vi(0). In the basic definition of MAPF, termination is                   stance, as shown in Fig. 2a, agent a2 finds no escape as a
+achieved once all agents are at their goal in the same timestep.                  result of consecutive priority inheritance (a6a5a4a3).
+To satisfy this requirement, when ai that once reached gi
+leaves it, a new task  = {gi} is added to i.                                         The solution relies on backtracking: i.e., any agent a that
+                                                                                  gives its priority must wait for an outcome (valid or invalid).
+   MAPD is an instance of iterative MAPF, where every task                        If valid, a successfully moves to the desired node. Other-
+                                                                                  wise, it must change its target, excluding 1) nodes requested
+is a tuple of two nodes (pickup and delivery) instead of a set.                   from higher priority agents, and 2) nodes denied from inher-
+                                                                                  ited agents. Upon finding no valid or unoccupied nodes, a
+4 Priority Inheritance with Backtracking                                          sends back an invalid outcome to the agent from which it in-
+                                                                                  herited its priority. In Fig. 2b, a2 first sends invalid back to a3,
+This section introduces the concept of Priority Inheritance                       which in turn sends invalid to a4. Since a0 has lower priority,
+with Backtracking (PIBT), describes the algorithm and its                         a4 can let a0 inherit its priority as an alternative, which leads
+properties, as well as how to apply PIBT to specific prob-                        to a valid outcome (Fig. 2c), and agents can move (Fig. 2d).
+lems such as MAPF and MAPD. To avoid unnecessarily com-
+plex explanations, we introduce PIBT as a centralized algo-                       4.2 Algorithm
+rithm and focus on the analysis of the prioritization scheme
+itself. PIBT relies on a decoupled approach making it easily                      We begin by defining the notion of groups of interacting
+amenable to decentralization. We briefly discuss later how to                     agents, since the algorithm and its proofs rely on it. When
+adapt it to a decentralized case.                                                 two agents located within two hops of each other move, they
+                                                                                  might collide in the next step, and they are said to be directly
+4.1 Basic Concept                                                                 interacting in that step. For an agent ai, a group of interacting
+                                                                                  agents Ai(t)  A is then defined by transitivity over direct
+Prioritized approaches are effective for iterative use, so PIBT                   interactions in a timestep t. Note that, given ai and Ai(t),
+essentially implements WHCA [Silver, 2005] with a time                            then for any other agent aj  Ai(t) we have Ai(t) = Aj(t).
+window of one. At every timestep, each agent updates its                          Whenever obvious from context, we use A(t) or A.
+own unique priority. Paths are computed one by one while
+avoiding collisions with previously computed paths.                                  Since agents belonging to different groups cannot affect
+                                                                                  each other, path planning can effectively occur in parallel. As
+Priority Inheritance                                                              a result, PIBT is decentralized and only relies on local com-
+Priorities alone can still result in a deadlock (see Fig. 1a)                     munication, i.e., it is sufficient that two agents in close prox-
+resulting from a case of priority inversion. Priority in-                         imity can talk directly and utilize multi-hop communication.
+version occurs when a low-priority agent (a0) fails to ob-
+tain a resource held by a medium-priority agent (a1), even
+though it holds a second resource claimed by a higher-priority
+
+                                                                             537
+                   Proceedings of the Twenty-Eighth International Joint Conference on Artificial Intelligence (IJCAI-19)
+
+Algorithm 1 PIBT (code at timestep t)                                   a2 in Fig. 2b. In that case, ai selects vi(t) as vi(t + 1) and
+                                                                        returns invalid as outcome [Lines 27,28]. Otherwise (Ci non-
+1: UNDECIDED  A(t)                           agents list                empty), ai selects the most valuable node vi [Line 13]. If
+                                                                        vi is occupied by an agent ak in UNDECIDED [Line 15], ai
+2: OCCUPIED                                  nodes list                 applies priority inheritance and waits for the result of back-
+                                                                        tracking [Line 16], otherwise, vi is set to vi(t+1) and returns
+3: update all priorities pi(t)                                          valid [Lines 23,24]. Upon a valid outcome, ai can move to
+4: while UNDECIDED =  do                                                vi [Line 17]. Otherwise, ai updates Ci to exclude prohibited
+                                                                        nodes [Line 20] and repeats the process [Lines 12­26].
+5: let a be the agent with highest priority in
+                                                                           We now prove that the agent with highest priority can al-
+     UNDECIDED
+                                                                        ways move. The intuition is that it can always move along a
+6: PIBT(a, )
+                                                                        simple cycle.
+7: end while
+                                                                        Lemma 1. Let a1 denote the agent with highest priority at
+8:                                                                      timestep t and v1 an arbitrary neighbor node of v1(t). If
+                                                                        there exists a simple cycle C = (v1(t), v1, . . . ) and |C|  3,
+ 9: function PIBT(ai, aj)                                               Algorithm 1 makes a1 move to v1 in the next timestep.
+10: UNDECIDED  UNDECIDED \ {ai}
+11: Ci  ({v | (v, vi(t))  E}  {vi(t)})                                  Proof. After deciding v1, it is added to OCCUPIED
+                                                                        [Line 13,14]. From the definition of Ci, i = 1 [Line 11],
+                    \({vj(t)}  OCCUPIED)                                no other agent can select v1.
+
+12: while Ci =  do                                                         Consider first the case when v1 is unoccupied. No other
+           vi  arg max fi(v)                                            agent can enter v1 and a1 is guaranteed to move to v1.
+13:
+                                                                           Consider now that v1 is occupied by some agent a2. a2
+                    vCi                                                 inherits a1's priority which is highest. The existence of cycle
+                                                                        C ensures that C2 is not initially empty (|C|  3, C contains
+14:        OCCUPIED  OCCUPIED  {vi}                                     v1(t) and v2(t)). From the definition of C2, collision and
+                                                                        intersection with a1 are implicitly prevented. If a2 selects
+15:        if ak  UNDECIDED such that vi = vk(t)                        v2  C2 such that v2 is unoccupied by another agent, then a2
+                                                                        is guaranteed to move to v2 according to the same logic as for
+     then                                                               a1. Consequently, a1 successfully moves to v1. This forms
+                                                                        the basis and the remaining now proves the induction step.
+16:           if PIBT(ak, ai) is valid then
+                                                                           Following this, suppose that ai grants its priority to aj
+17:                vi(t + 1)  vi                                        (ai, aj  A1(t), 2  i < j). From the definition of Cj, col-
+                                                                        lision and intersection with other agents are implicitly pre-
+18:                return valid                                         vented. If aj selects an unoccupied node vj  Cj, aj can
+                                                                        move to vj and a series of agents that will receive the result
+19:           else                                                      of backtracking as valid, including ai and a2, can move to its
+                                                                        current target node based on the same argument.
+20:                Ci  Ci \ OCCUPIED
+                                                                           Now, by contradiction, suppose that a2 fails to move to
+21:           end if                                                    any node, i.e. a2 receives invalid as the result of back-
+                                                                        tracking and C2 becomes empty. Let DECIDED denote
+22:        else                                                         A1(t) \ {UNDECIDED  {a1}}. The assumption says all
+                                                                        agents in DECIDED failed to move. Since ai  DECIDED
+23:           vi(t + 1)  vi                                             (i  2) tried to move other nodes until Ci became empty,
+                                                                        neighbor nodes of v2(t) exclusive of v1(t) are in OCCUPIED,
+24:           return valid                                              and all nodes adjacent to vj(t) (j  3) are in OCCUPIED.
+                                                                        Incidentally, the existence of C indicates at least one agent
+25:        end if                                                       a = a2 on C had initially at least one free neighbor node
+                                                                        including v1(t). At the beginning of the original priority
+26: end while                                                           inheritance from a1, even though all nodes in C is occu-
+                                                                        pied of someone, the agent on the last node of C has a free
+27: vi(t + 1)  vi(t)                                                    neighbor node, i.e., v1(t), otherwise, it is obviously there ex-
+28: return invalid                                                      ists a. Considering the mechanism of priority inheritance,
+                                                                        DECIDED must contain all agents on C exclusive of a1 be-
+29: end function                                                        cause C contains v2(t). This is contradiction; a should be in
+                                                                        DECIDED but a initially had an free neighbor node. There-
+   Algorithm 1 describes PIBT, where pi(t)  R is the pri-               fore, a2 can finally move to a node not v1(t) or v2(t) (equals
+ority of agent ai at timestep t. fi(v), v  V is the valua-              to v1). Thus, a1 can move to v1.
+tion function of nodes for ai at the current timestep, where
+a larger value of fi(v) means that ai has a higher preference
+to move to node v at the next timestep. PIBT can be de-
+scribed recursively, especially with respect to priority inheri-
+tance and backtracking. We assume that the groups of inter-
+acting agents A(t) are fully identified prior to starting the al-
+gorithm. UNDECIDED is the set of agents that have not man-
+ifested an intention (initially A(t)). At each timestep, agents
+update their priorities in the way mentioned later [Line 3].
+Subsequently, select the agent with highest priority in UN-
+DECIDED and call function PIBT [Lines 5,6]. This loops
+until all agents in A determines their nodes for next timestep.
+
+   The function PIBT takes two arguments: the agent ai mak-
+ing a decision and an agent aj from which ai inherits its pri-
+ority, or  if there is none. ai must select a node for vi(t + 1)
+from the set of candidates nodes Ci. Here, Ci consists of
+vi(t) and its neighbors while excluding 1) nodes requested
+from higher priority agents, 2) nodes denied from inherited
+agents, and 3) vj(t) for avoiding intersection [Line 11].
+
+   If Ci is empty [Line 12], this means that ai is stuck like
+
+                                                                   538
+Proceedings of the Twenty-Eighth International Joint Conference on Artificial Intelligence (IJCAI-19)
+
+Prioritization                                                         part of priority inheritance and backtracking is done by prop-
+Let i denote the task currently assigned to ai, and gi the             agation of information. In a decentralized context, PIBT re-
+current goal in i. Let i(t)  N be the number of timesteps              quires agents to know others' priorities before they decide
+elapsed since ai last updated gi and until time t. Note that           their next nodes. Usually, this requires |A|2 communication
+i(0) = 0 or when ai is free. Let i  [0, 1) be a value unique           between agents, however, updating rule of pi relaxes this ef-
+to each agent ai. At every timestep, pi(t)  R is computed              fort, e.g., stores other agents priories and communicates only
+as follows; pi(t)  i(t) + i. Obviously, pi(t) is unique                when i becomes zero. Therefore, the communication cost of
+among agents at every timestep.                                        PIBT mainly depends on the information propagation phase.
+
+   This prioritization leads to the following theorem.                    Let us now consider this phase. In Algorithm 1, communi-
+                                                                       cation between agents corresponds to calling function PIBT
+Theorem 2. If G has a simple cycle C for all pairs of ad-              [Line 6,16] and backtracking [Line 18,24,28]. PIBT(ai, ·) is
+jacent nodes and |C|  3 then, with PIBT, all agents reach              never called twice in each timestep, as discussed in the pre-
+their own destination within diam(G) · |A| timesteps after be-         vious section. Moreover, each agent sends a backtracking
+ing given.                                                             message at most once in each timestep. Overall, the com-
+                                                                       munication cost for PIBT at each timestep is linear w.r.t. the
+Proof. From Lemma 1, the agent with highest priority                   number of agents, that is, O(|A|). In reality, this can be even
+reaches its own goal within diam(G) timesteps. Based on the            less because the figures depend on the number of interacting
+definition of i(t), once some agent ai has reached its goal,           agents |A| which can be much smaller than |A|.
+pi(t) is reset and is lower than that of all other agents that
+have not reached their goal yet. Those agents see their prior-         4.3 Applying to Specific Problems
+ity increase by one. As long as such agents remain, exactly
+one of them must have highest priority. In turn, that agent            The valuation function of nodes, fi(v), must be defined based
+reaches its own goal after at most diam(G) timesteps. This             on the concrete problem. In the two scenarios introduced
+repeats until all agents have reached their goal at least once,        later, we use -cost(v, gi) as fi, where cost(u, u ) is the length
+which takes at most diam(G) · |A| timesteps in total.                  of the shortest path from u to u , and gi is the current desti-
+                                                                       nation if ai has a task. 1 To avoid unnecessary priority in-
+   A typical example that satisfies the above condition is any         heritance, the presence (or not) of an agent is used as a tie-
+biconnected undirected graph. The opposite is not true how-            breaking rule. If ai is free, make vi(t) to be the highest and
+ever, and Theorem 2 is expressed more generally to account             use the same tie-breaking rule.
+for directed graphs. For instance, a directed ring satisfies the
+condition even though it is not biconnected. Note that we              Multi-agent Path Finding (MAPF)
+neither ensure nor require that all agents be on their goal si-
+multaneously.                                                          In any graph G, PIBT with above fi does not ensure that
+                                                                       all agents are located on their goals simultaneously, which
+Complexity Analysis                                                    MAPF requires. We confirmed a certain kind of livelock situ-
+                                                                       ations in our experiment. It might be possible to ensure com-
+Now we consider the computational complexity of PIBT. To               pleteness for some classes of graphs through a more complex
+simplify, assume that PIBT performs in a centralized way.              fi, e.g., akin to "swap" operation [Luna and Bekris, 2011],
+Let (G) denote the maximum degree of G, and F be the                   but we do not address this issue here. Note that PIBT is aimed
+maximum time required to compute the most valuable node                at iterative use rather than one-shot use.
+for the next timestep [Line 13]. F depends on both G and the
+node evaluation function fi.                                           Multi-agent Pickup and Delivery (MAPD)
+
+Proposition 3. The computational complexity of PIBT in one             The MAPD problem is a typical example of iterative MAPF.
+timestep is O(|A| · (G) · F ).                                         Since PIBT only provides coordinated movements of agents,
+                                                                       we need to complement the method of task allocation.
+Proof. For an agent ai, the function PIBT(ai, ·) is called
+once in one timestep because PIBT(ai, ·) is called if and only            Different from the proposed algorithms by Ma et al. [Ma
+if ai  UNDECIDED [Line 5 and Line 15,16], and ai is re-                et al., 2017], deadlocks never occur with PIBT even with-
+moved from UNDECIDED after calling [Line 10]. The main                 out non-task endpoints, as long as G follows the condition
+loop in Line 12 is repeated at most (G) + 1 times. If pri-             stated in Theorem 2. Moreover, PIBT does not require well-
+ority inheritance occurs and succeeds [Line 16], the loop is           formed instances which guarantees that for any two endpoints
+broken [Line 18], otherwise |Ci| decreases [Lines 14 and 20].          including pickup and delivery locations, a path exists between
+If the absence of priority inheritance, the loop is also broken        them that traverses no other endpoints. Practically, MAPD is
+[Line 24]. At each iteration of the loop, the node selection           performed in orderly environments, i.e., the assumption we
+[Line 13] occurs and is itself of complexity F . Thus, we de-          stated of a graph is adequate. Therefore, there is no need to
+rive the complexity of PIBT as O(|A| · (G) · F ).                      care about the behavior of free agents.
+
+Communication                                                             From the above reasons, we propose a simple allocation
+                                                                       process; at every timestep, each free agent moves to the near-
+Since PIBT is based on priorities and assumes only local in-
+teractions, it is easily adapted to a decentralized context. The           1 Experiments on MAPF rely on A to obtain the shortest paths.
+                                                                       Those on MAPD used the Floyd-Warshal algorithm, to build the all-
+                                                                       pairs distance matrix, during a preprocessing phase. The comparison
+                                                                       (TP) also utilized the matrix.
+
+                                                                  539
+                   Proceedings of the Twenty-Eighth International Joint Conference on Artificial Intelligence (IJCAI-19)
+
+                                     PIBT                                WHCA                                      PPS
+
+            field  agents path makespan success runtime          path makespan success runtime       path makespan success runtime
+simple map
+                   10 6.7 (6.7) 11.2 (11.2) 99 0 (0) 5.8 (5.8) 10.5 (10.5) 98 1 (1) 8.3 (8.3) 13.7 (13.7) 100 0 (0)
+         8×8
+                   15 7.5 (7.5) 12.7 (12.5) 99 1 (1) 6.2 (6.2) 12.6 (12.5) 85 2 (2) 11.0 (11.1) 18.3 (18.5) 100 1 (1)
+    lak105d
+      25×31        20 8.4 (7.9) 15.0 (13.9) 89 2 (2) 6.5 (6.4) 13.8 (13.5) 44 4 (3) 13.8 (12.9) 23.0 (22.2) 100 2 (2)
+
+       arena       25 9.5 (10.0) 18.1 (20.3) 85 2 (2) 6.8 (6.8) 15.0 (15.0)                      4 5 (5) 16.9 (16.7) 26.9 (27.8) 100 4 (4)
+      49×49
+                   30 10.7    19.7         75 3                  -    -                          0-  21.3   32.7          99 7
+    ost003d
+  194×194          40 14.3    25.9         41 5                  -    -                          0-  33.3   47.4          99 21
+
+                   50 33.3    67.0         37 12                 -    -                          0-  58.0   72.7          95 73
+
+                   10 20.3 (20.2) 34.2 (34.0) 100 2 (2) 19.0 (19.0) 34.0 (34.0) 99 4 (4) 21.1 (21.1) 35.7 (35.6) 100 2 (2)
+
+                   25 23.0 (23.0) 41.1 (40.8) 99 8 (8) 19.9 (19.9) 40.4 (40.5) 87 22 (22) 26.0 (26.2) 47.0 (47.1) 100 9 (6)
+
+                   50 26.9 (26.4) 49.0 (47.6) 95 19 (19) 21.1 (21.1) 47.9 (47.9) 36 92 (92) 36.5 (35.4) 67.1 (64.5) 100 40 (26)
+
+                   75 31.7 (32.1) 59.4 (64.5) 77 36 (37) 22.8 (23.7) 54.0 (57.0)                 3 210 (230) 52.1 (47.7) 97.4 (91.0) 98 118 (62)
+
+                   100 37.1   67.6         62 55                 -    -                          0-  69.9   130.3         98 284
+
+                   10 32.4 (32.4) 56.5 (56.5) 100 5 (5) 31.6 (31.6) 56.5 (56.5) 100 5 (5) 32.6 (32.6) 56.9 (56.9) 100 3 (3)
+
+                   25 33.1 (33.1) 63.7 (63.7) 100 12 (12) 31.5 (31.5) 64.0 (64.0) 100 17 (17) 33.8 (33.8) 65.1 (65.1) 100 9 (9)
+
+                   50 35.0 (35.0) 68.7 (68.7) 100 25 (25) 32.2 (32.2) 69.3 (69.3) 100 59 (59) 36.6 (36.6) 72.7 (72.7) 100 20 (20)
+
+                   100 37.6 (37.6) 74.1 (74.0) 98 52 (52) 32.4 (32.4) 74.8 (74.8) 98 253 (253) 41.1 (41.1) 82.1 (82.0) 100 53 (53)
+
+                   200 42.1 (42.1) 77.5 (77.7) 96 121 (121) 33.3 (33.3) 79.8 (79.9) 82 1292 (1294) 51.0 (50.9) 96.6 (96.4) 100 185 (183)
+
+                   300 46.0 (46.2) 80.6 (81.6) 90 210 (212) 34.3 (34.3) 83.8 (83.8) 26 3482 (3492) 62.0 (62.1) 111.9 (112.2) 100 477 (463)
+
+                   400 49.4 (47.5) 84.1 (84.0) 74 318 (305) 35.1 (35.1) 83.0 (83.0)              1 6703 (6703) 74.3 (72.6) 129.4 (139.0) 100 1048 (847)
+
+                   500 52.7   88.4         61 458                -    -                          0-  87.6   147.0         99 2122
+
+                   10 163.3 (163.3) 316.4 (316.4) 100 208 (208) 159.6 (159.6) 316.3 (316.3) 100 290 (290) 163.8 (163.8) 317.3 (317.3) 100 192 (192)
+
+                   25 170.6 (170.6) 356.3 (356.3) 100 586 (586) 162.1 (162.1) 356.4 (356.4) 100 1179 (1179) 172.4 (172.4) 360.3 (360.3) 100 485 (485)
+
+                   50 173.4 (173.0) 370.9 (370.8) 100 1413 (1407) 160.3 (160.3) 370.2 (370.2) 99 3317 (3317) 177.2 (176.8) 379.0 (378.8) 100 1053 (1050)
+
+                   100 179.6 (178.7) 381.6 (381.2) 100 3298 (3224) 158.8 (158.8) 380.2 (380.2) 91 8436 (8436) 189.0 (188.0) 403.7 (403.3) 100 2796 (2748)
+
+                   200 190.5 (189.8) 393.1 (392.2) 100 8550 (8392) 160.1 (160.1) 391.1 (391.1) 57 22853 (22853) 215.6 (214.7) 453.1 (454.1) 100 9506 (9276)
+
+                   300 198.9 (194.1) 402.3 (396.2) 98 14614 (13069) 155.2 (155.2) 397.8 (397.8)  6 38453 (38453) 243.3 (233.1) 498.4 (488.8) 100 21630 (18219)
+
+                   400 207.4  410.7        99 21813              -    -                          0-  274.8  551.3         98 42966
+
+                   500 215.7  424.9        94 29834              -    -                          0-  308.3  606.4         100 76312
+
+Table 1: The results of MAPF experiments. "path" corresponds to path cost. "success" means the percentage that solver successfully solved
+within 100 instances. The unit of "runtime" is ms. In "path", "makespan" and "runtime", average only in the case of success within a solver
+(no decoration) and average over instances that were successfully solved by all solvers (in parentheses) are both shown.
+
+est pickup location of the non-assigned task, ignoring the be-        solver yielded a failure or failed to provide a result after a
+havior of other agents, and is assigned to a task if and only         timeout of 5 minutes. The evaluation metrics are the fol-
+if it reaches the pickup location and the task remains. The           lowing four, referring to other MAPF studies: 1) path cost,
+following theorem directly follows from Theorem 2.                    i.e., the timestep when each agent reaches its given goals and
+                                                                      never move from then; 2) makespan, i.e., the timestep when
+Theorem 4. If G has a simple cycle C for all pairs of adja-           all agents reach their given goals; 3) runtime; and 4) success
+cent nodes and |C|  3, then PIBT with the above-mentioned             rate over 100 instances. Note that the sum of service time
+allocation process solves MAPD.                                       for one agent defined in Section 3 is different from path cost,
+                                                                      e.g., assume that an agent reaches its goal and apart there. The
+5 Evaluation                                                          service time does not augment when the agent is on the goal
+                                                                      since the task is not issued, whereas the path cost does count
+This section assesses the effectiveness of PIBT quantitatively,       that time. Stated in section 3, the typical objective function
+through computer simulation. The simulator was developed              of iterative MAPF is service time and path cost is the spe-
+in C++, 2 and all experiments were run on a laptop with In-           cific metric of the one-shot version. However, following the
+tel Core i7 2.2GHz CPU and 8GB RAM. The experiments                   literature on one-shot MAPF, we address here path cost and
+address both the MAPF and MAPD problems.                              makespan, which is also indirect criteria of service time.
+
+5.1 Multi-agent Path Finding (MAPF)                                      The results, shown in Table 1, indicate, for each solver,
+                                                                      both an average over the instances successful with that solver
+We carefully chose four undirected graphs, shown in Ta-               (no decoration), and an average over only the instances that
+ble 1, as testbeds for MAPF. Three of them (lak105d, arena,           were successfully solved by all three solvers (in parentheses).
+ost003d) come from the game Dragon Age: Origins [Sturte-              In summary, PIBT compares well with other methods; Path
+vant, 2012] and are commonly used to evaluate multi-agent             efficiency is reasonable with a high success rate in most cases,
+algorithms. For comparison with PIBT, we also experimented            moreover, PIBT is comparable with PPS in terms of runtime
+using two sub-optimal MAPF solvers, namely WHCA [Sil-                 cost. In general, PIBT appears to have an advantage in huge
+ver, 2005] and Parallel Push and Swap (PPS) [Sajid et al.,            fields with many agents since it relies only on local communi-
+2012]. The window size of WHCA was set to 5 on the                    cation, and here, the experimental results support the strength
+simple map, and to 10 otherwise. All solvers were executed            of our proposal (see ost003d in Table 1). Conversely, PIBT
+on the same set of 100 settings with random initial positions         suffers from a somewhat low success rate in dense situations
+and goal locations for each configuration while changing the          (see the simple map). PIBT fails on MAPF either because the
+number of agents. An execution was considered failed if the           graph property mentioned before is not met or due to livelock
+                                                                      situations.
+    2 The code is available at https://kei18.github.io/pibt/
+
+                                                                 540
+              Proceedings of the Twenty-Eighth International Joint Conference on Artificial Intelligence (IJCAI-19)
+
+                       PIBT                       TP                      mity in path lengths among agents). In PIBT, once an agent a
+                                                                          reaches its goal, its priority drops below other agents that have
+freq. agents  make-    service    run-   make-    service    run-         yet to reach their goal, letting them push a away rather than
+              span      time      time   span      time      time         taking a detour. This likely contributes to reducing makespan
+     10                       29                         38   3007        over WHCA, in which agents hold their priority. Further,
+                2531          26    255    2543          38   3864        the "Swap" operation in Push and Swap [Luna and Bekris,
+     20         2527          25    405    2541          38   4790        2011] solvers, while effective in narrow passages, produces
+                2525          25    534    2540          38   5971        unnecessary steps in open spaces such as arena.
+0.2  30         2524          24    648    2542          38   6990
+                2524        116     776    2541        124                5.2 Multi-agent Pickup and Delivery (MAPD)
+     40         1224          28    142    1240          40     882
+                1038          25    218    1058          40   5709        Following the experimental setup of the original study [Ma
+     50         1033          24    326    1059          40   7211        et al., 2017], we used the same undirected graph as testbed,
+                1031          24    410    1058          40   8019        as shown in Table 2. We generated a sequence of 500 tasks
+     10         1031        296     494    1058        309    9629        by randomly choosing their pickup and delivery locations
+                1135          77    144    1154          85               from all task endpoints. We used 6 different task frequencies,
+     20           652         33    152      672         41     907       which numbers of tasks are added to the task set : 0.2 (one
+                  552         27    178      576         43   1778        task every 5 timestep), 0.5, 1, 2, 5 and 10 where the number
+0.5  30           540         25    229      580         44   4258        of agents increases from 10 to 50. TP algorithm [Ma et al.,
+                  537       403     286      581       415   11309        2017] was also tested for comparison. All experimental set-
+     40         1115        167     145    1134        177   13953        tings were performed in 100 instances which initial positions
+                  609         92    154      631       101                of agents were set randomly. We evaluated following three:
+     50           448         58    164      478         67     933       1) makespan which is the timestep when all tasks are com-
+                  370         41    175      404         51   1852        pleted; 2) service times, i.e., terms from issue to completion
+     10           328       470     184      369       479    2917        of tasks; and 3) runtime.
+                1105        231     143    1125        238    4187
+     20           597       152     155      616       159    5810           The results are shown in Table 2. Clearly, PIBT signif-
+                  429       114     164      454       121                icantly outperforms TP in the view from all three metrics.
+1    30           346         92    172      381         99     976       PIBT is efficient because 1) it ignores the positions of free
+                  299       492     183      341       501    1889        agents; 2) the computational cost of planning a path is cheap.
+     40         1103        252     144    1122        259    2895
+                  596       173     153      612       179    4022        6 Conclusion
+     50           425       135     163      452       140    5619
+                  344       112     173      371       118                This paper introduces PIBT, an algorithm for iterative MAPF.
+     10           294               182      336                884       PIBT focuses on the adjacent movements of multiple agents,
+                                                              1779        and hence can be applied to many domains. Intuitively, PIBT
+     20                                                       2717        is well-suited to large environments because such environ-
+                                                              4058        ments result in intensive communication and path efficiency
+2    30                                                       5461        improves with a lower density of agents. Empirical results
+                                                                          support this aspect, moreover, PIBT outperforms current so-
+     40                                                                   lutions to pickup and delivery (MAPD).
+
+     50                                                                      Future research include the following: 1) relaxing condi-
+                                                                          tions on the graph environment; 2) finding the effective valua-
+     10                                                                   tion function of nodes for each domain; 3) adapting the model
+                                                                          to asynchronous communication and movements; 4) expand-
+     20                                                                   ing the time window; and 5) applying PIBT to applications
+                                                                          other than MAPF and MAPD.
+5    30
+                                                                          Acknowledgments
+     40
+                                                                          Research partly supported by JSPS KAKENHI Grants
+     50                                                                   No. 17K00019 and 17K12734, and by Japan Science and
+                                                                          Technology Agency (JST) SICORP.
+     10
+                                                                          References
+     20
+                                                                          [Azarm and Schmidt, 1997] Kianoush Azarm and Gu¨nther
+10   30                                                                      Schmidt. Conflict-free motion of multiple mobile robots
+                                                                             based on decentralized motion planning and negotiation.
+     40                                                                      In Proc. IEEE Intl. Conf. on Robotics and Automation
+                                                                             (ICRA), volume 4, pages 3526­3533, 1997.
+     50
+
+Table 2: The results of MAPD experiments. Each value is an average
+of 100 instances. The unit of runtime is ms. The graph is 21×35 4-
+connected grid. Gray cells in the MAPD map are task endpoints,
+i.e., pickup and delivery locations.
+
+   Experimental results in arena show drastic improvements
+in both runtime and makespan for PPS and WHCA when
+compared to the original paper of PPS [Sajid et al., 2012].
+
+   The improvement in runtime is easily explained by heavy
+optimization of our implementation and, in particular, of the
+underlying A algorithm and its use (aggressive caching,
+elimination of redundant computations across agents, ...).
+
+   The improvement in makespan is difficult to isolate but is
+likely to come as a side-effect of the aggressive caching men-
+tioned above. The rationale is that, when many agents need to
+move in the same direction, the caching helps create one-way
+flows of agents and hence reduce interactions and contention
+between groups of agents moving in opposite directions. In
+contrast, since A is a stochastic algorithm, this could result
+in increased contention. This is interesting but largely beyond
+the scope of this paper.
+
+   All three solvers determine paths one at a time, but PPS
+and PIBT differ from WHCA in that the former two have
+a look ahead of a single step, whereas the WHCA com-
+putes paths multi-steps ahead. Due to this, WHCA is nat-
+urally expected to compute better paths than PIBT and PPS.
+We however observe that PIBT sometimes results in a bet-
+ter makespan than WHCA, which can be explained by the
+fairness provided by dynamic prioritization (i.e., more unifor-
+
+                                                                     541
+Proceedings of the Twenty-Eighth International Joint Conference on Artificial Intelligence (IJCAI-19)
+
+[Barer et al., 2014] Max Barer, Guni Sharon, Roni Stern,                [Sharon et al., 2013] Guni Sharon, Roni Stern, Meir Gold-
+   and Ariel Felner. Suboptimal variants of the conflict-based             enberg, and Ariel Felner. The increasing cost tree search
+   search algorithm for the multi-agent pathfinding problem.               for optimal multi-agent pathfinding. Artif.Intell., 195:470­
+   In Proc. 7th Annual Symp. on Combinatorial Search, 2014.                495, 2013.
+
+[C a´p et al., 2015] Michal C a´p, Jir´i Vokr´inek, and Alexander       [Sharon et al., 2015] Guni Sharon, Roni Stern, Ariel Felner,
+   Kleiner. Complete decentralized method for on-line multi-               and Nathan R Sturtevant. Conflict-based search for op-
+   robot trajectory planning in well-formed infrastructures. In            timal multi-agent pathfinding. Artif.Intell., 219:40­66,
+   25th Intl. Conf. on Automated Planning and Scheduling,                  2015.
+   2015.
+                                                                        [Silver, 2005] David Silver. Cooperative pathfinding. AIIDE,
+[Chouhan and Niyogi, 2015] Satyendra Singh Chouhan and                     1:117­122, 2005.
+   Rajdeep Niyogi. Dmapp: A distributed multi-agent path
+   planning algorithm. In Australasian Joint Conference on              [Standley, 2010] Trevor Scott Standley. Finding optimal so-
+   Artificial Intelligence, pages 123­135, 2015.                           lutions to cooperative pathfinding problems. In AAAI, vol-
+                                                                           ume 1, pages 28­29, 2010.
+[Cohen et al., 2016] Liron Cohen, Tansel Uras, TK Satish
+   Kumar, Hong Xu, Nora Ayanian, and Sven Koenig. Im-                   [Sturtevant, 2012] Nathan R Sturtevant. Benchmarks for
+   proved solvers for bounded-suboptimal multi-agent path                  grid-based pathfinding. IEEE Trans. on Computational In-
+   finding. In IJCAI, pages 3067­3074, 2016.                               telligence and AI in Games, 4(2):144­148, 2012.
+
+[de Wilde et al., 2013] Boris de Wilde, Adriaan ter Mors,               [Surynek, 2009] Pavel Surynek. A novel approach to path
+   and Cees Witteveen. Push and rotate: cooperative multi-                 planning for multiple robots in bi-connected graphs. In
+   agent path planning. In AAMAS, pages 87­94, 2013.                       IEEE Intl. Conf. on Robotics and Automation (ICRA),
+                                                                           pages 3613­3619, 2009.
+[Dresner and Stone, 2008] Kurt Dresner and Peter Stone. A
+   multiagent approach to autonomous intersection manage-               [Velagapudi et al., 2010] Prasanna Velagapudi, Katia
+   ment. J. Artif. Intell. Res., 31:591­656, 2008.                         Sycara, and Paul Scerri. Decentralized prioritized plan-
+                                                                           ning in large multirobot teams. In IEEE/RSJ Intl. Conf. on
+[Goldenberg et al., 2014] Meir Goldenberg, Ariel Felner,                   Intelligent Robots and Systems, pages 4603­4609, 2010.
+   Roni Stern, Guni Sharon, Nathan Sturtevant, Robert Holte,
+   and Jonathan Schaeffer. Enhanced partial expansion A*.               [Wagner and Choset, 2015] Glenn Wagner and Howie
+   J. Artif. Intell. Res., 50:141­187, 2014.                               Choset. Subdimensional expansion for multirobot path
+                                                                           planning. Artif.Intell., 219:1­24, 2015.
+[Khorshid et al., 2011] Mokhtar M. Khorshid, Robert C.
+   Holte, and Nathan R. Sturtevant. A polynomial-time algo-             [Wang and Botea, 2011] Ko-Hsin Cindy Wang and Adi
+   rithm for non-optimal multi-agent pathfinding. In Fourth                Botea. Mapp: a scalable multi-agent path planning al-
+   Annual Symp. on Combinatorial Search, 2011.                             gorithm with tractability and completeness guarantees. J.
+                                                                           Artif. Intell. Res., 42:55­90, 2011.
+[Luna and Bekris, 2011] Ryan Luna and Kostas E Bekris.
+   Push and swap: Fast cooperative path-finding with com-               [Wang et al., 2008] Ko-Hsin Cindy Wang, Adi Botea, et al.
+   pleteness guarantees. In IJCAI, pages 294­300, 2011.                    Fast and memory-efficient multi-agent pathfinding. In
+                                                                           ICAPS, pages 380­387, 2008.
+[Ma et al., 2017] Hang Ma, Jiaoyang Li, TK Kumar, and
+   Sven Koenig. Lifelong multi-agent path finding for on-               [Wiktor et al., 2014] Adam Wiktor, Dexter Scobee, Sean
+   line pickup and delivery tasks. In AAMAS, pages 837­845,                Messenger, and Christopher Clark. Decentralized and
+   2017.                                                                   complete multi-robot motion planning in confined spaces.
+                                                                           In Proc. IEEE/RSJ Intl. Conf. on Intelligent Robots and
+[Ma et al., 2018] Hang Ma, Daniel Harabor, Peter J Stuckey,                Systems (IROS), pages 1168­1175, 2014.
+   Jiaoyang Li, and Sven Koenig. Searching with consistent
+   prioritization for multi-agent path finding. arXiv preprint          [Wurman et al., 2008] Peter R Wurman, Raffaello
+   arXiv:1812.06356, 2018.                                                 D'Andrea, and Mick Mountz. Coordinating hun-
+                                                                           dreds of cooperative, autonomous vehicles in warehouses.
+[Morris et al., 2016] Robert Morris, Corina S Pasareanu,                   AI magazine, 29(1):9, 2008.
+   Kasper Søe Luckow, Waqar Malik, Hang Ma, TK Satish
+   Kumar, and Sven Koenig. Planning, scheduling and mon-                [Yan et al., 2013] Zhi Yan, Nicolas Jouandeau, and Arab Ali
+   itoring for airport surface operations. In AAAI Workshop:               Cherif. A survey and analysis of multi-robot coordination.
+   Planning for Hybrid Systems, 2016.                                      Intl. Journal of Advanced Robotic Systems, 10:399, 2013.
+
+[Sajid et al., 2012] Qandeel Sajid, Ryan Luna, and Kostas E             [Yu and LaValle, 2013] Jingjin Yu and Steven M LaValle.
+   Bekris. Multi-agent pathfinding with simultaneous execu-                Structure and intractability of optimal multi-robot path
+   tion of single-agent primitives. In SoCS, 2012.                         planning on graphs. In AAAI, 2013.
+
+[Sha et al., 1990] Lui Sha, Ragunathan Rajkumar, and                    [Zhang et al., 2016] Yu Zhang, Kangjin Kim, and Georgios
+   John P Lehoczky. Priority inheritance protocols: An ap-                 Fainekos. Discof: Cooperative pathfinding in distributed
+   proach to real-time synchronization. IEEE Trans. Com-                   systems with limited sensing and communication range. In
+   put., 39(9):1175­1185, 1990.                                            Distributed Autonomous Robotic Systems, pages 325­340,
+                                                                           2016.
+
+                                                                   542
+

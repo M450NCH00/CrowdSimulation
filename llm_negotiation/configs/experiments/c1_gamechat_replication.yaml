@@ -1,0 +1,65 @@
+# Condition C1: GameChat replication. Each agent is given a task and nothing else: no
+# persona, no situation report. Scored against hospital > airport > grocery.
+#
+# This is the full design: the paper's 18 doorway variants (see c0_no_llm.yaml), each run
+# with either agent speaking first, 36 runs. GameChat itself always had agent 0 speak
+# first (main.py:85-87, commit c49c35a). This file has NOT been run with the paid client;
+# the six-run c1_smoke.yaml has. Check the cost before running it:
+#
+#   python run_experiment.py configs/experiments/c1_gamechat_replication.yaml --plan
+#   python run_experiment.py configs/experiments/c1_gamechat_replication.yaml --client mock
+#
+# For the intersection, change "scenario" to configs/scenarios/intersection.yaml, drop
+# the zone override, and rename the experiment.
+schema_version: 1
+experiment_name: c1_gamechat_replication_doorway
+condition: C1
+description: GameChat replication, task only, the paper's 18 doorway variants, both speaking orders.
+
+scenario: configs/scenarios/doorway.yaml
+scenario_overrides:
+  conflict:
+    zone_half_length: 0.25   # the GameChat repository's margin; see c0_no_llm.yaml
+
+negotiation:
+  enabled: true
+  template: gamechat_task_v1
+  max_messages_per_agent: 4      # "each robot has sent four messages" (Sec IV-C)
+  timing:
+    mode: pre_conflict           # the paper's "Pre-SMG Comm."; "concurrent" is its "SMG Comm."
+    seconds_per_message: 1.0     # concurrent mode only: "each message is generated within one second" (Sec IV-C)
+  info_fields: none              # GameChat gave its agents no situational information
+  visibility: default
+
+llm:
+  client: mock                   # paid calls need --client deepseek on the command line
+  model: deepseek-flash
+  temperature: 1.0               # the API default; GameChat set no temperature (LLM_utils.py:56-59)
+  max_tokens: 300
+  thinking: disabled             # temperature has no effect in DeepSeek's thinking mode
+  mock_policy: task_priority
+
+arbitration:
+  policy: strategy1
+  tie_break: lower_index
+
+scoring:
+  ground_truth: task_priority
+
+budget:
+  cap_usd: 0.50
+  ledger: spend_ledger.jsonl
+
+design:
+  mode: factorial
+  seed: 24300
+  pairs:
+    - [{task_type: hospital}, {task_type: airport}]
+    - [{task_type: hospital}, {task_type: grocery}]
+    - [{task_type: airport}, {task_type: grocery}]
+  assignment: counterbalance
+  first_speaker: counterbalance
+  scenario_variants:
+    - {name: symmetric, overrides: {}}
+    - {name: agent0_back, overrides: {start_offsets: [0.25, 0.0]}}
+    - {name: agent1_back, overrides: {start_offsets: [0.0, 0.25]}}

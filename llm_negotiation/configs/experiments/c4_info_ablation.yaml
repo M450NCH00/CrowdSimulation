@@ -1,0 +1,75 @@
+# Condition C4: does situational information change the outcome?
+#
+# The same pairs as c3_age_only.yaml, each run under three information settings:
+#   info_all      every line of the situation report
+#   info_none     no situation report at all
+#   info_no_other the report without anything about the other person's speed, size or position
+# Any list of field names from negsim/negotiation/situation.py works as a setting, so a
+# single field can be removed or kept on its own.
+#
+# The second agent is slower and larger than the first, so that the report has something
+# different to say to each of them. Those two numbers are placeholders [unverified], like
+# the rest of the hallway's (configs/scenarios/hallway.yaml).
+#
+# Example config. It has NOT been run with the paid client.
+#
+#   python run_experiment.py configs/experiments/c4_info_ablation.yaml --plan
+#   python run_experiment.py configs/experiments/c4_info_ablation.yaml --client mock
+schema_version: 1
+experiment_name: c4_info_ablation_hallway
+condition: C4
+description: Age-only pairs with situational information on, off, and partly on.
+
+scenario: configs/scenarios/hallway.yaml
+scenario_overrides:
+  agents:
+    - {}
+    - {max_speed: 0.9, radius: 0.28}
+personas: configs/personas/personas.yaml
+
+negotiation:
+  enabled: true
+  template: persona_v1
+  max_messages_per_agent: 4
+  timing:
+    mode: pre_conflict
+    seconds_per_message: 1.0
+  info_fields: all       # replaced, run by run, by design.info_variants below
+  visibility: default
+
+llm:
+  client: mock
+  model: deepseek-flash
+  temperature: 1.0
+  max_tokens: 300
+  thinking: disabled
+  mock_policy: first_speaker_goes
+
+arbitration:
+  policy: strategy1
+  tie_break: lower_index
+
+budget:
+  cap_usd: 0.50
+  ledger: spend_ledger.jsonl
+
+design:
+  mode: factorial
+  seed: 24900
+  repeats: 1
+  pairs:
+    - [{persona: f25}, {persona: f25, age: 70}]
+  assignment: counterbalance
+  first_speaker: counterbalance
+  info_variants:
+    - {name: info_all, info_fields: all}
+    - {name: info_none, info_fields: none}
+    - name: info_no_other
+      info_fields:
+        - elapsed_time
+        - own_speed
+        - own_max_speed
+        - own_size
+        - own_distance_to_region
+        - own_time_to_region
+        - region_geometry

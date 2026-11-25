@@ -1,0 +1,859 @@
+Proceedings of the Thirtieth International Conference on Automated Planning and Scheduling (ICAPS 2020)
+
+         Multi-Agent Path Finding with Mutex Propagation
+
+Han Zhang,1 Jiaoyang Li,1 Pavel Surynek,2 Sven Koenig,1 T. K. Satish Kumar1
+
+                     1University of Southern California, 2Czech Technical University
+      {zhan645, jiaoyanl, skoenig}@usc.edu, pavel.surynek@fit.cvut.cz, tkskwork@gmail.com
+
+                              Abstract                                    one of the agents from occupying the conflicting vertex or
+                                                                          traversing the conflicting edge at the conflicting timestep.
+   Mutex propagation is a form of efficient constraint propaga-           On the low level, CBS finds individual minimum-cost paths
+   tion popularly used in AI planning to tightly approximate the          for each agent that satisfy the spatio-temporal constraints
+   reachable states from a given state. We utilize this idea in the       specified by the high-level node. CBS expands high-level
+   context of Multi-Agent Path Finding (MAPF). When adapted               nodes in a best-first order and returns a set of paths as
+   to MAPF, mutex propagation provides stronger constraints               solution when they are conflict-free. Many improvements
+   for conflict resolution in Conflict-Based Search (CBS), a pop-         to CBS have been made, such as adding conflict-selection
+   ular optimal MAPF algorithm, and provides it with the ability          strategies (Boyarski et al. 2015) and heuristic guidance (Li
+   to identify and reason with symmetries in MAPF. While ex-              et al. 2019a).
+   isting work identifies a limited form of symmetries using rect-
+   angle reasoning and requires the manual design of symmetry-               In this paper, we utilize a well-known technique, called
+   breaking constraints, mutex propagation is more general and            mutex propagation, from AI planning.1 It is a form of
+   allows for the automated design of symmetry-breaking con-              constraint propagation that corresponds to directed 3-
+   straints. Our experimental results show that CBS with mutex            consistency, which in turn is a truncated form of path con-
+   propagation is capable of outperforming CBSH with rectan-              sistency (Weld 1999). Like all constraint propagation tech-
+   gle reasoning, a state-of-the-art variant of CBS, with respect         niques, it makes implicit constraints explicit, and it does so
+   to runtime and success rate.                                           efficiently. In AI planning, mutex propagation is applied to
+                                                                          the planning graph (Blum and Furst 1997) to tightly ap-
+                   1 Introduction                                         proximate the set of all reachable states from a given state
+                                                                          in polynomial time (Weld 1999). It has successfully been
+The Multi-Agent Path Finding (MAPF) problem is a gener-                   used to design reachability heuristics for state-space plan-
+alization of the single-agent path finding problem to multi-              ners (Nguyen and Kambhampati 2000), design heuristics for
+ple agents. Each agent is required to move from a given start             plan-space planners that make them competitive with state-
+vertex to a given goal vertex on a given graph while avoid-               space planners (Nguyen and Kambhampati 2001) and im-
+ing conflicts with other agents. A conflict happens when two              prove SAT-based planners (Kautz and Selman 1996).2
+agents stay at the same vertex or traverse the same edge in
+opposite directions at the same time. Common objectives for                  Elements of the planning graph idea have reappeared in
+the MAPF problem include minimizing the sum of the path                   MAPF research in the form of Multi-valued Decision Di-
+costs and the makespan. Under both objectives, the MAPF                   agrams (MDDs) (Boyarski et al. 2015). MDDs are con-
+problem arises in many real-world application domains, in-                structed for each agent individually and essentially capture
+cluding automated warehouse robots (Wurman, D'Andrea,                     reachability information for them. However, they do not cap-
+and Mountz 2008) and aircraft-towing vehicles (Morris et                  ture reachability information for groups of agents. On the
+al. 2016).                                                                other hand, building joint MDDs for groups of agents is
+                                                                          computationally prohibitive because the joint space grows
+   Conflict-Based Search (CBS) (Sharon et al. 2015) is a                  exponentially with the number of agents. Knowing that mu-
+popular algorithm for solving the MAPF problem optimally                  tex propagation alleviates this dilemma in AI planning, we
+for both objectives, which is known to be NP-hard (Yu and                 seek to transfer this technique to MAPF, particularly in the
+LaValle 2013; Ma et al. 2016). CBS is a two-level MAPF                    CBS framework.
+algorithm that starts with an individual minimum-cost path
+for each agent. On the high level, CBS maintains a Con-                      We show that mutex propagation is beneficial in the CBS
+straint Tree (CT) and lazily resolves conflicts between pairs             framework for its ability to identify and reason about sym-
+of agents by adding spatio-temporal constraints to prohibit               metries. While existing work identifies a limited form of
+
+Copyright c 2020, Association for the Advancement of Artificial               1Mutex is short for mutual exclusion.
+Intelligence (www.aaai.org). All rights reserved.                             2SAT is short for the Boolean satisfiability problem.
+
+                                                                     323
+(a)  (b)                                                                 (c)  (d)
+
+Figure 1: Shows some examples of cardinal conflicts in the root CT node. The white and yellow cells indicate free cells while
+the gray cells indicate obstacles. The start vertices of the agents are marked with solid-line circles, and their goal vertices are
+marked with dashed-line circles. (a) shows a cardinal rectangle conflict where one of the two agents needs to wait for one
+timestep in every optimal solution (Li et al. 2019c). (b) shows a cardinal corridor conflict where one of the two agents needs to
+wait until the other agent exits the corridor (Li et al. 2019b; Lam et al. 2019; Li et al. 2020). (c) shows a goal vertex conflict
+where agent a2 needs to take the long path in the optimal solution. (d) shows a switching agents conflict where both agents
+need to move to the rightmost side of the corridor in order to switch their vertices (Sharon et al. 2013).
+
+symmetries and requires the manual design of symmetry-                   for all agents while minimizing the Sum of path Costs (SoC)
+breaking constraints (Li et al. 2019c; 2020), mutex prop-                of all agents. An optimal solution is a solution with mini-
+agation is more general and allows for the automated de-                 mum SoC.
+sign of symmetry-breaking constraints, resulting in stronger
+conflict resolution for CBS that is capable of outperforming             2.2 Conflict-Based Search (CBS)
+CBS with rectangle reasoning, a state-of-the-art variant of
+CBS, with respect to runtime and success rate. We present                Conflict-Based Search (CBS) is a two-level MAPF algo-
+experimental results to support our claims.                              rithm. On the high level, CBS maintains a Constraint Tree
+                                                                         (CT). Each CT node contains a set of constraints and a set
+                   2 Preliminaries                                       of paths, one for each agent, that satisfy all these constraints.
+                                                                         The root CT node contains no constraints. The cost of a CT
+In this section, we provide background material related to               node is the SoC of its paths. On the low level, for each CT
+Multi-Agent Path Finding (MAPF), Conflict-Based Search                   node, CBS finds an individual minimum-cost path for each
+(CBS) and Multi-valued Decision Diagrams (MDDs).                         agent, that is, a path that has the smallest cost among all
+                                                                         paths that satisfy all constraints of the CT node (but might
+2.1 Multi-Agent Path Finding (MAPF)                                      conflict with the other paths). The individual minimum cost
+                                                                         li of agent ai in a CT node is the cost of its path in the CT
+The Multi-Agent Path Finding (MAPF) problem has many                     node. When expanding a CT node, CBS returns a solution
+variants (Stern et al. 2019) and, in this paper, we focus on the         if its paths are conflict-free. Otherwise, CBS picks a con-
+variant defined in (Stern et al. 2019) that (1) considers vertex         flict and splits the CT node into two child CT nodes, which
+and swapping conflicts, (2) uses the "stay at target" assump-            inherit all constraints of their parent CT node. CBS adds a
+tion and (3) optimizes the sum of costs. Formally, we define             constraint to each child CT node to prohibit either one or
+the MAPF problem by an undirected graph G = (V, E) and                   the other of the two agents involved in the conflict to use the
+a set of m agents {a1 . . . am}. Each agent has a start ver-             conflicting vertex or edge at the conflicting timestep. On the
+tex si  V and a goal vertex gi  V . In each timestep, an                 high level, CBS expands nodes in a best-first order. There-
+agent either moves to a neighboring vertex or waits at its               fore, the paths of the first expanded CT node with conflict-
+current vertex. When an agent is at its goal vertex, it can ter-         free paths form an optimal solution.
+minally wait there, which means the agent waits at its goal
+vertex forever. Both move and wait actions have unit cost,                  Constraints: A constraint is a spatio-temporal restric-
+while terminally waiting at the goal vertex has zero cost. A             tion introduced by CBS to resolve conflicts. A vertex con-
+path for an agent is a sequence of move and wait actions                 straint ai, t, v prohibits agent ai from occupying vertex v
+that leads it from its start vertex to terminally waiting at its         at timestep t, and an edge constraint ai, t, v, v prohibits
+goal vertex. A sub-path for an agent is a sequence of actions            agent ai from moving from vertex v to vertex v , that is,
+that leads it from one vertex at a specific timestep to another          traversing edge v, v , between timesteps t and t + 1.
+vertex at a specific timestep. The cost of a path is the ac-
+cumulated cost of all actions in this path. A vertex conflict               Cardinal conflicts: A conflict in a CT node is cardinal iff
+happens when two agents stay at the same vertex simulta-                 any pair of individual minimum-cost paths of both conflict-
+neously, and an edge conflict happens when two agents tra-               ing agents that satisfy all constraints of the CT node has at
+verse the same edge simultaneously in opposite directions.               least one vertex or edge conflict. In other words, there does
+A solution is a set of conflict-free paths for all agents. In this       not exist a pair of conflict-free paths for these two agents
+paper, we limit our discussion to finding conflict-free paths            with their individual minimum costs, respectively, that sat-
+                                                                         isfy all constraints of the CT node. CBS is inefficient in re-
+                                                                         solving some cases of cardinal conflicts (e.g., the four cases
+
+                                                                    324
+in Figure 1) as it needs to check all combinations of paths                          3.1 Mutex Propagation on Planning Graphs
+whose SoC is less than the SoC of an optimal solution,
+which can lead to a large number of node expansions.                                 Planning graphs (Weld 1999) contain two types of nodes,
+                                                                                     proposition nodes and action nodes, arranged into levels.
+   We extend the definition of cardinal conflicts as follows:                        Even-numbered levels contain only proposition nodes, while
+agents ai and aj have a cardinal conflict within costs (li, lj)                      odd-numbered levels contain only action nodes. The zeroth
+in a CT node iff there does not exist a pair of conflict-free                        level represents the start state. An edge connects a proposi-
+paths for these two agents with costs li and lj, respectively,                       tion node to an action node at the next level iff the proposi-
+that satisfy all constraints of the CT node. The definition                          tion is a precondition of that action. An edge also connects
+of cardinal conflicts is identical to the definition of cardinal                     an action node to a proposition node at the next level iff the
+conflicts within costs (li , lj ).                                                   proposition is made true by that action. The planning graph
+                                                                                     represents the effects of parallel actions, but it does so very
+   Cardinal rectangle conflicts and barrier constraints:                             loosely. To better approximate the set of reachable states,
+In four-neighbor grid maps, two agents have a cardinal rect-                         mutex propagation is done on the planning graph using the
+angle conflict in a CT node iff (1) all individual minimum-                          following rules:
+cost paths of both agents cross the same rectangular area; (2)
+the earliest possible timesteps of both agents reaching each                         · Two action nodes at level i are mutex iff (1) the effect of
+vertex inside the rectangular area are equal; and (3) the di-                           one action is the negation of the effect of the other ac-
+rections of both agents moving through the rectangular area                             tion; (2) one action deletes the precondition of the other
+are same in both dimensions. Then, any pair of individual                               action; or (3) there exists a precondition of one action and
+minimum-cost paths of both agents has at least one con-                                 a precondition of the other action that are mutex at level
+flict. A barrier constraint is a set of vertex constraints that                         i - 1.
+prohibits one or the other of the two agents from leaving
+the rectangular area on an individual minimum-cost path.                             · Two proposition nodes at level i are mutex iff (1) one
+Li et al. (2019c) proved that using barrier constraints to re-                          proposition is the negation of the other proposition or (2)
+solve cardinal rectangle conflicts guarantees the optimality                            all actions at level i - 1 that achieve one proposition are
+and completeness of CBS.                                                                pairwise mutex with all actions at level i - 1 that achieve
+                                                                                        the other proposition.
+Example 1. Consider the example in Figure 1a. Agents
+a1 and a2 have a cardinal rectangle conflict, and any                                   In the context of MAPF, MDDs are directed and lev-
+pair of their individual minimum-cost paths has at least                             eled data structures that resemble planning graphs. However,
+one vertex conflict in the yellow rectangular area. In                               each action has a single precondition because each agent at
+any optimal solution, one or the other of the two                                    each timestep can either wait at its current vertex u or tra-
+agents needs to wait for one timestep, and the opti-                                 verse some edge u, v , both with the single precondition of
+mal SoC is 11. The barrier constraint for agent a1 is                                the agent being at vertex u at that timestep. Therefore, there
+{ a1, 2, C2 , a1, 3, C3 , a1, 4, C4 }, and the barrier con-                          is no necessity to represent the action layers explicitly, and
+straint for agent a2 is { a2, 3, B4 , a2, 4, C4 }.                                   a collection of MDDs built individually for each agent can
+                                                                                     be seen as a special case of a planning graph. Similarly, the
+2.3 Multi-Valued Decision Diagrams (MDDs)                                            mutex propagation rules can also be simplified in the case of
+                                                                                     MDDs, as explained in Section 3.2, resulting in the follow-
+A Multi-valued Decision Diagram (MDD) (Sharon et al.                                 ing semantics. If two MDD nodes ni of MDDi and nj of
+                                                                                     MDDj at level t are mutex, then there do not exist conflict-
+2015;  2013)    MDD     l  for  agent  ai  in  a   CT  node  is  a  (l  +  1)-       free sub-paths that move agents ai and aj from their start
+                        i                                                            vertices at timestep 0 to the vertices ni.loc and nj.loc at
+level directed acyclic graph that consists of all paths of cost l                    timestep t. Since mutex propagation can be done in polyno-
+                                                                                     mial time, the set of reachable vertices can be efficiently and
+for agent ai that satisfy all constraints of the CT node. We as-                     tightly approximated, from which useful information can be
+                                                                                     derived for symmetry breaking and guiding the high-level
+sume that l is not smaller than the individual minimum cost                          search of CBS.
+                                           l
+of  agent  ai.  The  nodes      of  MDD    i   at  level  t  correspond    to        3.2 Mutex Propagation on MDDs
+
+all possible vertices of agent ai at timestep t in these paths.                      We define two types of initial mutexes that correspond to
+                     l                                                               vertex and edge conflicts in MAPF, respectively:
+At  level  0,  MDD   i  has  a  single    source   node      corresponding
+                                                                                     · Two MDD nodes ni and nj are initial mutex iff ni and nj
+to agent ai occupying its start vertex si at timestep 0. At                             are from MDDs for different agents, ni.level = nj.level
+                l                                                                       and ni.loc = nj.loc.
+level  l,  MDD  i  has  a  single   sink  node  corresponding       to  agent
+                                                                                     · Two MDD edges ei = ni, ni and ej = nj, nj are
+ai occupying its goal vertex gi at timestep l. For an MDD                               initial mutex iff ei and ej are from MDDs for different
+node n of MDDli, we use n.level to denote the timestep of                               agents, ei.level = ej.level, ni.loc = nj.loc and nj.loc =
+n and n.loc to denote the vertex of n. For a directed MDD                               ni.loc.
+edge e = n, n of MDDli, we define e.level = n.level,
+e.f rom = n and e.to = n . We use MDDi when the num-
+
+ber of levels of the MDD is not important to the discussion.
+
+      3 Mutexes and Mutex Propagation
+
+In this section, we explain the original idea of mutex propa-
+gation on planning graphs and generalize it to mutex propa-
+gation on MDDs for MAPF.
+
+                                                                                325
+                                                                       Algorithm 1: GENERATE-MUTEX: Determine all mu-
+
+                                                                       texes between two MDDs.
+
+                                                                           Input : Two MDDs MDDi and MDDj.
+                                                                           Output: A set of mutexes M .
+
+                                                                       1 queue  all initial mutexes between MDDi and MDDj;
+                                                                       2 M  ;
+
+                                                                       3 while queue is not empty do
+                                                                       4 m  pop a mutex from queue with the smallest level,
+
+                                                                               breaking ties in favor of node mutexes;
+
+                                                                       5 Add m to M ;
+
+                                                                       6 if m is a node mutex then
+
+                                                                       7            ni, nj  m;
+
+                                                                       8            foreach ei such that ei.f rom = ni do
+
+Figure 2: Shows the MDDs for agents a1 and a2 on the rect-             9                 foreach ej such that ej.f rom = nj do
+angle conflict of Figure 1a along with the mutexes between
+their nodes. Initial mutexes are represented with blue dashed          10                     Add ei, ej to queue;
+arcs, and propagated mutexes are represented with red solid
+arcs.                                                                  11                end
+
+Example 2. Figure 2 shows the MDDs for agents a1 and                   12           end
+a2 on the rectangle conflict of Figure 1a. The label of each
+MDD node is its vertex. Initial mutexes are represented with           13 else // m is an edge mutex
+blue dashed arcs.
+                                                                       14           ei, ej  m;
+   At level 1, MDD nodes B2 of MDD1 and B2 of MDD2 are
+initial mutex and thus connected by a blue dashed arc be-              15           ni  ei.to;
+cause both agents staying at vertex B2 at timestep 1 causes
+a vertex conflict.                                                     16           nj  ej .to;
+
+   We define two types of propagated mutexes that express              17           is propagated mutex  T rue;
+our mutex propagation rules:
+                                                                       18           foreach ei such that ei.to = ni do
+1. Forward propagation for MDD nodes: Two MDD
+   nodes ni and nj are propagated mutex iff ni and nj are              19                foreach ej such that ej.to = nj do
+   from MDDs for different agents, ni.level = nj.level and
+   all pairs of MDD edges ei and ej with ei.to = ni and                20                     if ei, ej is not in M then
+   ej.to = nj are either initial mutex or propagated mutex.
+                                                                       21                        is propagated mutex  F alse;
+2. Forward propagation for MDD edges: Two MDD
+   edges ei and ej are propagated mutex iff ei and ej are              22                end
+   from MDDs for different agents, ei.level = ej.level and
+   MDD nodes ei.f rom and ej.f rom are either initial mu-              23           end
+   tex or propagated mutex.
+                                                                       24           if is propagated mutex then
+Example 3. Propagated mutexes between MDD nodes in
+Figure 2 are represented with red solid arcs. As MDD nodes             25                Add ni, nj to queue;
+B2 of MDD1 and B2 of MDD2 are initial mutex, the MDD
+edges from B2 to C2 of MDD1 and from B2 to B3 of MDD2                  26      end
+are propagated mutex. At level 2, MDD nodes C2 of MDD1
+and B3 of MDD2 have only one incoming MDD edge each,                   27 end
+namely, MDD edges from B2 to C2 of MDD1 and from B2
+to B3 of MDD2. Thus, MDD nodes C2 of MDD1 and B3 of                    28 return M ;
+MDD2 at level 2 are propagated mutex and connected by a
+red solid arc.                                                         to the queue. At the same level, we first check mutexes be-
+
+   We define two MDD nodes or two MDD edges to be mu-                  tween MDD nodes and then mutexes between MDD edges.
+tex iff they are initial mutex or propagated mutex. We use Al-
+gorithm 1 to find all mutexes between two MDDs. The algo-              Property 1. If two MDD nodes ni of MDDi and nj of
+rithm is similar to AC-3 (Mackworth 1977). The pseudocode              MDDj with ni.level = nj.level = l are mutex, then there
+is only for illustrating the general idea and is not intended to       does not exist a pair of conflict-free sub-paths pi and pj for
+be efficient. We add all initial mutexes to a queue and check          agents ai and aj, respectively, such that pi begins at si at
+all mutexes in the order of their levels for whether the mutex         timestep zero and reaches ni.loc at timestep l and pj begins
+can be propagated. The propagated mutexes are then added               at sj at timestep zero and reaches nj.loc at timestep l.
+
+                                                                       Proof. The property is trivially true if ni and nj are initial
+                                                                       mutex. For a proof of the property by contradiction if ni
+                                                                       and nj are propagated mutex, assume that there exist two
+                                                                       such sub-paths pi and pj that are conflict-free. Define ni,t
+                                                                       as the MDD node that corresponds to the vertex of agent
+
+                                                                       ai at timestep t when it follows pi. Similarly, define nj,t as
+                                                                       the MDD node that corresponds to the vertex of agent aj at
+                                                                       timestep t when it follows pj. By definition, ni,0.loc = si,
+                                                                       nj,0.loc = sj, ni,l = ni and nj,l = nj. Using induction,
+                                                                       we now prove the contradiction that ni and nj are not prop-
+                                                                       agated mutex. In the base case, ni,0 and nj,0 are not mutex
+                                                                       because si = sj, given that pi and pj are conflict-free. As-
+                                                                       sume that ni,t and nj,t are not propagated mutex for timestep
+                                                                       t < l. ni,t and nj,t are not initial mutex because pi and pj
+                                                                       are conflict-free. We define MDD edge ei as ni,t, ni,t+1
+                                                                       and MDD edge ej as nj,t, nj,t+1 . ei and ej are not initial
+
+                                                                  326
+   Algorithm 2: CLASSIFY-CONFLICT: Determine                                           4 Identifying Cardinal Conflicts with Mutex
+
+   whether agents ai and aj have a cardinal conflict within                                                              Propagation
+   costs (li, lj).
+                                                                                       In this section, we present an algorithm that uses mutex
+
+   Input   :  Two  MDDs      MDD        li  and  MDD        lj  with  li    lj .       propagation to identify cardinal conflicts in a CT node.
+                                        i                   j
+                                                                                           Two agents with different individual minimum costs can
+   Output: The conflict type between agents ai and aj,
+                                                                                       have vertex conflicts after one agent terminally waits at its
+              which is PC, AC or NC.
+                                                                                       goal vertex, and these conflicts are not captured by mutexes.
+1  Nj      MDD    nodes      in  level  li  of  MDD     lj  that are not
+                                                        j                              To handle them differently, we define two classes of cardinal
+
+   mutex   with   the  sink  node  of       MDD  li  ;                                 conflicts:
+                                                 i
+                                                                                          Pre-goal Cardinal conflict (PC) within costs (li, lj):
+2 if Nj =  then                                                                        There does not exist a pair of conflict-free paths with the
+3 return PC;
+                                                                                       given costs for both agents from their start vertices to their
+4 foreach nj  Nj do
+                                                     lj                                goal vertices even if we do not consider conflicts that happen
+5      if  there  exists  a  sub-path   in  MDD      j   from   nj    to  its
+                                                                                       after one agent terminally waits at its goal vertex.
+       sink node without traversing any MDD node with
+                                                                                          After-goal Cardinal conflict (AC) within costs (li, lj):
+       vertex gi then                                                                  There exists a pair of conflict-free paths with the given costs
+
+6          return NC;                                                                  for both agents from their start vertices to their goal vertices
+
+7 end                                                                                  if we do not consider conflicts that happen after one agent
+
+8 return AC;                                                                           terminally waits at its goal vertex. However, for every such
+
+                                                                                       pair of paths, one agent traverses the goal vertex of the other
+
+                                                                                       agent after the other agent terminally waits at its goal vertex.
+
+mutex because pi and pj are conflict-free. ei and ej are not                               Given two agents ai and aj and their corresponding
+propagated mutex either because their source MDD nodes
+ni,t and nj,t are not mutex. This implies that ni,t+1 and                              MDDs      MDD     li   and   MDD       lj  ,  we    use     Algorithm           2   to  deter-
+nj,t+1 are not propagated mutex. By induction, ni and nj                                                 i                    j
+are not propagated mutex, which contradicts the assump-                                mine whether these agents have a cardinal conflict within
+tion.
+                                                                                       costs (li, lj). Algorithm 2 returns PC, AC or NC ("Not a
+Property 2. If two MDD nodes ni of MDDi and nj of                                      Cardinal conflict"). Without loss of generality, we assume
+MDDj with ni.level = nj.level = l are not mutex, then
+there exists a pair of conflict-free sub-paths pi and pj for                           that li  lj throughout this paper. Algorithm 2 first checks
+agents ai and aj, respectively, such that pi begins at si at
+timestep zero and reaches ni.loc at timestep l and pj begins                           whether    all  MDD    nodes      of   MDD         lj  at   level      li  are  mutex       with
+at sj at timestep zero and reaches nj.loc at timestep l.                                                                                  j
+
+Proof. Because ni and nj are not mutex, there exists a pair                            the  sink  node   of   MDD      li  .  If  so,  then    it     classifies       the    conflict
+of their incoming MDD edges that are not mutex. Therefore,                                                             i
+the source MDD nodes of these two edges are not mutex                                  as a PC. Otherwise, it checks whether there exist an MDD
+either. Continuing this backward induction, we can construct
+the desired conflict-free sub-paths.                                                   node  nj   of   MDD    lj   at  level   li    that  is  not    mutex        with       the  sink
+                                                                                                              j
+   Theorem 1 combines Properties 1 and 2.
+                                                                                       node  of   MDD    li   and   a  sub-path      in   MDD         lj     from  nj  to     its  sink
+Theorem 1. Iff two MDD nodes ni of MDDi and nj of                                                        i                                            j
+MDDj with ni.level = nj.level = l are not mutex, then                                  node that does not traverse any MDD node with vertex gi. If
+there exists a pair of conflict-free sub-paths pi and pj for
+agents ai and aj, respectively, such that pi begins at si at                           so, it classifies the conflict as an NC. If such an MDD node
+timestep zero and reaches ni.loc at timestep l and pj begins
+at sj at timestep zero and reaches nj.loc at timestep l.                               and a sub-path do not exist, then it classifies the conflict as
+
+Example 4. In Figure 2, MDD nodes D4 of MDD1 and                                       an AC.
+C5 of MDD2 at level 5 are propagated mutex. From Theo-
+rem 1, there does not exist a pair of conflict-free sub-paths                          Theorem 2. There exists a pair of conflict-free paths pi and
+for agents a1 and a2 such that both agents arrive at their re-
+spective goal vertices at timestep 5, which means that there                           pj for agents ai and aj with costs li and lj, respectively, iff
+does not exist a pair of conflict-free paths of cost 5 for a1
+and a2. Therefore, by definition, the conflict between a1 and                          Algorithm      2  returns    NC     given     MDD       li     and     MDD      lj  .
+a2 is cardinal.                                                                                                                                i                       j
+
+                                                                                       Proof. First, assume that there exist such conflict-free paths
+
+                                                                                       pi  and  pj .  From    Theorem         1,     the  MDD         node        nj   of     MDD   lj
+                                                                                                                                                                                    j
+
+                                                                                       that corresponds to the vertex of agent aj at timestep li is not
+
+                                                                                       mutex    with     the  sink  node      of     MDD       li  .  Therefore,       Nj      is  not
+                                                                                                                                               i
+                                                                                       empty. Since pi and pj are conflict-free, agent aj following
+
+                                                                                       pj does not traverse vertex gi at or after timestep li. Thus,
+
+                                                                                       there exists a sub-path from nj to its sink node that does
+
+                                                                                       not traverse any MDD node with vertex gi, and Algorithm 2
+
+                                                                                       returns NC.
+
+                                                                                           Now assume that Algorithm 2 returns NC. From Line 5
+
+                                                                                       of  Algorithm     2,   there    exists     a  sub-path         p   in  MDD      lj     from  an
+                                                                                                                                                                       j
+
+                                                                                       MDD node nj  Nj to its sink node without traversing any
+                                                                                       MDD node with vertex gi. From Line 1 of Algorithm 2, nj is
+
+                                                                                       not  mutex     with    the  sink    node      of   MDD         li  .  From      Theorem      1,
+                                                                                                                                                      i
+                                                                                       there exists a pair of conflict-free sub-paths pi and pj for
+
+                                                                                       agents ai and aj, respectively, such that pi begins at si at
+
+                                                                                  327
+   Algorithm 3: GENERATE-CONSTRAINTS-PC: Gener-                                                 sets Ci and Cj for agents ai and aj, respectively. We de-
+
+   ate constraints for PCs.                                                                     fine the constraint on MDD node n of MDDi as the ver-
+
+   Input   :  Two    MDDs     MDD       li  and        MDD   lj  .                              tex constraint ai, n.level, n.loc . Constraint set Ci contains
+                                        i                    j
+                                                                                                the  constraints        on   every   MDD       node     of  MDD        li  that    is  mu-
+   Output: Constraint set Ci for agent ai and constraint                                                                                                               i
+                                                                                                                                                    lj
+              set Cj for agent aj.                                                              tex  with  all  MDD          nodes   of    MDD      j   at  the   same     level.     Sim-
+
+1  Ci     constraints   on    every    MDD         node      of  MDD     li   that is           ilarly, constraint set Cj contains the constraints on every
+                                                                         i
+                                                        lj                                      MDD      node    of  MDD         lj  that  is  mutex        with  all  MDD            nodes
+   mutex   with    all  MDD    nodes    of         MDD  j    at     the  same                                                    j
+
+   level;                                                                                       of  MDD    li  at   the  same    level.
+                                                                                                           i
+
+2  Cj     constraints     on  every    MDD             node  of  MDD      lj  that              Property 3. For all pairs of paths of agents ai and aj with
+                                                                          j                     a PC, if ai's path pi violates a constraint in Ci and aj's path
+                                                                                                pj violates a constraint in Cj, then paths pi and pj are not
+   is  mutex   with  all  MDD      nodes           of  MDD   li  at  the  same
+                                                             i
+   level;
+                                                                                                conflict-free.
+3 return Ci, Cj ;
+                                                                                                Proof. Let ai, ti, vi and aj, tj, vj denote the two con-
+
+                                                                                                straints violated by paths pi and pj, respectively. If ti  tj,
+
+   Algorithm 4: GENERATE-CONSTRAINTS-AC: Gener-                                                 use  nj  to    denote    the     MDD       node     in  MDD       lj  corresponding
+                                                                                                                                                                  j
+   ate constraints for ACs.                                                                     to the vertex of pj at timestep ti. From Line 1 of Algo-
+
+   Input   :  Two    MDDs     MDD       li  and        MDD   lj  with     li    lj .            rithm  3,  the   MDD         node    ni  of   MDD       li  with  ni.loc   =       vi  and
+                                        i                    j                                                                                          i
+                                                                                                ni.level = ti is mutex with nj. From Theorem 1, pi and pj
+   Output: Constraint set Ci for agent ai and constraint
+                                                                                                are not conflict-free. A similar proof works for ti  tj.
+              set Cj for agent aj.
+
+1 Ci  {cost constraint ai, li };                                                                   This property holds for paths pi and pj of any costs. Sim-
+                                                                                                ilarly, if CLASSIFY-CONFLICT returns AC, we use Algo-
+2  Nj      MDD     nodes   of  MDD      lj      at level li that are mutex
+                                        j
+
+   with   the  sink  node  of  MDD          li  ;                                               rithm 4 to generate constraint sets. We introduce a new type
+                                            i
+                                                   lj                                           of constraint.
+3  NAC        MDD    nodes     n   of  MDD         j   with n.loc = gi and
+                                                                                                   Cost Constraint: Cost constraint ai, l forces the path
+   n.level > li;                                                                                cost of agent ai to be larger than l.
+
+4 Cj  constraints on all MDD nodes in Nj  NAC ;                                                    Such a cost constraint can be implemented easily by
+
+5 return Ci, Cj ;                                                                               changing the termination condition of the low-level search
+
+                                                                                                of CBS.                  li                     lj
+                                                                                                                         i                      j
+                                                                                                    Given      MDD           and     MDD            for     which          CLASSIFY-
+
+timestep zero and reaches gi at timestep li and pj begins at                                    CONFLICT returns AC, we use Algorithm 4 to generate the
+sj at timestep zero and reaches nj.loc at timestep li. If agent
+ai follows pi until timestep li and then terminally waits at gi                                 constraint sets Ci and Cj for agents ai and aj, respectively.
+and agent aj follows pj until timestep li then follows p to gj
+and terminally waits at gj, then these two paths are conflict-                                  Constraint set Ci contains only the cost constraint ai, li .
+free and of costs li and lj, respectively.
+                                                                                                Constraint set Cj contains the constraints on all MDD nodes
+
+                                                                                                of  MDD    lj   at  level    li  that    are   mutex        with  the  sink    node      of
+                                                                                                           j
+
+                                                                                                MDD    li  and     all  MDD      nodes     n    of  MDD     lj    with     n.loc      =  gi
+                                                                                                       i                                                    j
+
+   To apply Theorem 2, li and lj do not have to be the indi-                                    and n.level > li.
+vidual minimum costs of agents ai and aj, respectively.
+                                                                                                Property 4. For all pairs of paths of agents ai and aj with
+Corollary 1. Agents ai and aj have a cardinal conflict iff                                      an AC, if ai's path cost is not larger than li and aj's path
+                                                                                                violates a vertex constraint from Cj, then the two paths are
+Algorithm 2 returns PC or          AC   given          MDD       li  and  MDD       lj  ,
+                                                                 i                  j           not conflict-free.
+
+where li and lj are the individual minimum costs of agents                                      Proof. From the calculation of Cj on Line 4 of Algorithm 4,
+ai and aj, respectively.
+                                                                                                Cj contains the vertex constraints on all MDD nodes in
+
+ 5 Resolving Cardinal Conflicts with Mutex                                                      Nj     NAC .    NAC          contains    all  those     MDD       nodes    of  MDD       lj
+                                                                                                                                                                                         j
+                        Propagation
+                                                                                                at levels larger than li whose vertices are gi. If agent aj vi-
+In this section, we first present two algorithms that generate
+constraint sets to resolve PCs and ACs within costs (li, lj),                                   olates the constraint on an MDD node n in NAC , it must
+respectively. We then describe how we find suitable li and
+lj so that the generated constraints are effective for CBS                                      have a conflict with agent ai because ai terminally waits at
+branching.
+                                                                                                gi at timestep n.level. Nj contains all those MDD nodes of
+
+                                                                                                MDD    lj  that    are   mutex       with  the  sink    node      of  MDD      li  .  From
+                                                                                                       j                                                                       i
+
+                                                                                                Theorem 1, since ai occupies gi at timestep li and aj vio-
+
+                                                                                                lates the constraint on an MDD node in Nj, the two paths
+
+5.1 Generating the Constraint Sets                                                              are not conflict-free.
+
+Given  MDD     li  and  MDD    lj  for  which          CLASSIFY-CONFLICT                           Properties 3 and 4 ensure that the constraint sets gener-
+               i               j                                                                ated by Algorithms 3 and 4 do not rule out any pairs of
+returns PC, we use Algorithm 3 to generate the constraint
+
+                                                                                           328
+conflict-free paths for the agents to which the constraint sets                                Algorithm 5: GENERATE-CONSTRAINTS-C: Generate
+are added.
+                                                                                               constraints for cardinal conflicts.
+Property 5. Algorithms 3 and 4 generate constraint sets
+that increase the individual minimum costs of agents to                                        Input : Two agents ai and aj with li  lj and
+which these constraint sets are added.
+                                                                                                                  CLASSIFY-CONFLICT(MDD                                            li  ,  MDD      lj   )  =
+                                                                                                                                                                                   i               j
+                                                                                                                NC.
+
+Proof. If Algorithm 2 outputs PC, then Ck, k  {i, j}, con-                                     Output: Constraint set Ci for agent ai and constraint
+
+tains  constraints      on  all  MDD    nodes        of  MDD   lk      at  level  li                            set Cj for agent aj.
+                                                               k
+                                             li                                            1 di  0;
+because    the   sink   node     of   MDD    i   is  mutex  with       all  MDD
+                                                                                           2 dj  0;
+nodes  of  MDD      lj  at  level  li.  Therefore,   any   path       of  agent  ak                                                                                            li
+                    j                                                                      3   while     C     L  A  S  S   I  F  Y-    C  O  N  FL    I  C  T(MDD             i   +di  +1  ,
+
+satisfying Ck must have cost of at least lk + 1.                                               MDD          lj  +dj        +1        =
+                                                                                                            j
+If Algorithm 2 outputs AC, then Ci contains only one cost                                                                      )        NC       do
+
+constraint ai, li . Therefore, any path of agent ai satisfying                             4 di  di + 1;
+
+Ci must have cost of at least li +1. For agent aj, Cj contains                             5 dj  dj + 1;
+
+constraints on all MDD nodes in Nj and NAC . We prove by                                   6 end
+
+contradiction that there does not exist a path for agent aj of                             7   while     C     L  A  S  S   I  F  Y-    C  O  N  FL    I  C  T(MDD             li  +di  +1  ,
+                                                                                                                                                                               i
+cost less than or equal to lj. Assume that such a path p exists.                                            lj  +dj
+                                                                                               MDD          j                  =
+We    use  Nj   to  denote  the    set  of  nodes    of  MDD       lj  at  level  li                                        )        NC    do
+                                                                   j
+                                                                                           8 di  di + 1;
+that  are  not  mutex   with     the  sink  node     of  MDD   li  .  From      The-
+                                                               i                           9 end
+orem 1, p must traverse a vertex that corresponds to an MDD
+                                                                                                                                                                   li    +di ,                 lj  +dj
+node in Nj at timestep li. Because Algorithm 2 outputs AC,                                 10  if  C  L  A  S  S  I  F  Y-     C  O  N  FL    I  CT(MDD            i               MDD         j        )  =
+
+from   Line  5,  there  does     not  exist  a   sub-path  in  MDD         lj   from           PC then
+                                                                           j
+                                                                                           11 return
+any   MDD    node   in  Nj  to     the  sink  node   of  MDD       lj     that  does
+                                                                   j                                  G     E  N  E     R   AT    E  -  C  O  N  S  T  R  A  I  N  T  S  -  P  C(MDD           li  +di  ,
+not traverse an MDD node in NAC . Therefore, such a path                                                                                                                                       i
+                                                                                                                        lj  +dj
+p does not exist.                                                                                     MDD               j         );
+
+   Property 5 shows that, in every child CT node generated                                 12 else // CLASSIFY-CONFLICT returns AC
+
+with newly-added constraints from Algorithms 3 or 4, the                                   13 return
+
+individual minimum cost of at least one agent increases.                                              G     E  N  E     R   AT    E  -  C  O  N  S  T  R  A  I  N  T  S  -  AC(MDD             li  +di  ,
+                                                                                                                                                                                               i
+Therefore, the SoC of that child CT node is larger than the                                                             lj  +dj
+                                                                                                      MDD               j         );
+SoC of its parent CT node.
+                                                                                           14 end
+   Properties 3-5 show that using Algorithms 3 and 4 to gen-
+                                                                                           the sum of their individual minimum costs. If we generate
+erate constraints for cardinal conflicts guarantees the opti-                              constraints using MDDs for the conflicting agents whose
+                                                                                           numbers of levels are the respective individual minimum
+mality and completeness of CBS, since the proof of Theo-                                   costs, CBS still needs to expand multiple CT nodes to re-
+                                                                                           solve all conflicts between the conflicting agents. An exam-
+rem 2 in (Li et al. 2019c) applies. Moreover, Properties 3-5                               ple is a corridor conflict where, in any optimal solution, one
+do not rely on li and lj being the individual minimum costs                                agent needs to wait for a certain number k of timesteps to
+of ai and aj, respectively. Therefore, we can pick any li and                              allow the other agent to traverse the corridor. Since Algo-
+lj as long as ai and aj have a cardinal conflict within (li, lj).                          rithms 3 and 4 use MDDs whose numbers of levels are the
+                                                                                           respective individual minimum costs, the constraints gener-
+   In practice, to keep the sizes of the constraint sets Ci and                            ated by them can increase the cost of either agent by only
+Cj small (which could reduce the runtime of the low-level                                  one. Therefore, CBS needs to increase the CT to a depth of
+search of CBS), we remove the constraints on all such MDD                                  at least k to find an optimal solution. Without heuristic guid-
+nodes n from the constraint set Ck, k  {i, j}, if the con-                                 ance, CBS thus needs to expand (2k) CT nodes.
+straints on all of n's predecessors in the MDD are also in
+Ck. Such constraints are redundant because the agent can-                                     To resolve cardinal conflicts efficiently when agents need
+not reach n.loc at timestep n.level.                                                       to increase their sum of individual minimum costs by
+                                                                                           more than one, we aggressively increase the numbers of
+Example 5. In Figure 2, the constraints generated by Al-                                   levels of MDDs before using them to generate the con-
+                                                                                           straint sets. As long as Algorithm 2 classifies two MDDs
+gorithm 3 are those of the MDD nodes which are filled                                      as AC or PC, we can apply Algorithms 3 and 4. Although
+                                                                                           there are several ways of determining suitable MDDs for
+with solid blue. After removing redundancies, the constraint                               generating the constraint sets, we adopt Algorithm 5 as
+set for agent a1 contains constraints a1, 2, C2 , a1, 3, C3                                our overall constraint generation algorithm. We begin with
+and a1, 4, C4 , while the constraint set for agent a2 con-
+tains constraints a2, 3, B4 and a2, 4, C4 . These two con-
+straint sets are exactly the barrier constraints for this cardi-
+
+nal rectangle conflict.
+
+5.2 Determining the Numbers of Levels of MDDs
+
+For some cardinal conflicts, the minimum SoC of conflict-
+free paths for the two conflicting agents is much larger than
+
+                                                                                      329
+di = dj = 0 and increase di and dj simultaneously un-                                                     Table 1: Shows the number of CT node expansions on dif-
+                                                                                                          ferent cardinal-conflict instances. The "Size" and "Length"
+til  C  L  A  S  S  I  F  Y-  C  O  N  FL  I  C  T(MDD    li  +di +1 ,  MDD     lj  +dj  +1  )  re-       of rectangle and corridor conflicts are the size and length
+                                                          i                     j                         of the yellow areas in Figures 1a and 1b, respectively. The
+                                                                                                          "Size" of goal vertex conflicts is the map size. The "Width"
+turns NC. We then increase only di until CLASSIFY-                                                        of switching agents conflicts is the map width.
+
+CONFLICT(MDD                        li  +di +1 ,  MDD     lj  +dj  )  returns   NC.  Finally,
+                                    i                     j
+
+MDDs          MDD         li  +di       and      MDD  lj  +dj  are    used  to  generate        the
+                          i                           j
+constraint sets on Lines 10-14. We leave it to future work to
+                                                                                                                   Cardinal Rectangle Conflict
+study how different ways of choosing the numbers of MDD
+                                                                                                          Size     5×5    6×6            7×7         8×8
+
+levels affect the efficiency of CBS.                                                                      CBSH-RM  1      1                     1    1
+
+Example 6. In any optimal solution of the corridor conflict                                               CBSH-MP  1      1                     1    1
+
+example in Figure 1b, one of the two agents has a cost of 11.                                                      Cardinal Corridor Conflict
+
+In Algorithm 5, CLASSIFY-CONFLICT returns PC until di =                                                   Length   12     14                    16   18
+
+dj   =     4.    Therefore,             Algorithm     5   uses  MDD     10  and     MDD         10        CBSH-RM 9, 302  39, 596 > 102, 238 > 95, 105
+                                                                        1                       2
+                                                                                                          CBSH-MP  1      1                     1    1
+to generate the constraint sets. After removing redundancies,
+                                                                                                                   Goal Vertex Conflict
+the constraint set for agent a1 is
+                                                                                                          Size     6×6    6×6            7×7         8×8
+
+     C1 ={ a1, 5, B5 , a1, 6, B4 , a1, 6, B5 , a1, 7, B3 ,                                                CBSH-RM 182, 065 > 1, 277, 243> 1, 107, 885> 1, 051, 743
+            a1, 7, B4 },
+                                                                                                          CBSH-MP  1      1                     1    1
+
+                                                                                                                   Switching Agents Conflict
+
+which prevents agent a1 from arriving at vertex C5 before                                                 Width    7      8                     9    10
+timestep 11. Similarly, the constraint set for agent a2 is
+                                                                                                          CBSH-RM> 685, 234 > 695, 391 > 690, 585 > 690, 394
+
+     C2 ={ a2, 5, B1 , a2, 6, B2 , a2, 6, B1 , a2, 7, B3 ,                                                CBSH-MP  19     32                    130  32
+            a2, 7, B2 },
+
+which prevents agent a2 from arriving at vertex C1 before                                                 the MAPF solver does not solve the instance within five min-
+timestep 11.                                                                                              utes, and the number after ">" is the number of CT node
+                                                                                                          expansions when the runtime limit is reached. CBSH-MP
+       6 CBSH with Mutex Propagation                                                                      solves all instances within one second.
+
+Based on our proposed mutex propagation techniques, we                                                       CBSH-RM does not efficiently solve cardinal conflicts
+develop a new MAPF solver, called CBSH with Mutex                                                         other than cardinal rectangle conflicts since it lacks rules to
+Propagation (CBSH-MP), that extends CBSH-RM (Li et al.                                                    deal with such conflicts. However, it solves cardinal rectan-
+2019c). CBSH-RM is equipped with heuristic guidance and                                                   gle conflicts faster than CBSH-MP because rectangle rea-
+rectangle reasoning that are retained in CBSH-MP. When re-                                                soning has a smaller overhead than mutex propagation.
+solving semi-cardinal and non-cardinal rectangle conflicts,
+CBSH-MP uses rectangle reasoning to generate barrier con-                                                    For rectangle conflicts, corridor conflicts and goal ver-
+straints. In addition, CBSH-MP uses Algorithm 2 to identify                                               tex conflicts, CBSH-MP expands only one CT node before
+cardinal conflicts. When resolving cardinal conflicts, it uses                                            finding an optimal solution. For switching agents conflicts,
+Algorithm 5 to generate the constraint sets. CBSH-MP also                                                 CBSH-MP expands only three CT nodes with cardinal con-
+caches the MDDs and the constraint sets for cardinal con-                                                 flicts at the bottom of the CT, and it expands only CT nodes
+flicts in two hash tables to reduce the runtime overhead of                                               with semi-cardinal and non-cardinal conflicts in the rest of
+mutex propagation. From Section 5.1, CBSH-MP is com-                                                      the CT.
+plete and optimal.
+                                                                                                          7.2 Benchmark Map Instances
+              7 Experimental Results
+                                                                                                          We use four benchmark maps from Stern et al. (2019): two
+In this section, we report experimental results for CBSH-                                                 small maps, which are the 16×16 empty map and the 32×32
+MP. We first compare CBSH-MP with CBSH-RM on the                                                          map with 20% randomly blocked cells, and two large maps,
+cardinal-conflict instances shown in Figure 1. Then, we                                                   which are the 194 × 194 game map lak303d and the 128 ×
+compare CBSH-MP with CBSH-RM and CBSH (Felner et                                                          128 maze map with corridor width 1. We vary the number
+al. 2018) on various types of four-neighbor grid map in-                                                  of agents and, for each number of agents, average over 25
+stances from the MAPF benchmark set (Stern et al. 2019).                                                  "even scenarios" from the benchmark set.
+These three MAPF solvers share the same codebase, except
+for conflict classification and constraint generation. We run                                                Figure 3 shows the success rates of CBSH-MP, CBSH-
+all experiments on t2.large AWS EC2 instances with 8GB of                                                 RM and CBSH, which respectively specify how many in-
+memory.                                                                                                   stances are solved by them within the time limit of five min-
+                                                                                                          utes, and Figure 4 shows the runtime of each MAPF solver
+7.1 Cardinal-Conflict Instances                                                                           averaged over the instances solved by all MAPF solvers. In
+                                                                                                          the 16×16 empty map, both CBSH-RM and CBSH-MP out-
+We use the cardinal-conflict instances shown in Figure 1.                                                 perform CBSH since there are many rectangle conflicts in
+Table 1 shows the number of CT node expansions of CBSH-                                                   the problem instances. However, CBSH-MP only has a small
+MP and CBSH-RM. The Prefix ">" in an entry means that                                                     advantage over CBSH-RM. In the other three maps with
+                                                                                                          narrower environments, CBSH-MP outperforms CBSH-RM
+
+                                                                                                     330
+1.0                             1.0                                   1.0                                                                                                                                        1.0
+
+0.8                             0.8                                   0.8                                                                                                                                        0.8
+
+                                     CBSH-MP                                                                   CBSH-MP
+Success Rate
+                                                                 Success Rate0.60.60.6                                                                                                                           0.6
+                                                                                                                                  Success Rate
+                                                                                                                                                                                                   Success Rate
+                                     CBSH-RM                                                                   CBSH-RM
+
+                                     CBSH                                                                      CBSH
+
+0.4                             0.4                                   0.4                                                                                                                                        0.4
+
+     CBSH-MP                                                                                                                                                                                                              CBSH-MP
+
+0.2  CBSH-RM                    0.2                                   0.2                                                                                                                                        0.2      CBSH-RM
+
+     CBSH                                                                                                                                                                                                                 CBSH
+
+0.0                             0.0                                   0.0                                                                                                                                        0.0
+    10 20 30 40 50 60 70            30 35 40 45 50 55 60 65 70            2 4 6 8 10 12 14
+                                                                                                                                                                                                                      10  20      30          40  50
+                        Agents                          Agents                                Agents
+                                                                                                                                                                                                                                  Agents
+
+     (a) empty-16-16                 (b) random-32-32-20                                              (c) maze-128-128-1                                                                                                  (d) lak303d
+
+     Figure 3: Shows the success rates of various MAPF solvers on each map with different numbers of agents.
+
+80                              150                                   100                                                                                                                                        300
+
+     CBSH-MP                         CBSH-MP                                                          CBSH-MP                                                                                                             CBSH-MP
+
+     CBSH-RM                    125  CBSH-RM                          80                              CBSH-RM                                                                                                    250      CBSH-RM
+
+60   CBSH                            CBSH                                                             CBSH                                                                                                                CBSH
+
+                                100                                                                                                                                                                              200
+                                                                                                  60
+Runtime (s)
+40                                                               Runtime (s)75                                                                                                                                   150
+                                                                                                                                  Runtime (s)
+                                                                                                                                                                                                   Runtime (s)
+                                                                                                 40                                                                                                              100
+                                50
+
+20                                                                    20
+
+                                25                                                                                                                                                                               50
+
+0                               0                                     0                                                                                                                                          0
+ 10 20 30 40 50 60 70            30 35 40 45 50 55                      23456789
+                                                                                                                                                                                                                      10      20          30      40
+                      Agents                         Agents                                 Agents
+                                                                                                                                                                                                                                  Agents
+
+     (a) empty-16-16                 (b) random-32-32-20                                              (c) maze-128-128-1                                                                                                  (d) lak303d
+
+Figure 4: Shows the runtimes of various MAPF solvers averaged over the instances solved by all of them on each map with
+different numbers of agents.
+
+and CBSH in both runtime and success rate because there                       9 Conclusions and Future Work
+are more cardinal conflicts that CBSH-RM and CBSH do
+not have rules to deal with.                                          In this paper, we studied mutex propagation in the context
+                                                                      of MAPF to efficiently reason about the interaction of two
+                  8 Related Work                                      agents and infer applicable constraints from the resulting
+                                                                      mutexes. We also proposed a novel algorithmic framework
+Mutex propagation is related to merging MDDs in (Sharon               for automatically identifying cardinal conflicts and gener-
+et al. 2013) since merging MDDs can also be used to de-               ating strong constraint sets for branching while preserv-
+termine the existence of conflict-free paths. Different from          ing the optimality guarantee of CBS. Our experimental re-
+mutex propagation, merging MDDs finds all reachable states            sults report significant improvements over the state-of-the-
+instead of all mutually exclusive states. It is also applicable       art MAPF solvers with respect to runtime and success rate.
+to more than two agents. However, it becomes very time-
+consuming as the number of agents increases.                             There are several interesting directions for future work,
+                                                                      namely to (1) study how to use mutexes to resolve semi-
+   Our work is also related to CBS with improved heuristics           cardinal conflicts and non-cardinal conflicts; (2) apply mu-
+(CBSH2) (Li et al. 2019a) since CBSH2 also uses pairwise              tex propagation to variants of MAPF problems where con-
+reasoning between agents to aggressively reason about the             flicts are implicitly represented, such as the robust MAPF
+minimum increment of SoC for pairs of agents. In particu-             problem (Atzmon et al. 2018) and the MAPF problem with
+lar, the heuristic used by CBSH-MP is equivalent to the DG            generalized conflicts (Ho¨nig et al. 2018); and (3) study mu-
+heuristic of CBSH2 because a cardinal conflict defined in             tex propagation for incomplete Boolean models of MAPF
+this paper is synonymous with a pair of dependent agents              where the formula is built lazily (Surynek 2019).
+defined in (Li et al. 2019a). In addition, the numbers of lev-
+els determined in Section 5.2 can also be used to improve the                        10 Acknowledgments
+WDG heuristic of CBSH2, which we leave for future work.
+                                                                      We thank Peter J. Stuckey, Daniel Harabor and Graeme
+   Finally, our work is related to mutex reasoning built into         Gange for helpful discussions and providing a first exam-
+a SAT-based MAPF solver (Surynek 2013). Different from                ple of goal vertex conflicts. The research at the University of
+CBSH-MP, that MAPF solver only marginally benefits from               Southern California was supported by the National Science
+mutex reasoning.                                                      Foundation (NSF) under grant numbers 1409987, 1724392,
+
+                                                                 331
+1817189 and 1837779 as well as a gift from Amazon. The               Nguyen, X., and Kambhampati, S. 2001. Reviving partial
+research at the Czech Technical University was supported             order planning. In IJCAI, 459­464.
+by GAC R - the Czech Science Foundation under grant num-
+ber 19-17966S. The views and conclusions contained in this           Sharon, G.; Stern, R.; Goldenberg, M.; and Felner, A. 2013.
+document are those of the authors and should not be inter-           The increasing cost tree search for optimal multi-agent
+preted as representing the official policies, either expressed       pathfinding. Artificial Intelligence 195:470­495.
+or implied, of the sponsoring organizations, agencies or the
+U.S. government.                                                     Sharon, G.; Stern, R.; Felner, A.; and Sturtevant, N. R. 2015.
+                                                                     Conflict-based search for optimal multi-agent pathfinding.
+                       References                                    Artificial Intelligence 219:40­66.
+
+Atzmon, D.; Stern, R.; Felner, A.; Wagner, G.; Barta´k, R.;          Stern, R.; Sturtevant, N. R.; Atzmon, D.; Walker, T.; Li, J.;
+and Zhou, N. F. 2018. Robust multi-agent path finding. In            Cohen, L.; Ma, H.; Kumar, T. K. S.; Felner, A.; and Koenig,
+SoCS, 2­9.                                                           S. 2019. Multi-agent pathfinding: Definitions, variants, and
+                                                                     benchmarks. In SoCS, 151­158.
+Blum, A. L., and Furst, M. L. 1997. Fast planning through
+planning graph analysis. Artificial Intelligence 90:281­300.         Surynek, P. 2013. Mutex reasoning in cooperative path find-
+                                                                     ing modeled as propositional satisfiability. In IROS, 4326­
+Boyarski, E.; Felner, A.; Stern, R.; Sharon, G.; Betzalel, O.;       4331.
+Tolpin, D.; and Shimony, E. 2015. ICBS: Improved conflict-
+based search algorithm for multi-agent pathfinding. In IJ-           Surynek, P. 2019. Unifying search-based and compilation-
+CAI, 740­746.                                                        based approaches to multi-agent path finding through satis-
+                                                                     fiability modulo theories. In IJCAI, 1177­1183.
+Felner, A.; Li, J.; Boyarski, E.; Ma, H.; Cohen, L.; Kumar,
+T. K. S.; and Koenig, S. 2018. Adding heuristics to conflict-        Weld, D. S. 1999. Recent advances in AI planning. AI
+based search for multi-agent path finding. In ICAPS, 83­87.          Magazine 20(2):93­123.
+
+Ho¨nig, W.; Preiss, J. A.; Kumar, T. K. S.; Sukhatme, G. S.;         Wurman, P. R.; D'Andrea, R.; and Mountz, M. 2008. Co-
+and Ayanian, N. 2018. Trajectory planning for quadrotor              ordinating hundreds of cooperative, autonomous vehicles in
+swarms. IEEE Transactions on Robotics 34(4):856­869.                 warehouses. AI Magazine 29(1):9­20.
+
+Kautz, H., and Selman, B. 1996. Pushing the envelope: Plan-          Yu, J., and LaValle, S. M. 2013. Structure and intractability
+ning, propositional logic, and stochastic search. In AAAI,           of optimal multi-robot path planning on graphs. In AAAI,
+1194­1201.                                                           1443­1449.
+
+Lam, E.; Bodic, P. L.; Harabor, D.; and Stuckey, P. J. 2019.
+Branch-and-cut-and-price for multi-agent pathfinding. In IJ-
+CAI, 1289­1296.
+
+Li, J.; Felner, A.; Boyarski, E.; Ma, H.; and Koenig, S.
+2019a. Improved heuristics for multi-agent path finding with
+conflict-based search. In IJCAI, 442­449.
+
+Li, J.; Harabor, D.; Stuckey, P. J.; Felner, A.; Ma, H.; and
+Koenig, S. 2019b. Disjoint splitting for multi-agent path
+finding with conflict-based search. In ICAPS, 279­283.
+
+Li, J.; Harabor, D.; Stuckey, P. J.; Ma, H.; and Koenig, S.
+2019c. Symmetry-breaking constraints for grid-based multi-
+agent path finding. In AAAI, 6087­6095.
+
+Li, J.; Gange, G.; Harabor, D.; Stuckey, P. J.; Ma, H.; and
+Koenig, S. 2020. New techniques for pairwise symmetry
+breaking in multi-agent path finding. In ICAPS.
+
+Ma, H.; Tovey, C.; Sharon, G.; Kumar, T. K. S.; and Koenig,
+S. 2016. Multi-agent path finding with payload transfers
+and the package-exchange robot-routing problem. In AAAI,
+3166­3173.
+
+Mackworth, A. K. 1977. Consistency in networks of rela-
+tions. Artificial Intelligence 8(1):99­118.
+
+Morris, R.; Pasareanu, C. S.; Luckow, K.; Malik, W.; Ma, H.;
+Kumar, T. K. S.; and Koenig, S. 2016. Planning, scheduling
+and monitoring for airport surface operations. In AAAI-16
+Workshop on Planning for Hybrid Systems.
+
+Nguyen, X., and Kambhampati, S. 2000. Extracting effec-
+tive and admissible state space heuristics from the planning
+graph. In AAAI, 798­805.
+
+                                                                332
+

@@ -1,0 +1,1175 @@
+                                                                                                                                                                                                                                            1
+
+                                       AVOCADO: Adaptive Optimal Collision
+                                              Avoidance driven by Opinion
+
+                                                    Diego Martinez-Baselga*, Eduardo Sebastián*, Eduardo Montijano,
+                                                                Luis Riazuelo, Carlos Sagüés and Luis Montano
+
+arXiv:2407.00507v4 [cs.RO] 1 Apr 2025     Abstract--We present AVOCADO (AdaptiVe Optimal Collision                Fig. 1. Illustrative example of one of the experiments with real robots and
+                                       Avoidance Driven by Opinion), a novel navigation approach to               humans. Robots using AVOCADO adapt online to avoid collisions with the
+                                       address holonomic robot collision avoidance when the robot does            other entities in the arena despite not knowing the degree of cooperation of the
+                                       not know how cooperative the other agents in the environment               other robots and humans. Section VI discusses all the experiments in detail.
+                                       are. AVOCADO departs from a Velocity Obstacle's (VO) for-
+                                       mulation akin to the Optimal Reciprocal Collision Avoidance                   Existing solutions (Section II) make one or more of the
+                                       method. However, instead of assuming reciprocity, it poses an              following assumptions: (i) the degree of cooperation between
+                                       adaptive control problem to adapt to the cooperation level of              the robot and an agent is known a priori (e.g., the robot
+                                       other robots and agents in real time. This is achieved through             knows that the agent is going to collaborate in the collision
+                                       a novel nonlinear opinion dynamics design that relies solely on            avoidance and how), restricting the solution to predetermined
+                                       sensor observations. As a by-product, we leverage tools from the           cooperative settings [12]­[15]; (ii) the robot can communicate
+                                       opinion dynamics formulation to naturally avoid the deadlocks in           with other robots and/or agents [16]­[19], which might not
+                                       geometrically symmetric scenarios that typically suffer VO-based           be possible during deployment due to a lack of cooperation,
+                                       planners. Extensive numerical simulations show that AVOCADO                communication delays, packet losses or disturbances from
+                                       surpasses existing motion planners in mixed cooperative/non-               external factors; (iii) the computational capabilities of the
+                                       cooperative navigation environments in terms of success rate,              robot are sufficient to do inference on learning-based policies
+                                       time to goal and computational time. In addition, we conduct               or long-term horizon planning [20]­[23], which is hard to
+                                       multiple real experiments that verify that AVOCADO is able to              ensure in low-cost onboard platforms if we take into account
+                                       avoid collisions in environments crowded with other robots and             that collision avoidance is just a low-level feature among a
+                                       humans.                                                                    myriad of desired high-level and computationally demanding
+                                                                                                                  capabilities (e.g., multi-robot active perception or semantic
+                                          Index Terms--Collision Avoidance, Multi-Robot Systems, Mo-              mapping [24], [25]).
+                                       tion and Path Planning, Opinion Dynamics
+                                                                                                                     To cope with all these issues, the main contribution of this
+                                                                 I. INTRODUCTION                                  work is AVOCADO (AdaptiVe Optimal Collision Avoidance
+                                                                                                                  Driven by Opinion), a novel method for collision avoidance
+                                       R OBOT navigation in dynamic environments is the task                      in cooperative and non-cooperative dynamic environments
+                                             of moving a robot from one location to another while                 (Section IV). AVOCADO is built upon a geometrical for-
+                                       avoiding collisions with obstacles that are in motion around               mulation based on the classical Velocity Obstacle (VO, [26],
+                                       the environment [1]. Collision avoidance is particularly chal-             [27]) framework (Section III). However, different from other
+                                       lenging when the dynamic obstacles are agents (humans, other               VO-based approaches that assume either no cooperation or
+                                       robots, etc.), and the problem of accounting for the effect                reciprocity [12], [28], [29], we consider that the degree of
+                                       of the robot motion on the other agents is still unsolved                  cooperation between the robot and the agent is unknown and
+                                       [2]. Agents have their own intent and they exhibit different               do not assume any predetermined behavior for the agent or
+                                       degrees of cooperation, i.e. they adjust their behavior to avoid
+                                       collision with the robot to a certain extent that is unknown
+                                       to the robot. Thus, it is hard for robots to predict their future
+                                       motion and effectively plan to avoid potential collisions [3],
+                                       [4]. The ability of avoiding collisions in crowded dynamic
+                                       environments is a low-level feature that is of key importance
+                                       in robotic applications such as social robotics [5], [6], robots
+                                       in the wild [7]­[9] or autonomous driving [10], [11].
+
+                                          The authors are with the DIIS - I3A, Universidad de Zaragoza, Spain
+                                       ({diegomartinez, esebastian, emonti, riazuelo,
+                                       montano, csagues}@unizar.es). *Equal contribution
+
+                                          This work has been supported by Spanish projects PID2022-139615OB-I00,
+                                       PID2021-125514NB-I00, PID2021-124137OB-I00 and TED2021-130224B-
+                                       I00 funded by MCIN/AEI/10.13039/501100011033/FEDER-UE, by ERDF A
+                                       way of making Europe and by the European Union NextGenerationEU/PRTR,
+                                       ONR Global grant N62909-24-1-2081, DGA T45-23R, and Spanish grants
+                                       FPU19-05700 and PRE2020-094415.
+
+                                       ©This paper has been accepted for publication at IEEE Transactions on Robotics. Please, when citing the paper, refer to the official manuscript with the
+                                       following DOI: 10.1109/TRO.2025.3552350.
+                                                                 2
+
+communication infrastructure. To address uncertainty on the      learning perspective [21], [43]­[48], deep learning develop
+degree of cooperation, we propose a novel nonlinear opinion      end-to-end policies that map the perception observations into
+dynamics adaptive scheme that enables the robot to adapt to      control commands [14] or sub-goals that are fed into a low-
+the agent's behavior in real-time from just its onboard sensor   level horizon planning controller [49]. For instance, Long-
+observations. Furthermore, we exploit the nonlinear opinion      Short Term Memory (LSTM) networks can be combined with
+dynamics adaptive law to develop a method that avoids the        barrier certificates [50] to improve collision avoidance success
+geometrical deadlocks coming from symmetries that suffer         rate and scalability. There are also works that combine ORCA
+some existing VO-based methods. We validate our proposal         scenario knowledge with reinforcement learning [38], [51].
+with simulations (Section V) and real experiments (Section       Nonetheless, deep learning approaches have a high memory
+VI), showing that AVOCADO surpasses exiting collision            and computational cost, often lack collision avoidance guar-
+avoidance approaches in environments that mix cooperative        antees and fail in out-of-distribution settings.
+and non-cooperative agents in terms of avoided collisions
+while featuring an inexpensive computational cost. The sce-         The lack of guarantees of purely learning-based methods
+narios include examples that combine real robots and humans      is addressed by reachability methods [16], control barrier
+in tight spaces, concluding (Section VII) that AVOCADO           functions [52] and Model Predictive Control (MPC) [53].
+is a promising alternative for low-cost robot navigation in      Reachability-based approaches depart from the Hamilton-
+crowded environments where agents exhibit unknown degrees        Jacobi equation [54] to build a safe set in the state space
+of cooperation.                                                  that fulfills all the desired constrains. Forward computation
+                                                                 of the Hamilton-Jacobi equation is highly demanding and
+   The code of the work is implemented in C++/Python and         over-conservative [55], so learning-based alternatives [56]­
+can be accessed in the repository of the work1, as well as the   [58] propose approximations that trade computation and per-
+videos of the experiments.                                       formance guarantees. On the other hand, control barrier
+                                                                 functions formulate an optimization problem that finds the
+                         II. RELATED WORK                        closest control action to the desired one that satisfies a set
+                                                                 of desired forward invariance constraints, stemming from a
+   Research on collision avoidance was primarily dominated       control stability definition of the desired safe set. It is not
+by geometrical approaches. Departing from robot observations,    clear how to extend control barrier functions to dynamic
+methods originally only considered static obstacles, as the      obstacles with unknown behaviors [59] or communication-
+Dynamic Window Approach [30]. Others like potential fields       denied settings [60], [61]. Finally, MPC shares with reacha-
+[31], inevitable collision states [32] or social forces [33]     bility methods the use of a time-horizon propagation and with
+compute control actions that reactively lead the robot towards   control barrier functions the optimization-based formulation
+collision-free regions. They are simple to compute but lack      [62]. MPC is flexible because it enables to satisfy additional
+formal performance guarantees, leading to over-conservative      goals or constraints such as motion uncertainties [63] or
+policies. By contrast, VO-based methods [34] preserve the        local maps [22]. However, it has a significant computational
+computational simplicity but guarantee optimality in terms       burden that is only alleviated by reducing the time-horizon
+of deviation with respect to the desired predefined velocity     and the number of considered nearby agents, resulting in
+either for holonomic or non-holonomic robots [29], [35], [36].   undesired local minima or oscillations. Different from these
+Reciprocal VO (RVO) extends VO by assuming reciprocity           alternatives, AVOCADO is inexpensive to compute, is not
+in the collision avoidance [28], i.e, it assumes that agents     over-conservative as it minimizes the deviation with respect
+encountered in the environment cooperate equally to avoid the    to the desired velocity, and does not suffer from symmetry
+collision. Specially relevant is Optimal Reciprocal Collision    deadlocks and oscillations.
+Avoidance ORCA [12], which builds a half-space geometrical
+constraint per agent that is incorporated in a linear program.      One key characteristic of the aforementioned methods is
+Nevertheless, the reciprocal avoidance assumption may not be     that, in non-cooperative environments with unknown intents, a
+applied in mixed cooperative/non-cooperative environments,       prediction model of the behavior of the other agents is required
+which are the ones considered in this paper.                     to effectively avoid collisions [64], [65]. The first option is
+                                                                 to use learned predictors that directly obtain future trajectory
+   Some solutions [37] remove the reciprocity assumption in      states of the agents given current and past samples [66], [67].
+ORCA and formulate an additional optimization problem to         The second option is to rely on a learned model [68], such that
+reduce the time the agents take to reach the goal. Instead       it can be integrated in a MPC program [23] to simultaneously
+of using optimization, ORCA can also be implemented as           optimize over the trajectories of the robot and the other
+a low-level module integrated in a high-level learned policy     agents. In both cases, the success of the collision avoidance
+that accounts for social and traffic cues [38]. Both approaches  module is subject to the accuracy of the complex prediction
+require 1-hop communication, which is not feasible in a non-     modules; instead, AVOCADO adapts to unknown degrees
+cooperative environment due to the lack of cooperation among     of cooperation through a novel nonlinear opinion dynamics
+agents. Instead, AVOCADO is fully decentralized and only         adaptive law that is inexpensive to compute, does not require
+relies on the perception of the robot.                           learning and is only based on current perception observations,
+                                                                 without relying on prediction of future trajectories.
+   Many recent methods use deep learning for robot naviga-
+tion. Either from a supervised [20], [39]­[42] or reinforcement     Opinion dynamics [69]­[71] originate from studies on how
+                                                                 to model social interactions. The ineffectiveness of linear
+   1https://github.com/dmartinezbaselga/AVOCADO
+                                                                                                             3
+
+models to represent behaviors like saturation of information         i.e., agents do not try to force collision with the robot as
+leads to nonlinear opinion dynamics [72], [73]. They have been       in, e.g., pursuit-evasion [82] or herding [83] problems. As in
+applied in a wide variety of fields, such as explaining political    realistic mixed cooperative/non-cooperative environments, the
+polarization [74] or perception and reaction to epidemics [75];      degree of cooperation of the agents is unknown.
+lately, they have been applied in robotic problems, mainly
+combining them with game theory for cooperative and non-                To model collisions, we exploit the concept of Velocity
+cooperative multi-agent decision making [76]­[78] or multi-          Obstacle [26], [27]. Given a certain time instant t  0,
+robot task allocation [79]. Regarding collision avoidance, there     the Velocity Obstacle of the robot and agent i is the set of
+is an important property of nonlinear opinion dynamics. They         velocities that can lead to a collision
+ensure the existence of a bifurcation in the state-space, i.e., the
+existence of two simultaneous stable equilibrium points. This        VOi = {vr | t  [0,  ] s.t. tvr  Dc(pi - pr, rs + ri)}. (4)
+feature has been exploited [80] to design a collision avoidance
+method that avoids deadlocks, where the opinion represents the       In VOi,  > 0 is the time horizon to check collisions between
+preference of the robot to move left or right. A recent work         the robot and agent i happens for any velocity vr  R2. In
+[81] extends opinion dynamics from the planar to the circle          Section IV we make use of VOi to develop an optimization
+space to represent, e.g., the heading angle of a robot. Neverthe-    program that uses the adapted degree of cooperation to com-
+less, these approaches do not guarantee collision avoidance nor      pute a velocity vr as close as possible to vrpre that guarantees
+consider other motion patterns than only changing the heading        collision avoidance.
+angle. AVOCADO exploits nonlinear opinion dynamics to
+guarantee that the robot decides if the agent is cooperative            To adapt to the unknown degree of cooperation, we rely
+or non-cooperative and in what degree, leaving the collision
+avoidance guarantees to a VO-based program.                          on the concept of nonlinear opinion dynamics [72]. Opinion
+
+III. PROBLEM FORMULATION                                             dynamics emerge as a means of modeling interactive behaviors
+
+   Consider a robot navigating in an environment populated           where nodes in a network can choose among a discrete set of
+with N > 0 agents. The robot follows single integrator               options regarding one or more topics. Let oj  [-1, 1] be
+holonomic dynamics given by                                          the opinion that node j has about a certain topic. Typically,
+                                                                     oj = 0 represents neutrality whereas oj = {-1, 1} represent
+                                                                     extreme opinions over a topic with two possible opinions. By
+                                                                     interacting with other nodes, node j can evolve its opinion.
+
+                                                                     For a topic with two opinions, one possible nonlinear opinion
+
+                                                                     dynamics design is
+
+                                                                                                           
+
+pr = vrpre,                          (1)                                                         M
+
+                                                                     oj = -djoj + g(oj)f ajoj +            cjkok + bj. (5)
+
+where pr  R2 is the position of the robot and vrpre  R2                                          k=1,k= j
+is a prescribed velocity command generated by a higher-level
+                                                                        In the equation above, dj > 0 tunes how fast the current
+motion planner. On the other hand, each agent is associated          opinion vanishes with time; bj  R is a bias that models
+with an index i  {1, . . . , N}, and has a position pi  R2           inherent priorities that the node j has on the topic; g(oj)
+and a velocity vi  R2. The robot can only sense the agents           is an attention term that evolves with time and weights the
+that are within a disc centered in the robot position and of         importance of the influence of other nodes; aj > 0, cjk > 0 are
+                                                                     consensus-like weights that model the exchange of opinions
+perception radius rp > 0                                             among the M > 0 nodes of the network; and f (·) is a nonlin-
+                                                                     ear function, such as tanh or sigmoid, that bounds the influence
+Dp(pr, rp) = {p | ||p - pr|| < rp},  (2)                             of the interactions. More importantly, the nonlinear function in
+                                                                     the opinion dynamics enforces a bifurcation phenomenon. The
+where ||·|| is the L2-norm of a vector and p  R2. Therefore,         bifurcation phenomenon is characterized by the appearance of
+the set of neighboring agents of the robot is defined as             a pitchfork bifurcation in the evolution of the state variable
+N = {i | pi  Dp(pr, rp)}. The purpose of the paper is to             oj that leads to two non-zero stable equilibrium, each of them
+develop an algorithm that avoids collisions between the robot        associated to one of the opinions. Whether the state evolves to
+and the agents. To that end, we define the set of locations that     one or another depends on the interactions between nodes. For
+lead to collisions as a disc centered in the position of the robot   more details on this, we refer the reader to [72]. In relation
+and security radius rs > 0                                           with this work, the inherent bifurcation property of nonlinear
+                                                                     opinion dynamics and the conceptual relationships between
+Dc(pr, rs) = {p | ||p - pr|| < rs},  (3)                             the opinion and the parameters of Eq. (5) motivate their use
+                                                                     to estimate ("build an opinion") on the unknown degree of
+where rs is given by the geometry of the robot and safety            cooperation of the other agents.
+requirements. Agents are also characterized by a collision
+radius ri > 0. The degree of cooperation of agent i with                In this work, we will exploit nonlinear opinion dynamics to
+respect to the robot is modeled through a continuous variable        design a novel adaptive law that adjusts the unknown degree
+i  [0, 1], where i = 1 means that the agent is fully                 of cooperation of the agents in real-time, using only relative
+cooperative with the robot (i.e., agent i will do all the efforts    position and velocity measurements from onboard sensors and
+at its hands to avoid collision), whereas i = 0 means that the       without the need of any communication infrastructure, prior
+agent is completely non-cooperative (i.e., agent i will ignore       knowledge on their degree of cooperation or other unfeasible
+the robot and continue its movement without any collision
+avoidance effort). We assume that agents are not competitive,
+                                                                                                                               4
+
+Fig. 2. Geometry of VOi (purple) and admissible velocities' regions asso-          Fig. 3. Representation of the intersection set specified by the OCAi half-
+ciated to different degrees of cooperation (orange, green, blue). AVOCADO          planes of 4 agents for different values of i. Note that i may be different
+selects the closest velocity to the desired one that is inside all the admissible  for each of the agents, but it is considered the same in this figure for a simple
+velocity sets.                                                                     visualization. If the intersection set of all half-planes is not empty, the problem
+                                                                                   is guaranteed to have a solution.
+assumptions. As a practical note, all the expressions that
+involve continuous-time dynamic systems are implemented                            where n is the normal to VOi at the point given by the head
+using an Euler forward discretization scheme, with sample                          of vector ui. The set OCAi defines a half-space constraint
+time T > 0. In this work, we select T = 0.05s to match the                         of admissible velocities for the robot to avoid collision. As
+real-time operation of the onboard sensing and computation
+capabilities of the robot.                                                         depicted in Fig. 2, the greater the value of i, the more coop-
+                                                                                   erative is agent i and therefore the less severe the restriction
+     IV. AVOCADO: ADAPTIVE OPTIMAL COLLISION
+                AVOIDANCE DRIVEN BY OPINION                                        on the admissible velocities for the robot. Note that i = 0.5
+                                                                                   corresponds to the ORCA algorithm [12], which corresponds
+A. Optimal Collision Avoidance for Unknown Degrees of
+Cooperation                                                                        to perfect reciprocity between the robot and agent i.
+                                                                                      Given OCAi for all i  {1, . . . , N}, AVOCADO selects the
+   We propose AVOCADO to address the robot collision
+avoidance problem in multi-agent dynamic environments. The                         closest velocity to vrpre that respects all the constraints sets at
+first step towards deriving AVOCADO is to consider the                             the same time. Formally, this is given by the following linear
+geometry defined by VOi for all i  {1, . . . , N}. Let assume
+that the relative velocity vrpre - vi  VOi for some agent                          program
+i. This means that, if robot and agent i follow vrpre and vi
+respectively, then collision will happen at any time in [0,  ].                    vr =arg min ||vrpre - vr||                  (8a)
+The velocity vrpre is provided by some higher-level planner,
+while vi is known from onboard sensor measurements. The                                   vr
+latter can be measured or estimated in real-time from onboard
+cameras or LiDAR [84], [85]. Since cooperation of agent i                              s.t. vr  OCAi i  N .                    (8b)
+cannot be assumed, then the robot needs to choose a new
+velocity vr to avoid the collision.                                                Problem (8) is guaranteed to have a solution unless the
+                                                                                   intersection of the OCAi sets is empty. In this case, the robot
+   Let VOi denote the boundary of the velocity obstacle                            computes the velocity that minimizes the distance with the
+set VOi. Then, the minimum change in velocity that makes                           half-planes OCAi i  N , i.e., it chooses the "least unsafe"
+vrpre - vi / VOi is given by the vector ui                                         velocity in the absence of a velocity that guarantees collision
+                                                                                   avoidance in that instant (see Section 5.3 of [12] for further
+        ui = arg min||vr - (vrpre - vi)|| - (vrpre - vi) (6)                       details). We remark that (8) is a natural extension of ORCA
+                                                                                   to settings where the degree of cooperation of the agents is
+                      vr VOi                                                       not necessarily reciprocal. Fig. 3 shows a representation of the
+                                                                                   constrained set (8b).
+ Figure 2 depicts the geometrical reasoning behind Eq. (6).
+Given the Euclidean space of 2D velocities, vector ui is a                            The challenge is how to estimate i for all perceived agents
+perpendicular vector to the boundary of the velocity obstacle                      i  N from local sensing. Next, we describe how AVOCADO
+set and with minimum magnitude. To ensure collision avoid-                         exploits opinion dynamics to adapt online to the degree of
+ance, the robot and agent i together must, at least, exert vector                  cooperation of each agent.
+ui. Let i be the degree of cooperation of agent i with respect
+to the robot such that agent i exerts the i part of ui. Then, to                   B. Nonlinear Opinion Dynamics Adaptive Law
+ensure collision avoidance, the robot has to exert, at least, the
+(1-i) part of ui, which defines a constraint set of admissible                        To derive the adaptive law based on nonlinear opinion
+velocities                                                                         dynamics, we firstly define, for convenience, the following
+                                                                                   change of coordinates:
+    OCAi = {vr | (vr - (vrpre + (1 - i)ui)) · n  0}, (7)
+                                                                                   oi  =  2i  -  1    i  =  oi  +  1           (9)
+                                                                                                                2   .
+
+                                                                                   The purpose of this change is to shift the degree of cooperation
+
+                                                                                   to better suit the definition of nonlinear opinion dynamics
+
+                                                                                   provided in Eq. (5). From now on, we refer to oi as the shifted
+                                                                                   degree of cooperation of agent i with respect to the robot.
+
+                                                                                   The (shifted) degree of cooperation associated to each agent
+
+                                                                                   is a quantity that only involves a pair-wise interaction between
+                                                                                                                                                                                 5
+
+                                                                                The goal is to design an attention mechanism for the
+                                                                             nonlinear opinion dynamics adaptive law that evolves such
+                                                                             that the shifted degree of cooperation changes when the robot
+                                                                             and agent i are close to each other, whereas it remains constant
+                                                                             if the robot and the agent are far. The attention Ai is modeled
+                                                                             as a dynamic quantity that evolves with time
+
+                                                                                   A i = -iAi + (1 - i)tanh(ii-1),                                                               (11)
+
+Fig. 4. Evolution of the nonlinear opinion dynamics adaptive law for a non-  where i > 0 and i  [0, 1) are gains and i > 0 is the
+cooperative (top, orange) or a cooperative (bottom, blue) agent.             expected collision time. The dynamics in (11) evolve such
+                                                                             that Ai = 0 when the robot and agent i are far from each
+the robot and the agent. This motivates the following design                 other, and Ai tends to 1 when the robot and agent i are close
+for the nonlinear opinion dynamics adaptive law                              to collision. To compute the time to collision, we exploit the
+
+           oi = -dioi + diAitanh (aioi + ciei) + bi. (10)                    geometry of the problem.
+                                                                                A potential collision between the robot and agent i hap-
+Compared to (5), Eq. (10) simplifies the consensus term to
+a weighted sum of the current shifted degree of cooperation                  pens at the intersection between (i) a circumference of ra-
+oi and a quantity ei that will be defined later and which                    dius R = rs + ri and center pi and (ii) the line given by
+represents an estimate of the opinion agent i has about oi.                  vrpre - vr passing through point pr. Let pr = (prx, pry) and
+Ideally, the consensus term would include not only ei, but                   pi = (pxi , pyi ). The equation of the circumference with center
+also all the other agents. However, this would require some                  pi and radius R is
+sort of communication infrastructure or k-hop neighboring de-
+pendence that is not feasible in a real setting that only depends                         (px - pxi )2 + (py - piy)2 = R2,                                                       (12)
+on onboard sensing. Therefore, we assume that the opinion of
+the robot on the degree of cooperation of agent i is a pair-                 where the circumference is parameterized by p = (px, py).
+wise interaction isolated from other agents. In this sense, the              Let v~i = vrpre - vi = (v~ix, v~iy). Then, the intersection between
+design of (10) manifests a fundamental difference with respect               (i) the circumference defined in (12) and (ii) a line of slope
+to existing nonlinear opinion dynamics formulations, tailored
+towards a feasible implementation in a real robotic platform.                given by vector v~i and point pr happens at:
+The quantities ai, bi, ci, di are gains with similar meaning to
+those in Eq. (5) and which parameterized the adaptive law.                   (prx + iv~ix - pxi )2 + (pyr + iv~iy - pyi )2 = R2.                                                 (13)
+For instance, bi = -0.5 represents some inductive bias on the
+degree of cooperation of agent i towards not cooperating with                The above equation leads to the second order equation
+the robot. As nonlinear function, we choose tanh to respect
+the domain of oi. Finally, Ai represents the attention, and is a                          1i2 + 2i + 3 = 0                                                                       (14)
+variable that dynamically evolves with time, in contrast to the
+algebraic relationship g(oj) formulated in Eq. (5). As depicted              w3ith=1R=2 (-v~ix()p2+rx (-v~iyp)ix2), 2-2=(2pv~ryix-(pxrpyi-)2p. xiT)+he2v~siyo(lpurytio-nspyio)f  and
+in Fig. 4, the idea is to design and tune (10) such that, when the                                                                                                               the
+agent i is close to the robot and does not collaborate to avoid
+the collision, the (shifted) degree of cooperation associated to             quadratic equation can be the following:
+agent i evolves such that the robot takes the responsibility.
+On the other hand, if agent i modifies its velocity to avoid                 1) if 22 < 413, then there is no intersection and, there-
+collision, then the (shifted) degree of cooperation evolves to                   fore, no potential collision. As a consequence, we set
+enable the robot a more selfish behavior. The attention term
+Ai appears scaled in (10) by gain di. The reason behind this                 i = .
+scaling will be explained later, in Section IV-C.
+                                                                             2) if 22 = 413, then the solution is given by a double root
+   There are two variables in Eq. (10) that are not readily                        -2                     22
+available at the robot. The first one is the attention, which                i  =  21  .  Otherwise,  if      >  413,  then  there  are                                          two
+should capture the importance of adapting the shifted degree of
+cooperation or if, otherwise, the shifted degree of cooperation              real roots. In both cases, the following reasoning holds:
+must not change. The second quantity is ei, which a priori
+depends on the information at agent i. We will later prove                   (i) if both roots are positive, then we take the minimum
+how the robot can estimate ei from just onboard sensor
+observations. Now, we focus on the attention Ai.                             among them; (ii) if both roots are negative, then there is
+                                                                             no collision and i = ; (iii) if one root is positive and
+                                                                             one root is negative, then collision has already happened
+
+                                                                             and, therefore, motion is terminated.
+
+                                                                             Note that i is inexpensive to compute and enables time-to-
+                                                                             collision checking in real-time.
+
+                                                                                The next step is to define ei and develop a method to com-
+                                                                             pute it from sensor observations. According to the definition of
+                                                                             the nonlinear opinion dynamics in Eq. (10), ei represents the
+                                                                             opinion that agent i has on the value of the shifted degree of
+                                                                             cooperation oi. Recalling the reasoning behind the nonlinear
+                                                                             opinion dynamics design in (5), the consensus term aioi +ciei
+                                                                             aims at fusing the values that the robot and agent i have on the
+                                                                             degree of cooperation oi. In the case of the robot, this is simply
+                                                                             the current value of oi; in the case of agent i, this is precisely
+                                                                             the opinion that agent i has on the value of the shifted degree
+                                                                                                                                    6
+
+                                                                            worth noting that the projection estimator in (15) directly uses
+                                                                            the velocity measurements from onboard sensors, which are
+                                                                            subject to disturbances. However, designing the adaptive law
+                                                                            as a non-linear opinion dynamic naturally provides robustness
+                                                                            against small perturbations, and exploits past information in
+                                                                            the opinion estimation by means of the memory term -dioi
+                                                                            [73]. Therefore, the proposed adaptive law can be framed as
+                                                                            a nonlinear estimator with a dynamic model (Eq. (10)) and a
+                                                                            measurement model (Eq. (15)). The sensitivity and robustness
+                                                                            of the general formulation of the nonlinear opinion dynamics
+                                                                            model is analyzed in previous works [72]. The next section
+                                                                            analyzes specific considerations on how to tune the parameters
+                                                                            of AVOCADO.
+
+Fig. 5. Geometry behind the projection estimator for ei.                    C. Nonlinear Opinion Dynamics Adaptive Law Tuning
+
+of cooperation oi. In typical opinion dynamics formulations                    To achieve fast and effective adaptation to the unknown
+it is assumed that these values can be communicated. This is                degree of cooperation of the agent, the nonlinear opinion
+                                                                            dynamics adaptive law of AVOCADO must be appropriately
+not the case in this work, so we need to recover ei using an                parameterized.
+estimation method that relies solely on onboard sensing.
+                                                                               First, we examine the stability properties of the adaptive law
+   Figure 5 depicts the geometry of the problem. At a certain               and the conditions under which bifurcation, i.e., instability of
+instant, the robot has a predefined velocity vrpre but executes             the initially stable equilibrium point of Eq. (10), happens. To
+vr to avoid collision. The difference between both velocities               do so, we use the expression sech(·) = 1/ cosh(·).
+is vr - vrpre = (1 - i)ui due to constraint (8b) in (8). On
+the other hand, agent i executes vi, and executed vi- in the                Proposition 1. Let di > 0, ai > 0 and bi  [-1, 1].
+previous instant, where vi-  R2 denotes the velocity of agent
+i sensed by the robot at the previous time instant. Since the               Then, oi = bi/di is an unstable equilibrium point of
+
+robot has been in charge of exerting (1 - i)ui, the remaining               the nonlinear opinion dynamics adaptive law in (10) if
+part of ui to avoid collision must be exerted by agent i,
+i.e., iui. Recall that ui represents a change in the velocity.              Ai > 1/    aisech2  ai  bi  .
+Henceforth, the remaining part of iui is exerted through                                            di
+the change in velocity of agent i, namely, vi = vi - vi-.
+However, in general, vi · iui = 0, i.e., vectors vi and                     Proof. Initially, Ai = 0, ei = 0 and oi = 0. Therefore, the
+iui are not aligned. This means that it is the component of                 robot has an initial opinion oi = bi/di that is an equilibrium
+vi parallel to iui the one that exerts the change in velocities             of the nonlinear opinion dynamics adaptive law in Eq. (10).
+to avoid collision. Therefore, if we compute the magnitude of               Nevertheless, whether this equilibrium is stable or unstable
+                                                                            depends on the parameters of the adaptive law. Let
+vector component of vi parallel to ui and compare it to the
+magnitude of ui, then we can obtain i.                                                      = -di + diAiaisech2  ai  bi             (16)
+                                                                                                                     di
+   These insights motivate the following projection estimator
+                                                                            be the unique eigenvalue of (10) after linearization at
+of ei:
+                                                                            oi = bi/di. Equilibrium becomes unstable when  > 0.
+
+                                                                            Assuming that ai, di and bi are fixed, and taking into account
+
+                                                                            that sech(·)  (0, 1] in all its domain, oi = bi/di becomes an
+
+                           ||proj(vi, ui)|| - 1                             unstable equilibrium when Ai > 1/  aisech2   ai  bi  .
+                                                                                                                             di
+     ei = tanh                                              .       (15)
+                           ||ui||                 2
+                                                                            Corollary 1. If bi  = 0, then sech2  ai  bi  = 1 and the
+                                                                                                                     di
+                           proj(a, b)  =  a·b  b
+The  projection  operator                 b·b     projects     the  vector  condition on the attention level reduces to Ai > 1/ai. Since
+
+vi on vector ui. Furthermore, by normalizing with the norm                  sech2  ai  bi   (0, 1), Ai > 1/ai is an upper bound on
+                                                                                       di
+||ui||, the estimate of i is extracted. The other operations
+                                                                            the attention value beyond which the equilibrium oi = bi/di
+translate the estimated degree of cooperation to the estimated
+                                                                            becomes an unstable equilibrium and, therefore, Ai > 1/ai
+shifted degree of cooperation ei, where  > 0 tunes how
+sensitive is the tanh function to changes in vi. In this sense,             is a sufficient condition for oi = bi/di being an unstable
+
+we remark that Eq. (15) is not a perfect estimator since it only            equilibrium.
+
+relies on the sensor observations of the change in velocities                  When the robot and agent i are far from each other, the
+
+vi. This motivates the use of the function tanh, which                      dynamics of the attention in (11) are designed such that
+
+simultaneously restricts the domain of the estimation to [-1, 1]            Ai = 0. When the robot and agent i approach each other
+                                                                            in a trajectory of potential collisions, tanh(ii-1) > 0 and
+and allows a fast evolution of the estimated shifted degree of              attention evolves towards Ai > 0, with a speed determined
+                                                                            by i. Since the attention dynamics in (11) is a linear system
+cooperation. For instance, if the robot observes that agent i
+                                                                            with bounded input, the attention is stable with equilibrium
+moves straight to it and vi  0, then this means that ei  -1
+
+and the robot estimates that agent i is not cooperating. It is
+                                                                                                                                                                                                                             7
+
+given by Aieq = tanh(i(ieq)-1). Therefore, i must be large                                                                                                              that, if ai >> ci, the robot tends to preserve its opinion over
+                                         1                                                                                                                              the (shifted) degree of cooperation, or heavily relies on the
+enough to  ensure       that Ai       >  ai  when    the time to collision i  is                                                                                        estimator if ci >> ai.
+
+large enough to avoid collision. Moreover, since Ai  [0, 1], ai
+
+must be    designed     such   that      1   <1  to  ensure   that   the  condition
+                                         ai  i.
+       1
+Ai  >  ai  is possible for some                                                                                                                                         D. Exploiting attention to avoid symmetry deadlocks
+
+Now, we examine the stability properties of the nonlinear                                                                                                                  The previous sections address the problem of unknown
+                                                                                                                                                                        degree of cooperation in collision avoidance. However, there is
+opinion dynamics adaptive law in Eq. (10) after bifurcation.                                                                                                            an additional issue, typical in VO-based methods like ORCA,
+                                                                                                                                                                        that is characterized by navigation deadlocks under symmetri-
+Proposition 2. Let, di > 0, ai > 0 and bi  [-1, 1]. Assume                                                                                                              cal configurations [86]. Among other mechanisms, VO-based
+                                                                                                                                                                        methods usually solve symmetry deadlocks by injecting some
+that  Ai   >  1   holds.       Then, the nonlinear opinion dynamics                                                                                                     arbitrary noise in the perceived velocity, where this amount is
+              ai                                                                                                                                                        typically handcrafted. Instead, we propose an adaptive noise
+adaptive law in Eq. (10) exhibits two stable equilibrium points,                                                                                                        injection mechanism that exploits the attention Ai of the
+                                                                                                                                                                        opinion dynamics to correlate the amount of noise with safety.
+given by the following expression:
+                                                                                                                                                                           Specifically, our solution consists in injecting some small
+                  oeiq  =  Aitanh(aioieq         +  ciei)  +  bi  .       (17)                                                                                          noise to the perceived velocity of agent i when the agent is
+                                                              di                                                                                                        far from the robot, decreasing the noise to zero when the robot
+                                                                                                                                                                        and the agent are close to a potential collision. When the robot
+Besides, |oieq|         |bi |  -  1,  |bi |  +1  .                                                                                                                      and the agent are far from each other, the impact of noise is
+                        di            di                                                                                                                                negligible because attention Ai  0 and bifurcation does not
+                                                                                                                                                                        happen. This preserves the neutrality of the opinion on the
+Proof. From       the     assumption         that Ai  >       1      holds, in the                                                                                      (shifted) degree of cooperation. When the robot and the agent
+transition Ai             bifurcation        happens          ai                                                                                                        are close to collision, noise is removed, so the performance
+                      1                                                                                                                                                 guarantees on the adaptive law and the collision avoidance are
+               =      ai                              [72]. The dynamics in                                                                                             preserved.
+
+Eq, (10) are bounded due to the term -dioi, so equilibrium(s)                                                                                                              Mathematically speaking, we reformulate Eq. (6) as
+
+point(s) exist(s) after bifurcation. By enforcing the equilibrium
+
+condition oi = 0 in Eq. (10), Eq. (17) is obtained. We
+
+recall that Ai  [0, 1] and |tanh(·)|  [0, 1]. Therefore, the
+absolute value of the equilibrium |oeiq| is bounded and such
+
+that |oieq|    |bi |    -  1,  |bi |  +1     .
+               di              di
+
+   If there is no bias, bi = 0 and oeiq  [-1, 1]; otherwise, the                                                                                                        ui = arg min||vr - (vrpre - viµ)|| - (vrpre - viµ), (18)
+bias introduces a shift in the domain that naturally encodes a
+priori knowledge on the degree of cooperation of the agent.                                                                                                                      vr VOi
+Proposition 2 motivates the use of the scaling factor di in the
+ttaohtteeannetqiaousniylimAbrmii:uemtirnicptaholeidnoatsbmsiaesinnoceiefqoor=f|otiehAqii|stawnfahit(chatiorordeie,iqs+pthceeicetie)tx+opbbriei,/slsdeiioa,dnii.neo.gf,  where
+not symmetrical with respect to the initial equilibrium before
+bifurcation. This asymmetry would derive in an intrinsic bias                                                                                                                  viµ = vi + (1 - Ai)µ(),                       (19)
+towards any of the two subsequent equilibrium points, which is
+an undesired effect that we overcome by including the scaling                                                                                                           with µ()  U(-, ) a uniformly distributed perturbation
+factor di.                                                                                                                                                              bounded by  > 0.
+
+   Finally, ci shall be designed to guarantee that the nonlinear                                                                                                           In essence, our method adds a uniformly distributed noise
+term tanh(·) in the adaptive law is enough sensitive to the                                                                                                             to the velocity of agent i sensed by the robot. This noise de-
+behavior of agent i, reacting fast enough to avoid collisions.                                                                                                          pends on the attention mechanism developed for the nonlinear
+On the other hand,  in (15) tunes how sensitive is the                                                                                                                  opinion dynamics adaptive law. This perturbed velocity is the
+estimator of ei to changes in the speed of agent i.                                                                                                                     one used to compute vector ui and the OCAi constraint sets.
+                                                                                                                                                                        Hence, the noise perturbs the potential symmetry between vrpre
+   In summary, the nonlinear opinion dynamics adaptive law                                                                                                              and vi only when the robot and agent i are sufficiently close
+depends on six parameters: (i)  > 0 determines how sensitive                                                                                                            to each other. The intensity of the perturbation increases when
+is the estimator of ei and should be chosen large enough                                                                                                                the distance between robot and agent i decreases in order to
+to ensure ei  1 with enough time to avoid collision but                                                                                                                 ensure that there is an effective deadlock breaking when robot
+small enough to avoid noisy estimations; (ii) i > 0 and                                                                                                                 and agent i approach each other. It is interesting to remark that
+i  [0, 1) determines how fast the adaptive law approaches                                                                                                               this deadlock breaking approach can also be applied to other
+the bifurcation point, and therefore establishes when the robot                                                                                                         VO-based methods such as ORCA, since it only requires the
+decides its opinion about the degree of cooperation of agent                                                                                                            implementation of the attention mechanism in Eq. (11).
+i; (iii) di > 0 sets the convergence speed of the dynamics
+of the adaptive law, associated to the forgetting factor -dioi;                                                                                                            AVOCADO is summarized in Algorithm 1. By combining
+(iv) ai determines the attention level necessary to reach the                                                                                                           a geometrical approach with a nonlinear opinion dynamics
+bifurcation, taking into account the value of di; (v) bi is a bias                                                                                                      adaptive law, AVOCADO is able to adapt in real-time to the
+that encodes potential prior knowledge on the (shifted) degree                                                                                                          unknown degree of cooperation of the agents in a multi-agent
+of cooperation of agent i; (vi) ci weights the importance of                                                                                                            setting. The unknown degree of cooperation of the agent in-
+the estimate ei compared to the current value of aioi such                                                                                                              duces an additional layer of complexity in collision avoidance,
+                                                                                                                                                                        since, as it is shown in Section V, an incorrect assumption
+                                                                                                                                                                        on the degree of cooperation leads to collision to existing
+                                                                                                                                                                        geometrical, learning and model predictive approaches. On
+                                                                                                                                    8
+
+the other hand, AVOCADO is agnostic to the nature of the          a) bi/di = -0.9                             b) bi/di = -0.9
+agents the robot encounters, so the robot can take a fast and
+flexible decision irrespective of the dynamic model of the        c) bi/di = 0                                d) bi/di = 0
+agent. AVOCADO explicitly couples prediction with planning
+by estimating the effect its motion is producing in the other     e) bi/di = 0.9                              f) bi/di = 0.9
+agents it encounters through the degree of cooperation i
+i  N . In other words, the degree of cooperation i, unless        Fig. 6. Head-on scenarios for different ratio bi/di and degree of cooperation.
+0, expresses the fact that the motion of agent i is influenced    The robot (blue) navigates using AVOCADO, whereas the agent is either non-
+by the velocity exerted by the robot. By designing an adaptive    cooperative (black, left column) or navigates using AVOCADO (red, right
+law that estimates i in the continuous domain i  [0, 1],          column). The motion of the robot and the agent is represented with disks of
+our method is able to deconflict the undesirable effects of       increasing transparency as time advances, and solid dots represent the center
+such coupling by predicting how the agent reacts to the robot
+motion and plan the collision avoidance maneuver accord-          of the disks. Collision is marked with. crosses surrounded by circles
+ingly. No communication is involved, only relying on the
+perceived position and velocity of the nearby agents. All the     degree of cooperation nor communication exchange, but just
+mathematical operations are inexpensive to compute, except
+for the optimization program in line 11. Nonetheless, since it    the robot uses a planner to avoid collisions. In contrast, agents
+entails a linear program, with an efficient implementation it is
+proven that a robot can process thousands of nearby agents in     are non-cooperative, i.e., they are blind against the robots.
+milliseconds [12]. We validate the computational simplicity of
+AVOCADO in Section V.                                             Non-cooperative agents resolve (8), but their neighbor set Ni
+
+Algorithm 1 AVOCADO                                               never includes the robots, only other agents. This is done to
+
+ 1: Parameters: rs, rp > 0,  > 0, i > 0, di > 0, ai, bi, ci       ensure collision avoidance among agents but complete non-
+     R,  > 0, i  [0, 1)
+                                                                  cooperation with the robots, so the behavior is more com-
+ 2: for all t do
+ 3: Get pr and vrpre from a higher-level planner.                 plex than a simple dynamic obstacle with a fixed trajectory.
+ 4: Measure pi, vi i  N from sensors and get the
+                                                                  A mixed cooperative/non-cooperative navigation scenario in-
+        stored vi- i  N .
+ 5: Update the attention level Ai using pr, vrpre, pi and vi      volves cooperative robots and non-cooperative agents. Finally,
+
+        through Eqs. (11) and (14), for all i  N .                robots and agents have a disc shape of radius rs = 0.2m and
+ 6: Apply Eq. (19) to compute viµ i  N .
+ 7: Calculate ui through Eq. (18).                                a sensor range of rp = 2.5m.
+ 8: Estimate ei through Eq. (15).                                    The maximum velocity, vrmax, of the robots is set to 1m/s
+ 9: Update the opinion on the shifted degree of cooperation
+                                                                  and vimax of the agents is set to 0.75m/s. The agents have a
+        using the adaptive law in Eq. (10).                       lower velocity than the robots, allowing the robots to escape
+10: Build all admissible sets OCAi through Eq. (7), for all
+                                                                  if the agents move quickly towards them. For robots using
+        i  N.                                                                      = v , max pr,j -prt,j
+11: Solve optimization problem (8) to obtain vr.                  AVOCADO,  vrpre                             where  pr,j  denotes  the
+12: Apply vr and store vi as vi- i  N .                                                   r ||pr,j -ptr,j ||
+13: end for                                                       desired goal for robot j and ptr,j is the position of robot j at
+
+                      V. SIMULATED RESULTS                        time t. Therefore, robots using AVOCADO are not helped by
+
+   First, we evaluate AVOCADO in simulated scenarios. In          any higher-level planner to choose the desired velocity.
+Section VI we describe the results obtained in real settings
+with robots and humans.                                           A. Head-on scenarios
+
+   In Section V-A we analyze the impact of the different             We simulate head-on scenarios to analyze the impact of
+parameters in the behavior of AVOCADO. Next, in Section           the different parameters in AVOCADO. A robot and either a
+V-B we conduct extensive multi-agent simulations using two        cooperative robot or a non-cooperative agent face each other,
+navigation settings. For each setting, we compare qualitatively   where their goals are the starting position of the other. Fig. 6
+and quantitatively AVOCADO with existing state-of-the-art         illustrates these scenarios for different values of bias bi (a, c, e
+planners against other cooperative robots and non-cooperative     for the non-cooperative agent; b, d, f for the cooperative robot).
+agents. In all the simulated scenarios, we consider that robots
+are cooperative, i.e., they act using the same motion planner
+under comparison. For instance, if AVOCADO is assessed,
+then all robots use AVOCADO. Importantly, in our paper,
+a robot being cooperative does not mean knowledge on the
+                                                                                                                   9
+
+The robot using AVOCADO starts, in scenarios a) and b),             a) Different di  b) Different ai, ci = 1 - ai
+                                                                    c) Different             d) Different i
+assuming that the other robot or agent is non-cooperative with      e) Different i            f) Different bi
+
+a low degree of cooperation; in scenarios c) and d), the robot
+
+initially assumes reciprocity, with a degree of cooperation
+
+equal to 0.5; and in e) and f) the robot initially assumes a
+
+great degree of cooperation. Extreme bias values can lead to
+
+collisions, as in b) and e). In a), the robot effectively avoids
+
+the collision with the agent, as the highly negative biased
+
+initial degree of cooperation (pessimistic robot) corresponds to
+
+reality. However, when the bias is incorrect, even if the agent
+
+is cooperative as in b), the robot takes some time to recover
+
+from the incorrect prior, resulting in collision. The opposite
+
+conflict arises when there is an initial highly positive bias in
+
+the degree of cooperation (optimistic). In case e), the robot
+
+is unable to correct the estimated degree of cooperation fast
+
+enough to realize that the agent is non-cooperative and take
+
+all the responsibility to avoid collision. Collision is avoided in
+
+case f), but the extreme bias leads to sub-optimal trajectories.
+
+Finally, a balanced bias allows the robot to react effectively
+
+to non-cooperative agents in c) and cooperative agents in d).
+
+The impact of the other parameters is evaluated by studying
+
+the evolution of oi when the parameters change. The default
+parameters are specified in Table I. Now, we focus on the
+
+non-cooperative head-on scenario.
+
+Parameter ai bi di i                 i bi
+
+Value 0.3 0.7 2 14.15 3.22 0.57 0
+
+TABLE I
+
+DEFAULT PARAMETER VALUES
+
+   Fig. 7 depicts the evolution of oi for the different cases. As   Fig. 7. Evolution of the degree of cooperation in the head-on scenario against
+the robot detects that agent i does not cooperate, oi decreases,    a non-cooperative agent, varying the value of each parameter of AVOCADO.
+trying to reach oi = -1. Finally, when the collision is avoided
+and Ai = 0, oi recovers to the initial value. In some cases, as     the nonlinear opinion dynamics adaptive law to be too sensitive
+in Fig. 7e) with  = 0.1, oi does not recover to the initial value   to changes in the agent and the estimate ei, leading to a non-
+because agent i leaves the sensor range of the robot before let-    smooth evolution of oi. Therefore, it is suggested to design the
+ting the nonlinear opinion dynamics to converge to oi = bi/di.      parameters as low as possible to guarantee collision avoidance
+First, regarding di (Eq. (10)), greater values imply a greater      but obtain fluid maneuvers. The nominal parameters described
+forgetting factor and therefore, a faster convergence. For very     in Table I have been tuned using Bayesian Optimization,
+large values (di = 6.5), the nonlinear opinion dynamics are         constrained the domain of the parameters according to the
+too reactive to the estimate ei and to the noise introduced         conclusions drawn from Fig. 7.
+(Eq. 19), leading to abrupt changes in oi. Second, regarding
+ai, ci (Eq. (10)), since ci = 1-ai and ai  {0.1, 0.3, 0.6, 0.9},    B. Multi-agent scenarios
+greater values of ai imply less reactivity against changes in
+the estimate ei and, henceforth, slowest convergence of the            After studying the influence of the different parameters in
+nonlinear opinion dynamics. Third, regarding  (Eq. (15)), it        AVOCADO, we conduct a series of multi-agent simulations
+is observed that beyond some value around  = 1, the estimate        to evaluate the performance of AVOCADO compared to
+of ei is reactive enough to guarantee a fast convergence of the     existing state-of-the-art planners. We compare AVOCADO
+nonlinear opinion dynamics. Fourth, the behavior of i (Eq.          with ORCA [12] and RVO-RL [51] as baselines planners
+(11)) is similar to that of , in the sense that there is a point    that consider reciprocal collision avoidance, and T-MPC [23],
+beyond which increasing  does not provide any improvement.          [68] and SARL [87] as baseline planners for non-cooperative
+Fifth, the same holds for i (Eq. (11)). Finally, regarding the      collision avoidance. The former is based on a model predictive
+ratio bi/di (Eq. (10)), it is very interesting to observe that      control formulation and the latter is a neural-network-based
+different values lead to different initial and final equilibrium,   planner trained using reinforcement learning. In this sense,
+equal to oi = bi/di. In all the cases, since the agent is always    SARL is retrained to satisfy the constraints in perception from
+non-cooperative, oi evolves towards a low value in order to         the limited sensing radius of robots and agents. Moreover, we
+take the responsibility of avoiding the collision. The plots of     set  = 0.0001 for AVOCADO.
+
+Fig. 7 show that, in general, very low parameters' values are          We design two evaluation settings. The circle scenario is
+                                                                    characterized by an evenly spaced initial position of robots
+not desirable, as they make the opinion grow slowly and the         and agents, forming a circle and with the goal of reaching the
+                                                                    initial position of the opposite robot or agent. On the other
+robot to react late. Nevertheless, very large values can make
+a) ORCA  b) T-MPC  c) SARL                                                                 d) RVO-RL                                               10
+                                                                                                                       e) AVOCADO
+
+Fig. 8. Non-cooperative circle (top) and crossing (bottom) scenarios with 10 agents and different planners. The robot is colored in purple, and the non-
+cooperative agents are in black. When the robot collides with an agent, it becomes transparent. The episode finishes when all the agents and the robot reach
+the goal or collide, or the simulation lasts more than 100s.
+
+hand, the crossing scenario is characterized by a random initial   presents many collisions, as it is not prepared to interact with
+position of all the agents and robots in the border of a square.   other robots, and some of the RVO-RL robots do not reach the
+Robots and agents must navigate to a individually assigned         goal before the time out of 100s. Trajectories of robots using
+random goal in the opposite side of the square. Cooperative        SARL are, again, very irregular, probably due to a reciprocal
+robots are placed in the sides oriented to one axis and non-       dance problem, specially noticeable in circle scenarios where
+cooperative agents are placed in the sides oriented to the         this leads to collisions. All the robots using AVOCADO reach
+other axis. This arrangement enforces that cooperative robots      their goals avoiding collisions, with short path lengths and
+traverse non-cooperative agents that move perpendicularly as       fluid trajectories, in both scenarios.
+a traffic flow they have to cross. Besides, to ensure that robots
+do not take trivial motion strategies (e.g., wait until all the       Mixed cooperative/non-cooperative scenarios are the most
+agents have reached the goal), once an agent reaches its goal,     challenging for most of the planners, as they assume some
+the goal is modified to be the initial position of the agent, so   sort of degree of cooperation, either reciprocity or complete
+the environment is always dynamic.                                 absence of cooperation. Fig. 10 provides examples of such
+                                                                   scenarios. T-MPC and RVO-RL avoid passing through the
+   We show the qualitative behavior of the robots in non-          center of the stage, as there are many non-cooperative agents.
+cooperative circle and crossing scenarios in Fig. 8. The           However, they encounter cooperative robots during the detour,
+planners address the navigation conflict at the center of the      so they are unable to avoid collisions. SARL faces again the
+circle in two different ways. T-MPC and RVO-RL completely          reciprocal dance problem when evading both non-cooperative
+avoid dangerous zones by taking a detour; this might not be        agents and other robots avoiding collisions. ORCA and AV-
+possible in a constrained scenario with boundaries. Among          OCADO perform similar trajectories, but AVOCADO adapta-
+the other three approaches, ORCA is the one that takes more        tion capabilities makes it safer, avoiding all collisions unlike
+risks, since it assumes reciprocity in the degree of cooperation,  ORCA.
+colliding in both scenarios. SARL and AVOCADO achieve
+adaptation to the unknown degree of cooperation of the agents      We conduct a systematic series of circle and crossing runs to
+and other robots and manage to reach the goal in both
+scenarios; nonetheless, the movements exerted by the robots        extract quantitative metrics to compare all the planners, using
+using AVOCADO are much more seamless than those exerted
+by SARL, which is a key aspect when transferring navigation        an increasing total number of agents. The circle size of circle
+policies to real robots.
+                                                                   scenarios  is  set  to  max(2.5,   2.3Nrs  )m  and  the  square  size  of
+   Fig. 9 shows examples of scenarios only populated with                                                
+robots. Fig. 9a demonstrates the deadlocks suffered by recipro-
+cal approaches like ORCA when symmetries are encountered.          crossing scenarios is set to 1.5Nrsm. These numbers guarantee
+AVOCADO overcomes this problem, as seen in Fig. 9e, by
+exploiting the attention mechanism in the nonlinear opinion        that there is enough space for the initial and final position of all
+dynamics adaptive law. T-MPC and RVO-RL take long un-
+necessary detours, as they are designed for scenarios with         robots and agents while enforcing collision conflicts. Simula-
+fewer robots and to take larger safety margins. T-MPC even
+                                                                   tion runs range from N = 10 to N = 25 in steps of 3. For each
+
+                                                                   value of N, we test five different proportions P of cooperative
+
+                                                                   robots. In particular, we set the number of cooperative robots
+
+                                                                   equal to PN, with P = {0.01, 0.25, 0.5, 0.75, 1}, where ·
+
+                                                                   is the operator that rounds a real number to the closest greater
+
+                                                                   integer. The others are non-cooperative agents. We run 128
+
+                                                                   random scenarios for each combination of planner, number of
+
+                                                                   cooperative robots and non-cooperative agents. Each run in
+   a) ORCA                    b) T-MPC                       c) SARL                 d) RVO-RL                                           11
+                                                                                                             e) AVOCADO
+
+Fig. 9. Cooperative circle (top) and crossing (bottom) scenarios with 10 robots and different planners. Each robot is depicted with a different color. The
+
+representation follows the same rules in Fig. 8. Collisions are marked with cr.osses surrounded by circles
+
+   a) ORCA                    b) T-MPC                       c) SARL                 d) RVO-RL               e) AVOCADO
+
+Fig. 10. Mixed cooperative/non-cooperative circle (top) and crossing (bottom) scenario with 4 agents, 6 robots and different planners. Each robot is depicted
+
+with a different color. The representation follows the same rules in Fig. 8. Co.llisions are marked with crosses surrounded by circles
+
+circle scenarios randomizes the identity of each agent (non-     rate is defined as
+cooperative or the planner under evaluation), while each run
+in crossing scenarios randomizes the initial and goal positions                      1 MN         succj,k .
+of each agent. We compare the state-of-the-art planners with
+4 versions of AVOCADO with the following parameters:                                 MN  k=1 j=1
+
+· AVOCADO_1: Table I.                                               The success rates are in Fig. 11 and Fig. 12 for circle and
+                                                                 crossing scenarios, respectively. AVOCADO outperforms all
+· AVOCADO_2: Table I but di = 5.                                 other approaches in success rate. AVOCADO_2, with a higher
+                                                                 value of di than AVOCADO_1, has a greater success rate
+·  AVOCADO_3:  Table  I  but  bi  =  1  (  bi  = 0.5).           in circle scenarios where the number of cooperative robots
+                                           di                    is greater, as it is more sensitive to the introduced noise
+                                               bi                that breaks symmetries. AVOCADO_1 is more stable and
+·  AVOCADO_4:  Table  I  but  bi  =  -1    (   di  = -0.5).      has a better performance in partially cooperative scenarios.
+                                                                 AVOCADO_3 presents a worse success rate due to the
+   We define the success rate as a evaluation metric. Let M      bias, that assumes low degrees of cooperation when it is
+                                                                 often not true. In this sense, it is very interesting to see
+be the number of runs; succj,k  {0, 1} is the indicator that     how AVOCADO_4, with a bias towards great degrees of
+is equal to 1 if ||pr,j - pr,j|| <  at the end of run k or 0     cooperation, presents the worst results among the AVOCADO
+otherwise (it is also zero when the robot j at run k collides),
+where pr,j is the position of robot j, pr,j is the desired goal
+of robot j, and  > 0 is a small tolerance. Then, the success
+                                                                                   12
+
+Fig. 11. Success rates of robots with the different planners in circle scenarios.  Fig. 12. Success rates of robots with the different planners in crossing
+Red crosses mark the best planner. The color bar refers to success rate as         scenarios. The color bar refers to success rate as defined in Section V-B,
+defined in Section V-B, whereas P refers to the proportion of cooperative          whereas P refers to the proportion of cooperative robots. The yellower the
+robots. The yellower the better.                                                   better.
+
+versions in Fig. 11 unless in fully-cooperative cases. However,                    Fig. 13. Mean and standard deviation of navigation times (in seconds) of
+AVOCADO_4 achieves the best success rates in Fig.12. This                          successful robots for the different planners, gathered in 128 square scenarios
+is probably due to the fact that, in crossing scenarios, the                       with P = 0.5
+robot first faces non-cooperative perpendicular traffic, where
+being cautious is desirable; meanwhile, in circle scenarios the                    slightly lower times to reach the goal even tough the resulting
+robot faces agents coming in their same direction, leading                         trajectories are longer than those of AVOCADO or ORCA.
+to conflicts similar to the one previously seen in Fig. 6b.                        This is due to the fact that T-MPC exerts higher velocities
+ORCA experiences deadlocks from geometrical symmetries,                            and it is, therefore, more risky, which explains its success rate
+so it fails in all cooperative circle scenarios. The performance                   metrics shown in Figs. 11 and 12.
+of T-MPC degrades when the number of cooperative agents
+increases, since, as it is observed in [23], [68], the method                         Finally, regarding computation times, Fig. 14 collects the
+is suited for scenarios with less than 10 robots or agents.                        mean and standard deviation computation times for all the
+RVO-RL, tuned for fully-cooperative environments, achieves                         planners under comparison. The pure geometrical methods
+its best performance for P = 1, decreasing the success rate                        (AVOCADO and ORCA) share the same inexpensive compu-
+as non-cooperative agents appear. SARL, due to the non-fluid                       tational cost, requiring hundreds of milliseconds to compute
+behavior, obtains poor success rates.                                              a solution in crowded environments. The time increases with
+                                                                                   the number of robots and agents since the number of entities
+   We show in Fig. 13 the mean navigation time that every                          under consideration grow, but this growth is linear with the
+planner takes to reach the goal in square scenarios with                           number of agents and robots within the sensor range. The
+P = 0.5. The mean time to goal is computed taking into
+account only the robots that do not collide:
+
+ 1M  N
+MN
+           tj,k ,
+
+k=1 j=1
+
+     succj,k =1
+
+where tj,k > 0 denotes the instant when robot j reaches its
+goal at run k. The results are aligned with the qualitative
+results depicted in Figs. 8, 9, and 10). RL-RVO and SARL
+exhibit the largest time to goal because their trajectories are
+irregular and present many detours. Meanwhile, the rest of
+the planners reach the goal in similar times. T-MPC manifests
+                                                                             13
+
+Fig. 14. Mean and standard deviation of the computational times (in          We use three Turtlebot 2 robotic platforms that use AVO-
+                                                                             CADO, and up to three pedestrians as external non-cooperative
+milliseconds) for the different planners. Y-axis is in a logarithmic scale.  agents. The experiments involve 19 pedestrians, 15 of them
+                                                                             external to the project associated to this work. The pedestrians,
+a)  b)                                                                       as the robots, have a fixed starting point and final goal for each
+                                                                             experiment, but they have no instructions on how to behave
+Fig. 15. Multi-robot experiments with static obstacles.                      and interact with the robots. In this way, the pedestrians decide
+                                                                             by themselves their degree of cooperation with the robots
+other methods take, by orders of magnitude, much more time                   and other pedestrians, their own velocity and the trajectory
+to compute their navigation commands. This computational                     to follow to reach the goal, making each experiment different
+burden may prevent their use in real hardware applications                   and unpredictable from the perspective of the robots. The
+with constrained resources, specially if there are other higher-             robots use AVOCADO with the same parameterization as the
+level tasks that use those resources.                                        default ones detailed in Table I. The purpose is to prove that
+                                                                             AVOCADO presents zero-shot-transfer capabilities.
+C. Static obstacles
+                                                                                We conduct the experiments in an arena of 6×6m. We used
+   As real-world scenarios often include other kind of obsta-                an Optitrack PrimeX 13W system of markers and 12 cameras
+cles, we study the behavior of AVOCADO in the presence of                    to localize the robots and the pedestrians. We also design
+static obstacles. We followed the same approach of previous                  and implement an Extended Kalman Filter with a constant
+VO-based methods [12], [13], [28], [29], [35], which consider                velocity assumption to track the positions and velocities of all
+representing the boundaries of the obstacles as segments. Half-              the robots and pedestrians.
+spaces constraining the velocities that lead to collision with
+these segments are directly included in the linear problem                      We design three representative experimental scenarios, run-
+optimization. In this way, collision avoidance with static                   ning them using different combinations of pedestrians, leading
+obstacles is naturally achieved with no extra cost.                          to a total of 33 experiments. Videos of the experiments can be
+                                                                             found in the supplementary material. The three scenarios are
+   To verify this insight, we conduct simulated experiments                  as follows:
+where robots following AVOCADO navigate in a circular
+scenario that includes static obstacles. Fig. 15 shows that                     · Head-on: two robots are placed next to each other in two
+the robots are able to adjust their trajectories to obstacles of                   corners of the arena, and two pedestrians are placed in the
+different shapes.                                                                  other two corners of the arena, each of them facing one
+                                                                                   of the robots. The goal of the robots and the pedestrians
+   Nevertheless, as previously stated, an important remark                         is to exchange their position with the pedestrian or robot
+is that AVOCADO is a planner that locally selects a non-                           that is in front of them.
+colliding velocity. Therefore, an additional high-level planner
+would be needed to navigate in the presence of non-convex                       · Circle: as in the simulations, pedestrians and robots
+obstacles, such as in a maze-like environment.                                     are arranged in an evenly spaced circular formation,
+                                                                                   alternating robots and pedestrians. The goal of all the
+                  VI. EXPERIMENTAL RESULTS                                         players is to go to the opposite side of the circle.
+
+   After evaluating AVOCADO in simulated environments, in                       · Crossing: two robots are located in the medium point of
+this section we conduct experiments with real ground robots.                       two opposite sides of the arena, facing each other. In one
+                                                                                   of the other sides we place a pedestrian and a robot, while
+                                                                                   two pedestrians are placed in the remaining side of the
+                                                                                   arena. The team robot-pedestrian and the team pedestrian-
+                                                                                   pedestrian are told to cross the arena towards the position
+                                                                                   of the other team. The goal of the first two robots is
+                                                                                   to cross the perpendicular traffic flow to exchange their
+                                                                                   position.
+
+                                                                                Fig. 16 shows two examples of head-on experiments. In the
+                                                                             first experiment (a) one of the pedestrians (bottom) decides
+                                                                             to evade the robot. AVOCADO detects that and adapts to
+                                                                             the situation, following a straight trajectory. Reciprocal dance
+                                                                             problem is not observed. The other pedestrian in Fig. 16a
+                                                                             slightly modifies the trajectory to cooperate with the robot.
+                                                                             Fig. 16b shows the same experiment with other pedestrians,
+                                                                             that decide to not cooperate at all, demonstrating how the
+                                                                             robots are able to take all the responsibility to do the collision
+                                                                             avoidance maneuver.
+
+                                                                                In Fig. 17a, pedestrians participating in the circle ex-
+                                                                             periment walked with different velocities. When the person
+                                                                             starting in the down-right leaves the intersection, the person
+                                                                             starting in the top-center is still starting the trajectory. The
+a) Group 2  b) Group 4                                                            a) Group 4                                 14
+                                                                                              b) Group 5
+
+Fig. 16. Head-on experiment, groups 2 and 4. Two robots face two                  Fig. 18. Crossing experiment, groups 4 and 5. Two robots, in opposite
+                                                                                  sides, exchange positions by crossing an intersection with one robot and three
+pedestrians, exchanging their initial position. The pedestrians trajectories are  pedestrians.
+
+represented in black and the robots with different colors.
+
+a) Group 3  b) Group 5
+
+Fig. 17. Circle experiment, groups 3 and 5. Three robots and three pedestrians,   mixed cooperative/non-cooperative multi-agent environments,
+evenly spaced in a circle, exchange their positions with the opposite player.     where the degree of cooperation of the agents is unknown.
+                                                                                  AVOCADO parameterizes the degree of cooperation of the
+robots adapt to the different velocities and safely reach the                     agents using a scalar value that is adapted in real-time using
+goal with fluid trajectories. The purple robot traverses the                      a novel adaptive law based on nonlinear opinion dynamics.
+intersection moving to its right side, as there is free space                     We have shown that the adaptive law, under an appropriate
+there. Fig. 17b depicts a situation where the human starting                      tuning, guarantees robot decision on the degree of cooperation
+in the down-right and the one starting in the top-center have                     of the agent before collision. To do so, we first exploited
+similar behaviors as in the previous experiment in terms of                       the geometry of the problem to develop a novel attention
+speed. The pedestrian starting in the bottom-left, however, is                    mechanism that depends on the expected time to collision. The
+faster than its previous homologous. The robots accomodate                        attention mechanism is also used to propose a novel method to
+to this situation by being more cooperative and more reactive                     overcome deadlocks generated by symmetries. The second key
+(yellow and blue) or choosing a different trajectory in the space                 to achieve adaptation involved a novel geometrical estimator
+that pedestrian is leaving behind (purple).                                       that predicts the opinion that the agent has on the adapted
+                                                                                  degree of cooperation of the robot. The estimator only relies
+   A standard crossing scenario is represented in Fig. 18a. All                   on the measured position and velocity of the agent. Finally,
+the agents forming the traffic in the middle of the arena respect                 AVOCADO integrates the adapted degree of cooperation in a
+their lane. The two robots in opposite sides choose a side to                     linear program that minimizes the difference between desired
+cross the intersection, passing between the two nearby agents                     and actual velocity while avoiding collision.
+and the two far ones. The girl starting behind the purple robot
+overtakes it safely, through the open space that is in their left.                   Simulated experiments have validated AVOCADO, showing
+The robot collaborates but giving her more space to do it.                        that it is inexpensive to compute and overcomes existing
+Fig. 18b, however, shows a different situation. The pedestrian                    approaches in terms of success rate, number of avoided
+behind the other pedestrian decides to accelerate and overtake                    collisions, computational time and time to reach the goal.
+through the central lane. The purple robot has to slow down                       In this sense, our solution is readily implementable in low-
+to evade a frontal collision. This delay in the central traffic                   cost hardware devices, leaving the computational and memory
+makes the blue robot avoid it through the right side, and the                     resources free for any desired high-level task such as semantic
+yellow adapt to it as it arrives there.                                           mapping, autonomous tracking or package delivery. Moreover,
+                                                                                  extensive experiments with multiple robots and humans have
+   Overall, extensive hardware experiments with multiple                          demonstrated that AVOCADO presents zero-shot-transfer ca-
+robots and humans prove that AVOCADO is effective naviga-                         pabilities and works in scenarios with uncertainties, noise and
+tion strategy for collision avoidance in mixed cooperative/non-                   evolving unpredictable human behaviors.
+cooperative environments. AVOCADO is a zero-shot approach
+since no further tuning is required to transfer the algorithm                        As future work, one direction is to explore the integration
+from simulations to real robots. In this sense, AVOCADO                           of AVOCADO in a higher-level planner that avoids dense
+preserves the properties observed in simulations in terms                         crowded areas or convex obstacles. AVOCADO, since it does
+of success rate, fluidity, adaptation to unknown degrees of                       not have an horizon planner, sometimes enter in conflicting
+cooperation and computational efficiency.                                         situations that lead to local minima or unavoidable collisions.
+                                                                                  Another research direction consists in extending AVOCADO
+                         VII. CONCLUSIONS                                         to general robot dynamic models, as other VO-based plan-
+                                                                                  ners [13], [29]; and to 3-D settings. Lastly, it would be
+   In this work we have presented AVOCADO, a novel ap-                            interesting to develop a method that, by just relying on onboard
+proach to solve the robot collision avoidance problem in                          sensors, is able to consider how neighboring interactions are
+                                                                                  affecting the motion of the nearby agents, in order to distin-
+                                                                                  guish non-cooperative behaviors stemming from the degree of
+                                                                                  cooperation of the agents from the ones enforced by their own
+                                                                                  collision avoidance goals.
+                                                                                  15
+
+                             REFERENCES                                           [23] S. Poddar, C. Mavrogiannis, and S. S. Srinivasa, "From crowd motion
+                                                                                        prediction to robot navigation in crowds," in IEEE/RSJ International
+ [1] H. Choset, K. M. Lynch, S. Hutchinson, G. A. Kantor, and W. Burgard,               Conference on Intelligent Robots and Systems, 2023, pp. 6765­6772.
+      Principles of robot motion: theory, algorithms, and implementations.
+      MIT press, 2005.                                                            [24] D. Morilla-Cabello, L. Mur-Labadia, R. Martinez-Cantin, and E. Mon-
+                                                                                        tijano, "Robust fusion for bayesian semantic mapping," in IEEE/RSJ
+ [2] C. Mavrogiannis, F. Baldini, A. Wang, D. Zhao, P. Trautman, A. Stein-              International Conference on Intelligent Robots and Systems, 2023, pp.
+      feld, and J. Oh, "Core challenges of social robot navigation: A survey,"          76­81.
+      ACM Transactions on Human-Robot Interaction, vol. 12, no. 3, pp. 1­
+      39, 2023.                                                                   [25] A. Asgharivaskasi and N. Atanasov, "Semantic OcTree mapping and
+                                                                                        shannon mutual information computation for robot exploration," IEEE
+ [3] J. F. Fisac, A. Bajcsy, S. L. Herbert, D. Fridovich-Keil, S. Wang, C. J.           Transactions on Robotics, vol. 39, no. 3, pp. 1910­1928, 2023.
+      Tomlin, and A. D. Dragan, "Probabilistically safe robot planning with
+      confidence-based human predictions," in Robotics: Science and Systems.      [26] P. Fiorini and Z. Shiller, "Motion planning in dynamic environments
+      MIT Press Journals, 2018.                                                         using the relative velocity paradigm," in IEEE International Conference
+                                                                                        on Robotics and Automation, 1993, pp. 560­565.
+ [4] A. Rudenko, L. Palmieri, M. Herman, K. M. Kitani, D. M. Gavrila,
+      and K. O. Arras, "Human motion trajectory prediction: A survey," The        [27] ----, "Motion planning in dynamic environments using velocity obsta-
+      International Journal of Robotics Research, vol. 39, no. 8, pp. 895­935,          cles," The International Journal of Robotics Research, vol. 17, no. 7,
+      2020.                                                                             pp. 760­772, 1998.
+
+ [5] D. Fridovich-Keil, A. Bajcsy, J. F. Fisac, S. L. Herbert, S. Wang, A. D.     [28] J. Van den Berg, M. Lin, and D. Manocha, "Reciprocal velocity obstacles
+      Dragan, and C. J. Tomlin, "Confidence-aware motion prediction for                 for real-time multi-agent navigation," in IEEE International Conference
+      real-time collision avoidance1," The International Journal of Robotics            on Robotics and Automation, 2008, pp. 1928­1935.
+      Research, vol. 39, no. 2-3, pp. 250­265, 2020.
+                                                                                  [29] J. Alonso-Mora, A. Breitenmoser, M. Rufli, P. Beardsley, and R. Sieg-
+ [6] R. Mirsky, X. Xiao, J. Hart, and P. Stone, "Conflict avoidance in social           wart, "Optimal reciprocal collision avoidance for multiple non-
+      navigation-a survey," ACM Transactions on Human-Robot Interaction,                holonomic robots," in Distributed autonomous robotic systems: The 10th
+      vol. 13, no. 1, pp. 1­36, 2024.                                                   international symposium. Springer, 2013, pp. 203­216.
+
+ [7] Y. Tian, K. Liu, K. Ok, L. Tran, D. Allen, N. Roy, and J. P. How,            [30] O. Brock and O. Khatib, "High-speed navigation using the global dy-
+      "Search and rescue under the forest canopy using multiple uavs," The              namic window approach," in IEEE International Conference on Robotics
+      International Journal of Robotics Research, vol. 39, no. 10-11, pp. 1201­         and Automation, vol. 1, 1999, pp. 341­346.
+      1221, 2020.
+                                                                                  [31] O. Khatib, "Real-time obstacle avoidance for manipulators and mobile
+ [8] W. Tabib, K. Goel, J. Yao, C. Boirum, and N. Michael, "Autonomous                  robots," The International Journal of Robotics Research, vol. 5, no. 1,
+      cave surveying with an aerial robot," IEEE Transactions on Robotics,              pp. 90­98, 1986.
+      vol. 38, no. 2, pp. 1016­1032, 2021.
+                                                                                  [32] S. Petti and T. Fraichard, "Safe motion planning in dynamic environ-
+ [9] E. Soria, F. Schiano, and D. Floreano, "Predictive control of aerial               ments," in IEEE/RSJ International Conference on Intelligent Robots and
+      swarms in cluttered environments," Nature Machine Intelligence, vol. 3,           Systems, 2005, pp. 2210­2215.
+      no. 6, pp. 545­554, 2021.
+                                                                                  [33] G. Ferrer, A. Garrell, and A. Sanfeliu, "Robot companion: A social-
+[10] B. Paden, M. C áp, S. Z. Yong, D. Yershov, and E. Frazzoli, "A survey of           force based approach with human awareness-navigation in crowded
+      motion planning and control techniques for self-driving urban vehicles,"          environments," in IEEE/RSJ International Conference on Intelligent
+      IEEE Transactions on intelligent vehicles, vol. 1, no. 1, pp. 33­55, 2016.        Robots and Systems, 2013, pp. 1688­1694.
+
+[11] Y. Song, A. Romero, M. Müller, V. Koltun, and D. Scaramuzza, "Reach-         [34] F. Vesentini, R. Muradore, and P. Fiorini, "A survey on velocity obstacle
+      ing the limit in autonomous racing: Optimal control versus reinforcement          paradigm," Robotics and Autonomous Systems, p. 104645, 2024.
+      learning," Science Robotics, vol. 8, no. 82, p. eadg1462, 2023.
+                                                                                  [35] M. Rufli, J. Alonso-Mora, and R. Siegwart, "Reciprocal collision
+[12] J. Van Den Berg, S. J. Guy, M. Lin, and D. Manocha, "Reciprocal n-                 avoidance with motion continuity constraints," IEEE Transactions on
+      body collision avoidance," in Robotics Research: The 14th International           Robotics, vol. 29, no. 4, pp. 899­912, 2013.
+      Symposium ISRR. Springer, 2011, pp. 3­19.
+                                                                                  [36] D. Bareiss and J. Van den Berg, "Generalized reciprocal collision
+[13] J. Alonso-Mora, P. Beardsley, and R. Siegwart, "Cooperative collision              avoidance," The International Journal of Robotics Research, vol. 34,
+      avoidance for nonholonomic robots," IEEE Transactions on Robotics,                no. 12, pp. 1501­1514, 2015.
+      vol. 34, no. 2, pp. 404­420, 2018.
+                                                                                  [37] K. Guo, D. Wang, T. Fan, and J. Pan, "VR-ORCA: Variable respon-
+[14] R. Han, S. Chen, and Q. Hao, "Cooperative multi-robot navigation                   sibility optimal reciprocal collision avoidance," IEEE Robotics and
+      in dynamic environment with deep reinforcement learning," in IEEE                 Automation Letters, vol. 6, no. 3, pp. 4520­4527, 2021.
+      International Conference on Robotics and Automation, 2020, pp. 448­
+      454.                                                                        [38] J. Qin, J. Qin, J. Qiu, Q. Liu, M. Li, and Q. Ma, "SRL-ORCA: A socially
+                                                                                        aware multi-agent mapless navigation algorithm in complex dynamic
+[15] M. Boldrer, A. Serra-Gomez, L. Lyons, J. Alonso-Mora, and L. Fer-                  scenes," IEEE Robotics and Automation Letters, vol. 9, no. 1, pp. 143­
+      ranti, "Rule-based lloyd algorithm for multi-robot motion planning                150, 2023.
+      and control with safety and convergence guarantees," arXiv preprint
+      arXiv:2310.19511, 2023.                                                     [39] L. Tai, J. Zhang, M. Liu, and W. Burgard, "Socially compliant navigation
+                                                                                        through raw depth inputs with generative adversarial imitation learning,"
+[16] A. Bajcsy, S. L. Herbert, D. Fridovich-Keil, J. F. Fisac, S. Deglurkar,            in IEEE International Conference on Robotics and Automation, 2018,
+      A. D. Dragan, and C. J. Tomlin, "A scalable framework for real-time               pp. 1111­1117.
+      multi-robot, multi-human collision avoidance," in IEEE International
+      Conference on Robotics and Automation, 2019, pp. 936­943.                   [40] A. Pokle, R. Martín-Martín, P. Goebel, V. Chow, H. M. Ewald, J. Yang,
+                                                                                        Z. Wang, A. Sadeghian, D. Sadigh, S. Savarese, et al., "Deep local trajec-
+[17] Q. Li, F. Gama, A. Ribeiro, and A. Prorok, "Graph neural networks                  tory replanning and control for robot navigation," in 2019 International
+      for decentralized multi-robot path planning," in IEEE/RSJ International           Conference on Robotics and Automation, 2019, pp. 5815­5822.
+      Conference on Intelligent Robots and Systems, 2020, pp. 11 785­11 792.
+                                                                                  [41] Z. Xie, P. Xin, and P. Dames, "Towards safe navigation through
+[18] A. Patwardhan, R. Murai, and A. J. Davison, "Distributing collaborative            crowded dynamic environments," in IEEE/RSJ International Conference
+      multi-robot planning with gaussian belief propagation," IEEE Robotics             on Intelligent Robots and Systems, 2021, pp. 4934­4940.
+      and Automation Letters, vol. 8, no. 2, pp. 552­559, 2022.
+                                                                                  [42] E. Sebastián, T. Duong, N. Atanasov, E. Montijano, and C. Sagüés,
+[19] S. Zhang, K. Garg, and C. Fan, "Neural graph control barrier functions             "LEMURS: Learning distributed multi-robot interactions," in IEEE
+      guided distributed collision-avoidance multi-agent control," in Confer-           International Conference on Robotics and Automation, 2023, pp. 7713­
+      ence on Robot Learning. PMLR, 2023, pp. 2373­2392.                                7719.
+
+[20] P. Long, W. Liu, and J. Pan, "Deep-learned collision avoidance policy        [43] P. Long, T. Fan, X. Liao, W. Liu, H. Zhang, and J. Pan, "Towards
+      for distributed multiagent navigation," IEEE Robotics and Automation              optimally decentralized multi-robot collision avoidance via deep rein-
+      Letters, vol. 2, no. 2, pp. 656­663, 2017.                                        forcement learning," in IEEE International Conference on Robotics and
+                                                                                        Automation, 2018, pp. 6252­6259.
+[21] M. Everett, Y. F. Chen, and J. P. How, "Collision avoidance in pedestrian-
+      rich environments with deep reinforcement learning," IEEE Access,           [44] T. Fan, P. Long, W. Liu, and J. Pan, "Distributed multi-robot collision
+      vol. 9, pp. 10 357­10 377, 2021.                                                  avoidance via deep reinforcement learning for navigation in complex
+                                                                                        scenarios," The International Journal of Robotics Research, vol. 39,
+[22] B. Brito, B. Floor, L. Ferranti, and J. Alonso-Mora, "Model predictive             no. 7, pp. 856­892, 2020.
+      contouring control for collision avoidance in unstructured dynamic
+      environments," IEEE Robotics and Automation Letters, vol. 4, no. 4,         [45] R. Ourari, K. Cui, A. Elshamanhory, and H. Koeppl, "Nearest-neighbor-
+      pp. 4459­4466, 2019.                                                              based collision avoidance for quadrotors via reinforcement learning," in
+                                                                                16
+
+      IEEE International Conference on Robotics and Automation, 2022, pp.             crowd navigation with attention-based interaction graph," in IEEE In-
+      293­300.                                                                        ternational Conference on Robotics and Automation, 2023, pp. 12 015­
+[46] K. Cui, M. Li, C. Fabian, and H. Koeppl, "Scalable task-driven robotic           12 021.
+      swarm control via collision avoidance and learning mean-field control,"   [68] C. Mavrogiannis, K. Balasubramanian, S. Poddar, A. Gandra, and
+      in IEEE International Conference on Robotics and Automation, 2023,              S. S. Srinivasa, "Winding through: Crowd navigation via topological
+      pp. 1192­1199.                                                                  invariance," IEEE Robotics and Automation Letters, vol. 8, no. 1, pp.
+[47] D. Martinez-Baselga, L. Riazuelo, and L. Montano, "Improving robot               121­128, 2022.
+      navigation in crowded environments using intrinsic rewards," in IEEE      [69] C. Altafini, "Consensus problems on networks with antagonistic inter-
+      International Conference on Robotics and Automation, 2023, pp. 9428­            actions," IEEE Transactions on Automatic Control, vol. 58, no. 4, pp.
+      9434.                                                                           935­946, 2012.
+[48] E. Sebastian, T. Duong, N. Atanasov, E. Montijano, and C. Sagues,          [70] P. Jia, A. MirTabatabaei, N. E. Friedkin, and F. Bullo, "Opinion
+      "Physics-informed multi-agent reinforcement learning for distributed            dynamics and the evolution of social power in influence networks," SIAM
+      multi-robot problems," arXiv preprint arXiv:2401.00212, 2023.                   review, vol. 57, no. 3, pp. 367­397, 2015.
+[49] B. Brito, M. Everett, J. P. How, and J. Alonso-Mora, "Where to go next:    [71] P. Cisneros-Velarde, K. S. Chan, and F. Bullo, "Polarization and fluc-
+      Learning a subgoal recommendation policy for navigation in dynamic              tuations in signed social networks," IEEE Transactions on Automatic
+      environments," IEEE Robotics and Automation Letters, vol. 6, no. 3, pp.         Control, vol. 66, no. 8, pp. 3789­3793, 2020.
+      4616­4623, 2021.                                                          [72] A. Bizyaeva, A. Franci, and N. E. Leonard, "Nonlinear opinion dynamics
+[50] H. Yu, C. Hirayama, C. Yu, S. Herbert, and S. Gao, "Sequential                   with tunable sensitivity," IEEE Transactions on Automatic Control,
+      neural barriers for scalable dynamic obstacle avoidance," in IEEE/RSJ           vol. 68, no. 3, pp. 1415­1430, 2022.
+      International Conference on Intelligent Robots and Systems, 2023, pp.     [73] N. E. Leonard, A. Bizyaeva, and A. Franci, "Fast and flexible multiagent
+      11 241­11 248.                                                                  decision-making," Annu. Rev. Control Robot. Auton. Syst, vol. 7, pp. 12­
+[51] R. Han, S. Chen, S. Wang, Z. Zhang, R. Gao, Q. Hao, and J. Pan,                  1, 2024.
+      "Reinforcement learned distributed multi-robot navigation with recipro-   [74] N. E. Leonard, K. Lipsitz, A. Bizyaeva, A. Franci, and Y. Lelkes,
+      cal velocity obstacle shaped rewards," IEEE Robotics and Automation             "The nonlinear feedback dynamics of asymmetric political polarization,"
+      Letters, vol. 7, no. 3, pp. 5896­5903, 2022.                                    Proceedings of the National Academy of Sciences, vol. 118, no. 50, p.
+[52] L. Wang, A. D. Ames, and M. Egerstedt, "Safety barrier certificates              e2102149118, 2021.
+      for collisions-free multirobot systems," IEEE Transactions on Robotics,   [75] M. Ordorica Arango, A. Bizyaeva, S. A. Levin, and N. Ehrich Leonard,
+      vol. 33, no. 3, pp. 661­674, 2017.                                              "Opinion-driven risk perception and reaction in sis epidemics," arXiv
+[53] D. Morgan, S.-J. Chung, and F. Y. Hadaegh, "Model predictive control of          e-prints, pp. arXiv­2410, 2024.
+      swarms of spacecraft using sequential convex programming," Journal of     [76] S. Park, A. Bizyaeva, M. Kawakatsu, A. Franci, and N. E. Leonard,
+      Guidance, Control, and Dynamics, vol. 37, no. 6, pp. 1725­1740, 2014.           "Tuning cooperative behavior in games with nonlinear opinion dynam-
+[54] M. Althoff, G. Frehse, and A. Girard, "Set propagation techniques                ics," IEEE Control Systems Letters, vol. 6, pp. 2030­2035, 2021.
+      for reachability analysis," Annual Review of Control, Robotics, and       [77] H. Hu, K. Nakamura, K.-C. Hsu, N. E. Leonard, and J. F. Fisac, "Emer-
+      Autonomous Systems, vol. 4, pp. 369­395, 2021.                                  gent coordination through game-induced nonlinear opinion dynamics,"
+[55] M. Chen, J. C. Shih, and C. J. Tomlin, "Multi-vehicle collision avoidance        in IEEE Conference on Decision and Control, 2023, pp. 8122­8129.
+      via hamilton-jacobi reachability and mixed integer programming," in       [78] H. Hu, J. DeCastro, D. Gopinath, G. Rosman, N. E. Leonard, and
+      IEEE Conference on Decision and Control, 2016, pp. 1695­1700.                   J. F. Fisac, "Think deep and fast: Learning neural nonlinear opinion
+[56] S. Bansal and C. J. Tomlin, "Deepreach: A deep learning approach                 dynamics from inverse dynamic games for split-second interactions,"
+      to high-dimensional reachability," in IEEE International Conference on          arXiv preprint arXiv:2406.09810, 2024.
+      Robotics and Automation, 2021, pp. 1817­1824.                             [79] A. Bizyaeva, G. Amorim, M. Santos, A. Franci, and N. E. Leonard,
+[57] K. D. Julian and M. J. Kochenderfer, "Reachability analysis for neural           "Switching transformations for decentralized control of opinion patterns
+      network aircraft collision avoidance systems," Journal of Guidance,             in signed networks: Application to dynamic task allocation," IEEE
+      Control, and Dynamics, vol. 44, no. 6, pp. 1132­1142, 2021.                     Control Systems Letters, vol. 6, pp. 3463­3468, 2022.
+[58] A. Li, L. Sun, W. Zhan, M. Tomizuka, and M. Chen, "Prediction-based        [80] C. Cathcart, M. Santos, S. Park, and N. E. Leonard, "Proactive opinion-
+      reachability for collision avoidance in autonomous driving," in IEEE            driven robot navigation around human movers," in IEEE/RSJ Interna-
+      International Conference on Robotics and Automation, 2021, pp. 7908­            tional Conference on Intelligent Robots and Systems, 2023, pp. 4052­
+      7914.                                                                           4058.
+[59] K. Long, V. Dhiman, M. Leok, J. Cortés, and N. Atanasov, "Safe control     [81] G. Amorim, A. Bizyaeva, A. Franci, and N. E. Leonard, "Spatially-
+      synthesis with uncertain dynamics and constraints," IEEE Robotics and           invariant opinion dynamics on the circle," IEEE Control Systems Letters,
+      Automation Letters, vol. 7, no. 3, pp. 7295­7302, 2022.                         vol. 8, pp. 3231­3236, 2024.
+[60] D. Panagou, D. M. Stipanovic´, and P. G. Voulgaris, "Distributed co-       [82] T. H. Chung, G. A. Hollinger, and V. Isler, "Search and pursuit-evasion
+      ordination control for multi-robot networks using lyapunov-like barrier         in mobile robotics: A survey," Autonomous robots, vol. 31, pp. 299­316,
+      functions," IEEE Transactions on Automatic Control, vol. 61, no. 3, pp.         2011.
+      617­632, 2015.                                                            [83] E. Sebastián, E. Montijano, and C. Sagüés, "Adaptive multirobot implicit
+[61] Y. Chen, A. Singletary, and A. D. Ames, "Guaranteed obstacle avoidance           control of heterogeneous herds," IEEE Transactions on Robotics, vol. 38,
+      for multi-robot operations with limited actuation: A control barrier            no. 6, pp. 3622­3635, 2022.
+      function approach," IEEE Control Systems Letters, vol. 5, no. 1, pp.      [84] T. Eppenberger, G. Cesari, M. Dymczyk, R. Siegwart, and R. Dubé,
+      127­132, 2020.                                                                  "Leveraging stereo-camera data for real-time dynamic obstacle detection
+[62] J. Schulman, Y. Duan, J. Ho, A. Lee, I. Awwal, H. Bradlow, J. Pan,               and tracking," in IEEE/RSJ International Conference on Intelligent
+      S. Patil, K. Goldberg, and P. Abbeel, "Motion planning with sequential          Robots and Systems, 2020, pp. 10 528­10 535.
+      convex optimization and convex collision checking," The International     [85] H. Dong, C.-Y. Weng, C. Guo, H. Yu, and I.-M. Chen, "Real-time
+      Journal of Robotics Research, vol. 33, no. 9, pp. 1251­1270, 2014.              avoidance strategy of dynamic obstacles via half model-free detection
+[63] K. Ryu and N. Mehr, "Integrating predictive motion uncertainties with            and tracking with 2d lidar for mobile robots," IEEE/ASME transactions
+      distributionally robust risk-aware control for safe robot navigation in         on mechatronics, vol. 26, no. 4, pp. 2215­2225, 2020.
+      crowds," in 2024 IEEE International Conference on Robotics and            [86] T. Battisti and R. Muradore, "A velocity obstacles approach for au-
+      Automation (ICRA). IEEE, 2024, pp. 2410­2417.                                   tonomous landing and teleoperated robots," Autonomous Robots, vol. 44,
+[64] O. de Groot, L. Ferranti, D. M. Gavrila, and J. Alonso-Mora, "Scenario-          no. 2, pp. 217­232, 2020.
+      based motion planning with bounded probability of collision," The         [87] C. Chen, Y. Liu, S. Kreiss, and A. Alahi, "Crowd-robot interaction:
+      International Journal of Robotics Research, 2025.                               Crowd-aware robot navigation with attention-based deep reinforcement
+[65] ----, "Topology-driven parallel trajectory optimization in dynamic               learning," in IEEE International Conference on Robotics and Automa-
+      environments," IEEE Transactions on Robotics, vol. 41, pp. 110­126,             tion, 2019, pp. 6015­6022.
+      2025.
+[66] K. D. Katyal, G. D. Hager, and C.-M. Huang, "Intent-aware pedestrian
+      prediction for adaptive crowd navigation," in IEEE International Con-
+      ference on Robotics and Automation, 2020, pp. 3277­3283.
+[67] S. Liu, P. Chang, Z. Huang, N. Chakraborty, K. Hong, W. Liang, D. L.
+      McPherson, J. Geng, and K. Driggs-Campbell, "Intention aware robot
+                                                                                      17
+
+                               Diego Martinez-Baselga (Graduate Student Mem-                                         Carlos Sagüés (Senior Member, IEEE) received
+                               ber, IEEE) received the B.Eng. degree in computer                                     the M.Sc. degree in computer science and systems
+                               science and the M.Sc. degree in Robotics, Graph-                                      engineering and the Ph.D. degree in industrial engi-
+                               ics and Computer Vision from the University of                                        neering from the University of Zaragoza, Zaragoza,
+                               Zaragoza, Spain, in 2020 and 2022, respectively,                                      Spain, in 1989 and 1992, respectively.
+                               where he is working toward the Ph.D. degree in
+                               computer science and systems engineering. He was                                         In 1994, he joined as an Associate Professor with
+                               a visiting researcher at TU Delft, Netherlands, in                                    the Departamento de Informatica e Ingenieria de
+                               2023, in the Autonomous Multi-Robots Lab. His                                         Sistemas, University of Zaragoza, where he became
+                               research interests include motion planning and colli-                                 a Full Professor in 2009 and also the Head Teacher.
+                               sion avoidance using learning and control methods,                                    He was engaged in research on force and infrared
+and multi-robot systems.                                                                                             sensors for robots. His current research interests
+                                                                                      include control systems and industry applications, computer vision, visual
+                                                                                      control, and multi-vehicle cooperative control.
+
+                               Eduardo Sebastián (Graduate Student Member,
+                               IEEE) received the B.Eng. (Hons.) degree in elec-
+                               tronic and automatic engineering and the M.Eng.
+                               (Hons.) degree in electronics in 2019 and 2020,
+                               respectively, from the Universidad de Zaragoza,
+                               Zaragoza, Spain, where he is currently working
+                               toward the Ph.D. degree in computer science and
+                               systems engineering. He has been a visiting scholar
+                               at the University of California San Diego, USA,
+                               in 2022 and 2024. His research interests include
+                               nonlinear control and distributed multirobot systems.
+Eduardo is a Fulbright Scholar and a DAAD AInet Fellow.
+
+                               Eduardo Montijano (Member, IEEE) received the                                         Luis Montano (Senior Member, IEEE) received his
+                               M.Sc. degree in computer science and the Ph.D.                                        degree in industrial engineering in 1981 and his
+                               degree in robotics and systems engineering from the                                   doctorate in 1987 from the University of Zaragoza,
+                               Universidad de Zaragoza, Zaragoza, Spain, in 2008                                     Spain. He is Full Professor at the University of Sys-
+                               and 2012, respectively. From 2012 to 2016, he was                                     tems Engineering and Automation at the University
+                               a faculty member with Centro Universitario de la                                      of Zaragoza. He was Director of the Department
+                               Defensa, Zaragoza.                                                                    of Computer Science and Systems Engineering and
+                                                                                                                     Deputy Director of the Aragon Engineering Re-
+                                  He is currently an Associate Professor with the                                    search Institute of the University of Zaragoza. He
+                               Departamento de Informática e Ingeniería de Sis-                                      is Principal Researcher of the Robotics, Computer
+                               temas, Universidad de Zaragoza. His current re-                                       Vision and Artificial Intelligence research Group
+                               search focuses on the design of scene understanding    of the Institute. His main research interests in robotics are: planning and
+algorithms for planning and control of multiple robots.                               navigation in dynamic environments, multi-robot systems.
+
+                               Luis Riazuelo (Member, IEEE) obtained his MsC
+                               in Computer Science in 2006 and his MEng in
+                               Biomedical Engineering in 2008 from the Univer-
+                               sity of Zaragoza. In 2018 he obtained his PhD in
+                               Computer Science at the University of Zaragoza. He
+                               is currently an associate profesor at the Computer
+                               Science and Systems Engineering department of the
+                               University of Zaragoza. Since 2007 he is researcher
+                               of the Robotics, Perception and Real Time group
+                               at the Aragòn Engineering Research. His current re-
+                               search topics include scene understanding for mobile
+robotics in underground environments and topological semantic mapping and
+localization in intracorporeal medical scenes.
+

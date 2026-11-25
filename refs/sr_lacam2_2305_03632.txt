@@ -1,0 +1,1226 @@
+                                       Improving LaCAM for Scalable Eventually Optimal Multi-Agent Pathfinding
+
+                                                                                     Keisuke Okumura1,2
+                                                     1National Institute of Advanced Industrial Science and Technology (AIST)
+
+                                                                                   2University of Cambridge
+                                                                                      ko393@cl.cam.ac.uk
+
+arXiv:2305.03632v1 [cs.AI] 5 May 2023                           Abstract                               runtime (sec)                                                                                                    EEEEEECCCBBBSSS---lfm                LNS2
+                                                                                                                                                                                                                                          PP                       LPIaBCTA+M
+                                             This study extends the recently-developed LaCAM              31218069000.......09013004803....7190%%%%%%%%%%%AACCOOOII**--BCBB--DDDlrrSSCBOO--mPSlfMMDD-rr**--lmMM**m--lm                            PIBT                              LaCAM*
+                                             algorithm for multi-agent pathfinding (MAPF). La-
+                                             CAM is a sub-optimal search-based algorithm that          30                                                                                                               545008...655%%%                  80.9%
+                                             uses lazy successor generation to dramatically re-                                                                                                                                           61.4%                85.6%
+                                             duce the planning effort. We present two enhance-                                                                                                                                                    67.4%              90.5%
+                                             ments. First, we propose its anytime version, called                                                                                                                                                                               99.0%
+                                             LaCAM, which eventually converges to optima,
+                                             provided that solution costs are accumulated tran-        20
+                                             sition costs. Second, we improve the successor
+                                             generation to quickly obtain initial solutions. Ex-       10
+                                             haustive experiments demonstrate their utility. For
+                                             instance, LaCAM sub-optimally solved 99% of               0
+                                             the instances retrieved from the MAPF benchmark,
+                                             where the number of agents varied up to a thousand,           0      10  20  30          40                                                                                50  60  70                       80  90  100
+                                             within ten seconds on a standard desktop PC, while
+                                             ensuring eventual convergence to optima; develop-                            solved instances (% of 13900)
+                                             ing a new horizon of MAPF algorithms.
+                                                                                                              algorithm reference                                                                                           solvability optimality metrics
+                                       1 Introduction
+                                                                                                              A       [Hart et al., 1968]                                                                                   complete optimal                     m, l
+                                       The multi-agent pathfinding (MAPF) problem aims to assign
+                                       collision-free paths for multiple agents on a graph. To date,          OD      [Standley, 2010]                                                                                      complete sub-optimal (greedy)
+                                       various MAPF algorithms have been developed, motivated by
+                                       various applications such as warehouse automation [Wurman              ODrM [Wagner and Choset, 2015] complete optimal                                                                                                    m, l
+                                       et al., 2008]. Ideal MAPF algorithms will be complete, opti-
+                                       mal, quick, and scalable. However, there is generally a trade-         I-ODrM [Wagner and Choset, 2015] complete bnd. sub-opt. m, l
+                                       off between the former two and the latter two. Conversely, the
+                                       primary challenge of developments in MAPF algorithms is to             BCP [Lam et al., 2022]                                                                                        solution cmp. optimal                f
+                                       guarantee solvability and solution quality, while suppressing
+                                       planning efforts to secure speed and scalability.                      CBS [Sharon et al., 2015]                                                                                     solution cmp. optimal                f, m, l
+
+                                          To break this tradeoff, we present two enhancements to              EECBS [Li et al., 2021c]                                                                                      solution cmp. bnd. sub-opt. f, m, l
+                                       the recently-developed algorithm called LaCAM (lazy con-
+                                       straints addition search for MAPF) [Okumura, 2023]. It is              PP      [Silver, 2005]                                                                                        incomplete sub-optimal
+                                       complete, sub-optimal, and search-based (akin to A search)
+                                       that uses lazy successor generation. The first enhancement             LNS2 [Li et al., 2022]                                                                                        incomplete sub-optimal
+                                       is its anytime version called LaCAM that eventually con-
+                                       verges to optima, provided that solution costs are accumu-             PIBT(+) [Okumura et al., 2022] incomplete sub-optimal
+                                       lated transition costs. Since solving MAPF optimally is com-
+                                       putationally intractable [Yu and LaValle, 2013], one practical         LaCAM [Okumura, 2023]                                                                                         complete sub-optimal
+                                       approach to large instances is obtaining sub-optimal solutions         LaCAM this paper                                                                                              complete eventually opt. m, l
+                                       and then refining their quality as time allows. LaCAM meets
+                                       such demands. The second enhancement is for the successor       Figure 1: Performance on the MAPF benchmark. upper: The
+                                                                                                       number of solved instances among 13,900 instances on 33 four-
+                                                                                                       connected grid maps, retrieved from [Stern et al., 2019]. The size of
+                                                                                                       agents varies up to 1,000. `-f,' `-m,' and `-l' respectively mean that
+                                                                                                       an algorithm tries to minimize flowtime, makespan, or sum-of-loss.
+                                                                                                       The scores of LaCAM are for initial solutions. lower: Represen-
+                                                                                                       tative or state-of-the-art MAPF algorithms. "solution cmp." means
+                                                                                                       that an algorithm ensures to find solutions for solvable instances but
+                                                                                                       it never identifies unsolvable ones. "bnd. sub-opt." means a bounded
+                                                                                                       sub-optimal algorithm. Their sub-optimality was set to five.
+
+                                                                                                       generation, i.e., tuning of the PIBT algorithm [Okumura et
+                                                                                                       al., 2022], so as to quickly obtain initial solutions.
+
+                                                                                                          With these enhancements, we empirically demonstrate that
+                                                                                                       LaCAM can break the trade-off. For instance, it sub-
+                                                                                                       optimally solved 99% of the instances retrieved from the
+                                                                                                       MAPF benchmark [Stern et al., 2019] within ten seconds
+                                                                                                       while guaranteeing the eventual optimality, on a standard
+                                                                                                       desktop PC. As illustrated in Fig. 1, this result is beyond
+                                                                                                       frontiers of existing MAPF algorithms. In what follows, we
+                                                                                                       present preliminaries, LaCAM, improved successor genera-
+                                                                                                       tion, empirical results, and discussion in order. The appendix
+                                                                                                       and code are available at https://kei18.github.io/lacam2/.
+(a) greedy  expanded  (b)                        (c)             (d)                                       (e)
+
+            0123
+
+            34                    no constraint
+
+5432        45                                                                                     not go
+                                                                                                   right
+
+543456
+
+           5456                                not go up
+generated
+                             Figure 2: Illustration of LaCAM using single-agent grid pathfinding.
+
+2 Preliminaries                                                  1][i] = . . . = [k][i] = gi. The difference from sum-
+                                                                 of-loss is cost contribution of agents who once reach their
+2.1 Notation, Problem Definition, and Assumption                 goal and leave there temporarily. The flowtime is history-
+                                                                 dependent on paths of each agent; hence, it is impossi-
+Notations. S[k] denotes the k-th element of the sequence         ble to represent as it is with accumulative costs.1 Instead,
+S, where the index starts at one. For convenience, we use        this paper considers sum-of-loss as seen in [Standley, 2010;
+as an "undefined" or "not found" sign.                           Wagner and Choset, 2015].
+
+Instance. An MAPF instance is defined by a graph G =             Admissible Heuristic. We assume an admissible heuristic
+(V, E), a set of agents A = {1, . . . , n}, a tuple of distinct  h : V |A|  R0, such that h(Q) is always the optimal cost
+starts S = (si  V )iA and goals G = (gi  V )iA.                  from Q to G or less; e.g., h(Q) := iA dist(Q[i], gi) is
+                                                                 available for the sum-of-{loss, fuels}, where dist : V × V 
+Configuration. A configuration is a tuple of locations for       N0 is the shortest path length on G.
+all agents. For instance, Q = (v1, v2, . . . , vn)  V |A| is a
+configuration, where Q[i] = vi is the location of agent i  A.    Understanding MAPF as Graph Pathfinding. Using con-
+The start and goal configurations are S and G, respectively.     figurations, consider a graph H comprising vertices that rep-
+                                                                 resent configurations, and edges that represent the connectiv-
+Collision and Connectivity. A configuration Q has a ver-         ity of configurations. Then, by regarding S and G as start and
+tex collision when there is a pair of agents i, j  A, i = j,     goal vertices respectively, optimal MAPF is equivalent to the
+such that Q[i] = Q[j]. Two configurations X and Y have an        shortest pathfinding problem on H. This is a key perspective
+edge collision when there is a pair of agents i, j  A, i = j,    to understand LaCAM().
+such that X[i] = Y [j]  Y [i] = X[j]. Let neigh(v) be a set of
+vertices adjacent to v  V . Two configurations X and Y are       2.2 LaCAM
+connected when Y [i]  neigh(X[i])  {X[i]} for all i  A,
+and, there are neither vertex nor edge collisions in X and Y .   LaCAM [Okumura, 2023] was originally developed as a sub-
+                                                                 optimal complete MAPF algorithm. In a nutshell, it is a graph
+Decision Problem. Given an MAPF instance, an MAPF                pathfinding algorithm, like A, but some parts are specific to
+problem is a decision problem that asks existence of a se-       MAPF. Below, we provide the essence of the graph pathfind-
+quence of configurations  = (Q0, Q1, . . . , Qk), such that      ing part, using an example of single-agent grid pathfinding.
+Q0 = S, Qk = G, and any two consecutive configurations           The details of the MAPF-specific part are delivered in the ap-
+in  are connected. A solution to MAPF is a  that satisfies       pendix.
+the conditions. To align with the literature, the index of 
+exceptionally starts at zero (i.e., [0] = Q0). An algorithm      Classical Search. See Fig. 2a that illustrates how a typical
+is said to be complete when it returns solutions for solvable    search scheme solves grid pathfinding. Specifically, we show
+                                                                 the greedy best-first search with a heuristic of the Manhattan
+instances and reports non-existence for unsolvable instances.    distance. Here, a location of the agent corresponds to a con-
+Otherwise, it is called incomplete.                              figuration (aka. state) of the search. From the start config-
+                                                                 uration, the search generates three successor nodes: left, up,
+Optimization Problems. Given a transition (or edge) cost         and right. Each node corresponds to one configuration. The
+                                                                 search then takes one of the generated nodes according to the
+between two configurations, coste : V |A| × V |A|  R0,           heuristic, and generates successors. This procedure continues
+                                                                 until finding the goal configuration.
+we aim at minimizing accumulated transition costs of a solu-
+                                                                 Branching Factor. Consider how many nodes are gener-
+tion , denoted as cost() :=  k-1  coste  [t], [t + 1]   .        ated to estimate the search effort. Though the solution length
+                             t=0                                 is 8, 22 nodes are generated. This number is related to the
+                                                                 number of connected configurations (i.e., branching factor).
+This notation can represent various optimization metrics. For    It is four in grid pathfinding, therefore, the number of node
+
+instance, cost is called makespan when coste(X, Y ) := 1.            1However, it is worth noting that flowtime can be defined by in-
+                                                                 troducing virtual goals, where once an agent has arrived there, it
+It is called sum-of-fuels (aka. total travel distance) when      cannot move anywhere in the future.
+
+cost(X, Y ) := |{i  A; X[i] = Y [i]}|. Sum-of-loss counts
+
+actions of non-staying at goals, defined by coste(X, Y ) :=
+
+|{i  A | ¬(X[i] = Y [i] = gi)}|. A solution  is optimal
+
+when there is no solution  such that cost( ) < cost().
+
+Remarks for Flowtime. Another common metric of
+
+MAPF is flowtime (aka. sum-of-costs): iA ti, where
+ti  k is the earliest timestep such that [ti][i] = [ti +
+generations remains acceptable. However, the branching fac-        Algorithm 1 LaCAM. Cinit means "no constraint."
+tor of MAPF is exponential for the number of agents. Con-
+sequently, the generation itself becomes intractable. This is      input: MAPF instance
+why a vanilla A is hopeless to solve large MAPF instances.
+                                                                   output: solution or NO_SOLUTION
+Configuration Generator. LaCAM tries to relieve this
+huge-branching-factor issue when a configuration generator         1: initialize Open, Explored                    stack, hash table
+is available. Given a configuration and constraints, it gen-
+erates a connected configuration following constraints. Con-       2: N init  config : S, tree : Cinit , parent : 
+straints should be embodied by each domain. In this example,
+consider a constraint as a prohibition of direction, such as not   3: Open.push N init ; Explored [S] = N init
+moving up, left, right, or down.
+                                                                   4: while Open =  do
+Constraint Tree. Each search node of LaCAM contains not
+only a configuration but also constraints, taking the form of      5: N  Open.top()
+a tree structure. For each node invoke, LaCAM gradually
+develops the tree by low-level search, implemented by, e.g.,       6: if N .config = G then return backtrack(N )
+breadth-first search (BFS). A node on the tree has a constraint
+and represents several constraints by tracing a path to the root.  7: if N .tree =  then Open.pop(); continue discard node
+
+Search Flow. We now explain LaCAM using Fig. 2b­e,                 8: C  N .tree.pop()                              get constraint
+with a depth-first search (DFS) style. The attempt to find a se-
+quence of configurations is called high-level search. At first,    9: low_level_expansion(N , C)    proceed low-level search
+a search node of the start is examined (Fig. 2b). The node
+poses no constraints for the first invoke, meaning that the con-   10: Qnew  configuration_generator(N , C)
+figuration generator can output any connected configuration.
+Suppose that the generator outputs an "up" configuration, fol-     11: if Qnew =  then continue                    generator may fail
+lowing the Manhattan distance guide, illustrated by the pink
+arrow. Preparing for the second invoke, the node expands a         12: if Explored [Qnew] =  then continue
+constraint tree with new constraints (e.g., "not go up"). The
+high-level search does not discard the examined node imme-         13: N new  config : Qnew, tree : Cinit , parent : N
+diately, rather, it discards when all connected configurations     14: Open.push (N new); Explored [Qnew] = N new
+have been generated (i.e., when the low-level search com-
+pletes). Next, Fig. 2c­d show an example of the second in-         15: return NO_SOLUTION
+voke of nodes. In Fig. 2c, the generator outputs an already-
+known configuration. Since this example assumes DFS, La-           Algorithm 2 PIBT
+CAM examines the blue-colored node again in Fig. 2d. This
+time, the generator must follow a constraint "not go right"        input: configuration Qfrom, agents A, goals (g1, . . . gn)
+and its parent "no constraint." The example then generates         output: configuration Qto (each element is initialized with )
+a "left" configuration. The search continues until finding the
+goal (Fig. 2e) and obtains a solution path by backtracking.         1: for i  A do; if Qto[i] =  then PIBT(i)
+
+Adaptation to MAPF. With appropriate designs of con-                2: return Qto
+straints and tree construction, LaCAM can be an exhaustive
+search and guarantees completeness for graph pathfinding           3: procedure PIBT(i)             return VALID or INVALID
+problems. In [Okumura, 2023], such an example is shown for
+MAPF by letting a constraint specify which agent is where          4: C  neigh Qfrom[i]  Qfrom[i]                  candidate vertices
+in the next configuration. Moreover, LaCAM can greatly de-
+crease the number of node generations if the configuration         5: sort C in ascending order of dist(u, gi) where u  C
+generator is promising in outputting configurations that are
+close to the goal. This reduction could be a silver bullet         6: for v  C do
+to achieve quick planning, especially in planning problems
+where the branching factor is huge like MAPF. The remain-          7:   if collisions in Qto supposing Qto[i] = v then continue
+ing question is a realization of good configuration generators.
+In the original paper, PIBT (priority inheritance with back-       8:   Qto[i]  v
+tracking) [Okumura et al., 2022] served as it, explained in
+Sec. 2.3.                                                          9:   if j  A s.t. j = i  Qfrom[j] = v  Qto[j] =  then
+
+Pseudocode. Algorithm 1 shows DFS-based LaCAM. Each                10:  if PIBT(j) = INVALID then continue
+search node N stores (i) a configuration, (ii) a constraint tree
+embodied by a queue (assuming BFS) and (iii) a pointer to a        11: return VALID                                assignment done
+parent node (see Line 2). Nodes are stored in an Open list and     12: Qto[i]  Qfrom[i]; return INVALID
+
+                                                                        (a) fixed order:  i  v    (b) with PIBT: i
+                                                                        i, k, j                   i first
+
+                                                                        k                    j                  k   j
+
+                                                                   Figure 3: Concept of PIBT. Qfrom is illustrated. Bold arrows repre-
+                                                                   sent assignments of Qto. (a) Consider a fixed assignment order of
+
+                                                                   i, k, and j. If i and k are assigned following the illustrated arrows,
+                                                                   j has no candidate vertex as Qto[j] (annotated with ×). (b) This
+
+                                                                   pitfall is overcome by doing the assignment for j prior to k, reacting
+
+                                                                   to i's assignment request.
+
+                                                                   Explored table, akin to general search schema, and are pro-
+                                                                   cessed one by one. We abstract how to create constraint trees
+                                                                   for MAPF by Line 9, which is elaborated in the appendix.
+
+                                                                   2.3 PIBT
+
+                                                                   PIBT [Okumura et al., 2022] was originally developed to
+                                                                   solve MAPF iteratively. In a nutshell, it is a configuration
+                                                                   generator, which generates a new connected configuration
+                                                                   (Qto), given another (Qfrom) as input. By continuously gener-
+                                                                   ating configurations, PIBT can generate a solution for MAPF.
+
+                                                                   Concept. To determine Qto, PIBT sequentially assigns a
+                                                                   vertex to each agent while avoiding assignments that trigger
+                                                                   collisions. This assignment order adaptively changes. Specif-
+ically, before fixing Qto[i] to v  neigh(Qfrom[i]){Qfrom[i]},      Algorithm 3 LaCAM. Cinit means "no constraint."
+PIBT first checks the existence of j  A such that Qfrom[j] =
+v. If such j exists, j may have no candidate vertex for Qto[j],    input: MAPF instance, edge cost coste, admissible heuristic h
+due to collision avoidance (see Fig. 3a). Therefore, PIBT next
+determines Qto[j] prior to locations of other agents (e.g., k in   output: solution, NO_SOLUTION, or FAILURE
+Fig. 3). This scheme is called priority inheritance. If Qto[j] is  notation: f(N ) := N .g + h(N );  := N goal = 
+successfully assigned, Qto[i] is fixed to v (Fig. 3b); otherwise,
+Qto[i] needs to take another vertex other than v.                  1: initialize Open, Explored ; N goal  
+                                                                   2: N init  config : S, tree : Cinit , parent : , neigh : , g : 0
+Pseudocode. Algorithm 2 implements the concept above,
+by recursively calling a procedure PIBT (Line 3­), which           3: Open.push N init ; Explored [S] = N init
+takes an agent i and eventually assigns Qto[i]. The assign-
+ment attempts of Lines 6­11 are performed for candidate            4: while Open =   ¬interrupt() do
+vertices regarding Qfrom[i], in ascending order of the dis-
+tance toward gi. The attempts continue until Qto[i] is deter-      5: N  Open.top()
+mined, resulting in VALID outcome (Line 11). When all at-
+tempts failed, PIBT(i) assigns Qfrom[i] to Qto[i] and returns      6: if N .config = G then N goal  N
+INVALID (Line 12). Priority inheritance is triggered as nec-       7: if   f N goal  f (N ) then Open.pop(); continue
+essary, taking the form of calling PIBT for another agent j
+(Line 10). The success of priority inheritance triggers receipt    8: if N .tree =  then Open.pop(); continue
+of VALID; otherwise, INVALID is backed, and then i con-
+tinues the assignment attempts.                                    9: C  N .tree.pop()
+
+Dynamic Priorities. In addition to priority inheritance,           10: low_level_expansion(N , C)
+PIBT prioritizes assignments for agents that are not on their
+goal, which is done by sorting A of Line 1 in that way. This       11: Qnew  configuration_generator(N , C)
+scheme is convenient for lifelong scenarios wherein all agents
+are not necessarily being goals simultaneously.                    12: if Qnew =  then continue
+
+3 LaCAM: Eventually Optimal Algorithm                              13: if Explored [Qnew] =  then
+
+Algorithm 3 presents LaCAM. The same lines as LaCAM                14:  N .neigh.append (Explored [Qnew])
+(Alg. 1) are grayed out. The blue-colored lines are not nec-
+essary from the theoretical side but are effective in speeding     15: D  N                      Dijkstra, priority queue of g-value
+up the search. The main differences from LaCAM are two:
+(i) it continues the search when finding the goal configuration    16: while D =  do
+G, and, (ii) it rewrites parent relations between search nodes
+as necessary. For convenience, the transition cost coste and       17:       N from  D.pop()
+admissible heuristic h can take nodes as arguments, instead
+of configurations. Below, the updated parts are explained.         18:       for N to  N from.neigh do
+
+Keeping Goal Node. LaCAM retains the goal node N goal,             19:       g  N from.g + coste N from, N to
+rather than immediately returning solutions when first finding
+the goal G (Line 6). The search terminates when there is no        20:       if g < N to.g then
+remaining node in Open; otherwise, there is an interruption
+from users such as timeout (Line 4). A solution is then con-       21:       N to.g  g; N to.parent  N from; D.push(N to)
+structed by backtracking from N goal (Lines 27­28). Doing
+so makes LaCAM an anytime algorithm, that is, after find-          22:       if   f (N to) < f N goal then Open.push (N to)
+ing the goal node, it is interruptible whenever a solution is
+required, while gradually refining solution quality as time al-    23: else
+lows.                                                                   N new  config : Qnew, tree : Cinit , parent : N ,
+                                                                   24:
+Search Node Ingredients. Each high-level node contains a
+set neigh that stores connected configurations (i.e., nodes)                 neigh : , g : N .g + coste (N , Qnew)
+and g-value that represents cost-to-come from the start S
+(Line 2). They are initialized and updated appropriately when      25:  Open.push (N new); Explored [Qnew] = N new
+finding a new configuration (Lines 24­26).
+                                                                   26:  N .neigh.append (N new)
+Updating Parents and Costs. To maintain the optimality,
+when finding an already known configuration, LaCAM up-             27: if   Open =  then return backtrack N goal           optimal
+dates neigh (Line 14). This is followed by updates of g-value
+and parent, performed by Dijkstra's algorithm (Lines 15­           28: else if  then return backtrack N goal        sub-optimal
+21). Figure 4 illustrates the update.
+                                                                   29: else if Open =  then return NO_SOLUTION
+
+                                                                   30: else return FAILURE
+
+                                                                   Discarding Redundant Nodes. Once the goal node is
+                                                                   found, LaCAM discards nodes that do not contribute to im-
+                                                                   proving solution quality (Line 7). It also revives nodes as
+                                                                   necessary when their g-values are updated (Line 22).
+
+                                                                   Theorem 1. LaCAM (Alg. 3) is complete and optimal.
+
+                                                                   Proof. Consider Alg. 3 without blue lines (Lines 7 and 22);
+                                                                   they just speed up the search without breaking the optimal
+                                                                   search structure. In this proof, the term "path" refers to a
+                                                                   sequence of connected configurations.
+
+                                                                      First, we introduce a directed graph H, where its vertex
+                                                                   corresponds to a configuration. Initially, H has only a start
+                                                                   vertex S. Then, the search iterations gradually develop H.
+                                                                   When a new node is created (Line 24), its configuration is
+                                                                   added to H. An arc (X, Y ) of H occurs when the search
+                                                                   finds a connection from X to Y , i.e., N Y  N X .neigh.
+
+                                                                      We now prove that: () for any configuration Q in H, a
+                                                                   path from S to Q constructed by backtracking (i.e., by fol-
+                                                                   lowing N .parent) is the shortest path in H, regarding ac-
+                                                                   cumulative transition costs, at the beginning of each search
+                                                                   iteration. This is proven by induction. Initially, H comprises
+                                                                   only S, satisfying . Assume now that  is satisfied in the
+                                                                   previous iteration of Lines 4­26. In the next iteration, H is
+before 1     2         after 1     2                                     Algorithm 4 procedure PIBT with swap
+                    3                     3
+0         5            0        2                                         1: C  neigh Qfrom[i]  Qfrom[i]
+             4                     3                                      2: sort C in increasing order of dist(u, gi) where u  C
+   1          6           1         3                                     3: j  swap_required_and_possible i, C[1], Qfrom
+                                                                          4: if j =  then reverse C
+Figure 4: Updating parents and costs. Each circle is a search node        5: for v  C do
+(i.e., configuration), including its g-value of makespan. Arrows rep-     6: Lines 7­10 of Alg. 2
+resent known neighboring relations. Among them, solid lines repre-        7: if v = C[1]  j =   Qto[j] =  then Qto[j]  Qfrom[i]
+sent parent. The updated parts are red-colored. left: A new neighbor      8: return VALID
+relationship, a red dashed arrow, has been found. right: Rewrite the      9: Qto[i]  Qfrom[i]; return INVALID
+search tree. Observe that the rewriting occurs in a limited part of the
+tree due to g-value pruning (Line 20).                                                    1
+
+                                                                                          2                   1     (c)
+                                                                                   (a)                 (b)                 1
+
+updated by: (i) generating a new configuration (Lines 24­26),                                                 2            2
+or (ii) finding a known configuration (Lines 14­21). Case (i)
+holds  because only a new vertex and an arc toward the ver-              Figure 5: Failure example of PIBT. Goals are represented by arrows.
+tex are added to H. Case (ii) holds  because only an arc is
+added for the node N (Line 14), and then Lines 15­21 per-                       1                   1                   21        21
+form Dijkstra's algorithm starting from N that maintains the             (a)                                     (c)             (d)
+tree structure of the shortest paths.                                                               2
+                                                                                2            (b)
+   The search space of LaCAM is finite (see [Okumura,
+2023]); the search terminates in finite time. Each node even-            Figure 6: Swap operation. The last two steps are omitted because of
+tually examines all connected configurations. Consequently,              just moving two agents toward their goal.
+when terminated, H includes all possible paths from S to G
+for solvable instances. Together with , LaCAM returns an                 135                                     |A|=2 |A|=4 |A|=6
+optimal solution, otherwise, reports the non-existence.                  246
+                                                                                             w/Alg. 2            128 23,907 287,440
+Implementation Tips. Following [Okumura, 2023], when                                         w/Alg. 4
+finding an already known configuration at Line 13, our imple-                                                    6            8       8
+mentation reinserts the corresponding node to Open. More-
+over, with a small probability (e.g., 0.1%), the implementa-             Table 1: The number of search iterations of LaCAM to solve the
+tion reinserts a node of S instead of the found one. Doing               instances. When |A| = 2, only agents-{1, 2} appear, and so forth.
+so enables the search to "escape" from configurations be-
+ing bottlenecks. Such techniques relying on non-determinism                 LaCAM can break such livelocks by posing constraints.
+have been seen in other search problems [Kautz et al., 2002]             However, it may require significant effort because appropriate
+and MAPF studies [Cohen et al., 2018b; Andreychuk and                    combinations of constraints should be explored. Even worse,
+Yakovlev, 2018]. Indeed, we informally observed that this                with more agents, the search effort dramatically increases, as
+random replacement slightly improved the success rate. Note              demonstrated in Table 1.
+that the optimality still holds with these modifications.
+                                                                         4.2 Enhancing PIBT by Swap
+4 Improving Configuration Generator
+                                                                         Livelocks in PIBT can be resolved by swap operation, orig-
+The performance of LaCAM heavily relies on a configura-                  inally developed in rule-based MAPF algorithms [Luna and
+tion generator, therefore, the development of good generators            Bekris, 2011; De Wilde et al., 2014]. In short, this operation
+is critical. The implementation in [Okumura, 2023] uses a                swaps locations of two agents using a vertex with a degree of
+vanilla PIBT of Alg. 2, resulting in poor performances in sev-           three or more. Figure 6 shows an example. Here, we extract
+eral scenarios, especially in instances with narrow corridors.           its essence and incorporate it into PIBT. Specifically, this is
+This is because PIBT itself often fails such scenarios, hence            done by adjusting vertex scoring at Line 5 in Alg. 2.
+being an ineffective guide for LaCAM. This section elabo-
+rates on this phenomenon and presents an improved version.                  Algorithm 4 extends the PIBT procedure of Alg. 2. The
+                                                                         modification is simple; if an agent i and neighboring agent j
+4.1 Failure Analysis of PIBT                                             are judged to require swapping locations (Line 3), i reverses
+                                                                         the order of candidate vertices C (Line 4); that is, i tries to
+As seen in Sec. 2.3, PIBT sequentially assigns the next lo-              be apart from gi. Then, if i successfully moves to the first
+cations for agents. Since this order prioritizes agents being            vertex in the candidates C, i pulls j to the current occupy-
+not on their goals, livelock situations might be triggered. See          ing vertex (Line 7). With an appropriate implementation of
+Fig. 5; two agents reach their goal vertex periodically but              the function swap_required_and_possible, PIBT does not fall
+PIBT never reaches the goal configuration.                               into the livelock of Fig. 5, rather, it can generate a sequence
+of configurations shown in Fig. 6.                                          search iterations                   runtime (ms)
+   The swap_required_and_possible function is a pattern de-
+                                                                  |A| w/Alg. 2             w/Alg. 4 w/Alg. 2 w/Alg. 4
+tector and implementation-depending. We do not aim at de-
+signing complete detectors because pitfalls of the detectors      100       374 (344,54468) 366 (338,401)       65 (31,1218) 112 (34,216)
+can be complemented by LaCAM. However, a well-tuned im-
+plementation can relax the search effort of LaCAM. Below,         300 54802 (388,369131) 392 (357,482) 3049 (291,18858) 301 (187,409)
+we illustrate our example implementation, while omitting
+tiny fine-tunings.                                                500 181459 (44534,268724) 410 (391,432) 18063 (4598,29820) 500 (347,574)
+
+Pattern Detector Implementation                                   Table 2: Effect of configuration generators. For each |A|, median,
+                                                                  min, and max scores are presented for instances solved by both al-
+Assume that the detector is called for i. Assume further that     gorithms among 25 instances retrieved from [Stern et al., 2019], on
+another agent j is on C[1] for i at Line 2 of Alg. 4, such that   warehouse-20-40-10-2-1, illustrated in Fig. 8.
+the degree is 2 or less. Our detector uses two emulations.
+                                                                            tunnel, |A|=4                       loop-chain, |A|=5
+   The first emulation asks about the necessity of the swap.
+This is done by continuously moving i to j's location while             40        LaCAM*                   200  LaCAM*
+moving j to another vertex not equal to i's location, ignoring
+the other agents. The emulation stops in two cases: (i) The       loss            ODrM*          loss      150  ODrM*
+swap is not required when j's location has a degree of more
+than two. (ii) The swap is required when j's location has a             20                                 100
+degree of one, or, when i reaches gi while j's nearest neigh-
+boring vertex toward its goal is gi.                                                                       50
+
+   If the swap is required, the second emulation asks about             0                                  0
+the possibility of the swap. This is done by reversing the              10-3 10-2 10-1 100 101             10-3 10-2 10-1 100 101
+emulation direction; that is, continuously moving j to i's lo-
+cation while moving i to another vertex. It stops in two cases:                  time(ms)                       time(ms)
+(i) The swap is possible when i's location has a degree of
+more than two. (ii) The swap is impossible when i is on a               random-32-32-20, |A|=30  random-32-32-20, |A|=100
+vertex with degree of one.
+                                                                        60        LaCAM*
+   The function returns j when the swap is required and possi-
+ble. For instance, in configurations of Fig. 6(a,b), the swap is        40                                 400
+required for both agents. However, the swap is possible only
+for agent-1, then, the order of candidate vertices is reversed    loss            I-ODrM*        loss
+for agent-1 (Line 4). Consequently, Alg. 4 generates config-
+urations of Fig. 6(b,c). An exception is the case of Fig. 6c,           20                                 200  LaCAM*
+where agent-2 needs to reverse its candidates to generate a
+configuration of Fig. 6d. We note that this case is also possi-         0                                                I-ODrM*
+ble to be detected by applying the two emulations.                      10-3 10-2 10-1 100 101
+                                                                                                           0
+5 Evaluation                                                                     time(ms)                  10-3 10-2 10-1 100 101
+
+This section empirically assesses the two improvements,                                                         time(ms)
+comprising: (i) how the improved configuration generator
+reduces planning effort, (ii) how LaCAM refines solution,         Figure 7: Refinement of LaCAM. Three maps were used, shown in
+(iii) how discarding redundant nodes speeds up the con-
+vergence, (iv) evaluation with small complicated instances,       Table 4 and Fig. 8. For each chart, five identical instances were used
+(v) evaluation with the MAPF benchmark, (vi) comparison
+with another anytime MAPF algorithm, and (vii) evaluation         where starts and goals were set randomly. The optimization was
+with extremely dense scenarios.                                   for sum-of-loss. "loss" shows the gaps from scores of (I-)ODrM.
+
+Setup. The experiments were run on a desktop PC with In-          In random-32-32-20, the bounded sub-optimal version with sub-
+tel Core i7-7820X 3.6 GHz CPU and 32 GB RAM. A max-               optimality of 1.5 was used because ODrM failed to solve the in-
+imum of 16 different instances were run in parallel using         stances. LaCAM used Alg. 2 as a configuration generator.
+multi-threading. LaCAM was coded in C++. All exper-
+iments used four-connected grid maps retrieved from the                     tree corners tunnel string loop-chain connector
+MAPF benchmark [Stern et al., 2019]. Unless mentioned,
+this section uses a timeout of 30 s for solving MAPF. Base-       no discard 10K   2M 410M 19M                  N/A                N/A
+line MAPF algorithms are summarized in Fig. 1. Their im-          w/Alg. 2 1K     28K 287K 103K
+plementation details are available in the appendix.               w/Alg. 4 1K      1K 199K 103K                 N/A                N/A
+
+                                                                                                                N/A                N/A
+
+                                                                  Table 3: The number of search iterations for termination. "no dis-
+                                                                  card" is blue-lines omitted version of LaCAM. The metric was for
+
+                                                                  makespan. The instances are displayed in Table 4. In the last two
+                                                                  instances, LaCAM did not terminate before the timeout.
+
+                                                                  Effect of Improved Configuration Generator. Table 1
+                                                                  presents the number of search iterations of LaCAM on an in-
+                                                                  stance that requires "swap," using a vanilla PIBT (Alg. 2) and
+                                                                  the improved one (Alg. 4) as a configuration generator. Ta-
+                                                                  ble 2 further compares the generators with larger instances.
+                                                                  The results show that Alg. 4 dramatically reduced the search
+                                                                  iterations of LaCAM, contributing to smaller computation
+                                                                  time in large instances. Note however that the pattern detector
+                                                                  has runtime overhead, as seen in |A| = 100 of Table 2.
+
+                                                                  Refinement of LaCAM. Figure 7 shows how LaCAM
+                                                                  refines solutions. As baselines, we used scores of a com-
+                                                                  plete and optimal algorithm called (I-)ODrM [Wagner and
+                                                                  Choset, 2015]. In the small instances, LaCAM quickly
+                                             random-32-32-20                    random-64-64-20                    brc202d                           warehouse-20-40-10-2-1             maze-128-128-1
+                                             32x32 (|V |=819)                   64x64 (|V |=3,270)                 530x481 (|V |=43,151)             321x123 (|V |=22,599)              128x128 (|V |=8,191)
+
+                                             1.0                                1.0                                1.0                               1.0                                1.0
+                                             0.8
+sum-of-loss / LB runtime (sec) success rate  0.6                                0.8                                0.8                               0.8                                0.8
+                                             0.4
+                                             0.2                                0.6                                0.6                               0.6                                0.6
+                                             0.0
+                                                                                0.4                                0.4                               0.4                                0.4
+                                                    50 100
+                                             30                                 0.2                                0.2                               0.2                                0.2
+
+                                                            200   300     400   0.0        250    500   750  1000  0.0       250  500     750  1000  0.0       250  500      750  1000  0.0       250  500    750 1000
+                                                                                      50                                 50                                50                                 50
+
+                                                                                30                                 30                                30                                 30
+
+                                             20                                 20                                 20                                20                                 20
+
+                                             10                                 10                                 10                                10                                 10
+
+                                               0             200  300     400     0        250     500  750  1000    0       250  500     750  1000    0       250   500  750 1000      0               500   750  1000
+                                                   50 100   200   300     400        50           500   750             50                                50        500                    50 250      500    750  1000
+
+                                             6                                  6                                  6                                 6                                  6
+
+                                             5                                  5                                  5                                 5                                  5
+
+                                             4                                  4                                  4                                 4                                  4
+
+                                             3                                  3                                  3                                 3                                  3
+
+                                             2                                  2                                  2                                 2                                  2
+
+                                             1                                  1                            1000  1   50 250     500  750     1000  1   50 250           750 1000      1  50 250
+                                                 50 100                             50 250
+
+                                                                                                                            agents: |A|
+
+                                                                  OD            ODrM*-m           ODrM*-l       I-ODrM*-m         I-ODrM*-l      BCP               CBS-f        CBS-m               CBS-l
+                                                                                                                                    LNS2       PIBT            PIBT+         LaCAM                LaCAM*
+                                                                  EECBS-f               EECBS-m         EECBS-l              PP
+
+Figure 8: Results of the MAPF benchmark. Scores of sum-of-loss are normalized by                                                                          of   iLaACdAisMt(sia,regif)r.omFoinr irtiuanltsimoleutaionnds.sum-of-loss,
+median, min, and max scores of solved instances within each solver are displayed. Scores
+
+                                                 tree corners tunnel string loop-chain connector                                  the chance of rewriting the search tree.
+
+                                                 3          1                           5                    15                   Effect of Discarding Redundant Nodes. Table 3 shows
+                                                                                                                                  how discarding redundant search nodes (blue lines of Alg. 3)
+                                                 2          2             4                       543        3                    affects the search to identify optimal solutions. Regardless
+                                                                                                                                  of the generators, the discarding dramatically reduced the
+unit of                                                                                    4      62                              search effort. The reduction was larger with Alg. 4 because
+                                                                                                                                  initial solutions can be found with smaller search iterations
+time: ms                                                              33                3         71                   4          than Alg. 2. Note that without the discarding, the numbers of
+                1                                                     42                      2                                   search iterations are equivalent between Alg. 2 and Alg. 4
+                                                                                                                   62             because the search spaces are identical. In the remaining,
+                                                                             1          1                                         LaCAM uses Alg. 4 while LaCAM denotes the original im-
+                                                                                                                                  plementation that uses Alg. 2.
+                                                 time s-opt time s-opt time s-opt time s-opt      time s-opt time s-opt solved
+                                                                                                                                  Small Complicated Instances. Table 4 shows the results
+LaCAM                                            0 1.20           0 1.23        0 1.41    0 1.81     2     6.58 0 1.62       6/6  of LaCAM with instances retrieved from [Luna and Bekris,
+after 1 s                                        0 1.00           2 1.00        6 1.00    7 1.00  578      1.35 226 1.00          2011]. Overall, it immediately found not only initial solutions
+                                                                                                                                  but also (near-)optimal ones. In contrast, the baselines failed
+A                                                 0 1.00          0 1.00 30 1.00 27 1.00 11125 1.00 N/A N/A 5/6                   some instances or returned low-quality solutions.
+ODrM                                              5 1.00          2 1.00 396 1.00 402 1.00 N/A N/A N/A N/A 4/6
+I-ODrM                                            1 1.00          0 1.50 70 1.07 2 1.25 N/A N/A N/A N/A 4/6                       MAPF Benchmark. We tested LaCAM on the MAPF
+CBS                                              71 1.00          0 1.00 N/A N/A 149 1.00 N/A N/A N/A N/A 3/6                     benchmark that includes 33 maps, each having 25 "random
+EECBS                                             2 1.00          1 1.00 N/A N/A 0 1.00 N/A N/A N/A N/A 3/6                       scenarios" which specify start-goal pairs. From each sce-
+                                                                                                                                  nario, we extracted instances by increasing the number of
+OD                                               0 1.00 0 1.88 14 2.73 0 1.25 2133 31.22 5 1.50 6/6                               agents by 50 up to the maximum (1,000 in most cases) and
+                                                                                                                                  obtained 13,900 instances in total. The percentage of solved
+LaCAM 0 1.17 1 2.12 92 2.00 0 2.25 55 17.83 0 1.56 6/6                                                                            instances is summarized in Fig. 1. Figure 8 presents partial
+                                                                                                                                  results for each map. LaCAM only failed in the instances
+PP                                               N/A N/A 0 1.00 N/A N/A 0 1.00 N/A N/A N/A N/A 2/6                                of maze-128-128-1 and sub-optimally solved all the other in-
+                                                                                                                                  stances within 10 s, outperforming the other algorithms. The
+LNS2 N/A N/A 0 1.00 N/A N/A 0 1.00 N/A N/A 29 1.00 3/6                                                                            failures might be reduced by improving the pattern detec-
+                                                                                                                                  tor; however, we consider such implementations are too opti-
+PIBT N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A 0/6
+
+PIBT+                                            0 3.50 0 1.25 0 4.07 0 2.12 N/A N/A 0 1.81 5/6
+
+BCP                                              194 - 150 - N/A - 117 - N/A - N/A - 3/6
+
+Table 4: Results of the small complicated instances. "s-opt" is
+
+makespan normalized by optimal ones. The minimum is one. The
+
+sum-of-loss version appears in the appendix. Two rows show results
+of LaCAM: (i) scores for initial solutions and (ii) solution qual-
+
+ity at 1 s and the runtime when that solution was obtained; they are
+
+an average of 10 trials with different random seeds. Algorithms are
+categorized into LaCAM, those optimizing makespan, sub-optimal
+
+ones, and BCP optimizing another metric (i.e., flowtime).
+
+found initial solutions and converged to optimal ones. Mean-
+while, the convergence speed was slow in large instances with
+many agents. This is due to finding new connections be-
+tween known configurations becoming rare, hence reducing
+mized for the benchmark. As shown in Fig. 9, the refinement          sum-of-loss/LB  5     initial solution
+was steady but not dramatic due to the same reason of Fig. 7.
+Further discussions are available in the appendix.                                   4     after 30 seconds
+
+Comparison with Anytime MAPF Solver. We compared                                     3
+LaCAM with AFS [Cohen et al., 2018a], a CBS-based any-
+time MAPF solver that guarantees to converge optima. Ta-                             2
+ble 5 summarizes the results. Contrary to LaCAM, AFS
+can obtain plausible solutions from the beginning, however, it                       1  0  2000              4000  6000  8000   10000        13766 instances
+compromises scalability. We consider this quality gap can be
+overcome by developing better generators other than PIBT.            Figure 9: Refinement by LaCAM for the MAPF benchmark. On
+                                                                     the x-axis, the figure sorts 13,766 solved instances out of 13,900 by
+Extremely Dense Scenarios. Table 6 reports LaCAM in                  initial solution quality and displays the scores in red bars. For each
+very congested scenarios that existing solvers mostly fail.          instance, we also plot the solution quality at 30 seconds using gray
+Even with such challenging cases, LaCAM solved many in-              bars. Hence, the effect of refinement is visualized by tiny red areas.
+stances, demonstrating its excellent scalability.
+                                                                                           solved(%) time-init(ms) loss-init                 loss-30 s
+6 Conclusion and Discussion
+                                                                     |A| AFS LaCAM AFS LaCAM AFS LaCAM AFS LaCAM
+The primary challenge of MAPF is to maintain solvabil-
+ity and solution quality while suppressing planning efforts.          50 100                     100 88                  1 25    159 24       118
+To break this tradeoff, this paper presented two enhance-            100 56                      100 7223                2 140   609 139      545
+ments to LaCAM, namely, LaCAM which eventually con-                  150 0                       100 N/A                 4 N/A  1463 N/A     1368
+verges to optima and an effective configuration generator.
+The enhancements were thoroughly assessed, achieving re-             Table 5: Comparison of anytime MAPF algorithms. We used sum-
+markable results. From the empirical evidence, we believe            of-loss and 25 "random" scenarios of random-32-32-20. "init"
+that LaCAM has developed a new frontier in MAPF.
+                                                                     shows scores related to initial solutions. "loss" is the gap scores from
+Related Work. LaCAM() relates to partial successor ex-                  iA dist(si, gi). The scores are averaged for instances solved by
+pansion during the search, as seen in [Goldenberg et al., 2014;
+Wagner and Choset, 2015], because it also generates a sub-           both solvers, except for |A| = 150 because AFS failed all.
+set of successors, but differs in the use of constraints and a
+configuration generator. Anytime MAPF algorithms that con-           map                                     |A| % time(s) other algorithms
+verge to optima have been studied [Standley and Korf, 2011;
+Cohen et al., 2018a; Vedder and Biswas, 2021]. However,              empty-8-8                               58 100   0.00 PIBT&LaCAM (100%; 0.00 s)
+their scalability is limited; they often fail to derive initial so-                                                   0.63 LaCAM (4%; 14.81 s)
+lutions, as we empirically saw. Techniques to refine arbi-           random-32-32-20 737 100                         11.64 N/A
+trary MAPF solutions have also been studied [Surynek, 2013;                                                          55.54 N/A
+De Wilde et al., 2014; Okumura et al., 2021; Li et al., 2021a]       random-64-64-20 2943 68
+but they do not ensure optimality. Rewriting the search tree
+structure is popular in optimal motion planning [Karaman             maze-128-128-10 9772 100
+and Frazzoli, 2011; Shome et al., 2020], by which LaCAM
+is partially inspired. Incorporating swap into PIBT is in-           Table 6: Results on extremely dense scenarios. |A| was adjusted so
+spired by sub-optimal rule-based MAPF algorithms [Luna               that |A|/|V | = 0.9. For each scenario, 25 instances were prepared
+and Bekris, 2011; De Wilde et al., 2014]. Meanwhile, the
+solution quality of rule-based approaches themselves is often        while randomly placing starts and goals. "%" is the success percent-
+severely compromised.                                                age by LaCAM with timeout of 60 s. "time" is the median runtime
+
+Future Directions. We are interested in more effective con-          to obtain initial solutions. We also tested the other solvers in Fig. 1
+figuration generators than PIBT variants which can output
+near-optimal initial solutions. Improving the convergence            and report solvers that solved in at least one instance.
+speed of LaCAM is also important. Moreover, LaCAM in
+MAPF variants, e.g., multi-robot motion planning [Okumura            Number JPMJAX22A1. I thank the support of the Yoshida
+and Défago, 2023], is worth to be studied. Other than MAPF,          Scholarship Foundation when I was a Ph.D. student.
+since LaCAM is just a graph pathfinding algorithm, apply-
+ing its concept to other planning domains might be exciting.         References
+
+Acknowledgments                                                      [Andreychuk and Yakovlev, 2018] Anton Andreychuk and
+                                                                        Konstantin Yakovlev. Two techniques that enhance the
+I am grateful to Yasumasa Tarmura for his comments on the               performance of multi-robot prioritized path planning. In
+initial manuscript. This work was partly supported by JSPS              Proc. Int. Joint Conf. on Autonomous Agents & Multiagent
+KAKENHI Grant Numbers 20J23011 and JST ACT-X Grant                      Systems (AAMAS), 2018.
+
+                                                                     [Cohen et al., 2018a] Liron Cohen, Matias Greco, Hang Ma,
+                                                                        Carlos Hernández, Ariel Felner, TK Satish Kumar, and
+                                                                        Sven Koenig. Anytime focal search with applications.
+                                                                        In Proc Int. Joint Conf. on Artificial Intelligence (IJCAI),
+                                                                        2018.
+
+                                                                     [Cohen et al., 2018b] Liron Cohen, Glenn Wagner, David
+                                                                        Chan, Howie Choset, Nathan Sturtevant, Sven Koenig, and
+                                                                        TK Satish Kumar. Rapid randomized restarts for multi-
+                                                                        agent path finding solvers. In Proc. Annu. Symp. on Com-
+                                                                        binatorial Search (SOCS), 2018.
+
+                                                                     [De Wilde et al., 2014] Boris De Wilde, Adriaan W
+                                                                        Ter Mors, and Cees Witteveen. Push and rotate: a
+   complete multi-agent pathfinding algorithm. Journal of        [Okumura et al., 2022] Keisuke Okumura, Manao Machida,
+   Artificial Intelligence Research (JAIR), 2014.                   Xavier Défago, and Yasumasa Tamura. Priority inheri-
+                                                                    tance with backtracking for iterative multi-agent path find-
+[Erdmann and Lozano-Perez, 1987] Michael Erdmann and                ing. Artificial Intelligence (AIJ), 2022.
+   Tomas Lozano-Perez. On multiple moving objects. Al-
+   gorithmica, 1987.                                             [Okumura, 2023] Keisuke Okumura. Lacam: Search-based
+                                                                    algorithm for quick multi-agent pathfinding. In Proc. AAAI
+[Goldenberg et al., 2014] Meir Goldenberg, Ariel Felner,            Conf. on Artificial Intelligence (AAAI), 2023.
+   Roni Stern, Guni Sharon, Nathan Sturtevant, Robert Holte,
+   and Jonathan Schaeffer. Enhanced partial expansion A*.        [Sharon et al., 2015] Guni Sharon, Roni Stern, Ariel Felner,
+   Journal of Artificial Intelligence Research (JAIR), 2014.        and Nathan R Sturtevant. Conflict-based search for opti-
+                                                                    mal multi-agent pathfinding. Artificial Intelligence (AIJ),
+[Hart et al., 1968] Peter E Hart, Nils J Nilsson, and Bertram       2015.
+   Raphael. A formal basis for the heuristic determination of
+   minimum cost paths. IEEE transactions on Systems Sci-         [Shome et al., 2020] Rahul Shome, Kiril Solovey, Andrew
+   ence and Cybernetics, 1968.                                      Dobson, Dan Halperin, and Kostas E Bekris. drrt*: Scal-
+                                                                    able and informed asymptotically-optimal multi-robot mo-
+[Karaman and Frazzoli, 2011] Sertac Karaman and Emilio              tion planning. Autonomous Robots (AURO), 2020.
+   Frazzoli. Sampling-based algorithms for optimal mo-
+   tion planning. International Journal of Robotics Research     [Silver, 2005] David Silver. Cooperative pathfinding. In
+   (IJRR), 2011.                                                    Proc. AAAI Conf. on Artificial Intelligence and Interactive
+                                                                    Digital Entertainment (AIIDE), 2005.
+[Kautz et al., 2002] Henry Kautz, Eric Horvitz, Yongshao
+   Ruan, Carla Gomes, and Bart Selman. Dynamic restart           [Standley and Korf, 2011] Trevor Standley and Richard
+   policies. In Proc. AAAI Conf. on Artificial Intelligence         Korf. Complete algorithms for cooperative pathfinding
+   (AAAI), 2002.                                                    problems. In Proc Int. Joint Conf. on Artificial Intelligence
+                                                                    (IJCAI), 2011.
+[Lam et al., 2022] Edward Lam, Pierre Le Bodic, Daniel
+   Harabor, and Peter J Stuckey. Branch-and-cut-and-price        [Standley, 2010] Trevor Scott Standley. Finding optimal so-
+   for multi-agent path finding. Computers & Operations Re-         lutions to cooperative pathfinding problems. In Proc. AAAI
+   search (COR), 2022.                                              Conf. on Artificial Intelligence (AAAI), 2010.
+
+[Li et al., 2021a] Jiaoyang Li, Zhe Chen, Daniel Harabor,        [Stern et al., 2019] Roni Stern, Nathan Sturtevant, Ariel Fel-
+   P Stuckey, and Sven Koenig. Anytime multi-agent path             ner, Sven Koenig, Hang Ma, Thayne Walker, Jiaoyang
+   finding via large neighborhood search. In Proc Int. Joint        Li, Dor Atzmon, Liron Cohen, TK Kumar, et al. Multi-
+   Conf. on Artificial Intelligence (IJCAI), 2021.                  agent pathfinding: Definitions, variants, and benchmarks.
+                                                                    In Proc. Annu. Symp. on Combinatorial Search (SOCS),
+[Li et al., 2021b] Jiaoyang Li, Daniel Harabor, Peter J             2019.
+   Stuckey, and Sven Koenig. Pairwise symmetry reasoning
+   for multi-agent path finding search. Artificial Intelligence  [Surynek, 2013] Pavel Surynek. Redundancy elimination
+   (AIJ), 2021.                                                     in highly parallel solutions of motion coordination prob-
+                                                                    lems. International Journal on Artificial Intelligence Tools
+[Li et al., 2021c] Jiaoyang Li, Wheeler Ruml, and Sven              (IJAIT), 2013.
+   Koenig. Eecbs: A bounded-suboptimal search for multi-
+   agent path finding. In Proc. AAAI Conf. on Artificial Intel-  [Van Den Berg and Overmars, 2005] Jur P Van Den Berg
+   ligence (AAAI), 2021.                                            and Mark H Overmars. Prioritized motion planning for
+                                                                    multiple robots. In Proc. IEEE/RSJ Int. Conf. on Intelli-
+[Li et al., 2022] Jiaoyang Li, Zhe Chen, Daniel Harabor, Pe-        gent Robots and Systems (IROS), 2005.
+   ter J Stuckey, and Sven Koenig. Mapf-lns2: Fast repair-
+   ing for multi-agent path finding via large neighborhood       [Vedder and Biswas, 2021] Kyle Vedder and Joydeep
+   search. In Proc. AAAI Conf. on Artificial Intelligence           Biswas. X*: Anytime multi-agent path finding for sparse
+   (AAAI), 2022.                                                    domains using window-based iterative repairs. Artificial
+                                                                    Intelligence (AIJ), 2021.
+[Luna and Bekris, 2011] Ryan Luna and Kostas E Bekris.
+   Push and swap: Fast cooperative path-finding with com-        [Wagner and Choset, 2015] Glenn Wagner and Howie
+   pleteness guarantees. In Proc Int. Joint Conf. on Artificial     Choset. Subdimensional expansion for multirobot path
+   Intelligence (IJCAI), 2011.                                      planning. Artificial Intelligence (AIJ), 2015.
+
+[Okumura and Défago, 2023] Keisuke Okumura and Xavier            [Wurman et al., 2008] Peter R Wurman, Raffaello
+   Défago. Quick multi-robot motion planning by combining           D'Andrea, and Mick Mountz. Coordinating hun-
+   sampling and search. In Proc Int. Joint Conf. on Artificial      dreds of cooperative, autonomous vehicles in warehouses.
+   Intelligence (IJCAI), 2023.                                      AI magazine, 2008.
+
+[Okumura et al., 2021] Keisuke Okumura, Yasumasa                 [Yu and LaValle, 2013] Jingjin Yu and Steven M LaValle.
+   Tamura, and Xavier Défago. Iterative refinement for              Structure and intractability of optimal multi-robot path
+   real-time multi-robot path planning. In Proc. IEEE/RSJ           planning on graphs. In Proc. AAAI Conf. on Artificial In-
+   Int. Conf. on Intelligent Robots and Systems (IROS), 2021.       telligence (AAAI), 2013.
+Appendix                                                         Algorithm 5 LaCAM
+
+A MAPF-Specific Part of LaCAM                                    input: MAPF instance
+
+Algorithm 5 presents the full version of LaCAM (Alg. 1). To      output: solution or NO_SOLUTION
+highlight differences, the pseudocode uses gray-out for the
+same lines with Alg. 1. In what follows, we complement the       preface: Cinit := parent : , who : , where : 
+MAPF-specific part of Alg. 5.
+                                                                 1: initialize Open, Explored                 stack, hash table
+Constraint. Recall that a constraint in LaCAM is defined
+by each domain. In MAPF, a constraint specifies which agent      2: N init  config : S, tree : Cinit , parent : ,
+is where in the next configuration. Then, a node C in the
+constraint tree specifies locations for multiple agents in the        order : get_init_order()
+next configuration. The configuration generator must follow
+this specification.                                              3: Open.push N init ; Explored [S] = N init
+
+Constraint Generation. To determine which agent will be          4: while Open =  do
+constrained, a high-level node N includes order , an enumer-
+ation of all agents sorted by specific criteria. This is speci-  5: N  Open.top()
+fied by two functions: get_init_order (Line 2) and get_order
+(Line 17). An agent i is then selected following order and       6: if N .config = G then return backtrack(N )
+depth of the low-level node in the constraint tree, which is
+obtained by the function depth (Line 10). Doing so en-           7: if N .tree =  then Open.pop(); continue
+sures that each path of the constraint tree has no duplicate
+agents. Constraints are generated for all possible locations     8: C  N .tree.pop()
+from N .config[i] (Lines 11­13). The constraint tree is not
+developed when the depth of the low-level node equals |A|        9: if depth(C)  |A| then                 low_level_expansion
+(Line 9) because all agents have constraints in such a node.
+                                                                 10: i  N .order [depth(C)]
+B Evaluation
+                                                                 11: for u  neigh(N .config[i])  {N .config[i]} do
+B.1 Baselines
+                                                                 12:  Cnew  parent : C, who : i, where : u
+We tested a variety of representative or state-of-the-art MAPF
+algorithms that have diverse properties for solvability and op-  13:  N .tree.push (Cnew)
+timality as follows. See also Fig. 1.
+                                                                 14: Qnew  configuration_generator(N , C)
+   · A [Hart et al., 1968] as a vanilla search algorithm.
+      It is complete and optimal. The used objectives were       15: if Qnew =  then continue
+      makespan (A-m) and sum-of-loss (A-l).
+                                                                 16: if Explored [Qnew] =  then continue
+   · A with operator decomposition (OD) [Standley,
+      2010] as an adaptation of the general search to MAPF. It   17: N new  config : Qnew, tree : Cinit , parent : N ,
+      was implemented as a greedy best-first search to obtain
+      solutions as much as possible. The heuristic was the sum                       order : get_order(Qnew, N )
+      of distance toward goals.                                  18: Open.push (N new); Explored [Qnew] = N new
+                                                                 19: return NO_SOLUTION
+   · ODrM [Wagner and Choset, 2015] as a state-of-the-art
+      optimal and complete algorithm, similar to A. The used       tation used CPLEX for mathematical optimization and
+      objectives were sum-of-loss (ODrM-l) and makespan            was retrieved from https://github.com/ed-lam/bcp-mapf.
+      (ODrM-m). The implementation was from https://               The used objective was flowtime (aka. sum-of-costs),
+      github.com/gswagner/mstar_public. The original im-           following the authors' implementation.
+      plementation uses sum-of-loss as an objective function.
+      The makespan version was adapted from it.                  · CBS [Sharon et al., 2015] with many improvement tech-
+                                                                   niques as appeared in [Li et al., 2021b], as a state-of-the-
+   · Inflated ODrM (I-ODrM) [Wagner and Choset,                    art optimal solver. This is representative of two-level
+      2015] as a state-of-the-art bounded sub-optimal and          combinatorial search. CBS is solution complete. The
+      complete algorithm, which is a variant of ODrM. The          implementation was retrieved from https://github.com/
+      used objective is makespan (I-ODrM-m) and sum-of-            Jiaoyang-Li/CBSH2-RTC. The used objectives were
+      loss (I-ODrM-l). The sub-optimality was set to five to       flowtime (CBS-f), makespan (CBS-m), and sum-of-loss
+      find solutions as much as possible.                          (CBS-l). The original implementation uses flowtime as
+                                                                   an objective function. The makespan and sum-of-loss
+   · BCP [Lam et al., 2022] as a state-of-the-art optimal          versions were adapted from it.
+      solver that uses reduction to a mathematical optimiza-
+      tion problem. BCP is solution complete, namely, it can-    · EECBS [Li et al., 2021c] as a state-of-the-art bounded
+      not distinguish unsolvable instances. The implemen-          sub-optimal but solution complete algorithm, which is
+                                                                   a variant of CBS. The used objectives were flowtime
+                                                                   (EECBS-f), makespan (EECBS-m), and sum-of-loss
+                                                                   (EECBS-l). The sub-optimality was set to five. The
+                                                                   implementation was retrieved from https://github.com/
+                                                                   Jiaoyang-Li/EECBS. The original implementation uses
+                                                                   flowtime as an objective function. The makespan and
+                                                                   sum-of-loss versions were adapted from it.
+
+                                                                 · Prioritized planning (PP) [Erdmann and Lozano-
+                                                                   Perez, 1987; Silver, 2005] as a basic approach for
+                                                                   MAPF. The implementation first uses a distance heuris-
+                                                                   tic [Van Den Berg and Overmars, 2005] for the planning
+                                                                   order. Furthermore, it involves the repetition of PP with
+                                                                   random priorities until the problem is solved. The imple-
+                                                                   mentation was adapted from https://github.com/Kei18/
+                                                                   pibt2.
+   · MAPF-LNS2 (LNS2) [Li et al., 2022] as a state-of-the-                   tree corners tunnel string loop-chain connector
+      art sub-optimal and incomplete solver, based on a large
+      neighborhood search. The implementation was retrieved                  3  1                    5                          15
+      from https://github.com/Jiaoyang-Li/MAPF-LNS2.
+                                                                             2  2  4                                      543   3
+   · PIBT [Okumura et al., 2022], which is an incomplete
+      and sub-optimal algorithm. A vanilla PIBT was tested                                              4                 62
+      because LaCAM used PIBT. To detect planning failure,
+      PIBT was regarded as a failure when it reached pre-                    1     33                3                    71        4
+      defined sufficiently large timesteps. The implementation                     42                      2
+      was retrieved from https://github.com/Kei18/pibt2.                                                                            62
+                                                                                          1          1
+   · PIBT+ [Okumura et al., 2022], as a state-of-the-art
+      scalable MAPF solver, which is incomplete and sub-                     time s-opt time s-opt time s-opt time s-opt  time s-opt time s-opt solved
+      optimal. It used push and swap [Luna and Bekris, 2011]
+      to complement solutions.                                    LaCAM      0 1.25 0 1.12 0 1.46    0 2.36                  2  7.12 0 (1.48)    6/6
+                                                                  after 1 s  0 1.00 13 1.00 77 1.00  8 1.00               700   1.44 408 (1.08)
+   · LaCAM [Okumura, 2023], on which LaCAM is based.
+      This is a complete sub-optimal algorithm. It used a         A          0 1.00 149 1.00 35 1.00 25 1.00 15124 1.00 N/A N/A 5/6
+      vanilla PIBT as a configuration generator. The imple-       ODrM       3 1.00 40 1.00 675 1.00 0 1.00 N/A N/A N/A N/A 4/6
+      mentation was from https://github.com/Kei18/lacam.          I-ODrM     0 1.00 0 1.31 257 1.08 0 1.00 N/A N/A 124 (1.39) 5/6
+
+   · AFS [Cohen et al., 2018a], an anytime version of CBS         CBS        70 1.00 0 1.00 N/A N/A 180 1.00 N/A N/A N/A N/A 3/6
+      that eventually converges to optima. Its implementation
+      was obtained from the authors of the paper. The original    EECBS 2 1.00 0 1.00 N/A N/A 0 1.00 N/A N/A 86 (1.61) 4/6
+      implementation uses flowtime as an objective function.
+      The sum-of-loss versions were adapted from it.              OD         0 1.00 0 1.50 14 2.57 0 1.20 2133 30.62 5 (1.38) 6/6
+
+B.2 Small Complicated Instances for Sum-of-loss                   LaCAM 0 1.23 1 1.69 92 1.91 0 3.30 55 19.15 0 (1.45) 6/6
+
+Table 7 presents the results of the small complicated instances   PP         N/A N/A 0 1.00 N/A N/A 0 1.00 N/A N/A N/A N/A 2/6
+for the sum-of-loss, corresponding to Table 4. Overall, the
+results are similar to those for makespan; many solvers failed    LNS2 N/A N/A 0 1.00 N/A N/A 0 1.00 N/A N/A 29 (1.00) 3/6
+in some instances or compromised the solution quality, while
+LaCAM immediately found initial solutions and converged           PIBT N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A 0/6
+to (near-)optimal solutions.
+                                                                  PIBT+      0 4.38 0 1.12 0 3.91 0 2.20 N/A N/A 0 (1.68) 5/6
+B.3 MAPF Benchmark
+                                                                  BCP        194 - 150 - N/A - 117 - N/A - N/A - 3/6
+How to Test Each Algorithm. When increasing the num-
+ber of agents by 50, we stopped testing some algorithms if        Table 7: Results of the small complicated instances for sum-of-loss.
+they failed to solve all instances in the previous round.         The time of the unit is ms. See also the caption of Table 4. Regard-
+                                                                  ing sum-of-loss in connector (decorated by parentheses), the scores
+Results. Figures 10 to 12 present full results of the             normalized by known best values (80) are presented due to failing to
+MAPF benchmark, complementing Fig. 8. In addition                 obtain the optimal scores.
+to sum-of-loss, we also present makespan normalized by
+maxiA dist(si, gi). Scores of LaCAM are for initial so-           however, the completeness can be the bottleneck for achiev-
+lutions. Overall, LaCAM solved a variety of problem in-           ing speed. This is observed in A, OD, and ODrM.
+stances that have diverse sizes of graphs or agents, sparse-
+ness, and complexity, within several seconds. Solution qual-         In general, makespan-optimal solutions are easier to obtain
+ities of LaCAM are comparable to other sub-optimal algo-          than sum-of-loss-optimal ones. This is because, given an in-
+rithms. Specifically, the qualities are similar to those of PIBT  stance, the number of makespan-optimal solutions is larger
+and LaCAM because it is based on these algorithms.                than that of sum-of-loss. Empirically, this is validated with
+                                                                  ODrM and CBS in Fig. 1. For instance, CBS-m solved
+Discussion of Other Algorithms. Although recent remark-           much more instances than CBS-l. Meanwhile, we can see
+able progress in MAPF studies, the scalability of optimal al-     a reverse trend in I-ODrM, which is a bounded sub-optimal
+gorithms (e.g., ODrM, BCP, CBS) is limited; they failed to        complete algorithm; I-ODrM-l solved more instances than
+handle a few hundred agents in most cases. Bounded sub-           I-ODrM-m. We regard this as an effect of admissible heuris-
+optimal algorithms such as I-ODrM and EECBS can solve             tics. The sum-of-loss optimization uses iA dist(si, gi)
+a variety of instances but struggle to solve challenging in-      while the makespan optimization uses maxiA dist(si, gi);
+stances (e.g., with 1000 agents). Sub-optimal algorithms such     the former provides more informatic guidance than the latter.
+as PP, LNS2, or PIBT(+) sometimes can handle such chal-
+lenging instances but still failed many instances. From an-
+other perspective, it is ideal for an algorithm to be complete,
+                                Berlin_1_256                 Boston_0_256                  Paris_1_256               brc202d                      den312d                       den520d
+                                256x256 (47,540)             256x256 (47,768)              256x256 (47,240)          530x481 (43,151)             65x81 (2,445)                 256x257 (28,178)
+
+                                1.0                          1.0                           1.0                       1.0                          1.0                           1.0
+
+success rate                    0.8                          0.8                           0.8                       0.8                          0.8                           0.8
+
+                                0.6                          0.6                           0.6                       0.6                          0.6                           0.6
+
+                                0.4                          0.4                           0.4                       0.4                          0.4                           0.4
+
+                                0.2                          0.2                           0.2                       0.2                          0.2                           0.2
+
+                                0.0  50 250 500 750 1000     0.0  50 250 500 750 1000      0.0  50 250 500 750 1000  0.0  50 250 500 750 1000     0.0  50 250 500 750 1000      0.0  50 250 500 750 1000
+
+                                30                           30                            30                        30                           30                            30
+
+runtime (sec)                   20                           20                            20                        20                           20                            20
+
+                                10                           10                            10                        10                           10                            10
+
+                                 0                750  1000   0            500 750 1000    0                         0                 750  1000   0            500  750  1000  0             500 750 1000
+                                     50 250 500   750  1000       50 250                      50 250 500 750 1000       50 250 500     750  1000       50 250  500   750           50 250
+                                                  750  1000               500 750 1000                                                 750  1000               500   750                     500 750 1000
+makespan / LB sum-of-loss / LB  6                            6                             6                         6                            6                             6
+                                5                            5            500 750 1000                                                            5                                          500 750 1000
+                                4                            4                             5                         5                            4                             5
+                                3                            3              ODrM*-l                                                               3                                              CBS-l
+                                2                            2                             4                         4                            2                             4
+                                1                            1                                                                                    1
+                                                                                           3                         3                                                          3
+                                   50 250 500                   50 250                                                                               50 250
+                                6                            6                             2                         2                            6                             2
+                                5                            5                                                                                    5
+                                4                            4                             1   50 250 500 750 1000   1   50 250 500               4                       1000  1      250
+                                3                            3                                                                                    3                                50
+                                2                            2                             6                         6                            2
+                                1                            1                                                                                    1                             6
+
+                                   50 250 500                   50 250                     5                         5                               50 250                     5
+
+                                       OD                                                  4                         4                                                          4
+
+                                                                                           3                         3                                                          3
+
+                                                                                           2                         2                                                          2
+
+                                                                                           1   50 250 500 750 1000   1   50 250 500                                       1000  1   50 250
+
+                                                                                                             agents: |A|
+
+                                                       ODrM*-m                                  I-ODrM*-m            I-ODrM*-l              BCP        CBS-f              CBS-m
+
+                                         EECBS-f             EECBS-m           EECBS-l                       PP         LNS2           PIBT            PIBT+              LaCAM              LaCAM*
+
+                                empty-16-16                  empty-32-32                   empty-48-48               empty-8-8                    ht_chantry                    ht_mansion_n
+                                16x16 (256)                  32x32 (1,024)                 48x48 (2,304)             8x8 (64)                     162x141 (7,461)               133x270 (8,959)
+
+                                1.0                          1.0                           1.0                       1.0                          1.0                           1.0
+
+success rate                    0.8                          0.8                           0.8                       0.8                          0.8                           0.8
+
+                                0.6                          0.6                           0.6                       0.6                          0.6                           0.6
+
+                                0.4                          0.4                           0.4                       0.4                          0.4                           0.4
+
+                                0.2                          0.2                           0.2                       0.2                          0.2                           0.2
+
+                                0.0  50           100  128   0.0  50      200 300 400 500  0.0  50 250 500 750 1000  0.0        32                0.0  50 250 500 750 1000      0.0  50 250 500 750 1000
+
+                                30                           30                            30                        30                           30                            30
+
+runtime (sec)                   20                           20                            20                        20                           20                            20
+
+                                10                           10                            10                        10                           10                            10
+
+                                 0                            0                            0                         0                             0                             0
+                                     50                           50                                                                                   50 250                        50 250
+                                                  100  128            200 300 400 500           50 250 500 750 1000             32                              500  750  1000                500  750  1000
+                                6                 100  128   6                                                                                    6            500   750  1000  6            500   750  1000
+makespan / LB sum-of-loss / LB  5                 100  128   5                             6                         6                            5            500   750  1000               500   750  1000
+                                4                            4                                                                                    4
+                                3                            3                             5                         5                            3                             5
+                                2                            2                                                                                    2
+                                1                            1                             4                         4                            1                             4
+
+                                   50                           50                         3                         3                               50 250                     3
+                                6                            6                                                                                    6
+                                5                            5                             2                         2                            5                             2
+                                4                            4                                                                                    4
+                                3                            3        200 300 400 500      1   50 250 500 750 1000   1          32                3                             1      250
+                                2                            2                                                                                    2                                50
+                                1                            1                             6                         6                            1
+                                                                                                                                                                                6
+                                   50                           50                                                                                   50 250
+                                                                                           5                         5                                                          5
+
+                                                                                           4                         4                                                          4
+
+                                                                                           3                         3                                                          3
+
+                                                                                           2                         2                                                          2
+
+                                                                      200 300 400 500      1   50 250 500 750 1000   1          32                                              1
+                                                                                                                                                                                   50 250
+
+                                                                                                             agents: |A|
+
+                                         OD            ODrM*-m              ODrM*-l             I-ODrM*-m            I-ODrM*-l              BCP        CBS-f              CBS-m                    CBS-l
+
+                                         EECBS-f             EECBS-m           EECBS-l                       PP         LNS2           PIBT            PIBT+              LaCAM              LaCAM*
+
+                                             Figure 10: Result of the MAPF benchmark (1/3). See also the caption of Fig. 8. |V | is shown in parentheses.
+                                lak303d                       lt_gallowstemplar_n           maze-128-128-1                maze-128-128-10              maze-128-128-2                 maze-32-32-2
+                                194x194 (14,784)              251x180 (10,021)              128x128 (8,191)               128x128 (14,818)             128x128 (10,858)               32x32 (666)
+
+                                1.0                           1.0                           1.0                           1.0                          1.0                            1.0
+
+success rate                    0.8                           0.8                           0.8                           0.8                          0.8                            0.8
+
+                                0.6                           0.6                           0.6                           0.6                          0.6                            0.6
+
+                                0.4                           0.4                           0.4                           0.4                          0.4                            0.4
+
+                                0.2                           0.2                           0.2                           0.2                          0.2                            0.2
+
+                                0.0  50 250 500 750 1000      0.0  50 250 500 750 1000      0.0   50 250 500 750 1000     0.0    50 250 500 750 1000   0.0  50 250 500 750 1000       0.0  50 100   200  300
+
+                                30                            30                            30                            30                           30                             30
+
+runtime (sec)                   20                            20                            20                            20                           20                             20
+
+                                10                            10                            10                            10                           10                             10
+
+                                 0                 750  1000   0            500 750 1000    0                             0                 750  1000   0            500   750  1000   0            200  300
+                                     50 250 500    750  1000       50 250                      50 250 500 750 1000           50 250 500     750  1000       50 250  500    750             50 100
+                                                   750  1000               500 750 1000                                                     750  1000               500    750
+makespan / LB sum-of-loss / LB  6                             6                             6                             6                            6                              6
+                                5                             5            500 750 1000                                                                5
+                                4                             4                             5                             5                            4                              5
+                                3                             3              ODrM*-l                                                                   3
+                                2                             2                             4                             4                            2                              4
+                                1                             1                                                                                        1
+                                                                                            3                             3                                                           3
+                                   50 250 500                    50 250                                                                                   50 250
+                                6                             6                             2                             2                            6                              2
+                                5                             5                                                                                        5
+                                4                             4                             1  50 250 500 750 1000        1   50 250 500               4                        1000  1             200  300
+                                3                             3                                                                                        3                                 50 100
+                                2                             2                             6                             6                            2
+                                1                             1                                                                                        1                              6
+
+                                   50 250 500                    50 250                     5                             5                               50 250                      5
+
+                                       OD                                                   4                             4                                                           4
+
+                                                                                            3                             3                                                           3
+
+                                                                                            2                             2                                                           2
+
+                                                                                            1  50 250 500 750 1000        1   50 250 500                                        1000  1   50 100    200  300
+
+                                                                                                                    agents: |A|
+
+                                                        ODrM*-m                                    I-ODrM*-m              I-ODrM*-l              BCP                CBS-f       CBS-m                 CBS-l
+                                                                                                                                                                                                    LaCAM*
+                                             EECBS-f             EECBS-m              EECBS-l                  PP            LNS2             PIBT          PIBT+               LaCAM
+
+                                maze-32-32-4                  orz900d                       ost003d                       random-32-32-10              random-32-32-20                random-64-64-10
+                                32x32 (790)                   1491x656 (96,603)             194x194 (13,214)              32x32 (922)                  32x32 (819)                    64x64 (64x64)
+
+                                1.0                           1.0                           1.0                           1.0                          1.0                            1.0
+
+success rate                    0.8                           0.8                           0.8                           0.8                          0.8                            0.8
+
+                                0.6                           0.6                           0.6                           0.6                          0.6                            0.6
+
+                                0.4                           0.4                           0.4                           0.4                          0.4                            0.4
+
+                                0.2                           0.2                           0.2                           0.2                          0.2                            0.2
+
+                                0.0  50 100 200 300 395       0.0  50 250 500 750 1000      0.0   50 250 500 750 1000     0.0    50  200 300     461   0.0  50 100 200 300      400   0.0  50 250 500 750 1000
+
+                                30                            30                            30                            30                           30                             30
+
+runtime (sec)                   20                            20                            20                            20                           20                             20
+
+                                10                            10                            10                            10                           10                             10
+
+                                 0                            0                                0                          0                             0                              0
+                                     50 100                                                                                                                 50 100                         50 250
+                                              200  300 395         50 250 500 750 1000            50 250 500 750 1000          50    200 300     461                 200   300  400                 500  750 1000
+                                6            200                                                                                                 461   6            200    300  400   6            500   750 1000
+makespan / LB sum-of-loss / LB  5            200              6                             6                             6                      461   5            200    300  400                500   750 1000
+                                4                                                                                                                      4
+                                3                             5                             5                             5                            3                              5
+                                2                                                                                                                      2
+                                1                             4                             4                             4                            1                              4
+
+                                   50 100                     3                             3                             3                               50 100                      3
+                                6                                                                                                                      6
+                                5                             2                             2                             2                            5                              2
+                                4                                                                                                                      4
+                                3                  300  395   1   50 250   500   750  1000  1      250    500  750  1000  1          200 300           3                              1      250
+                                2                                                              50                            50                        2                                 50
+                                1                             6                                                                                        1
+                                                                                            6                             6                                                           6
+                                   50 100                                                                                                                 50 100
+                                                              5                             5                             5                                                           5
+
+                                                              4                             4                             4                                                           4
+
+                                                              3                             3                             3                                                           3
+
+                                                              2                             2                             2                                                           2
+
+                                                   300  395   1   50 250   500   750 1000   1     50 250  500  750 1000   1   50     200 300                                          1
+                                                                                                                                                                                         50 250
+
+                                                                                                                    agents: |A|
+
+                                     OD                 ODrM*-m            ODrM*-l                 I-ODrM*-m              I-ODrM*-l              BCP                CBS-f       CBS-m                    CBS-l
+
+                                             EECBS-f             EECBS-m              EECBS-l                  PP            LNS2             PIBT          PIBT+               LaCAM               LaCAM*
+
+                                                                   Figure 11: Result of the MAPF benchmark (2/3). See also the caption of Fig. 8.
+                                random-64-64-20              room-32-32-4                  room-64-64-16               room-64-64-8                w_woundedcoast                warehouse-10-20-
+                                64x64 (3,270)                32x32 (682)                   64x64 (3,646)               64x64 (3,232)               642x578 (34,020)              10-2-1
+                                                                                                                                                                                 161x63 (5,699)
+                                1.0                          1.0                           1.0                         1.0                         1.0
+                                                                                           0.8                                                                                   1.0
+                                                                                           0.6
+success rate                    0.8                          0.8                           0.4                         0.8                         0.8                           0.8
+                                                                                           0.2
+                                0.6                          0.6                           0.0                         0.6                         0.6                           0.6
+
+                                0.4                          0.4                                 50 250 500            0.4                         0.4                           0.4
+                                                                                           30
+                                0.2                          0.2                                                       0.2                         0.2                           0.2
+
+                                0.0  50 250 500 750 1000     0.0  50 100   200       300                     750 1000  0.0  50 250 500  750 1000   0.0  50 250 500    750 1000   0.0  50 250 500   750 1000
+
+                                30                           30                                                        30                          30                            30
+
+runtime (sec)                   20                           20                            20                          20                          20                            20
+
+                                10                           10                            10                          10                          10                            10
+
+                                 0            500  750 1000   0            200       300   0                           0                750  1000   0            500  750  1000  0            500 750 1000
+                                     50 250  500   750 1000       50 100                      50 250 500 750 1000         50 250 500    750  1000       50 250  500   750           50 250
+                                             500   750 1000                                                                             750  1000               500   750                    500 750 1000
+makespan / LB sum-of-loss / LB  6                            6                             6                           6                           6                             6
+                                                             5                                                                                     5                                         500 750 1000
+                                5                            4                             5                           5                           4                             5
+                                                             3                                                                                     3                                             CBS-l
+                                4                            2                             4                           4                           2                             4
+                                                             1                                                                                     1
+                                3                                                          3                           3                                                         3
+                                                                50 100                                                                                50 250
+                                2                            6                             2                           2                           6                             2
+                                                             5                                                                                     5
+                                1      250                   4             200       300   1   50 250 500 750 1000     1   50 250 500              4                       1000  1      250
+                                   50                        3                                                                                     3                                50
+                                                             2                             6                           6                           2
+                                6                            1                                                                                     1                             6
+
+                                5                               50 100                     5                           5                              50 250                     5
+
+                                4                                                          4                           4                                                         4
+
+                                3                                                          3                           3                                                         3
+
+                                2                                                          2                           2                                                         2
+
+                                1                                          200       300   1   50 250 500 750 1000     1   50 250 500                                      1000  1   50 250
+                                   50 250
+
+                                                                                                             agents: |A|
+
+                                       OD          ODrM*-m                 ODrM*-l                I-ODrM*-m            I-ODrM*-l             BCP        CBS-f              CBS-m
+
+                                       EECBS-f                  EECBS-m                   EECBS-l            PP           LNS2          PIBT            PIBT+              LaCAM             LaCAM*
+
+                                warehouse-10-20-             warehouse-20-40-              warehouse-20-40-
+                                10-2-2                       10-2-1                        10-2-2
+                                170x84 (9,776)               321x123 (22,599)              340x164 (38,756)
+
+                                1.0                          1.0                           1.0
+
+success rate                    0.8                          0.8                           0.8
+
+                                0.6                          0.6                           0.6
+
+                                0.4                          0.4                           0.4
+
+                                0.2                          0.2                           0.2
+
+                                0.0  50 250 500 750 1000     0.0  50 250 500 750 1000      0.0  50 250 500 750 1000
+
+                                30                           30                            30
+
+runtime (sec)                   20                           20                            20
+
+                                10                           10                            10
+
+                                0                            0                             0
+                                   50 250 500 750 1000          50 250 500 750 1000           50 250 500 750 1000
+
+makespan / LB sum-of-loss / LB  6                            6                             6
+
+                                5                            5                             5
+
+                                4                            4                             4
+
+                                3                            3                             3
+
+                                2                            2                             2
+
+                                1      250   500   750 1000  1   50 250   500   750  1000  1      250  500   750 1000
+                                   50                                                         50
+                                                             6
+                                6                                                          6
+
+                                5                            5                             5
+
+                                4                            4                             4
+
+                                3                            3                             3
+
+                                2                            2                             2
+
+                                1            500   750 1000  1   50 250   500   750 1000   1   50 250  500   750 1000
+                                   50 250
+
+                                                                                                             agents: |A|
+
+                                       OD          ODrM*-m                 ODrM*-l                I-ODrM*-m            I-ODrM*-l          BCP               CBS-f             CBS-m            CBS-l
+                                                                                                                                        PIBT            PIBT+              LaCAM             LaCAM*
+                                       EECBS-f                  EECBS-m                   EECBS-l            PP           LNS2
+
+                                                                  Figure 12: Result of the MAPF benchmark (3/3). See also the caption of Fig. 8.
+

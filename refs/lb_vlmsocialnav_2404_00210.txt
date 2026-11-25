@@ -1,0 +1,565 @@
+                                                                                                                                                                                                                                                                     1
+
+                                        VLM-Social-Nav: Socially Aware Robot Navigation
+                                          through Scoring using Vision-Language Models
+
+                                           Daeun Song1, Jing Liang2, Amirreza Payandeh1, Amir Hossain Raj1, Xuesu Xiao1, and Dinesh Manocha2
+
+arXiv:2404.00210v3 [cs.RO] 25 Nov 2024     Abstract--We propose VLM-Social-Nav, a novel Vision-                         ---- Ours
+                                        Language Model (VLM) based navigation approach to compute                       ---- DWA
+                                        a robot's motion in human-centered environments. Our goal is to                 ---- BC
+                                        make real-time decisions on robot actions that are socially com-
+                                        pliant with human expectations. We utilize a perception model to               Fig. 1. The trajectories of VLM-Social-Nav (red), DWA (blue), and BC
+                                        detect important social entities and prompt a VLM to generate                  (yellow) approaches in the frontal encountering scenario (left) and the
+                                        guidance for socially compliant robot behavior. VLM-Social-Nav                 intersection scenario (right). The resulting trajectories show that VLM-Social-
+                                        uses a VLM-based scoring module that computes a cost term that                 Nav demonstrates more socially compliant behavior because it is instructed
+                                        ensures socially appropriate and effective robot actions generated             by a prompt.
+                                        by the underlying planner. Our overall approach reduces reliance
+                                        on large training datasets and enhances adaptability in decision-              common strategy to handle the challenge is by learning-based
+                                        making. In practice, it results in improved socially compliant                 approaches to learn the complicated contexts empirically.
+                                        navigation in human-shared environments. We demonstrate and                    Imitation Learning (IL) is a recent emerging paradigm for
+                                        evaluate our system in four different real-world social navigation             desired navigation behavior [7], [8]. This approach enables
+                                        scenarios with a Turtlebot robot. We observe at least 27.38%                   autonomous robots to navigate socially by learning from
+                                        improvement in the average success rate and 19.05% improve-                    human demonstrations. Other learning approaches, such as
+                                        ment in the average collision rate in the four social navigation               reinforcement learning have also been used to address this
+                                        scenarios. Our user study score shows that VLM-Social-Nav                      problem [9]. While both methods demonstrate promising
+                                        generates the most socially compliant navigation behavior.                     results in real-world settings, substantial datasets [10]­[12]
+                                                                                                                       for training and reward engineering are required for their
+                                           Index Terms--Motion and Path Planning, Task and Motion                      successful application and it is hard to generalize.
+                                        Planning, Integrated Planning and Control
+                                                                                                                          Language models are inherently well-suited for contextual
+                                                                  I. INTRODUCTION                                      understanding but not well applied in social navigation. Re-
+                                                                                                                       cent Large Language Models (LLMs) and Vision-Language
+                                           Mobile robots integrated into diverse indoor and outdoor                    Models (VLMs) demonstrate a deep understanding of con-
+                                        human-centric environments are becoming increasingly preva-                    textual information and have the potential to perform chain-
+                                        lent. These robots serve various functions, ranging from                       of-thought [13] and common sense reasoning [14]. Those
+                                        package and food delivery [1] to service [2] and home as-                      processes are inherent to social navigation, especially the
+                                        sistance [3]. Overall, these roles necessitate interaction with                challenges of contextual appropriateness and politeness, which
+                                        humans and navigating seamlessly through public spaces with                    require understanding the task/environmental context and the
+                                        pedestrians. In such dynamic scenarios, it is important for                    behavior of humans. This capability has also been evaluated
+                                        the robots to engage in socially compliant interactions and                    across diverse domains of robotics, including human-like
+                                        navigation [4], [5].                                                           driving scenarios [15] and autonomous robot navigation [16].
+                                                                                                                       However, using language models for social navigation is not
+                                           This paper focuses on the challenges of social naviga-                      well explored, the language models suffer from high latency
+                                        tion [5]. It addresses the ability of robots to navigate while                 for real-time navigation, and the issue impedes the smoothness
+                                        adhering to social etiquette, especially contextual appropri-                  and efficiency of human-robot social interaction.
+                                        ateness, which requires robots to understand environment
+                                        contexts, current tasks, and interpersonal behaviors. Therefore,
+                                        navigating socially across varying contexts presents distinct
+                                        challenges [4]­[6], including ensuring safety, comfort, and
+                                        politeness, as well as adhering to social norms.
+
+                                           Inferring contextually appropriate navigation behaviors is
+                                        challenging. Humans have various behaviors and the environ-
+                                        mental or task contexts cannot be easily categorized [5]. A
+
+                                            The majority of the work is conducted as a postdoctoral researcher at the
+                                        University of Maryland.
+
+                                           1D. Song, A. Payandeh, A. H. Raj, and X. Xiao are with the Depart-
+                                        ment of Computer Science, George Mason University, Fairfax, VA 22030
+                                        USA (e-mail: dsong26@gmu.edu; apayande@gmu.edu; araj20@gmu.edu;
+                                        xiao@gmu.edu).
+
+                                           2J. Liang and D. Manocha are with the Department of Computer Sci-
+                                        ence, University of Maryland, College Park, MD 20742 USA (e-mail:
+                                        jingl@umd.edu; dmanocha@umd.edu).
+2
+
+   Main Results: In this paper, we present VLM-Social-             [22]. DWA [18] is a well-known collision-free navigation
+Nav, a new approach that uses VLMs to interpret contextual         method that calculates collision constraints and selects the
+information from robot observation to help autonomous robots       best feasible action. Velocity-Obstacle (VO)-based approaches
+improve their navigation abilities in human-centered environ-      are more efficient and can be used to simulate the actions
+ments. We leverage a VLM to analyze and reason about the           of crowds [23], but they do not take uncertainties into ac-
+current social interaction and generate an immediate preferred     count. PRVO [24] and OFVO [21] handle the perception
+robot action to guide an underlying motion planner. We             uncertainties, but those approaches require a hard threshold
+formalize the concept of social cost and the problem definition    for planning. To deal with this issue, learning-based methods
+of social robot navigation suitable for language descriptions.     empirically train the policies by demonstrations [25] or use
+The social cost is defined as how well a robot's behavior aligns   reinforcement learning to train the robot in a simulator and
+with socially acceptable norms, i.e., the behavior a human         implement it in real-world scenarios [22], [26]. However,
+would likely exhibit. Our VLM-based scoring module com-            learning-based approaches require a significant amount of data
+putes the social cost, which is used for a bottom-level motion     or realistic simulators to learn the task. Social interactions
+planner to output appropriate robot actions. To overcome the       are highly nuanced and context-dependent. Simulating these
+limitation of existing VLMs' latency issue, we utilize a state-    interactions accurately requires sophisticated models of human
+of-the-art perception model (i.e., YOLO [17]) to detect key        behavior and interaction dynamics, which is not trivial.
+entities that are used for social interactions (e.g., humans,
+gestures, and doors) and query a VLM to generate socially          B. Contextual Appropriateness of Social Navigation
+compliant navigation behavior and compute the social cost.
+We demonstrate VLM-Social-Nav in four different indoor                Researchers have developed various methods to incorpo-
+scenarios with human interactions. Unlike previous social          rate social awareness into mobile robot navigation. Creating
+navigation approaches, VLM-Social-Nav can better navigate          such systems is complex, requiring advanced perception and
+through social scenarios by interpreting the situation based       reasoning to navigate environments shared with humans and
+on common sense without any dedicated training on a large          robots [4]. Defining social navigation varies across cultures
+dataset. Some of our main results include:                         and platforms. Assessing social compliance, beyond safety,
+                                                                   depends on the scenario and requires contextual consideration.
+   · We propose VLM-Social-Nav, a novel approach for social        Various methodologies are employed to address this chal-
+      robot navigation, by integrating VLMs with optimization-     lenge, with a significant focus on enhancing learning methods
+      based or scoring-based motion planners and a state-of-       through reinforcement learning, learning from demonstration
+      the-art perception model for better VLM efficiency.          (particularly by analyzing examples of human trajectories or
+                                                                   robots operated by humans), and the utilization of simulated
+   · We propose a VLM-based scoring module that translates         datasets [27]­[29]. Additionally, various datasets have been
+      the current robot observation and textual instructions into  collected for this purpose. SCAND [11] and MuSoHu [12]
+      a relevant social cost term. This cost term is used for the  are two recent large-scale social human navigation datasets in
+      bottom-level motion planner to output appropriate robot      many natural human-inhabited public spaces for robots to learn
+      action.                                                      similar, human-like, socially compliant navigation behaviors.
+                                                                   Although extensive research has explored various machine
+   · We evaluate VLM-Social-Nav in four different real-            learning techniques, Vision-Language Models (VLMs) have
+      world indoor social navigation scenarios along with a        not yet been applied to the social navigation problem, despite
+      user study and compare the results with a Dynamic-           their strong potential for contextual analysis.
+      Window Approach (DWA) [18] and Behavior Cloning
+      (BC) [19] method trained on a state-of-the-art large         C. Large Foundation Models for Navigation
+      Socially CompliAnt Navigation Dataset (SCAND) [11].
+      VLM-Social-Nav achieves at least 27.38% improvement             Recent advancements in Language Foundation Models
+      in average success rate and 19.05% improvement in            (LFMs) [30], encompassing VLMs and LLMs, show signif-
+      average collision rate in four scenarios. The user study     icant potential in robotic navigation. SayCan [31] integrates
+      score shows that VLM-Social-Nav generates the most           LLMs for high-level task planning. GPT-Driver [32] evaluates
+      socially compliant navigation behavior.                      the performance of GPT-3.5 in simulation for autonomous
+                                                                   driving, framing motion planning as a language modeling
+   More related works and discussions can be found in the          problem. L3MVN [33] constructs semantic maps of envi-
+technical report of our manuscript [20].                           ronments and utilizes LLMs to reach long-term goals, while
+                                                                   LLaDA [34] enables autonomous vehicles to adapt to diverse
+                         II. RELATED WORK                          traffic rules across regions. LM-Nav [16] utilizes GPT-3 and
+                                                                   CLIP [35] to navigate outdoor environments based on natural
+   In this section, we give an overview of existing works          language instructions, combining language and visual cues for
+related to safety requirements and different challenges of         optimal path planning. Despite their powerful capabilities in
+contextual appropriateness in social robot navigation, and         contextual understanding and commonsense reasoning, lan-
+Large Foundation Models (LFMs) for robot navigation.               guage models have not been extensively investigated for social
+                                                                   navigation. Our approach proposes a novel method to navigate
+A. Safety Requirement of Social Navigation                         robots in a socially compliant manner.
+
+   For social navigation, safety is a basic requirement for in-
+teracting with humans and navigating dynamic scenarios [21],
+                                                                                                          3
+
+                                                    Prompt
+
+                                              How will you navigate?
+
+Sensor Inputs   RGB Image         Perception  Vision Language         Csocial
+                3D LiDAR            Model           Model
+                Odometry
+               Goal Pose                                                       Optimization-    (v*, w*)
+                                                                               based Planner
+
+                                              Move RIGHT with
+                                              SLOWING DOWN
+
+                                              Scoring Module                   C C goal, obst
+
+Fig. 2. The overall system architecture of VLM-Social-Nav. Our real-world perception (vision) model detects important social entities (e.g., humans, gestures,
+and doors) in real time and prompts the VLM-based scoring module to compute social cost Csocial, which is used to generate socially compliant robot action.
+
+                            III. APPROACH                          including large datasets [10]­[12], we leverage the power of
+                                                                   a VLM to compute appropriate behavior based on its rich
+   In this section, we define the social navigation problem and    contextual understanding and nuanced interpretations from
+describe VLM-Social-Nav in detail.                                 perceived images and given prompts. We elaborate further in
+                                                                   Section III-C.
+A. Problem Definition
+                                                                   B. VLM-based Social Navigation Architecture
+   Navigation is the task of generating and following an effi-
+cient collision-free path from an initial location to a goal [5].     Fig. 2 highlights the overview of VLM-Social-Nav. Our
+In general, the overall system consists of a global planner        approach is based on an autonomous navigation system that
+and a local planner. A global planner is designed to find          integrates a perception layer with an optimization-based mo-
+a collision-free path to reach a goal, while a local planner       tion planner. The motion planner processes sensor inputs and
+aims to navigate the robot through its immediate surroundings,     generates a robot action that minimizes the cost function C.
+making real-time adjustments to deal with vehicle dynamics
+and surrounding obstacles.                                            While LiDAR detects geometric information useful for
+                                                                   obstacle avoidance, RGB images provide contextual details of
+   For social robot navigation, humans are no longer perceived     the current environment. They contain rich information crucial
+only as dynamic obstacles but also as social entities [4]. It      for social navigation. To enhance navigation capabilities within
+necessitates integrating social norms into robot behaviors. We     social contexts, we propose a VLM-based scoring module.
+define the social robot navigation problem as a Markov Deci-       VLMs excel in contextual understanding, interpreting scenes
+sion Process (MDP): S, A, T , C, where s = (x, y, )  S is          not solely based on visual features but also considering social
+a state consisting of a robot pose, a = (v, w)  A is an action     dynamics [36]. VLMs generate socially appropriate robot
+consisting of a linear and an angular velocity of the robot,       actions based on current observations and input instructions.
+T : S × A  S is the transition function characterizing the         Our VLM-based scoring module then calculates a cost term
+dynamics of the robot, and C : S × A  R is a cost function.        to be used by the motion planner.
+Given a cost function C, the motion planner finds (v, w)
+that minimizes the expected cost. The cost function takes the         While VLMs can generate navigation behaviors that comply
+following form:                                                    with social norms, continuously querying large VLMs for new
+                                                                   responses is prohibitively computationally expensive for real-
+C(s, a) =  · Cgoal +  · Cobst +  · Csocial,   (1)                  time navigation. To address this challenge, we incorporate
+                                                                   a real-time perception model. This model identifies social
+where Cgoal encourages movement toward the goal, Cobst dis-        entities such as humans, gestures, and doors as the robot
+courages collisions with obstacles, and Csocial encourages the     navigates its environment. Our VLM-based scoring module
+robot to follow the social norms. , , and  are non-negative        activates only when significant social cues are detected, en-
+weights for each cost term.                                        suring that the social cost term is integrated only when
+                                                                   necessary, i.e., when there is any human interaction involved.
+   The social cost term Csocial encompasses various factors        This approach reduces the VLM queries and facilitates real-
+that govern human-robot interactions in shared environments.       time navigation efficiency for our approach. Algorithm 1
+Defining them mathematically poses challenges. For VLM-            summarizes an overview of our VLM-Social-Nav process.
+Social-Nav, we define Csocial as:
+
+               Csocial = B - Bh,              (2)
+
+where B is a navigation behavior and Bh is a navigation            C. VLM-based Scoring Module
+behavior humans would adopt in accordance with social
+conventions. Minimizing the deviation between them will               VLM plays a crucial role in VLM-Social-Nav in inferring
+encourage the robot to emulate socially acceptable human           immediate socially compatible navigation behavior Bht+1 based
+behaviors. While Bh can be obtained through various methods,       on its pre-trained large internet-scale dataset:
+
+                                                                               Bht+1 = VLM(It, P, at),    (3)
+4
+
+   Algorithm 1: VLM-based Social Navigation
+
+    Input : RGB image I, LiDAR point cloud L, prompt                   Input Image:
+
+              P, goal position pg                                      Input Prompt:
+1 Initialize robot position pr;                                        Task:
+2 while not at goal position pr = pg do                                How will you navigate concerning the person in your view? You will
+3 I  Read image sensor data;                                           need to follow general walking etiquette.
+                                                                       Ego state:
+4 L  Read LiDAR sensor data;                                           - heading direction: straight
+                                                                       - linear velocity: 0.28
+5 e  Perception Model(I);                                              Remember:
+                                                                       - Move to the right when passing by a person.
+6 forall possible actions a do                                         - Do not obstruct others' paths.
+                                                                       - ...
+7   Csocial  0;                                                        Answer Format:
+                                                                       Move DIRECTION with SPEED
+8   if social entities detected in e then                              - options for DIRECTION: left, straight, right
+                                                                       - options for SPEED: slow down, speed up, constant, stop
+9   Bh = VLM(I, P, a);
+                                                                   Fig. 3. An example input image (It) and prompt (P) used in VLM-
+10  Csocial = VLM-based scoring(Bh);                               Social-Nav. Parameterized inputs (at) are highlighted in blue. Formatted
+                                                                   outputs specifying the heading (d) and the speed (s) are highlighted in
+11  Calculate the total coast                                      red. The example input data is one of the frontal approach scenarios from
+                                                                   MuSoHu [12].
+              C =  · Cgoal +  · Cobst +  · Csocial;
+12 end                                                             structions, offering reasoning guidelines enhances its decision-
+13 Find action a with minimal cost C and execute;                  making processes [37]. These guidelines not only facilitate
+                                                                   comprehensive reasoning and judgment within the VLM but
+14 Update robot position pr;                                       also enable the robot to adapt to specific rules more effectively.
+15 end                                                             For example, in a country where it's customary to walk on the
+                                                                   left, we can rephrase the prompt as "Move to the left when
+where It is an RGB image from the robot view at time t, P          passing by another person."
+is a textual prompt, and at is a current robot action at time
+t. Inspired by In-Context Learning (ICL), our prompt P is                                    IV. EXPERIMENTS
+designed to leverage the VLM's reasoning abilities through            In this section, we describe the details of the implementation
+zero-shot examples. This approach offers an interpretable          and qualitative and quantitative experimental results.
+interface, mirroring human reasoning and decision-making
+processes, without extensive training [37].                        A. Implementation Details
+                                                                      VLM-Social-Nav is tested on a Turtlebot 2 equipped with a
+   Our VLM-based scoring module starts from the insight that
+the action space of a mobile robot can be readily mapped to        Velodyne VLP16 LiDAR, a Zed 2i camera, and a laptop with
+linguistic terms. For example, the action "move forward at a       an Intel i7 CPU and an Nvidia GeForce RTX 2080 GPU. We
+constant speed" can be linked to a linear velocity of vt m/s       use YOLO [17] as our real-world perception model to detect
+and an angular velocity of 0. The heading direction on the         key objects. In our experiment, we focus on key social cues,
+left indicates a positive value of wt, while the direction on the  i.e., humans, doors, and gestures, which are critical considera-
+right indicates a negative value. Leveraging this understanding,   tions when navigating in socially rich environments [38]. Gen-
+we structure the output of the VLM into a linguistic format        erative Pre-trained Transformer 4 with Vision (GPT-4V) [14]
+comprising the heading and the speed. Subsequently, our            is used as our VLM to comprehend the social dynamics and
+scoring module extracts Bht+1  (vht+1, wht+1)  A from              output the immediate preferred robot action. This follows a
+these tokens; vht+1 = vt + s, where s is derived from the          preliminary study that compared its performance with other
+response for the speed; wht+1 = d, where d is derived from         large and small VLMs. GPT-4V was able to produce reliable
+the response for the heading. Thus, the social cost term for       results with high consistency, achieving a reasonable average
+the next time step can be calculated:                              inference time of around three seconds. We combined our
+                                                                   approach with a low-level motion planner DWA [18]. We
+    Csto+ci1al = wl · v - vht+1 + wa · w - wht+1,     (4)          compare VLM-Social-Nav with DWA without social cost
+
+where wl and wa are non-negative weights. Given all the cost
+terms, our low-level optimization-based motion planner finds
+the robot action (v, w) that minimizes the cost.
+
+   Fig. 3 shows an example prompt P used in our experiment.
+We provide a high-level task description along with an image
+It captured from the robot's perspective. Furthermore, the
+current robot action at = (vt, wt)  A is provided. The
+angular velocity is mapped into corresponding directional in-
+structions based on predefined categories (i.e., positive values
+correspond to left, values near zero to straight, and negative
+values to right). Supplementary instructions regarding walk-
+ing etiquette are included. Although the VLM demonstrates
+proficient navigation abilities in the absence of explicit in-
+                                                                                                                                                                                                                               5
+
+                      Move right, slow down
+
+(a) Frontal Approach
+
+                      STOP, slow down
+
+(b) Frontal Approach
+   with Gesture
+
+                      Move right, constant speed
+
+(c) Intersection
+
+                      STOP, slow down
+
+(d) Narrow Doorway
+
+Fig. 4. Qualitative Results: the robot navigation behaviors with VLM-Social-Nav for four social navigation scenarios: (a) Frontal Approach, (b) Frontal
+Approach with Gesture, (c) Intersection, and (d) Narrow Doorway. The solid gray arrow shows the participant's path. The solid red arrow shows the robot's
+path. The red and gray dashed arrows show the robot's and participant's paths respectively, after a stop motion. A caption on the top left shows the result
+from the VLM.
+
+Csocial and BC [19] trained on a state-of-the-art, large-scale         · Frontal Approach: A robot and a human approach each
+social navigation dataset, SCAND [11]. The dataset contains               other from two ends of a straight trajectory.
+various examples of socially compliant navigation behaviors
+teleoperated by humans including sticking to the right of the          · Frontal Approach with Gesture: A robot and a human
+road and waiting for a human to pass. We expect that the model            approach each other from two ends of a straight trajectory.
+can learn to output socially compliant navigation behaviors               The human recognizes the robot and then gestures for it
+like the human demonstrations.                                            to stop.
+
+   Evaluating the social aspects of social robot navigation is         · Intersection: A robot and a human cross each other on
+inherently challenging [39]. To validate VLM-Social-Nav, we               perpendicular trajectories.
+carefully follow the social robot navigation studies [6], [40],
+which set up the benchmark scenarios and the metrics for               · Narrow Doorway: A robot and a human cross each
+measuring social compliance. We present qualitative, quanti-              other's paths by moving through a narrow doorway.
+tative, and user study results in four different social navigation
+scenarios:                                                          B. Qualitative Result
+
+                                                                       Based on the protocols and principles set by other stud-
+                                                                    ies [6], [40], the robot is expected to behave in a socially
+6
+
+                                                                    TABLE I
+   QUANTITATIVE RESULTS: PERFORMANCE COMPARISONS USING BC [19], DWA [18], AND VLM-SOCIAL-NAV
+
+                    Metric       Method     (a) Frontal Approach                            Scenario  (c) Intersection  (d) Narrow Doorway
+    Success Rate (%) 
+   Collision Rate (%)               BC               38.10        (b) Frontal Approach w/ Gesture          33.33                 42.86
+    User Study Score               DWA                100                                                  90.48                  100
+                            VLM-Social-Nav            100                            0                       100                  100
+                                                                                     0
+                                    BC               42.86                          100                    28.57                 38.10
+                                   DWA               28.57                                                 19.05                 38.10
+                            VLM-Social-Nav           14.29                         66.67                    4.76                  9.52
+                                                                                   19.05
+                                    BC           2.80 ± 1.45                                           2.80 ± 1.40           2.60 ± 1.33
+                                   DWA           3.99 ± 0.80                         0                 3.57 ± 0.62           3.59 ± 0.83
+                            VLM-Social-Nav       4.31 ± 0.72                                           4.35 ± 0.70           4.04 ± 0.74
+                                                                              2.23 ± 1.54
+                                                                              3.38 ± 0.64
+                                                                              4.28 ± 0.56
+
+compliant way as follows:                                                                                     TABLE II
+                                                                                           SOCIAL COMPLIANCE QUESTIONNAIRE
+   · Frontal Approach: The robot is expected to yield or
+      slow down and modify its original trajectory so that it          Scenario 1: Frontal Approach
+      does not obstruct the human path. Like driving rules in
+      North America, it is conventional to keep on the right.          1 The robot moved to avoid me.
+                                                                       2 The robot obstructed my path.
+   · Frontal Approach with Gesture: The robot is expected              3 The robot maintained a safe and comfortable distance at all times.
+      to yield by interpreting the human gesture.                      4 The robot nearly collided with me.
+                                                                       5 It was clear what the robot wanted to do.
+   · Intersection: The robot is expected to drive slowly when
+      it approaches the human. It may come to a complete stop          Scenario 2: Frontal Approach with Gesture
+      or modify its original trajectory to go behind the human
+      to not obstruct the path.                                        6 The robot maintained a safe and comfortable distance at all times.
+                                                                       7 The robot slowed down and stopped.
+   · Narrow Doorway: The robot is expected to wait outside             8 The robot followed my command
+      the door and yield to the human.                                 9 I felt like the robot paid attention to what I was doing.
+
+   Fig. 4 shows snapshots of the resulting robot motion using          Scenario 3: Intersection
+VLM-Social-Nav in four different scenarios. We demonstrate
+that VLM-Social-Nav follows the social convention and navi-            10 The robot let me cross the intersection by maintaining a safe and
+gates toward its goal as expected. Fig. 1 illustrates the resulting           comfortable distance.
+trajectories of VLM-Social-Nav in comparison to those of
+DWA and BC methods. A notable observation is that, while               11 The robot changed course to let me pass.
+DWA also effectively avoids collisions with individuals, VLM-          12 I felt like the robot paid attention to what I was doing.
+Social-Nav generates trajectories that align more closely with         13 The robot slowed down and stopped to let me pass.
+social norms. For instance, in the frontal approach scenario,
+while DWA tends to maneuver around the person either to                Scenario 4: Narrow Doorway
+the right or left, VLM-Social-Nav predominantly bypasses the
+person on the right side. Similarly, in the intersection scenario,     14 The robot got in my way.
+whereas DWA occasionally obstructs the person's path by                15 The robot moved to avoid me.
+veering to avoid collision directly in front, VLM-Social-Nav           16 The robot made room for me to enter or exit.
+adjusts its trajectory to pass behind the individual, adapting         17 It was clear what the robot wanted to do.
+effectively to the human's movement direction. Additionally,
+BC avoids humans but fails to recover and follow the original        manually intervene to avoid an imminent collision with the
+path. This leads to many failures in reaching the goal. The          human subject or surroundings. The user study score is an
+accompanying supplementary video shows the resulting robot           average score we obtained from the user study detailed in
+motions.                                                             Section IV-D.
+
+C. Quantitative Result                                                  Table I reports the results averaged over 21 runs for each
+                                                                     method and scenario. The results demonstrate that VLM-
+   To further validate VLM-Social-Nav, we evaluate the meth-         Social-Nav, DWA with social cost, outperforms other methods
+ods using three different metrics. The success rate describes        in every metric. DWA excels at following a path smoothly, yet
+whether the robot reaches the goal. For the frontal approach         it faces challenges in collision avoidance as it relies solely on
+with gesture scenario, we mark it as successful when the robot       the LiDAR sensor and does not consider social compliance.
+reacts to the gesture. The collision rate describes whether          Most of the collisions occurred when DWA navigated in a
+the robot collided with the human or other objects in the            way that interfered with a person's path, for example, going in
+environment. We also mark it as in collision when we                 front of the person when intersecting. We also observe that the
+                                                                     outcomes of BC varied. At times, when attempting to avoid
+                                                                     collisions, it failed to return to its original path and failed
+                                                                     to reach the goal. Conversely, there were instances where it
+                                                                     didn't attempt collision avoidance at all, resulting in colli-
+                                                                     sions with the participants. For gesture recognition, only our
+                                                                     proposed method successfully responded to the participants'
+                                                                               7
+
+        Frontal Approach    Frontal Approach with Gesture                      making continuous querying impractical for real-time nav-
+                                                                               igation tasks. To address this, we optimized VLM-Social-
+5                         5                                                    Nav in two ways: first, by formatting prompts and providing
+                                                                               predefined choices, which resulted in reduced response times.
+4                         4                                                    Second, we minimize queries by using a perception model to
+                                                                               detect social cues, allowing for timely VLM queries only when
+3                         3                                                    necessary. These choices enable and allow average response
+                                                                               times of 2-3 seconds, sufficient for human interaction and
+2                         2                                                    navigation. While such a limitation can be problematic in more
+                                                                               dynamic scenarios that require frequent interactions, future
+1                         1                                                    advancements in fast large language models promise further
+                                                                               extensions of our approach.
+0 Q1 Q2 Q3 Q4 Q5          0 Q1  Q2  Q3          Q4
+                                                                                  Socially aware navigation with VLM: We observe
+           Intersection         Narrow Doorway                                 that VLMs can analyze and reason about social interactions
+                                                                               from single images. Using various single images, including
+5                         5                                                    those collected by ourselves and from social robot navigation
+                                                                               datasets [11], [12], VLMs accurately describe scenes and
+4                         4                                                    suggest socially compliant navigation strategies with reasons.
+                                                                               For instance, for the image shown in Fig. 3, GPT-4V describes
+3                         3                                                    the scene as a person is walking towards the camera along a
+                                                                               sidewalk. To navigate this situation, GPT-4V advises the robot
+2                         2                                                    to yield the right of way because it is generally customary
+                                                                               to keep to the right side of the path when encountering
+1                         1                                                    someone coming from the opposite direction, similar to driving
+                                                                               rules. However, despite their powerful capabilities, VLMs can
+0 Q1 Q2 Q3 Q4             0 Q1  Q2  Q3          Q4                             still make mistakes. Therefore, relying solely on VLMs for
+                                                                               navigation decisions is not safe. Instead, we incorporate their
+   Ours DWA BC                                                                 output as a cost term in our overall decision-making process.
+
+Fig. 5. User Study Average Scores: the per-question average scores for the        More challenging scenarios: Although our robot exper-
+three methods in each scenario. The results indicate that VLM-Social-Nav       iments were conducted only indoors, according to the exam-
+earned the highest level of agreement from participants across all questions,  ple in Fig. 3, VLM-Social-Nav can be extended to outdoor
+highlighting its robust alignment with social norms.                           scenarios in more complex environments. VLMs successfully
+                                                                               retrieve significant environmental information for outdoor so-
+gestures. VLM-Social-Nav improves the average success rate                     cial robot navigation, such as sidewalks, zebra crossings, and
+by 27.38% and reduces the average collision rate by 19.05%                     cars. This will be our immediate focus for future work, i.e.,
+across four social navigation scenarios.                                       to advance into global outdoor navigation. We also aim to
+                                                                               extend our approach to complex scenarios involving multiple
+D. User Study                                                                  individuals. When tested with the scenario with one person,
+                                                                               VLM-Social-Nav successfully outputs socially compatible ac-
+   To validate the social compliance of VLM-Social-Nav, we                     tions, realizing the group of people in the scene. However,
+conduct a user study. We ask the participants to walk along                    when multiple groups are present, simple directions like left
+the predefined trajectory and then to answer questionnaires                    or right may not suffice to describe effective robot navigation.
+about the robot motion [40] (Table II). * denotes negatively
+formulated questions, for which we reverse-code the ratings to                                            V. CONCLUSION
+ensure comparability with the positively formulated ones. The
+three methods are randomly shuffled and repeated three times.                     We propose a novel social navigation approach based on
+Each scenario is tested on seven participants. We use a five-                  VLMs, focusing on real-time, socially compliant decision-
+level Likert scale to ask participants to rate their agreement                 making in human-centric environments. We utilize the per-
+with these statements.                                                         ception model to detect important social entities and prompt
+                                                                               a VLM to generate guidance for socially compliant behavior.
+   Fig. 5 and the user study scores in Table I show the study                  VLM-Social-Nav features a VLM-based scoring that ensures
+result. The plot shows the per-question average scores for                     socially appropriate and effective robot actions. This mini-
+the three methods in each scenario. Based on the results,                      mizes the dependence on extensive training datasets and elim-
+it's evident that VLM-Social-Nav receives the highest level                    inates the necessity for explicit rules or hand-tuned parameters
+of agreement from participants across all questions, indicating                typically associated with imitation learning approaches. By
+its strong adherence to social norms. The standard error of                    furnishing textual instructions to VLM, we can instruct the
+the BC method was large, indicating that the performance                       robot to adhere to specific navigation rules, such as navigating
+of the BC method was not consistent. The score difference                      on the right or left according to cultural norms. However,
+between VLM-Social-Nav and DWA was not large in the
+narrow doorway scenario. This is because, when attempting to
+enter the narrow doorway, DWA often failed to find a plan and
+froze, resembling the result of VLM-Social-Nav, a complete
+stop in front of the doorway.
+
+E. Discussion
+
+   Real-time navigation with VLM: GPT-4V and similar
+large VLMs require several seconds to respond to prompts,
+8
+
+interpreting social rules and deriving appropriate actions from                  [19] D. A. Pomerleau, "Alvinn: An autonomous land vehicle in a neural
+them based on raw robot perception remains complex. VLMs                               network," Advances in neural information processing systems, vol. 1,
+interpret social situations and determine actions based on these                       1988.
+rules, offering a more nuanced approach than simpler rule-
+or planning-based methods. We demonstrate and evaluate our                       [20] D. Song, J. Liang, A. Payandeh, X. Xiao, and D. Manocha, "Vlm-
+system in four different real-world social navigation scenarios                        social-nav: Socially aware robot navigation through scoring using vision-
+with a Turtlebot robot.                                                                language models," arXiv preprint arXiv:2404.00210, 2024.
+
+   One immediate future work is to explore visual prompting                      [21] J. Liang, Y.-L. Qiao, T. Guan, and D. Manocha, "Of-vo: Efficient
+methods [41], [42] to enhance spatial reasoning in VLMs by                             navigation among pedestrians using commodity sensors," IEEE Robotics
+marking the images. Another promising future direction is to                           and Automation Letters, vol. 6, no. 4, pp. 6148­6155, 2021.
+explore open-source VLMs, such as LLaVA [43]. Their access
+to lower-level information, such as log probabilities could                      [22] J. Liang, U. Patel, A. J. Sathyamoorthy, and D. Manocha, "Crowd-steer:
+help detect and address hallucinations. It is also interesting                         Realtime smooth and collision-free robot navigation in densely crowded
+to develop a VLM that generates high-level social navigation                           scenarios trained using high-fidelity simulation," in Proc. of the Twenty-
+instructions through chain-of-thought reasoning, and integrate                         Ninth International Conference on International Joint Conferences on
+it into an autonomous navigation system.                                               Artificial Intelligence, 2021, pp. 4221­4228.
+
+                             REFERENCES                                          [23] A. Best et al., "Densesense: Interactive crowd simulation using density-
+                                                                                       dependent filters." in Symposium on Computer Animation, 2014, pp.
+ [1] S. Technology. (2024) Starship. [Online]. Available: https://www.                 97­102.
+      starship.xyz/
+                                                                                 [24] B. Gopalakrishnan et al., "Prvo: Probabilistic reciprocal velocity ob-
+ [2] D. Robotics. (2024) Dilligent robotics. [Online]. Available: https:               stacle for multi robot navigation under uncertainty," in IEEE/RSJ In-
+      //www.diligentrobots.com/                                                        ternational Conference on Intelligent Robots and Systems, 2017, pp.
+                                                                                       1089­1096.
+ [3] Amazon. (2024) Meet astro, a home robot unlike any
+      other. [Online]. Available: https://www.aboutamazon.com/news/devices/      [25] H. Sun, W. Zhang, R. Yu, and Y. Zhang, "Motion planning for mobile
+      meet-astro-a-home-robot-unlike-any-other                                         robots--focusing on deep reinforcement learning: A systematic review,"
+                                                                                       IEEE Access, vol. 9, pp. 69 061­69 081, 2021.
+ [4] R. Mirsky, X. Xiao, J. Hart, and P. Stone, "Conflict avoidance in social
+      navigation--a survey," ACM Transactions on Human-Robot Interaction,        [26] S. Aradi, "Survey of deep reinforcement learning for motion planning of
+      vol. 13, no. 1, pp. 1­36, 2024.                                                  autonomous vehicles," IEEE Transactions on Intelligent Transportation
+                                                                                       Systems, vol. 23, no. 2, pp. 740­759, 2020.
+ [5] C. Mavrogiannis et al., "Core challenges of social robot navigation: A
+      survey," ACM Transactions on Human-Robot Interaction, vol. 12, no. 3,      [27] P. Liu, D. F. Glas, T. Kanda, and H. Ishiguro, "Data-driven hri: Learning
+      pp. 1­39, 2023.                                                                  social behaviors by example from human­human interaction," IEEE
+                                                                                       Transactions on Robotics, vol. 32, no. 4, pp. 988­1008, 2016.
+ [6] A. Francis et al., "Principles and guidelines for evaluating social robot
+      navigation algorithms," ACM Transactions on Human-Robot Interaction,       [28] M. Li, R. Jiang, S. S. Ge, and T. H. Lee, "Role playing learning for
+      2024.                                                                            socially concomitant mobile robot navigation," CAAI Transactions on
+                                                                                       Intelligence Technology, vol. 3, no. 1, pp. 49­58, 2018.
+ [7] N. Hirose et al., "Sacson: Scalable autonomous control for social
+      navigation," IEEE Robotics and Automation Letters, 2023.                   [29] M. Nazeri, J. Wang, A. Payandeh, and X. Xiao, "Vanp: Learning where
+                                                                                       to see for navigation with self-supervised vision-action pre-training,"
+ [8] A. H. Raj et al., "Targeted learning: A hybrid approach to social                 2024.
+      robot navigation," in IEEE International Conference on Robotics and
+      Automation, 2024.                                                          [30] R. o. Bommasani, "On the opportunities and risks of foundation models,"
+                                                                                       arXiv preprint arXiv:2108.07258, 2022.
+ [9] H. Kretzschmar et al., "Socially compliant mobile robot navigation via
+      inverse reinforcement learning," The International Journal of Robotics     [31] M. Ahn et al., "Do as i can, not as i say: Grounding language in robotic
+      Research, vol. 35, no. 11, pp. 1289­1307, 2016.                                  affordances," 2022.
+
+[10] A. Rudenko et al., "Tho¨r: Human-robot navigation data collection and       [32] J. Mao, Y. Qian, J. Ye, H. Zhao, and Y. Wang, "Gpt-driver: Learning to
+      accurate motion trajectories dataset," IEEE Robotics and Automation              drive with gpt," 2023.
+      Letters, vol. 5, no. 2, pp. 676­682, 2020.
+                                                                                 [33] B. Yu, H. Kasaei, and M. Cao, "L3mvn: Leveraging large language mod-
+[11] H. Karnan et al., "Socially compliant navigation dataset (scand): A large-        els for visual target navigation," in IEEE/RSJ International Conference
+      scale dataset of demonstrations for social navigation," IEEE Robotics            on Intelligent Robots and Systems, 2023, pp. 3554­3560.
+      and Automation Letters, 2022.
+                                                                                 [34] B. Li, Y. Wang, J. Mao, B. Ivanovic, S. Veer, K. Leung, and M. Pavone,
+[12] D. M. Nguyen, M. Nazeri, A. Payandeh, A. Datar, and X. Xiao, "Toward              "Driving everywhere with large language model policy adaptation,"
+      human-like social robot navigation: A large-scale, multi-modal, social           2024.
+      human navigation dataset," in IEEE/RSJ International Conference on
+      Intelligent Robots and Systems, 2023, pp. 7442­7447.                       [35] A. Radford et al., "Learning transferable visual models from natural
+                                                                                       language supervision," in International conference on machine learning.
+[13] J. Wei et al., "Chain-of-thought prompting elicits reasoning in large             PMLR, 2021, pp. 8748­8763.
+      language models," Advances in Neural Information Processing Systems,
+      vol. 35, pp. 24 824­24 837, 2022.                                          [36] J. Duan, W. Yuan, W. Pumacay, Y. R. Wang, K. Ehsani, D. Fox, and
+                                                                                       R. Krishna, "Manipulate-anything: Automating real-world robots using
+[14] J. Achiam, S. Adler, S. Agarwal, L. Ahmad, I. Akkaya, F. L. Aleman,               vision-language models," arXiv preprint arXiv:2406.18915, 2024.
+      D. Almeida, J. Altenschmidt, S. Altman, S. Anadkat et al., "Gpt-4
+      technical report," arXiv preprint arXiv:2303.08774, 2023.                  [37] S. Min et al., "Rethinking the role of demonstrations: What makes in-
+                                                                                       context learning work?" arXiv preprint arXiv:2202.12837, 2022.
+[15] L. Wen et al., "On the road with gpt-4v (ision): Explorations of utilizing
+      visual-language model as autonomous driving agent," in ICLR 2024           [38] T. Kruse, A. K. Pandey, R. Alami, and A. Kirsch, "Human-aware
+      Workshop on Large Language Model (LLM) Agents, 2024.                             robot navigation: A survey," Robotics and Autonomous Systems, vol. 61,
+                                                                                       no. 12, pp. 1726­1743, 2013.
+[16] D. Shah et al., "Lm-nav: Robotic navigation with large pre-trained
+      models of language, vision, and action," 2022.                             [39] N. Tsoi, J. Romero, and M. Va´zquez, "How do robot experts mea-
+                                                                                       sure the success of social robot navigation?" in Companion of the
+[17] J. Redmon, S. Divvala, R. Girshick, and A. Farhadi, "You only look                2024 ACM/IEEE International Conference on Human-Robot Interaction,
+      once: Unified, real-time object detection," in Proc. of the IEEE Conf.           2024, pp. 1063­1066.
+      on Computer Vision and Pattern Recognition, 2016, pp. 779­788.
+                                                                                 [40] S. Pirk, E. Lee, X. Xiao, L. Takayama, A. Francis, and A. Toshev,
+[18] D. Fox, W. Burgard, and S. Thrun, "The dynamic window approach to                 "A protocol for validating social navigation policies," arXiv preprint
+      collision avoidance," IEEE Robotics & Automation Magazine, vol. 4,               arXiv:2204.05443, 2022.
+      no. 1, pp. 23­33, 1997.
+                                                                                 [41] S. Nasiriany et al., "Pivot: Iterative visual prompting elicits actionable
+                                                                                       knowledge for vlms," arXiv preprint arXiv:2402.07872, 2024.
+
+                                                                                 [42] F. Liu, K. Fang, P. Abbeel, and S. Levine, "Moka: Open-vocabulary
+                                                                                       robotic manipulation through mark-based visual prompting," in First
+                                                                                       Workshop on Vision-Language Models for Navigation and Manipulation
+                                                                                       at ICRA 2024, 2024.
+
+                                                                                 [43] H. Liu, C. Li, Q. Wu, and Y. J. Lee, "Visual instruction tuning,"
+                                                                                       Advances in neural information processing systems, vol. 36, 2024.
+

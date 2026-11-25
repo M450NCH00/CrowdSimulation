@@ -1,0 +1,730 @@
+                                          Lifelong Multi-Agent Path Finding
+                                        for Online Pickup and Delivery Tasks
+
+arXiv:1705.10868v1 [cs.AI] 30 May 2017             Hang Ma                                                               Jiaoyang Li
+
+                                        University of Southern California                                               Tsinghua University
+
+                                             hangma@usc.edu                                                  lijiaoyang13@mails.tsinghua.edu.cn
+
+                                             T. K. Satish Kumar                                                          Sven Koenig
+
+                                        University of Southern California                                      University of Southern California
+
+                                           tkskwork@gmail.com                                                        skoenig@usc.edu
+
+                                        ABSTRACT                                                             The agents are constantly engaged with new tasks and have
+                                                                                                             to navigate between locations where the tasks need to be
+                                        The multi-agent path-finding (MAPF) problem has recently             executed. Examples include aircraft-towing vehicles [18],
+                                        received a lot of attention. However, it does not capture            warehouse robots [31], office robots [28], and game charac-
+                                        important characteristics of many real-world domains, such           ters in video games [21]. In the near future, for instance,
+                                        as automated warehouses, where agents are constantly                 aircraft-towing vehicles might navigate autonomously to
+                                        engaged with new tasks. In this paper, we therefore study            aircraft and tow them from the runways to their gates so
+                                        a lifelong version of the MAPF problem, called the multi-            as to reduce pollution, energy consumption, congestion, and
+                                        agent pickup and delivery (MAPD) problem. In the MAPD                human workload. Today, warehouse robots already navigate
+                                        problem, agents have to attend to a stream of delivery tasks         autonomously to inventory pods and move them from their
+                                        in an online setting. One agent has to be assigned to each           storage locations to packing stations.
+                                        delivery task. This agent has to first move to a given pickup
+                                        location and then to a given delivery location while avoiding           Past research efforts have concentrated mostly on a
+                                        collisions with other agents. We present two decoupled               "one-shot" version of this problem, called the multi-agent
+                                        MAPD algorithms, Token Passing (TP) and Token Passing                path-finding (MAPF) problem, which has been studied in
+                                        with Task Swaps (TPTS). Theoretically, we show that they             artificial intelligence, robotics, and operations research. In
+                                        solve all well-formed MAPD instances, a realistic subclass           the MAPF problem, each agent has to move from its current
+                                        of MAPD instances. Experimentally, we compare them                   location to its destination while avoiding collisions with
+                                        against a centralized strawman MAPD algorithm without                other agents in a known common environment. The number
+                                        this guarantee in a simulated warehouse system. TP can               of agents is the same as the number of destinations, and the
+                                        easily be extended to a fully distributed MAPD algorithm             MAPF task ends once all agents reach their destinations.
+                                        and is the best choice when real-time computation is of pri-         Therefore, the MAPF problem does not capture important
+                                        mary concern since it remains efficient for MAPD instances           characteristics of many real-world domains, such as auto-
+                                        with hundreds of agents and tasks. TPTS requires limited             mated warehouses, where agents are constantly engaged
+                                        communication among agents and balances well between TP              with new tasks.
+                                        and the centralized MAPD algorithm.
+                                                                                                                In this paper, we therefore study a "lifelong" version
+                                        Keywords                                                             of the MAPF problem, called the multi-agent pickup and
+                                                                                                             delivery (MAPD) problem. In the MAPD problem, agents
+                                        agent coordination; multi-agent path finding; path planning;         have to attend to a stream of delivery tasks in a known
+                                        pickup and delivery tasks; task assignment                           common environment that is modeled as an undirected
+                                                                                                             graph. Tasks can enter the system at any time and are
+                                        1. INTRODUCTION                                                      modeled as exogenous events that are characterized by a
+                                                                                                             pickup location and a delivery location each. An agent that
+                                           Many real-world applications of multi-agent systems re-           is currently not executing any task can be assigned to an
+                                        quire agents to operate in known common environments.                unexecuted task. In order to execute the task, the agent
+                                                                                                             has to first move from its current location to the pickup
+                                        Our research was supported by NSF under grant numbers                location and then to the delivery location of the task while
+                                        1409987 and 1319966. The views and conclusions contained             avoiding collisions with other agents. We first formalize the
+                                        in this document are those of the authors and should not be          MAPD problem and then present two decoupled MAPD
+                                        interpreted as representing the official policies, either expressed  algorithms, Token Passing (TP) and Token Passing with
+                                        or implied, of the sponsoring organizations, agencies or the U.S.    Task Swaps (TPTS), both of which are based on existing
+                                        government.                                                          MAPF algorithms. Theoretically, we show that they solve
+                                                                                                             all well-formed MAPD instances [2], a realistic subclass
+                                        Appears in: Proc. of the 16th International Conference on            of MAPD instances. Experimentally, we compare them
+                                        Autonomous Agents and Multiagent Systems (AAMAS 2017),               against a centralized strawman MAPD algorithm without
+                                        S. Das, E. Durfee, K. Larson, M. Winikoff (eds.),                    this guarantee in a simulated warehouse system.
+                                        May 8­12, 2017, S~ao Paulo, Brazil.
+                                        Copyright c 2017, International Foundation for Autonomous Agents
+                                        and Multiagent Systems (www.ifaamas.org). All rights reserved.
+2. BACKGROUND AND RELATED WORK                                                                                s1 a1 a2 g1
+
+   The MAPD problem requires both the assignment of                Figure 1: The figure shows a MAPD instance with
+agents to tasks in an online and lifelong setting and the          two free agents a1 and a2 and one task 1 with pickup
+planning of collision-free paths. In a lifelong setting, agents    location s1 and delivery location g1.
+have to attend to a stream of tasks. Therefore, agents
+cannot rest in their destinations after they finish executing      to the task set. Each task j  T is characterized by a
+tasks. In an online setting, tasks can enter the system at         pickup location sj  V and a delivery location gj  V . An
+any time. Therefore, assigning agents to tasks and path            agent is called free iff it is currently not executing any task.
+planning cannot be done in advance but rather need to be           Otherwise, it is called occupied. A free agent can be assigned
+done during execution in real-time.                                to any task j  T . It then has to move from its current
+                                                                   location via the pickup location sj of the task to the delivery
+   The decentralized assignment of agents to more than one         location gj of the task. (Any agent that had been assigned
+task each has been studied before in isolation [26, 33, 17].       to this task previously no longer has this obligation.) When
+The decentralized planning of collision-free paths has also        the agent reaches the pickup location, it starts to execute
+been studied before in isolation, including with reactive          the task and the task is removed from T . When it reaches
+approaches [27] and prioritized approaches [6], but these ap-      the delivery location, it finishes executing the task, which
+proaches can result in deadlocks. The planning of collision-       implies that it becomes free again and is no longer assigned
+free paths has also been studied in the context of the MAPF        to the task. Note that any free agent can be assigned to
+problem, which is a one-shot (as opposed to a lifelong)            any task in the task set. An agent can be assigned to a
+version of the MAPD problem. It is NP-hard to solve                different task in the task set while it is still moving to the
+optimally for minimizing flowtime (the sum of the number of        pickup location of the task it is currently assigned to but
+timesteps required by all agents to reach their destinations       it has first to finish executing the task after it has reached
+and stop moving) and NP-hard to approximate within any             its pickup location. These properties model delivery tasks,
+constant factor less than 4/3 for minimizing makespan (the         where agents can often be re-tasked before they have picked
+timestep when all agents have reached their destinations and       up a good but have to deliver it afterward.
+stop moving) [16]. It can be solved via reductions to Boolean
+Satisfiability [25], Integer Linear Programming [32], and             The objective is to finish executing each task as quickly
+Answer Set Programming [5]. Optimal dedicated MAPF                 as possible. Consequently, the effectiveness of a MAPD
+algorithms include Independence Detection with Operator            algorithm is evaluated by the average number of timesteps,
+Decomposition [22], Enhanced Partial Expansion A* [7],             called service time, needed to finish executing each task after
+Increasing Cost Tree Search [20], M* [29], and Conflict-           it was added to the task set. A MAPD algorithm solves a
+Based Search [19, 1, 3]. Suboptimal dedicated MAPF algo-           MAPD instance iff the resulting service time of all tasks is
+rithms include Windowed-Hierarchical Cooperative A* [21,           bounded.
+23], Push and Swap/Rotate [12, 4], TASS [10], BIBOX [24],
+and MAPP [30]. The MAPF problem has recently been                  3.2 Well-Formed MAPD Instances
+generalized to more clearly resemble real-world settings [8,
+14, 9, 15, 13] but these versions are still one-shot.                 Not every MAPD instance is solvable. Figure 1 shows
+                                                                   an example with two free agents a1 and a2 where neither
+3. PROBLEM DEFINITION                                              agent can finish executing task 1 with pickup location
+                                                                   s1 and delivery location g1. We now provide a sufficient
+   In this section, we first formalize the MAPD problem and        condition that makes MAPD instances solvable, namely
+then define well-formed MAPD instances.                            being well-formed [2]. The intuition is that agents should
+                                                                   only be allowed to rest (that is, stay forever) in locations,
+3.1 MAPD Problem                                                   called endpoints, where they cannot block other agents.
+                                                                   For example, office workspaces are typically placed in office
+   An instance of the MAPD problem consists of m agents            environments so as not to block routes. The set Vep of
+A = {a1, a2 . . . am} and an undirected connected graph G =        endpoints of a MAPD instance contains all initial locations
+(V, E) whose vertices V correspond to locations and whose          of agents, all pickup and delivery locations of tasks, and
+edges E correspond to connections between locations that           perhaps additional designated parking locations. Let Vtsk
+the agents can move along. Let li(t)  V denote the location        denote the set of all possible pickup and delivery locations
+of agent ai in discrete timestep t. Agent ai starts in its         of tasks, called the task endpoints. The set Vep \ Vtsk is
+initial location li(0). In each timestep t, the agent either       called the set of non-task endpoints.
+stays in its current location li(t) or moves to an adjacent
+location, that is, li(t + 1) = li(t) or (li(t), li(t + 1))  E.     Definition 1. A MAPD instance is well-formed iff a) the
+Agents need to avoid collisions with each other: (1) Two           number of tasks is finite, b) there are no fewer non-task
+agents cannot be in the same location in the same timestep,        endpoints than the number of agents, and c) for any two
+that is, for all agents ai and ai with ai = ai and timesteps       endpoints, there exists a path between them that traverses
+t: li(t) = li (t); and (2) two agents cannot move along the        no other endpoints.
+same edge in opposite directions in the same timestep, that
+is, for all agents ai and ai with ai = ai and all timesteps t:        Well-formed MAPD instances (with at least one task)
+li(t) = li (t + 1) or li (t) = li(t + 1). A path is a sequence of  have at least m + 1 endpoints. Figure 2 shows three MAPD
+locations with associated timesteps, that is, a mapping from       instances. The MAPD instance on the left is well-formed.
+an interval of timesteps to locations. Two paths collide iff       The MAPD instance in the center is not well-formed because
+the two agents that move along them collide.                       there are two agents but only one non-task endpoint. The
+
+   Consider a task set T that contains the set of unexecuted
+tasks. In each timestep, the system adds all new tasks
+e1  e2  e1  e2          e2                                             Algorithm 1: Token Passing (TP)
+
+                    e1                                             1 /* system executes now */;
+
+                                                                   2 Initialize token with the (trivial) path [loc(ai)] for each agent ai;
+
+                                                                   3 while true do
+
+e3  e4  e3  e4  e3      e4                                         4   Add all new tasks, if any, to the task set T ;
+
+                                                                   5   while agent ai exists that requests token do
+
+                                                                   6   /* system sends token to ai - ai executes now */;
+
+Figure 2: The figure shows three MAPD instances.                   7   T  {j  T |no other path in token ends in sj or gj };
+Black cells are blocked. Blue and green circles are
+the initial locations of agents. Red dashed circles                8   if T =  then
+are task endpoints. Black dashed circles are non-
+task endpoints.                                                    9     arg minj T h(loc(ai), sj );
+
+                                                                   10  Assign ai to  ;
+
+                                                                   11  Remove  from T ;
+
+                                                                   12  Update ai's path in token with Path1(ai,  , token);
+
+                                                                   13  else if no task j  T exists with gj = loc(ai) then
+
+                                                                   14  Update ai's path in token with the path [loc(ai)];
+
+MAPD instance on the right is not well-formed because,             15  else
+for example, all paths between endpoints e2 and e3 traverse
+endpoint e1. We design two decoupled MAPD algorithms               16  Update ai's path in token with Path2(ai, token);
+in the following that both solve all well-formed MAPD
+instances (even though they might not execute all tasks in         17  /* ai returns token to system - system executes now */;
+case the number of tasks is infinite).
+                                                                   18  All agents move along their paths in token for one timestep;
+4. DECOUPLED MAPD ALGORITHMS
+                                                                   19  /* system advances to the next timestep */;
+   In this section, we present first a simple decoupled MAPD
+algorithm, called Token Passing (TP), and then an improved         timestep, the system adds all new tasks, if any, to the task
+version, called Token Passing with Task Swaps (TPTS), that         set [Line 4]. Any agent that has reached the end of its path
+is more effective. Decoupled MAPD algorithms are those             in the token requests the token once per timestep. (It turns
+where each agent assigns itself to tasks and computes its          out that one can easily drop the condition and let any free
+own collision-free paths given some global information.            agent request the token once per timestep for both decoupled
+                                                                   MAPD algorithms in this paper.) The system then sends
+4.1 Token Passing (TP)                                             the token to each agent that requests it, one after the other
+                                                                   [Lines 5-6]. The agent with the token chooses a task from
+   Token Passing (TP) is based on an idea similar to               the task set such that no path of other agents in the token
+Cooperative A* [21], where agents plan their paths one after       ends in the pickup or delivery location of the task [Line 7].
+the other. Its task set contains all tasks that have no agents
+assigned to them. We describe a version of TP that uses                · If there is at least one such task, then the agent assigns
+token passing and can thus easily be extended to a fully                  itself to the one with the smallest h-value from its
+distributed MAPD algorithm. The token is a synchronized                   current location to the pickup location of the task and
+shared block of memory that contains the current paths of                 removes this task from the task set [Lines 9-11]. The
+all agents, task set, and agent assignments. All MAPD                     agent then calls function Path1 to update its path in
+algorithms in this paper, including TP, always assume that                the token with a cost-minimal path that a) moves from
+an agent rests (that is, stays forever) in the last location of           its current location via the pickup location of the task
+its path in the token when it reaches the end of it. Token                to the delivery location of the task and b) does not
+passing has previously been used to develop COBRA [2],                    collide with the paths of other agents stored in the
+which is a MAPF-like algorithm that does not take into                    token [Line 12].
+account that pickup or delivery locations of tasks can be
+occupied by agents not executing them and can thus result              · If there is no such task, then the agent does not assign
+in deadlocks.                                                             itself to a task in the current timestep. If the agent
+                                                                          is not in the delivery location of a task in the task
+   Algorithm 1 shows the pseudo-code of TP, where loc(ai)                 set, then it updates its path in the token with the
+denotes the current location of agent ai. Agent ai finds all              trivial path where it rests in its current location [Line
+paths via A* searches in a state space whose states are pairs             14]. Otherwise, to avoid deadlocks, it calls function
+of locations and timesteps. A directed edge exists from state             Path2 to update its path in the token with a cost-
+(l, t) to state (l , t + 1) iff l = l or (l, l )  E. State (l, t)         minimal path that a) moves from its current location to
+is removed from the state space iff ai being in location l at             an endpoint such that the delivery locations of all tasks
+timestep t results in it colliding with other agents that move            in the task set are different from the chosen endpoint
+along their paths in the token. Similarly, the edge from state            and no path of other agents in the token ends in the
+(l, t) to state (l , t + 1) is removed from the state space iff           chosen endpoint and b) does not collide with the paths
+ai moving from location l to location l at timestep t results             of other agents stored in the token [Line 16].
+in it colliding with other agents that move along their paths
+in the token. Since cost-minimal paths need to be found               Finally, the agent returns the token to the system and
+only to endpoints, the path costs from all locations to all        moves along its path in the token [Lines 17-18].
+endpoints are computed in a preprocessing phase and then
+used as h-values for all A* searches. TP works as follows:            We now prove that the agent is always able to find a path
+The system initializes the token with the trivial paths where      because it finds a path only when it is at an endpoint and
+all agents rest in their initial locations [Line 2]. In each       thus has to find only a path from an endpoint to an endpoint.
+
+                                                                   Property 1. Function Path1 returns a path successfully for
+                                                                   well-formed MAPD instances.
+Proof. We construct a path from the current location loc(ai)         Algorithm 2: Token Passing with Task Swaps (TPTS)
+of agent ai (which is an endpoint) via the pickup location sj
+of task j to the delivery location gj of task j that does not    1 /* system executes now */;
+collide with the paths of other agents stored in the token.
+Due to Definition 1, there exists a path from loc(ai) via sj     2 Initialize token with the (trivial) path [loc(ai)] for each agent ai;
+to gj that traverses no other endpoints. All paths stored in
+token end in endpoints that are different from loc(ai), sj,      3 while true do
+and gj. Thus, this path does not collide with the paths of
+the other agents if ai moves along it after all other agents     4   Add all new tasks, if any, to the task set T ;
+have moved along their paths.
+                                                                 5   while agent ai exists that requests token do
+Property 2. Function Path2 returns a path successfully for
+well-formed MAPD instances.                                      6   /* system sends token to ai - ai executes now */;
+
+Proof. Due to Definition 1, there exist at least m non-task      7   GetTask(ai, token);
+endpoints and thus at least one non-task endpoint such that
+no path of agents other than agent ai in the token ends in the   8   /* ai returns token to system - system executes now */;
+non-task endpoint. Of course, the delivery locations of all
+tasks in the task set are different from the non-task endpoint   9   All agents move along their paths in token for one timestep
+as well. We construct a path from the current location
+loc(ai) of agent ai (which is an endpoint) to the chosen             and remove tasks from T when they start to execute them;
+endpoint that does not collide with the paths of other agents
+stored in the token. Due to Definition 1, there exists a path    10  /* system advances to the next timestep */;
+from loc(ai) to the chosen endpoint that traverses no other
+endpoints. All paths stored in token end in endpoints that       11 Function GetTask(ai, token)
+are different from loc(ai) and the chosen endpoint. Thus,
+this path does not collide with the paths of the other agents    12  T  {j  T |no other path in token ends in sj or gj };
+if ai moves along it after all other agents have moved along
+their paths.                                                     13  while T =  do
+
+Theorem 3. All well-formed MAPD instances are solvable,          14    arg minj T h(loc(ai), sj );
+and TP solves them.
+                                                                 15  Remove  from T ;
+Proof. We show that each task is eventually assigned some
+agent and executed by it. Each agent requests the token          16  if no agent is assigned to  then
+after a bounded number of timesteps, and no agent rests in
+the delivery location of a task in the task set due to Line 16.  17        Assign ai to  ;
+Thus, the condition on Line 8 becomes eventually satisfied
+and some agent assigns itself to some task on Line 10. The       18        Update ai's path in token with Path1(ai,  , token);
+agent is then able to execute it due to Properties 1 and 2.
+                                                                 19        return true;
+4.2 Token Passing with Task Swaps (TPTS)
+                                                                 20  else
+   TP is simple but can be made more effective. Token
+Passing with Task Swaps (TPTS) is similar to TP except           21        Remember token, task set, and agent assignments;
+that its task set now contains all unexecuted tasks, rather
+than only all tasks that have no agents assigned. This means     22        ai  agent that is assigned to  ;
+that an agent with the token can assign itself not only to a
+task that has no agent assigned but also to a task that is       23        Unassign ai from  and assign ai to  ;
+already assigned another agent as long as that agent is still
+moving to the pickup location of the task. This might be         24        Remove ai 's path from token;
+beneficial when the former agent can move to the pickup
+location of the task in fewer timesteps than the latter agent.   25        Path1(ai,  , token);
+The latter agent is then no longer assigned to the task and
+no longer needs to execute it. The former agent therefore        26        Compare when ai reaches sj on its path in token to
+sends the token to the latter agent so that the latter agent
+can try to assign itself to a new task.                                    when ai reaches sj on its path in token';
+                                                                           if ai reaches sj earlier than ai then
+   Algorithm 2 shows the pseudo-code of TPTS. It uses the        27
+same main loop [Lines 3-10] and the same functions Path1
+and Path2 as TP. Agent ai with the token executes function       28               /* ai sends token to ai - ai executes now */;
+GetTask [Line 7], where it tries to assign itself to a task in
+the task set T and find a path to an endpoint. The call of       29               success  GetTask(ai, token);
+function GetTask returns success (true) if agent ai finds a
+path to an endpoint and failure (false) otherwise.               30               /* ai returns token to ai - ai executes now */;
+
+                                                                 31               if success then
+
+                                                                 32                 return true;
+
+                                                                 33        Restore token, task set, and agent assignments;
+
+                                                                 34  if loc(ai) is not an endpoint then
+
+                                                                 35  Update ai's path in token with Path2(ai, token);
+
+                                                                 36  if path was found then
+
+                                                                 37        return true;
+
+                                                                 38  else
+
+                                                                 39  if no task j  T exists with gj = loc(ai) then
+
+                                                                 40        Update ai's path in token with the path [loc(ai)];
+
+                                                                 41  else
+
+                                                                 42        Update ai's path in token with Path2(ai, token);
+
+                                                                 43  return true;
+
+                                                                 44  return false;
+
+                                                                    When executing function GetTask, agent ai considers all
+                                                                 tasks  from the task set such that no path of other agents
+                                                                 in the token ends in the pickup or delivery location of the
+                                                                 task [Line 12], one after the other in order of increasing h-
+                                                                 values from its current location to the pickup locations of
+                                                                 the tasks [Lines 13-15]. If no agent is assigned to the task,
+                                                                 then (as in TP) agent ai assigns itself to the task, updates its
+                                                                 path in the token with function Path1 and returns success
+                                                                 [Lines 17-19]. Otherwise, agent ai unassigns the agent ai
+                                                                 assigned to the task and assigns itself to the task [Line 23].
+                                                                 It removes the path of agent ai from the token and updates
+                                                                 its own path in the token with function Path1 [Lines 24-25].
+                                                                 If agent ai reaches the pickup location of the task with fewer
+                                                                 timesteps than agent ai , then it sends the token to agent ai ,
+                                                                 which executes function GetTask to try to assign itself to a
+                                                                 new task and eventually returns the token to agent ai [Lines
+                                                                 28-30]. If agent ai returns success, then agent ai returns
+                                                                 success as well [Lines 31-32]. In all other cases, agent ai
+                                                                 reverses all changes to the paths in the token, task set, and
+agent assignments and then considers the next task  [Lines         a1    a1    a1
+33].
+                                                                   1 a2  1 a2  1 a2
+   Once agent ai has considered all tasks  unsuccessfully,         2     2     2
+then it does not assign itself to a task in the current timestep.
+If it is not in an endpoint (which can happen only during          Figure 3: The figure shows a MAPF instance. The
+a call of Function GetTask on Line 29), then it updates            pickup location is the same as the delivery location
+its path in the token with function Path2 to move to an            for both two tasks. Blue and green circles are the
+endpoint [Line 35]. The call can fail since agent ai is not at     initial locations of agents. Dashed circles are the
+an endpoint. Agent ai returns success or failure depending         pickup/delivery locations.
+on whether it was able to find a path [Lines 37 and 44].
+Otherwise, (as in TP) if the agent is not in the delivery          to 2. Figure 3 (right) shows the paths of a1 and a2. The
+location of a task in the task set, then it updates its path in    service time is three (the average of five and one).
+the token with the trivial path where it rests in its current
+location [Line 40]. Otherwise, to avoid deadlocks, it updates      5. CENTRALIZED ALGORITHM
+its path in the token with Function Path2 [Line 42]. In both
+cases, it returns success [Line 43].                                  In this section, we develop a centralized strawman MAPD
+                                                                   algorithm, CENTRAL, to evaluate how effective our decou-
+   Finally, the agent returns the token to the system and          pled MAPD algorithms are. We want CENTRAL to be
+moves along its path in the token, removing the task that it       reasonably efficient and effective but do not require that it
+is assigned to (if any) from the task set once it reaches the      is optimally effective or even solves all well-formed MAPD
+pickup location of the task (and thus starts to execute it)        instances. The agents of a centralized MAPD algorithm can
+[Lines 8-9].                                                       communicate more than the ones of TPTS, and the ones
+                                                                   of TPTS communicate more than the ones of TP. Thus,
+Property 4. Function GetTask returns successfully for              we expect the MAPD algorithms to be in increasing order
+well-formed MAPD instances when called on Line 7.                  of effectiveness: TP, TPTS, and CENTRAL. For the same
+                                                                   reason, we expect the MAPD algorithms to be in increasing
+Proof. Function GetTask returns in finite time (and the            order of efficiency: CENTRAL, TPTS, and TP.
+number of times an agent can unassign another agent from
+any task is bounded during its execution) because a) the              In each timestep, CENTRAL first assigns endpoints to
+number of tasks in the task set is finite; b) an agent can         all agents and then solves the resulting MAPF instance to
+unassign another agent from a task only if it reaches the          plan paths for all agents from their current locations to their
+pickup location of the task with fewer timesteps than the          assigned endpoints simultaneously. Finally, all agents move
+other agent; c) a task that has some agent assigned always         along their paths for one timestep and the procedure repeats.
+continues to have some agent assigned until it has been            Agent Assignment First, CENTRAL considers each agent,
+executed; and d) the functions Path1 and Path2 return in           one after the other, that rests at the pickup location of
+finite time. We show that an agent that executes function          an unexecuted task. If the delivery location of the task is
+GetTask on Line 7 finds a path to an endpoint. The agent is        currently not assigned to other agents, CENTRAL assigns
+always able to find paths with functions Path1 and Path 2          the agent to the corresponding unexecuted task (if it is
+on all lines but Line 35 because it is then at an endpoint and     not assigned to the task already) and assigns the delivery
+thus has to find a path from an endpoint to an endpoint. The       location of the task to the agent. The agent then starts
+proofs are similar to those of Properties 1 and 2. However,        to execute the task and thus becomes occupied. Then,
+the agent is not guaranteed to find a path with function           CENTRAL assigns each free agent either the pickup location
+Path2 on Line 35 because it is then not at an endpoint and         of an unexecuted task or some other endpoint as parking
+thus has to find a path from a non-endpoint to an endpoint.        location. To make the resulting MAPF problem solvable, the
+Since the agent is at an endpoint during the call of function      endpoints assigned to all agents must be pairwise different.
+GetTask on Line 7, it does not execute Line 35, finds a path,      Agents are assigned pickup locations of unexecuted tasks
+and returns success.                                               in order to execute the tasks afterward. Thus, when
+                                                                   CENTRAL assigns pickup locations of unexecuted tasks
+Theorem 5. TPTS solves all well-formed MAPD instances.             to agents, we want the delivery locations of these tasks
+                                                                   to be different from the endpoints assigned to all agents
+Proof. The proof is similar to the one of Theorem 3 but uses       (except for their own pickup locations) and from each other.
+Property 4.                                                        CENTRAL achieves these constraints as follows:
+
+   TPTS is often more effective than TP but Figure 3 shows            First, CENTRAL greedily constructs a set of possible
+that this is not guaranteed. The figure shows a MAPD               endpoints X for the free agents as follows: CENTRAL
+instance with two agents a1 and a2 and two tasks 1 and             greedily constructs a subset T of unexecuted tasks, starting
+2. The pickup location is the same as the delivery location        with the empty set, by checking for each unexecuted task,
+for each task. Assume that both a1 and a2 request the              one after the other, whether its pickup and delivery locations
+token and the system sends it to a1 first. a1 assigns itself       are different from the delivery locations of all executed tasks
+to 1. Figure 3 (left) shows the path of a1. The system
+then sends the token to a2 next. In TP, a2 assigns itself to
+2. Figure 3 (center) shows the paths of a1 and a2. The
+resulting service time is two. In TPTS, however, a2 assigns
+itself to 1 because it can reach the pickup location of 1
+with fewer timesteps than a1. In return, a1 assigns itself
+and the pickup and delivery locations of all unexecuted tasks        Figure 4: The figure shows a 21 × 35 4-neighbor
+already added to T and, if so, adds it to T . CENTRAL                grid that represents the layout of a small simulated
+then sets X to the pickup locations of all tasks in T . If the       warehouse environment with 50 agents. Black cells
+number of free agents is larger than |X|, then CENTRAL               are blocked. Gray cells are task endpoints. Colored
+needs to add endpoints to X as parking locations for some            circles are the initial locations of agents.
+free agents. Since it is not known a priori which free
+agents these parking locations will be assigned to, there            Proof. We construct paths for all agents that became occu-
+should be one good parking location available for each free          pied in the current timestep from their current locations to
+agent, which is possible due to Definition 1. CENTRAL                their assigned endpoints that do not collide with the most
+thus greedily determines a good parking location for each            recently calculated paths of all other agents: Assume that
+free agent ai, one after the other, as the endpoint e that           all other agents move along their most recently calculated
+minimizes the cost c(ai, e) ("is closest to the agent") among        paths. When all of them have reached the ends of their
+all endpoints that are different from the delivery locations         paths, move all agents that became occupied one after the
+of all executed tasks, the pickup and delivery locations of all      other to their assigned endpoints, which is possible due to
+tasks in T , and the parking locations already determined,           Definition 1 since their current locations are endpoints and
+where c(ai, e) is the cost of a cost-minimal path that moves         their assigned endpoints are different from the endpoints
+from the current location of free agent ai to endpoint e. It         that all other agents now occupy.
+then adds this endpoint to X.
+                                                                     Property 7. Path planning for all free agents returns paths
+   Second, CENTRAL assigns each free agent an endpoint in            successfully for well-formed MAPD instances.
+X to satisfy all constraints. It uses the Hungarian Method
+[11] for this purpose with the modified costs c (ai, e) for          Proof. We construct paths for all free agents from their
+each pair of free agent ai and endpoint e, where c is the            current locations to their assigned endpoints that do not
+number of free agents, C is a sufficiently large constant (for       collide with the most recently calculated paths of all other
+example, the maximum over all costs c(ai, e) plus one), and          agents: Assume that all agents move along their most
+c (ai, e) = c · C · c(ai, e) if e is a pickup location of a task in  recently calculated paths. When all of them have reached
+T and c (ai, e) = c · C2 + c(ai, e) if e is a parking location.      the ends of their paths, move all free agents one after the
+The modified costs have two desirable properties: a) The             other to their assigned endpoints, which is possible due to
+modified cost of assigning a pickup location to a free agent is      Definition 1 since the locations that they now occupy are
+always smaller than the modified cost of assigning a parking         endpoints. Directly before an agent moves to its assigned
+location to the same agent. Therefore, assigning pickup              endpoint, check whether this endpoint is blocked by another
+locations is more important than assigning rest locations.           agent. If so, move this other agent to an unoccupied
+b) Assigning a closer pickup location to a single free agent         endpoint first. Such an endpoint exists since there are at
+that is assigned a pickup location reduces the total modified        least m + 1 endpoints for m agents due to Definition 1.
+cost more than assigning closer parking locations to all free
+agents that are assigned rest locations. Therefore, assigning        6. EXPERIMENTAL EVALUATION
+closer pickup locations is more important than assigning
+closer parking locations.                                               In this section, we describe our experimental results on
+Path Planning CENTRAL uses the optimally effective                   a 2.50 GHz Intel Core i5-2450M laptop with 6 GB RAM.
+MAPF algorithm Conflict-Based Search [19] to plan collision-         We ran TP, TPTS, and CENTRAL in the small simulated
+free paths for all agents from their current locations to their      warehouse environment shown in Figure 4. We generated
+assigned endpoints simultaneously. These paths minimize              a sequence of 500 delivery tasks by randomly choosing
+the sum of the number of timesteps required by all agents            their pickup and delivery locations from all task endpoints.
+to reach their assigned endpoints and stop moving. We                The initial locations of the agents are the only non-task
+noticed that CENTRAL becomes significantly more efficient            endpoints. We used 6 different task frequencies (numbers
+if it plans paths in two stages: First, it plans paths for           of tasks that are added (in order) from the sequence to the
+all agents that become occupied in the current timestep              task set in each timestep): 0.2 (one task every 5 timesteps),
+to their assigned endpoints (using the approach described            0.5, 1, 2, 5, and 10. For each task frequency, we used 5
+above but treating the most recently calculated paths of             different numbers of agents: 10, 20, 30, 40, and 50. Table 1
+all other agents as spatio-temporal obstacles. Then, it              reports the makespans, the service times, the runtimes per
+plans paths for all free agents to their assigned endpoints          timestep (in ms), the ratios of the service times of TPTS
+(again using the approach described above but treating               and TP, and the ratios of the service times of CENTRAL
+the most recently calculated paths of all other agents as
+spatio-temporal obstacles). In general, two smaller MAPF
+instances can be solved much faster than their union due
+to the NP-hardness of the problem. Also, CENTRAL can
+then determine a more informed cost c(ai, e) as the cost of a
+cost-minimal path that a) moves from the current location
+of agent ai to endpoint e and b) does not collide with the
+paths of the occupied agents (as described for TP).
+
+Property 6. Path planning for all agents that became
+occupied in the current timestep returns paths successfully
+for well-formed MAPD instances.
+Table 1: The table shows the experimental results                                                  Runtimes per Timestep The MAPF algorithms in in-
+                                                                                                   creasing order of their runtimes per timestep tend to be:
+for TP, TPTS, and CENTRAL in the small simu-                                                       TP, TPTS, and CENTRAL. For example, the runtime of
+                                                                                                   TPTS (and CENTRAL) is two orders of magnitude larger
+lated warehouse environment.                                                                       than the runtime of TP (and TPTS, respectively) for some
+                          TP                    TPTS                         CENTRAL               experimental runs. The runtimes of TP are less than
+                                   run-                  run-                         run-         10 milliseconds, the runtimes of TPTS are less than 200
+task fre-  agents  make-  service  time  make-  service  time  ratio  make-  service  time  ratio  milliseconds, and the runtimes of CENTRAL are less than
+quency             span    time          span    time                 span    time                 4,000 milliseconds in all experimental runs. We consider
+                                                                                                   runtimes below one second to allow for real-time lifelong
+           10 2,532 38.54 0.13 2,532 29.33 1.86 0.76 2,513 27.78 92.69 0.72                        operation. The runtimes tend not to be correlated with the
+          20 2,540 39.77 0.26 2,520 25.36 9.82 0.64 2,513 24.37 493.83 0.61                        task frequencies. They tend to be small for small numbers
+0.2 30 2,546 38.71 0.25 2,527 23.88 21.57 0.62 2,513 23.10 1,225.62 0.60                           of agents and large for large numbers of agents because all
+           40 2,540 38.88 0.24 2,524 23.50 27.49 0.60 2,511 22.48 2,246.66 0.58                    agents need to perform computations, which are not run in
+           50 2,540 40.03 0.32 2,524 23.11 47.33 0.58 2,511 21.82 3,426.01 0.54                    parallel in our experiments.
+                                                                                                   Number of Executed Tasks The service times vary over
+           10 1,309 132.79 0.24 1,274 131.15 0.33 0.99 1,242 116.37 113.60 0.88                    time since only very few tasks are available in the first and
+          20 1,094 42.69 1.16 1,038 30.74 12.39 0.72 1,031 28.05 309.01 0.66                       last time steps. The steady state is in between these two
+0.5 30 1,069 43.97 1.51 1,035 27.14 34.04 0.62 1,034 25.36 916.37 0.58                             extremes. Figure 5 therefore visualizes the number of tasks
+           40 1,090 43.01 0.70 1,038 25.98 19.85 0.60 1,034 24.26 1,697.99 0.56                    added and executed by 50 agents during the 100-timestep
+           50 1,083 43.66 1.36 1,036 25.22 71.48 0.58 1,031 23.83 2,920.72 0.55                    window [t - 99, t] for all MAPD algorithms as a function
+                                                                                                   of the timestep t. For low task frequencies, the numbers of
+           10 1,198 311.78 0.20 1,182 301.03 0.37 0.97 1,143 285.67 141.32 0.92                    tasks added match the numbers of tasks executed closely for
+           20 757 95.98 1.03 706 88.25 2.80 0.92 673 74.79 279.52 0.78                             all MAPD algorithms. Differences between them arise for
+1          30 607 53.80 2.81 561 42.84 8.45 0.80 557 30.26 446.38 0.56                             higher task frequencies. For example, for the task frequency
+                                                                                                   of 2 tasks per timestep, the number of tasks executed by
+           40 624 48.80 2.14 563 31.99 39.54 0.66 556 28.27 1,159.76 0.58                          CENTRAL increases faster and reaches a higher level than
+           50 597 49.14 3.76 554 30.27 128.13 0.62 552 26.55 2,197.82 0.54                         the numbers of tasks executed by TP and TPTS. The 100-
+                                                                                                   timestep window [150, 249] at time step t = 249 is a close
+           10 1,167 407.62 0.19 1,168 407.24 0.37 1.00 1,121 386.81 143.30 0.95                    approximation of the steady state since all tasks are added
+           20 683 190.76 0.96 667 181.03 2.38 0.95 628 163.79 406.88 0.86                          at a steady rate during the first 250 timesteps. CENTRAL
+2          30 529 114.39 2.31 496 102.69 8.39 0.90 466 88.45 589.13 0.77                           executes more tasks during this 100-timestep window than
+                                                                                                   TP and TPTS and thus has a smaller service time. However,
+           40 464 95.32 3.43 425 72.59 7.32 0.76 385 58.12 837.21 0.61                             the numbers of tasks executed are smaller for all MAPD
+           50 432 75.63 6.28 383 58.06 126.47 0.77 320 39.25 1,200.10 0.52                         algorithms than the number of tasks added, and tasks thus
+                                                                                                   pile up for all of them in the steady state.
+           10 1,162 473.78 0.20 1,165 473.18 0.41 1.00 1,105 452.50 126.19 0.96                    Scalability To evaluate how the MAPD algorithms scale in
+           20 655 247.08 1.02 645 238.02 1.68 0.96 594 224.70 350.13 0.91                          the size of the environment, we ran TP, TPTS, and CEN-
+5          30 478 170.78 2.22 474 167.66 8.58 0.98 426 147.03 595.04 0.86                          TRAL in the large simulated warehouse environment shown
+                                                                                                   in Figure 6. We generated a sequence of 1,000 delivery tasks
+           40 418 155.33 4.15 396 131.36 12.31 0.85 334 108.39 864.56 0.70                         by randomly choosing their pickup and delivery locations
+           50 395 124.59 5.92 343 104.86 59.64 0.84 295 86.22 1,388.30 0.69                        from all task endpoints. The initial locations of the agents
+                                                                                                   are the only non-task endpoints. We used a task frequency of
+           10 1,163 495.93 0.22 1,172 505.26 0.40 1.02 1,090 472.56 125.55 0.95                    50 tasks per timestep and 100, 200, 300, 400, and 500 agents.
+          20 643 275.24 1.09 645 258.36 1.87 0.94 607 248.74 379.53 0.90                           TPTS and CENTRAL did not allow for real-time lifelong
+10 30 526 192.01 1.98 491 198.30 10.82 1.03 414 164.41 593.89 0.86                                 operation for large numbers of agents. Figure 7 therefore
+           40 407 154.63 1.65 389 152.49 12.62 0.99 341 128.29 899.81 0.83                         reports, for TP only, the service times and the runtimes
+           50 333 131.42 5.62 319 126.96 25.32 0.97 277 105.11 1,376.51 0.80                       per timestep (in ms) in the table as well as the numbers of
+                                                                                                   tasks added and executed during a 100-timestep window for
+and TP. The measures for a task frequency of 10 tasks per                                          different numbers of agents in the charts. The runtime of
+timestep are reasonably representative of the case where all                                       TP is smaller than 500 milliseconds for 200 agents, allowing
+tasks are added in the beginning of the operation since the                                        for real-time lifelong operation.
+tasks are added over the first 50 timesteps only.
+Makespans and Service Times The MAPD algorithms                                                    7. CONCLUSIONS
+in increasing order of their makespans and service times
+tend to be: CENTRAL, TPTS, and TP. For example, the                                                   In this paper, we studied a lifelong version of the multi-
+service time of TPTS (and CENTRAL) is up to about 42                                               agent path finding (MAPF) problem, called the multi-agent
+percent (and 48 percent, respectively) smaller than the one                                        pickup and delivery (MAPD) problem, to capture important
+of TP for some experimental runs. The makespans tend to                                            characteristics of many real-world domains. In the MAPD
+be large for low task frequencies and small for high task                                          problem, agents have to attend to a stream of delivery tasks
+frequencies because the number of tasks is constant and                                            in an online setting by first moving to the pickup locations
+thus more time steps are needed to add all tasks for low                                           of the tasks and then to the delivery locations of the tasks
+task frequencies. On the other hand, the service times                                             while avoiding collisions with other agents. We presented
+tend to be small for low task frequencies and high for                                             two decoupled MAPD algorithms, Token Passing (TP) and
+high task frequencies because the agents tend to be able
+to attend to tasks fast if the number of tasks in the system
+is small. The makespans and service times tend to be large
+for small numbers of agents and small for large numbers
+of agents because the agents tend to be able to attend
+to tasks fast if the number of agents is large (although
+congestion increases). The makespans and service times for
+a task frequency of 0.2 tasks per timestep are about the
+same for all numbers of agents because 10 agents already
+attend to all tasks as fast as the MAPD algorithms allow.
+The makespans are similar for all MAPD algorithms and
+all numbers of agents for the task frequency of 0.2 tasks
+per timestep because 10 agents already execute tasks faster
+than they are added. The makespans then depend largely
+on how fast the agents execute the last few tasks. On the
+other hand, the makespans of MAPD algorithms increase
+substantially when tasks pile up because the agents execute
+them more slowly than they are added. This allows us to
+estimate the smallest number of agents needed for a lifelong
+operation as a function of the task frequency and MAPD
+algorithm. For example, the makespan of TPTS increases
+substantially when the number of agents are reduced from
+20 to 10 for a task frequency of 1 task per timestep. Thus,
+one needs between about 10 and 20 agents for a lifelong
+operation with TPTS.
+30        TP  TPTS  CENTRAL  tasks added                           70      TP  TPTS  CENTRAL  tasks added                   120         TP   TPTS       CENTRAL  tasks added
+
+25                                                                 60                                                       100
+
+20                                                                 50                                                       80
+
+                                                                   40
+
+15                                                                                                                          60
+
+                                                                   30
+
+10                                                                 20                                                       40
+
+5                                                                  10                                                       20
+
+0                                                                  0                                                        0
+   0 200 400 600 800 1000 1200 1400 1600 1800 2000 2200 2400 2600     0 100 200 300 400 500 600 700 800 900 1000 1100 1200     0 50 100 150 200 250 300 350 400 450 500 550 600 650 700
+
+250       TP  TPTS  CENTRAL  tasks added                           600     TP  TPTS  CENTRAL  tasks added                   600         TP   TPTS       CENTRAL  tasks added
+
+200                                                                500                                                      500
+
+                                                                   400                                                      400
+
+150
+
+                                                                   300                                                      300
+
+100
+
+                                                                   200                                                      200
+
+50                                                                 100                                                      100
+
+    0                                                              0                                                        0
+
+       0  50 100 150 200 250 300 350 400 450 500 550                    0  50 100 150 200 250 300 350 400 450 500                0  50  100  150   200  250      300  350                                            400  500
+
+Figure 5: The charts show the number of tasks added (grey) and executed by 50 agents during the 100-
+timestep window [t - 99, t] for TP, TPTS, and CENTRAL as a function of the timestep t for task frequencies
+0.2, 0.5, 1, 2, 5, and 10 (from left to right and top to bottom)
+
+                                                                                                 agents 100 200 300 400 500
+                                                                                              service time 463.25 330.19 301.97 289.08 284.24
+
+                                                                                                runtime 90.83 538.22 1,854.44 3,881.11 6,121.06
+
+                                                                                              1000                                                                                                      100
+                                                                                               900                                                                                                      200
+                                                                                               800                                                                                                      300
+                                                                                               700                                                                                                      400
+                                                                                               600                                                                                                      500
+                                                                                               500                                                                                                      tasks added
+                                                                                               400
+                                                                                               300         100 200 300 400 500 600 700 800 900 1000 1100
+                                                                                               200
+                                                                                               100
+                                                                                                  0
+                                                                                                      0
+
+Figure 6: The figure shows a 81 × 81 4-neighbor                                      Figure 7: The figure shows the experimental results
+grid that represents the layout of a large simulated                                 for TP in the large simulated warehouse environ-
+warehouse environment with 500 agents.                                               ment.
+
+Token Passing with Task Swaps (TPTS). Theoretically,                                       In International Joint Conference on Artificial Intelligence,
+we showed that both MAPD algorithms solve all well-                                        pages 740­746, 2015.
+formed MAPD instances. Experimentally, we compared                                    [2] M. Ca´p, J. Vokr´inek, and A. Kleiner. Complete
+them against the centralized strawman MAPD algorithm                                       decentralized method for on-line multi-robot trajectory
+CENTRAL without this guarantee in a simulated warehouse                                    planning in well-formed infrastructures. In International
+system. The MAPD algorithms in increasing order of                                         Conference on Automated Planning and Scheduling, pages
+their makespans and service times tend to be: CENTRAL,                                     324­332, 2015.
+TPTS, and TP. The MAPF algorithms in increasing order                                 [3] L. Cohen, T. Uras, T. K. S. Kumar, H. Xu, N. Ayanian,
+of their runtimes per timestep tend to be: TP, TPTS, and                                   and S. Koenig. Improved solvers for bounded-suboptimal
+CENTRAL. TP can easily be extended to a fully distributed                                  multi-agent path finding. In International Joint Conference
+MAPD algorithm and is the best choice when real-time                                       on Artificial Intelligence, pages 3067­3074, 2016.
+computation is of primary concern since it remains efficient                          [4] B. de Wilde, A. W. ter Mors, and C. Witteveen. Push and
+for MAPD instances with hundreds of agents and tasks.                                      rotate: Cooperative multi-agent path planning. In
+TPTS requires limited communication among agents and                                       International Conference on Autonomous Agents and
+balances well between TP and CENTRAL.                                                      Multi-Agent Systems, pages 87­94, 2013.
+                                                                                      [5] E. Erdem, D. G. Kisa, U. Oztok, and P. Schueller. A
+REFERENCES                                                                                 general formal framework for pathfinding problems with
+                                                                                           multiple agents. In AAAI Conference on Artificial
+ [1] E. Boyarski, A. Felner, R. Stern, G. Sharon, D. Tolpin,                               Intelligence, pages 290­296, 2013.
+      O. Betzalel, and S. E. Shimony. ICBS: Improved                                  [6] M. A. Erdmann and T. Lozano-P´erez. On multiple moving
+      conflict-based search algorithm for multi-agent pathfinding.                         objects. Algorithmica, 2:477­521, 1987.
+                                                                                      [7] M. Goldenberg, A. Felner, R. Stern, G. Sharon, N. R.
+                                                                                           Sturtevant, R. C. Holte, and J. Schaeffer. Enhanced Partial
+                                                                                           Expansion A*. Journal of Artificial Intelligence Research,
+                                                                                           50:141­187, 2014.
+ [8] W. Ho¨nig, T. K. S. Kumar, L. Cohen, H. Ma, H. Xu,              [27] J. P. van den Berg, J. Snape, S. J. Guy, and D. Manocha.
+      N. Ayanian, and S. Koenig. Multi-agent path finding with             Reciprocal collision avoidance with acceleration-velocity
+      kinematic constraints. In International Conference on                obstacles. In IEEE International Conference on Robotics
+      Automated Planning and Scheduling, pages 477­485, 2016.              and Automation, pages 3475­3482, 2011.
+
+ [9] W. Ho¨nig, T. K. S. Kumar, H. Ma, N. Ayanian, and               [28] M. Veloso, J. Biswas, B. Coltin, and S. Rosenthal. CoBots:
+      S. Koenig. Formation change for robot groups in occluded             Robust symbiotic autonomous mobile service robots. In
+      environments. In IEEE/RSJ International Conference on                International Joint Conference on Artificial Intelligence,
+      Intelligent Robots and Systems, pages 4836­4842, 2016.               pages 4423­4429, 2015.
+
+[10] M. Khorshid, R. Holte, and N. Sturtevant. A                     [29] G. Wagner. Subdimensional Expansion: A Framework for
+      polynomial-time algorithm for non-optimal multi-agent                Computationally Tractable Multirobot Path Planning. PhD
+      pathfinding. In Annual Symposium on Combinatorial                    thesis, Carnegie Mellon University, 2015.
+      Search, 2011.
+                                                                     [30] K. Wang and A. Botea. MAPP: a scalable multi-agent path
+[11] H. W. Kuhn. The Hungarian method for the assignment                   planning algorithm with tractability and completeness
+      problem. Naval Research Logistics Quarterly, 2:83­97, 1955.          guarantees. Journal of Artificial Intelligence Research,
+                                                                           42:55­90, 2011.
+[12] R. Luna and K. E. Bekris. Push and Swap: Fast
+      cooperative path-finding with completeness guarantees. In      [31] P. R. Wurman, R. D'Andrea, and M. Mountz. Coordinating
+      International Joint Conference on Artificial Intelligence,           hundreds of cooperative, autonomous vehicles in
+      pages 294­300, 2011.                                                 warehouses. AI Magazine, 29(1):9­20, 2008.
+
+[13] H. Ma and S. Koenig. Optimal target assignment and path         [32] J. Yu and S. M. LaValle. Planning optimal paths for
+      finding for teams of agents. In International Conference on          multiple robots on graphs. In IEEE International
+      Autonomous Agents and Multiagent Systems, pages                      Conference on Robotics and Automation, pages 3612­3617,
+      1144­1152, 2016.                                                     2013.
+
+[14] H. Ma, S. Koenig, N. Ayanian, L. Cohen, W. H¨onig,              [33] X. Zheng and S. Koenig. K-swaps: Cooperative negotiation
+      T. K. S. Kumar, T. Uras, H. Xu, C. Tovey, and G. Sharon.             for solving task-allocation problems. In International Joint
+      Overview: Generalizations of multi-agent path finding to             Conference on Artifical Intelligence, pages 373­378, 2009.
+      real-world scenarios. In IJCAI-16 Workshop on
+      Multi-Agent Path Finding, 2016.
+
+[15] H. Ma, T. K. S. Kumar, and S. Koenig. Multi-agent path
+      finding with delay probabilities. In AAAI Conference on
+      Artificial Intelligence, 2017.
+
+[16] H. Ma, C. Tovey, G. Sharon, T. K. S. Kumar, and
+      S. Koenig. Multi-agent path finding with payload transfers
+      and the package-exchange robot-routing problem. In AAAI
+      Conference on Artificial Intelligence, pages 3166­3173,
+      2016.
+
+[17] P. MacAlpine, E. Price, and P. Stone. SCRAM: Scalable
+      collision-avoiding role assignment with minimal-makespan
+      for formational positioning. In AAAI Conference on
+      Artificial Intelligence, pages 2096­2102, 2015.
+
+[18] R. Morris, C. Pasareanu, K. Luckow, W. Malik, H. Ma,
+      S. Kumar, and S. Koenig. Planning, scheduling and
+      monitoring for airport surface operations. In AAAI-16
+      Workshop on Planning for Hybrid Systems, 2016.
+
+[19] G. Sharon, R. Stern, A. Felner, and N. R. Sturtevant.
+      Conflict-based search for optimal multi-agent pathfinding.
+      Artificial Intelligence, 219:40­66, 2015.
+
+[20] G. Sharon, R. Stern, M. Goldenberg, and A. Felner. The
+      increasing cost tree search for optimal multi-agent
+      pathfinding. Artificial Intelligence, 195:470­495, 2013.
+
+[21] D. Silver. Cooperative pathfinding. In Artificial Intelligence
+      and Interactive Digital Entertainment, pages 117­122,
+      2005.
+
+[22] T. S. Standley and R. E. Korf. Complete algorithms for
+      cooperative pathfinding problems. In International Joint
+      Conference on Artificial Intelligence, pages 668­673, 2011.
+
+[23] N. R. Sturtevant and M. Buro. Improving collaborative
+      pathfinding using map abstraction. In Artificial Intelligence
+      and Interactive Digital Entertainment, pages 80­85, 2006.
+
+[24] P. Surynek. A novel approach to path planning for multiple
+      robots in bi-connected graphs. In IEEE International
+      Conference on Robotics and Automation, pages 3613­3619,
+      2009.
+
+[25] P. Surynek. Reduced time-expansion graphs and goal
+      decomposition for solving cooperative path finding
+      sub-optimally. In International Joint Conference on
+      Artificial Intelligence, pages 1916­1922, 2015.
+
+[26] C. Tovey, M. Lagoudakis, S. Jain, and S. Koenig. The
+      generation of bidding rules for auction-based robot
+      coordination. In F. S. L. Parker and A. Schultz, editors,
+      Multi-Robot Systems. From Swarms to Intelligent
+      Automata, volume 3, chapter 1, pages 3­14. Springer, 2005.
+

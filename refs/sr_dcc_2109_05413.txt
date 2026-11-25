@@ -1,0 +1,544 @@
+                                        Learning Selective Communication for Multi-Agent Path Finding
+
+                                                                            Ziyuan Ma1, Yudong Luo2 and Jia Pan3
+
+arXiv:2109.05413v2 [cs.RO] 23 Dec 2021     Abstract-- Learning communication via deep reinforcement            heuristic map [15]. For IL-based methods [11], [13], [14],
+                                        learning (RL) or imitation learning (IL) has recently been             partial observability is still considered, but the objective is to
+                                        shown to be an effective way to solve Multi-Agent Path Finding         minimize the divergence between expert demonstrations and
+                                        (MAPF). However, existing communication based MAPF solvers             generated trajectories, so that the learned policy can mimic
+                                        focus on broadcast communication, where an agent broadcasts            the expert behavior.
+                                        its message to all other or predefined agents. It is not only
+                                        impractical but also leads to redundant information that could            Recently, researchers focus on trainable communication
+                                        even impair the multi-agent cooperation. A succinct commu-             channels between agents for MAPF, where extra informa-
+                                        nication scheme should learn which information is relevant             tion can be obtained during both training and execution to
+                                        and influential to each agent's decision making process. To            enhance multi-agent cooperation [13], [14], [15]. However,
+                                        address this problem, we consider a request-reply scenario and         these methods focus on broadcast communication in which
+                                        propose Decision Causal Communication (DCC), a simple yet              messages will be transmitted to all other or predefined set
+                                        efficient model to enable agents to select neighbors to conduct        of agents. For instance, in [13] and [14], the messages
+                                        communication during both training and execution. Specifically,        are broadcast to all other agents within a distance (com-
+                                        a neighbor is determined as relevant and influential only when         munication radius). In [15], the central agent takes the
+                                        the presence of this neighbor causes the decision adjustment           messages from the two nearest neighbors after getting all
+                                        on the central agent. This judgment is learned only based on           the broadcast messages from its neighbors inside the field
+                                        agent's local observation and thus suitable for decentralized          of view (FOV). Although empirical results have shown great
+                                        execution to handle large scale problems. Empirical evaluation         improvements of communication based methods compared
+                                        in obstacle-rich environment indicates the high success rate with      with non communication ones [15], the drawback is that
+                                        low communication overhead of our method.                              broadcast communication requires lots of bandwidth and
+                                                                                                               incurs additional system overhead and latency in practice.
+                                                                 I. INTRODUCTION                               More importantly, not every agent provides useful informa-
+                                                                                                               tion for cooperation, and redundant information can even
+                                           Multi-Agent Path Finding is the problem of arranging a              impair the learning process.
+                                        set of collision-free paths for a set of agents on a given
+                                        graph. Although MAPF is NP-hard to solve optimally on                     Plenty of methods on reducing communication overhead
+                                        graphs [1] and even 2D grids [2], many optimal MAPF                    or learning selective communication have been proposed in
+                                        algorithms have been developed in recent years. Some reduce            the literature of RL [17], [18], [19], [20], [21], [22]. But
+                                        MAPF to other well-studied problems, e.g., ILP [3] and                 most of them are designed for centralized training framework
+                                        SAT [4], others solve it with search-based algorithms, e.g.,           on cooperative Markov Game, where agents share the same
+                                        enhanced A* search [5], [6], Conflict-Based Search [7] and             team reward. In contrast, each agent has its individual reward
+                                        its improved variants [8]. However, the limitation of these            in MAPF, and thus more information needs to be swapped
+                                        centralized planning methods is that they do not scale well            for cooperation. Therefore, selective communication is much
+                                        to a large number of agents.                                           more important in this case. To design a succinct communica-
+                                                                                                               tion protocol for MAPF, we consider a request-reply commu-
+                                           RL and IL methods with decentralized execution have                 nication scenario where messages are updated in two stages,
+                                        been applied to address this issue [9], [10], [11], [12], [13],        and propose Decision Causal Communication, a simple yet
+                                        [14], [15]. During execution, each agent takes action based            efficient mechanism to enable agents to select other members
+                                        on its individual decision model with its own observation              in the swarm for communication during both training and
+                                        (may also include messages from other agents) as input,                execution. More specifically, before communication, each
+                                        which avoids the scalability problem. For RL-based meth-               agent is capable to figure out which neighbors in its FOV are
+                                        ods [9], [10], [12], [15], MAPF is generally modeled as                relevant and influential by just using local observation. The
+                                        a Markov Game [16] with partial observability, where a                 agent makes two temporary decisions based on its raw local
+                                        reward function is designed for each agent, and the goal of            observation and the modified local observation by masking
+                                        each agent is to maximize its expected total return. Usually,          out a neighbor. For any neighbor that can cause difference
+                                        expert guidance is applied to guide the RL during training             between these two temporary decisions, that neighbor is
+                                        in terms of behavior cloning [9], shaped reward [12], or               considered as relevant and influential, and the agent will
+                                                                                                               send a request to that neighbor for communication purpose.
+                                           1School of Computing Science, Simon Fraser University, Canada       This communication protocol is also naturally capable for
+                                        ziyuan ma@sfu.ca                                                       decentralized execution. Empirical results show the high suc-
+
+                                           2School of Computer Science, University of Waterloo, Canada
+                                        yudong.luo@uwaterloo.ca
+
+                                           3Department of Computer Science, The University of Hong Kong, Hong
+                                        Kong, China jpan@cs.hku.hk
+
+                                           * indicates equal contribution.
+cess rate with low communication overhead of our method           Similar ideas are applied by the work described in [13] and
+compared with its counterparts.                                   Message-Aware Graph Attention neTwork (MAGAT) [14],
+                                                                  where the communication part is a graph neural network
+   Contributions. In this work, we propose DCC for MAPF.          (GNN) [29]. However, it is worth noting that both [13]
+Unlike broadcast communication, DCC learns selective com-         and [14] are IL-based methods, which train the model
+munication, and hence encourages agents to focus only on          to imitate the demonstrations generated by Conflict-Based
+relevant information. We demonstrate that, on one hand,           Search (CBS) [7] and Enhanced CBS [30], respectively.
+selective communication can remove temporal redundant             Thus, MAPF instances still need to be pre-solved while
+messages, which is beneficial to multi-agent cooperation. On      extreme scenarios may fail to be solved and collected into
+the other hand, communication overhead is greatly cut down        the training data. Also, none of these communication based
+due to the reduction of communication frequency.                  methods consider the efficiency of communication, resulting
+                                                                  in high communication overhead and latency.
+                        II. RELATED WORK
+                                                                  B. Efficient and Selective Communication for MARL
+A. Reinforcement Learning based MAPF
+                                                                     Most existing works on communication in MARL, includ-
+   RL-based planners generally formulate MAPF as a multi-         ing those described above, focus on broadcast communica-
+agent reinforcement learning (MARL) problem to learn              tion, i.e., broadcasting the messages to all other or prede-
+decentralized policies for agents (robots). Compared with         fined agents. To improve efficiency, a number of strategies
+centralized planning methods, learning decentralized polices      have been proposed. Individualized Controlled Continuous
+scales well to a large number of agents. Collision free           Communication Model (IC3Net) [17] considers that full
+policies are usually learned by guiding RL with constraints       communication is not always necessary and agents can
+or demonstration data [23], [9], [10], [12]. Incorporating        determine whether to send messages to others indicated by a
+demonstration guidance with RL can be divided into two            gating function. However, this gating function can block all
+categories, using demonstrations generated by a central-          communication channels of an agent. Cases where an agent's
+ized planner, or by a single-agent planner. For instance, a       message is instructive to some agents but useless or harmful
+well known framework named PRIMAL [9] builds on the               to others can not be handled. Schedule Communication
+asynchronous advantage actor critic (A3C) network [24] as         (SchedNet) [18] only allows a limited number of agents to
+its RL part and uses behaviour cloning to supervise the           broadcast messages, who are chosen by some importance
+training of RL. So it requires demonstrations generated by        weights assigned. The shortcoming is that a central scheduler
+a centralized planner named ODrM* [6]. The limitation of          is required to gather all individual weights and decide
+using a centralized planner is that it requires solving a MAPF    which agents should be entitled to broadcast their messages.
+problem and is thus time-consuming, especially in a complex       Variance Based Control (VBC) [19] lets agents transmit their
+environment with a large number of agents. For methods            messages only when the variance of the message vector is
+using single-agent planner as guidance, MAPPER [12] and           high (high variance implies that the message is informative).
+Globally Guided RL (G2RL) [10] use A* search for single-          And agents decide whether to request messages based on
+agent path generation and apply an off-route penalty if agents    local ambiguity. Temporal Message Control (TMC) [20]
+fail to follow the path. The potential issue is that, as single-  stores agent messages in the buffer and new messages are
+agent shortest paths are usually not unique and not globally      sent out only when they contain relatively new information
+optimal for multi-agent environment, forcing agents to follow     compared with old ones. Nearly Decomposable Q-functions
+these paths by extra shaped rewards can mislead agents.           (NDQ) [21] optimizes communication via minimizing the
+                                                                  entropy of messages between agents. Individually Inferred
+   To tackle the above issues, our previous method DHC [15]       Communication (I2C) [22] learns a prior network, which
+does not require a centralized planner. Although single-agent     takes local observation and identity of another agent as input,
+shortest paths are still adopted as guidance, DHC embeds all      to predict a belief of whether to communicate. All VBC,
+the potential choices of shortest paths as heuristic into the     TMC, NDQ and I2C are designed on the centralized training
+input of the model, instead of forcing agents to follow a         methods that factorize the joint action-value function, such
+specific path. Thus, no special shaped rewards are required.      as QMIX [31], different from MAPF settings.
+
+   Even though empirical results have shown that enhancing                          III. PROBLEM FORMULATION
+RL with guidance can help to learn collision free policies
+for MAPF, the cooperation among agents is not directly            A. MAPF Problem Definition
+modeled. Communication via graph convolution is a promis-
+ing way to achieve multi-agent cooperation, where an agent           MAPF has many variants as summarized in [32]. In this
+aggregates information from its neighbors, including itself,      paper, we consider the classical MAPF case defined in [32]
+and makes decisions based on this augmented informa-              that (a) each agent performs an action in every time step, and
+tion [25], [26], [27]. This idea is recently deployed for         may cause vertex and swapping conflicts, (b) agents "stay
+MAPF. By treating each agent in the environment as a              at target" until all agents have reached their goals, and (c)
+node and connecting neighboring nodes (agents) if they are        optimizes the sum of cost. This definition differs from the
+inside the FOV of each other, a graph is formulated by            environments used in PRIMAL and MAPPER, which are
+DHC and multi-head dot-product attention [28] serves as the
+convolutional kernel to compute interactions among agents.
+                                                                                          TABLE I
+                                                                              REWARD FUNCTION DESIGN
+
+                                                                                          Actions           Reward
+                                                                              Move (Up/Down/Left/Right)      -0.075
+                                                                                                            0, -0.075
+                                                                               Stay (on goal, away goal)       -0.5
+                                                                               Collision (obstacle/agents)
+                                                                                                                3
+                                                                                           Finish
+
+Fig. 1. (a) Broadcast communication: agent i broadcasts its message to all    step, agents move simultaneously to neighboring locations
+neighboring agents j, k, and p. And agents j, k, p will also broadcast their  or wait at their current locations. Thus, the size of the action
+messages to agent i. If predefined scope is set, agent i can decide whose     space is 5 (move to four directions or stay still). Agents
+message to be used in calculation, e.g., DHC takes the nearest two agents.    may hit obstacles or conflict with others during simulation.
+There is no communication between agent i and u, as agent u is outside        We handle the collision by recursively resetting the related
+agent i's FOV. (b) Request-reply based selective communication: agent i       agents to previous states until no collision exits.
+omits irrelevant agent k, and only communicates with relevant agent j and
+p. After determining which agent to communicate, the communication is            We consider a partially observable environment, which is
+conducted in two rounds. At the first round, agent i sends out messages       more compatible with the real world problem. Each agent can
+(requests) to agent j and p. At the second round, agent j and p reply with    only access the information inside its FOV with size ×
+their updated messages to agent i.                                            ( < m), where is an odd number to make sure agents are
+                                                                              at the center of FOV.
+much simpler. In PRIMAL, agents take actions in turn (only
+one agent takes action at a time), although we can treat this as                 The reward design is adopted from DHC [15], shown in
+all agents act simultaneously but only one agent can move                     Table I. Generally, negative rewards are given to agents for
+while all others choose no-op action. In MAPPER, agents                       each movement to facilitate goal reaching. No shaped reward
+are removed from the environment upon reaching their goal                     is required in our method.
+locations, which simplifies the problem, as there will be no
+livelocks when an agent reaches its goal but obstructs other                         IV. SELECTIVE COMMUNICATION FOR MAPF
+agents from getting to their goals. We also notice that the
+environment in [33] is specially designed where obstacles                        In this paper, we propose DCC 1, a simple yet efficient
+compose narrow corridors that only allow one agent to pass                    mechanism to reduce communication overhead in multi-
+at a time. We do not consider an environment like this.                       agent systems. DCC can be instantiated by independent Q-
+                                                                              learning [34], or any framework of centralized training and
+   Formally, we define MAPF as follows. Given an undi-                        decentralized execution, such as QMIX [31] and VDN [35].
+rected graph G = (V, E) and a set of n agents, each agent                     We consider a request-reply scenario different from the
+indexed by i has a unique start vertex si  V and a unique                     traditional setup where each agent only sends out an almost
+goal vertex gi  V . Time is discretized into time steps. At                   information-less indicator, e.g. a scalar value, as the request
+each discrete time step, each agent can either move to an                     signal. Instead, in our setup, each agent sends out a request
+adjacent vertex or wait at its current vertex. A path for i-                  signal with rich information including its own messages
+th agent is a sequence of adjacent (indicating a moving)                      along with the relative positions of neighbors. In this way,
+or identical (indicating a waiting) vertices starting at si                   after receiving the request, the agents being requested can
+and terminating at gi. Agents remain at their goal vertices                   immediately benefit from this query by collecting some
+(gi) after they complete their paths. There are two kinds of                  information from the query agent. Fig. 1 shows the difference
+collisions, either vertex collision or edge collision. A vertex               between broadcast and our request-reply based selective
+collision is a tuple i, j, v, t where i-th and j-th agents                    communication. In the following part, We first introduce
+reaching at the same vertex v at time t. An edge collision is                 DCC communication mechanism and then instantiate DCC
+a tuple i, j, u, v, t where i-th and j-th agents traverse the                 with independent Q-learning.
+same edge (u, v) in opposite directions at time t. A solution
+to MAPF is a set of collision-free paths, one for each agent.                 A. Decision Causal Communication
+The quality of a solution is measured by the sum of arrival
+time of all agents at their goal vertices.                                       Our communication mechanism is motivated by I2C [22],
+                                                                              where causal inference is utilized to derive a threshold to trig-
+B. Environment Setup                                                          ger communication. Specifically, I2C defines the causal effect
+                                                                              of agent j to agent i as the KL-divergence [36] between two
+   In line with standard MAPF tasks, we focus on 2D 4-                        decision probabilities, DKL(P (ai|a-i, o)||P (ai|a-ij, o)),
+neighbor grids where agents, goals, and obstacles occupy one                  where o is the joint observations, a-i denotes the joint
+grid cell respectively. Formally, the map is a m × m matrix,                  actions except for agent i, and similar meaning for a-ij.
+where 0 represents a free location and 1 is an obstacle.                      The magnitude of this divergence indicates how much agent
+Each map is chosen n start positions and n corresponding                      i will adjust its policy if taken into account agent j's policy. If
+goal positions for n agents from free locations. We make
+sure each goal is reachable from its start point and there                       1Code available at https://github.com/ZiyuanMa/DCC
+is no overlap among 2n selected positions. At each time
+Fig. 2. System flow of DCC. It contains four modules: observation encoder (blue), decision casual unit (purple), communication block (green), and Q
+network (orange). An example of agent i's FOV is shown by a 5 × 5 grid, where the blue color represents the agent itself, the green color represents
+neighbors, and the gray color represents obstacles. Agent i's decision casual unit constructs three modified local observations by masking each neighbor
+inside the FOV, represented by a red cross. The embeddings by observation encoder for the raw and modified local observations are fed to Q network
+directly to get temporary decisions, which are further used to decide which neighbor is relevant for communication.
+
+the divergence is small, agent i chooses not to communicate       j is inside the FOV of agent i), and the relative position
+with j as that will hardly affect its own policy.                 of agent j in i's FOV is (xj, yj). Agent i gets its local
+                                                                  observation oi from the environment and constructs another
+   However, I2C is only effective for centralized training        modified observation oi,-j (-j means without j) by setting
+algorithms as it requires to know the joint observations          the information at agent j's position by some special value,
+and actions of all other agents. In real world problems           such as zero: oi,-j  oi(xj, yj) = 0. Then agent i uses
+such as MAPF, usually an agent with partial observability         its local decision model, without communication, to predict
+can only observe the existence of other agents instead of         two temporary actions ai and ai,-j based on oi and oi,-j,
+their policies. Although agents can broadcast their actions,      respectively. If these two actions match with each other, im-
+that will definitely increase the communication overhead. In      plying that the existence of agent j will not affect i's policy,
+practice, if the policy of an agent requesting communication      agent i will not request message from agent j. Otherwise,
+conditions on the action of the communicated agent, the           agent i sends a request to agent j via a communication
+circular dependencies can occur. At last, setting a reasonable    channel, and agent j will respond with a message. In this
+threshold for that KL-divergence highly depends on empiri-        work, we consider messages are updated in both request and
+cal experiments and may vary in different problems.               reply stages, which is discussed in the following subsection.
+                                                                  The final aggregated messages are further used by policy or
+   Thus, to design an appropriate communication protocol          Q-network to generate the final actions.
+for MAPF, in this work, we restrict the strategy in I2C by
+triggering communication between agent i and j only when          B. Deep Q-Learning Model Design
+the existence of agent j causes the policy adjustment on agent
+i, and we call this Decision Causal Communication. To get            We instantiate DCC with independent Q-learning, namely
+an intuition of the proposed protocol, consider the learning      the model is designed and trained from a single agent's per-
+based MAPF methods discussed in Section II-A, where most          spective by treating other agents as part of the environment.
+of them guide the RL agent with global or local optimal           We borrow some architecture design from DHC. The whole
+demonstrations. In order to diminish the communication cost,      model of DCC consists of four main components, including
+an agent should follow the demonstration guided policy as         observation encoder, decision causal unit, communication
+often as possible without communicating with others, if the       block, and Q-network. The model architecture is shown in
+existence of other agents in its FOV will not affect its current  Fig. 2. We begin from the model input and describe the four
+policy. Otherwise, the agent communicates with those neigh-       components one by one.
+bors who will individually affect its policy. Although the
+policy may be adjusted after communication and we can not               a) Local observation input: At time step t, agent i gets
+guarantee the adjusted policy is always better than unchanged     a matrix with the shape × × 6 as input, denoted by oti.
+policy during simulation, training the communication part         The first channel is a binary matrix representing the obstacles
+along with RL in an end to end manner to maximize the             inside the FOV. The second channel is a binary matrix
+expected total return will force the communication to be          indicating the locations of other agents if within the FOV.
+helpful and performed only when it is necessary.                  The other four are heuristic channels proposed by DHC [15],
+                                                                  to encode multiple choices of single-agent shortest path. We
+   Formally, this communication protocol can be formulated        refer readers to the DHC paper for further details.
+as follows. Suppose agent j can be seen by agent i (agent
+      b) Observation encoder: The encoder contains four                         The message e^jt and the initial message etj are first aggregated
+                                                                                by a GRU to generate the first round outcome e[j1]t. Then ej[1]t
+stacked convolutional layers with a GRU [37]. The local                         acts as the initial message for the next round.
+observation oti is first encoded into o^it by four convolu-
+tional layers. Then by adopting the last step communication                        At the second round, agents who received requests will
+outcome e[i2]t-1 as the hidden state, the GRU gets o^it and
+generates the intermediate message eti.                                         reply with their updated messages along with the relative
+                                                                                position of their neighbors, i.e. agent i will receive ej[1]t and
+      c) Decision causal unit: This unit depends on the                         ljt from all agent j  Ci. Let Ci+ denote the set {i, Ci}.
+                                                                                Agent i will update its message in the same manner as
+observation encoder to embed modified observations, and
+                                                                                defined in Equations 3-4 by replacing j with i, and replacing
+the Q-network (will be discussed later), to get temporary                       ¯i  C¯ j+ with ¯j  Ci+. Denote the message generated by
+actions. Let Bi denote all neighbors of agent i. Given oit,                     Equations 3-4 at this round as e^i[1]t. Finally, e^i[1]t and ej[1]t
+oti,-j is constructed according to Section IV-A for all j  Bi.                  are aggregated by a GRU to output ei[2]t, the final outcome
+Each oti,-j is passed through the observation encoder as                        message of the second round.
+discussed above to get an embedding eit,-j. By skipping the
+communication, eit and {eit,-j}jBi are directly fed into the                          e) Q-network: The message e[i2]t is adopted by a du-
+Q-network to compute Q-values. Actions ati and {ait,-j}jBi                      eling Q-network [38], which separates state advantage Vs(·)
+are inferred by applying argmax over Q-values. Based on
+                                                                                and action advantage A(·), to predict the Q-values.
+these actions, the communication scope of agent i is
+
+                   Ci = {j|ait = ati,-j }jBi .                             (1)  Qis,a = Vs(ei[2]t) +  A(ei[2]t)a      -   1         A(ei[2]t)a   , (5)
+                                                                                                                         |A|
+                                                                                                                              a
+Note that temporary actions ait and {ait,-j}jBi are only used
+to decide the communication scope, not the final action to                      where A is the action space.
+be executed.                                                                       After we get the Q values of agent i, the loss function for
+
+      d) Communication block: This block is the graph con-                      training the whole model is a time difference (TD) error. To
+volution with multi-head dot-production as the convolutional                    stabilize training, we use a multi-step TD error calculated by
+kernel [28] followed by a GRU. We regard the request-                           the mean square error (MSE)
+reply as a two-round communication. After defining the
+communication scope Ci, at the first round, agent i sends                                     L() = MSE Rti - Qist,at ()                                (6)
+request information to all agent j  Ci. This information
+includes its own message eit as well as the relative position                   with  Rti  =  rti + rti+1  +  ...  +    n  Qi       ,at+n  (¯),  where  rti
+of i's neighbors inside i's FOV, denoted as lit. The relative
+position of each neighbor is originally represented as a one-                                                                 st+n
+hot vector, i.e. the vector length is × , and further embedded                  is the reward received by agent i at time t, Rti is the multi-
+by a neural network layer. At the first round, agent j may
+receive many requests from different agents, and we define                      step expected return,  represents the parameters of the entail
+this request receiving scope for agent j as
+                                                                                model, and ¯ denotes the parameters of the target network,
+
+                                                                                a periodical copy of the online parameters .
+
+                      C¯ j = {i|j  Ci}.                                    (2)  C. Training
+
+Then each agent j who receives requests will update                                As mentioned above, we train the model from a single
+                                                                                agent's perspective using independent Q-learning, where
+its message using multi-head attention. Let C¯ j+ denote                        each agent learns its own action value Qi independently
+the set {j, C¯ j}. For every agent ¯i  C¯ j+, agent ¯i's own                    and simultaneously, treating other agents as part of the
+                                                                                environment. The benefit is that it avoids the scalability
+message e¯it is projected to Query by matrix W Qh , while the                   problem in centralized training, which requires learning a
+concatenation of e¯ti and l¯it is projected to Key and Value by                 Q-function for joint actions over all agents, as the joint
+           h          h                                                         action space grows exponentially when the number of agents
+matrix  W  K  and  W  V  in each independent attention head h.                  increases. To further simplify the training process, instead of
+                                                                                training separate models for different agents, we train a single
+The relation between agent j and ¯i  C¯ j+ in h-th attention                    model by sharing parameters among agents. To facilitate
+                                                                                training, we adopt two training strategies, namely distributed
+head is computed as                                                             training and curriculum learning [39], which are discussed
+                                                                                in the following.
+        µjh¯i = softmax  W      h  ejt  ·  (W  h    [e¯ti ,  l¯it])  ,     (3)
+                                Q              K                                      a) Distributed training: Distributed training has sig-
+                                                                                nificantly improved the performance of RL compared with
+                                           dK                                   non distributed ones, such as R2D2 [40] and Ape-X [41].
+                                                                                In MAPF, PRIMAL is a distributed RL method by using
+where dK is the dimension of Keys. The Values are weighted                      A3C. The idea behind this distributed version of algorithm
+summed by weights µhj¯i over C¯ j+ at each head h. And all                      is to parallelize the gradient computation, to more rapidly
+head outputs are concatenated over H heads to pass through                      optimize the parameters. Another approach, as proposed
+                                                                                in Ape-X, is to parallelize experience data generation and
+a neural network layer fo for the final output                                  selection with a shared replay memory. We adopt the latter
+
+                                                                     
+
+e^tj = fo concat                µjh¯iW  h  [e¯ti ,  l¯it],  h        H  .  (4)
+                                        V
+
+                      ¯iC¯ j +
+strategy, where we setup multiple runners on CPUs with           Fig. 3. Success rate of our method compared with PRIMAL and DHC in
+their own copy of the environment and up to date model
+to generate experience data, and a single learner on GPU to      two different scenarios.  TABLE II
+train. The runners initialize the priorities for the experience
+data and feed into a global prioritized reply buffer. The        AVERAGE STEPS IN TWO TYPES OF ENVIRONMENTS WITH OBSTACLE
+learner samples the most useful experiences from the buffer
+to update the model parameters and also update the priorities                              DENSITY = 0.3
+of the experiences. The advantage is that the model training
+is allocated to GPU while original A3C is designed for multi-    Agents  Average steps in 40 × 40 maps
+core CPU. Note that the transitions of all the agents need to       4
+be recorded for communication purpose in the model. As the          8    ODrM* DCC DHC PRIMAL
+priorities are shared among all runners, the good experiences      16     50.00 48.575 52.33 79.08
+explored by any runner can benefit the learner.                    32     52.17 59.60 63.90 76.53
+                                                                   64     59.78 71.34 79.63 107.14
+   As we only have a single learner on GPU, the core task                 67.39 93.54 100.10 155.21
+is to efficiently distribute multiple runners on CPUs. Here               82.60 135.55 147.26 170.48
+we utilize a powerful Python package named Ray [42],
+a distributed framework designed for machine learning, to        Agents  Average steps in 80 × 80 maps
+easily deploy parallel programs on multiple CPUs with little        4
+modification to the deep learning code.                             8    ODrM* DCC DHC PRIMAL
+                                                                   16     93.40 93.89 96.72 134.86
+      b) Curriculum learning: The ultimate goal of the learn-      32     104.92 109.89 109.24 153.20
+ing model is to handle complex cases in a large environment        64     114.75 122.24 122.54 180.74
+with high obstacle density and many agents. However, it            128    121.31 132.99 138.32 250.07
+would be hard for the model to learn fast and stably if                   134.42 159.67 163.50 321.63
+directly starting from a complicated training environment. As             143.84 192.90 213.15 350.76
+pointed in [39], presenting training examples not randomly
+but in a meaningful order will benefit machine learning          DHC are not included in this evaluation because they are
+algorithms. Motivated by this idea, we design a training         all-to-all communication (more costly than request-reply).
+pipeline to gradually introduce more complex training cases
+to the model. Specifically, training starts with a task where    A. Success Rate and Average Step
+only 1 agent stays in a 10 × 10 environment. Then if the
+success rate of the current task exceeds 0.9, two new tasks         Success rate measures the ability to complete a MAPF task
+are established for training. One is to increase the number      within given time steps. Average step measures the average
+of agents by 1, and the other is to increase the size of the     time step consumed to finish a task, where smaller value
+environment by 5. The final task with 16 agents in a 40 × 40     indicates a better policy. We average both successful and
+environment will be reached as the training scale grows.         unsuccessful cases to calculate the average steps. We set up
+                                                                 two types of maps, 40 × 40 and 80 × 80 for testing. The
+      c) Other training settings: For the environment setting,   obstacle density is set to be 0.3, the highest testing density
+the obstacle density for each environment during training is     in PRIMAL and DHC. We set up 200 test cases for each
+sampled from a triangular distribution between 0 and 0.5         agent number in {4, 8, 16, 32, 64}. Additional agent number
+with a peak at 0.33, which is the same as the obstacle setting   of 128 is tested in 80 × 80 maps due to a larger environment
+in PRIMAL. The FOV size is 9 × 9 (10 × 10 in PRIMAL,             space. The maximum time step for 40 × 40 map is 256, and
+we make it odd) and the agent is in the middle of the FOV.       386 for 80 × 80 map, the same as the PRIMAL's setting.
+The maximum step for the environment is 256.
+                                                                    Fig. 3 shows the success rate of our method compared
+   For training setting, we train the model with a batch size    with PRIMAL and DHC in two types of environments. In
+of 128 and a sequence length of 20. The discount factor          general, DCC and DHC (RL plus communication) perform
+ = 0.99. The multi-step TD error defined in Equation 5           much better than PRIMAL (RL with expert guidance) in
+is computed with a length of 2. The number of runners for        all cases. The performance of PRIMAL downgrades heavily
+distributed training is set to be 16.                            in relatively larger environments (80 × 80) compared with
+                                                                 smaller ones (40 × 40), which indicates the IL part of
+                         V. EXPERIMENTS                          PRIMAL does not deliver good guidance to its RL com-
+                                                                 ponent. Thus it suffers performance degradation on long-
+   The model is trained and tested in classical MAPF en-
+vironments as discussed in Section III. We compare DCC
+with one of the most well known RL baselines named
+PRIMAL [9], and the most recent RL plus communication
+method named DHC [15] in terms of success rate and
+average step. For comparing communication overhead, we
+build a baseline model, which uses request-reply mechanism
+but with predefined communication scope. PRIMAL and
+                                                                                                             TABLE III
+                                                                         COMMUNICATION FREQUENCY IN TWO DIFFERENT ENVIRONMENTS
+
+                                                                                               WITH OBSTACLE DENSITY = 0.3
+
+                                                                         Average Step  Map size 40 × 40  Map size 80 × 80
+                                                                            Agents
+                                                                                4      DCC RR-N2         DCC RR-N2
+                                                                                8
+                                                                               16      2.42  36.88       1.06  18.36
+                                                                               32
+                                                                               64      11.56 209.79      5.75  105.86
+                                                                              128
+                                                                                       60.47 959.38      24.98 469.58
+
+                                                                                       294.69 4111.57    126.685 2125.94
+
+                                                                                       1811.33 19490.09  562.11 8780.72
+
+Fig. 4. Success rate of our method compared with RR-N2 in two different                -     -           2915.84 36560.30
+scenarios.
+
+horizon task. In the environments where the agent density                that DCC achieves a better performance due to unconstrained
+is low, such as 4, 8, 16 agents in both 40 × 40 and                      communication scope, where each agent may communicate
+80 × 80 maps, the difference between the success rate of                 with more than two agents inside its FOV and thus gathers
+DCC and DHC is small. In these environments, agents                      more information than RR-N2. We show that this is not really
+have a lower chance to meet and communicate with others,                 the case and DCC actually learns succinct communication. In
+so the difference between broadcast communication (DHC)                  particular, we compute the average communication frequency
+and selective communication (DCC) is not very significant.               in these test environments as shown in Table III. A pair of
+However, the success rate of DHC drops rapidly when                      request and reply is counted as one time communication. The
+agent density further grows. In agent dense environments,                average communication overhead of RR-N2 is much more
+agents have a higher chance of encountering each other,                  costly than DCC in all the testing cases, and is extremely
+but agents will obtain irrelevant and redundant information              expensive in agent-dense environments. By learning selective
+from others due to broadcast communication, which harms                  communication, DCC can greatly reduce communication by
+the cooperation among agents. By selecting and gathering                 only focusing on relevant messages.
+relevant and influential information for communication, the
+cooperation is enhanced by DCC.                                             Combining these two results, we can conclude that al-
+                                                                         though communication can help multi-agent cooperation for
+   Table II verifies that DCC learns higher quality policies             MAPF, agents should learn to actively select relevant agents
+with respect to average steps. We include ODrM* [6], a                   for communication, because even the most nearest agents are
+centralized planner, as a reference. Especially compared with            not the relevant ones. Communicating with only two agents
+DHC, learning selective communication by DCC leads to                    can already lead to huge communication overhead. Thus,
+much shorter paths in agent dense environments.                          researchers should always devise a succinct communication
+                                                                         mechanism in order to reduce the communication overhead
+B. Selective Communication vs. Predefined Scope                          for easy deployment to real world problems.
+
+   Generally, selective communication by DCC does not                       Limitations: There is an additional computational cost
+need to set a communication scope. Any neighboring agent                 associated with selecting neighboring agents. In extreme
+inside the FOV is possible to be requested by the central                cases, the cost is of order of O(n×p). p is the FOV capacity.
+agent for communication. Previous broadcast communication
+method DHC defines the communication scope as the nearest                                         VI. CONCLUSION
+two neighboring agents inside the FOV in order to reduce
+temporal redundant information. Although it is reasonable to                We propose DCC to learn succinct communication for
+assume the nearest agents are most relevant and influential,             MAPF with classical MAPF environment settings. Our aim
+we show that selective communication outperforms the pre-                is to enable agents to actively select relevant and influential
+defined scope (nearest two agents) for MAPF in both success              neighbors for communication, instead of broadcasting. The
+rate and communication overhead.                                         selection is learned via the local policy adjustment effect
+                                                                         between agents, which captures the necessity of communi-
+   To make a fair comparison, we develop a baseline model,               cation. Empirical results show that selective communication
+named RR-N2 (request-reply, nearest two). The whole model                with relevant agents improves the policy learning process.
+architecture is similar to DCC. The only difference is that              Moreover, DCC also serves as a component for communica-
+RR-N2 does not have the decision causal unit in Fig. 2, and in           tion reduction, greatly downscaling the communication over-
+communication block, each agent only requests information                head. Future work entails extensions of DCC to centralized
+from its two nearest agents inside the FOV. The training                 training frameworks and cooperative Markov Game tasks.
+settings are the same as DCC as discussed in Section IV-C.               Another direction is to explore how to directly exclude sets of
+                                                                         neighbors during neighboring selection to reduce complexity,
+   Fig. 4 shows the success rate of our method compared with             and also the maximal number of agents that DCC can handle
+this baseline. The difference in success rate is significant in          in different size of maps.
+agent-dense environments, i.e., 64 agents in 40×40 map and
+128 agents in 80 × 80 map, which implies the nearest two
+agents are not always the most relevant ones. One may think
+                            REFERENCES                                            [22] Z. Ding, T. Huang, and Z. Lu, "Learning individually inferred com-
+                                                                                        munication for multi-agent cooperation," in Proc. Advances in Neural
+ [1] J. Yu and S. M. LaValle, "Structure and intractability of optimal multi-           Information Processing Systems (NeurIPS'20), 2020.
+      robot path planning on graphs," in Proc. AAAI Conference on Artificial
+      Intelligence (AAAI'13), 2013.                                               [23] M. Everett, Y. F. Chen, and J. P. How, "Motion planning among
+                                                                                        dynamic, decision-making agents with deep reinforcement learning,"
+ [2] J. Banfi, N. Basilico, and F. Amigoni, "Intractability of time-optimal             in Proc. IEEE/RSJ International Conference on Intelligent Robots and
+      multirobot path planning on 2d grid graphs with holes," IEEE Robotics             Systems (IROS'18). IEEE, 2018, pp. 3052­3059.
+      and Automation Letters, vol. 2, no. 4, pp. 1941­1947, 2017.
+                                                                                  [24] V. Mnih, A. P. Badia, M. Mirza, A. Graves, T. Lillicrap, T. Harley,
+ [3] J. Yu and S. M. LaValle, "Planning optimal paths for multiple                      D. Silver, and K. Kavukcuoglu, "Asynchronous methods for deep
+      robots on graphs," in Proc. International Conference on Robotics and              reinforcement learning," in Proc. International Conference on Machine
+      Automation (ICRA'13). IEEE, 2013, pp. 3612­3617.                                  Learning (ICML'16). PMLR, 2016, pp. 1928­1937.
+
+ [4] P. Surynek, A. Felner, R. Stern, and E. Boyarski, "Efficient sat             [25] A. Das, T. Gervet, J. Romoff, D. Batra, D. Parikh, M. Rabbat, and
+      approach to multi-agent path finding under the sum of costs objective,"           J. Pineau, "Tarmac: Targeted multi-agent communication," in Proc.
+      in Proc. European Conference on Artificial Intelligence (ECAI'16),                International Conference on Machine Learning (ICML'19). PMLR,
+      2016, pp. 810­818.                                                                2019, pp. 1538­1546.
+
+ [5] M. Goldenberg, A. Felner, R. Stern, G. Sharon, N. Sturtevant, R. C.          [26] J. Jiang, C. Dun, T. Huang, and Z. Lu, "Graph convolutional rein-
+      Holte, and J. Schaeffer, "Enhanced partial expansion a*," Journal of              forcement learning," in Proc. International Conference on Learning
+      Artificial Intelligence Research, vol. 50, pp. 141­187, 2014.                     Representations (ICLR'20), 2020.
+
+ [6] G. Wagner and H. Choset, "Subdimensional expansion for multirobot            [27] Y. Niu, R. Paleja, and M. Gombolay, "Multi-agent graph-attention
+      path planning," Artificial Intelligence, vol. 219, pp. 1­24, 2015.                communication and teaming," in Proc. International Conference on
+                                                                                        Autonomous Agents and MultiAgent Systems (AAMAS'21), 2021.
+ [7] G. Sharon, R. Stern, A. Felner, and N. R. Sturtevant, "Conflict-based
+      search for optimal multi-agent pathfinding," Artificial Intelligence, vol.  [28] A. Vaswani, N. Shazeer, N. Parmar, J. Uszkoreit, L. Jones,
+      219, pp. 40­66, 2015.                                                             A. N. Gomez, L. Kaiser, and I. Polosukhin, "Attention is all you
+                                                                                        need," in Proc. Advances in neural information processing systems
+ [8] J. Li, A. Felner, E. Boyarski, H. Ma, and S. Koenig, "Improved                     (NeurIPS'17), 2017, pp. 5998­6008.
+      heuristics for multi-agent path finding with conflict-based search."
+      in Proc. International Joint Conference on Artificial Intelligence          [29] F. Scarselli, M. Gori, A. C. Tsoi, M. Hagenbuchner, and G. Monfar-
+      (IJCAI'19), vol. 2019, 2019, pp. 442­449.                                         dini, "The graph neural network model," IEEE transactions on neural
+                                                                                        networks, vol. 20, no. 1, pp. 61­80, 2008.
+ [9] G. Sartoretti, J. Kerr, Y. Shi, G. Wagner, T. S. Kumar, S. Koenig,
+      and H. Choset, "Primal: Pathfinding via reinforcement and imitation         [30] M. Barer, G. Sharon, R. Stern, and A. Felner, "Suboptimal variants
+      multi-agent learning," IEEE Robotics and Automation Letters (RA-L),               of the conflict-based search algorithm for the multi-agent pathfinding
+      vol. 4, no. 3, pp. 2378­2385, 2019.                                               problem," in Annual Symposium on Combinatorial Search, 2014.
+
+[10] B. Wang, Z. Liu, Q. Li, and A. Prorok, "Mobile robot path planning in        [31] T. Rashid, M. Samvelyan, C. Schroeder, G. Farquhar, J. Foerster, and
+      dynamic environments through globally guided reinforcement learn-                 S. Whiteson, "Qmix: Monotonic value function factorisation for deep
+      ing," IEEE Robotics and Automation Letters (RA-L), vol. 5, no. 4, pp.             multi-agent reinforcement learning," in Proc. International Conference
+      6932­6939, 2020.                                                                  on Machine Learning (ICML'18). PMLR, 2018, pp. 4295­4304.
+
+[11] B. Riviere, W. Ho¨nig, Y. Yue, and S.-J. Chung, "Glas: Global-to-local       [32] R. Stern, N. R. Sturtevant, A. Felner, S. Koenig, H. Ma, T. T.
+      safe autonomy synthesis for multi-robot motion planning with end-to-              Walker, J. Li, D. Atzmon, L. Cohen, T. S. Kumar, et al., "Multi-
+      end learning," IEEE Robotics and Automation Letters (RA-L), vol. 5,               agent pathfinding: Definitions, variants, and benchmarks," in Twelfth
+      no. 3, pp. 4249­4256, 2020.                                                       Annual Symposium on Combinatorial Search, 2019.
+
+[12] Z. Liu, B. Chen, H. Zhou, G. Koushik, M. Hebert, and D. Zhao,                [33] M. Damani, Z. Luo, E. Wenzel, and G. Sartoretti, "Primal 2: Pathfind-
+      "Mapper: Multi-agent path planning with evolutionary reinforcement                ing via reinforcement and imitation multi-agent learning-lifelong,"
+      learning in mixed dynamic environments," in Proc. IEEE/RSJ Inter-                 IEEE Robotics and Automation Letters (RA-L), vol. 6, no. 2, 2021.
+      national Conference on Intelligent Robots and Systems (IROS'20).
+      IEEE, 2020, pp. 11 748­11 754.                                              [34] M. Tan, "Multi-agent reinforcement learning: Independent vs. cooper-
+                                                                                        ative agents," in Proc. International Conference on Machine Learning
+[13] Q. Li, F. Gama, A. Ribeiro, and A. Prorok, "Graph neural networks                  (ICML'93), 1993, pp. 330­337.
+      for decentralized multi-robot path planning," in Proc. IEEE/RSJ In-
+      ternational Conference on Intelligent Robots and Systems (IROS'20).         [35] P. Sunehag, G. Lever, A. Gruslys, W. M. Czarnecki, V. F. Zambaldi,
+      IEEE, 2020, pp. 11 785­11 792.                                                    M. Jaderberg, M. Lanctot, N. Sonnerat, J. Z. Leibo, K. Tuyls, and
+                                                                                        T. Graepel, "Value-decomposition networks for cooperative multi-
+[14] Q. Li, W. Lin, Z. Liu, and A. Prorok, "Message-aware graph attention               agent learning based on team reward," in Proc. International Con-
+      networks for large-scale multi-robot path planning," IEEE Robotics                ference on Autonomous Agents and MultiAgent Systems (AAMAS'18),
+      and Automation Letters (RA-L), vol. 6, no. 3, pp. 5533­5540, 2021.                2018, pp. 2085­2087.
+
+[15] Z. Ma, Y. Luo, and H. Ma, "Distributed heuristic multi-agent path            [36] S. Kullback, Information theory and statistics. Courier Corporation,
+      finding with communication," in Proc. IEEE International Conference               1997.
+      on Robotics and Automation (ICRA'21), 2021.
+                                                                                  [37] J. Chung, C. Gulcehre, K. Cho, and Y. Bengio, "Empirical evaluation
+[16] M. L. Littman, "Markov games as a framework for multi-agent                        of gated recurrent neural networks on sequence modeling," arXiv
+      reinforcement learning," in Proc. International Conference on Machine             preprint arXiv:1412.3555, 2014.
+      Learning (ICML'94), 1994, pp. 157­163.
+                                                                                  [38] Z. Wang, T. Schaul, M. Hessel, H. Hasselt, M. Lanctot, and N. Freitas,
+[17] A. Singh, T. Jain, and S. Sukhbaatar, "Learning when to communicate                "Dueling network architectures for deep reinforcement learning," in
+      at scale in multiagent cooperative and competitive tasks," in Proc.               Proc. International Conference on Machine Learning (ICML'16).
+      International Conference on Learning Representations (ICLR'19),                   PMLR, 2016, pp. 1995­2003.
+      2019.
+                                                                                  [39] Y. Bengio, J. Louradour, R. Collobert, and J. Weston, "Curriculum
+[18] D. Kim, S. Moon, D. Hostallero, W. J. Kang, T. Lee, K. Son, and Y. Yi,             learning," in Proc. International Conference on Machine Learning
+      "Learning to schedule communication in multi-agent reinforcement                  (ICML'09), 2009, pp. 41­48.
+      learning," in Proc. International Conference on Learning Representa-
+      tions (ICLR'19), 2019.                                                      [40] S. Kapturowski, G. Ostrovski, J. Quan, R. Munos, and W. Dab-
+                                                                                        ney, "Recurrent experience replay in distributed reinforcement learn-
+[19] S. Q. Zhang, Q. Zhang, and J. Lin, "Efficient communication in multi-              ing," in Proc. International Conference on Learning Representations
+      agent reinforcement learning via variance based control," in Proc.                (ICLR'18), 2018.
+      Advances in Neural Information Processing Systems (NeurIPS'19),
+      2019, pp. 3230­3239.                                                        [41] D. Horgan, J. Quan, D. Budden, G. Barth-Maron, M. Hessel,
+                                                                                        H. van Hasselt, and D. Silver, "Distributed prioritized experience re-
+[20] S. Q. Zhang, Q. Zhang, and J. Lin, "Succinct and robust multi-agent                play," in Proc. International Conference on Learning Representations,
+      communication with temporal message control," in Proc. Advances in                (ICLR'18), 2018.
+      Neural Information Processing Systems (NeurIPS'20), 2020.
+                                                                                  [42] P. Moritz, R. Nishihara, S. Wang, A. Tumanov, R. Liaw, E. Liang,
+[21] T. Wang, J. Wang, C. Zheng, and C. Zhang, "Learning nearly decom-                  M. Elibol, Z. Yang, W. Paul, M. I. Jordan, et al., "Ray: A distributed
+      posable value functions via communication minimization," in Proc.                 framework for emerging AI applications," in USENIX Symposium on
+      International Conference on Learning Representations, (ICLR'20),                  Operating Systems Design and Implementation, 2018, pp. 561­577.
+      2020.
+

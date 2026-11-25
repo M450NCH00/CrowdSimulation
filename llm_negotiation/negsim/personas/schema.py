@@ -1,0 +1,177 @@
+"""Persona schema.
+
+A persona is a ``persona_id`` plus a set of attributes. Each attribute is declared once,
+in :data:`ATTRIBUTES`, with how to validate it and whether another person could plausibly
+see it. Adding an attribute means adding one entry there and one line to a prompt
+template; the loader, the visibility settings and the prompt renderer pick it up from
+this table and need no change.
+
+Personas have no personal names, on purpose: a name carries gender and ethnicity cues
+that would be confounded with the attributes under study. The loader rejects name-like
+fields. Agents are referred to as "you" and "the other person" in prompts, and by agent
+index and ``persona_id`` in logs.
+"""
+
+from __future__ import annotations
+
+import re
+from dataclasses import dataclass
+from typing import Any, Callable, Mapping
+
+SCHEMA_VERSION = 1
+GENDERS = ("female", "male", "nonbinary")
+MIN_AGE, MAX_AGE = 1, 120
+PERSONA_ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_]*$")
+NAME_LIKE_FIELDS = frozenset(
+    {"name", "first_name", "last_name", "surname", "given_name", "full_name", "nickname"}
+)
+
+
+class PersonaError(ValueError):
+    """A persona definition is invalid."""
+
+
+def _age(value: Any) -> int:
+    # bool is a subclass of int in Python; "true" is not an age.
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError(f"must be a whole number of years, got {value!r}")
+    if not MIN_AGE <= value <= MAX_AGE:
+        raise ValueError(f"must be between {MIN_AGE} and {MAX_AGE}, got {value}")
+    return value
+
+
+def _gender(value: Any) -> str:
+    if value not in GENDERS:
+        raise ValueError(f"must be one of {list(GENDERS)}, got {value!r}")
+    return value
+
+
+def _text(allow_empty: bool) -> Callable[[Any], str]:
+    def validate(value: Any) -> str:
+        if value is None and allow_empty:
+            return ""
+        if not isinstance(value, str):
+            raise ValueError(f"must be text, got {value!r}")
+        value = " ".join(value.split())
+        if not value and not allow_empty:
+            raise ValueError("must not be empty")
+        return value
+
+    return validate
+
+
+@dataclass(frozen=True)
+class AttributeSpec:
+    """One persona attribute.
+
+    ``observable`` says whether another person could plausibly tell it by looking. It is
+    the default for the experiment's visibility settings and can be overridden there.
+    """
+
+    name: str
+    validate: Callable[[Any], Any]
+    required: bool
+    default: Any
+    observable: bool
+
+
+ATTRIBUTES: dict[str, AttributeSpec] = {
+    spec.name: spec
+    for spec in (
+        AttributeSpec("age", _age, required=True, default=None, observable=True),
+        AttributeSpec("gender", _gender, required=True, default=None, observable=True),
+        AttributeSpec("backstory", _text(allow_empty=True), required=False, default="", observable=False),
+        AttributeSpec("task", _text(allow_empty=False), required=True, default=None, observable=False),
+    )
+}
+
+
+@dataclass(frozen=True)
+class Persona:
+    persona_id: str
+    attributes: Mapping[str, Any]
+
+    @property
+    def age(self) -> int:
+        return self.attributes["age"]
+
+    @property
+    def gender(self) -> str:
+        return self.attributes["gender"]
+
+    @property
+    def task(self) -> str:
+        return self.attributes["task"]
+
+    @property
+    def backstory(self) -> str:
+        return self.attributes["backstory"]
+
+    def with_overrides(self, **changes: Any) -> "Persona":
+        """A copy with some attributes changed, re-validated.
+
+        This is how an experiment varies one attribute while holding the others fixed.
+        The copy's id records what was changed, e.g. ``f25+age=70``. A changed task does
+        not alter the id (the task is logged next to the persona), and a changed free-text
+        attribute is marked without being spelled out, e.g. ``f25+backstory*``.
+        """
+        if not changes:
+            return self
+        parts = []
+        for key in sorted(changes):
+            if key == "task":
+                continue
+            value = changes[key]
+            parts.append(f"{key}*" if isinstance(value, str) and value not in GENDERS else f"{key}={value}")
+        new_id = f"{self.persona_id}+{','.join(parts)}" if parts else self.persona_id
+        return validate_persona({**self.attributes, **changes}, persona_id=new_id)
+
+    def as_dict(self) -> dict[str, Any]:
+        return {"persona_id": self.persona_id, **self.attributes}
+
+
+def validate_persona(raw: Any, persona_id: str | None = None) -> Persona:
+    """Build a :class:`Persona` from a mapping, or raise :class:`PersonaError`.
+
+    ``raw`` may carry ``persona_id`` itself; ``persona_id`` given here takes precedence
+    (used for derived personas, whose ids are not plain identifiers).
+    """
+    if not isinstance(raw, Mapping):
+        raise PersonaError(f"a persona must be a mapping, got {type(raw).__name__}")
+    derived = persona_id is not None
+    persona_id = persona_id if derived else raw.get("persona_id")
+    label = f"persona {persona_id!r}"
+    if not isinstance(persona_id, str) or not persona_id:
+        raise PersonaError("a persona needs a 'persona_id' (text)")
+    if not derived and not PERSONA_ID_PATTERN.match(persona_id):
+        raise PersonaError(
+            f"{label}: persona_id must be lower-case letters, digits and underscores "
+            "(a code, not a name)"
+        )
+
+    names = sorted(NAME_LIKE_FIELDS & set(raw))
+    if names:
+        raise PersonaError(
+            f"{label}: field(s) {names} are not allowed. Personas must not have personal "
+            "names: a name carries gender and ethnicity cues that would confound the experiment."
+        )
+    unknown = sorted(set(raw) - set(ATTRIBUTES) - {"persona_id"})
+    if unknown:
+        raise PersonaError(
+            f"{label}: unknown field(s) {unknown}; allowed fields are "
+            f"{['persona_id', *ATTRIBUTES]}. To add an attribute, declare it in "
+            "negsim/personas/schema.py."
+        )
+
+    attributes = {}
+    for name, spec in ATTRIBUTES.items():
+        if name not in raw:
+            if spec.required:
+                raise PersonaError(f"{label}: missing required field {name!r}")
+            attributes[name] = spec.default
+            continue
+        try:
+            attributes[name] = spec.validate(raw[name])
+        except ValueError as exc:
+            raise PersonaError(f"{label}: {name} {exc}") from exc
+    return Persona(persona_id, attributes)

@@ -1,0 +1,47 @@
+# Doorway scenario — GameChat (Mahadevan, Zhang, Chandra, arXiv:2503.12333v1).
+# A value marked "Sec V-A" is the paper's. "repo" means the GameChat repository at commit
+# c49c35a, where the paper is silent. "design choice" means this project's own decision.
+schema_version: 1
+type: doorway
+description: >
+  Two agents start on the same side of a wall and must both pass through one doorway.
+  Their straight paths cross just beyond it.
+
+dt: 0.2                    # s      simulation step time (Sec V-A)
+max_time: 15.0             # s      maximum runtime (Sec V-A); the repo uses 20.0 (config.py:37)
+goal_tolerance: 0.1        # m      repo, main.py:146
+
+geometry:
+  door_width: 0.4          # m      "a doorway of size 0.4 m" (Sec V-A); the repo's gap is 0.5 m clear
+  wall_thickness: 0.1      # m      design choice; the repo's wall is a row of 0.05 m-radius discs (scenarios.py:22-23)
+  wall_extent: 1.5         # m      how far the wall runs to either side of the doorway
+  start_distance: 2.0      # m      "start 2 m to the left of the doorway" (Sec V-A)
+  start_lateral: 0.5       # m      "0.5 m north or south of it" (Sec V-A)
+  goal_distance: 1.0       # m      repo, scenarios.py:14-15; the paper says only "goals on the opposite side"
+  goal_lateral: 0.2        # m      repo, scenarios.py:11 — on the far side of the centre line, so the paths cross
+  start_heading_deg: 10.0  # deg    turned toward the centre line; repo, scenarios.py:12-13
+
+agent_defaults:
+  radius: 0.1              # m      "Agents had radii of 0.1 m" (Sec V-A)
+  max_speed: 0.3           # m/s    v_max (Sec V-A)
+  max_turn_rate: 1.0       # rad/s  omega_max (Sec V-A)
+agents: [{}, {}]           # per-agent overrides of agent_defaults, by agent index
+start_offsets: [0.0, 0.0]  # m      how far each agent's start is moved back; the paper's asymmetric variants use 0.25
+swap_sides: false          # false: agent 0 starts north and agent 1 south; true: the other way round
+
+conflict:
+  predictor: heading_ray   # rays cast along the headings (Sec IV-B)
+  safety_margin: 0.05      # m      design choice; at a right-angle crossing it gives the repo's 0.25 m (mpc_cbf.py:237-239)
+  zone_half_length: auto   # auto = (r_i + r_j + safety_margin) / sin(crossing angle); or a fixed number of metres
+
+controller:
+  backend: path_tracking
+  lookahead: 0.3           # m      design choice
+
+observation:
+  max_range: null          # no limit: the agents see each other from the start, as in GameChat
+  walls_block_sight: false # GameChat does not model occlusion
+
+deadlock:
+  window_s: 3.0            # s      "no robot can move toward its goal for a few seconds" (Sec I); "a few" read as 3 — design choice
+  speed_eps: 0.01          # m/s    repo, main.py:210

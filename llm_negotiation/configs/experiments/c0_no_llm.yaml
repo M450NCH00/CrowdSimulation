@@ -1,0 +1,47 @@
+# Condition C0, doorway: no LLM. Strategy 1 alone decides who goes first.
+#
+# The design is the paper's 18 doorway variants (arXiv:2503.12333v1, Sec V-A): the
+# symmetric layout and the two in which one agent starts 0.25 m further back, each with
+# "every combination of priorities such that neither was the same" (3 pairs of task
+# types, each in both orders).
+#
+# Strategy 1 knows nothing about the tasks, so the higher-priority agent should go first
+# in exactly half of the runs. The paper reports 50% for its non-communicating methods.
+#
+#   python run_experiment.py configs/experiments/c0_no_llm.yaml
+schema_version: 1
+experiment_name: c0_no_llm_doorway
+condition: C0
+description: Strategy 1 only, the paper's 18 doorway variants.
+
+scenario: configs/scenarios/doorway.yaml
+scenario_overrides:
+  conflict:
+    # The GameChat repository's fixed margin (mpc_cbf.py:237-239), used here so that the
+    # timings can be set beside the paper's Table II. It is safe for these identical
+    # agents (tests/test_scenarios.py) but not in general; the scenario's own
+    # default, "auto", is. See docs/derivations.md section 5.
+    zone_half_length: 0.25
+
+negotiation:
+  enabled: false
+
+arbitration:
+  policy: strategy1
+  tie_break: lower_index   # balanced by "assignment: counterbalance" below
+
+scoring:
+  ground_truth: task_priority   # hospital > airport > grocery
+
+design:
+  mode: factorial
+  seed: 24000
+  pairs:
+    - [{task_type: hospital}, {task_type: airport}]
+    - [{task_type: hospital}, {task_type: grocery}]
+    - [{task_type: airport}, {task_type: grocery}]
+  assignment: counterbalance   # each member of a pair is agent 0 once
+  scenario_variants:
+    - {name: symmetric, overrides: {}}
+    - {name: agent0_back, overrides: {start_offsets: [0.25, 0.0]}}
+    - {name: agent1_back, overrides: {start_offsets: [0.0, 0.25]}}

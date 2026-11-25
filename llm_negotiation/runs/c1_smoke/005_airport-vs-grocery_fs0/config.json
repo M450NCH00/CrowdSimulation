@@ -1,0 +1,233 @@
+{
+  "log_schema_version": 1,
+  "experiment_name": "c1_smoke",
+  "run_id": "005_airport-vs-grocery_fs0",
+  "run_index": 5,
+  "condition": "C1",
+  "seed": 24405,
+  "repeat": 1,
+  "created_utc": "2026-10-13T08:16:06+00:00",
+  "git": {
+    "commit": "c9522e4af76fbff676357ab611d6ce3ccda24e26",
+    "dirty": false
+  },
+  "software": {
+    "negsim_version": "0.1.0",
+    "python": "3.13.3"
+  },
+  "scenario_file": "configs/scenarios/doorway.yaml",
+  "scenario_variant": "base",
+  "scenario": {
+    "type": "doorway",
+    "description": "Two agents start on the same side of a wall and must both pass through one doorway. Their straight paths cross just beyond it.",
+    "dt_s": 0.2,
+    "max_time_s": 15.0,
+    "goal_tolerance_m": 0.1,
+    "geometry": {
+      "door_width": 0.4,
+      "wall_thickness": 0.1,
+      "wall_extent": 1.5,
+      "start_distance": 2.0,
+      "start_lateral": 0.5,
+      "goal_distance": 1.0,
+      "goal_lateral": 0.2,
+      "start_heading_deg": 10.0
+    },
+    "swap_sides": false,
+    "start_offsets_m": [
+      0.0,
+      0.0
+    ],
+    "region": {
+      "kind": "doorway",
+      "width_m": 0.4,
+      "length_m": 0.1
+    },
+    "conflict": {
+      "predictor": "heading_ray",
+      "safety_margin_m": 0.05,
+      "zone_half_length_m": 0.25
+    },
+    "observation": {
+      "max_range_m": null,
+      "walls_block_sight": false
+    },
+    "deadlock": {
+      "window_s": 3.0,
+      "speed_eps_mps": 0.01
+    },
+    "controller": {
+      "backend": "path_tracking",
+      "lookahead": 0.3
+    },
+    "agents": [
+      {
+        "agent_id": 0,
+        "side": "north",
+        "radius_m": 0.1,
+        "max_speed_mps": 0.3,
+        "max_turn_rate_radps": 1.0,
+        "initial_speed_mps": 0.3,
+        "start": {
+          "x": -2.0,
+          "y": 0.5,
+          "theta_rad": -0.17453292519943295
+        },
+        "goal": {
+          "x": 1.0,
+          "y": -0.2
+        },
+        "path": [
+          [
+            -2.0,
+            0.5
+          ],
+          [
+            1.0,
+            -0.2
+          ]
+        ],
+        "path_length_m": 3.0805843601498726,
+        "region_entry_s_m": 2.0023798340974173,
+        "region_exit_s_m": 2.105065979435746
+      },
+      {
+        "agent_id": 1,
+        "side": "south",
+        "radius_m": 0.1,
+        "max_speed_mps": 0.3,
+        "max_turn_rate_radps": 1.0,
+        "initial_speed_mps": 0.3,
+        "start": {
+          "x": -2.0,
+          "y": -0.5,
+          "theta_rad": 0.17453292519943295
+        },
+        "goal": {
+          "x": 1.0,
+          "y": 0.2
+        },
+        "path": [
+          [
+            -2.0,
+            -0.5
+          ],
+          [
+            1.0,
+            0.2
+          ]
+        ],
+        "path_length_m": 3.0805843601498726,
+        "region_entry_s_m": 2.0023798340974173,
+        "region_exit_s_m": 2.105065979435746
+      }
+    ],
+    "obstacles": [
+      {
+        "xmin": -0.05,
+        "ymin": 0.2,
+        "xmax": 0.05,
+        "ymax": 1.5
+      },
+      {
+        "xmin": -0.05,
+        "ymin": -1.5,
+        "xmax": 0.05,
+        "ymax": -0.2
+      }
+    ]
+  },
+  "participants": [
+    {
+      "agent_id": 0,
+      "task": "go to the airport",
+      "task_type": "airport",
+      "persona": null,
+      "side": "north"
+    },
+    {
+      "agent_id": 1,
+      "task": "the grocery store",
+      "task_type": "grocery",
+      "persona": null,
+      "side": "south"
+    }
+  ],
+  "assignment": {
+    "agent_0": {
+      "persona": null,
+      "overrides": {},
+      "task_type": "airport"
+    },
+    "agent_1": {
+      "persona": null,
+      "overrides": {},
+      "task_type": "grocery"
+    },
+    "swap_sides": false,
+    "first_speaker": 0
+  },
+  "negotiation": {
+    "enabled": true,
+    "prompt_template": {
+      "key": "gamechat_task_v1",
+      "id": "gamechat_task",
+      "version": 1,
+      "sha256": "cf6ec868b93410447d74ad263a81cb43ce0e7627221c308634c2b9be55a26737"
+    },
+    "max_messages_per_agent": 4,
+    "first_speaker": 0,
+    "timing": {
+      "mode": "pre_conflict",
+      "seconds_per_message": 1.0
+    },
+    "info_variant": "default",
+    "info_fields": [],
+    "visibility": {
+      "age": true,
+      "gender": true,
+      "backstory": false,
+      "task": false,
+      "speed": true,
+      "size": true
+    },
+    "rendered_system_prompts": {
+      "agent_0": "You are taking someone to go to the airport. There is another agent taking someone to a location. You will have a conversation until you determine whether you have more or less priority as them depending on the tasks you and they are performing. Do not include pleasantries and be concise. Remembering your task correctly is paramount!\n\nReply with a single JSON object and nothing else. It must have exactly these two keys:\n\"message\": what you say to the other agent, as plain text.\n\"stance\": your current position on who has priority and so goes first. Use exactly one of:\n  \"I_GO_FIRST\" if you have more priority,\n  \"YOU_GO_FIRST\" if the other agent has more priority,\n  \"UNDECIDED\" if that has not been determined yet.\nOnly \"message\" is passed to the other agent. They are not shown \"stance\".\nThe format, with placeholders: {\"message\": \"<what you say>\", \"stance\": \"<I_GO_FIRST, YOU_GO_FIRST or UNDECIDED>\"}",
+      "agent_1": "You are taking someone to the grocery store. There is another agent taking someone to a location. You will have a conversation until you determine whether you have more or less priority as them depending on the tasks you and they are performing. Do not include pleasantries and be concise. Remembering your task correctly is paramount!\n\nReply with a single JSON object and nothing else. It must have exactly these two keys:\n\"message\": what you say to the other agent, as plain text.\n\"stance\": your current position on who has priority and so goes first. Use exactly one of:\n  \"I_GO_FIRST\" if you have more priority,\n  \"YOU_GO_FIRST\" if the other agent has more priority,\n  \"UNDECIDED\" if that has not been determined yet.\nOnly \"message\" is passed to the other agent. They are not shown \"stance\".\nThe format, with placeholders: {\"message\": \"<what you say>\", \"stance\": \"<I_GO_FIRST, YOU_GO_FIRST or UNDECIDED>\"}"
+    }
+  },
+  "llm": {
+    "client": "deepseek",
+    "base_url": "https://api.deepseek.com",
+    "timeout_s": 60.0,
+    "max_retries": 2,
+    "budget_cap_usd": 0.5,
+    "spend_ledger": "spend_ledger.jsonl",
+    "prices": {
+      "source_url": "https://api-docs.deepseek.com/quick_start/pricing",
+      "date_checked": "2026-10-13"
+    },
+    "model": "deepseek-flash",
+    "temperature": 1.0,
+    "max_tokens": 300,
+    "thinking": "disabled",
+    "json_mode": true,
+    "seed_parameter": null
+  },
+  "arbitration": {
+    "policy": "strategy1",
+    "tie_break": "lower_index"
+  },
+  "scoring": {
+    "ground_truth": "task_priority",
+    "priority_order": [
+      "hospital",
+      "airport",
+      "grocery"
+    ]
+  },
+  "budget": {
+    "cap_usd": 0.5,
+    "ledger": "spend_ledger.jsonl"
+  }
+}

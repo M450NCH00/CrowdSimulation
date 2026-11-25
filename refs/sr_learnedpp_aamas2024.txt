@@ -1,0 +1,662 @@
+Attention-based Priority Learning for Limited Time Multi-Agent
+                                   Path Finding
+
+        Yibin Yang               Mingfeng Fan                                                                     Chengyang He
+
+     Tsinghua University     Central South University                                                      National University of Singapore
+         Beijing, China           Changsha, China                                                          Singapore, Republic of Singapore
+
+yyb19@mails.tsinghua.edu.cn  mingfan2001@gmail.com                                                             chengyanghe@u.nus.edu
+
+   Jianqiang Wang                  Heye Huang                                                                  Guillaume Sartoretti
+
+   Tsinghua University            Tsinghua University                                                      National University of Singapore
+      Beijing, China                  Beijing, China                                                       Singapore, Republic of Singapore
+                                                                                                           guillaume.sartoretti@nus.edu.sg
+wjqlws@tsinghua.edu.cn       hhy18@mails.tsinghua.edu.cn
+
+ABSTRACT                                                                                   Limited Time Multi-Agent Path Finding. In Proc. of the 23rd International
+                                                                                           Conference on Autonomous Agents and Multiagent Systems (AAMAS 2024),
+Solving large-scale Multi-Agent Path Finding (MAPF) within a                               Auckland, New Zealand, May 6 ­ 10, 2024, IFAAMAS, 9 pages.
+limited time remains an open challenge, despite its importance
+for many robotic applications. Recent learning-based methods                               1 INTRODUCTION
+scale better than conventional ones, but remain suboptimal and
+often exhibit low success rates within a limited time on large-scale                       Multi-Agent Path-Finding (MAPF) [1, 23] is a central multi-agent/-
+instances. These limitations often stem from their black-box nature.                       robot problem, in which multiple agents have to plan collision-free
+In this study, we propose a hybrid approach that incorporates                              paths to their pre-assigned goals while minimizing total travel
+prioritized planning with learning-based methods to explicitly                             times. There has been an increasing interest in large-scale MAPF
+address these challenges. We formulate prioritized planning as                             due to its broad applications in autonomous vehicles [12], multi-
+a Markov Decision Process and introduce a reinforcement learning-                          robot systems [6, 19], and video games [16]. However, due to the
+based prioritized planning paradigm. In doing so, we develop                               curse of dimensionality, solving large-scale MAPF in a limited
+a novel Synthetic Score-based Attention Network (S2AN) to                                  time still remains a significant challenge [9, 28]. For instance, in
+learn conflict/blocking relationships among agents, and deliver                            gaming scenarios, real-time computation and rendering of paths
+blocking-free priorities. By integrating priority mechanisms and                           for a large number of agents are necessary to enable them to find
+leveraging a new attention-based neural network for enhanced                               collision-free paths quickly and maintain player engagement. In
+multi-agent cooperative strategies, our method enhances solution                           this work, we focus on large-scale MAPF, and present an approach
+completeness while trading off scalability and maintains linear                            that aims to strike an efficient balance between high completeness
+time complexity, thus offering a robust avenue for large-scale                             and computing times, by boosting the performance of prioritized
+MAPF tasks. Comparisons demonstrate its superiority over current                           planning through machine learning.
+learning-based methods in terms of solution quality, completeness,
+and reachability within limited time constraints, especially in large-                     Limited Feasible Path Finding                                                              Priority Learning Framework
+scale scenarios. Moreover, an extensive set of numerical results
+reveals superior completeness compared to restricted-time Priority-                             Feature                Initial                                             Synthetic
+Based Search (PBS) and Priority Inheritance with Backtracking                                   Process             Trajectories                                             Score-
+(PIBT) in medium to large-scale obstacle-dense scenarios.                                                                                                                    based
+                                                                                                                                  No
+KEYWORDS                                                                                                                                                                   Attention
+                                                                                           ...                      Repair?                                                Network
+Multi-Agent Path Finding; Attention-Based Network; Reinforce-                                                                                                               (S2AN)
+ment Learning; Prioritized Planning                                                                                                Yes
+
+ACM Reference Format:                                                                                                 Reachability
+Yibin Yang, Mingfeng Fan, Chengyang He, Jianqiang Wang, Heye Huang,                                                 Repair Algorithm
+and Guillaume Sartoretti. 2024. Attention-based Priority Learning for
+                                                                                           Multi-Agent Environment                                                         Agent  × 
+Both authors contributed equally to the paper                                                                                                                                ID
+Corresponding author                                                                                       Grid World
+                                                                                           MAPF                  Goal 1                 Trajec-
+                               This work is licensed under a Creative Commons Attribution  Cases                                        tories
+                               International 4.0 License.                                         Goal 3                 Goal 2                                             Low-
+                                                                                                                                                                             level
+Proc. of the 23rd International Conference on Autonomous Agents and Multiagent Systems            Agent 2                                                                  Planner
+(AAMAS 2024), N. Alechina, V. Dignum, M. Dastani, J.S. Sichman (eds.), May 6 ­ 10, 2024,
+Auckland, New Zealand. © 2024 International Foundation for Autonomous Agents and                           Agent 1       Agent 3
+Multiagent Systems (www.ifaamas.org).
+                                                                                                                                                                      Map  Feedback
+
+                                                                                                Limited Time Multi-Agent Path-Finding
+
+                                                                                           Figure 1: Limited Time MAPF Problem and Attention-based
+                                                                                           Priority Learning Framework.
+   MAPF algorithms can be categorized into non-learning and                    than existing learning-based methods in highly obstructed
+learning approaches. Non-learning algorithms can be further                    scenarios.
+divided into systematic search algorithms, rule-based algorithms,         (2) Our framework is able to yield high-completeness solutions
+and prioritized algorithms. Systematic search algorithms, such as              to large-scale MAPF instances under strong time constraints,
+CBS [22], offer optimal or bounded-suboptimal solutions. However,              typically within seconds for teams of up to 180 agents in
+due to the NP-Hard nature of MAPF problems, they face challenges               32*32 random 20% obstacle maps. It significantly outper-
+when handling large-scale scenarios and exhibit exponential-time in            forms a variety of MAPF algorithms in terms of success rate
+the worst case. On the other hand, rule-based algorithms guarantee             on maps with large teams and high-density obstacles, while
+finding a solution in polynomial time but may encounter planning               keeping time complexity linear.
+time or memory issues in practical applications. Prioritized algo-
+rithms, such as MAPF-LNS2 [11] (the state-of-the-art unbounded         2 RELATED WORK
+suboptimal MAPF algorithms) and PBS [14], perform well in
+practice despite being incomplete. They decompose the MAPF             2.1 MAPF Algorithms
+problem into a series of single-agent planning problems that can be
+solved sequentially based on some underlying priority, each treating   Numerous algorithms have been developed to solve MAPF problem,
+higher-priority agents as obstacles. While low-level planning          which is focused on finding the minimum-cost, conflict-free solu-
+can achieve optimality, it does not guarantee the optimality of        tion [6, 15]. Optimal MAPF resolution is NP-complete, frequently
+the overall plan, as high-level planners often lack the ability        encountering scalability issues [4]. Optimal MAPF resolution is NP-
+to adequately consider global features and predict interactions        complete, frequently encountering scalability issues [4]. Bounded
+with lower-priority agents. In contrast, learning-based methods        suboptimal solvers ensure that the cost of the solution is within a
+have shown great abilities at leveraging global information and        given bound of the optimal value, and they operate at a relatively
+achieving high performances in many other applications, such as        accelerated pace [2]. However, they cannot handle large-scale
+routing problems [8]. In particular, existing learning-based MAPF      problems. Unbounded suboptimal solutions offer rapid computa-
+approaches [17, 21, 27] often rely on distributed reinforcement        tional speed and demonstrate admirable performance in large-scale
+learning (RL) or partially centralized Multi-Agent Reinforcement       agent scenarios, finding applications in both research and industry
+Learning (MARL) algorithms. They scale well across different team      [2]. Accordingly, this paper concentrates on the elucidation of
+sizes, world sizes, and obstacle densities. However, these methods     unbounded suboptimal solutions. Unbounded suboptimal methods
+cannot guarantee optimality or completeness. Due to their black-       for solving MAPF can be categorized into two broad classifications:
+box nature, learning-based methods lack behavior consistency and       learning-based and non-learning-based approaches.
+low-level optimality. This often leads to extended time requirements
+for guiding all agents to their goals. In practice, learning methods      Classic non-learning-based approaches. These approaches
+struggle to achieve optimality and may fail to solve problems within   generally include rule-based algorithms [18, 20, 26], bounded-
+a limited time, especially in highly obstructed, small-world-size, or  suboptimal algorithms with an infinite bound factor [2, 24] and
+dense-agent scenarios [17, 21].                                        prioritized planning algorithms. Rule-based algorithms generally
+                                                                       offer completeness guarantees and can be executed in polynomial
+   To address these limitations, this paper introduces a novel         time under certain (weakened) conditions. However, in practical
+paradigm for Multi-Agent Path Finding (MAPF) that combines             applications, these methods often struggle with global optimal-
+learning and prioritized planning. We harness the power of machine     ity and are time-consuming for large-scale problems. Bounded-
+learning to reason about global information and directly generate      suboptimal algorithms are based on CBS. While these methods no
+high-quality priorities for the agents. These priorities are then      longer require boundedness, their foundation in CBS techniques
+used to quickly find near-optimal low-level paths for the agents,      still presents challenges when addressing larger-scale problems.
+and thus solve the problem with high completeness and low time         Prioritized planning algorithms have gained significant attention
+complexity. In doing so, our approach directly learns cooperation in   due to their simplicity and efficiency. They can be seamlessly
+the priority space of the agents. Specifically, we employ an encoder   extended with other algorithms and exhibit strong performance.
+to encode the MAPF instance and a decoder to sequentially output
+the agent to be planned next, based on the encoded information            Learning-based approaches. These methods represent another
+and information about all planned trajectories so far. To the          paradigm for computing approximate solutions to the MAPF
+best of our knowledge, we are the first to utilize Reinforcement       problem through the iterative refinement of temporal strategies
+Learning (RL) for learning priorities for MAPF. Accordingly, the       informed by feedback rewards. These approaches engage in policy
+main contributions are outlined as follows.                            planning for each agent, employing local observations or messages
+                                                                       to determine the next action. Notable methods in this category
+   (1) We introduce a novel hybrid paradigm for MAPF, which            include distributed RL techniques such as PRIMAL [21], MARL
+        combines machine learning and priority-based planning.         approaches like SCRIMP [27] and PICO [13]. PRIMAL initially
+        There, the behavior inconsistency and suboptimal low-level     introduces RL and learns a fully decentralized policy in a partially
+        planning challenges are explicitly addressed by building       observable environment. Recent research has emphasized commu-
+        upon the prioritized planning framework, also offering         nication learning for the MAPF problem. While specific features
+        promising scalability. Experiments demonstrate that our        and networks enhance success rates, they often struggle to scale to
+        method has better solution quality and higher completeness     large scenarios due to communication complexity. Learning-based
+                                                                       methods show scalability under certain conditions. However, due
+                                                                       to the challenges associated with multimodal policy learning and
+inconsistent behavior, they struggle to find feasible solutions for       Many decoupled Multi-Agent Path Finding (MAPF) algorithms
+scenarios involving hundreds or more agents.                           break down the multi-agent planning problem into multiple smaller
+                                                                       constrained single-agent planning problems. These single-agent
+2.2 Prioritized Planning                                               planners have been extensively studied and are typically governed
+                                                                       by non-learning methods. One such powerful single-agent planner
+Prioritized planning algorithms are neither complete nor optimal;      is SIPPS (Safe Interval Path Planning with Soft constraints) [11],
+however, they represent a computationally inexpensive and highly       capable of efficiently handling scenarios involving moving obstacles.
+effective approach to solving the MAPF problem [3, 7, 14]. These       We employ the SIPPS as the low-level single-agent path planner to
+methods are predicated on a straightforward prioritization scheme:     complete our framework.
+each agent is assigned a unique priority, and agents are subse-
+quently ordered according to predefined global priorities. The         1 2 Start points 1,2 1 2 3 Goals 1,2,3  Obstacle
+agent with the highest priority is enabled to compute its individual
+optimal path first. The Attention routing problem shares similarities        3                                 2
+with MAPF and is also NP-Hard [8, 10], requiring the generation of a
+non-repeating sequence. It necessitates a trade-off between solution   1  2  1                       2  1      1
+quality and computational time [5]. Mainstream approaches can
+be classified into three types: improvement, backtracking, and         (a) Failure: Target blocking  (b) Failure: Run over
+construction methods.
+                                                                          Figure 2: Priority Failure Reasons.
+   Backtracking. These methods often necessitate iterative tra-
+versal of the entire priority space, exemplified by algorithms like    3.2 Prioritized Planning Failure Analysis
+PBS [14]. Such methods iteratively search through a subset of the
+space until a feasible solution is discovered. Analogous to CBS [22],  Prioritized planning is a prevalent decoupled method for MAPF.
+this method partitions the space based on conflicts arising from the   It operates by assigning a fixed global order and then planning
+generated paths and is provably p-complete.                            the agents' paths sequentially. The highest-priority agent begins
+                                                                       by optimally planning its path while avoiding static obstacles.
+   Iteration. The iteration methods proceed to generate progres-       Subsequently, each agent plans its path, considering not only static
+sively superior solutions, building upon previous ones, until com-     obstacles but also treating previously planned agents' paths as
+pletion. MAPF-LNS2 [11] employs the large neighborhood search          moving obstacles. This process repeats  times, where  is the
+framework for its iterative procedure and currently represents the     number of agents, ultimately solving the problem. This method
+state-of-the-art in unbounded MAPF methods.                            efficiently simplifies the multi-agent problem into a series of single-
+                                                                       agent problems.
+   Construction. The construction methods typically produce
+a solution in a single pass, contrasting with improvement and             Prioritized planning, while widely used, has been proven to be
+backtracking approaches, which require repetitive iteration and        incomplete and suboptimal. Randomly assigned priorities can lead
+search traversal. Hence, construction methods boast superior real-     to poor or even failed solutions. Failures in prioritized planning
+time capabilities alongside a commendable success rate. It is well     can be categorized into two main situations [11], as illustrated in
+known in the routing problems [8, 10] but is rare in MAPF. They        Figure 2. The first situation is goal blocking, where higher-priority
+are capable of rapidly generating high-quality suboptimal solutions    agents (e.g., 2 and 3) reach their goals early and occupy them,
+and exhibit admirable scalability. Accordingly, this paper introduces  entirely preventing lower-priority agents (e.g., 1) from reaching
+a construction-type attention routing method.                          their destinations. While feasible solutions can be generated when
+                                                                       1 has higher priority than 2 or 3, in dense obstacle environments,
+3 PRELIMINARIES                                                        agents can be blocked by different agents at various priority levels,
+                                                                       necessitating multiple visits to their goal before completing the task.
+3.1 Multi Agent Path Finding                                           This makes it challenging to find a feasible priority assignment in
+                                                                       a single pass.
+Definition 1 (Multi-Agent Path Finding). In a known 2D static
+grid map containing multiple obstacles, we consider a scenario with       The second reason is run over, where higher-priority agents (e.g.,
+ agents. Each agent possesses a distinct starting location that does   2) plan paths that intersect with lower-priority agents (e.g., 1).
+not overlap with obstacles or other agents' starting positions, as     In such cases, 1 lacks the required maneuvering space to plan a
+well as unique goal locations that are similarly obstacle-free and     collision-free path. It is worth noting that if all agents can wait at
+non-overlapping. At each discrete time step, agents can move to        starts and goals without obstructing others, any priority assignment
+neighboring cells or remain stationary at their current locations.     would solve the problem. We refer to this as a well-formed problem.
+The primary objective is for each agent to plan a path that satisfies
+the following conditions: 1) Begins at their respective starting       4 METHOD
+positions, 2) Avoids collisions with other agents and obstacles, and
+3) all agents end up at their goal locations at some terminal time     This section outlines our approach to the prioritized problem
+step. The solution to this problem comprises a set of paths for all    within a Markov Decision Process (MDP) framework. We start by
+agents. The optimization objective is to minimize the sum of the       formulating the problem as an MDP, subsequently highlighting two
+path lengths. However, instead of seeking the optimal solution, our    critical and time-efficient features that enable our learning-based
+focus is on efficiently finding a feasible solution within a limited
+time frame.
+model to learn patterns and relationships within the data pertaining      4.2 Feature Design
+to MAPF problems. Next, we elaborate on our policy network, S2AN,
+which extracts latent information from these critical features and        Effective feature engineering is the key to unlocking the full
+learns to deliver priority sequences with high completeness in an         potential of a learning-based model for solving MAPF problems.
+encoding-decoding manner. Lastly, we present our reinforcement            In our paper, we employ two well-designed features including
+learning technique, which efficiently trains this model.                  harmful feature and target matrix, based on domain knowledge to
+                                                                          capture the essential information from data given a MAPF instance.
+State      Transition Function   High-level Priority Planner  Agent ID    Harmful feature assesses local connectivity to determine whether
+                                                                          an agent's goal is blocking its neighborhood or not. Figure 4 offers
+1          Transit      2                                                 an illustrative example of how this feature distinguishes whether
+                                                                          an agent's goal is harmful or not. In practice, goal blocking is a
+1                       2                                                 common occurrence. When an agent's goal obstructs other agents,
+                                                                          its priority should be lowered. However, manually detecting all
+Low-level           Low-level         Low-level  Low-level                blocking pairs can be time-consuming. Consequently, we aim to
+                                                                          autonomously discern these blocking relationships by utilizing the
+Planner                 Planner  ...  Planner    Planner                  provided harmful feature in a learning-based model. The harmful
+                                                                          feature allows the model to capture the blocking relationships
+         Avoid planned                         Avoid planned              inherent in the data, enhancing its ability to address the MAPF
+                                                                          problem effectively.
+
+     Figure 3: MDP Formulation of Prioritized Planning.                       11                              11
+                                                                                                      44
+4.1 Markov Decision Process Formulation                                   44      22
+                                                                                                              33
+A MAPF instance comprises three basic components: an obstacle                 33
+map, start locations, and goal locations. We describe the MDP of                            (b) not harmful goal
+prioritized planning in Figure 3. In the initial state 1, the high-       (a) harmful goal
+level priority planner selects an agent, such as 1, as its action.
+Subsequently, the low-level single-agent path planner computes            Figure 4: Harmful Feature Illustration. The star indicates the
+the path for this agent while considering the paths of previously         goal location. Assume the goal has up to four non-obstacle
+planned agents as soft-moving obstacles. The low-level planner            neighbors 1,2,h3a,r4hma.frWumlfeul examine the cnoontnhnoaterhmcatrfmuivlfuitly sequentially.
+provides feedback to the environment, leading to a transition to          If any of them fail, then the goal is blocking a region and is
+state 2 based on this feedback. This iterative process repeats for        considered harmful. In sub-figure (a), 3 cannot find a path to
+ times, ultimately progressing the state to its final configuration.      4 so it is harmful. In (b), all the non-obstacle neighbors are
+Given an instance with  agents, we formally define the MDP of             connected so it is not harmful.
+prioritized planning as follows.
+                                                                             On the other hand, another feature target matrix is derived
+   State. The state consists of two parts, a static and a dynamic         from the Minimal Target Visit A* algorithm (MTVA*), inspired by
+one. The static part contains the basic components of the instance,       MAPF-LNS2 [11]. In the original A* algorithm, the search prioritizes
+i.e., the obstacle map, start, and goal locations, as well as additional  exploring the node with the minimal  value from the open set
+static features such as harmful features. On the other hand, the          to find a path.  is the sum of the node's heuristic distance to
+dynamic part contains the agents that have been selected before           the goal and its traveled distance. However, in MTVA*, instead of
+and their respective planned paths.                                       focusing solely on the minimal  value, it explores the node with
+                                                                          the least visits to other agents' goals, denoted as . In cases where
+   Action. The action of the MDP is the index of an agent, i.e.,          multiple nodes | | share the minimum  values, it will select the
+selecting the agent at the current time step. Since the high-level        node in | | with the smallest  value. We aggregate visiting pairs
+planner cannot choose an agent more than once, the legal set of           and represent them as target matrix. Formally,    = 1
+actions consists of all the agents that have not been chosen.             if agent  passes through agent 's goal during the execution of
+                                                                          MTVA*; otherwise,    = 0. Notably, target matrix is
+   State transition. We use SIPPS as the low-level path solver.           a dynamic feature that changes whenever the high-level planner
+Once the policy network delivers an action, SIPPS generates the           generates an action. Hence, we integrate target matrix into the
+corresponding agent's path. This planned path constitutes as a            decoding step to provide auxiliary knowledge to our learning-based
+component of the dynamic state of the next state.                         model. Similar to the algorithm for topological sorting with zero
+                                                                          in-degrees, when an agent no longer obstructs others, it can be
+   Reward. The goal is to find a feasible solution. We achieve this       selected as the highest-priority agent among the remaining ones.
+by minimizing the collisions. When new collisions are detected,
+( ,  ) are equal to the negative number of new collision agents.
+When the episode terminates and a collision-free solution is found,
+we give a positive episode reward.
+                                    Target-Obstacle Map                   1+1 2+1 ··· +1                                    Linear                             
+                                                                                                                                                  '
+
+                                                                                                                                                              SoftMax
+
+                                  Harmful Detector                                 Add & Norm                               Mask Fill                           Sum
+                                                                                  Feed Forward                                                    '
+                                  Harmful                                          Add & Norm                                     
+                                  Feature 0/1                                  Multi-head Attention                                                             Scale
+                                                                               1 2 ··· 
+       Hybrid Initial Embeddings                                                                          MatMul               MatMul               MatMul
+                                                                                                           Scale               SoftMax
+          Resnet                          Embedding                                                                             Linear                ar
+
+          1                                  2
+
+                             Concatenate
+
+           1 2 ···                                               Attention-based Encoder(× )                        Synthetic Score-based Decoder
+
+             Figure 5: The Network Structure of Synthetic Score-based Attention Network(S2AN).
+
+4.3 Policy Network                                                                  where , , and   represent Query, Key, and Value matrices,
+                                                                                                                        
+
+To solve the MAPF problem, we develop a novel learning-based                        respectively;  is the number of attention heads;   ,   ,   
+method namely S2AN. Our S2AN is built upon a Transformer-
+style [25] architecture and consists of hybrid initial embeddings,                                                                                             , ,  ,
+attention-based encoder, and synthetic score-based decoder, as
+shown in Figure 5.                                                                   × with  = / , and    × are trainable parameters.
+
+   Hybrid Initial Embeddings. The hybrid initial embeddings                         Eqs.(1) and (2) are applied for each attention head . Then the
+serve as inputs to S2AN and are obtained by mapping the raw
+features associated with a MAPF instance into a high-dimensional                    output of the MHA sublayer, i.e.,  , is fed into the FF sublayer
+feature space. For a given instance S with  agents, each agent
+possesses two types of raw features: instance features (comprising                  to get the output of the attention layer , i.e., +1, expressed as
+start location, goal location, and obstacle map) and a domain-                      Eq.(5). After applying these operations for a total of  attention
+specific feature harmful feature. We process these two types of
+features separately. Specifically, we employ a ResNet to project                    layers, we ultimately obtain the attention-based encoder's output,
+instance features into a 1-dim vector denoted as 1. On the other
+hand, we utilize a linear layer to map Harmful feature which                         = +1, which serves as the input to the synthetic score-based
+is a boolean variable into a 2-dim vector represented as 2.
+Subsequently, these two vectors, 1 and 2, are concatenated to                       decoder.
+form the -dim hybrid initial embedding  of agent .
+                                                                                                                        +1 =  (^ +   (^ )),                                          (5)
+   Attention-based Encoder. The attention-based encoder takes
+the hybrid initial embeddings 1 = { }1 as inputs and generates                          Synthetic Score-based Decoder. Based on the embedding
+an advanced embedding matrix denoted as  for all agents. We
+employ an encoder structure similar to that of Transformer [25],                    matrix , our synthetic score-based decoder constructs solutions
+comprising  attention layers. Each attention layer consists of a
+multi-head attention (MHA) sublayer that facilitates communica-                     to MAPF problems in an autoregressive manner. The decoder
+tion between agents to capture their relationships more effectively
+and a feed-forward (FF) sublayer that consists of two linear projec-                consists of one synthetic attention layer that integrates a domain-
+tion layers with a ReLU activate function in between. Each sublayer
+is followed by a skip-connection and batch normalization(BN). Let                   specific feature,i.e., target matrix, into an MHA mechanism, and
+ represent the input to attention layer  (  {1, · · · , }). The core
+of the MHA sublayer, based on  , is formally defined as follows:                    one compatibility layer. We first calculate the Query, Key, and Value
+
+                                                                                    matrixes, denoted as , , and  , respectively, for the synthetic
+                                                                                    attention layer, and single head key termed  for the compatibility
+
+                                                                                    layer through linear transformation, expressed as follows,
+
+                                                                                                           =  ,                                                                      (6)
+
+                                                                                                                                          ,  ,  ,  .
+
+                                                                                        Given the constraint that each agent can be selected no more
+
+                                                                                    than once, we should forbid the actions representing selected agents
+
+                                                                                    to be chosen again during the decoding process. To achieve this,
+
+                                                                                    we explicitly eliminate the visited agents in the instance at each
+
+                                                                                    step.            Specifically,  at  each  time     step    ,  we  update      ,        ,      ,  and
+
+                                                                                                                                                                                
+
+                                                                                        ,  where     1 ,  1 ,       1 ,   and  1    are  initialized  as    ,    ,       ,    and      ,
+
+                                                                                      
+
+                                                                                    respectively. This update is achieved by applying a mask fill layer
+
+                        =           ,           ,            ,                 (1)  that sets the corresponding information of the selected agents to
+                                                                                    zero in the original , ,  , and , as shown below,
+        ,  ,                                       
+
+                              ,           ,           ,
+
+    =     (,                   )
+
+               ,                                                                                                                                     
+
+                                                                               (2)                    =  (,  ),                                    ,  ,  ,  ,                        (7)
+
+    =      (               (  )   /       )     ,    =   1,  2,  ·  ·  ·  , ,
+
+                                                                                    where  is a boolean tensor, and its value corresponding
+                                                                                    to the selected agent is set to zero. In the synthetic attention
+    ( ,    ,            )  =           (1,   2,    ...,      ) ,               (3)  layer, it first computes multi-head self-attention score  , i.e.,
+
+                                                                                                                                                                            
+
+                                                           
+
+          ^ =  ( + ( ,  ,  )),                                                 (4)
+     =     (     )  /    ,     =    1, 2, · · · ,  . Thereafter, we introduce  solution, they will output a collision-free solution, while not every
+                                                                               agent arrives at its goal. This characteristic is essential in certain
+                                                                               applications. However, our method is rooted in the prioritized
+                                                                               planning architecture. To address the limitation, we find it necessary
+the domain-specific feature target matrix as our auxiliary atten-              to provide a fast and effective post-processing method. In scenarios
+                                                                               where a collision solution is encountered, we aim to eliminate
+tion score which further facilitates various feature embeddings.               collisions and enable the maximum number of agents possible to
+                                                                               reach their intended goals.
+Notably, the target matrix, i.e.,   ( 1 =
+                                                                                  To address this issue, we propose a reachability repair algorithm
+ ), is a dynamic feature about the blocking pairs,                             for S2AN, as shown in the appendix. The core idea of this method
+                                                                               involves replanning paths for all colliding agents, ensuring they
+which also be updated by the mask fill layer. Then, the self-                  avoid collisions with others instead of reaching their goals. This
+                                                                               will be achieved by iteratively running SIPPS for the colliding
+attention  score         and target matrix are concatenated and fed            agents, and adjusting goals to start points to avoid collisions. An
+                                                                               obvious advantage is that the time complexity does not increase
+                                                                               significantly since most non-colliding agents can maintain their
+                                                                               initial paths. Specifically, we first decode the actions in a greedy
+                                                                               manner, resulting in obtaining the initial solution , where  =
+                                                                               (1, 1)  (2, 2)  ...  (, ). Then, we select all the colliding
+into a linear layer to obtain the synthetic attention score, i.e.,             agents set  in the solution . If there are no collisions, a feasible
+                                                                               solution will be found and returned as . Otherwise, the solution
+  =              (          (       ,                  )),  where              needs to be repaired. Furthermore, since we change the goals of
+                                                                               colliding agents, some unmodified agents might share the same goal
+                                                                               as the modified ones, making the MAPF case invalid. Therefore, it
+                                                                               is critical to repeatedly adjust agents that collide with the modified
+2 × is a trainable parameter. The synthetic attention score                    agent's goal until no further collisions occur. Subsequently, we
+                                                                               remove the corresponding agents' paths in  and then replan their
+is then normalized to ~ through SoftMax, which is further                      paths using SIPPS to find a minimal number of collisions from their
+                                                                               start points to the new goals. If any agent fails to find a collision-
+used to calculate attention values for each head, i.e.,  =                     free path, the repair method will return an empty solution. If repair
+                                                                               is successful, the reach rate can be calculated as  = | |/,
+~. Subsequently, all heads are concatenated together, which                    where | | is the number of agents that altered their goals. Thus,
+                                                                               this method still has a linear time complexity and improves the
+then passes through a linear layer with a trainable parameter                  reach rate of S2AN.
+
+        ×    to  obtain  the output of the synthetic attention layer,          5 EXPERIMENTS
+
+                                                                               In our research, we conducted an extensive experimental evaluation
+                                                                               for three aspects. 1) We compared the success rates of various
+i.e.,  =  (1, · · · ,  ) . Finally, we obtain the                              MAPF algorithms, under identical maximum planning times. This is
+                                                                               done to ascertain the high completeness of the proposed method in
+probability of selecting actions via the compatibility layer, i.e.,            relation to other prevalent algorithms. 2) We aimed to compare the
+                                                                               success rate, episode length, and reach rate against current learning
+     =              (  =1   (            /  ))  .                              methods to present the advantages. 3) We embarked on an ablation
+                                                                               study to critically evaluate the effectiveness of a salient component
+                                                                               of our algorithm. For the purpose of these tests, we generated 100
+                                                                               randomized maps and scenarios. These were constructed with an
+                                                                               obstacle density of 20 percent, derived from the standard MAPF
+4.4 Training Algorithm                                                         benchmark suite. To further underscore the superiority of our
+                                                                               priority learning framework, an additional 100 random scenes were
+The S2AN model is trained using the REINFORCE algorithm [29],                  generated using empty maps.
+which incorporates an entropy term to encourage exploration
+during training. The REINFORCE loss is defined as the negative of              5.1 Settings and Metrics
+expectation of reward, i.e., L = -E  []. Then, the gradient
+for minimizing the REINFORCE loss L is defined as follows,                     Settings. In the training procedure, the batch size is set to 64, and
+                                                                               Ray is employed to accelerate our sampling process. For the initial
+                                                                               embedding network, we utilize ResNet18 to encode the maps. In
+                                                                               both the encoder and decoder networks, we incorporate 8 attention
+                                  
+
+              L = -E [  ·   ( | )],                                    (8)
+
+                                     =1
+
+where the  is the total timesteps and equal to the number of agents
+;  is the selected action sequence (i.e. the solution) generated by
+the policy  ;  is the return at time , which is the discounted sum
+of rewards. Additionally, an entropy loss is introduced to prevent
+the model from converging to a suboptimal policy too quickly,
+defined as follows,
+
+  L = - ( ) = E  [ (| )( (| ))]. (9)
+
+Finally, the total gradient  L, is a combination of the REINFORCE
+loss and the entropy loss, i.e.,  L =  L +   L,
+where the  is the coefficient of entropy loss to adjust the
+importance of the entropy regularization during training, striking
+a balance between exploration and exploitation.
+
+   In this paper, we employ two types of action-selection strategies:
+a greedy strategy that always selects the action with the maximum
+probability and a sampling strategy that samples actions based
+on their probabilities. During the training process, we utilize the
+sampling strategy to encourage exploration. In contrast, during the
+inference process, we employ the greedy strategy to efficiently find
+a feasible solution to the MAPF problem.
+
+4.5 Reachability Repair Algorithm
+
+In traditional non-distributed methods, the planned trajectory is
+often either entirely feasible or plagued by collisions and cannot
+be executed, presenting a binary outcome. On the other hand,
+distributed methods, especially learning-based methods, frequently
+yield collision-free solutions. When they fail to find a feasible
+heads with 128-dimensional features. The encoder consists of 2              numerous priorities within a similar time frame. In this context, the
+layers. In the encoder and decoder network, we use 8 attention              neural network component of S2AN aids in learning the correct
+heads with 128 dimension features. The encoder layer number is 2.           dependencies among agents. For scenarios with a small agent count
+In terms of the learning procedure, we employ the Adam optimizer            (less than 100), collisions are infrequent, and PBS operates swiftly. It
+with a learning rate of 3 × 10-4. The entropy weight is set at 0.3,         can quickly iterate through the critical regions of the priority space
+and the discount factor , is set to 0.95. The training is executed on       using conflict-based search, thereby maintaining a 100% success
+a server equipped with a 4x3090 GPU and an i9-10980XE CPU, but              rate in a short timeframe. However, as the agent count surpasses
+only one GPU is used during the training process. Source codes are          100, the incidence of collisions increases. In such cases, exhaustive
+in https://github.com/marmotlab/S2AN.                                       priority space exploration by conflict becomes less efficient and
+                                                                            time-consuming. Particularly in scenarios involving 140 to 250
+   Metrics. In our evaluation of performance, we focus on five key          agents, PBS often fails to find any solutions within the allocated
+metrics: success rate, reach rate, makespan, episode length, and            time. In contrast, S2AN, guided by a global perspective, swiftly
+runtime. These metrics serve to benchmark our approach against              identifies feasible priorities and resolves a substantial portion of the
+other methods within the generated scenarios.                               problem just in one-shot. PIBT is a rule-based method, dynamically
+                                                                            adjusting priorities at each time step. It is noteworthy that PIBT
+5.2 Limited Time Completeness Experiment                                    offers a distributed version that exhibits exceptional speed when
+                                                                            fully parallelized. It can be executed in less than 1 second. While
+We select two representative algorithms for comparison to validate          effective under specific graph conditions, it tends to struggle and
+our high completeness within a limited time. 1) PIBT [18].This              become unsuccessful as obstacle density rises. As in Figure 6,
+algorithm, based on priority inheritance, boasts linear time com-           PIBT exhibits a lower success rate compared to S2AN in scenarios
+plexity, which is on par with our S2AN algorithm. It operates at            characterized by dense obstacles.
+high speed and provides a guarantee of reachability. It stands as
+a convincing benchmark due to its matching time complexity. 2)                                    S2AN            DHC       PRIMAL         Success  Reach
+Same time constraint PBS [14]. PBS is a well-known prioritized
+planning method due to its simplicity and efficiency. This priority-                                          32*32 random map with 20% obstacles             1.00
+based search algorithm with backtracking is capable of exploring                                                                                              0.75
+all possible priorities given sufficient time. To provide a fair            Success Rate    1.00                                                              0.50  Reach Rate
+comparison, we evaluate it using the same time constraint applied in                        0.75                                                              0.25
+our algorithm. To ensure a more robust evaluation of the algorithm's                        0.50                                                              0.00
+effectiveness, we calculate the success rates of the PBS algorithm                          0.25
+when subjected to time limits of 0.5T and 1.5T respectively.                                0.00
+
+                       PIBT       S2AN       PBS with same time                             500
+                                                                                            400
+Success Rate                      32*32 random map with 20% obstacles       Episode Length  300
+              1.0                                                                           200
+                                                                                            100
+              0.5
+
+              0.0                                                                                             50       100          150    200           250
+              80
+Makespan                                                                                                                    num of agents           Reach
+
+              60                                                                                        S2AN      DHC       PRIMAL         Success            1.00
+                                                                                                                                                              0.75
+                                                                                            1.00                       32*32 empty map                        0.50
+                                                                                            0.75                                                              0.25
+Runtime/s     50                                                            Success Rate    0.50                                                              0.00  Reach Rate
+                                                                                            0.25
+              25                                                                            0.00
+
+              0
+
+                   50        100        150      200                   250
+
+                                  num of agents
+
+Figure 6: Limited Time Completeness Experiment.                             Episode Length  500
+                                                                                            400
+   As illustrated in Figure 6, S2AN demonstrates superior per-                              300
+formance in terms of success rate when compared to both the                                 200
+same-time PBS and PIBT. Although the average makespan remains                               100
+nearly identical, S2AN significantly reduces the required time while
+maintaining a linear time complexity. PBS algorithm employs a tree                                            50       100          150    200      250
+search approach to enumerate the priority space in search of a
+feasible solution. In contrast, S2AN generates a specific priority,                                                    num of agents
+thereby avoiding the need to search extensively through the
+priority space. PBS, implemented in C++, exhaustively explores              Figure 7: Priority Learning Paradigm Effectiveness. In the
+                                                                            double y-axis sub-figure, the solid line represents the success
+                                                                            rate, and the dotted line represents the reach rate.
+Table 1: Ablation Performance. The values in parentheses              5.4 Ablation Study
+represent the percentage relative to the S2AN method.
+                                                                      We conducted an ablation study to evaluate the effectiveness of
+Method            Test Reward Converge TimeStep/103                   the Synthetic Score-Based Attention Network (S2AN) and the
+                                                                      entropy loss. In order to assess S2AN, we compared it to the
+S2AN                  17.77        45.5                               original Attention Model [8], with the key difference being the
+no Entropy        7.53(-57%)       21.8                               inclusion of domain-specific features, harmful feature and the target
+No Target Matrix  7.13(-59%)       16.7                               matrix. Therefore, we present results without these two features,
+No Harmful        17.12(-4%)  73.0(+60%)                              and separately without the entropy loss component. Additionally,
+Random                            None                                for this study, the success reward was set to a value of 20, resulting
+                         3                                            in a maximum achievable reward of 20.
+
+5.3 Priority Learning Paradigm Effectiveness                             As shown in Table 1, when the entropy loss is omitted, we
+                                                                      observe a significant 57% decrease in the test reward. Nevertheless,
+To rigorously verify that our framework can achieve better results    this performance remains better compared to a random policy,
+due to its explicit evasion of multimodal policy learning and         suggesting that the network may quickly converge to a suboptimal
+inconsistent behavior, we compare the success rate, reach rate,       policy from which it struggles to escape. Another notable impact on
+and episode length across various learning methods. Mainstream        performance arises from the absence of the target matrix. This key
+learning methods adopt a distributed way. Given the current           feature plays a crucial role in guiding the network by providing an
+position, field of view (FOV), and communication messages, these      approximate feasible solution, effectively indicating which agents
+methods produce an action at each timestep. By giving a maximum       should be retained to solve the problem. Its inclusion significantly
+episode length, we can quantify experimental outcomes. Given that     enhances the network's ability to learn a good policy. Conversely,
+the average makespan in non-learning approaches is below 100, we      the harmful feature has minimal impact on performance. In practice,
+design the maximum episode length as 512. Herein, episode length      the network can acquire local connectivity information through the
+refers to the average length required to address the problem. The     ResNet, resulting in negligible performance differences. However,
+reach rate denotes the fraction of agents who successfully reach      the harmful feature can accelerate the learning process, reducing
+their goals by the episode's conclusion. Even if an episode is not    the time required to reach the same policy by up to 60% when
+deemed successful, learning techniques can still plan a not-feasible  compared to S2AN.
+solution within a constrained timeframe and achieve a high reach
+rate. To thoroughly demonstrate the performance of our method,        6 CONCLUSION
+we augmented it with a Reachability Repair Algorithm described
+in Section 4.5.                                                       In this paper, we propose an effective learning-based paradigm
+                                                                      that fuses prioritized planning, which is aimed at addressing
+   As depicted in Figure 7, our performance results surpass those of  the challenge of solving large-scale MAPF in a limited time by
+both PRIMAIL [21] and the communication-based learning method         fusing the advantages of both classes of methods. By incorporating
+DHC [17]. In scenarios with an empty map, S2AN demonstrates           prioritized planning into the attention-based learning algorithm,
+comparable reach rates to PRIMAL. However, S2AN outperforms           we have achieved comprehensive collaborative strategies among
+PRIMAL in terms of success rate when the agent count exceeds          multiple agents, elevating both completeness and solution quality
+200. DHC leverages strong heuristic map features, but its efficacy    within linear time complexity. Simultaneously, by integrating
+diminishes notably in empty map scenarios, resulting in lower         learning mechanisms into the prioritized planning framework and
+success and reach rates. Regarding average episode length, S2AN       formulating prioritized planning as the Markov Decision Process,
+excels primarily due to its ability to avoid inconsistent behaviors.  the method enables a more informed search process for MAPF.
+Notably, as the number of agents increases, the episode length        Experiments demonstrate that our attention-based priority learning
+required for problem resolution experiences a significant increment,  method achieves a balance between computational time and
+accompanied by a drop in solution quality. In the 32×32 random        completeness, outperforming a range of learning-based planners
+map with 20% obstacle density, S2AN consistently maintains an         in large-scale pathfinding tasks in terms of success rate, reach rate,
+advantage over the other two methods. S2AN exhibits lower reach       and solution quality. Moreover, compared to PIBT and restricted-
+rates compared to PRIMAL when  exceeds 180. This suggests             time PBS, our proposed method exhibits high completeness in
+that the repair method employed may not be robust enough, even        medium to large-scale dense obstacle scenarios, making it suitable
+though S2AN still outperforms PRIMAL. As discussed previously,        for expediting various MAPF algorithms.
+the reachability repair method proves valuable in enhancing S2AN's
+reach rate performance without imposing excessive computational       ACKNOWLEDGMENTS
+demands. Learning within the priority space appears to offer
+improved completeness and solution quality, especially in scenarios   This research was supported by the Singapore Ministry of Education
+with a large number of agents. By providing a global map and          (MOE) Academic Research Fund (AcRF) Tier 1 grant, as well as by
+sacrificing a reasonable amount of time, we can achieve enhanced      an Amazon Research Award. This work was also funded by the
+performance through this learning approach.                           National Natural Science Foundation of China, the Science Fund
+                                                                      for Creative Research Groups (52221005), and the National Natural
+                                                                      Science Foundation of China (Key Project 52131201), as well as the
+                                                                      China Scholarship Council.
+REFERENCES                                                                                      Generalizations of Multi-Agent Path Finding to Real-World Scenarios. Technical
+                                                                                                Report. arXiv. https://doi.org/10.48550/arXiv.1702.05515 arXiv: 1702.05515 [cs].
+ [1] Anton Andreychuk, Konstantin Yakovlev, Pavel Surynek, Dor Atzmon, and Roni           [16] Hang Ma, Jingxing Yang, Liron Cohen, T. K. Kumar, and Sven Koenig. 2017.
+      Stern. 2022. Multi-agent pathfinding with continuous time. Artificial Intelligence        Feasibility Study: Moving Non-Homogeneous Teams in Congested Video Game
+      305 (April 2022), 103662. https://doi.org/10.1016/j.artint.2022.103662                    Environments. Proceedings of the AAAI Conference on Artificial Intelligence and
+                                                                                                Interactive Digital Entertainment 13, 1 (2017), 270­272. https://doi.org/10.1609/
+ [2] Max Barer, Guni Sharon, Roni Stern, and Ariel Felner. 2014. Suboptimal Variants            aiide.v13i1.12919
+      of the Conflict-Based Search Algorithm for the Multi-Agent Pathfinding Problem.     [17] Ziyuan Ma, Yudong Luo, and Hang Ma. 2021. Distributed Heuristic Multi-Agent
+      Proceedings of the International Symposium on Combinatorial Search 5, 1 (2014),           Path Finding with Communication. In 2021 IEEE International Conference on
+      19­27. https://doi.org/10.1609/socs.v5i1.18315 Number: 1.                                 Robotics and Automation (ICRA). 8699­8705. https://doi.org/10.1109/ICRA48506.
+                                                                                                2021.9560748 ISSN: 2577-087X.
+ [3] Shao-Hung Chan, Roni Stern, Ariel Felner, and Sven Koenig. 2023. Greedy              [18] Keisuke Okumura, Manao Machida, Xavier Défago, and Yasumasa Tamura. 2022.
+      Priority-Based Search for Suboptimal Multi-Agent Path Finding. Proceedings of             Priority inheritance with backtracking for iterative multi-agent path finding.
+      the International Symposium on Combinatorial Search 16, 1 (July 2023), 11­19.             Artificial Intelligence 310 (Sept. 2022), 103752. https://doi.org/10.1016/j.artint.
+      https://doi.org/10.1609/socs.v16i1.27278 Number: 1.                                       2022.103752
+                                                                                          [19] Jingyao Ren, Vikraman Sathiyanarayanan, Eric Ewing, Baskin Senbaslar, and
+ [4] Liron Cohen, Tansel Uras, T. K. Kumar, and Sven Koenig. 2019. Optimal                      Nora Ayanian. 2021. MAPFAST: A Deep Algorithm Selector for Multi Agent
+      and Bounded-Suboptimal Multi-Agent Motion Planning. Proceedings of the                    Path Finding using Shortest Path Embeddings. In Proceedings of the 20th
+      International Symposium on Combinatorial Search 10, 1 (2019), 44­51. https:               International Conference on Autonomous Agents and MultiAgent Systems (AAMAS
+      //doi.org/10.1609/socs.v10i1.18501                                                        '21). International Foundation for Autonomous Agents and Multiagent Systems,
+                                                                                                Richland, SC, 1055­1063.
+ [5] Ariel Felner, Roni Stern, Solomon Shimony, Eli Boyarski, Meir Goldenberg, Guni       [20] Qandeel Sajid, Ryan Luna, and Kostas Bekris. 2012. Multi-Agent Pathfinding
+      Sharon, Nathan Sturtevant, Glenn Wagner, and Pavel Surynek. 2017. Search-                 with Simultaneous Execution of Single-Agent Primitives. Proceedings of the
+      Based Optimal Solvers for the Multi-Agent Pathfinding Problem: Summary and                International Symposium on Combinatorial Search 3, 1 (2012), 88­96. https:
+      Challenges. Proceedings of the International Symposium on Combinatorial Search            //doi.org/10.1609/socs.v3i1.18243 Number: 1.
+      8, 1 (2017), 29­37. https://doi.org/10.1609/socs.v8i1.18423                         [21] Guillaume Sartoretti, Justin Kerr, Yunfei Shi, Glenn Wagner, T. K. Satish Kumar,
+                                                                                                Sven Koenig, and Howie Choset. 2019. PRIMAL: Pathfinding via Reinforcement
+ [6] Omri Kaduri, Eli Boyarski, and Roni Stern. 2020. Algorithm Selection for                   and Imitation Multi-Agent Learning. IEEE Robotics and Automation Letters 4, 3
+      Optimal Multi-Agent Pathfinding. Proceedings of the International Conference on           (July 2019), 2378­2385. https://doi.org/10.1109/LRA.2019.2903261
+      Automated Planning and Scheduling 30 (June 2020), 161­165. https://doi.org/10.      [22] Guni Sharon, Roni Stern, Ariel Felner, and Nathan R. Sturtevant. 2015. Conflict-
+      1609/icaps.v30i1.6657                                                                     based search for optimal multi-agent pathfinding. Artificial Intelligence 219 (Feb.
+                                                                                                2015), 40­66. https://doi.org/10.1016/j.artint.2014.11.006
+ [7] Kazumi Kasaura, Mai Nishimura, and Ryo Yonetani. 2022. Prioritized Safe              [23] Roni Stern, Nathan Sturtevant, Ariel Felner, Sven Koenig, Hang Ma, Thayne
+      Interval Path Planning for Multi-Agent Pathfinding With Continuous Time on                Walker, Jiaoyang Li, Dor Atzmon, Liron Cohen, T. K. Kumar, Roman Barták,
+      2D Roadmaps. IEEE Robotics and Automation Letters 7, 4 (Oct. 2022), 10494­10501.          and Eli Boyarski. 2019. Multi-Agent Pathfinding: Definitions, Variants, and
+      https://doi.org/10.1109/LRA.2022.3187265 Conference Name: IEEE Robotics and               Benchmarks. Proceedings of the International Symposium on Combinatorial Search
+      Automation Letters.                                                                       10, 1 (2019), 151­158. https://doi.org/10.1609/socs.v10i1.18510
+                                                                                          [24] Pavel Surynek. 2020. Bounded Sub-optimal Multi-Robot Path Planning Using
+ [8] Wouter Kool, Herke van Hoof, and Max Welling. 2019. Attention, Learn to Solve              Satisfiability Modulo Theory (SMT) Approach. In 2020 IEEE/RSJ International
+      Routing Problems!. In 7th International Conference on Learning Representations,           Conference on Intelligent Robots and Systems (IROS). 11631­11637. https://doi.
+      ICLR 2019, New Orleans, LA, USA, May 6-9, 2019. OpenReview.net. https://                  org/10.1109/IROS45743.2020.9341047 ISSN: 2153-0866.
+      openreview.net/forum?id=ByxBFsRqYm                                                  [25] Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones,
+                                                                                                Aidan N. Gomez, Lukasz Kaiser, and Illia Polosukhin. 2017. Attention is all you
+ [9] Sarit Kraus. 1997. Negotiation and cooperation in multi-agent environments.                need. In Proceedings of the 31st International Conference on Neural Information
+      Artificial Intelligence 94, 1 (July 1997), 79­97. https://doi.org/10.1016/S0004-          Processing Systems (NIPS'17). Curran Associates Inc., Red Hook, NY, USA, 6000­
+      3702(97)00025- 8                                                                          6010.
+                                                                                          [26] Hanlin Wang and Michael Rubenstein. 2020. Walk, Stop, Count, and Swap:
+[10] Yeong-Dae Kwon, Jinho Choo, Byoungjip Kim, Iljoo Yoon, Youngjune Gwon,                     Decentralized Multi-Agent Path Finding With Theoretical Guarantees. IEEE
+      and Seungjai Min. 2020. POMO: Policy Optimization with Multiple Optima for                Robotics and Automation Letters 5, 2 (April 2020), 1119­1126. https://doi.org/
+      Reinforcement Learning. In Advances in Neural Information Processing Systems,             10.1109/LRA.2020.2967317 Conference Name: IEEE Robotics and Automation
+      Vol. 33. Curran Associates, Inc., 21188­21198. https://proceedings.neurips.cc/            Letters.
+      paper/2020/hash/f231f2107df69eab0a3862d50018a9b2- Abstract.html                     [27] Yutong Wang, Bairan Xiang, Shinan Huang, and Guillaume Sartoretti. 2023.
+                                                                                                SCRIMP: Scalable Communication for Reinforcement- and Imitation-Learning-
+[11] Jiaoyang Li, Zhe Chen, Daniel Harabor, Peter J. Stuckey, and Sven Koenig.                  Based Multi-Agent Pathfinding. https://doi.org/10.48550/arXiv.2303.00605
+      2022. MAPF-LNS2: Fast Repairing for Multi-Agent Path Finding via Large              [28] Jens Weise, Sebastian Mai, Heiner Zille, and Sanaz Mostaghim. 2020. On the
+      Neighborhood Search. Proceedings of the AAAI Conference on Artificial Intelligence        Scalable Multi-Objective Multi-Agent Pathfinding Problem. In 2020 IEEE Congress
+      36, 9 (June 2022), 10256­10265. https://doi.org/10.1609/aaai.v36i9.21266                  on Evolutionary Computation (CEC). IEEE, 1­8. https://doi.org/10.1109/CEC48606.
+                                                                                                2020.9185585 Place: Glasgow, United Kingdom tex.eventtitle: 2020 IEEE Congress
+[12] Jiaoyang Li, The Anh Hoang, Eugene Lin, Hai L. Vu, and Sven Koenig. 2023.                  on Evolutionary Computation (CEC).
+      Intersection Coordination with Priority-Based Search for Autonomous Vehicles.       [29] Ronald J. Williams. 1992. Simple statistical gradient-following algorithms for
+      Proceedings of the AAAI Conference on Artificial Intelligence 37, 10 (June 2023),         connectionist reinforcement learning. Machine Learning 8, 3 (May 1992), 229­256.
+      11578­11585. https://doi.org/10.1609/aaai.v37i10.26368                                    https://doi.org/10.1007/BF00992696
+
+[13] Wenhao Li, Hongjun Chen, Bo Jin, Wenzhe Tan, Hongyuan Zha, and Xiangfeng
+      Wang. 2022. Multi-Agent Path Finding with Prioritized Communication Learning.
+      In 2022 International Conference on Robotics and Automation (ICRA). IEEE, 10695­
+      10701. https://doi.org/10.1109/ICRA46639.2022.9811643 Place: Philadelphia,
+      PA, USA tex.eventtitle: 2022 IEEE International Conference on Robotics and
+      Automation (ICRA).
+
+[14] Hang Ma, Daniel Harabor, Peter J. Stuckey, Jiaoyang Li, and Sven Koenig.
+      2019. Searching with Consistent Prioritization for Multi-Agent Path Finding.
+      Proceedings of the AAAI Conference on Artificial Intelligence 33, 1 (July 2019),
+      7643­7650. https://doi.org/10.1609/aaai.v33i01.33017643
+
+[15] Hang Ma, Sven Koenig, Nora Ayanian, Liron Cohen, Wolfgang Hoenig, T. K. Satish
+      Kumar, Tansel Uras, Hong Xu, Craig Tovey, and Guni Sharon. 2017. Overview:
+

@@ -1,0 +1,649 @@
+                                       CrowdVLA: Embodied Vision-Language-Action Agents for
+
+                                       Context-Aware Crowd Simulation
+
+                                       JUYEONG HWANG, IIIXR Lab, Korea University, South Korea
+                                       SEONG-EUN HONG, IIIXR Lab, Korea University, South Korea
+                                       JINHYUN KIM, IIIXR Lab, Korea University, South Korea
+                                       JAEYOUNG SEON, IIIXR Lab, Kyung Hee University, South Korea
+                                       GILJOO NAM, Meta, United States
+                                       HANYOUNG JANG, NC AI, South Korea
+                                       HYEONGYEOP KANG, IIIXR Lab, Korea University, South Korea
+
+arXiv:2604.05525v1 [cs.GR] 7 Apr 2026                                                                                                 Rule-following Avoiding
+
+                                       Grouping
+
+                                       + Perception  Language                                                                         Actoin      Skill 1
+                                                                                                                                                  Skill 2
+                                                         What skills                                                                             Skill 38
+                                                     can I choose from?
+                                                                                                                                              Skill 42
+
+                                                                                                                                                 Skill 61
+
+                                       Fig. 1. CrowdVLA conditions motion skill actions on visual input and language-based instructions, enabling agents to reason about scene semantics and social
+                                       norms before selecting appropriate behaviors across diverse environments.
+
+                                       Crowds do not merely move; they decide. Human navigation is inherently                         avoidance, producing motion that is plausible but rarely intentional. We in-
+                                       contextual: people interpret the meaning of space, social norms, and po-                       troduce CrowdVLA, a new formulation of crowd simulation that models each
+                                       tential consequences before acting. Sidewalks invite walking, crosswalks                       pedestrian as a Vision--Language­Action (VLA) agent. Instead of replaying
+                                       invite crossing, and deviations are weighed against urgency and safety. Yet                    recorded trajectories, CrowdVLA enables agents to interpret scene semantics
+                                       most crowd simulation methods reduce navigation to geometry and collision                      and social norms from visual observations and language instructions, and to
+                                                                                                                                      select actions through consequence-aware reasoning. CrowdVLA addresses
+                                       These authors contributed equally to this work.                                                three key challenges­limited agent-centric supervision in crowd datasets,
+                                       Corresponding author.                                                                          unstable per-frame control, and success-biased datasets­through: (i) agent-
+                                                                                                                                      centric visual supervision via semantically reconstructed environments and
+                                       Authors' Contact Information: Juyeong Hwang, IIIXR Lab, Korea University, Seoul,               Low-Rank Adaptation (LoRA) fine-tuning of a pretrained vision­language
+                                       South Korea, 05judy02@korea.ac.kr; Seong-Eun Hong, IIIXR Lab, Korea University,                model, (ii) a motion skill action space that bridges symbolic decision making
+                                       Seoul, South Korea, seong_eun@korea.ac.kr; Jinhyun Kim, IIIXR Lab, Korea University,           and continuous locomotion, and (iii) exploration-based question answering
+                                       Seoul, South Korea, rlawlsgus0623@korea.ac.kr; JaeYoung Seon, IIIXR Lab, Kyung Hee             that exposes agents to counterfactual actions and their outcomes through
+                                       University, Seoul, South Korea, cogongnam@khu.ac.kr; Giljoo Nam, Meta, United                  simulation rollouts. Our results shift crowd simulation from motion-centric
+                                       States, United States, giljoonam@khu.ac.kr; Hanyoung Jang, NC AI, Seoul, South Korea,          synthesis toward perception-driven, consequence-aware decision making,
+                                       ncdrjang@ncsoft.com; HyeongYeop Kang, IIIXR Lab, Korea University, Seoul, South                enabling crowds that move not just realistically, but meaningfully.
+                                       Korea, siamiz_hkang@korea.ac.kr.
+                                                                                                                                      Additional Key Words and Phrases: Virtual agents, crowd simulation, visual
+                                       Permission to make digital or hard copies of all or part of this work for personal or          language reasoning, vision-language-action model
+                                       classroom use is granted without fee provided that copies are not made or distributed
+                                       for profit or commercial advantage and that copies bear this notice and the full citation      ACM Reference Format:
+                                       on the first page. Copyrights for components of this work owned by others than the             Juyeong Hwang, Seong-Eun Hong, Jinhyun Kim, JaeYoung Seon, Giljoo
+                                       author(s) must be honored. Abstracting with credit is permitted. To copy otherwise, or         Nam, Hanyoung Jang, and HyeongYeop Kang. 2026. CrowdVLA: Embodied
+                                       republish, to post on servers or to redistribute to lists, requires prior specific permission  Vision-Language-Action Agents for Context-Aware Crowd Simulation. 1, 1
+                                       and/or a fee. Request permissions from permissions@acm.org.                                    (April 2026), 11 pages. https://doi.org/10.1145/nnnnnnn.nnnnnnn
+                                       © 2026 Copyright held by the owner/author(s). Publication rights licensed to ACM.
+                                       ACM XXXX-XXXX/2026/4-ART
+                                       https://doi.org/10.1145/nnnnnnn.nnnnnnn
+
+                                                                                                                                              , Vol. 1, No. 1, Article . Publication date: April 2026.
+2 · Hwang, Hong, Seon, and Kang                                         out counterfactual actions in the environment to observe their out-
+                                                                        comes, such as collisions, norm violations, or inefficient detours.
+1 Introduction                                                          This trains agents to reason not only about which action to take,
+                                                                        but why certain actions lead to undesirable consequences.
+Simulating crowds that autonomously navigate complex environ-
+ments is a long-standing challenge in computer graphics. Realistic         Together, these components enable context-aware, outcome-aware
+crowd behavior extends beyond collision-free motion toward a goal.      decision making for crowd simulation. Our contributions are sum-
+Human navigation is inherently context dependent: individuals per-      marized as follows:
+ceive their surroundings, interpret semantic and social cues, and
+act accordingly. Navigation decisions are shaped not only by physi-          · Introducing VLA agents for crowd simulation. Crowd
+cal constraints, but also by how spaces are socially interpreted: for           behavior is modeled with an end-to-end VLA policy that
+example, preferring sidewalks over grass or crossing streets at cross-          embeds semantic understanding and social reasoning directly
+walks. As a result, realistic crowd behavior emerges from individual            into individual agent decisions.
+decisions conditioned on the interpreted use of space.
+                                                                             · Agent-centric supervision for VLA training. Semantically
+   Despite steady progress, most existing crowd simulation methods              structured Unity environments provide scalable agent-centric
+fall short of this perspective. Macroscopic models [Guy et al. 2010,            observations for fine-tuning pretrained VLMs.
+2009, 2011; Helbing and Molnar 1995; Lee et al. 2007; Qiu and Hu
+2010; Van den Berg et al. 2008] reproduce aggregate flow patterns,           · Stable action grounding via motion skill abstraction.
+while microscopic models [Guy et al. 2010, 2009, 2011; Helbing and              Short-horizon motion skills derived from real trajectories
+Molnar 1995; Lee et al. 2007; Qiu and Hu 2010; Van den Berg et al.              enable stable and coherent action selection.
+2008] focus on local interactions such as collision avoidance and
+grouping. Both primarily frame navigation as motion governed by              · Exploration-based QA for learning beyond success. Exploration-
+physical feasibility and nearby agents. Recent learning-based ap-               based supervision enables agents to reason about rare, unsafe,
+proaches [Charalambous et al. 2023; Lee et al. 2018; Panayiotou et al.          or unseen outcomes absent from success-biased datasets.
+2022; Wei et al. 2018; Zheng and Liu 2019] inherit this formulation,
+replacing explicit rules with learned policies but still treating the   2 Related Work
+environment as a geometric constraint space. Perception is typ-         2.1 Crowd Simulation in Complex Environments
+ically used to detect obstacles and free space. This limitation is
+reinforced by commonly used datasets [Lerner et al. 2007; Pellegrini    The interaction between agents and their surroundings is central
+et al. 2009; Robicquet et al. 2016; Yi et al. 2015], which mainly pro-  to plausible crowd simulation. While early methods successfully
+vide 2D trajectories and bias models toward imitation of observed       incorporated the environment as physical geometry, capturing the
+motion. Consequently, prior work produces locally plausible motion      semantic affordances and context-dependent social conventions that
+but struggles to model individuals whose behavior depends on how        drive human navigation remains a significant challenge.
+space is intended to be used.
+                                                                           Geometric and Planning-Based Approaches. Traditional crowd sim-
+   We argue that crowd simulation should instead be formulated as       ulation frameworks typically rely on explicit environmental rep-
+a Vision­Language­Action (VLA) problem at the level of individual       resentations to handle complex scenes. Continuum methods, for
+agents. Crowd navigation naturally requires agents to perceive com-     instance, utilize semantically partitioned regions or globally aligned
+plex scenes, interpret semantic and social cues, and select actions     grids coupled with obstacle-aware fields to ensure collision-free
+whose consequences unfold over time, closely aligning with recent       navigation [Jiang et al. 2010]. To improve scalability in dynamic
+VLA formulations in embodied AI. However, directly adopting VLA         settings, planning-oriented systems often employ heterogeneous
+paradigms for crowds presents key challenges: agent-centric image­      representations, i.e., combining navigation meshes with space-time
+language­action supervision is scarce, per-frame action prediction      domains, to resolve interactions with moving obstacles [Kapadia
+is unstable for continuous locomotion, and trajectory datasets over-    et al. 2013]. While effective for navigation, these pipelines predomi-
+whelmingly capture only successful behavior, offering little super-     nantly assume a predefined environment model and require exten-
+vision for reasoning about failures or unsafe alternatives.             sive pre-processing. This rigidity limits their adaptability to novel
+                                                                        scenes where semantic labels or mesh topology may be unavailable
+   To address these issues, we introduce three key design choices.      or subject to change.
+First, we construct semantically structured environments with in
+Unity and re-render agent-centric third-person observations, en-           Perception-Based Navigation. To reduce reliance on global knowl-
+abling scalable Low-Rank Adaptation (LoRA)-based fine-tuning [Hu        edge, an alternative line of work couples agents to the environment
+et al. 2022] of a pretrained Vision­Language Model (VLM) for            through egocentric perception. Synthetic vision techniques [Dutra
+crowd navigation. Second, we discretize motion into short-horizon       et al. 2017; Ondej et al. 2010] simulate an agent's field of view to
+trajectory-based motion skills spanning 20 frames, derived from         sample visible obstacles, deriving control variables directly from
+real crowd data. Selecting among motion skills, rather than regress-    relative motion cues, e.g., time-to-collision. While this allows for
+ing per-frame controls, provides stable and temporally coherent         more autonomous behavior, the perceptual signals employed are
+action grounding while preserving realistic movement. Third, to         strictly geometric. Consequently, incorporating higher-level seman-
+overcome success bias in crowd datasets, we introduce exploration-      tic behaviors, such as adhering to social norms or interpreting scene
+based Question Answering (QA) supervision that explicitly rolls         context, remains difficult without explicit, manual modeling.
+
+, Vol. 1, No. 1, Article . Publication date: April 2026.
+CrowdVLA: Embodied Vision-Language-Action Agents for Context-Aware Crowd Simulation · 3
+
+   Learning-Based and Data-Driven Methods. The shift toward deep         the computational latency introduced by long-form reasoning re-
+reinforcement learning has enabled richer and more flexible behav-       mains a significant barrier to real-time operation.
+iors in cluttered environments, replacing hand-crafted heuristics
+with learned policies [Hu et al. 2021; Lee et al. 2018; Panayiotou          Efficiency-Oriented Architectures. Recognizing that latency is the
+et al. 2022]. These methods typically encode local geometry via          primary impediment to VLA deployment, recent research has fo-
+ray-casting or occupancy grids, allowing agents to learn complex         cused on redesigning supervision and decoding mechanisms for
+collision avoidance and group dynamics. More recently, data-driven       speed. In latency-sensitive 3D environments, methods like Combat-
+formulations have moved away from explicit environment modeling          VLA [Chen et al. 2025] introduce "Action-of-Thought" supervision,
+entirely, extracting state and action representations directly from      progressively training from coarse signals to fine, frame-aligned ac-
+trajectory demonstrations to improve naturalness [Charalambous           tions. Furthermore, techniques such as truncated generation, which
+et al. 2023]. However, jointly optimizing for geometric feasibility      caps output length via specialized stop tokens, demonstrate that
+and human-like compliance is non-trivial. Designing reward func-         real-time capability relies not just on parameter reduction, but on
+tions that faithfully reflect social norms without extensive manual      inference interfaces tailored specifically for fast decision-making.
+labeling remains an open problem.
+                                                                            Gap in Multi-Agent Crowd Simulation. Despite rapid progress
+   Language-Conditioned Simulation. Recently, Large Language Mod-        in single-agent domains, VLA research in multi-agent or crowd
+els (LLMs) have been adopted to crowd simulation, enabling the gen-      simulation remains limited. Crowd scenarios present unique chal-
+eration of diverse behaviors from natural language scripts [Ji et al.    lenges, for example, interactions are dense, environments are highly
+2024]. When conditioned on textual descriptions and semantic maps,       dynamic, and the inference cost scales linearly with the number
+these models can synthesize scenario-level variations in motion          of agents. Our work aims to bridge this gap by bringing the gen-
+style and intent. Nevertheless, current approaches often decouple        eralization capabilities of VLM-based policies to crowd behavior
+high-level semantic reasoning from low-level control; environmen-        generation. Building on the end-to-end VLA paradigm, we incorpo-
+tal inputs are typically processed as abstract map representations       rate efficiency-oriented designs [Chen et al. 2025; Kim et al. 2024]
+rather than through an agent's closed-loop perception­reasoning­         to ensure that the resulting policies are not only semantically aware
+action mechanism.                                                        and generalizable but also sufficiently responsive for large-scale,
+                                                                         real-time multi-agent environments.
+2.2 Vision­Language­Action Policies
+                                                                         3 CrowdVLA Framework
+The integration of VLMs into control policies has been proved to be
+a powerful paradigm for robotics and autonomous systems [Durante         Our CrowdVLA Framework is shown in Fig. 2. Our goal is to en-
+et al. 2025; Shao et al. 2024; Zitkovich et al. 2023]. By leveraging     able agents in crowd simulation to infer scene semantics (e.g., side-
+the extensive world knowledge and semantic alignment inherent            walk/crosswalk/road, obstacles) and social norms (e.g., avoiding
+in large-scale pre-training, VLA models demonstrate superior gen-        roads, preferring crosswalks, collision avoidance) from the current
+eralization to novel objects and instructions compared to policies       observation, and to generate natural, realistic motions without hand-
+trained from scratch.                                                    crafted rule-based controllers. To this end, we learn an end-to-end
+                                                                         VLA policy that maps each agent's third-person view image to an
+   VLA in Robotics and Manipulation. In robotic manipulation, a dom-     action decision.
+inant approach involves fine-tuning Transformer-based backbones
+(e.g., Llama [Touvron et al. 2023]) to predict discretized control com-  3.1 Expertise Trajectory Dataset
+mands directly from visual and textual inputs [Kim et al. 2025, 2024].
+These systems prioritize scalability, utilizing massive real-world       Expertise trajectories provide realistic motion priors and stable
+demonstration datasets to learn robust policies. To facilitate practi-   action grounding. From crowd datasets, we extract pedestrian tra-
+cal deployment, recent works have incorporated parameter-efficient       jectories, derive motion skills, and construct agent-centric training
+adaptation techniques, such as low-rank adaptation (LoRA) and            samples in reconstructed virtual environments running at 25 fps.
+quantization. However, despite these optimizations, the inherent
+computational cost of large backbones restricts inference through-       3.1.1 Scene Reconstruction and Agent-centric Observations. We use
+put, creating a bottleneck for tasks requiring high-frequency control    three scenes from the ETH and UCY benchmark [Lerner et al. 2007;
+loops.                                                                   Pellegrini et al. 2009]: Zara2, Univ, and ETH. Each scene is recon-
+                                                                         structed in Unity by matching the original layout and geometry,
+   Autonomous Driving and Semantic Reasoning. A parallel trend in        as shown in Fig. 3. Recorded trajectories are replayed, and a third-
+autonomous driving unifies high-level reasoning and low-level plan-      person camera is placed slightly behind each agent to capture both
+ning within a single autoregressive generator. Built on backbones        the agent and its local surroundings, producing agent-centric obser-
+like Qwen [Bai et al. 2025b], these frameworks tokenize continu-         vations suitable for VLA training.
+ous trajectories into physically feasible action tokens, effectively
+bridging scene understanding and actuation [Zhou et al. 2025]. To        3.1.2 Motion Skill-based Action. Instead of regressing continuous
+enhance adaptability, such models often employ dual-process ar-          control signals, we represent actions as short-horizon future motion
+chitectures, utilizing direct generation for routine maneuvers and       segments [Chen et al. 2024; Li et al. 2025, 2024], referred to as
+chain-of-thought reasoning for complex scenarios. While effective,       motion skills. Each motion skill corresponds to a 20-frame trajectory
+                                                                         segment extracted from expertise trajectories, as shown in Fig. 4-(a).
+
+                                                                         , Vol. 1, No. 1, Article . Publication date: April 2026.
+4 · Hwang, Hong, Seon, and Kang
+
+ Expertise trajectory          K-means clustering           Counterfactual                  Exploration in Unity                             Generate QA
+divided into 20 frames                                        trajectory                                                        Action selection Q&A Example
+                                                                                            Start state t t+20 End state
+                                    motion         motion                                   No collision    No collision          Q. In the given image,
+                                    skill 62       skill 1                                                                        which skill number
+                               ...            ...                                           crosswalk                             should you choose among 23, 41, 61
+                                                                                                                  road            to avoid colliding with the building?
+
+                                                                                            Image                 ...             A. 23, 61
+
+                  Motion Skill Supervision                                  Exploration-based QA supervision                    Outcome prediction Q&A Example
+
+Third-person View                                                      Third-person View                                          Q. In the given image, what would
+                             Pre-trained                                                                                          happen if we apply motion skill 10?
+                                                       Predict                               Pre-trained     1) Action
+                            Vision Encoder         full motion skills                       Vision Encoder  selection A           A. path: crosswalk | goal: move closer |
+                                                                                                                                  group: keep distance | collision: none | ...
+                               LoRA                                                            LoRA                       Loss
+
+Instruction                    Pre-trained                               Question           Pre-trained
+                                  LLM                                   Action selection Q     LLM
+Task intent  Safety and group                                                                               2) Outcome
+               constraints      LoRA                                   Outcom prediction Q   LoRA           prediction A
+
+Social norms Time pressure
+
+Fig. 2. Overview of the dataset processing and training pipeline for Motion Skills and exploration-based QA. For Motion Skills, long trajectories are segmented
+into 20-frame clips to construct the skill dataset. For exploration-based QA, segment-level counterfactual trajectories are generated by randomly sampling
+Motion Skills, and their outcomes are curated into a QA dataset. Using these datasets, a pre-trained vision­language model is fine-tuned with LoRA.
+
+   At each decision step, the policy selects one skill conditioned on                                                                  UCY dataset
+the current observation, which is executed via a short-horizon track-                                                       video => virtual environment
+ing controller. This formulation aligns discrete VLM-style action
+selection with smooth, continuous motion in simulation.                                                                                ETH dataset
+                                                                                                                            video => virtual environment
+   The motion skill set is constructed by clustering 20-frame trajec-
+tory segments using K-means; we use  = 64 skills, which balances                            Fig. 3. Visualization of Expertise trajectory after transplanting the existing
+expressiveness and stability. As shown in Fig. 4-(b), skill transitions                     crowd data environment to the unity environment.
+exhibit a strong diagonal structure, indicating temporal persistence
+in which individuals tend to repeat the same or highly similar motion                          We formulate two complementary QA types. Action selection QA
+patterns over multiple timesteps [Charalambous et al. 2023]. This                           supervises which candidate motion skills satisfy safety or norm
+confirms that the motion-skill abstraction preserves the continuity                         constraints under the current observation, allowing multiple valid
+and inertia of pedestrian motion while avoiding abrupt transitions.                         answers. Outcome prediction QA supervises how the environment
+                                                                                            evolves when executing a specific candidate skill, such as changes
+3.1.3 Training Samples from Expertise Trajectories. Each training                           in collision risk, goal distance, or group cohesion.
+sample includes an agent-centric third-person image, the relative
+positions of the group members, the destination, and remaining                                 Together, these QA types expose the policy to rare, ambigu-
+time. Remaining time serves as a lightweight conditioning signal                            ous, and non-demonstrated scenarios through counterfactual explo-
+that modulates behavior under a single policy. The supervision                              ration, enabling it to reason not only about which action to take, but
+target is the next motion skill. In total, we collect 15,635 expertise                      why certain actions lead to safer and more appropriate outcomes. In
+trajectory samples.                                                                         total, we collect 359,473 exploration-based QA samples. Additional
+                                                                                            details are provided in the supplementary material.
+3.2 Exploration-based QA Dataset
+Existing crowd datasets are inherently success-biased: pedestrians                          3.3 Training and Inference
+usually walk normally, avoid collisions, and follow social norms. As                        We train a single VLA model using both expertise trajectories and
+a result, standard supervised learning on demonstrations empha-                             exploration-based QA. The model is initialized from a pretrained
+sizes trajectory matching rather than action-conditioned outcome                            VLM and adapted to crowd navigation via LoRA fine-tuning ap-
+prediction. This provides little supervision for counterfactual rea-                        plied to the vision encoder and language model, while freezing all
+soning, leaving models under-specified in anticipating the outcomes                         backbone parameters
+of alternative actions.
+
+   To address this, we construct an exploration-based QA dataset
+that explicitly supervises action-conditioned, counterfactual reason-
+ing. Using reconstructed environments, we algorithmically gener-
+ate alternative motion skills at each timestep that deviate from the
+demonstrated trajectory and roll them out in the reconstructed en-
+vironments to observe their outcomes, including collisions, unsafe
+proximity, norm violations, or inefficient detours.
+
+, Vol. 1, No. 1, Article . Publication date: April 2026.
+                                                                                                                                                                    CrowdVLA: Embodied Vision-Language-Action Agents for Context-Aware Crowd Simulation · 5
+
+                                          (a) Motion Skills                                            (b) Motion Skill Transition Probability                                                                                                                                                      Zara01        ETH-Hotel  CrossingScene
+
+                                                         Sample 50 anchor trajectories                            Anchor Transition Probabilities (K=64)            1.0
+
+Y: Lateral displacement (local)     1.5                                                                56
+                                                         Sample 50 anchor trajectories
+                                                                                                                                                                                                                                                                             0.8
+                                    11..05                                                             48
+                                                                                                       current motion skill idx
+                                    01..50                                                                     current anchor idx
+                                                                                                                                                                                                                                                                                 P(next | current)
+                                    00..05                                                                                                                          P(next|current)
+                                 y                                                                     40                                                                                                                                                                                           Intersection  Hallway
+                                                                                                                                                                                                                                                                             0.6
+
+                                                                                                       32
+
+                                 y  -00..50                                                            24                                                           0.4
+
+                                    --10..05                                                           16
+                                                                                                                                                                                                                                                                             0.2
+                                    --11..50
+                                                                                                        8
+
+                                              -1.5 -1.0 -0.5  0.0  0.5  1.0             1.5            0                                                            0.0
+                                                                                        x
+                                                                                                           0  8   16   24  32  40  48                     56
+                                    X:-1.5 Forward displacement (local)                                           next motion next anchor idx skill idx
+                                                                                                                                                                                                                                                                                                    Fig. 5. Simulation Environments. Zara01 and ETH-Hotel are reconstructed
+                                              -1.5 -1.0 -0.5  0.0  0.5  1.0             1.5                                                                                                                                                                                                         from the videos provided in the corresponding datasets. Intersection and
+                                                              x                                                                                                                                                                                                                                     Hallway are simplified scenes for clearer motion visualization. Cross-
+                                                                                                                                                                                                                                                                                                    ingScene depicts an everyday-life scenario.
+Fig. 4. (A) Visualization of representative motion skills as short-horizon
+trajectory primitives, each encoding a distinct local movement pattern ex-                                                                                                                                                                                                                          4 Evaluation
+tracted from real crowd data. (B) Empirical transition probabilities between
+consecutive motion skills estimated from ground-truth trajectories, exhibit-                                                                                                                                                                                                                        We evaluate CrowdVLA from both systems and behavioral per-
+ing strong diagonal structure that indicates temporal continuity and repeti-                                                                                                                                                                                                                        spectives, focusing on whether Vision­Language­Action reasoning
+tion of similar motion patterns.                                                                                                                                                                                                                                                                    enables more accurate, socially grounded, and diverse crowd behav-
+                                                                                                                                                                                                                                                                                                    iors under identical environmental conditions.
+3.3.1 Unified Training Data. Training is performed in a single stage
+on a unified dataset that interleaves expertise trajectory samples                                                                                                                                                                                                                                  4.1 Implementation Details
+and exploration-based QA samples, enabling the model to jointly
+learn motion imitation and action-conditioned reasoning.                                                                                                                                                                                                                                            We used Qwen3-VL-2B-Instruct [Bai et al. 2025a] as the backbone
+                                                                                                                                                                                                                                                                                                    VLM and fine-tune it using LoRA on eight NVIDIA A100 Tensor
+3.3.2 Motion skill Supervision. For expertise trajectory samples,                                                                                                                                                                                                                                   Core GPUs. Further Implementation details are provided in the
+the model is trained to predict the demonstrated motion skill. Given                                                                                                                                                                                                                                Supplementary Material.
+an observation  , the model outputs a categorical policy  (· |  )
+over the motion-skill vocabulary, supervised with cross-entropy:                                                                                                                                                                                                                                    4.2 Environment Setup
+
+                                                              Lsup      =    -E              (      )  log        (    |    )  .                                                                                                                                                  (1)               We evaluate our method across five environments designed to test
+                                                                                                                                                                                                                                                                                                    generalization, robustness, and social norm compliance. Fig. 5 sum-
+                                                                                                ,                                                                                                                                                                                                   marizes the evaluation environments.
+
+                                                                                                                                                                                                                                                                                                       First, we consider two unseen real-world pedestrian datasets,
+                                                                                                                                                                                                                                                                                                    Zara01 and ETH-Hotel, which are not used during training. These
+where                                             denotes          the  ground-truth                       skill  extracted        from                       real  crowd                                                                                                                           scenes test whether learned behaviors generalize beyond the envi-
+                                                                                                                                                                                                                                                                                                    ronments used to construct the expertise trajectories.
+                                                
+                                                                                                                                                                                                                                                                                                       Second, we include two standard synthetic scenarios, Hallway and
+trajectories.                                                                                                                                                                                                                                                                                       Intersection, which are widely adopted in prior crowd simulation
+                                                                                                                                                                                                                                                                                                    work and primarily stress collision avoidance and goal-directed
+3.3.3 Exploration-based QA Supervision. For QA samples, training                                                                                                                                                                                                                                    navigation.
+focuses on learning action-conditioned outcome reasoning. Each
+sample is formatted as a language prompt containing the observa-                                                                                                                                                                                                                                       However, many commonly used benchmarks provide limited
+tion, a question, and candidate motion skills. The supervision target                                                                                                                                                                                                                               opportunity to evaluate explicit social norm compliance, as they
+is the corresponding answer, which encodes comparative judgments                                                                                                                                                                                                                                    lack semantically distinct regions with normative constraints. To
+or predicted outcomes derived from simulator rollouts.                                                                                                                                                                                                                                              address this gap, we additionally construct CrossingScene, a daily-
+                                                                                                                                                                                                                                                                                                    life urban scene that explicitly includes both streets and crosswalks,
+   We train the language model via standard next-token prediction:                                                                                                                                                                                                                                  enabling direct comparison of socially normative behaviors such as
+                                                                                                                                                                                                                                                                                                    road avoidance and proper crosswalk usage.
+                                                              LQA = -E(,)DQA [log  ( | )] ,                                                                                                                                                                                       (2)
+                                                                                                                                                                                                                                                                                                    4.3 Quantitative Comparison
+where  is a language prompt and  is the target answer.
+                                                                                                                                                                                                                                                                                                    We compare CrowdVLA against two representative baselines: (i)
+   Joint Optimization. The model is optimized with a unified objec-                                                                                                                                                                                                                                 CCP [Panayiotou et al. 2022] as a learning-based RL approach and
+tive, applying the corresponding loss per sample:                                                                                                                                                                                                                                                   (ii) GBM [Dutra et al. 2017] as a classic synthetic-vision controller.
+                                                                                                                                                                                                                                                                                                    This choice covers two widely used paradigms for environment-
+                                                                                        L = Lsup + LQA.                                                                                                                                                                           (3)               aware crowd navigation. All methods are evaluated in the same
+                                                                                                                                                                                                                                                                                                    Unity environments with identical initial conditions.
+   Multi-horizon Skill Prediction. In addition to next-step prediction,
+the model is trained to predict future motion skill sequences up                                                                                                                                                                                                                                    4.3.1 Metrics. We evaluate CrowdVLA along four axes: short-horizon
+to episode termination, encouraging temporal coherence and goal-                                                                                                                                                                                                                                    dynamical accuracy, social/semantic compliance, task completion,
+consistent behavior beyond single-step decisions.
+
+   Inference. At inference time, the model predicts only the next
+motion skill at each step, executes it, and replans at the following
+timestep. This minimizes per-step computation and enables real-
+time performance, while preserving temporal coherence learned
+during training.
+
+                                                                                                                                                                                                                                                                                                                  , Vol. 1, No. 1, Article . Publication date: April 2026.
+6 · Hwang, Hong, Seon, and Kang
+
+and behavioral diversity. Full definitions and implementation details   SRVR and GSR, demonstrating the emergence of multiple plausi-
+are provided in the supplementary.                                      ble, goal-consistent behaviors rather than failure-driven variance.
+                                                                        Supplementary material provides detailed quantitative results.
+   Progressive Difference Metrics (PDM). PDM measures transition
+accuracy, focusing on whether the policy selects locally correct        4.4 Behavioral Response to Contextual Conditioning
+motion given the current scene and interactions. We evaluate under
+teacher forcing by resetting the simulator to the ground-truth state    We visually analyze how contextual conditioning­remaining time
+at each decision point and assessing only the next predicted segment,   and group context­influence agent behavior. For controlled com-
+avoiding drift accumulation. We report two segment-level variants       parison, remaining time is set proportional to distance-to-goal.
+analogous to ADE and FDE (in meters): PDM-ADE averages the
+displacement error over all frames in each predicted segment, while        As shown in . 7, shorter time budgets lead to more aggressive goal-
+PDM-FDE measures the segment's displacement error in final-frame.       directed motion and tighter navigation. In urgent cases, agents may
+Lower PDM-ADE/PDM-FDE indicates more accurate local dynamics            temporarily relax certain norms, such as briefly entering the road-
+and better decision quality.                                            way in vehicle-free scenes. This behavior arises from exploration-
+                                                                        based QA supervision, which trains the model to distinguish unsafe
+   Social Region Violation Rate (SRVR). SRVR quantifies norm com-       actions from contextually acceptable deviations, enabling risk-aware
+pliance by measuring how often generated trajectories enter scene-      decision making rather than rigid rule adherence.
+dependent forbidden regions defined by semantic masks and scene
+conventions. Lower SRVR indicates better adherence to social and           Fig. 8 compares solo and group settings. In solo cases, agents
+semantic constraints.                                                   increase interpersonal distance while progressing toward the goal.
+                                                                        In group settings, agents maintain cohesive spacing while navigating
+   Goal Success Rate (GSR). GSR measures task completion as the         collectively, even in unseen environments.
+fraction of agents that reach their assigned goals within a toler-
+ance before the time limit. Higher GSR indicates more reliable goal-    4.5 Stress Test
+directed behavior.
+                                                                        To assess the robustness of CrowdVLA under multiple unseen set-
+   Trajectory Diversity under Identical Inputs (Div). Div is measured   tings. As shown in Fig. 9, the model remains effective in narrow-gap
+by sampling multiple rollouts from identical initial conditions (via    traversal, occlusion, and height variation scenarios, none of which
+different decoding randomness) and computing the average pairwise       are observed during training. CrowdVLA relies solely on visual
+DTW distance among the resulting trajectories.                          input and requires no additional scene annotations, enabling the
+                                                                        same policy to generalize across diverse environments.
+4.3.2 Overall Results. Tab. 1 and 2 report results across four axes:
+short-horizon fidelity (PDM-ADE and PDM-FDE), semantic and                 We further examine agent behavior across environments that
+social compliance (SRVR) and goal success (GSR).                        share similar start and goal locations but differ in semantics and
+                                                                        layout, as shown in Fig. 10. Agents correctly transition through
+   Short-horizon fidelity (PDM-ADE and PDM-FDE). CrowdVLA con-          doorways in entrance scenes, respect crosswalk norms in unseen
+sistently achieves lower PDM-ADE and PDM-FDE across all scenes,         low-poly environments, and select more direct diagonal paths in
+indicating more accurate local motion execution over each motion-       dark, realistic forest scenes when unobstructed. These results indi-
+skill window. This reflects stable short-horizon decisions under        cate consistent goal-directed, collision-aware, and norm-compliant
+varying scene layouts and interaction contexts.                         behavior across diverse scene geometries and appearances.
+
+   Semantic and social compliance (SRVR) vs. task completion (GSR).        Interestingly, failures near transparent glass arise from perceptual
+CrowdVLA improves semantic and social norm compliance while             ambiguity rather than control errors. Similar to humans, the agent
+maintaining, and often improving, goal success. As shown in Fig. 6,     relies on visual cues and may misinterpret transparent surfaces as
+CrowdVLA reaches the goal coherently, while baselines frequently        traversable space.
+show unstable or implausible behaviors.
+                                                                        4.6 Ablation Study
+   Agents reduce violations of socially disallowed regions without
+sacrificing task completion, avoiding the trade-off commonly ob-        We perform an ablation study to quantify the contributions of (i)
+served in baseline methods. This behavior arises from explicitly        motion skill-based action representation and (ii) exploration-based
+reasoning about environmental semantics and the consequences            QA supervision. All variants share the same Qwen3-VL-2B back-
+of norm-violating actions, rather than relying solely on geometric      bone, LoRA configuration, training schedule, and data splits, and
+costs or reward tuning.                                                 are evaluated under the same simulator settings.
+
+   Diversity under identical inputs (Div). While GBM reports the        4.6.1 Variants. We compare the full model against the following
+highest Div, this variability largely stems from unstable behaviors,    ablations: (1) w/o Motion Skill: replace discrete motion-skill selec-
+including agents failing to reach their goals or showing unbounded      tion with direct continuous action regression; (2) w/o QA: train only
+trajectories, rather than from meaningful alternative strategies. CCP,  with expertise trajectories without exploration-based QA; (3) w/o
+on the other hand, shows limited diversity under fixed conditioning,    Full trajectory: disable multi-horizon supervision and predict the
+as most variation arises from changing profile weights. In contrast,    only next skill. Ablations that remove individual QA subtypes are
+CrowdVLA achieves balanced diversity that coexists with improved        reported in the supplementary material.
+
+, Vol. 1, No. 1, Article . Publication date: April 2026.
+                                                                 CrowdVLA: Embodied Vision-Language-Action Agents for Context-Aware Crowd Simulation · 7
+              Table 1. Per-scene quantitative results on the held-out test scenes (Zara01 and ETH-Hotel).
+
+Scene         Method                             PDM-ADE                 PDM-FDE           GSR                              SRVR 
+Zara01
+              GBM                                0.3057±.0345            0.5203±.0509  0.9419±.0152                       0.0849±.0182
+ETH-Hotel     CCP                                0.2406±.0005            0.4524±.0005  0.9797±.0000                       0.1796±.0018
+              CCP (Goal Only)                    0.3171±.0160            0.5995±.0304  0.9905±.0045                       0.0910±.0045
+              CrowdVLA (ours)                    0.1288±.0031            0.2489±.0160  1.0000±.0000                       0.0593±.0104
+
+              GBM                                0.2262±.0104            0.4306±.0198  0.9821±.0072                       0.0749±.0082
+              CCP                                0.2689±.0160            0.4669±.0007  0.7876±.0061                       0.1727±.0031
+              CCP (Goal Only)                    0.2694±.0221            0.4816±.0433  0.7758±.0359                       0.0958±.0051
+              CrowdVLA (ours)                    0.2088±.0063            0.4184±.0128  0.9909±.0038                       0.0390±.0051
+
+Table 2. Per-scene quantitative results on the held-out test scenes.     Table 4. Ablation results on held-out test scenes.
+
+Scene         Method                  GSR          SRVR                  Scene         Method                  GSR          SRVR 
+Intersection                                                             Intersection
+              GBM                  1.0000±.0000  0.1475±.1000                          CrowdVLA (ours)      1.0000±.0000  0.0170±.0158
+Hallway       CCP                  1.0000±.0000  0.0414±.0002            Hallway       w/o Motion Skill     1.0000±.0000  0.0639±.0425
+              CCP (Goal Only)      0.9555±.0308  0.0290±.0002                          w/o Full trajectory  1.0000±.0000  0.1124±.0445
+              CrowdVLA (ours)      1.0000±.0000  0.0170±.0158                          w/o QA               0.9444±.0845  0.1369±.0537
+
+              GBM                  1.0000±.0000  0.0615±.0271                          CrowdVLA (ours)      1.0000±.0000  0.0016±.0015
+              CCP                  1.0000±.0000  0.1585±.0000                          w/o Motion Skill     1.0000±.0000  0.0123±.0109
+              CCP (Goal Only)      1.0000±.0000  0.0067±.0000                          w/o Full trajectory  1.0000±.0000  0.1450±.0356
+              CrowdVLA (ours)      1.0000±.0000  0.0016±.0015                          w/o QA               0.8888±.0845  0.2777±.0577
+
+Table 3. Ablation study on held-out test scenes (Zara01 and ETH_Hotel).  QA explicitly teaches consequence-aware decision making. This
+                                                                         sharply reduces SRVR in convention-heavy scenes (e.g., crosswalk
+Scene         Method               PDM-ADE       PDM-FDE                 vs. roadway) while maintaining or improving goal success, avoiding
+Zara01                                                                   the typical trade-off between compliance and task completion.
+              CrowdVLA (ours)      0.1288±.0031  0.2489±.0160
+ETH_Hotel     w/o Motion Skill     0.5876±.0035  1.1714±.0055               Multi-horizon supervision further improves temporal coherence,
+              w/o Full trajectory  0.2337±.0024  0.4861±.0018            reducing myopic switching and stabilizing final segment outcomes
+              w/o QA               0.1974±.0019  0.3986±.0047            (PDM-FDE).
+
+              CrowdVLA (ours)      0.2088±.0063  0.4184±.0128               Together, these components address distinct failure modes: mo-
+              w/o Motion Skill     0.5978±.0028  1.2003±.0023            tion skills improve dynamical fidelity and controllability, exploration-
+              w/o Full trajectory  0.3428±.0252  0.7311±.0670            based QA supplies supervision that is absent from imitation alone,
+              w/o QA               0.2482±.0049  0.5388±.0062            and multi-horizon supervision enforces temporal consistency. Their
+                                                                         combination yields lower PDM, lower SRVR, and higher diversity
+4.6.2 Results and analysis. The results of the ablation study are        under identical inputs, demonstrating both robust execution with
+presented in Tab. 3 and 4. Across held-out real scenes and synthetic     flexible, context-aware behavior.
+scenarios, CrowdVLA shows consistent improvements. Motion skill
+abstraction stabilizes short-horizon execution by constraining deci-     4.6.3 Inference Time. VLM-based policies face scalability challenges
+sions to executable primitives, substantially reducing PDM errors        as agent count grows. CrowdVLA mitigates this by predicting ac-
+and rollout instability, especially in dense multi-agent interactions    tions at a 20-frame motion-skill cadence, using lightweight LoRA-
+where small control noise can cascade. Compared to direct contin-        based adaptation, and batching agent queries for efficient GPU uti-
+uous regression, motion skills yield more reliable transitions and       lization. Compared to per-frame control prediction, the motion-skill
+enable controlled stochasticity at the decision level.                   interface avoids repeated inference overhead and reduces end-to-
+                                                                         end rollout time for a fixed horizon. While more than thousands of
+   Exploration-based QA supervision primarily improves semantic          agents remain compute-bound, this design substantially improves
+and social compliance. Training on success-only demonstrations           practical deployability and points toward future system-level opti-
+under-exposes the model to unsafe or norm-violating alternatives,        mizations such as quantization and asynchronous serving. During
+leading to brittle behavior in rare or ambiguous cases. By contrast-     real-time inference, to ensure smooth, uninterrupted motion, we
+ing counterfactual motion skills and supervising their outcomes,         ran the model several steps ahead; details are provided in the sup-
+                                                                         plementary material.
+
+                                                                                                                  , Vol. 1, No. 1, Article . Publication date: April 2026.
+8 · Hwang, Hong, Seon, and Kang                                                              337­348.
+                                                                                         Stephen J Guy, Jatin Chhugani, Sean Curtis, Pradeep Dubey, Ming C Lin, and Dinesh
+5 Conclusion
+                                                                                             Manocha. 2010. PLEdestrians: A Least-Effort Approach to Crowd Simulation.. In
+CrowdVLA reframes crowd simulation as a problem of perception-                               Symposium on computer animation. 119­128.
+driven, consequence-aware decision making, rather than rule ex-                          Stephen J Guy, Jatin Chhugani, Changkyu Kim, Nadathur Satish, Ming Lin, Dinesh
+ecution or trajectory replay. By grounding individual agents in a                            Manocha, and Pradeep Dubey. 2009. Clearpath: highly parallel collision avoidance
+Vision­Language­Action loop, our approach enables pedestrians                                for multi-agent simulation. In Proceedings of the 2009 ACM SIGGRAPH/Eurographics
+to interpret scene semantics and social context directly from visual                         Symposium on Computer Animation. 177­187.
+observations, and to select actions based on their consequences.                         Stephen J Guy, Sujeong Kim, Ming C Lin, and Dinesh Manocha. 2011. Simulating
+                                                                                             heterogeneous crowd behaviors using personality trait theory. In Proceedings of the
+   This formulation is made practical through three key design                               2011 ACM SIGGRAPH/Eurographics symposium on computer animation. 43­52.
+choices. A pretrained VLM is adapted to pedestrian control via                           Dirk Helbing and Peter Molnar. 1995. Social force model for pedestrian dynamics.
+LoRA fine-tuning, preserving broad visual and commonsense pri-                               Physical review E 51, 5 (1995), 4282.
+ors while remaining computationally feasible. Action selection is                        Edward J Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen-Zhu, Yuanzhi Li, Shean Wang,
+mediated through a motion-skill vocabulary, where each token rep-                            Lu Wang, Weizhu Chen, et al. 2022. Lora: Low-rank adaptation of large language
+resents a short, executable trajectory segment, bridging token-based                         models. ICLR 1, 2 (2022), 3.
+reasoning and continuous simulation. Finally, exploration-based su-                      Kaidong Hu, Brandon Haworth, Glen Berseth, Vladimir Pavlovic, Petros Faloutsos,
+pervision exposes the policy to counterfactual alternatives and their                        and Mubbasir Kapadia. 2021. Heterogeneous crowd simulation using parametric
+consequences, overcoming the strong success bias of recorded crowd                           reinforcement learning. IEEE Transactions on Visualization and Computer Graphics
+data and enabling risk- and norm-aware decisions.                                            29, 4 (2021), 2036­2052.
+                                                                                         Xuebo Ji, Zherong Pan, Xifeng Gao, and Jia Pan. 2024. Text-guided synthesis of crowd
+   Several limitations remain. Motion-skill discretization may con-                          animation. In ACM SIGGRAPH 2024 Conference Papers. 1­11.
+strain fine-grained control. Norm compliance currently relies on                         Hao Jiang, Wenbin Xu, Tianlu Mao, Chunpeng Li, Shihong Xia, and Zhaoqi Wang. 2010.
+scene-specific semantic definitions, and longer-range intent, such as                        Continuum crowd simulation in complex environments. Computers & Graphics 34,
+activities or group formation, is only partially modeled. Addressing                         5 (2010), 537­544.
+these challenges will require richer scene understanding, hierarchi-                     Mubbasir Kapadia, Alejandro Beacco, Francisco Garcia, Vivek Reddy, Nuria Pelechano,
+cal action abstractions, and extended temporal reasoning.                                    and Norman I Badler. 2013. Multi-domain real-time planning in dynamic envi-
+                                                                                             ronments. In Proceedings of the 12th ACM SIGGRAPH/Eurographics symposium on
+   This work suggests a shift in crowd simulation from motion-                               computer animation. 115­124.
+centric synthesis to agents that see, reason, and act within their                       Moo Jin Kim, Chelsea Finn, and Percy Liang. 2025. Fine-tuning vision-language-action
+environment. By casting VLA reasoning as a unifying interface                                models: Optimizing speed and success. arXiv preprint arXiv:2502.19645 (2025).
+between perception, social understanding, and motion, CrowdVLA                           Moo Jin Kim, Karl Pertsch, Siddharth Karamcheti, Ted Xiao, Ashwin Balakrishna, Suraj
+enables crowd behaviors that are semantically grounded, adaptable                            Nair, Rafael Rafailov, Ethan Foster, Grace Lam, Pannag Sanketi, et al. 2024. Openvla:
+to new scenes, and driven by understanding rather than predefined                           An open-source vision-language-action model. arXiv preprint arXiv:2406.09246
+rules or demonstration-driven imitation.                                                    (2024).
+                                                                                         Jaedong Lee, Jungdam Won, and Jehee Lee. 2018. Crowd simulation by deep reinforce-
+References                                                                                   ment learning. In Proceedings of the 11th ACM SIGGRAPH conference on motion,
+                                                                                             interaction and games. 1­7.
+Shuai Bai, Yuxuan Cai, Ruizhe Chen, Keqin Chen, Xiong-Hui Chen, Zesen Cheng,             Kang Hoon Lee, Myung Geol Choi, Qyoun Hong, and Jehee Lee. 2007. Group behavior
+    Lianghao Deng, Wei Ding, Rongyao Fang, Chang Gao, Chunjiang Ge, Wenbin Ge,               from video: a data-driven approach to crowd simulation. In Proceedings of the 2007
+    Zhifang Guo, Qidong Huang, Jie Huang, Fei Huang, Binyuan Hui, Shutong Jiang,             ACM SIGGRAPH/Eurographics symposium on Computer animation. 109­118.
+    Zhaohai Li, Mingsheng Li, Mei Li, Kaixin Li, Zicheng Lin, Junyang Lin, Xuejing       Alon Lerner, Yiorgos Chrysanthou, and Dani Lischinski. 2007. Crowds by example. In
+    Liu, Jiawei Liu, Chenglong Liu, Yang Liu, Dayiheng Liu, Shixuan Liu, Dunjie Lu,          Computer graphics forum, Vol. 26. Wiley Online Library, 655­664.
+    Ruilin Luo, Chenxu Lv, Rui Men, Li Ying Meng, Xuancheng Ren, Xin yi Ren, Sibo        Yingyan Li, Yuqi Wang, Yang Liu, Jiawei He, Lue Fan, and Zhaoxiang Zhang. 2025.
+    Song, Yu-Chen Sun, Jun Tang, Jianhong Tu, Jianqiang Wan, Peng Wang, Pengfei              End-to-end driving with online trajectory evaluation via bev world model. arXiv
+   Wang, Qiuyue Wang, Yuxuan Wang, Tianbao Xie, Yihe Xu, Haiyang Xu, Jin Xu,                 preprint arXiv:2504.01941 (2025).
+    Zhibo Yang, Mingkun Yang, Jian-Xing Yang, An Yang, Bowen Yu, Fei Zhang, Hang         Zhenxin Li, Kailin Li, Shihao Wang, Shiyi Lan, Zhiding Yu, Yishen Ji, Zhiqi Li, Ziyue Zhu,
+    Zhang, Xi Zhang, Botao Zheng, Humen Zhong, Jingren Zhou, Fanxi Zhou, Jingren            Jan Kautz, Zuxuan Wu, et al. 2024. Hydra-mdp: End-to-end multimodal planning
+    Zhou, Yuanzhi Zhu, and Keming Zhu. 2025a. Qwen3-VL Technical Report. https:             with multi-target hydra-distillation. arXiv preprint arXiv:2406.06978 (2024).
+    //api.semanticscholar.org/CorpusID:283262018                                         Jan Ondej, Julien Pettré, Anne-Hélène Olivier, and Stéphane Donikian. 2010. A
+                                                                                             synthetic-vision based steering approach for crowd simulation. ACM Transactions
+Shuai Bai, Keqin Chen, Xuejing Liu, Jialin Wang, Wenbin Ge, Sibo Song, Kai Dang,             on Graphics (TOG) 29, 4 (2010), 1­9.
+    Peng Wang, Shijie Wang, Jun Tang, et al. 2025b. Qwen2. 5-vl technical report. arXiv  Andreas Panayiotou, Theodoros Kyriakou, Marilena Lemonari, Yiorgos Chrysanthou,
+    preprint arXiv:2502.13923 (2025).                                                        and Panayiotis Charalambous. 2022. Ccp: Configurable crowd profiles. In ACM
+                                                                                             SIGGRAPH 2022 conference proceedings. 1­10.
+Panayiotis Charalambous, Julien Pettre, Vassilis Vassiliades, Yiorgos Chrysanthou, and   Stefano Pellegrini, Andreas Ess, Konrad Schindler, and Luc Van Gool. 2009. You'll never
+    Nuria Pelechano. 2023. Greil-crowds: Crowd simulation with deep reinforcement           walk alone: Modeling social behavior for multi-target tracking. In 2009 IEEE 12th
+    learning and examples. ACM Transactions on Graphics (TOG) 42, 4 (2023), 1­15.            international conference on computer vision. IEEE, 261­268.
+                                                                                         Fasheng Qiu and Xiaolin Hu. 2010. Modeling group structures in pedestrian crowd
+Peng Chen, Pi Bu, Yingyao Wang, Xinyi Wang, Ziming Wang, Jie Guo, Yingxiu Zhao,              simulation. Simulation Modelling Practice and Theory 18, 2 (2010), 190­205.
+    Qi Zhu, Jun Song, Siran Yang, et al. 2025. Combatvla: An efficient vision-language-  Alexandre Robicquet, Amir Sadeghian, Alexandre Alahi, and Silvio Savarese. 2016.
+    action model for combat tasks in 3d action role-playing games. arXiv preprint            Learning social etiquette: Human trajectory understanding in crowded scenes. In
+    arXiv:2503.09527 (2025).                                                                 European conference on computer vision. Springer, 549­565.
+                                                                                         Hao Shao, Yuxuan Hu, Letian Wang, Guanglu Song, Steven L Waslander, Yu Liu, and
+Shaoyu Chen, Bo Jiang, Hao Gao, Bencheng Liao, Qing Xu, Qian Zhang, Chang Huang,             Hongsheng Li. 2024. Lmdrive: Closed-loop end-to-end driving with large language
+   Wenyu Liu, and Xinggang Wang. 2024. Vadv2: End-to-end vectorized autonomous               models. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern
+    driving via probabilistic planning. arXiv preprint arXiv:2402.13243 (2024).              Recognition. 15120­15130.
+                                                                                         Hugo Touvron, Louis Martin, Kevin Stone, Peter Albert, Amjad Almahairi, Yasmine
+Zane Durante, Ran Gong, Bidipta Sarkar, Naoki Wake, Rohan Taori, Paul Tang, Shrinidhi        Babaei, Nikolay Bashlykov, Soumya Batra, Prajjwal Bhargava, Shruti Bhosale, et al.
+    Lakshmikanth, Kevin Schulman, Arnold Milstein, Hoi Vo, et al. 2025. An interac-          2023. Llama 2: Open foundation and fine-tuned chat models. arXiv preprint
+    tive agent foundation model. In Proceedings of the Computer Vision and Pattern           arXiv:2307.09288 (2023).
+    Recognition Conference. 3652­3662.                                                   Jur Van den Berg, Ming Lin, and Dinesh Manocha. 2008. Reciprocal velocity obstacles
+                                                                                             for real-time multi-agent navigation. In 2008 IEEE international conference on robotics
+Teófilo Bezerra Dutra, Ricardo Marques, Joaquim B Cavalcante-Neto, Creto Augusto             and automation. Ieee, 1928­1935.
+    Vidal, and Julien Pettré. 2017. Gradient-based steering for vision-based crowd       Xiang Wei, Wei Lu, Lili Zhu, and Weiwei Xing. 2018. Learning motion rules from real
+    simulation algorithms. In Computer graphics forum, Vol. 36. Wiley Online Library,        data: Neural network for crowd simulation. Neurocomputing 310 (2018), 125­134.
+
+, Vol. 1, No. 1, Article . Publication date: April 2026.
+CrowdVLA: Embodied Vision-Language-Action Agents for Context-Aware Crowd Simulation · 9
+
+Shuai Yi, Hongsheng Li, and Xiaogang Wang. 2015. Understanding pedestrian behaviors       Driving with Adaptive Reasoning and Reinforcement Fine-Tuning. arXiv preprint
+    from stationary crowd groups. In Proceedings of the IEEE conference on computer       arXiv:2506.13757 (2025).
+    vision and pattern recognition. 3488­3496.                                        Brianna Zitkovich, Tianhe Yu, Sichun Xu, Peng Xu, Ted Xiao, Fei Xia, Jialin Wu, Paul
+                                                                                         Wohlhart, Stefan Welker, Ayzaan Wahid, et al. 2023. Rt-2: Vision-language-action
+Shangfei Zheng and Hong Liu. 2019. Improved multi-agent deep deterministic policy         models transfer web knowledge to robotic control. In Conference on Robot Learning.
+    gradient for path planning-based crowd simulation. Ieee Access 7 (2019), 147755­      PMLR, 2165­2183.
+   147770.
+
+Zewei Zhou, Tianhui Cai, Seth Z Zhao, Yun Zhang, Zhiyu Huang, Bolei Zhou, and Jiaqi
+    Ma. 2025. AutoVLA: A Vision-Language-Action Model for End-to-End Autonomous
+
+                                                                                      , Vol. 1, No. 1, Article . Publication date: April 2026.
+10 · Hwang, Hong, Seon, and Kang
+
+GBM                   CCP           CCP - OnlyGoal              CrowdVLA (Ours)                                                           GBM          CCP       CCP - OnlyGoal            CrowdVLA (Ours)
+
+Entangled trajectory implausible patterns implausible patterns                                                                   Entangled
+Hallway                                                                                                                          trajectory
+                                                                                                                   Intersection
+                                                                                                                                 Boundary
+                                                                                                                                 violating implausible patterns          Failure to reach
+
+Fig. 6. Trajectory Comparison in Hall and Intersection scenes. We compare pedestrian trajectories when nine agents cross in each scene. While CCP [Panayiotou
+et al. 2022] and GBM [Dutra et al. 2017] incorporate environmental constraints, their limited integration with expertise trajectory data can result in inconsistent
+behaviors, including agents failing to reach their goals, becoming entangled in congested regions, or occasionally violating scene boundaries.
+
+Remaining time - 22s  (a) Crosswalk Starting        Remaining time - 40s                                                         Remaining time - 18s  (b) Sidewalk Starting     Remaining time - 28s
+                      Remaining time - 28s                                                                                                             Remaining time - 22s
+
+                                                                suddenly stop
+
+                                                                                                                                 walking                    walking
+                                                                                                                                 in the roadway             in the curb
+
+aggressive            conservative                                                                                                                                                         walking
+                                                                                                                                                                                           in the sidewalk
+
+Fig. 7. We visualize how trajectories change as remaining time varies: a 1:1 mapping from distance-to-goal, a more urgent setting, and a more relaxed setting.
+(a) The agent starts from the crosswalk and moves toward the sidewalk. Under an urgent setting, the trajectory approaches closer to the traffic light (more
+aggressive), while the default setting stays farther away. Under the relaxed setting, the agent may briefly stop and wait before continuing, which appears to
+reflect behaviors in the dataset such as pausing unexpectedly to use a phone or check shoes. (b) The agent starts from the sidewalk with a goal across the
+crosswalk. Similarly, when time is urgent, the agent partially tolerates the roadway and moves along the crosswalk boundary; with the default setting, it
+moves toward the curb (the boundary between the crosswalk and sidewalk); with a relaxed setting, it follows a clearly safer trajectory toward the center of the
+crosswalk. Please refer to the supplementary video for more details.
+
+                      (a) Intersection Crossing                                                                                                        (b) Corner turning
+
+Group setting                                 Solo setting Goal                                                                  Group setting                                Solo setting
+
+Fig. 8. This figure visualizes trajectory differences between group and solo settings under two scenarios: intersection crossing and corner turning. (a) The red
+dashed line shows that agents in the solo setting tend to drift farther apart than in the group setting. The blue dashed line shows that group agents move
+while keeping a closer inter-agent distance. The white dashed line shows that, while the group maintains spacing, solo agents keep distance and pass between
+obstacles. (b) The white solid line indicates that, in the solo setting, the agent takes a wider turn around the corner to avoid getting too close to others. Please
+refer to the supplementary video for more details.
+
+, Vol. 1, No. 1, Article . Publication date: April 2026.
+                                                       CrowdVLA: Embodied Vision-Language-Action Agents for Context-Aware Crowd Simulation · 11
+
+   Between obstacles 1                     Between obstacles 2                   Occlusion            Height variation
+
+Fig. 9. This figure shows robustness tests across multiple unseen environments and scenarios. As in the first and second panels, agents can pass through
+narrow gaps between obstacles (white solid lines). We also observe that, under occlusion caused by descending an escalator, the model does not panic and still
+reaches the goal. Conversely, even in unseen cases with height changes (e.g., riding an escalator), the agent adapts robustly. Please refer to the supplementary
+video for more details.
+
+(a) Entrance Scenario                   (b) Crosswalk Scenario                (c) Forest Scenario     (d) Failure Case
+
+                                     1                          Start                                                    1
+
+                                    2                                1                                                    32
+  Goal                                                                                                Goal
+                                                                                                                                                                             Start
+                  3                   Start
+                                                                                                1
+                                                                                            Start
+
+                                                                              3  2
+
+                                                 3  2
+
+                                           Goal                         Goal
+
+1                                       1                               1                          1
+
+2                                       2                               2                          2
+
+3                                       3                               3                          3
+
+Fig. 10. Qualitative stress-test results across unseen environments with similar start­goal configurations. Each column shows the agent's trajectory (top)
+and corresponding third-person observations at selected timesteps (bottom). Despite the similar start and goal locations, agents adapt their behavior to
+scene-specific context, including indoor entrances, crosswalks, and natural terrain. The last column illustrates a failure case near transparent glass, where
+ambiguous visual cues lead to incorrect obstacle perception.
+
+                                                                                                                                                             , Vol. 1, No. 1, Article . Publication date: April 2026.
+

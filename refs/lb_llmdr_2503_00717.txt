@@ -1,0 +1,455 @@
+                                       LLMDR: LLM-Driven Deadlock Detection and Resolution in
+                                                               Multi-Agent Pathfinding
+
+                                                      Seungbae Seo1, Junghwan Kim2, Minjeong Shin3, and Bongwon Suh4
+
+arXiv:2503.00717v1 [cs.MA] 2 Mar 2025  Fig. 1. Overview of LLMDR (LLM-Driven Deadlock Detection and                 multiple agents to find collision-free paths to their individual
+                                       Resolution). When a deadlock is detected in the base model simulation,       goals while minimizing the overall number of steps. As
+                                       manual actions are iterated to resolve the deadlock. If no deadlock is       the number of agents and the complexity of environments
+                                       detected, the base model simulation is directly applied to the environment.  increase, solving MAPF instances becomes increasingly dif-
+                                                                                                                    ficult [5].
+                                          Abstract-- Multi-Agent Pathfinding (MAPF) is a core chal-
+                                       lenge in multi-agent systems. Existing learning-based MAPF                      Existing approaches to MAPF can be broadly classified
+                                       methods often struggle with scalability, particularly when                   into algorithmic and learning-based methods. Algorithmic
+                                       addressing complex scenarios that are prone to deadlocks. To                 methods include systematic search algorithms like Conflict-
+                                       address these challenges, we introduce LLMDR (LLM-Driven                     Based Search (CBS) [6], which struggle with large-scale
+                                       Deadlock Detection and Resolution), an approach designed to                  scenarios due to their exponential worst-case time complex-
+                                       resolve deadlocks and improve the performance of learned                     ity. Recently, learning-based methods have shown promise
+                                       MAPF models. LLMDR integrates the inference capabilities                     in scaling across different scenarios. For instance, PRIMAL
+                                       of large language models (LLMs) with learned MAPF models                     [7] combines reinforcement learning with imitation learning,
+                                       and prioritized planning, enabling it to detect deadlocks and                while more recent approaches like DHC [8] and DCC
+                                       provide customized resolution strategies. We evaluate LLMDR                  [9] have introduced advanced communication mechanisms
+                                       on standard MAPF benchmark maps with varying agent num-                      between agents. However, learning-based methods still face
+                                       bers, measuring its performance when combined with several                   challenges in behavior consistency and low-level optimality,
+                                       base models. The results demonstrate that LLMDR improves                     especially in complex scenarios. Failures in MAPF policies
+                                       the performance of learned MAPF models, particularly in                      trained through reinforcement learning are not always easy
+                                       deadlock-prone scenarios, with notable improvements in success               to identify [8], [7]. Moreover, deadlock situations often
+                                       rates. These findings show the potential of integrating LLMs                 involve multiple agents, making simple or random resolution
+                                       to improve the scalability of learning-based MAPF methods.                   strategies ineffective [10].
+
+                                                              I. INTRODUCTION                                          To address these challenges, we present LLMDR (LLM-
+                                                                                                                    Driven Deadlock Detection and Resolution), which
+                                          Multi-Agent Pathfinding (MAPF) [1] is a core challenge in                 integrates large language models (LLMs) with learned
+                                       multi-agent systems. Its applications span various domains,                  MAPF models and prioritized planning. LLMDR has two
+                                       such as autonomous vehicles [2], multi-robot systems [3],                    phases: deadlock detection by LLM and resolution using
+                                       and video games [4]. The objective of MAPF is to coordinate                  LLM strategies with Priority Inheritance with Backtracking
+                                                                                                                    (PIBT) [11]. In detection, the LLM checks the agents'
+                                          This work has been submitted to the IEEE for possible publication.        states within a detection window to spot deadlocks. When
+                                       Copyright may be transferred without notice, after which this version may    deadlock is detected, the system shifts to resolution, where
+                                       no longer be accessible.                                                     the LLM sets priorities for agents and actions. These
+                                                                                                                    priorities guide PIBT to generate collision-free 1-step
+                                          2,3,4Junghwan Kim, Minjeong Shin, Bongwon Suh are with Seoul              moves. We tested LLMDR on standard MAPF benchmark
+                                       National University, 1 Gwanak-ro, Gwanak-gu, Seoul, Republic of Korea,       maps [1] with 4 to 64 agents. The results show that LLMDR
+                                       08826.                                                                       improves learned MAPF models, especially in complex
+                                                                                                                    environments. This suggests that many learned MAPF
+                                         1Seungbae Seo: wiki1177@snu.ac.kr                                          models fail due to deadlocks, and resolving them with
+                                         2Junghwan Kim: jhbale11@snu.ac.kr                                          LLMDR improves performance. LLMDR's impact grows
+                                         3Minjeong Shin: shinmj1024@snu.ac.kr                                       with more agents and increasing complexity, showing its
+                                         4Bongwon Suh: bongwon@snu.ac.kr                                            potential to improve various learned MAPF models.
+
+                                                                                                                       The main contributions of our work are:
+                                                                                                                       · We present LLMDR, which combines large language
+
+                                                                                                                          models with learning-based MAPF methods and prior-
+                                                                                                                          itized planning to detect and resolve deadlocks.
+                                                                                                                       · Through experiments, we show that LLMDR enhances
+                                                                                                                          various learned MAPF models, improving performance
+      across environments and agent numbers, thus boosting        their approach faced significant challenges in complex envi-
+      the scalability of learning-based MAPF methods.             ronments. This study highlighted LLMs' limitations in han-
+                                                                  dling multi-agent coordination and spatial reasoning, partic-
+                        II. RELATED WORK                          ularly in complex scenarios. In contrast, LLMDR addresses
+                                                                  these limitations by using LLMs for high-level tasks like
+   In this section, we review learning-based MAPF methods         deadlock detection and resolution, while relying on learned
+and their limitations. Then, we explore recent developments       MAPF models for low-level planning. This approach allows
+in utilizing LLMs for planning tasks.                             LLMDR to benefit from LLMs' reasoning capabilities in
+                                                                  decision-making, without being constrained by their limita-
+A. Learning-Based MAPF Methods                                    tions in handling low-level planning.
+
+   Learning-based MAPF methods using reinforcement                                        III. PRELIMINARIES
+learning (RL) to train policies for agents have been stud-
+ied to improve generalization across diverse environments.           This paper uses prioritized planning to enable cooperative
+PRIMAL [7] combines RL with imitation learning from               behaviors based on LLM strategies to resolve deadlocks.
+a centralized MAPF planner to train decentralized policies        While prioritized planning helps cooperation, it can cause
+[12]. Subsequent studies have introduced the use of the           agents to get stuck. To mitigate this, we apply PIBT [11],
+A* algorithm as a key component [13], [14], [15]. Recent          which improves prioritized planning by resolving conflicts.
+studies have facilitated communication between agents. The
+use of graph neural networks allowed agents to communicate        A. Multi-Agent Pathfinding
+[16]. In DHC [8], pathfinding and communication strategies
+were trained separately, with agents communicating through           The standard MAPF [1] problem is defined as follows:
+a graph convolution mechanism. To conserve resources, DCC         Given a set of agents A = {1, 2, . . . , k} on an undirected
+[9] introduced decision-causal communication, which selects       graph G = (V, E), where V represents locations and E
+only relevant neighbors. SACHA [17], based on Soft Actor-         denotes connections, the goal is to find collision-free paths
+Critic, trained the actor and critic network architectures.       from each agent's start s(i)  V to its target t(i)  V .
+                                                                  Agents move in discrete time steps, either waiting or moving
+   Some studies have shifted focus towards resolving issues       to an adjacent node. A move from v to v is a(v) = v, while
+such as conflicts and deadlocks in learning-based methods.        staying is a(v) = v. An agent's plan is i = (a1, a2, . . . , an),
+PIBT [11] and LaCAM [18] have been combined with the              guiding it from s(i) to t(i). A valid solution provides k such
+action probability distributions generated by a learned model     plans {1, 2, . . . , k}, ensuring all agents reach their targets
+to prevent collisions [19]. EPH [20] employs several infer-       without collisions.
+ence strategies and ensemble methods. RDE [21] proposed
+a method that detects deadlock based on specific rules by         Algorithm 1 PIBT algorithm
+analyzing agents' past actions. When a deadlock is detected,
+agents resolve it by randomly selecting an action from            Parameters: Current states s1:N , actions a11::N 5 , Static Obstacles W
+possible options. However, failures in learned MAPF models        Output: Collision free actions a1:N
+are not always easy to identify. In many cases, deadlock
+involves multiple agents, and therefore, it is important to       1: procedure PIBT(Current states s1:N , agentPriorities)
+account for the interdependencies between agents. For escape
+policies, strategies that adapt to the agents' states may be      2: Reserved  
+more effective than purely random methods.
+                                                                  3: Moves  dictionary()
+B. LLM for Planning
+                                                                  4: for k  argsort(agentPriorities) do
+   Since LLMs can perform zero-shot planning and demon-
+strate robustness in novel environments [22], there have been     5:   if k / Moves.keys() then
+attempts to incorporate them into multi-robot planning. Some
+studies have explored using LLMs to decompose high-level          6:           PIBT-H(k, a11::N 5 , s1:N , Reserved, Moves)
+task commands and distribute them among multiple robots,
+facilitating coalition formation and task allocation [23], [24].  7: return Moves
+
+   Efforts have also been made to apply LLMs in other             8:
+fields where LLMs handle high-level control, while low-           9: procedure PIBT-H(Agent k, Action a11::5N , Current States s1:N , Reserved,
+level control is managed through RL [25]. For example, the
+common deadlock problem in multi-robot systems (MRS)                   Moves)
+can be mitigated using a framework that combines LLM-
+driven high-level control with graph neural network-based         10: for a  a1k:5 do                      Sort ak1:5 with preferred a first
+low-level control [26].                                                        s  T (sk, a)
+                                                                  11:
+   In the context of MAPF, Chen et al. [27] investigated the                   if s  W  Reserved or (s, s)  Reserved then
+direct use of LLMs. While successful in simple scenarios,         12:
+
+                                                                  13:          continue
+
+                                                                  14:          Moves[k]  a, Reserved  Reserved {s, (s, s)}
+
+                                                                  15:          if  agent j = k at s then
+
+                                                                  16:          if PIBT-H(j, a11::N 5 , s1:N , Reserved, Moves) then
+
+                                                                  17:                return Success
+
+                                                                  18:          Moves[k]  , Reserved  Reserved \ {s, (s, s)}
+
+                                                                  19:          else
+
+                                                                  20:          return Success
+
+                                                                  21: return Failure
+
+                                                                  B. Prioritized Planning and PIBT
+
+                                                                     In MAPF, prioritized planning [28] is used to coordinate
+                                                                  agents by allowing higher-priority agents to act first. It pro-
+                                                                  motes cooperative behaviors which helps prevent conflicts.
+                                                                  However, while effective, prioritized planning can lead to
+                                                                  issues like agents becoming stuck, particularly in complex
+                                                                  environments.
+   To overcome these limitations, we incorporate PIBT algo-                            A. Deadlock Detection by LLM
+rithm [11], which extends prioritized planning by introducing
+mechanisms to resolve conflicts and prevent agents from get-                              The LLM detects potential deadlocks by analyzing agent
+ting stuck. PIBT allows lower-priority agents to temporarily                           movement within a specified detection window, extracted
+inherit the priority of higher-priority agents if lower-priority                       from the execution plan. The execution plan, generated by
+agents are blocking the paths of the higher-priority agents.                           simulating the environment using the base model, logs agent
+Additionally, PIBT employs backtracking to further enhance                             positions as coordinate data over time. Both the execution
+the algorithm's ability to manage conflicts. Algorithm 1                               plan and the detection window have predefined lengths, with
+outlines the execution of PIBT, where the priorities between                           the detection window representing the initial part of the
+agents and the priorities among each agent's actions are                               execution plan used for deadlock analysis.
+both considered when determining 1-step plans [19]. PIBT is
+simple to implement and computationally efficient, making                                 For deadlock detection, the LLM considers agents that
+it suitable for large-scale, real-time applications [11].                              have never reached their goal during the execution plan.
+                                                                                       Additionally, agents within a 9×9 area around them are
+   However, PIBT operates greedily, which can result in                                included in the analysis. This ensures only agents potentially
+suboptimal solutions over the long term. The algorithm                                 causing deadlocks are inspected.
+prioritizes resolving immediate conflicts between agents,
+potentially neglecting the global context of the problem.                                 Each agent's state within the detection window is defined
+This can lead to a degradation in overall solution quality.                            by three elements: (1) the agent's ID, (2) the coordinates of
+In our approach, the priorities of agents and their actions                            the agent's goal, and (3) the agent's position at each step.
+are determined by strategies generated by LLMs. These                                  The detection window is attached to the LLM prompt for
+priorities are then integrated into PIBT, which uses them                              deadlock analysis. Prompt 1, a simplified version of the
+to resolve conflicts for a single step. This process enables                           original prompt, provides the detection window to the LLM,
+more effective deadlock management across multiple steps,                              which goes through three main stages to detect deadlocks
+contributing to improved long-term performance.                                        and suggest resolution strategies for each deadlock. First,
+                                                                                       the LLM analyzes the agents' states and classifies them
+  IV. LLMDR: LLM-DRIVEN DEADLOCK DETECTION                                             as either in a deadlock or a non-deadlock. Second, the
+                         AND RESOLUTION                                                agents identified as being in a deadlock and any nearby
+                                                                                       deadlocked/arrived agents are grouped together, forming
+    Prompt 1: Prompt for Deadlock Detection                                            groups to address the deadlock issue. Third, the LLM
+                                                                                       provides appropriate strategies based on the characteristics
+      You are given {detection window length} action logs of agents to detect          of each deadlock group.
+      deadlocks.
+      Follow these steps in order:                                                     Classify Deadlocks The LLM classifies whether an
+                                                                                       agent is in a deadlock based on its behavior--specifically,
+      1. Classify deadlocks:                                                           whether the agent exhibits no movement or is wandering
+           · Detect agents that are exhibiting deadlock conditions.                    without consistent goal-oriented movement. To prevent the
+           · Deadlock conditions: No movement, Wandering                               misclassification, the LLM is also provided with criteria for
+           · Not deadlocks: Always "Arrived", Arrived and stationary, Consistent       identifying agents that are functioning normally.
+               movement
+                                                                                       Group Deadlocked Agents The LLM groups deadlocked
+      2. Group deadlocked agents:                                                      agents that are in close proximity to each other. For example,
+           · Group deadlocked agents that are within a 2-Manhattan distance of         if a deadlocked agent is within a 2-Manhattan distance
+               each other.                                                             of another deadlocked agent or an agent that has already
+           · If a deadlocked agent is within a 2-Manhattan distance of an already      arrived at its goal, they are grouped together. The reason
+               arrived agent, include them in the same group.                          for grouping agents this way is that deadlocks often occur
+                                                                                       due to interactions between agents, making it necessary to
+      3. Provide solutions:                                                            resolve the deadlock collectively.
+           · Use the "leader" method for independently deadlocked agents or
+               when any agent in the group has a goal more than 8 Manhattan            Assign Strategies to Deadlock Groups The LLM
+               units away.                                                             assigns resolution strategies to each deadlocked group
+           · Use the "radiation" method when all agents in the group are near their    based on the characteristics of the deadlock. The "leader"
+               goals (less than 8 units) and likely to experience repeated deadlocks.  method is applied to groups where at least one agent
+                                                                                       is significantly farther from its goal. Conversely, the
+      Below are the {detection window length} action logs of agents.                   "radiation" method is used for groups where all agents are
+                                                                                       near their goals, meaning they are at risk of encountering
+      {detection window}                                                               repeated deadlocks, because resolving the deadlock for one
+                                                                                       agent in such a group may lead to others getting stuck again.
+      Provide the agent group status in this JSON format:
+      { "agent id": [Agent IDs in the same group], "solution": "leader" or
+      "radiation" }
+
+   We introduce LLMDR, a novel approach to improve
+learned MAPF models. LLMDR operates in two main
+phases: deadlock detection by LLM, and deadlock resolution
+using LLM strategies with PIBT. Figure 2 shows the overall
+flow of LLMDR. In the following subsections, we will
+explain LLMDR in the order depicted in Figure 2.
+Fig. 2. Detailed implementation of LLMDR (LLM-Driven Deadlock Detection and Resolution). The figure illustrates the process where agents in deadlock
+situations are detected by the LLM, and the action sets for each agent to resolve the deadlocks are obtained using the strategies proposed by the LLM
+along with PIBT algorithm. PIBT is used to derive collision-free actions from strategies generated by the LLM, thus enabling cooperative behavior among
+agents to resolve deadlocks.
+
+   If no deadlock is detected in the entire set of agents,        Algorithm 2 Strategized PIBT for Deadlock Resolution
+the previously generated execution plan is executed, and the
+process moves on to the next detection loop.                      Parameters: Current states s1:N , Actions a11::5N , Static Obstacles W , Strategy S
+                                                                  Output: Collision-free strategized actions a1:N
+B. Deadlock Resolution Using LLM Strategies with PIBT
+                                                                  1: procedure STRATEGIZEDPIBT(Current states s1:N , Actions a11::N 5 , Strategy S)
+   When a deadlock is detected, the LLM analysis is               2: agentPriorities  empty list
+turned into strategies for resolving it. These strategies set
+the agents' priorities and the priorities of their actions.       3: actionsSorted  empty list
+The priorities are then applied to PIBT, which create
+collision-free 1-step actions for each agent. This process        4: for each agent k do
+follows a loop: after each set of 1-step actions is executed,
+the strategy is reapplied to PIBT to generate the next set        5:  agentPriorities[k]  S.priorityForAgent(k)  Get agent priority from
+of 1-step actions. This loop continues for the length of
+the execution plan, progressively resolving the deadlock.             strategy S
+The following explains how the strategy forms the priority
+order of agents and their actions. The order presented below      6:  actionsSorted[k]
+reflects the priority ranking of agents:
+                                                                       sort(a1k:5, according to strategy S.actionPriorityForAgent(k))
+   1) Lead agents (from groups assigned "leader") are the
+       agents farthest from their goals within their respective   7: collisionFreeActions  PIBT(s1:N , actionsSorted, agentPriorities)
+       groups and prioritize moving toward their goals using
+       the shortest path heuristic.                               8: return collisionFreeActions
+
+   2) Radiate agents (from groups assigned "radiation")              The overall strategy is applied to Algorithm 2, where
+       move away from the deadlock center, which is calcu-        PIBT is used to derive collision-free 1-step action set.After
+       lated as the average position of all agents in the group,  executing these actions, the process loops back to reapply
+       to prevent further deadlock.                               the strategy and generate the next set of actions. This cycle
+                                                                  repeats for the execution plan length, aiming to resolve the
+   3) Non-deadlock agents prioritize the 1-step actions           deadlocks before the next detection loop. Once the cycle is
+       generated by the base model. While not depicted in         completed for the length of the execution plan, the process
+       Figure 2, they act independently to ensure the overall     moves to the next detection loop, regardless of whether
+       efficiency.                                                deadlocks remain.
+
+   4) Yield agents (from groups assigned "leader") are                    V. EXPERIMENTAL RESULTS AND ANALYSIS
+       the remaining agents within each group who are not
+       selected as the lead agent, and they prioritize staying       We conducted three experiments to evaluate LLMDR:
+       to allow the lead agent to move.                           (1) comparing its performance with the baseline models in
+                                                                  different maps and agent numbers; second, (2) analyzing the
+                                                                  impact of the language model on the performance of LLMDR
+                                                                  and (3) examining the effect of hyperparameters on LLMDR.
+
+                                                                  A. Experiment Setup
+
+                                                                     Our experiments evaluate LLMDR's performance across
+                                                                  various scenarios, comparing it with baseline models. We
+                                                                  conducted tests on four standard MAPF benchmark maps
+                                                                  [1]: random32 and random64 are square maps of size
+                                                                  (32x32) and (64x64), den312d is a (65x81) game map,
+                                                                                         TABLE I
+  PERFORMANCE COMPARISON FOR DIFFERENT NEURAL MAPF SOLVERS ON THE WAREHOUSE MAP. WE REPORT AVERAGE EPISODE LENGTH (EL,
+LOWER IS BETTER ) AND SUCCESS RATE (SR, HIGHER IS BETTER ). EPH* DENOTES THE BASE MODEL OF EPH WITHOUT ITS ORIGINAL INFERENCE
+
+                                                                            STRATEGIES AND ENSEMBLE.
+
+     Map   Agents     PRIMAL         DHC   DHC+LLMDR           DCC                                  DCC+LLMDR         SACHA        EPH*        EPH*+LLMDR
+warehouse
+              4      EL SR       EL SR     EL      SR      EL SR                                    EL      SR      EL SR      EL          SR  EL      SR
+              8
+             16    355.80 42%  146.12 99%  142.32  100%  135.89 99%                                 134.21  100%  134.59 99%   133.76  100%    133.9   100%
+             32    451.82 18%  198.82 91%  174.19  99%   169.50 96%                                 160.07  99%   166.72 93%   173.05   95%    162.20  99%
+             64    492.04 8%   281.37 74%  206.35  98%   208.72 90%                                 190.58   96%  198.72 76%   240.44   81%    194.42   96%
+                   505.58 4%   432.28 28%  258.18  94%   335.81 58%                                 231.50   93%  354.33 48%   352.95   52%    248.18   90%
+                   512.00 0%   512.00 1%   350.21  83%   473.92 14%                                 319.02   74%  437.29 28%   496.22   6%     357.72   68%
+
+and warehouse is a (161x63) warehouse map. For each                                                  TABLE II
+map, we varied the number of agents, testing with 4, 8, 16,    COMPARISON OF DCC AND ITS LLMDR VARIANTS USING DIFFERENT
+32, and 64 agents. We set maximum time step to 256 for
+random32, random64, and den312d, and 512 for the                   LANGUAGE MODELS ON VARIOUS MAPS AND AGENT NUMBERS.
+warehouse map. The first experiment included 300 test
+instances, while the second and the third had 100 each. All    Map Agents                                       DCC      DCC+LLMDR             DCC+LLMDR
+base models use a shortest-path heuristic. LLMDR retains
+this when applied.                                                                                                       (gpt-3.5-turbo) (gpt-4o)
+
+   We used success rate and average episode length as                                                       EL       SR  EL            SR      EL      SR
+metrics. Success rate is calculated as the proportion of
+instances resolved within the maximum time step, while         warehouse den312d random64 random32  4       33.20 100% 41.29       100%        33.2 100%
+average episode length is the mean number of time steps
+taken to resolve test instances. For unresolved instances, we                                       8       38.63 100% 51.17       100%        38.23 100%
+used the maximum time step in the average calculation.
+                                                                                                    16      44.35 100% 58.09       100%        46.08 100%
+   In our experiments, we combined LLMDR with the
+learned models of several learning-based methods, including                                         32      51.74 100% 59.97       100%        53.84 100%
+DCC [9], DHC [8], and EPH [20]. Notably, EPH was
+used only as a base model without its original inference                                            64      95.67 90% 76.22        100%        69.52 100%
+strategies. We tested with gpt-3.5-turbo and gpt-4o
+as the underlying language models. Unless stated otherwise,                                         4       69.77 99% 77.1         100% 68.08 100%
+and excluding hyperparameter analysis, we set the detection
+window length to 4 and the execution plan length to 16 for                                          8       83.02 97% 89.47        100%        79.17 100%
+all tests.
+                                                                                                    16      92.64 95% 100.59 100%              85.44 100%
+
+                                                                                                    32 116.69 88% 111.83 100% 108.09 97%
+
+                                                                                                    64 147.31 77% 138.01               99%     132.31 94%
+
+                                                                                                    4       85.41 99% 94.14        100%        84.23 100%
+
+                                                                                                    8       97.78 99% 114.43 100%              96.57 100%
+
+                                                                                                    16 106.95 99% 121.36 100% 106.98 100%
+
+                                                                                                    32 124.00 94% 131.91 100% 119.54 100%
+
+                                                                                                    64 149.10 90% 146.82 100% 141.71 100%
+
+                                                                                                    4       131.16 100% 144.2      100% 131.17 100%
+
+                                                                                                    8       179.68 93% 175.29          99%     159.85 99%
+
+                                                                                                    16 212.92 89% 198.69               99%     184.69 98%
+
+                                                                                                    32 321.81 61% 249.78               90%     228.57 92%
+
+                                                                                                    64 468.48 16% 347.96               71%     324.55 74%
+
+B. LLMDR Performance with Various Base Models                  outperformed the base DCC in success rate, but gpt-4o
+                                                               achieved shorter average episode lengths, indicating more ef-
+   LLMDR improves the performance of all base models           ficient path planning. Additionally, while gpt-3.5-turbo
+by resolving deadlocks. By improving performance across        tends to exhibit longer average episode lengths than the
+different models, LLMDR shows potential for broader ap-        base model at similar success rates, this effect is much
+plication in learning-based MAPF methods. Table I shows        less noticeable in gpt-4o. These results suggest that as
+how LLMDR improves performance when combined with              the language model's reasoning improves, LLMDR better
+various base models. In the warehouse map, which is prone      distinguishes deadlocks from non-deadlocks, leading to more
+to deadlocks, LLMDR consistently improves performance,         precise interventions.
+especially as the number of agents increases. Notably, DHC
+struggled in the 64-agent scenario, but with LLMDR, it         D. Hyperparameter Analysis
+achieved the highest success rate. Similar improvements were
+observed with other base models. Additionally, increasing the     We conducted a hyperparameter analysis using the
+maximum time step could impact the average episode length,     DCC+LLMDR model to evaluate the impact of detection
+affecting performance metrics. These findings suggest that     window length and execution plan length. Table III presents
+many failures in learned MAPF models stem from deadlocks,      the results, focusing on the scenario of 64 agents in the
+and resolving them with LLMDR improves performance.            warehouse map. For the detection window length, we tested
+                                                               values of 2, 4. The results show that increasing the detection
+C. Impact of Language Model Capability on LLMDR                window length beyond 4 does not yield significant perfor-
+                                                               mance improvements. This suggests that most deadlocks in
+   Our experiments, as shown in Table II, show that the        our scenarios are due to stagnation rather than oscillation or
+language model's capability affects LLMDR's performance.       wandering. For the execution plan length, we tested values of
+Both gpt-3.5-turbo and gpt-4o versions of LLMDR
+                                       TABLE III                                  [7] G. Sartoretti, J. Kerr, Y. Shi, G. Wagner, T. S. Kumar, S. Koenig,
+HYPERPARAMETER ANALYSIS ON DETECTION WINDOW LENGTH (DWL)                               and H. Choset, "Primal: Pathfinding via reinforcement and imitation
+                                                                                       multi-agent learning," IEEE Robotics and Automation Letters, vol. 4,
+            AND EXECUTION PLAN LENGTH (EPL) FOR LLMDR.                                 no. 3, pp. 2378­2385, 2019.
+
+DWL EPL SR (%) EL                                                                 [8] Z. Ma, Y. Luo, and H. Ma, "Distributed heuristic multi-agent path
+                                                                                       finding with communication," in 2021 IEEE International Conference
+2  16 71.00 323.91                                                                     on Robotics and Automation (ICRA). IEEE, 2021, pp. 8699­8705.
+
+4  16 74.00 324.55                                                                [9] Z. Ma, Y. Luo, and J. Pan, "Learning selective communication for
+                                                                                       multi-agent path finding," IEEE Robotics and Automation Letters,
+8  16 73.00 325.15                                                                     vol. 7, no. 2, pp. 1455­1462, 2021.
+
+4  8 70.00 323.66                                                                [10] B. Flammini, D. Azzalini, and F. Amigoni, "Preventing deadlocks
+                                                                                       for multi-agent pickup and delivery in dynamic environments," in
+4  16 74.00 324.55                                                                     Proceedings of the 23rd International Conference on Autonomous
+                                                                                       Agents and Multiagent Systems, 2024, pp. 580­588.
+4  32 75.00 339.06
+                                                                                 [11] K. Okumura, M. Machida, X. De´fago, and Y. Tamura, "Priority
+8, 16, and 32. It was observed that a length of 16 offers a bal-                       inheritance with backtracking for iterative multi-agent path finding,"
+ance between providing enough intervention steps to resolve                            Artificial Intelligence, vol. 310, p. 103752, 2022.
+deadlocks and minimizing the risk of decreased efficiency
+due to unnecessarily prolonged intervention periods.                             [12] C. Ferner, G. Wagner, and H. Choset, "Odrm* optimal multirobot
+                                                                                       path planning in low dimensional search spaces," in 2013 IEEE
+                         VI. CONCLUSION                                                international conference on robotics and automation. IEEE, 2013,
+                                                                                       pp. 3854­3859.
+   In this study, we propose LLMDR, a novel approach
+that integrates the LLMs to resolve deadlocks and improve                        [13] F. Grenouilleau, W.-J. Van Hoeve, and J. N. Hooker, "A multi-
+scalability of learned MAPF models. LLMDR analyzes plans                               label a* algorithm for multi-agent pathfinding," in Proceedings of
+from base model, using LLMs to detect deadlocks. If a dead-                            the international conference on automated planning and scheduling,
+lock is detected, LLMDR proposes solutions through LLM                                 vol. 29, 2019, pp. 181­185.
+inference, devising a strategy to adjust the agents' actions
+and priorities, and integrates these adjustments with PIBT                       [14] Z. Liu, B. Chen, H. Zhou, G. Koushik, M. Hebert, and D. Zhao,
+algorithm to resolve the deadlocks. Experimental results                               "Mapper: Multi-agent path planning with evolutionary reinforcement
+show that LLMDR significantly improves the performance                                 learning in mixed dynamic environments," in 2020 IEEE/RSJ Interna-
+of several learned models in complex environments. These                               tional Conference on Intelligent Robots and Systems (IROS). IEEE,
+results highlight LLMDR's capability to generalize across                              2020, pp. 11 748­11 754.
+various models, while also improving scalability. However,
+the computational cost of LLMs remains a challenge, lim-                         [15] B. Wang, Z. Liu, Q. Li, and A. Prorok, "Mobile robot path plan-
+iting LLMDR's use in resource-constrained or real-time                                 ning in dynamic environments through globally guided reinforcement
+scenarios. Future work could explore more efficient LLM                                learning," IEEE Robotics and Automation Letters, vol. 5, no. 4, pp.
+architectures or hybrid approaches to reduce computational                             6932­6939, 2020.
+overhead.
+                                                                                 [16] Q. Li, F. Gama, A. Ribeiro, and A. Prorok, "Graph neural networks
+                            REFERENCES                                                 for decentralized multi-robot path planning," in 2020 IEEE/RSJ inter-
+                                                                                       national conference on intelligent robots and systems (IROS). IEEE,
+ [1] R. Stern, N. Sturtevant, A. Felner, S. Koenig, H. Ma, T. Walker, J. Li,           2020, pp. 11 785­11 792.
+      D. Atzmon, L. Cohen, T. Kumar, et al., "Multi-agent pathfinding:
+      Definitions, variants, and benchmarks," in Proceedings of the Interna-     [17] Q. Lin and H. Ma, "Sacha: Soft actor-critic with heuristic-based
+      tional Symposium on Combinatorial Search, vol. 10, no. 1, 2019, pp.              attention for partially observable multi-agent path finding," IEEE
+      151­158.                                                                         Robotics and Automation Letters, 2023.
+
+ [2] J. Li, E. Lin, H. L. Vu, S. Koenig, et al., "Intersection coordination      [18] K. Okumura, "Lacam: Search-based algorithm for quick multi-agent
+      with priority-based search for autonomous vehicles," in Proceedings of           pathfinding," in Proceedings of the AAAI Conference on Artificial
+      the AAAI Conference on Artificial Intelligence, vol. 37, no. 10, 2023,           Intelligence, vol. 37, no. 10, 2023, pp. 11 655­11 662.
+      pp. 11 578­11 585.
+                                                                                 [19] R. Veerapaneni, Q. Wang, K. Ren, A. Jakobsson, J. Li, and
+ [3] O. Kaduri, E. Boyarski, and R. Stern, "Algorithm selection for                    M. Likhachev, "Improving learnt local mapf policies with heuristic
+      optimal multi-agent pathfinding," in Proceedings of the international            search," in Proceedings of the International Conference on Automated
+      conference on automated planning and scheduling, vol. 30, 2020, pp.              Planning and Scheduling, vol. 34, 2024, pp. 597­606.
+      161­165.
+                                                                                 [20] H. Tang, F. Berto, and J. Park, "Ensembling prioritized hybrid policies
+ [4] H. Ma, J. Yang, L. Cohen, T. Kumar, and S. Koenig, "Feasibility                   for multi-agent pathfinding," arXiv preprint arXiv:2403.07559, 2024.
+      study: Moving non-homogeneous teams in congested video game
+      environments," in Proceedings of the AAAI Conference on Artificial         [21] J. Gao, Y. Li, X. Yang, and M. Tan, "Rde: A hybrid policy
+      Intelligence and Interactive Digital Entertainment, vol. 13, no. 1, 2017,        framework for multi-agent path finding problem," arXiv preprint
+      pp. 270­272.                                                                     arXiv:2311.01728, 2023.
+
+ [5] S. Kraus, "Negotiation and cooperation in multi-agent environments,"        [22] W. Huang, P. Abbeel, D. Pathak, and I. Mordatch, "Language models
+      Artificial intelligence, vol. 94, no. 1-2, pp. 79­97, 1997.                      as zero-shot planners: Extracting actionable knowledge for embodied
+                                                                                       agents," in International conference on machine learning. PMLR,
+ [6] E. Boyarski, A. Felner, R. Stern, G. Sharon, O. Betzalel, D. Tolpin,              2022, pp. 9118­9147.
+      and E. Shimony, "Icbs: The improved conflict-based search algorithm
+      for multi-agent pathfinding," in Proceedings of the International          [23] S. S. Kannan, V. L. Venkatesh, and B.-C. Min, "Smart-llm: Smart
+      Symposium on Combinatorial Search, vol. 6, no. 1, 2015, pp. 223­225.             multi-agent robot task planning using large language models," arXiv
+                                                                                       preprint arXiv:2309.10062, 2023.
+
+                                                                                 [24] Y. Shukla, W. Gao, V. Sarathy, A. Velasquez, R. Wright, and
+                                                                                       J. Sinapov, "Lgts: Dynamic task sampling using llm-generated
+                                                                                       sub-goals for reinforcement learning agents," arXiv preprint
+                                                                                       arXiv:2310.09454, 2023.
+
+                                                                                 [25] X. Zhu, Y. Chen, H. Tian, C. Tao, W. Su, C. Yang, G. Huang, B. Li,
+                                                                                       L. Lu, X. Wang, et al., "Ghost in the minecraft: Generally capable
+                                                                                       agents for open-world environments via large language models with
+                                                                                       text-based knowledge and memory," arXiv preprint arXiv:2305.17144,
+                                                                                       2023.
+
+                                                                                 [26] K. Garg, J. Arkin, S. Zhang, N. Roy, and C. Fan, "Large language
+                                                                                       models to the rescue: Deadlock resolution in multi-robot systems,"
+                                                                                       arXiv preprint arXiv:2404.06413, 2024.
+
+                                                                                 [27] W. Chen, S. Koenig, and B. Dilkina, "Why solving multi-agent path
+                                                                                       finding with large language model has not succeeded yet," arXiv
+                                                                                       preprint arXiv:2401.03630, 2024.
+[28] M. Erdmann and T. Lozano-Perez, "On multiple moving objects,"
+      Algorithmica, vol. 2, pp. 477 ­ 521, January 1987.
+

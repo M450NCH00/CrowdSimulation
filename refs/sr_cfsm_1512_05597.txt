@@ -1,0 +1,348 @@
+arXiv:1512.05597v1 [physics.soc-ph] 17 Dec 2015  Collision-free speed model for pedestrian
+                                                 dynamics
+
+                                                 Antoine Tordeux, Mohcine Chraibi, and Armin Seyfried
+
+                                                 Abstract We propose in this paper a minimal speed-based pedestrian model for
+                                                 which particle dynamics are intrinsically collision-free. The speed model is an op-
+                                                 timal velocity function depending on the agent length (i.e. particle diameter), max-
+                                                 imum speed and time gap parameters. The direction model is a weighted sum of
+                                                 exponential repulsion from the neighbors, calibrated by the repulsion rate and dis-
+                                                 tance. The model's main features like the reproduction of empirical phenomena are
+                                                 analysed by simulation. We point out that phenomena of self-organisation observ-
+                                                 able in force-based models and field studies can be reproduced by the collision-free
+                                                 model with low computational effort.
+
+                                                 1 Introduction
+
+                                                 Modelling of pedestrian dynamics have been strongly developed since the 1990's
+                                                 [4, 23, 8]. Microscopic models describe the movement of individuals in two-
+                                                 dimensional representation of space. They are used for theoretical purposes [14, 13],
+                                                 as well as for applications e.g. design and conception of escape routes in build-
+                                                 ings [24, 25] or optimal organization of mass events or public transport facilities
+
+                                                 Antoine Tordeux
+                                                 Ju¨lich Supercomputing Centre, Forschungszentrum Ju¨lich GmbH, Germany and Computer Simu-
+                                                 lation for Fire Safety and Pedestrian Traffic, Bergische Universita¨t Wuppertal, Germany, e-mail:
+                                                 a.tordeux@fz-juelich.de
+                                                 Mohcine Chraibi
+                                                 Ju¨lich Supercomputing Centre, Forschungszentrum Ju¨lich GmbH, Germany e-mail: m.chraibi@fz-
+                                                 juelich.de
+                                                 Armin Seyfried
+                                                 Ju¨lich Supercomputing Centre, Forschungszentrum Ju¨lich GmbH, Germany and Computer Simu-
+                                                 lation for Fire Safety and Pedestrian Traffic, Bergische Universita¨t Wuppertal, Germany, e-mail:
+                                                 a.seyfried@fz-juelich.de
+
+                                                                                                                                                                      1
+2  Antoine Tordeux, Mohcine Chraibi, and Armin Seyfried
+
+(VISWalk [22], Legion [3], . . .). In the microscopic class of models, pedestrians are
+represented as autonomous entities (Lagrangian representation) with local interac-
+tions. Complex collective phenomena of self-organisation emerge from the inter-
+actions. Examples are the lane formation, clogging at bottlenecks, zipper effect or
+intermittent flow at bottlenecks, stop-and-go waves, herding, strip formation or cir-
+cular flows (see [4, 12] and references therein). Even simple microscopic models
+can yield in rich dynamics [15, 6]. Yet, the relations between the microscopic model
+parameters and the emergence of phenomena of self-organisation are not straight-
+forward. In most of the cases, they have to be analysed by simulation.
+
+   Microscopic pedestrian models could be defined in continuous or discrete time,
+space and state variables (see [23, Chapter 5]). One of the most investigated class
+is the class of force-based (or acceleration) models [15, 6, 5]. They use an analogy
+between pedestrian movement and Newtonian dynamics. Force-based approaches
+allow to describe a large variety of pedestrian dynamics [15, 6]. Yet, this model class
+describes particles with inertia and does not exclude particle collision and overlap-
+ping. This is especially problematic at high densities [5]. Moreover, the force-based
+approach may lead to numerical difficulties resulting in small time steps and high
+computational complexity, or use of mollifies [16].
+
+   Pedestrian behaviors result from repulsive and attractive forces with the accel-
+eration models. They are based on the visual perception of distances or obstacle
+speeds resulting in instantaneous changing of the speed or the direction within the
+speed models. Also, this model class is generally called vision-based. One example
+is the synthetic-vision-based steering approach that notably allows to describe com-
+plex collective structures avoiding gridlocks [20]. Also the velocity obstacle models
+or reciprocal velocity obstacle model borrowed from robotics exist [10, 2]. These
+models are defined in discrete time and are driven by collision avoidance. They
+are by construction collision-free if the time step is smaller than a horizon time of
+anticipation. In the evacuation model by Venel, the pedestrians move as fast as pos-
+sible to the desired destination with no overlapping [17]. There exits some variants
+of the model with different interaction strategies [26]. Note that there exists also
+rule based multi-agent models aiming to describe pedestrian psychology (see for
+instance [21, 11]) or mixed models, see for instance the gradient navigation model
+where the direction model is defined at first order while the speed is of second order
+[9]. In most of cases, these models need a large number of parameters with inherent
+calibration difficulties and, as for force-based models, high computational efforts.
+
+   In this paper, we aim to develop a minimal model for which the dynamics are
+by construction collision-free (i.e. overlapping-free). The model belongs to Maury
+and Venel mathematical framework [17]. We show by simulation that it allows to
+describe some expected phenomena of self-organisation observed in field studies or
+in simulations with forced based models. The model is defined in section 2 while the
+simulation results are presented in section 3. Conclusion and working perspective
+are given in section 4.
+Collision-free speed model for pedestrian dynamics                            3
+
+2 Collision-free speed-based pedestrian model
+
+A continuous speed model is a derivative equation for the velocity. Typical examples
+are
+     xi = v(xi, x j, . . .) or xi = V (xi, x j, . . .) × ei(xi, x j, . . .),  (1)
+
+with xi the pedestrian position and xi the velocity of pedestrian i (see figure 1). The
+velocity in regulated in one function for the first equality while the speed V and the
+direction ei (unit vector) are regulated separately in the second approach.
+
+                             xj
+
+         si,j                vi                              xk
+             ei
+
+         i                          ei,k
+
+     xi
+
+Fig. 1 Notations used. xi, vi and i are the position, velocity and direction of the pedestrian i ; is
+the pedestrian size ; ei, j is the unit vector from x j to xi ; ei = (cos i, sin i) ; si, j = ||xi - x j||.
+
+2.1 Definition of the model
+
+The speed model is the optimal speed (OV) function depending on the minimal
+spacing in front. The approach is borrowed from road traffic model [1]. The OV
+approach has been already developed with a force-based model [19]. Here we use
+the OV function at the first order with the minimal spacing in front.
+
+   For a given pedestrian i, the set of the pedestrians in front is defined by
+
+     Ji = j, ei · ei, j  0 and |ei · ei, j|  /si, j .                         (2)
+
+The pedestrians in front are the pedestrians overlapping the grey area in figure 1.
+The minimum distance in front si is
+
+                             si  =  min             si,  j.                   (3)
+
+                                    jJi
+4                                              Antoine Tordeux, Mohcine Chraibi, and Armin Seyfried
+
+The model is               xi = V si(xi, x j, . . .) × ei(xi, x j, . . .),                     (4)
+
+with V (·) the OV function and ei(xi, x j, . . .) the direction model to define. As shown
+below, such model is by construction collision-free if
+
+                           V (s)  0 for all s and V (s) = 0 for all s  .                       (5)
+
+In the following, the OV function is the piecewise linear V (s) = min{v0, max{0, (s-
+ )/T }}, with v0 the desired speed and T the time gap in following situations ( is
+the pedestrian diameter, see figure 1). This OV function satisfies the collision-free
+assumption (5). The direction model is a simplified version of the additive form of
+the gradient navigation model [9]. It is based on a repulsion function depending on
+the distances (si, j) with the neighbours
+
+                           ei(xi, x j, . . .)  =  1    e0 +  j R(si, j) ei, j  ,               (6)
+                                                  N
+
+with e0 the desired direction given by a strategic model, N a normalization constant
+such that ei = 1 and R(s) = a exp ( -s)/D the repulsion function, calibrated by
+the coefficient a > 0 and distance D > 0. The parameter values used in the simulation
+are presented in figure 2.
+
+   Speed (m/s)  0.6 v0     OV function V (·)           Repulsion      Repulsion function R(·)
+                                                             0 2.5 a
+                           v0 = 1.2 m/s                                                a =5
+                              = 0.3 m                                                   D = 0.1 m
+                                                                                        D = 0.02 m
+                           T = 1s
+
+                0
+
+                        0  0.7 1.1                1.8                             0.5 0.7 0.9
+
+                           Spacing (m)                                            Spacing (m)
+
+Fig. 2 Functions and associated parameters for the model: The OV function (3 parameters, left
+panel), and the repulsion function (2 parameters, right panel).
+
+2.2 Collision-free property
+
+Oppositely to the force-based models, the presence of collision and overlapping can
+be controlled by construction with the speed-based models (non-overlapping con-
+straint). If pedestrians are considered as discs with diameter , the set of collision-
+Collision-free speed model for pedestrian dynamics      5
+
+free configurations is for a given pedestrian i
+
+Qi = xi  R2, si, j   j .                                (7)
+
+The set of collision-free velocities
+
+Cxi = v  R4, si, j =  ei, j · vi  0 and e j,i · v j  0  (8)
+
+is such that the speeds are nil or in opposite direction for a pedestrian in contact with
+an other (see [17] for more general conditions). Therefore, if initially xi(0)  Qi,
+then xi remains in Qi for any dynamics in Cxi . In these conditions Qi is an invariant
+set for xi, i.e. the dynamics are collision-free (see also [18]). It is easy to see that the
+model (4) belongs to this class if assumption (5) is satisfied. Consider si, j = then
+either ei · ei, j  0 and then j  Ji, i.e. si  si, j = and V (si) = 0, or neither ei · ei, j  0
+and then V (si)  0 since V (·)  0. Therefore vi · ei, j = V (si) × ei · ei, j  0 and the
+velocity belongs to Cxi . The arguments are valid for any direction model ei.
+
+3 Model features
+
+We describe in this section by simulation some characteristics of the model with
+uni- and bi-directional flows. The parameter settings are given in figure 2. The sim-
+ulations are done on rectangular systems with length L = 9 m and width W = 3 m
+from random initial configurations and by using explicit Euler numerical scheme
+with time step dt = 0.01 s.
+
+3.1 Counter flows and the lane formation
+
+We observed with the model the formation of lanes by direction for counter flows
+(figure 3, left panels). Such phenomena frequently occurs in real data (see for in-
+stance [27]). The system needs an organization time for that the lanes emerge (fig-
+ure 3, top right panel), where the mean flow to the desired direction for counter flows
+is compared to uni-directional ones). The formation of lanes is observed with the
+model for some density levels up to  = 6 ped/m2 (figure 3, bottom right panel). As
+expected, the density threshold value for that the lanes appear depends on the pedes-
+trian size (here = 0.3 m). Note that the lane formation phenomenon disappears
+when a noise is introduced in the model (freezing by heating phenomenon, see [13]
+and in figure 3, thin dotted line in bottom right panel where a Brownian noise with
+standard deviation  = 0.1 m/s is added to the model ­ the lane formation breaks
+as soon as   2 ped/m2).
+6            Antoine Tordeux, Mohcine Chraibi, and Armin Seyfried
+
+    t=0      Eff. flow (ped/m/s)                     Bi-directional
+   t = 10 s        0.85 1.05 1.25                    Uni-directional
+
+             Flow (ped/m/s)        0 10 20 30 40 50
+                   0 0.5 1 1.5               Time t (s)
+
+                                                     Bi-directional
+                                                     Min/Max interval
+
+                                                             Uni-direct.
+                                                             Noise
+
+                                   0 2 4 6 8 10
+
+   t = 50 s                        Density (ped/m2)
+
+Fig. 3 Counter flows. Left panels, snapshots of the system at time t = 0, 10 and 20 s from random
+initial conditions ( = 2 ped/m2). Right panels, the mean flow sequence to the desired direction
+and the fundamental diagram.
+
+3.2 Intermittent bottleneck flows
+
+Oscillating phenomena for counter flows in bottlenecks are observed with both real
+data and models ([15, 12, 7]). Such phenomena are related as intermittent bottle-
+neck flows in the literature [14]. We observe that the speed-based model is able to
+reproduce them (see figure 4, left and top right panels). The phenomenon occurs
+even at relatively high density levels (see figure 4, bottom right panel). Yet it in-
+duces frictions and the flow volumes obtained for counter flows are less than the
+ones of uni-direction. As expected, the frictions tend to increase as the density in-
+creases. Some simulation results not presented here show that the intermittent flow
+phenomenon subsists for high density levels when D is sufficiently high and that the
+frequency of the flows oscillations tend to increase as the density increases.
+
+4 Conclusion and working perspective
+
+A new speed-based model is proposed for pedestrian dynamics in two dimensions.
+Oppositely to classical force-based approaches, the model is intrinsically collision-
+free and no overlapping phenomena occur, for any density level. The model has
+five parameters. Three of them concern the optimal speed function. They are the
+Collision-free speed model for pedestrian dynamics                                     7
+
+ t=0                                                Cum. flow (ped)             e0 = (0, -1)
+t = 15 s                                                  048                   e0 = (0, 1)
+
+                                                    Flow (ped/m/s)   0 10 20 30 40 50
+                                                          0 0.8 1.6            Time t (s)
+                                                                                         Uni-directional
+                                                                                          Bi-directional
+
+                                                                     0.0 1.0 2.0 3.0
+
+t = 25 s                                                             Density (ped/m2)
+
+Fig. 4 Counter flows with bottleneck. Left panels, snapshots of the system at time t = 0, 10 and 20 s
+from random initial conditions ( = 1.4 ped/m2 and  = 0.6 m). Right panels, the corresponding
+flow sequences by direction and the fundamental diagram.
+
+pedestrian length, desired speed and time gap with the predecessor. The two others
+calibrate the direction model. They are the repulsion rate and repulsion distance.
+
+   The model main properties are described by simulation. A large range of dy-
+namics observed in real data and force-based models are reproduced. For instance,
+linear increase of flow with the bottleneck width, lane formation for counter flows
+(with the freezing by heating effect) or intermittent flows, are obtained with iden-
+tical setting of the parameters. However, other well-known characteristic such that
+stop-and-go phenomena can not be described. Further mechanisms (and parameters)
+remain to be introduced to the model.
+
+References
+
+ 1. Bando, M., Hasebe, K., Nakayama, A., Shibata, A., Sugiyama, Y.: Dynamical model of traffic
+     congestion and numerical simulation. Phys. Rev. E 51(2), 1035­1042 (1995)
+
+ 2. van den Berg, J., Lin, M., Manocha, D.: Reciprocal velocity obstacles for real-time multi-agent
+     navigation. In: Robotics and Automation, 2008. ICRA 2008. IEEE International Conference
+     on. 2008 IEEE International Conference on Robotics and Automation Pasadena, CA, USA,
+     May 19-23, 2008 (2008)
+
+ 3. Berrou, J., Beecham, J., Quaglia, P., Kagarlis, M., Gerodimos, A.: Calibration and valida-
+     tion of the legion simulation model using empirical data. In: N. Waldau, P. Gattermann,
+8  Antoine Tordeux, Mohcine Chraibi, and Armin Seyfried
+
+     H. Knoflacher, M. Schreckenberg (eds.) Pedestrian and Evacuation Dynamics 2005, pp. 167­
+     181. Springer Berlin Heidelberg (2007).
+ 4. Chowdhury, D., Santen, L., Schadschneider, A.: Statistical physics of vehicular traffic and
+     some related systems. Phys. Rep. 329(4­6), 199­329 (2000).
+ 5. Chraibi, M., Kemloh, U., Seyfried, A., Schadschneider, A.: Force-based models of pedestrian
+     dynamics. Netw. Heterog. Media 6(3), 425­442 (2011)
+ 6. Chraibi, M., Seyfried, A., Schadschneider, A.: Generalized centrifugal force model for pedes-
+     trian dynamics. Phys. Rev. E 82, 046,111 (2010).
+ 7. Corradi, O., Hjorth, P., Starke, J.: Equation-free detection and continuation of a hopf bifurca-
+     tion point in a particle model of pedestrian flow. SIAM J. Appl. Dyn. Syst. 11(3), 1007­1032
+     (2012)
+ 8. Degond, P., Appert-Rolland, C., Moussaid, M., Pette´, J., Theraulaz, G.: A hierarchy of
+     heuristic-based models of crowd dynamics. J. Stat. Phys. 152(6), 1033­1068 (2013)
+ 9. Dietrich, F., Ko¨ster, G.: Gradient navigation model for pedestrian dynamics. Phys. Rev. E 89,
+     062,801 (2014)
+10. Fiorini, P., Shiller, Z.: Motion planning in dynamic environments using velocity obstacles. Int.
+     J. Robot. Res. 17(7), 760­772 (1998).
+11. Guo, R., Wong, S.C., Huang, H., Lam, W.H.K.: A microscopic pedestrian-simulation model
+     and its application to intersecting flows. Phys. A 389(3), 515­526 (2010)
+12. Helbing, D.: Traffic and related self-driven many-particle systems. Rev. Mod. Phys. 73, 1067­
+     1141 (2001).
+13. Helbing, D., Farkas, I., Vicsek, T.: Freezing by heating in a driven mesoscopic system. Phys.
+     Rev. Lett. 84, 1240­1243 (2000)
+14. Helbing, D., Johansson, A., Mathiesen, J., Jensen, M.H., Hansen, A.: Analytical approach to
+     continuous and intermittent bottleneck flows. Phys. Rev. Lett. 97, 168,001 (2006).
+15. Helbing, D., Molna´r, P.: Social force model for pedestrian dynamics. Phys. Rev. E 51, 4282­
+     4286 (1995).
+16. Ko¨ster, G., Treml, F., Go¨del, M.: Avoiding numerical pitfalls in social force models. Phys.
+     Rev. E 87 (2013)
+17. Maury, B., Venel, J.: Un mode`le de mouvement de foule. ESSAIM: Proc. 18, 143­152 (2007)
+18. Monneau, R., Roussignol, M., Tordeux, A.: Invariance and homogenization of an adaptive
+     time gap car-following model. Nonlinear Differ. Equ. Appli. 21(4), 491­517 (2014)
+19. Nakayama, A., Hasebe, K., Sugiyama, Y.: Instability of pedestrian flow and phase structure in
+     a two-dimensional optimal velocity model. Phys. Rev. E 71, 036,121 (2005)
+20. Ond^rej, J., Pettre´, J., Olivier, A.H., Donikian, S.: A synthetic-vision-based steering approach
+     for crowd simulation. In: ACM Trans. Graph., vol. 29, pp. 123:1 ­ 123:9. ACM, New York,
+     NY, USA (2010)
+21. Pelechano, N., O'Brien, K., Silverman, B., Badler, N.: Crowd simulation incorporating agent
+     psychological models, roles and communication. In: First International Workshop on Crowd
+     Simulation, vol. 2, pp. 21­30. Lausanne (2005)
+22. PTV AG: PTV Vissim 7.0 ­ User Manual. PTV Group, Haid-und-Neu-Str. 15, D-76131
+     Karlsruhe, Germany (2014)
+23. Schadschneider, A., Chowdhury, D., Nishinari, K.: Stochastic Transport in Complex Systems.
+     From Molecules to Vehicles. Elsevier Science Publishing Co Inc. (2010)
+24. Schneider, V., Ko¨nnecke, R.: Simulating evacuation processes with aseri. In: Pedestrian and
+     Evacuation Dynamics, pp. 303­314. Springer (2002)
+25. TraffGo HT GmbH: Handbuch PedGo 2, PedGo Editor 2 (2005). Www.evacuation-
+     simulation.com
+26. Venel, J.: Integrating strategies in numerical modelling of crowd motion. In: Pedestrian and
+     Evacuation Dynamics 2008 (2010)
+27. Zhang, J., Klingsch, W., Schadschneider, A., Seyfried, A.: Ordering in bidirectional pedestrian
+     flows and its influence on the fundamental diagram. J. Stat. Mech. Theor. Exp. 2012(02),
+     P02,002 (2012).
+

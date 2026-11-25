@@ -1,0 +1,1751 @@
+arXiv:2001.02443v1 [cs.MA] 8 Jan 2020  Coordination of Autonomous Vehicles:
+                                       Taxonomy and Survey
+
+                                       STEFANO MARIANI, GIACOMO CABRI, and FRANCO ZAMBONELLI, Università degli Studi
+
+                                       di Modena e Reggio Emilia
+
+                                       In the near future, our streets will be populated by myriads of autonomous self-driving vehicles to serve our
+                                       diverse mobility needs. This will raise the need to coordinate their movements in order to properly handle
+                                       both access to shared resources (e.g., intersections and parking slots) and the execution of mobility tasks (e.g.,
+                                       platooning and ramp merging). In this paper, we firstly introduce the general issues associated to coordination
+                                       of autonomous vehicles, by identifying and framing the key classes of coordination problems. Following, we
+                                       overview the different approaches that can be adopted to manage such coordination problems, by classifying
+                                       them in terms of the degree of autonomy in decision making that is left to autonomous vehicles during
+                                       coordination. Finally, we overview some further peculiar challenges that research will have to address before
+                                       autonomously coordinated vehicles can safely hit our streets.
+
+                                       CCS Concepts: · Computing methodologies  Cooperation and coordination.
+
+                                       Additional Key Words and Phrases: Autonomous vehicles, cooperative driving, coordination, autonomy, survey
+
+                                       1 INTRODUCTION
+
+                                       Autonomous self-driving vehicles will soon populate our streets [29, 38]. Yet already several car
+                                       models include at least some level of driving autonomy (e.g., automated steering and lane-keeping,
+                                       or emergency stop in the presence of obstacles), but still definitely require the driver to be in control
+                                       for some, if not most, of the time. However, it won't be long before increasing levels of automation
+                                       will make the driver mostly, if not fully, unnecessary.
+
+                                          Besides the advantage of relieving us from the duty of driving and paying attention, thus making
+                                       it possible to exploit travel time in other activities, autonomous vehicles will bring further important
+                                       benefits. They will reduce crashes, now mostly due to bad human behaviours and human errors,
+                                       most likely saving millions of injuries and lives [17]. They will notably reduce the number of
+                                       circulating vehicles and, also thanks to route optimisations, will definitely reduce traffic and
+                                       pollution [69]. Last but not least, they will pave the way for a number of innovative solutions in
+                                       the provisioning of mobility services [85], to serve our needs with much greater levels of quality
+                                       and efficiency than today.
+
+                                          Innovative mobility solutions that will be promoted (or boosted) by autonomous vehicles include,
+                                       just to mention a few: car sharing [46], where fleets of autonomous vehicles (whether provided
+                                       by public actors or by private companies) will be available to serve our urban mobility needs;
+                                       personalised public transport and ride sharing [15, 90], where autonomous vehicles and buses can
+                                       dynamically gather people based on their actual required routes; smart and more effective parking
+                                       approaches [60], in that autonomous vehicles can search for parking slots based on criteria different
+                                       from the "very soon and very close" one that we human usually adopt, and exploiting additional
+                                       information that they might have.
+
+                                          Most of the current industrial and applied research in the area of autonomous vehicles concerns
+                                       the methods and tools to enable individual autonomous vehicles to hit the road safely. However, it
+                                       is getting increasingly recognised that, to get full advantage from autonomous vehicles (enabling
+
+                                       Authors' address: Stefano Mariani, stefano.mariani@unimore.it; Giacomo Cabri, giacomo.cabri@unimore.it; Franco Zam-
+                                       bonelli, franco.zambonelli@unimore.it, Università degli Studi di Modena e Reggio Emilia.
+2  Mariani, Cabri, Zambonelli
+
+overall traffic reduction and pollution, and supporting the effective implementation of the above
+mentioned mobility solutions), a number of situations will compulsory require coordinating the
+relative activities and movements of vehicles [1, 86]. This trend is witnessed by initiatives such
+as the Grand Cooperative Driving Challenge, which in its latest edition explicitly focussed on
+cooperative automated driving [37].
+
+   Examples of very diverse situations that require a proper and careful coordination amongst
+groups of vehicles include: crossing intersections, entering a motorway, platooning, organising
+urban deployment and rides for fleets of ride/car-sharing vehicles, trying to improve parking
+occupancies and reduce parking times. Effectively supporting such coordination needs implies
+devising effective mechanisms and strategies to support coordination activities.
+
+1.1 Contribution
+
+Against this background, the overarching contribution of this paper is to overview and frame
+the key issues associated to the coordination of autonomous vehicles, and overview the possible
+approaches to attack the problem. To this end, we:
+
+    · Introduce a taxonomy to classify the key problems requiring some forms of coordination, and,
+       accordingly, present and discuss the main issues associated with approaching the problems.
+       In particular, we show that vehicles coordination problems can be classified in terms of
+       resource-oriented vs. task-oriented and, orthogonally, in terms of competitive vs. cooperative
+       ones, and that the issues associated to them are mostly analogues to those traditionally
+       expressed in coordination [26, 65, 76] and concurrency theory [28, 32, 50].
+
+    · Identify the different approaches, e.g., coordination mechanisms, protocols, and strategies,
+       that can be put at work to solve the identified issues. In particular, we show that (independently
+       of the specific coordination problem to address) the different approaches can be classified in
+       terms of the degree of autonomy in decision making that is left to individual vehicles during
+       the coordination process--not to be confused with the "level of autonomy" in driving defined
+       in [54].
+
+    · Overview some research challenges that horizontally apply to most (if not all) the identified
+       coordination problems, and that call for additional inter-disciplinary research to identify
+       solutions that are both technically sound and socially acceptable.
+
+To the best of our knowledge, this is the first survey investigating the problems associated to vehicle
+coordination in general broad terms. Other surveys exist but focus on specific coordination issues
+(e.g., either intersection management [84] or smart parking [60]) and are mostly concerned with
+computational techniques and infrastructural requirements of solutions, rather than on coordina-
+tion problems. Also, again to the best of our knowledge, this is the first attempt at providing a
+comprehensive taxonomy of coordination problems for autonomous vehicles and at surveying
+under a unifying perspective the spectrum of possible solutions.
+
+1.2 Scope
+
+Concerning the extent of applicability of our analysis with respect to the level of autonomy
+of vehicles (as per the autonomy level classification defined in [54]), it applies to level 5 (fully
+autonomous vehicles requiring no drivers) as well as to level 4 (vehicles that can drive in autonomy in
+the vast majority of situations, but that can still reclaim the human driver in specific contingencies).
+
+   We also emphasise that this article is not a systematic literature review. From the literature,
+we have tried to identify and discuss what we consider key proposals in the area, in order to
+Coordination of Autonomous Vehicles: Taxonomy and Survey  3
+
+give readers a sound overview of problems and solutions, each properly supported by relevant
+examples1.
+
+1.3 Structure
+
+The remainder of this paper is structured as follows: Section 2 introduces the taxonomy of coordi-
+nation problems; Section 3 classifies and overviews the approaches that can be adopted to address
+the aforementioned problems; Section 4 introduces some further coordination challenges that are
+horizontal w.r.t. the taxonomy and the approaches; Section 5 concludes the paper.
+
+2 TAXONOMY OF COORDINATION PROBLEMS
+
+The problem of coordinating the movements and activities of autonomous, connected vehicles
+in an urban environment is a very general one, including highly heterogeneous scenarios from
+intersection management to car sharing. Nevertheless, such heterogeneous scenarios can all be
+homogeneously framed in a single conceptual framework.
+
+2.1 Definitions
+
+With "coordination" we refer to the decision making process (involving vehicles themselves and
+possibly some additional infrastructural process) aimed at orchestrating vehicles' actions so as to
+achieve a goal which cannot be achieved (or not optimally) by each vehicle in isolation. The goal
+may belong either to individual vehicles (e.g., crossing an intersection), or to a group of vehicles
+(e.g., allocating parking slots to the vehicles of a company fleet), or to the traffic system as a whole
+(e.g., balance overall traffic distribution in a city).
+
+   In particular, we can define a two-dimensional taxonomy for the major classes of coordination
+problems--depicted in Table 1. On one dimension, the problems can be categorised according to
+whether they are resource-oriented or task-oriented:
+
+    · A resource-oriented coordination problem concerns enabling vehicles to acquire access to a
+       shared limited resource (e.g., a shared intersection), and requires the coordination process to
+       safely regulate such access according to specific strategies and rules.
+
+    · A task-oriented coordination problem concerns enabling vehicles to complete a specific task
+       (e.g., bring a group of persons home), and requires the coordination process to properly
+       allocate to vehicles the responsibilities and actions required to achieve such task.
+
+It is worth noting that a resource-oriented coordination process always takes place in the context
+of a task to be executed (e.g., "I need to cross an intersection to bring a person home") and that,
+viceversa, completing the execution of an allocated task may require access to some shared resource
+and the involvement in further coordination processes. On the other dimension, coordination
+problems can be of a collaborative nature or of a competitive one:
+
+    · A collaborative coordination problem involves vehicles that either share a common overall
+       goal (e.g., the vehicles of a company fleet) or that recognise that cooperating is the best way
+       to achieve their own individual goals (e.g., group of trucks platooning in a motorway).
+
+    · A competitive coordination problem involves self-interested vehicles that have the primary
+       intent to achieve their own goal and have no interest for cooperating with others (e.g.,
+       crossing an intersection or finding a parking slot).
+
+Regardless of the specific bi-dimensional classification of the coordination problem at hand, the
+coordination process aimed at solving the problem has to satisfy the following general properties
+(assuming a specific form depending on the given problem, as depicted in Table 2):
+
+1Yet, we would really appreciate if the reviewers could suggest us references to relevant articles that we might have miss.
+4                                    Mariani, Cabri, Zambonelli
+
+   Table 1. Coordination problems for connected autonomous vehicles: bi-dimensional taxonomy.
+
+                  Resource-oriented Task-oriented
+
+   Competitive    intersection manag. ride sharing (private)
+   Collaborative
+                  parking (private)  ramp merging
+
+                  parking (fleet)    ride sharing (fleet)
+                  traffic flow opt.      platooning
+
+    · Safety, expressing that "something bad never happens" during the coordination process (e.g.,
+       two cars never crash while crossing an intersection)--where "never" may be possibly replaced
+       by a bounded probability.
+
+    · Liveness, expressing that "something good eventually happens" (e.g., all cars will eventually
+       manage to cross an intersection)--where "eventually" may be possibly replaced by a bounded
+       time horizon.
+
+In addition, all coordination problems can be associated to some specific Quality measure, expressing
+how well a coordination process manages to solve the coordination problem (e.g., the average or
+cumulative delay at which cars manage to cross an intersection).
+
+2.2 Problems statement
+
+Let us now analyse in detail, according to the concepts introduced in the previous subsection, the
+key coordination problems that will arise in future autonomous vehicles scenarios. These include:
+
+    · crossing intersections;
+    · parking, in the case of both private vehicles and public (or company) fleets;
+    · ride sharing (there including carpooling), again in the case of individual vehicles or fleets;
+    · ramp merging (or the similar lane changing and roundabout crossing problems);
+    · platooning;
+    · traffic flow optimisation.
+
+In Table 2 we categorise these problems according to our proposed taxonomy, and further detailing
+their peculiar features from a coordination perspective. The following subsections thoroughly
+describe each problem, why it has been categorised in the given way, and how it can be framed as
+a typical coordination problem as stemming from classical coordination and concurrency theory.
+
+2.2.1 Intersection management. Intersection management is the problem of coordinating vehicles
+while concurrently crossing intersections [84]. As such, it is a competitive, resource-oriented problem,
+since vehicles are self-interested agents willing to obtain the right-of-way (as soon as possible) across
+the shared resource represented by the intersection. As for the properties, intersection management
+should enable vehicles to safely cross an intersection by avoiding collisions, eventually giving each
+vehicle the right-of-way (liveness), while possibly minimising the average delay experienced by
+vehicles in waiting the right-of-way (quality measure).
+
+   Today, intersection management is realised either by a central controller, the traffic light, or by
+imposing to vehicles (i.e., to their drivers) pre-defined coordination rules to be obeyed (e.g., stop
+at sign or give right-of-way to vehicles coming from the right). This puts the responsibility for
+safety fully in charge of humans, and does not promote efficiency. Future autonomous vehicles
+Coordination of Autonomous Vehicles: Taxonomy and Survey                                                5
+
+Table 2. Traffic problems mapped to coordination problems, in terms of their core, defining elements. Emphasis
+is used to highlight the resource / task oriented nature of problems, as per Table 1.
+
+               Resource / Task      Safety                 Liveness          Quality Measures
+
+ intersection   intersection              no collision     no starvation     avg. / max. / cumulative
+management      parking slot           no overbooking      no exclusions         delay, travel time,
+smart parking                                              no exclusions
+               serve mobility       no overlapping roles   no starvation     throughput, queue length
+ ride sharing     requests          no disconnected trips                           total distance,
+                                                                                   resource usage,
+ramp merging    merge / split             no collision
+                                                                                  user satisfaction,
+                                                                                 avg. time to park,
+                                                                                  wandering ratio
+
+                                                                                     travel time,
+                                                                                    vehicle-miles,
+                                                                                 avg. no. matching,
+                                                                                    % saved cars,
+                                                                                  carpools lifespan
+                                                                             avg. merging time / rate,
+                                                                                    waiting time,
+                                                                                    avg. velocity,
+                                                                                  avg. throughput
+
+platooning     behave as one        no collision           no fragmentation  --
+
+traffic flow   road infrastructure  no traffic jams        fair scheduling   travel time
+
+optimisation
+
+scenarios will make it possible to conceive a variety of automated solutions, safer and more efficient,
+eventually making traffic lights and stop signs obsolete.
+
+2.2.2 Smart parking. Smart parking is the problem of coordinating vehicles, either privately owned
+or belonging to a fleet, while looking for parking slots [60, 79]. As such, it is a resource-oriented
+problem that, in the case of privately owned vehicles (as it is most often the case today), assumes a
+competitive form, since free parking slots in cities are typically scarce resources very hard to find,
+and private vehicles have no interest in collaborating with each other to fairly share parking slots.
+
+   However, as cities are also getting (and will be increasingly) populated by "fleets" of vehicles
+made available by private companies or municipalities, for short term renting or car sharing [51],
+vehicles belonging to the same fleet can indeed have interest in fairly allocating the available
+parking slot to the fleet members, and in cooperating towards such a goal.
+
+   As for the properties, coordinating vehicles while they are seeking for free parking implies
+for safety avoiding overbooking (allocating the same parking slot to more than one vehicle), and
+for liveness avoiding starvation (i.e., vehicles that gets never assigned to a parking slot). Quality
+metrics can be defined according to a variety of parameters (i.e., quickness in finding a slot, but
+also distance of the slot from the desired destination, and hourly price for occupancy), and different
+vehicles or different fleets can each have their own personal quality metrics (e.g., an elderly people
+may prefer taking a little more time to park in order to find a slot closer to destination).
+
+   Today, in most cities worldwide, parking slots (and the movement of vehicles wandering in their
+search) are simply not managed. Some cities provide digital signals to inform human drivers about
+availability of parking slots in specific parking areas, in order to direct vehicles towards them. A
+6  Mariani, Cabri, Zambonelli
+
+few cities provide mobile apps for discovering in real-time free parking slots and possibly book
+them [52, 55]. In the presence of autonomous connected vehicles, though, it will be easy to enhance
+such embryonic parking management approaches towards much higher levels of efficiency and
+quality, without having humans to care about.
+
+2.2.3 Ride sharing. Ride sharing is the problem of coordinating groups of vehicles to collectively
+satisfy a number of "mobility requests", each concerned with bringing a person from its current
+location to a desired destination [15]. However, the same coordination problem can be instantiated
+in many other different application domains, for instance to merchandise delivery.
+
+   As such, ride sharing is a task-oriented problem: given a number of mobility requests expressed
+at a given time (the tasks to be performed) and a number of vehicles currently available to serve
+them, the system must assign vehicles to requests. Ride sharing takes the form of a competitive
+problem in the case of privately owned vehicles. Indeed, it is expected that in the future, privately
+owned autonomous vehicles, when not in use by owners, can be instructed to act as ride sharing
+vehicles to monetise otherwise idle time. And clearly, such private vehicles will compete with each
+other for being assigned a mobility request to satisfy, and maximise their personal gains. However,
+in the presence of fleets of ride sharing vehicles, the problem becomes a collaborative one, in that
+the vehicles of the fleet have interest in coordinating with each other to maximise the overall gain
+of the fleet, and the overall satisfaction of users. Indeed, this is what already happens, to some
+extent, with the fleets of taxi companies.
+
+   As for the properties, safety concerns not assigning the same mobility request to multiple
+vehicles and, viceversa, not assigning multiple users with different mobility needs to the same
+vehicle. Liveness concerns avoiding starvation for both vehicles and users. Quality measures
+strongly depend on the perspective: for vehicles, it may be having coordination schemes that
+maximise car usage and monetary gains, whereas for users it may be having coordination schemes
+that minimise waiting time and limit the walking distance needed to reach the planned pick-up
+location [3].
+
+   It is worth emphasising here that ride sharing, as we have presented it, includes the case of
+carpooling: a vehicle currently moving (or planning to move) towards a destination to serve a
+specific user, that can become available to carry additional users that happen to share the same
+mobility need (i.e., are on the path of the vehicle and need to reach a destination on that path).
+
+   Currently, coordination for ride sharing is mostly promoted at the level of municipal taxi compa-
+nies or of companies like Uber and Lyft, and based on centralised policies for the assignment of
+tasks to vehicles that strongly rely on the availability and personal preferences of human drivers,
+thus limiting efficiency and user satisfaction. Autonomous vehicles will make it possible to conceive
+more flexible and reliable policies.
+
+2.2.4 Ramp merging. Ramp merging is the problem of coordinating vehicles while entering and
+leaving highway ramps. Lane changing is the similar problem (that is, equivalent from the coordi-
+nation viewpoint) of changing lane in a multi-lane road (usually, a highway) [84]. In addition, we
+emphasise that roundabout crossing is a coordination problem that can be stated as a sequence of
+ramp merging, lane changing, and then splitting problems.
+
+   All of the above problems are better understood as task-oriented ones, with the key problem
+of efficiently steering vehicles during merging operations. Of course, the problem also somehow
+concerns access to a shared resource (the few meters of the lane that the merging vehicle needs to
+occupy). However, in normal traffic conditions, such resource in not scarce, and entering a lane
+from a ramp (or entering a roundabout, or changing a lane) is not focussed on that, but rather
+on making sure that the movements of all vehicles in the surroundings are properly orchestrated
+to avoid crashes and enabling the change. With this regard, although the problem is apparently
+Coordination of Autonomous Vehicles: Taxonomy and Survey  7
+
+competitive (the vehicles already in a lane do not care about the need of a car to enter that lane),
+coordination of vehicles during the process necessarily becomes cooperative, as all vehicles have
+the common interest in not crashing with each other2. Only in very intense traffic conditions the
+problem tends to become a resource-oriented and competitive one.
+
+   As for most of the other problems, the main safety and liveness properties to be preserved in
+ramp merging (and equivalent) problems are to avoid collisions and starvation, respectively. Quality
+clearly maps to minimising the time required to perform the task.
+
+   Today, several commercial vehicles already integrate the capability to perform lane merging
+and changing in autonomy, but without any form of direct coordination with other vehicles. Thus,
+safety is still in the hand of other (human driven) vehicles, and the time needed to complete the
+merging procedure in their willingness and quickness to cooperate.
+
+2.2.5 Platooning. Platooning is the problem of coordinating manoeuvers of a fleet of vehicles so that
+they travel altogether as a single entity, for instance by keeping the same speed and relative positions
+in a highway [56], as it happens in natural systems for flocking or schooling behaviours [93].
+Platooning is a coordination problem per se, although it is also often used as a mechanism in support
+of (or to facilitate attacking) other coordination problems, such as intersection management (by
+letting vehicles with the right-of-way to cross in platoons), traffic flow optimisation [30] (by avoiding
+that abrupt changes in speed can lead to traffic jams), and ramp merging (or lane changing)--the
+latter being often interpreted, in fact, as entering/leaving a platoon.
+
+   Platooning is clearly a task-oriented coordination problem (the task being to move as a single
+entity) in which vehicles have incentives to cooperate (i.e., to reduce fuel consumption and risk of
+accidents). As for most of the other classes of coordination problems, safety concerns are about
+avoiding collisions, whereas liveness and quality refer to the capability of preserving the structure
+of the platoon despite contingencies, and doing so with the highest adherence to the ideal shape,
+respectively.
+
+   Although platoons tend to naturally form in streets and highways, the explicit deliberate choice
+of moving in platoons is not currently enforced by regulations or ad-hoc coordination mechanisms
+between vehicles [95], as we instead expect will happen in the future.
+
+2.2.6 Traffic flow optimisation. Traffic flow optimisation is the problem of coordinating vehicles'
+journeys across the transport network so as to achieve a maximal (or a satisfying) balancing of
+road infrastructure exploitation and avoid (or limit) traffic congestions and jams [88, 105]. Clearly,
+this is a large-scale general coordination problem, that also somewhat subsume all the previously
+presented problems. In fact, traffic flow optimisation implies also finding good solutions to cross
+intersections efficiently, finding parkings without having cars wander around hopelessly, exploiting
+ride-sharing as much as possible, and quickly merging into highway lanes, since all these measures
+improve utilisation of the road infrastructure--hence have a positive impact on overall traffic
+congestion. However, the objective of traffic flow optimisation should also integrate large-scale
+strategies to route vehicles across the road network in order to promote load balancing of the
+network itself (and of course without forgetting where each individual vehicle needs to go).
+
+   Such a coordination problem is clearly a resource-oriented one, the resource to be allocated being
+the road network. At first, the problem may appear of a competitive nature, since individual vehicles
+have the selfish goal of reaching destination fast, regardless of others. However, it could naturally
+become cooperative if, as it should be, vehicles are made aware that routing suggestions (or the
+
+2Indeed, we emphasise that the very fact of avoiding intersections in highways, and of substituting intersections with
+roundabouts wherever possible in cities, is motivated by the possibility of turning a highly competitive resource-oriented
+problem into a more cooperative task-oriented one.
+8  Mariani, Cabri, Zambonelli
+
+routing plans that they elaborate together) can facilitate all individual vehicles in reaching their
+destinations smoothly.
+
+   In traffic flow optimisation, safety amounts at avoiding congestions and traffic jams, while
+liveness amounts at routing vehicles so as to avoid loops and never-ending trips. In terms of quality
+measure, the degree of balance in the exploitation of the road network and the overall fluidity of
+the traffic flow are certainly the primary ones. However, also the extent to which the coordination
+process deviates vehicles from their original route should be accounted for.
+
+   Current measures adopted by municipalities to optimise traffic flow are mostly based on static
+strategies such as imposing one-way streets to route vehicles across specific paths or limiting
+access to certain zones/streets to specific categories of vehicles. However, such measures cannot
+cope with the dynamics of traffic conditions and are largely inefficient in handling the diverse
+situations that happen at different hours of the day or periods of the year [61]. Adaptive traffic light
+synchronisation can work well to improve traffic flow in limited parts of a city, but cannot help at a
+large (e.g., urban) scale [36, 101]. Digital signals adaptively suggesting directions to drivers can
+somewhat work, but are inherently limited by the fact that human drivers often disregard them
+to follow their originally planned route (or the one suggested by traffic navigator). Fortunately,
+such situation will change when autonomous vehicles, not drivers, will receive suggestions or
+cooperatively elaborate routes.
+
+3 COORDINATION APPROACHES
+
+In this section we overview the relevant approaches proposed so far in the literature (as well as
+those that can be, at least conceptually, conceived) to address the identified vehicles coordination
+problems. Independently of the specific coordination problem addressed, such approaches can
+be classified in terms of the degree of autonomy in decision making left to vehicles during the
+coordination process.
+
+3.1 Definitions
+
+By "degree of autonomy in decision making" we refer to the extent to which vehicles can decide
+their own course of actions by themselves while coordinating. Such decision of course can be
+based on information acquired by vehicles about the current state of the affairs, information that
+can be obtained by the vehicles' own sensors, by road-side infrastructural elements (vehicle-to-
+infrastructure, or V2I, communications) or from the other vehicles participating the coordination
+process (vehicle-to-vehicle, or V2V, communications).
+
+   By definition, in any coordination process, the entities to be coordinated cannot act completely
+free, and must undertake actions that account for the actions of the other entities involved in the
+process [42]. Thus, there is never full autonomy and freedom. However, different approaches to
+coordination may leave to entities different degrees of freedom in their decision making, i.e., in
+selecting the actions to perform during the process. Hence, the degree of autonomy may range
+from fully externally imposed actions (lowest autonomy) to fully self-determined action (highest
+autonomy). In particular, as depicted in Figure 1, we can identify four main classes of coordination
+approaches centred around the concept of degree of autonomy:
+
+    · Centralised, where the burden of coordination (that is, the decision making determining the
+       outcome of the coordination process) is entirely charged upon an individual computational
+       entity (i.e., a coordinator) whose decisions on how everyone should act are undebatable,
+       and to whom vehicles must abide by design without any autonomous decision making left
+       to them. A traditional traffic light exemplifies the role of such centralised coordinator. We
+       emphasise that the term "centralised" here refers to the decision making process, not to the
+Coordination of Autonomous Vehicles: Taxonomy and Survey                     9
+
+          highest
+
+                     self-organising                            emergent
+          game theory
+
+AUTONOMY  argumentation                                   dcop  agreement
+
+                               auction                          negotiation
+          contract-net
+
+          coordinator                                           centralised
+
+                                                             lowest
+
+Fig. 1. Coordination approaches categorised according to increasing degree of autonomy in decision making
+left to vehicles during the coordination process.
+
+       actual computing infrastructure supporting it, which can include for instance distributed
+       processing of information by multiple sensors/cameras and/or services to perform reasoning
+       in the cloud.
+    · Negotiation, where the burden of coordination is distributed amongst the ensemble of co-
+       ordinating vehicles, who participate to a specific negotiation protocol, typically inspired by
+       economic mechanisms. In a negotiation protocol, the vehicles involved can "propose" (each
+       according to its own internal strategy and its own situation and goals) solutions and ac-
+       tions, amongst a set of admissible moves dictated by the protocol at each step. If properly
+       designed, the protocol will eventually guarantee the convergence towards an equilibrium
+       solution, determining who (i.e., which vehicle) should do what, and when, to solve the coordi-
+       nation problem. Most representative negotiation protocols are: Contract Net, for collaborative
+       problems, and auctions, for competitive ones [63].
+    · Agreement, where coordinating vehicles participate to a dynamic protocol defined by them-
+       selves in a collective way, in a sort of "meta-coordination" process whose outcome is both the
+       set of admissible moves, now jointly defined, and possibly even a dynamic re-determination
+       of the goals to be achieved during the coordination process. The distinguishing feature here
+       iss the ability of agents to collectively define the protocol itself, that is, the goal to pursue and
+       their strategy to make moves. Examples of these dynamic protocols include those based on
+10                                                    Mariani, Cabri, Zambonelli
+
+       argumentation [80], where involved entities discuss and argue together to reach a common
+       perspective on situations, goals, and solutions, and distributed constraint optimisation [64],
+       where agents tries to collectively find a solution to a constraint optimisation problem.
+    · Emergent, where coordinating vehicles do not explicitly engage in any coordination protocol,
+       thus do not even share the goal of reaching a common agreement. Rather, every vehicle
+       behaves in a selfish way according to its goals and to maximise utility of actions w.r.t. the
+       goals, and according to the perceptions it collects about other participants to the coordination
+       process. Examples include: game theoretic approaches [75], where explicit communication
+       is lacking, each vehicle merely assumes rationality of others, and computes its own course
+       of actions based on informed guesses about others' expected behaviour; and self-organising
+       algorithms [66], typically nature-inspired, where vehicles act in a purely reactive way, based
+       on the implicitly perceived presence and situation of other vehicles, typically expressed via
+       "traces" (e.g., virtual pheromones or virtual computational fields) in the environment.
+
+The criteria defining the above described categories are summarised in Table 3.
+   Let us now analyse, for each of the identified coordination problems, how different solutions based
+
+on different autonomy classes can be (or cannot be) applied, also with reference to representative
+literature examples (Table 4).
+
+3.2 Intersection management
+
+Intersection management is a competitive resource-oriented coordination problem: vehicles com-
+pete for the right to acquire exclusive access to the portions of the intersection they have to cross.
+The goal of the coordination process is to minimise delay in handling concurrent access to the
+intersection, and to guarantee collision avoidance and starvation of vehicles.
+
+3.2.1 Centralised. In this category lie all the approaches in which a computational central au-
+thority (let's call it the intersection manager) bears alone the burden of decision making. The
+intersection manager is typically in charge of: (a) receiving information from vehicles approaching
+the intersection (i.e., origin, destination, speed); (b) elaborating a set of collision free trajectories
+enabling vehicles to safely cross the intersection (which may require some vehicles to slow down
+or change lane) (c) precisely instructing (or directly commanding) the vehicles about what to do, or
+informing them about what constraints they must abide to while crossing the intersection.
+
+Table 3. Criteria for definition of and attribution to autonomy classes of the coordination approaches
+for connected autonomous vehicles. The adjectives in each cell refer to the vehicles participating to the
+coordination process.
+
+                 Strategy    Protocol Role Degree of Freedom
+
+    Centralised external (coordinator) fixed passive  none
+
+    Negotiation  individual  dynamic active           admissible moves
+    Agreement    individual
+     Emergent    individual  dynamic active admissible moves, goals
+
+                             none active              full
+Coordination of Autonomous Vehicles: Taxonomy and Survey                                                   11
+
+Table 4. Problems vs. coordination approaches, categorised and ordered according to increasing autonomy
+allowed for vehicles (left to right).
+
+               Centralised                 Negotiation Agreement               Emergent
+                                                                                   [68]
+Intersection   [35, 58, 59, 94, 102, 106]  [20, 23, 98]         [12, 62, 100]      [10]
+management
+
+Smart parking  [18, 55]                    [4, 11, 25, 31, 43]  [72]
+
+Ride sharing   [3, 41, 48, 57]             [16, 53]             --             [5, 13]
+
+Ramp merging   [9, 22, 83, 84]             [6, 7]               [81]           [103]
+                                             --
+ Platooning            [6, 70]             [97]                 --                 [56]
+                                                                               [27] (UAVs)
+Traffic flow           [47, 73]
+optimisation   [2, 99, 104] (forecast)                                         [21, 67, 74]
+
+                                                                --             [49, 107] (traffic lights)
+
+                                                                               [89] (robots)
+
+   It is worth emphasising that for centralised approaches to intersection management (and in
+general for all centralised approaches to coordination) the distinction between cooperative and
+competitive approaches vanishes, since the central authority handles goals, strategies, and deals
+with conflicts by itself.
+
+   Examples of centralised proposal to intersection management include [102], which attack the
+problem in terms of a traditional mutual exclusion approach, and [59], in which the authors propose
+a control algorithm implementing a nonlinear constrained optimisation in charge of computing the
+best moves for every vehicle and then directly manipulating vehicles' driving parameters. A similar
+stance is taken in [106], where cooperative adaptive cruise control is exploited for intersection
+management, by assuming that a smart controller device placed in the intersection can communicate
+with incoming vehicles to instruct them about the actions to perform.
+
+   Other approaches are a little more permissive and let the inbound vehicles decide how to fulfil a set
+of constraints set by the intersection manager (which may regard the time slot assigned for crossing)
+as in the work by Dresner and Stone [35]: the authors propose a reservation-based approach in
+which incoming vehicles request assignment of a time slot for crossing to the intersection manager,
+who computes decisions based on a local control policy. Alternatively, constraints may regard the
+min/max speed profile to hold, as in the case of [58]: there, an hybrid architecture for intelligent
+intersections mixes decentralised computations (as regards collision avoidance) and centralised
+decision making (for coordinating vehicle traversing the intersection) ultimately letting vehicles
+decide whether to cross or not in the assigned time frame.
+
+   In general terms, all the above approaches ensures safety and starvation by giving every vehicles
+the possibility to cross the intersection. Most importantly, simulations show that such approaches
+dramatically reduce the waiting time for vehicles with respect to traditional approaches based on
+stop signs or traffic lights [35], because: (a) the occupancy of the intersection is maximised and (b)
+vehicles from different directions can cross the intersection without waiting, provided they are
+not in direct collision--i.e., they occupy different portion of the intersection, or occupy the same
+portion at different times.
+12  Mariani, Cabri, Zambonelli
+
+   A problem of centralised approaches is that they require the presence of an infrastructural
+element (the intersection manager) and the capability of vehicles to interact with it. Thus, they
+can hardly be applicable in the wild. A recent proposal [94] suggests the possibility (in absence
+of any infrastructure, but only exploiting V2V communication) to be engaged in a leader election
+algorithm, to elect a transient leader vehicle in charge for a predefined amount of time. The leader,
+elected by considering factors such as the distance to the intersection, the traveling speed, etc.,
+temporarily acts as intersection manager and (other than acquiring its own right-of-way) elaborates
+which other vehicles can cross the intersection safely.
+
+3.2.2 Negotiation. In centralised approaches, vehicles have no word over the policies enforced
+by the intersection manager. Negotiation-based approach, instead, enables vehicles to actively
+participate in the protocol aimed at establishing in which order vehicles will gain access to the
+intersection.
+
+   Such protocol, given the competitive nature of the problem, can take the form of an auction. In
+approaching the intersection, vehicles contact the intersection manager by placing a "bid", that
+is, by making an offer to "buy" the portions of the intersections they require for crossing, for the
+time required to cross. The value of the bid expresses the urgency of the vehicle in crossing, it is
+autonomously set by each individual vehicle according to its own strategy, and it can correspond
+to some real-world currency or some sort of "road credits" assigned to vehicles. The intersection
+manager collects the bids, gives the right-of-way to the set of vehicles that are in a collision free
+trajectory and, amongst those that are in collision, to the ones having placed the highest bid.
+
+   Examples of auction-based protocols for intersection management are described in [98], [23],
+and [20]. There, different policies to resolve the auction are analysed, based on different strategies
+put in place by the vehicles in bidding, as well as different strategies by the intersection manager
+in establishing the winners. Such strategies can also attempt at incentivising fair bidding while
+discouraging malicious behaviours.
+
+   In general, auction-based mechanisms (with slight variations depending on the adopted strategies)
+exhibit performances comparable (at times superior) to that of centralised mechanisms: the waiting
+time of vehicles is again dramatically lower that that of traditional traffic lights. Safety is ensured
+provided that vehicles respect the "rules of the game", and accept waiting when losing the auction.
+A problem intrinsic of any auction mechanism concerns liveness, i.e., starvation of vehicles, in that
+the strategy of vehicles in bidding can sometimes prevent others to win auctions, with the risk for
+them to experience indefinitely long waiting times.
+
+   Depending on whether auctions are performed with virtual or real-world currency, this can also
+introduce serious fairness problems, that will be discussed in more detail in Subsection 4.4.
+
+3.2.3 Agreement. This category increases the degree of autonomy that vehicles retain while being
+subject of a coordination process, as the coordination protocol is not fixed a priori, but arises from
+the interaction between participants, dynamically. In particular, in this category even the goals
+of the coordinating vehicles as well as their strategies to pursue them can change at run-time
+depending on the agreement that vehicles establish between each other. As far as intersection
+management is concerned, solving the problem with agreement techniques essentially amounts at
+giving vehicles incoming to an intersection the possibility of interacting for affecting each others'
+originals goals (e.g., directions) and priorities.
+
+   An exemplary proposal, specifically conceived for intersection regulation in the context of
+bimodal traffic (vehicular plus public transport), is discussed in [12]. There, agreement between ve-
+hicles happens through a repeated communication protocol running between approaching vehicles
+and buses, with the assistance of an heterogeneous pool of agents representing conflicting goals
+(such as the need to minimise private vehicles travel time while prioritising public transportation).
+Coordination of Autonomous Vehicles: Taxonomy and Survey  13
+
+Depending on both macro and micro scale criteria, in fact, the agents participating in the protocol
+may decide to prioritise (hence, ultimately giving right-of-way) either private traffic or public
+transportation, as a result of a conflict resolution meta-protocol.
+
+   Another interesting approach models intersection management as a Distributed Constrained
+Optimisation Problem (DCOP) [100], that is, interpreting vehicles as a multi-agent system in which
+each agent has to collaborate with others so as to find an agreement about the best solution
+possible to the dynamic set of shared constraints they are involved in. This kind of modelling lends
+itself to a distributed implementation, where each vehicle interacts in a peer-to-peer way with
+the neighbouring ones to solve a local problem, that is, DCOP limited to those vehicles actually
+approaching the intersection. For doing so, the involved agents actually undergo a messaging
+protocol to exchange their current solutions as they try to adjust their individual values to converge
+to a feasible (hopefully, optimal) solution.
+
+   Finally, let us mention the approach we envisioned in [62], which proposes to adopt argumentation
+technologies [80]. In particular, we suggest vehicles can engage in open dialogues while approaching
+the intersection, discussing their beliefs about the best way to approach the intersection, and in case
+of conflicting needs, arguing with each other about possible ways to avoid that conflict. During the
+dialogue, vehicles can change the argumentation strategy, and may evaluate assertions differently
+based on the dynamic contingencies arising in the meantime. For instance, a vehicle A approaching
+the intersection in the north-to-south direction can express arguments about its urgency to cross,
+and can argue that another vehicle B in the east-to-west direction (and thus conflicting with A)
+could/should decide to cross right, as that move would make B reach in any case destination, but
+would avoid the conflict with A. Persuaded by solidity of A's argument, B could eventually decide to
+turn right. Although still at the conceptual level, an argumentation-based approach to intersection
+management show potential for greater flexibility and adaptivity in facing unforeseen situations. In
+addition, the power of argumentation approaches in the area of autonomous driving is advocated
+also by other conceptual proposals as a way to solve conflicts and increase trustworthiness and
+safety of decisions [40].
+
+3.2.4 Emergent. Approaching intersection management by emergence implies giving absolute
+freedom to vehicles in choosing how to cross intersections, with the only constraints of acting in a
+safe way and avoiding starvation. To this end, one can let vehicles either: (a) play a selfish game
+where each agent attempts to maximise its expected utility in crossing despite other agents' needs
+and goals [75]; or (b) be engaged in an implicit, self-organising coordination scheme, where each
+vehicles responds in a reactive way to the actions of the other agents, according to some sort of
+"natural laws" enforced in the intersection "ecosystem" [78]. In both cases, coordination does not
+consider an explicit agreement about what to do.
+
+   Emergent approaches of this kind are indeed already at work in the real world. The way (human-
+driven) vehicles and motorbikes cross unsignalled intersections in many over-congested African and
+Asian cities is based on drivers' trying to guess each other actions while making subtle movements
+strategically aimed at affecting those of nearby vehicles. For instance, in [68], the authors interpret
+the intersection crossing problem using game theory, that is, modelling each vehicle as the player
+of a game involving other approaching vehicles, each playing its own game, thus each having
+different payoffs and utility models--that is, essentially, each player is unaware of the formalisation
+of the game others are playing. The proposed approach investigates how to build decision matrices
+in such a way that minimal information can be assumed by agents while still being able to find a
+solution for their own game--that is, a safe way to cross the intersection in the lowest possible
+time. Alternatively, it is possible to model the collective behaviour of vehicles at intersections in
+terms of a self-organised collective movement, similar to that of flocking birds [93].
+14  Mariani, Cabri, Zambonelli
+
+   However, beside the scientific interest that modelling the behaviour of vehicles at intersections
+in game-theoretic or self-organising ways can have, actually deploying autonomous vehicles
+that cross intersections by relying on such approaches seems hardly feasible. In fact, delivering
+guarantees about safety and liveness may be prohibitively difficult or impractical in the general
+case of emergent approaches to coordination, as these approaches often exploit stochastic decision
+making and partial, local information. Indeed, in the cited real-world examples of unsignalled
+intersections, crashes are frequent, and so it is impossible to predict the time-to-cross.
+
+3.3 Smart parking
+
+Smart parking is a resource-oriented coordination problem, which is inherently competitive in the
+case of individual vehicles (or vehicles belonging to different companies), whereas collaborative in
+the case of vehicles part of a company fleet.
+
+   In general, to enable smart parking solutions for autonomous vehicles (and for human-driven
+vehicles as well), it is necessary to augment parking spaces by deploying sensors (e.g., cameras or
+presence sensors) to detect free parking slots and inform either some centralised control center or
+directly vehicles/drivers (depending on the adopted solution) about their location. Alternatively, it
+would also be possible to exploit vehicles themselves as mobile sensors, detecting and informing
+about available parking spots as they drive. Also, suitable actuator devices may be needed in the
+transitory phase during which autonomous vehicles would co-exist with human-driven ones, so
+as, for instance, to signal human drivers that a parking slot has been reserved although not yet
+physically occupied. We forward the interested read to [82] for a survey of such technologies.
+
+3.3.1 Centralised. A centralised solution to smart parking in the presence of autonomous vehicles
+would simply let vehicles communicate their requests (where they need to park and when) to a
+central authority (i.e., a brokerage service owned by the municipality or, for fleets, some service
+managed by the fleet company). The central authority takes care of reserving available parking
+slots to the requesting vehicles, by assigning vehicles to slots according to its own policy (e.g.,
+maximisation of resource utilisation, minimisation of vehicles delay), and then inform each of the
+vehicles about the parking slot assigned to them.
+
+   It is worth emphasising that a whole lot of solutions to smart parking are currently limited
+to provide information about free parking spots to human drivers, that then can select the one
+to reserve and receive guidance accordingly. Such a sort of systems are not of interest for the
+present paper as no coordination happens at all, even in matching supply and demand, as human
+intervention is mandatory--see [60, 79] for comprehensive surveys.
+
+   Nevertheless, examples of fully or partially automated systems matching, respectively, vehicles
+and drivers to a given parking lot without the need for human intervention can be found. For
+instance, [55] proposes a Cloud-based architecture where a recommendation algorithm based on
+the Map/Reduce technique is exploited for suggesting the "best" car parking lots to users (receiving
+the recommendation through a mobile app). The matching between a user (hence, vehicle) and a
+parking lot depends on factors such as friends' car parking suggestions, own preference profile, and
+users' parking history, hence the match found by the platform has the goal ox maximising each user
+satisfaction. A similar approach is taken in [18], where a centralised Cloud infrastructure is still
+exploited to gather information, disseminate routing paths, and search for vehicle-lot matchings, but
+the optimal parking place is defined as the most optimal distribution of vehicles over the available
+parking places--from the perspective of the municipality, for instance. Each user specifies his point
+of destination, the maximum distance the parking place is allowed to be from the destination, and
+the maximum fee he is willing to pay for the parking place: these factors are then weighed against
+the collective interest of all other users to determine the optimal parking place. Moreover, Ant
+Coordination of Autonomous Vehicles: Taxonomy and Survey  15
+
+Colony Optimisation [33] is exploited to provide dynamical navigation paths to vehicles, taking
+into account the real-time traffic density as monitored by smart lampposts scattered across the
+road network.
+
+3.3.2 Negotiation. A negotiation approach would let vehicles participate to a coordination protocol
+where each of them has the right to advance proposals, reject others' ones, suggest alternatives,
+and the like, according to an individual negotiation strategy (for instance meant at minimising cost
+or travel distance). In other words, each vehicle may actively participate to the decision making
+process of coordination.
+
+   In [25] for instance, a decentralised implementation of an auction in a multi-agent systems
+setting is described, where each vehicle undertakes a two-stage negotiation with a broker agent
+responsible of a (set of) parking slot(s): first, it bargains to reserve a parking slot, then for setting
+the price to pay. Three are the criteria adopted by the broker to match parking demand with supply:
+parking fees, distance to the parking spot and to the destination, and the broker's own booking
+and reservation policies (as stemming, e.g., from the owner of the parking lot). In the paper, a
+few negotiation strategies are also compared: bid contracting, simple contracting, and sequential
+request with best-first acceptance.
+
+   A similar approach is taken in [43], but leveraging on a centralised implementation where a
+single entity (actually composed by three logical modules) decides the allocations of demanding
+vehicles to parking slots. The approach is in the negotiation category as the demanding vehicles
+have the opportunity to reject an allocation received, and to ask for another one by supplying a set
+of constraints, over which the two parties may negotiate until an acceptable solution is found. In
+particular, the allocation process is interpreted as a sequence of mixed-integer linear programming
+problems solved at specific time points, continuously.
+
+   The approach described in [11], instead, proposes a dynamic pricing scheme adjusted through a
+market-oriented optimisation algorithm, so as to let the parking slot manager influence the way in
+which the available parking slots are occupied by competing vehicles. The authors validate through
+simulations that the proposed pricing algorithm is able to steer the system towards load balancing
+the available resources.
+
+   In [31] an Iterated Contract Net protocol is set up between a parking manager agent and a
+user agent having conflicting goals: the former tries to achieve fair distribution of occupied slots
+while avoiding over-crowding the city centre, whereas the latter only wants the closest and most
+convenient spot. The parking manager makes offers for available parking slots to the user agent,
+which accepts or refuses them, until convergence to a compromise between user satisfaction and
+public good is found.
+
+   Finally, in [4] both collaborative and competitive approaches are evaluated to compare their
+performance w.r.t. paid price and distance to parking spot: Contract Net is used a collaborative
+approach, while English (lower price first, then raise) and Dutch (opposite) auctions are exploited
+as competitive ones. Along the distance dimension, all approaches show similar results, whereas
+along the price metric the Dutch auction is the worst, whereas the other two are comparable.
+
+3.3.3 Agreement. The only example of agreement approaches applied to smart parking we found
+in the literature is the argumentation-based approach described in [72]. However, the manuscript
+lacks an evaluation section, hence no conclusions about feasibility and efficacy of the approach are
+possible.
+
+   The easiest explanation of this under exploration could be that there is not much to agree
+upon when vehicles are looking for parking: they have the same individual goal, they have no
+interest in collaborating, hence the target of a potential agreement appears uncertain. Also, possibly,
+approaches such as DCOP my be overly complex (hence, computationally unsustainable) for the
+16  Mariani, Cabri, Zambonelli
+
+assignment problem that parking allocation essentially is. Argumentation-based approaches may
+provide some beneficial effects, especially in terms of fairness of parking slots assignment, by
+letting vehicles debate over their urgency or precedence and let an arbiter decide upon the dispute.
+For instance, a vehicle may cooperate to accept farther parking slots as its passengers must meet a
+deadline for an important meeting, whether another one may instead value more a closer spot as
+its passenger has difficulty in walking.
+
+3.3.4 Emergent. Approaches leveraging coordination arising by emergence from local interactions
+amongst vehicles are not so common in the context of smart parking, possibly because they are
+best suited to complex systems where many individual agents need to frequently interact so as to
+achieve a common goal without centralised control--whereas smart parking often concerns either
+a single vehicle to be assigned a spot, or a few vehicles competing for one.
+
+   Nevertheless, [10] for instance, proposes to exploit a distributed implementation of a game
+theoretic approach where competing vehicles are modelled as selfish agents striving to obtain
+parking slots. This setting is dealt with under the assumption of complete knowledge of the
+game by each player (payoff known), and that of incomplete knowledge instead. Furthermore,
+a centralised implementation is also presented, where a single authority makes parking choices
+for travellers and assigns each to a specific parking slot. In both cases, the objective of the game
+theoretic solution is to optimise social welfare.
+
+3.4 Ride sharing
+
+As pointed out in Section 2, ride sharing is a sort of umbrella term for many highly related sub-
+problems, such as carpooling, and presents differencesst depending on whether private individual
+vehicles or company-owned fleets are considered, making the problem competitive or cooperative,
+respectively.
+
+   As anticipated, for taxis and similar services like Uber, most approaches are centralised: a single
+site collects mobility requests and, based on the availability of vehicles/drives to satisfy them,
+proposes a match based on its own internal policies. We do not exclude that in the future, in the
+presence of autonomous vehicles, it will be possible to rely on direct V2V and vehicle-to-user
+communications for ride sharing or to satisfy more general classes of mobility needs. However,
+even if, most likely, the approaches will still consider the presence of centralised sites to collect
+requests and availabilities, the key differences with respect to current approaches will be that:
+(a) they will be able to exploit more detailed information (e.g., about positions of vehicles, traffic
+situations, etc.) (b) they will make it possible to decentralise the decision making process the leads
+to matches.
+
+3.4.1 Centralised. Centralised approaches to ride sharing concern solving a constrained optimisa-
+tion problem aimed at matching supply and demand while complying to time-based and route-based
+constraints (e.g. departure and arrival times, maximum deviation from optimal route, etc.). We
+forward the reader to [3] and [41] for two extensive surveys on these kinds of approaches, also
+outlining the advantages in efficiency that the availability of detailed information can bring.
+
+   Let us just exemplify two specific proposals for centralised decision making in ride sharing. The
+work described in [48] exploit a genetic algorithm to both propose initial matchings between supply
+(vehicles and drivers) and demand ("free riders"), constrained by pickup and delivery times as well
+as maximum distance travelled and capacity occupied, and later adjust those matchings "on-line"
+as new riders want to dynamically join. The approach proposed in [57], although still centralised in
+decision making, goes somewhat in the direction of negotiation: the idea is to let passengers bid for
+drivers by interacting with an individual broker with complete knowledge of the system (drivers
+availability, departure and arrival times, routes, as well as passengers preferences). However, the
+Coordination of Autonomous Vehicles: Taxonomy and Survey  17
+
+interacting parties cannot adjust bids or refuse offers, or anyhow negotiate with each other, or with
+the broker, to find a better individual solution--hence there is little autonomy left to vehicles (or,
+drivers).
+
+   As for all centralised approaches to negotiation, the distinction between collaboration and
+competition, and thus the distinction between private vehicles and fleets of company vehicles is
+blurred. In fact, by putting themselves in the hand of a central decision maker, even individual
+vehicles can be interpreted as partss of a fleet.
+
+3.4.2 Negotiation. A solution to the ride sharing problem based on negotiation techniques, e.g.
+auctions or Contract Net, is possibly the most suitable besides the centralised one, as it is quite
+natural to model the problem as a set of interacting agents collectively engaging in a joint planning
+process, and actively pursuing convergence through negotiation, indeed. The benefits that a
+negotiation-based approach may have are increased flexibility and scalability, as each "ride sharing
+group" may independently (concurrently) find an agreement about the parameters of the joint trip,
+such as pickup/delivery locations, departure/arrival times, etc.
+
+   In the specific context of carpooling, that is sharing a vehicle amongst private individuals, [53]
+presents a multi-agent based simulation framework where negotiation between "carpooling agents"
+is at the core of the coordination approach used to match supply and demand, as well as to arrange
+trips. In particular, the authors assume existence of a "carpooling social network" where people
+with similar home-work and work-home trips are clustered, so as to navigate the graph in search for
+potential matchings. When a group of drivers sharing similar routes is formed, as soon as requested
+by one of the participants negotiation takes place at two steps: driver and vehicle selection, and
+departure time setting. This process may repeat even during trips or while an agreement has
+been already settled, for instance because members leave the group (or new ones join) or change
+preferences (such as pickup times, pickup and drop-off order, trip start times, etc.). It is worth noting
+that the focus of the paper is on forming carpool groups, disregarding analysis the competition
+that may arise between different vehicles to maximise their own utility, e.g., monetary gain.
+
+   In [16] instead the focus is on fleet management, namely task allocation and redeployment of
+vehicles owned by a set of organisations: the former problem amounts at determining which vehicle
+should serve a given task, whereas the latter consists in relocating vehicles so that new tasks can be
+better dealt with (faster and/or with lower costs). In particular, the authors exploit an auction-based
+mechanism to assign tasks to vehicles, inspired by Bertsekas' auction algorithm [14]. It is worth
+emphasising that the auction mechanism employed is structured in such a way that the overall
+system gain is maximised, not the individual vehicle gain. For instance, in the taxi fleet scenario
+described, vehicles are assigned to passengers by collecting all the requests in a given time window,
+and then distributing requests to taxis so as to maximise utilisation, not individual passengers'
+utility function.
+
+3.4.3 Agreement. We could not find any agreement approach in the surveyed literature on ride
+sharing. However, here the lack of DCOP-based solutions is perhaps surprising, as the problem of
+assigning vehicles to routes is often times interpreted as an assignment problem which could be
+handled by DCOP, especially in the case of privately owned vehicles--in the case of the fleet of a
+company, instead, centralised or negotiation-based solutions seems more practical.
+
+   As far as argumentation is concerned, benefits may be gained again especially in the case of
+privately owned vehicles: each vehicle may argue about an unplanned detour, or a delay in delivery
+time, and others may attack or support its arguments towards settlement of the debate. Assuming to
+have the possibility of registering passengers and drivers' preferences, which already is taken into
+account in some approaches, letting ride sharing undergo an argumentation-based coordination
+process seems a path worth exploring.
+18  Mariani, Cabri, Zambonelli
+
+3.4.4 Emergent. Solving ride sharing with an emergent approach would amount at letting vehicles
+figure out an arrangement for serving ride sharing requests in complete autonomy, by interacting
+with each other without trying to impose any constraints about what do and when, but solely
+abiding to some "rules of the game" either resembling their own convenience/goal (as for game
+theory) or somehow "hard-coded" in the system (such as for nature-inspired approaches).
+
+   The game theoretic model proposed in [13] for the more specific problem of carpooling is an
+example of emergent approach: by careful designing incentives to cooperate, in the form of social
+credit, the authors obtain a distributed coordination process where each participant to the carpooling
+solves (repeatedly) a stochastic game with the objective to maximise its own utility (hence, social
+reward). Due to a careful integration of this distributed coordination protocol matching supply
+and demand with the reward mechanism, the authors achieve the desirable effect of incentivising
+cooperation while letting individuals maximise their own payoff.
+
+   Also the work presented in [5] starts from a game theoretic treatment of the problem, but models
+it in a very different way, drawing inspiration from multi-agent planning theory: in particular,
+the solution described allows participants to engage in a collective planning process in terms of a
+bargaining game allowing each driver to seal the deal using its preferred strategy. Once drivers
+arrive at their decision, a cooperative protocol takes charge of mitigating the conflicts possibly
+arisen: in particular, every player discloses its strategy to others, so as to let conflicting players
+start to interact to resolve conflict.
+
+3.5 Ramp merging
+
+Ramp merging (and the similar lane changing) is a task-oriented coordination problem that, although
+inherently competitive, has to be addressed in a cooperative way.
+
+   In most cases, approaches to this coordination problem take as reference a platoon-based setting,
+that is, a scenario in which each of the on-ramp (or source lane) vehicles are considered individually
+as they merge into the existing platoon of vehicles already travelling in the highway (or destination
+lane) as an ensemble--and, similarly, vehicles willing to leave the highway are individually consid-
+ered as splitting ones. However, the problem can be faced also in the absence of a platoon-based
+setting.
+
+   Whether considering a platoon-based setting or not, the general benefits that a coordination
+approach to ramp merging may deliver are similar to those for intersection management: stop-and-
+go behaviour and the need to slow down (both for the merging vehicle and for the one already
+occupying a lane) may be drastically reduced.
+
+3.5.1 Centralised. Centralised approaches to ramp merging (and lane changing) are adopted in
+the context of a platoon setting. The leader of the platoon takes care of all the decision making
+involved about the actions that the other vehicles of the platoon and the entering vehicle have to
+take in order to facilitate merging/splitting manoeuvres. Vehicles however can also exploit their
+own sensing and V2V communications in order to calibrate the actions.
+
+   Approaches of this kind are described in [9] and [83]. Also, most of the many approaches surveyed
+in [84] adopt a similar endeavour, by applying either optimisation techniques or model predictive
+control strategies (as in [22]) which leave vehicles no degrees of freedom w.r.t. the outcome of the
+coordination process.
+
+3.5.2 Negotiation. In the absence of an existing leader, that is when vehicles travel on a lane
+outside of a platoon, a vehicle wishing to enter a lane from a ramp, or in need to change lane, has to
+somehow make sure to: (a) avoid collisions with the vehicles on the entering lane and (b) enter the
+lane smoothly, that is avoiding forcing the vehicles on the entering lane to abruptly reduce speed.
+Coordination of Autonomous Vehicles: Taxonomy and Survey  19
+
+This may require some sort of negotiation of relative actions and speeds between the entering
+vehicle and the other vehicles already on the lane in its proximities.
+
+   In the approach described in [6], the actions of the vehicles involved in a ramp merging scenario
+are decided via peer-to-peer V2V negotiation protocol, in which the entering vehicle proposes
+actions to the vehicles already on the target lane, which have the right to refuse and make alternative
+proposal. A very similar approach is described in [7]. In high-traffic conditions, though, such
+approaches are at risk of starvation, if the vehicles are not willing or are not in the conditions to
+accept the proposal of the entering vehicles.
+
+   To avoid starvation, negotiation approaches based on incentive mechanisms for vehicles on the
+entering lane, such as auctions where merging vehicles offer to pay some kind of currency to enter
+can be conceptually envisioned. However, we haven't found any relevant example of this kind in
+the literature.
+
+3.5.3 Agreement. In a ramp merging (or lane changing) scenario it is quite difficult to imagine
+engineering efficient agreement approache.
+
+   A notable exception is described in [81]. There a coordination protocol between 2 or 3 vehicles (but
+easily extendable to more) is proposed where vehicles coordinate to find the best accomplishment
+for a lane change operation (essentially the same problem faced in ramp merging scenarios). In
+particular, vehicles may assess the quality of their moves and exploit such a measure to motivate
+their proposal to take action (or coordinate action), and also may substantiate the rejection of a
+proposal during negotiation by communicating the state of affairs leading to such decision. This
+clearly can be assimilated to a coordination approach based an argumentation.
+
+3.5.4 Emergent. Concerning emergent approaches to foster coordination, some game theoretic
+models can be spotted in the surveyed literature, but are exploited in the context of centralised
+approaches where a single individual (i.e., the leader of the platoon) tells participant what to do.
+
+   A rather unique exception is described in [103], which proposes a game-theoretic approach were
+two vehicles are considered at a time to play a 3-stages sequential game aimed at letting them agree
+on the best solution to merge. In the proposed setting two more measures are taken by the authors
+to find better solutions to the two-players game: communication between vehicles is allowed as a
+means to negotiate actions (admissible moves), and also multi-agent learning is exploited so as to
+let vehicles improve their own utility matrix as games are played.
+
+   As far as self-organised approaches are concerned, these can be potentially exploited in the
+context of leaving and entering a platoon by taking inspiration from the behaviour of flocking
+birds [93], as described in the following subsection.
+
+3.6 Platooning
+
+Platooning is the cooperative problem of coordinating manoeuvres of a fleet of vehicles so that
+they travel altogether as a single entity.
+
+3.6.1 Centralised. Centralised approaches to platooning in the literature typically involve a pre-
+liminary phase of electing a platoon leader, which is then in charge of communicating to the other
+vehicles the speed profile to which they must abide [70]. Clearly, in need of speed variation or
+other road contingencies, the leader could communicate these changes to the other vehicles of the
+platoon, which adapt accordingly [6].
+
+3.6.2 Negotiation and agreement. Negotiation- and agreement-based approaches to platooning
+have not been found in the literature. Whether it depends on unsuitability of the approach or lack
+of exploration, one reason may be that there is little to negotiate or agree upon during platoon
+formation or disbanding: one may claim that a potential subject of negotiation/agreement could be
+20  Mariani, Cabri, Zambonelli
+
+the speed profile to keep, but usually platoon formation exactly serves the purpose of traveling
+safely at the maximum allowed speed--hence, simply, the head vehicle sets the pace. Along this line,
+a path worth exploring could be that of negotiating the goal of the platoon, for instance, pursuing
+maximum speed or most fuel-efficient driving behaviour; nevertheless, to date this appears to be
+unexplored.
+
+3.6.3 Emergent. Here, the platoon formation does not involve the election of a leader, and groups
+of vehicles can simply engage in a platoon by having each vehicle dynamically adapt their speed to
+those of nearby vehicles, exploiting their sensors to do so, and without any explicit agreement [56].
+Such an approach can be considered mimicking the self-organising behaviour of those many species
+of social animals that tend to move in formation [93], and in particular those of flocking birds,
+which do so also for the sake of maximising efficiency of flight (a key goal for vehicle platooning as
+well). In this context, also the acts of entering and leaving a platoon (that is, the problems of ramp
+merging and lane changing) can be attacked with such a kind of self-organising approaches.
+
+   It is worth mentioning that similar self-organising solutions are also applied to Unmanned Aerial
+Vehicles, to let them travel in formation despite disruption [27].
+
+3.7 Traffic flow optimisation
+
+Traffic flow optimisation involves directing traffic across a road network (e.g., at an urban scale)
+in order to balance overall exploitation of the road infrastructure, minimising travel times, and
+avoiding traffic jams. As discussed in Subsection 2.2.6, today's modern approaches attempt at
+influencing vehicles by means of adapting traffic lights schedule [2, 104] and digital signages. In
+the presence of autonomous vehicles, the approach can be completely different.
+
+3.7.1 Centralised. Centralised solutions to traffic flow optimisation in the presence of autonomous
+vehicles will naturally be based on similar algorithmic techniques as that of current systems:
+sensorial infrastructures monitoring the traffic situation, to inform a centralised traffic management
+systems in charge of applying traffic flow/density forecasting techniques to anticipate congestions
+and jams [99], and to elaborating plans avoiding them.
+
+   The actuation phase, however, will be different: instead of acting on traffic lights (which, as
+we envision, will mostly disappear) and digital signages, vehicles can directly receive guidance
+from the centralised traffic management system [73] instructing vehicles on which routes to avoid.
+However, providing personalised individual guidance to each vehicle seems impractical, especially
+in large-scale scenario. Therefore, most likely, instructions will be sent collectively to groups of
+vehicles on a geographical basis (i.e., instructions to change route sent to all or a given fraction of
+the vehicles that find themselves in a road where a traffic jams is predicted to occur).
+
+   An alternative option to actuate plans could be that of acting at the level of traffic intersections,
+as it is done today with traffic lights, but acting at the level of the policies enforced to coordinate
+intersections [47], i.e., dynamically adapting in a coordinated way the parameters adopted in the
+different intersections, if not dynamically changing the coordination approach adopted in different
+intersections itself.
+
+3.7.2 Negotiation and Agreement. Negotiation and agreement approaches to traffic flow optimisa-
+tion at the level of individual vehicles can hardly apply, indeed we did not found any examples
+about in the literature. In fact, given the scale of the problem involving a large number of vehicles,
+elaborating solutions based on distributed negotiations and discussions amongst vehicles seems
+impractical and would likely require long delays before reaching a solution.
+
+   However, to overcome the problem, one can think at the possibility of selecting a subset of
+representative vehicles (e.g., elected as leader or randomly selected) in different regions of the
+Coordination of Autonomous Vehicles: Taxonomy and Survey  21
+
+road network. Such vehicles, each accounting for the needs of the region it represents, can then
+negotiate/agree with each other towards the identification of suitable actions aimed at overall
+traffic optimisation. A proposal of this kind is described in [97], where specialised software agents
+(not necessarily vehicles) are assigned portions of the road infrastructure and are put at negotiating
+with each other. Indeed, similar approaches to negotiations and agreements are common practice
+in cities in order define urban mobility plans: multiple stakeholders are typically involved in the
+decision process, such as representatives of residential neighbourhoods, managers of shopping
+centres, public transport managers, etc. The aim is to reach a common agreement about the goals
+and the strategies to enforce with the urban mobility plan.
+
+3.7.3 Emergent. Emergent approaches to traffic flow optimisation, although not making it possible
+to control the behaviour of individual vehicles, can guarantee the achievement of specific properties
+at the global, collective level. For this reason, in particular self-organised ones, can indeed by a
+viable solution for traffic flow optimisation at the urban scale.
+
+   Solutions in the literature mostly take inspiration from the natural world, and from the way
+the movement of individuals in systems can naturally self-distribute in an environment simply
+based on indirectly sensing the presence of other individuals. With this regard, in [21, 67], we
+have proposed vehicles spreading of virtual computational fields across the road networks, and
+their dynamic aggregation, so as to express sort of "density gradients". Vehicles can then move
+towards their destination trying to get the direction with decreasing intensity of such field, that
+is, by moving away from congested roads. Simulation results show that this enables improving
+the balance of the traffic over the road infrastructure, and the traffic flow consequently. A similar
+approach is proposed in [74] that takes instead inspiration from biology: virtual computational
+pheromones are deposited by vehicles as they travel. Such pheromones tend to repel other vehicles,
+with the results of limiting the concentration of vehicles and increasing distribution.
+
+   Besides the scenario of autonomous vehicles, it is also worth outlining that similar nature-inspired
+approaches have been proposed (e.g., in [49, 107]) as a means to properly orchestrate the schedule of
+traffic lights, and to orchestrate the movements of robots aimed at mapping and exploring complex
+environments [89].
+
+3.8 Summarising discussion
+
+Given the diversity of coordination problems we have overviewed and the different approaches that
+can be adopted to attack them, it is quite difficult to draw some ultimate conclusions about what
+approach better suits which problem. Nevertheless, some generals considerations can be made:
+
+    · Centralised approaches offer the best guarantees in terms of safety and liveness, thanks
+       to the strict control over the actions of individual vehicles. Also, they make it possible for
+       e.g., urban traffic managers or managers of vehicles' fleets, to impose their own policies
+       on traffic behaviour. However, for large-scale problems (i.e., traffic flow optimisation or
+       parking allocation at the urban scale), centralised approachess may fall short, as the duty of
+       controlling individual vehicles can become overwhelming (other than less relevant). As an
+       additional drawback of centralised approaches, they leave no room to vehicles for personalis-
+       ing the driving experience, whether it's due to the contingent need for a vehicle to cross an
+       intersection quickly, or to find a parking in a specific zone, or to catch a timely ride.
+
+    · Decentralised negotiation approaches, by enabling agents to express their needs and by having
+       the coordination process account for them, can help somehow accommodating individual
+       needs, but at risk of losing fair treatment of all vehicles during the coordination process, to the
+       point of failing in liveness (e.g., inducing starvation of vehicles). From the safety viewpoint,
+22  Mariani, Cabri, Zambonelli
+
+       it can be ensured by a properly designed negotiation protocol and the strict adherence of
+       vehicles to it.
+    · Agreement appears promising in solving conflicts between vehicles, in finding suitable
+       coordination schemes between them (e.g., at intersections or at the more global urban level),
+       and even at better evaluating conditions which may be critical for safety [40]. However,
+       such approaches are definitely the less explored ones in the literature, probably because
+       argumentation theory so far is well-studied from a theoretical standpoint in areas such as
+       sociology and multi-agent systems, but still lacks effective practical development frameworks
+       and software engineering methods.
+    · Emergent approaches appear not suitable for those coordination problems where there is the
+       need of guaranteeing accurate and predictable behaviour at the level of individual vehicles,
+       such as in crossing intersections or in ramp merging. They can be more properly applied
+       when the overall global-scale behaviour of the system, rather that of individual vehicles, is the
+       key focus of the coordination problem. This is the case of traffic flow optimisation, or parking
+       (if looked at from the perspective of traffic managers) or even ride sharing. An exception to
+       this rule concerns vehicles' platooning, where emergent self-organising solutions assimilable
+       to those expressed in social animals (and already extensively applied to swarms of UAVs) are
+       indeed applied.
+
+In any case, to give more solid ground to the above general considerations, and to make it possible to
+define more specific guidelines, more studies are necessary. In particular, there is need of systematic,
+comparative, and quantitative analysis of the dependability (safety and liveness) and performances
+(quality measures) of the different coordination approaches applied to the different coordination
+problems in a variety of different traffic conditions.
+
+   With this regard, we emphasise that the scientific literature on concurrency control, distributed
+systems, social systems, and multi-agent systems has plenty of solutions and prior experience to
+share. For instance, negotiation-based coordination approaches have been extensively studied in
+multi-agent systems literature, likewise agreement and emergent ones in the area of complex and
+social systems.
+
+4 HORIZONTAL CHALLENGES
+
+Let us now introduce some "horizontal" challenges related to the coordination of autonomous
+vehicles, i.e., general issues that apply to all the problems and approaches discussed so far. The
+coordination approaches that we have discussed can be hardly realised and deployed in the real-
+world in a dependable and acceptable way without also identifying suitable solutions to these
+additional challenges
+
+4.1 Dynamic switching of coordination scheme
+
+In previous section, for the different coordination problems, we have presented different approaches
+based on a different degree of autonomy left to vehicles. However, a single solution can hardly
+handle all possible situations that can occur.
+
+   For instance, in the case of intersection management, a solution based on direct negotiation or
+argumentation between vehicles can be very effective in low traffic situations, when the number of
+vehicles involved in such negotiations is quite low, thus a collective outcome can be reached quickly.
+Instead, in the case of congested traffic situations, with a large number of vehicles involved, reaching
+a shared agreement can be harder and induce notable overhead and delay in communications. Also,
+in the case of auctions, it can induce inflationary effects on the bids. Hence, in these situations, it
+would be better to rely on a more centralised solution based on an intersection manager [23]. Or, as
+Coordination of Autonomous Vehicles: Taxonomy and Survey  23
+
+discussed in [47] it can be necessary for different intersections to dynamically adapt the coordination
+approach in order to support traffic flow optimisation. As another example, a centralised parking
+scheme that works well let the city governance control the distribution of parked vehicles, may fall
+short in the presence of a high-number of vehicles, by inducing notable delays in parking. In this
+case it is better to switch to an approach that lets individual vehicles negotiate for parking slots
+according to their own preferences [31].
+
+   The above issue suggests the need to dynamically switch from one type of coordination solution
+to another, upon changing conditions. This implies dynamically varying the level of autonomy of
+vehicles: for instance, in heavy-traffic conditions, an intersection manager could be instantiated
+reclaiming autonomy of decisions from vehicles and taking charge of decisions itself.
+
+   In the area of robotics and multi-agent systems the theme of "coordination with adjustable
+autonomy" [71] (sometimes referred to as "flexible autonomy", also [44]) has been extensively
+discussed, either referring to the fact that, at times, a human actor may wish to reclaim autonomy
+in decisions from agents or robots to take care of decisions herself [87], or to the fact that (as in
+our scenario) specific conditions may require to dynamic switch coordination scheme [96]. In the
+real world, and in the context of safety-critical situations such as the coordination of autonomous
+vehicles, though, designing and realising such dynamic switch can be conceptually and technically
+very hard: who decides when to switch? How can a group of cars agree on the if and when of
+switching? Who takes care of coordinating the switching act? Who instantiates/activates the
+additional components (e.g., a traffic intersection manager)? We do not have solutions ready to use,
+but certainly the vast amount of literature on adjustable autonomy can suggest useful research
+directions [71].
+
+4.2 Coordination at the "System of Systems" level
+
+In previous section, we addressed the issue of coordination mostly at the level of individual systems
+(a single intersection, a single entering lane, or the cars of a single car sharing company), and
+discussed how such problems can be dealt with in isolation. However, thinking at a more global
+level, it is clear that the coordination actions in one system may impact on other systems. That is,
+coordination issues arise also at the level of "systems of systems". For example, we all know that
+queues at an intersection can induce queues at nearby intersections, or that similarly a slow down
+in a motorway due to an intense flux of traffic in an entering lane can quickly propagate backwards
+to impact previous entering lanes. As other examples, when a car or ride sharing company starts
+having problems in satisfying all requests, this may impact on the requests arriving at competing
+companies, suggesting inter-company coordination and agreement in serving request peaks.
+
+   To add further complexity, one should also think that municipalities (as discussed in Subsec-
+tion 3.7) might wish to impose specific policies over traffic management, for instance to reduce
+overall pollution and/or noise, or to avoid excessive crowding in specific parts of a city. Similarly,
+motorway managers may wish to impose limitations on the flux of entering vehicles to avoid
+over-crowding and slowing down.
+
+   Both the inter-related effects of individual coordination acts and the need to respect global level
+policies will necessarily imply that the solutions and the policies adopted to solve an individual
+coordination problem cannot be designed without accounting for the systemic impact of such
+solutions and policies. Or, in other words, that the level of individual coordination must be coupled
+with a meta co-coordination level, in which an agreement at the global level is reached on how to
+act (i.e., according to which policies and constraints) at the local level. In the area of autonomous
+vehicles, a few work exist that handles such systemic problems. For instance, in [98], it is analysed
+how global coordination of intersections can be achieved by trying to affect, at the local level, the
+choices of individual vehicles. A similar analysis is presented in [47]. In different fields (logistics,
+24  Mariani, Cabri, Zambonelli
+
+energy management, teamwork, robotics, and multi-agent systems) a variety of mechanisms have
+been proposed for coordination in large-scale systems of systems (e.g., hierarchical mechanisms,
+market-based, self-organising) [77, 91]. Such mechanisms can be a source of inspiration for the
+field of autonomous vehicles as well.
+
+4.3 Ethics of coordination acts
+
+The safety-critical nature of autonomous vehicles implies the necessity of devising solutions to
+handle unexpected situations. Indeed, all the presented coordination schemes consider dynamic
+context-aware decisions that account for unexpected situations and tune movements of vehicles
+accordingly, e.g., slowing down in the presence of pedestrians, halting to give road to an ambulance,
+or accounting for "byzantine" vehicles that gets temporarily disconnected and are unable to partic-
+ipate in the coordination process. However, in the presence of critical situations that can cause
+damage to cars and road infrastructures, or even injuries and death to passengers and pedestrians
+around, deciding how to act becomes not simply a problem of algorithmic nature, but a problem of
+ethical nature.
+
+   Concerning individual autonomous vehicles, the most representative examples of ethical deci-
+sions that they should face could be expressed as specific instantiations of the well-known trolley
+dilemma3 [39]. For example, consider an autonomous vehicle that abruptly finds in its trajectory
+a child, and has not enough time and space to stop the vehicle. The only alternative to save the
+child would be to turn the car and have it crash against a wall, thus killing its passenger(s). What
+should the vehicle do? Simply nothing, and kill the child, or deviate towards the wall killing the
+passenger(s)? What is the most ethical decision? Besides the fact that, as a passenger, I would hardly
+accept to ride a vehicle that can decide to deliberately kill myself, programming the behaviour of
+autonomous vehicles to handle such situations requires a shared code of ethics, backed up by a
+proper regulatory framework dictating the responsibilities shared by manufacturers, programmers,
+passengers, owners, etc. Unfortunately, legislation comprehensively ruling autonomous vehicles
+is yet to be defined, and this is further complicated by the fact that no universally shared code of
+ethics can be defined to handle such situations (as from the recent "moral machine experiment" [8]).
+
+   In the case of coordinating autonomous vehicles, a variety of different instances of the trolley
+dilemma can be conceived, i.e., a variety of critical situations that can occur during the process of
+coordination. Most of these can be expressed in terms of cars that are in collision with each other,
+with the need of deciding which one must deviate from the planned trajectory towards an unsafe
+one, or in terms of groups of cars that finds themselves in a position to cause damage or injury,
+and have to decide who will take actual responsibility for this. The additional complexity that
+these types of critical decisions express over the simpler single vehicle case arises from the need of
+agreeing on a common ethical choice amongst different vehicles, and from the fact that different
+vehicles (e.g., coming from different nations) may have different ethical guidelines embedded.
+
+4.4 Road neutrality and traffic democracy
+
+Another problem that might emerge in future scenarios of autonomous vehicles concerns usage
+of traffic infrastructures and of mobility services, and this can be again a sort of ethical, or better
+"democracy" problem. As of today, while driving, we are already used to pay for the usage of
+infrastructures, such as parking slots, bridges, motorways. Similarly, we pay for mobility services
+
+3The trolley dilemma is expressed as follows: a trolley is advancing on a railway and is going to kill three persons that are
+in its trajectory. You are seeing the scene, by a rail switch, and are in a position to operate the switch so as to deviate the
+trolley towards a direction where it would kill a single person. What should you do? Nothing, and let three people die. Or
+switch, thus saving three people but making yourself directly responsible of the death of the other persons that would have
+otherwise survived?
+Coordination of Autonomous Vehicles: Taxonomy and Survey  25
+
+such as buses and taxis. Common characteristics of all of these cases are that (a) the payments are
+based on fixed, known, and universal fees; (b) the service received is neutral.
+
+   With regard to the former point, whether I drive my car on Saturday night or on a busy Tuesday
+morning, I will always pay the same known fee on the Milano-Venice motorway. Also, I will pay
+the same fee whether I drive a Ferrari or a small city car. Mobility services can have different fees at
+different hours and day, but again based on public and clear fee schemes. With regard to the latter
+point, whether I have a Ferrari or a city car, I will receive exactly the same quality of service from
+a parking slot, or while driving on a motorway, and there is no way for a richer person to have
+a better service by paying more. That is, the use of mobility services and infrastructures express
+neutrality over the users. With the advent of autonomous and coordinating vehicles, things can
+dramatically change.
+
+   If vehicles can dynamically request the usage of infrastructures and pay it automatically, it
+may become possible for the manager of such infrastructures to impose dynamic pricing mech-
+anisms [24], based on the current demand load. Something similar is already happening with
+regard to mobility services (consider, e.g., the dynamic pricing mechanisms of Uber and of airlines
+companies), but at least we are always given a choice to accept the proposed price before buying
+the services. Applying such dynamic schemes to cars that are moving around implies that a vehicle,
+while starting its ride, may have no a priori idea on how much it will eventually cost [19]. Also, one
+can consider that the possibility for cars to dynamically pay while on-transit, and to dynamically
+track exactly which infrastructure a vehicle is using, opens up the way for imposing fees on the
+usage of infrastructures other than parking slots and motorways. For instance, as in the already
+presented auction-based approaches to intersection management, it could become possible to
+impose payments for crossing busy intersections, with fees varying in dependence of traffic and
+time-to-wait, or for using a specific lane in motorways with fees depending on the average speed
+on that lane.
+
+   The mechanisms of dynamic payment, could also enable a model in which passengers can decide
+to pay more to get better services, breaking the current neutrality of road infrastructures. Consider
+the mechanisms of crossing intersections based on virtual auctions that we have introduced in
+Section 3. In the future, such mechanisms could become based on a real auction with real money,
+with the consequence that richer vehicles will always bid higher and buy priority in crossing the
+intersection, while poorer vehicles will risk starvation. Similar issues can arise in motorways w.r.t.
+priority lanes.
+
+   The above issues are not of an algorithmic or technical nature, but calls for the definition of
+suitable regulations to avoid mobility becoming a privilege.
+
+4.5 Mixing human drivers and autonomous cars
+
+Most of the considerations we have made so far in this paper assumed that all the cars involved in
+coordination are of a fully autonomous nature, or at least that (during the coordination act) they
+act and interact autonomously with each other without human intervention. Such assumption can
+match a not-so-near future when we can expect that human-driven cars will no longer exist or
+when, for safety and efficiency reasons, it will be forbidden for humans to drive but in specific
+controlled situations (the same as today, for instance, it is forbidden to ride a horse in motorways
+and high-speed roads). However, there will be a rather long transition phase in which our streets
+will be populated by a mixture of fully autonomous cars, partially autonomous ones, and traditional
+human-driven cars. Such a scenario clearly challenges the possibility of relying on the surveyed
+coordination schemes, unless one devises out dependable means to involve human-driven cars
+(that is, their human drivers) in the process of coordination.
+26  Mariani, Cabri, Zambonelli
+
+   In the area of robotics and autonomous systems, the issue of coordinating mixed teams of
+robots and humans has been extensively analysed, and many possible means of interactions have
+been devised, e.g., for motion planning and task partitioning in rescue or war operations [45, 92].
+These scenarios have several characteristics in common with vehicle coordination, but assume the
+existence of means for robots and humans to communicate with each other. In a vehicle coordination
+scenario, this would imply human-driven cars to be necessarily equipped with suitable hardware to
+send/receive information to/from nearby cars and road infrastructure, and the presence of friendly
+interfaces (e.g., based on natural language, wearables, augmented reality, and/or properly modified
+infrastructural traffic lights [34]) for humans to receive information while driving. Fortunately,
+such features can be easily integrated in existing cars, and are cheap enough that we can expect to
+become legally compulsory.
+
+   Concerning the coordination schemes to be applied in a group of mixed human-driven and
+autonomous vehicles, these can be designed according to the solutions discussed in Section 3,
+properly modified and tuned to account for the possible inaccuracy of actions by human-driven
+cars. For instance, a human-driven car should not be asked to cross an intersection with one
+centimetre accuracy in position and a millisecond accuracy in time. In any case, amongst the many
+surveyed schemes, those based on argumentation [62] appear the most natural ones for humans to
+be involved in, given their dialogical nature.
+
+   The issue of mixing human-driven and fully autonomous cars, though, is a very complex one,
+and would require a full survey on its own.
+
+5 CONCLUSIONS
+
+For autonomous vehicles to start circulating in our streets and cities, it will be necessary to identify
+solutions for coordinating their relative movements in order to let them circulate safely and without
+conflicts and crashes. In this article, we firstly introduced a taxonomy for the different classes
+of coordination problems of autonomous vehicles, and overviewed the individual coordination
+problems according to their classes. Then we tried to frame the key solutions that can be identified
+for such coordination problems, showing that the distinguishing characteristics of the different
+solutions concern the level of autonomy in decision making assigned to vehicles during the
+coordination process.
+
+   Although there are still many open challenges to address before autonomous vehicles can safely
+hit the road, we hope our attempt at framing some key concepts and potential solutions can help
+the research in this area, one that promises to be a flourishing source of plenty of challenging and
+fascinating research problems to face.
+
+ACKNOWLEDGMENTS
+
+The authors would like to thank the Italian MIUR PRIN 2017 Project "Fluidware" for supporting
+this work.
+
+REFERENCES
+
+  [1] Dhaminda B. Abeywickrama, Marco Mamei, and Franco Zambonelli. 2018. Engineering Collectives of Self-driving
+       Vehicles: The SOTA Approach. In Leveraging Applications of Formal Methods, Verification and Validation. Distributed
+        Systems - 8th International Symposium, ISoLA 2018, Limassol, Cyprus, November 5-9, 2018, Proceedings, Part III (Lecture
+        Notes in Computer Science), Vol. 11246. Springer, 79­93.
+
+  [2] Ludovica Adacher, Adriano Gemma, and Gabriele Oliva. 2014. Decentralized Spatial Decomposition for Traffic Signal
+        Synchronization. Transportation Research Procedia 3 (2014), 992 ­ 1001. https://doi.org/10.1016/j.trpro.2014.10.079
+       17th Meeting of the EURO Working Group on Transportation, EWGT2014, 2-4 July 2014, Sevilla, Spain.
+
+  [3] N. Agatz, A. Erera, M. Savelsbergh, and X. Wang. 2012. Optimization for dynamic ride-sharing: A review. European
+        Journal of Operational Research 223, 2 (2012), 295­303. https://doi.org/10.1016/j.ejor.2012.05.028
+Coordination of Autonomous Vehicles: Taxonomy and Survey  27
+
+ [4] Bruno Rafael Alves, Gleifer Vaz Alves, André Pinz Borges, and Paulo Leitão. 2019. Experimentation of Negotiation
+      Protocols for Consensus Problems in Smart Parking Systems. In International Conference on Industrial Applications of
+      Holonic and Multi-Agent Systems. Springer, 189­202.
+
+ [5] H. M. Amar and O. A. Basir. 2018. A Bargaining-Based Solution to the Team Mobility Planning Game. IEEE Transactions
+      on Intelligent Transportation Systems 19, 3 (March 2018), 854­867. https://doi.org/10.1109/TITS.2017.2704418
+
+ [6] M. Amoozadeh, H. Deng, C.-N. Chuah, H.M. Zhang, and D. Ghosal. 2015. Platoon management with cooperative
+      adaptive cruise control enabled by VANET. Vehicular Communications 2, 2 (2015), 110­123. https://doi.org/10.1016/j.
+      vehcom.2015.03.004
+
+ [7] S. Aoki and R. Rajkumar. 2017. A Merging Protocol for Self-Driving Vehicles. In 2017 ACM/IEEE 8th International
+      Conference on Cyber-Physical Systems (ICCPS). IEEE, 219­228.
+
+ [8] Edmond Awad, Sohan Dsouza, Richard Kim, Jonathan Schulz, Joseph Henrich, Azim Shariff, Jean-François Bonnefon,
+      and Iyad Rahwan. 2018. The Moral Machine experiment. Nature 563, 7729 (2018), 59.
+
+ [9] T. Awal, L. Kulik, and K. Ramamohanrao. 2013. Optimal traffic merging strategy for communication- and sensor-
+      enabled vehicles. In 16th International IEEE Conference on Intelligent Transportation Systems (ITSC 2013). IEEE,
+      1468­1474. https://doi.org/10.1109/ITSC.2013.6728437
+
+[10] D. Ayala, O. Wolfson, B. Xu, B. Dasgupta, and J. Lin. 2011. Parking slot assignment games. In 19th ACM SIGSPATIAL
+      International Conference on Advances in Geographic Information Systems. ACM, 299­308. https://doi.org/10.1145/
+      2093973.2094014
+
+[11] D. Ayala, O. Wolfson, B. Xu, B. DasGupta, and J. Lin. 2012. Pricing of parking for congestion reduction. In 20th
+      International Conference on Advances in Geographic Information Systems. ACM, 43­51. https://doi.org/10.1145/2424321.
+      2424328
+
+[12] Flavien Balbo, Neïla Bhouri, and Suzanne Pinson. 2016. Bimodal traffic regulation system: A multi-agent approach.
+      Web Intelligence 14, 2 (2016), 139­151. https://doi.org/10.3233/WEB-160336
+
+[13] D. Banerjee and B. Srivastava. 2015. Promoting Carpooling with Distributed Schedule Coordination and Incentive
+      Alignment of Contacts. In IEEE Conference on Intelligent Transportation Systems, Proceedings, ITSC, Vol. 2015-October.
+      IEEE, 1837­1842. https://doi.org/10.1109/ITSC.2015.298
+
+[14] D. P. Bertsekas. 1988. The auction algorithm: A distributed relaxation method for the assignment problem. Annals of
+      Operations Research 14, 1 (01 Dec 1988), 105­123. https://doi.org/10.1007/BF02186476
+
+[15] Nicola Bicocchi, Marco Mamei, Andrea Sassi, and Franco Zambonelli. 2017. On Recommending Opportunistic Rides.
+      IEEE Trans. Intelligent Transportation Systems 18, 12 (2017), 3328­3338. https://doi.org/10.1109/TITS.2017.2684625
+
+[16] Holger Billhardt, Alberto Fernández, Marin Lujak, Sascha Ossowski, Vicente Julián, Juan F. De Paz, and Josefa Z.
+      Hernández. 2016. Towards Smart Open Dynamic Fleets. In Multi-Agent Systems and Agreement Technologies, Michael
+      Rovatsos, George Vouros, and Vicente Julian (Eds.). Springer International Publishing, Cham, 410­424.
+
+[17] Keshav Bimbraw. 2015. Autonomous cars: Past, present and future a review of the developments in the last century,
+      the present scenario and the expected future of autonomous vehicle technology. In Informatics in Control, Automation
+      and Robotics (ICINCO), 2015 12th International Conference on, Vol. 1. IEEE, IEEE, 191­198.
+
+[18] J.L. Boehlé, L.J.M. Rothkrantz, and Michiel van Wezel. 2008. CBPRS: A City Based Parking and Routing System. ERIM
+      Report Series Research in Management ERS-2008-029-LIS. Erasmus Research Institute of Management (ERIM), ERIM
+      is the joint research institute of the Rotterdam School of Management, Erasmus University and the Erasmus School
+      of Economics (ESE) at Erasmus University Rotterdam. https://EconPapers.repec.org/RePEc:ems:eureri:12467
+
+[19] Daniel A Brent and Austin Gross. 2018. Dynamic road pricing and the value of time and reliability. Journal of Regional
+      Science 58, 2 (2018), 330­349.
+
+[20] Giacomo Cabri, Luca Gherardini, and Manuela Montangero. 2019. Auction-based Crossings Management. In Proceed-
+      ings of the 5th EAI International Conference on Smart Objects and Technologies for Social Good (GoodTechs '19). ACM,
+      New York, NY, USA, 183­188. https://doi.org/10.1145/3342428.3342689
+
+[21] Marco Camurri, Marco Mamei, and Franco Zambonelli. 2006. Urban Traffic Control with Co-Fields. In Environments
+      for Multi-Agent Systems III, Third International Workshop, E4MAS 2006, Hakodate, Japan, May 8, 2006, Selected Revised
+      and Invited Papers. Lecture Notes in Computer Science, Vol. 4389. Springer, 239­253.
+
+[22] Wenjing Cao, Masakazu Mukai, Taketoshi Kawabe, Hikaru Nishira, and Noriaki Fujiki. 2015. Cooperative vehicle
+      path generation during merging using model predictive control with real-time optimization. Control Engineering
+      Practice 34 (2015), 98 ­ 105. https://doi.org/10.1016/j.conengprac.2014.10.005
+
+[23] Dustin Carlino, Stephen D Boyles, and Peter Stone. 2013. Auction-based autonomous intersection management. In
+      Intelligent Transportation Systems-(ITSC), 2013 16th International IEEE Conference on. IEEE, IEEE, 529­534.
+
+[24] Ningyuan Chen and Guillermo Gallego. 2018. Welfare Analysis of Dynamic Pricing. Management Science 65, 1 (2018).
+[25] Shuo-Yan Chou, Shih-Wei Lin, and Chien-Chang Li. 2008. Dynamic parking negotiation and guidance using an agent-
+
+      based platform. Expert Systems with Applications 35, 3 (2008), 805 ­ 817. https://doi.org/10.1016/j.eswa.2007.07.042
+28  Mariani, Cabri, Zambonelli
+
+[26] Giovanni Ciatto, Stefano Mariani, Andrea Omicini, Franco Zambonelli, and Maxime Louvel. 2018. Twenty Years of
+      Coordination Technologies: State-of-the-Art and Perspectives. In Coordination Models and Languages, Giovanna
+      Di Marzo Serugendo and Michele Loreti (Eds.). Lecture Notes in Computer Science, Vol. 10852. Springer, 51­80.
+      https://doi.org/10.1007/978-3-319-92408-3_3
+
+[27] M. G. C. A. Cimino, A. Lazzeri, and G. Vaglini. 2015. Combining stigmergic and flocking behaviors to coordinate
+      swarms of drones performing target search. In 2015 6th International Conference on Information, Intelligence, Systems
+      and Applications (IISA). IEEE, 1­6. https://doi.org/10.1109/IISA.2015.7387990
+
+[28] E. G. Coffman, M. Elphick, and A. Shoshani. 1971. System Deadlocks. ACM Comput. Surv. 3, 2 (June 1971), 67­78.
+      https://doi.org/10.1145/356586.356588
+
+[29] Riccardo Coppola and Maurizio Morisio. 2016. Connected car: technologies, issues, future trends. ACM Computing
+      Surveys (CSUR) 49, 3 (2016), 46.
+
+[30] T. Dao, C. M. Clark, and J. P. Huissoon. 2008. Distributed platoon assignment and lane selection for traffic flow
+      optimization. In 2008 IEEE Intelligent Vehicles Symposium. IEEE, 739­744. https://doi.org/10.1109/IVS.2008.4621202
+
+[31] Claudia Di Napoli, Dario Di Nocera, and Silvia Rossi. 2014. Agent Negotiation for Different Needs in Smart Parking
+      Allocation. In Advances in Practical Applications of Heterogeneous Multi-Agent Systems. The PAAMS Collection, Yves
+      Demazeau, Franco Zambonelli, Juan M. Corchado, and Javier Bajo (Eds.). Springer International Publishing, Cham,
+      98­109.
+
+[32] Edsger W. Dijkstra. 2002. Cooperating Sequential Processes. Springer, New York, NY, 65­138. https://doi.org/10.1007/
+      978-1-4757-3472-0_2
+
+[33] Marco Dorigo and Thomas Stützle. 2019. Ant Colony Optimization: Overview and Recent Advances. Springer
+      International Publishing, Cham, 311­351. https://doi.org/10.1007/978-3-319-91086-4_10
+
+[34] Kurt Dresner and Peter Stone. 2007. Sharing the road: autonomous vehicles meet human drivers. In Proceedings of the
+      20th international joint conference on Artifical intelligence. Morgan Kaufmann Publishers Inc., 1263­1268.
+
+[35] K. Dresner and P. Stone. 2008. A multiagent approach to autonomous intersection management. Journal of Artificial
+      Intelligence Research 31 (2008), 591­656.
+
+[36] S. El-Tantawy, B. Abdulhai, and H. Abdelgawad. 2013. Multiagent Reinforcement Learning for Integrated Network
+      of Adaptive Traffic Signal Controllers (MARLIN-ATSC): Methodology and Large-Scale Application on Downtown
+      Toronto. IEEE Transactions on Intelligent Transportation Systems 14, 3 (Sep. 2013), 1140­1150. https://doi.org/10.1109/
+      TITS.2013.2255286
+
+[37] C. Englund, L. Chen, J. Ploeg, E. Semsar-Kazerooni, A. Voronov, H. H. Bengtsson, and J. Didoff. 2016. The Grand
+      Cooperative Driving Challenge 2016: boosting the introduction of cooperative automated vehicles. IEEE Wireless
+      Communications 23, 4 (August 2016), 146­152. https://doi.org/10.1109/MWC.2016.7553038
+
+[38] Daniel J Fagnant and Kara Kockelman. 2015. Preparing a nation for autonomous vehicles: opportunities, barriers and
+      policy recommendations. Transportation Research Part A: Policy and Practice 77 (2015), 167­181.
+
+[39] P. Foote. 1978. The problem of abortion and the doctrine of the double effect in virtues and vices.
+[40] Lex Fridman, Li Ding, Benedikt Jenik, and Bryan Reimer. 2017. Arguing Machines: Human Supervision of Black Box
+
+      AI Systems That Make Life-Critical Decisions. arXiv:cs.AI/1710.04459
+[41] M. Furuhata, M. Dessouky, F. Ordóñez, M.-E. Brunet, X. Wang, and S. Koenig. 2013. Ridesharing: The state-of-the-art
+
+      and future directions. Transportation Research Part B: Methodological 57 (2013), 28­46. https://doi.org/10.1016/j.trb.
+      2013.08.012
+[42] David Gelernter and Nicholas Carriero. 1992. Coordination Languages and Their Significance. Commun. ACM 35, 2
+      (1992), 96­107. https://doi.org/10.1145/129630.376083
+[43] Y. Geng and C.G. Cassandras. 2013. New 'smart parking' system based on resource allocation and reservations. IEEE
+      Transactions on Intelligent Transportation Systems 14, 3 (2013), 1129­1139. https://doi.org/10.1109/TITS.2013.2252428
+[44] Christian Gerber, J Siekmann, and Gero Vierke. 1999. Flexible autonomy in holonic agent systems. In Proceedings of
+      the 1999 AAAI Spring Symposium on Agents with Adjustable Autonomy. AAAI.
+[45] Michael A Goodrich, Alan C Schultz, et al. 2008. Human­robot interaction: a survey. Foundations and Trends® in
+      Human­Computer Interaction 1, 3 (2008), 203­275.
+[46] Mingyang HAO and Toshiyuki YAMAMOTO. 2018. Shared Autonomous Vehicles: A Review Considering Car Sharing
+      and Autonomous Vehicles. Asian Transport Studies 5, 1 (2018), 47­63.
+[47] Matthew Hausknecht, Tsz-Chiu Au, and Peter Stone. 2011. Autonomous intersection management: Multi-intersection
+      optimization. In 2011 IEEE/RSJ International Conference on Intelligent Robots and Systems. IEEE, IEEE, 4581­4586.
+[48] Wesam Mohamed Herbawi and Michael Weber. 2012. A Genetic and Insertion Heuristic Algorithm for Solving the
+      Dynamic Ridematching Problem with Time Windows. In Proceedings of the 14th Annual Conference on Genetic and
+      Evolutionary Computation (GECCO '12). ACM, New York, NY, USA, 385­392. https://doi.org/10.1145/2330163.2330219
+[49] Mun Chon Ho, Joanne Mun-Yee Lim, Kian Lun Soon, and Chun Yong Chong. 2019. An improved pheromone-based
+      vehicle rerouting system to reduce traffic congestion. Applied Soft Computing 84 (2019), 105702.
+Coordination of Autonomous Vehicles: Taxonomy and Survey  29
+
+[50] C. A. R. Hoare. 1978. Communicating Sequential Processes. Commun. ACM 21, 8 (Aug. 1978), 666­677. https:
+      //doi.org/10.1145/359576.359585
+
+[51] Nicklas Hoch, Henry-Paul Bensler, Dhaminda B. Abeywickrama, Tomás Bures, and Ugo Montanari. 2015. The
+      E-mobility Case Study. In Software Engineering for Collective Autonomic Systems - The ASCENS Approach. Springer,
+      513­533.
+
+[52] Hongwei Wang and Wenbo He. 2011. A Reservation-based Smart Parking System. In 2011 IEEE Conference on Computer
+      Communications Workshops (INFOCOM WKSHPS). IEEE, 690­695. https://doi.org/10.1109/INFCOMW.2011.5928901
+
+[53] Iftikhar Hussain, Luk Knapen, Ansar-Ul-Haque Yasar, Tom Bellemans, Davy Janssens, and Geert Wets. 2016. Negotia-
+      tion and Coordination in Carpooling: Agent-Based Simulation Model. Transportation Research Record 2542, 1 (2016),
+      92­101. https://doi.org/10.3141/2542-11
+
+[54] SAE International. 2018. Taxonomy and Definitions for Terms Related to Driving Automation Systems for On-Road
+      Motor Vehicles.
+
+[55] Zhanlin Ji, Ivan Ganchev, Mairtin O. Droma, Li Zhao, and Xueji Zhang. 2014. A Cloud-Based Car Parking Middleware
+      for IoT-Based Smart Cities: Design and Implementation. Sensors 14, 12 (2014), 22372­22393. https://doi.org/10.3390/
+      s141222372
+
+[56] D. Jia, K. Lu, J. Wang, X. Zhang, and X. Shen. 2016. A Survey on Platoon-Based Vehicular Cyber-Physical Systems. IEEE
+      Communications Surveys Tutorials 18, 1 (Firstquarter 2016), 263­284. https://doi.org/10.1109/COMST.2015.2410831
+
+[57] Alexander Kleiner, Bernhard Nebel, and Vittorio Amos Ziparo. 2011. A mechanism for dynamic ride sharing based
+      on parallel auctions. In Twenty-Second International Joint Conference on Artificial Intelligence. AAAI Press.
+
+[58] H. Kowshik, D. Caveney, and P.R. Kumar. 2011. Provable systemwide safety in intelligent intersections. IEEE
+      Transactions on Vehicular Technology 60, 3 (2011), 804­818. https://doi.org/10.1109/TVT.2011.2107584
+
+[59] J. Lee and B. Park. 2012. Development and Evaluation of a Cooperative Vehicle Intersection Control Algorithm Under
+      the Connected Vehicles Environment. IEEE Transactions on Intelligent Transportation Systems 13, 1 (March 2012),
+      81­90. https://doi.org/10.1109/TITS.2011.2178836
+
+[60] T. Lin, H. Rivano, and F. Le Mouël. 2017. A Survey of Smart Parking Solutions. IEEE Transactions on Intelligent
+      Transportation Systems 18, 12 (Dec 2017), 3229­3253. https://doi.org/10.1109/TITS.2017.2685143
+
+[61] M. Lippi, M. Bertini, and P. Frasconi. 2013. Short-Term Traffic Flow Forecasting: An Experimental Comparison of
+      Time-Series Analysis and Supervised Learning. IEEE Transactions on Intelligent Transportation Systems 14, 2 (June
+      2013), 871­882. https://doi.org/10.1109/TITS.2013.2247040
+
+[62] M. Lippi, M. Mamei, S. Mariani, and F. Zambonelli. 2018. An Argumentation-Based Perspective Over the Social IoT.
+      IEEE Internet of Things Journal 5, 4 (Aug 2018), 2537­2547. https://doi.org/10.1109/JIOT.2017.2775047
+
+[63] Fernando Lopes, Michael Wooldridge, and Augusto Q Novais. 2008. Negotiation among autonomous computational
+      agents: principles, analysis and challenges. Artificial Intelligence Review 29, 1 (2008), 1­44.
+
+[64] Rajiv T Maheswaran, Milind Tambe, Emma Bowring, Jonathan P Pearce, and Pradeep Varakantham. 2004. Taking
+      DCOP to the real world: Efficient complete solutions for distributed multi-event scheduling. In Proceedings of the
+      Third International Joint Conference on Autonomous Agents and Multiagent Systems-Volume 1. IEEE Computer Society,
+      310­317.
+
+[65] Thomas W. Malone and Kevin Crowston. 1994. The Interdisciplinary Study of Coordination. Comput. Surveys 26, 1
+      (1994), 87­119. https://doi.org/10.1145/174666.174668
+
+[66] Marco Mamei, Ronaldo Menezes, Robert Tolksdorf, and Franco Zambonelli. 2006. Case studies for self-organization
+      in computer science. Journal of Systems Architecture 52, 8-9 (2006), 443­460.
+
+[67] M. Mamei, F. Zambonelli, and L. Leonardi. 2003. Distributed motion coordination with Co-Fields: a case study in
+      urban traffic management. In The Sixth International Symposium on Autonomous Decentralized Systems, 2003. ISADS
+      2003. IEEE, 63­70. https://doi.org/10.1109/ISADS.2003.1193933
+
+[68] R. Mandiau, A. Champion, J.-M. Auberlet, S. Espié, and C. Kolski. 2008. Behaviour based on decision matrices
+      for a coordination between agents in a urban traffic simulation. Applied Intelligence 28, 2 (2008), 121­138. https:
+      //doi.org/10.1007/s10489-007-0045-3
+
+[69] Nikhil Menon, Natalia Barbour, Yu Zhang, Abdul Rawoof Pinjari, and Fred Mannering. 2018. Shared autonomous vehi-
+      cles and their potential impacts on household vehicle ownership: An exploratory empirical assessment. International
+      Journal of Sustainable Transportation (2018), 1­12.
+
+[70] F. Michaud, P. Lepage, P. Frenette, D. Létourneau, and N. Gaubert. 2006. Coordinated maneuvering of automated
+      vehicles in platoons. IEEE Transactions on Intelligent Transportation Systems 7, 4 (2006), 437­446. https://doi.org/10.
+      1109/TITS.2006.883939
+
+[71] Salama A Mostafa, Mohd Sharifuddin Ahmad, and Aida Mustapha. 2017. Adjustable autonomy: a systematic literature
+      review. Artificial Intelligence Review (2017), 1­38.
+
+[72] Andrés Muñoz and Juan A Botía. 2010. Developing an intelligent parking management application based on multi-
+      agent systems and semantic web technologies. In International Conference on Hybrid Artificial Intelligence Systems.
+30  Mariani, Cabri, Zambonelli
+
+      Springer, 64­72.
+[73] David Myr. 2003. Real time vehicle guidance and traffic forecasting system. US Patent 6,615,130.
+[74] W. Narzt, U. Wilflingseder, G. Pomberger, D. Kolb, and H. Hortner. 2010. Self-organising congestion evasion strategies
+
+      using ant-based pheromones. IET Intelligent Transport Systems 4, 1 (March 2010), 93­102. https://doi.org/10.1049/iet-
+      its.2009.0022
+[75] Noam Nisan, Tim Roughgarden, Eva Tardos, and Vijay V Vazirani. 2007. Algorithmic game theory. Cambridge
+      university press.
+[76] Andrea Omicini and Mirko Viroli. 2011. Coordination Models and Languages: From Parallel Computing To
+      Self-Organisation. The Knowledge Engineering Review 26, 1 (March 2011), 53­59. https://doi.org/10.1017/
+      S026988891000041X
+[77] Andrea Omicini and Franco Zambonelli. 2016. Challenges of decentralized coordination in large-scale ubicomp
+      systems. In Proceedings of the 2016 ACM International Joint Conference on Pervasive and Ubiquitous Computing,
+      UbiComp Adjunct 2016, Heidelberg, Germany, September 12-16, 2016. ACM Press, 1315­1320.
+[78] H. Van Dyke Parunak, Sven Brueckner, and John Sauter. 2002. Digital Pheromone Mechanisms for Coordination of
+      Unmanned Vehicles. In 1st International Joint Conference on Autonomous Agents and Multiagent systems, Cristiano
+      Castelfranchi and W. Lewis Johnson (Eds.), Vol. 1. ACM, New York, NY, USA, 449­450.
+[79] E. Polycarpou, L. Lambrinos, and E. Protopapadakis. 2013. Smart parking solutions for urban areas. In 2013 IEEE
+      14th International Symposium on "A World of Wireless, Mobile and Multimedia Networks" (WoWMoM). IEEE. https:
+      //doi.org/10.1109/WoWMoM.2013.6583499
+[80] Iyad Rahwan, Sarvapali D Ramchurn, Nicholas R Jennings, Peter Mcburney, Simon Parsons, and Liz Sonenberg. 2003.
+      Argumentation-based negotiation. The Knowledge Engineering Review 18, 4 (2003), 343­375.
+[81] Bala Ramasamy and Arnold Gum. 2018. Systems and methods for coordinated lane-change negotiations between
+      vehicles. US Patent App. 10/089,876.
+[82] G Revathi and VR Sarma Dhulipala. 2012. Smart parking systems and sensors: A survey. In 2012 International
+      Conference on Computing, Communication and Applications. IEEE, 1­5.
+[83] J. Rios-Torres and A.A. Malikopoulos. 2017. Automated and Cooperative Vehicle Merging at Highway On-Ramps. IEEE
+      Transactions on Intelligent Transportation Systems 18, 4 (2017), 780­789. https://doi.org/10.1109/TITS.2016.2587582
+[84] J. Rios-Torres and A.A. Malikopoulos. 2017. A Survey on the Coordination of Connected and Automated Vehicles
+      at Intersections and Merging at Highway On-Ramps. IEEE Transactions on Intelligent Transportation Systems 18, 5
+      (2017), 1066­1077. https://doi.org/10.1109/TITS.2016.2600504
+[85] Thilo Röth, Michael Pielen, Klaus Wolff, and Thomas Lüdiger. 2018. Urban Vehicle Concepts for the Shared Mobility.
+      ATZ worldwide 120, 1 (01 Jan 2018), 18­23. https://doi.org/10.1007/s38311-017-0163-4
+[86] Andrea Sassi and Franco Zambonelli. 2014. Coordination Infrastructures for Future Smart Social Mobility Services.
+      IEEE Intelligent Systems 29, 5 (2014), 78­82. https://doi.org/10.1109/MIS.2014.81
+[87] Paul Scerri, David Pynadath, and Milind Tambe. 2001. Adjustable autonomy in real-world multi-agent environments.
+      In Proceedings of the fifth International conference on Autonomous agents. ACM Press, 300­307.
+[88] M. Seredynski and P. Bouvry. 2011. A survey of vehicular-based cooperative traffic information systems. In 2011 14th
+      International IEEE Conference on Intelligent Transportation Systems (ITSC). IEEE, 163­168. https://doi.org/10.1109/
+      ITSC.2011.6083055
+[89] Wei-Min Shen, Peter Will, Aram Galstyan, and Cheng-Ming Chuong. 2004. Hormone-inspired self-organization and
+      distributed control of robotic swarms. Autonomous Robots 17, 1 (2004), 93­105.
+[90] Mitja Stiglic, Niels Agatz, Martin Savelsbergh, and Mirko Gradisar. 2018. Enhancing urban mobility: Integrating
+      ride-sharing and public transit. Computers & Operations Research 90 (2018), 12­21.
+[91] Grahame Thompson. 1991. Markets, hierarchies and networks: the coordination of social life. Sage.
+[92] Sebastian Thrun. 2004. Toward a framework for human-robot interaction. Human-Computer Interaction 19, 1 (2004),
+      9­24.
+[93] John Toner and Yuhai Tu. 1998. Flocks, herds, and schools: A quantitative theory of flocking. Physical review E 58, 4
+      (1998), 4828.
+[94] O. K. Tonguz. 2018. Red light, green light--no light: Tomorrow's communicative cars could take turns at intersections.
+      IEEE Spectrum 55, 10 (Oct 2018), 24­29. https://doi.org/10.1109/MSPEC.2018.8482420
+[95] S. Tsugawa, S. Jeschke, and S. E. Shladover. 2016. A Review of Truck Platooning Projects for Energy Savings. IEEE
+      Transactions on Intelligent Vehicles 1, 1 (March 2016), 68­77. https://doi.org/10.1109/TIV.2016.2577499
+[96] Bob Van Der Vecht, Frank Dignum, John-Jules Ch Meyer, and Martijn Neef. 2008. A dynamic coordination mechanism
+      using adjustable autonomy. In Coordination, Organizations, Institutions, and Norms in Agent Systems III, LNAI 4870.
+      Springer, 83­96.
+[97] Matteo Vasirani and Sascha Ossowski. 2011. An artificial market for efficient allocation of road transport networks.
+      In German Conference on Multiagent System Technologies. Springer, 189­196.
+Coordination of Autonomous Vehicles: Taxonomy and Survey  31
+
+ [98] Matteo Vasirani and Sascha Ossowski. 2012. A Market-inspired Approach for Intersection Management in Urban
+       Road Traffic Networks. J. Artif. Int. Res. 43, 1 (Jan. 2012), 621­659.
+
+ [99] Eleni I Vlahogianni, Matthew G Karlaftis, and John C Golias. 2014. Short-term traffic forecasting: Where we are and
+       where we are going. Transportation Research Part C: Emerging Technologies 43 (2014), 3­19.
+
+[100] Huan Vu, Samir Aknine, and Sarvapali D Ramchurn. 2018. A Decentralised Approach to Intersection Traffic
+       Management.. In IJCAI. AAAI Press, 527­533.
+
+[101] T. Wongpiromsarn, T. Uthaicharoenpong, Y. Wang, E. Frazzoli, and D. Wang. 2012. Distributed traffic signal control
+       for maximum network throughput. In 2012 15th International IEEE Conference on Intelligent Transportation Systems.
+       IEEE, 588­595. https://doi.org/10.1109/ITSC.2012.6338817
+
+[102] W. Wu, J. Zhang, A. Luo, and J. Cao. 2015. Distributed mutual exclusion algorithms for intersection traffic control.
+       IEEE Transactions on Parallel and Distributed Systems 26, 1 (2015), 65­74. https://doi.org/10.1109/TPDS.2013.2297097
+
+[103] Y. Wu, Z. Zhang, J. Yuan, Q. Ma, and L. Gao. 2016. Sequential game solution for lane-merging conflict between
+       autonomous vehicles. In 2016 IEEE 19th International Conference on Intelligent Transportation Systems (ITSC). IEEE,
+       1482­1488. https://doi.org/10.1109/ITSC.2016.7795753
+
+[104] C. Wuthishuwong and A. Traechtler. 2013. Coordination of multiple autonomous intersections by using local
+       neighborhood information. In 2013 International Conference on Connected Vehicles and Expo (ICCVE). IEEE, 48­53.
+       https://doi.org/10.1109/ICCVE.2013.6799768
+
+[105] D. Zhao, Y. Dai, and Z. Zhang. 2012. Computational Intelligence in Urban Traffic Signal Control: A Survey. IEEE
+       Transactions on Systems, Man, and Cybernetics, Part C (Applications and Reviews) 42, 4 (July 2012), 485­494. https:
+       //doi.org/10.1109/TSMCC.2011.2161577
+
+[106] I. H. Zohdy, R. K. Kamalanathsharma, and H. Rakha. 2012. Intersection management for autonomous vehicles
+       using iCACC. In 2012 15th International IEEE Conference on Intelligent Transportation Systems. IEEE, 1109­1114.
+       https://doi.org/10.1109/ITSC.2012.6338827
+
+[107] Guangyu Zou and Levent Yilmaz. 2019. Self-organization models of urban traffic lights based on digital infochemicals.
+       Simulation 95, 3 (2019), 271­285.
+

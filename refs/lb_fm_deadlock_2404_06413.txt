@@ -1,0 +1,1030 @@
+                                        Foundation Models to the Rescue: Deadlock Resolution in Connected
+                                                                     Multi-Robot Systems
+
+                                        Kunal Garg  Songyuan Zhang                                                 Jacob Arkin  Chuchu Fan
+
+arXiv:2404.06413v2 [cs.RO] 16 Sep 2024     Abstract-- Connected multi-agent robotic systems (MRS) are              results in all the agents getting stuck, making it crucial to
+                                        prone to deadlocks in an obstacle environment where the robots             resolve the deadlocks for connected MRS.
+                                        can get stuck away from their desired locations under a smooth
+                                        low-level control policy. Without an external intervention, often             In recent years, learning-based methods have shown
+                                        in terms of a high-level command, a low-level control policy               promising results in computing a low-level control policy
+                                        cannot resolve such deadlocks. Utilizing the generalizability              for complex robotic systems [7]­[9]. The recent work [10]
+                                        and low data requirements of foundation models, this paper                 proposed a new notion termed graph control barrier function
+                                        explores the possibility of using text-based models, i.e., large           (GCBF) for encoding safety in arbitrarily large MRS, and
+                                        language models (LLMs), and text-and-image-based models,                   a framework, GCBF+, for learning the GCBF and a safe
+                                        i.e., vision-language models (VLMs), as high-level planners                distributed control policy. However, that work focuses on
+                                        for deadlock resolution. We propose a hierarchical control                 safety, i.e., collision avoidance, and does not incorporate
+                                        framework where a foundation model-based high-level planner                connectivity maintenance or goal-reaching requirements. In
+                                        helps to resolve deadlocks by assigning a leader to the MRS                this work, we modify the GCBF-based distributed low-level
+                                        along with a set of waypoints for the MRS leader. Then, a low-             control policy so that the new policy can maintain both
+                                        level distributed control policy based on graph neural networks            safety and connectivity for arbitrarily large MRS. However,
+                                        is executed to safely follow these waypoints, thereby evading              the resulting low-level control policy is still prone to failure
+                                        the deadlock. We conduct extensive experiments on various                  modes such as deadlocks in obstacle environments. Many
+                                        MRS environments using the best available pre-trained LLMs                 works have been proposed to solve the problem of detecting
+                                        and VLMs. We compare their performance with a graph-                       and moving out of deadlocks under safety constraints [11]­
+                                        based planner in terms of effectiveness in helping the MRS                 [14]. However, these works do not consider connectivity con-
+                                        reach their target locations and computational time. Our results           straints. To this end, we extend the GCBF+ framework from
+                                        illustrate that, compared to grid-based planners, the foundation           [10] to incorporate robot connectivity in addition to safety.
+                                        models perform better in terms of the goal-reaching rate and               The GCBF+ framework uses a graph neural network (GNN)
+                                        computational time for complex environments, which helps us                to learn a distributed control policy for collision avoidance,
+                                        conclude that foundation models can assist MRS operating in                where edge features encode the essential information for
+                                        complex obstacle-cluttered environments to resolve deadlocks               maintaining safety (i.e., relative state information). In this
+                                        efficiently.                                                               work, we add edge features with the required connectivity
+                                                                                                                   information and modify the definition of the safe set to
+                                                                 I. INTRODUCTION                                   include connectivity requirements.
+
+                                           Multi-agent robotic systems (MRS) are widely used in                       This work proposes a hierarchical control architecture
+                                        various applications today, such as warehouse operations [1],              in which a high-level planner can intervene and provide a
+                                        [2], self-driving cars [3], and coordinated drone navigation in            mechanism to resolve deadlocks. Our proposed planner takes
+                                        a dense forest for search-and-rescue missions [4], among oth-              the environment information available to the MRS so far and
+                                        ers. In various MRS applications for navigating in unknown                 proposes a high-level command in terms of a leader assign-
+                                        environments, such as coverage [5] and formation control                   ment for the MRS and a set of waypoints for it to navigate
+                                        [6], robot agents must remain within the communication                     safely in obstacle environments. Motivated by the generaliz-
+                                        region of each other, or, in other words, remain connected,                ability and low data requirements of pre-trained foundation
+                                        so that they can actively communicate with each other to                   models [15] as well as the recent success of foundation
+                                        share information and build the unknown or partially known                 models in assisting a control framework for complex robotics
+                                        environment collectively. Additionally, ensuring safety in                 problems [16], [17], we explore the possibility of using text-
+                                        terms of collision avoidance and scalability to large-scale                based large language models (LLMs) and text-and-image-
+                                        multi-agent problems are also crucial requirements of the                  based vision language models (VLMs) as high-level planners
+                                        control design of MRS. When the requirements of con-                       to resolve deadlocks in MRS. Instead of proactively using
+                                        nectivity and safety come together, existing methods for                   these models, whether directly for planning, translation, or
+                                        multi-agent coordination and motion planning often result in               reward design, we are instead interested in using foundation
+                                        deadlocks, where agents get stuck away from their desired                  models reactively to resolve a class of failure modes in low-
+                                        goal locations. Particularly, with the additional requirement              level controllers for MRS, namely deadlocks. This also helps
+                                        of connectivity, even one robot getting stuck in a deadlock                to ensure that the VLM or LLM does not lead to a violation
+                                                                                                                   of safety as it is taken care of by the provably safe low-level
+                                           The authors are with the Department of Aeronautics and Astronautics at
+                                        MIT, {kgarg, jarkin, szhang21, chuchu}@mit.edu. Project
+                                        website: https://mit-realm.github.io/LLM-gcbfplus-website/
+             Foundation model
+
+                Leader: Id,                                        Leader-   Low-level controller
+                Waypoints:                                        follower
+Deadlock     1, 1 , ... , ,                                      assignment
+
+             Problem description + Expected output description
+
+No deadlock
+
+Fig. 1: Overview of the hierarchical control framework using a foundation model as a high-level planner. In the image on
+the left, the robots are shown in blue, their goals in green, and obstacles in red. The planner assigns a leader and waypoints
+(shown in purple) for the leader of the MRS, resulting in a leader-follower formation. A GNN-based low-level controller
+provides a distributed control policy for safety and connectivity while the leader helps evade the deadlock.
+
+control policy. When a deadlock is detected, a VLM or an         handle long-horizon tasks [21]. Instead, another class of
+LLM is prompted to decide on a leader for the MRS and a          methods relies on LLMs to translate from a natural language
+set of waypoints for navigation to resolve it, conditioned on    task description to a formal representation that can be pro-
+a top-view image-based description (for VLM) or text-based       vided as input to existing planners [24]­[28]. More recently,
+description (for LLM) of the so far observed environment.        VLMs have become popular in robotic applications due to
+The MRS then reconfigures into a leader-follower formation       their strong semantic reasoning capabilities [16]. VLMs have
+to evade the deadlock situation. This temporary high-level       shown promising results in reasoning about future actions of
+assignment aims to move the MRS out of the deadlock so           robotic systems with partial environment information [29]­
+that the low-level controller can continue progressing toward    [34]. In particular, VLMs have been successfully employed
+the goal.                                                        in robot navigation tasks [35]­[37], even when long-horizon
+                                                                 reasoning is required [17].
+   Contributions The contributions of the paper are as fol-
+lows. 1) We propose a novel hierarchical control architecture                      III. PROBLEM FORMULATION
+to resolve deadlocks in an obstacle-cluttered environment for
+MRS (see Figure 1). For large-scale MRS, we propose a               In this work, we design a distributed control framework
+hierarchy of leaders for efficient deadlock evasion. 2) We       for large-scale multi-robot systems (MRS) with multiple
+compare the performance of various text-based LLMs and           objectives. The MRS consists of N robots navigating in an
+text-and-image-based VLMs in efficient deadlock resolution       obstacle-cluttered environment to reach their goal locations
+for MRS. We perform extensive experiments on a variety of        {pigoal}iN=1. The environment X  R2 consists of stationary
+MRS environments varying the number of agents from 5 to          obstacles Ol  R2 for l  {1, 2, . . . , M }, which denote
+50 with various foundation models. Our results demonstrate       walls, blockades, and other obstacles in the path of moving
+that both VLM and LLM-based high-level planners are              agents. Each agent has a safety distance r > 0 and a limited
+effective at resolving deadlocks in MRS and more efficient       sensing radius R > r such that the agents can only sense
+in terms of MRS goal-reaching rate in a given time budget        other agents or obstacles if they lie within their sensing
+as compared to grid-based planners such as A*. Based             radius. The agents use LiDAR to sense the obstacles, and the
+on our observations, we provide a detailed discussion and        observation data for each agent i consists of nrays evenly-
+possible future directions to improve the performance of         spaced LiDAR rays yj(i) originating from each robot and
+foundation models as high-level planners for assisting low-      measures the relative location of obstacles (see Appendix for
+level controllers in complex MRS problems.                       more details). The time-varying connectivity graph G(t) =
+                                                                 (V(t), E(t)) dictates the network among the agents and
+                        II. RELATED WORK                         obstacles. Here, V(t) = Va  Vo(t) denotes the set of nodes,
+                                                                 where Va = {1, 2, . . . , N } denotes the set of agents, Vo(t) is
+   Pre-trained LLMs have been shown to exhibit gener-            the collection of all LiDAR hitting points at time t  0, and
+alization to novel tasks without requiring updates to the        E(t)  Va × V denotes the set of edges, where (i, j)  E(t)
+underlying model parameters [15], [18]. While originally in-     means the flow of information from node j to agent i. In
+tended for language tasks, pre-trained LLMs have since been      addition to safety, the resulting underlying graph topology for
+adopted for use in robotics for planning and control design.     the MRS is required to remain connected so that robots can
+For planning, a class of approaches has investigated the direct  build team knowledge and share information, where given a
+use of LLMs as planners by prompting them to generate            communication radius R > 0, two agents i, j are connected
+sequences of actions by which a robot could accomplish a         if pi - pj  R (see Appendix for more details). The
+given task [19]­[23]; some methods rank the possible next        formal problem statement studied in this paper is described
+action according to the probability of the LLM generating        in the following.
+that action combined with the likelihood that the action will
+succeed [20], even iterating between LLM action proposals        Problem 1. Consider the multi-agent system with connected
+and estimates of individual action success probabilities to      initial topology G(0), safety parameters r > 0, a sensing
+radius R > 0, a set of stationary obstacles {Oj}M j=1, goal              agent with minimum distance to its goal. Once the clusters
+locations {pigoal}Ni=1, and a terminal time TF > 0. Design               of agents {Vka} are obtained, a sub-leader lk is chosen based
+                                                                         on the vicinity of the agents in Vka to the cluster of the
+a distributed control architecture such that                             main leader VMa (see Appendix B for more details). Note
+                                                                         that for large-scale MRS, the high-level planner is utilized
+· Safety: The agent maintains a safe distance from other                 only for the waypoint assignment as the leader is assigned
+                                                                         heuristically based on the distance to the goal locations.
+       agents and obstacles at all times, i.e., pi(t) - pj(t) 
+       2r, j = i and yj(i)(t) > r, j = 1, . . . , nrays for all          A. Foundation model based high-level planner
+
+       t  0;                                                                To initiate the leader-follower assignment process as ex-
+                                                                         plained in the previous section, it is necessary to designate
+· Connectivity: The graph G(t) remains connected at all                  a leader for the MRS. Based on the success of foundation
+                                                                         models in a variety of robotic tasks that require spatial
+       times;                                                            understanding, we explore their utility as the high-level
+                                                                         planner for the leader and waypoint assignment.
+· Performance: The agents reach their respective goals,
+                                                                            To use a pre-trained foundation model for leader and way-
+       i.e.,   lim  pi(t)  -  pgi oal  =  0.                             point assignment, we provide the model with task-relevant
+                                                                         context that is expected to be helpful when generating a
+              tTF                                                        decision. In particular, the prompt to the model consists
+                                                                         of three main components: (1) the Task description, (2)
+       IV. HIERARCHICAL CONTROL ARCHITECTURE                             an Environment state, and (3) the Desired output. Next,
+                                                                         we explain each of the prompt components in more detail.
+In an MRS problem with connectivity requirements, the                    The exact prompts used in the experiments are provided in
+                                                                         Appendix D.
+presence of obstacles can lead to deadlock situations for
+                                                                            Task description The initial part of the prompt consists
+the entire MRS, as illustrated in Figure 1. In this work,                of a description of the deadlock resolution problem for a
+                                                                         multi-robot system. This includes the system requirements
+we propose a hierarchical control architecture consisting                of maintaining safety, connectivity, and each agent reaching
+                                                                         its assigned goal. Further, we include a description of the
+of a low-level control policy that accounts for safety and               planner's role in providing high-level commands when the
+                                                                         MRS is stuck in a deadlock. The description also includes
+connectivity constraints and a high-level planner that assists           the number of waypoints P > 0 that the planner is supposed
+                                                                         to suggest. This component of the prompt is created offline
+the low-level controller with the goal-reaching requirement              and is fixed for all calls.
+
+upon detection of a deadlock. We first describe how we detect               Environment state The environment state of the MRS is
+                                                                         a necessary context to make a good leader assignment deci-
+the deadlocks.                                                           sion, so we encode it in a textual description that is included
+                                                                         as a component of the prompt. Since the obstacle information
+Deadlock detection In the proposed hierarchical archi-                   depends on the roll-out of the system, we construct this part
+                                                                         of the prompt online after a deadlock has been detected.
+tecture, the high-level planner is triggered upon detection of           For VLMs, at any given time instant tq when the VLM is
+                                                                         queried, the environment state is constructed via a base64
+a deadlock, which we define as a situation when the average              encoded JPEG image that includes the location of the agents,
+                                                                         their goals, and the obstacles seen by the MRS so far for
+speed of the MRS falls below a minimum threshold v > 0,                  all t  tq whose information comes from the LiDAR data
+       i pi                                                              (see Section IV-B for more details). An example input image
+i.e.,  N       <    v  and    the  average    distance  of  the  agents  to the VLM is given in Figure 1. To assist the VLM with
+                                                                         the precise locations of the agent and the goals, we provide
+from their goals is at least d > 0, i.e.,     i pi-pgi oal       >  d.   their text description. For LLMs, the environment state is
+                                                   N                     represented in text as the tuple: (Number of agents, Safety
+                                                                         radius, Connectivity radius, Agent locations, Agent goals,
+These criteria imply that the MRS is stuck in a deadlock due             Locations of observed obstacles), where the agent locations
+                                                                         are {pi(tq)}, the goals {pgi oal}, and the observed obstacles
+to the obstacles as the agents are not near their goals. Since           {oi(t)}ttq .
+
+the graph topology is connected, the average MRS speed can                  Desired output Finally, we describe the desired output,
+                                                                         both in terms of content and format. The high-level planner
+be computed through consensus updates.                                   is responsible for choosing a leader and a set of waypoints
+
+Leader-follower formation When a deadlock is detected,
+
+the high-level planner assigns a leader among the N agents
+
+along with a set of intermediate waypoints for the leader
+
+so that the leader does not get stuck in a deadlock due to
+
+obstacles on its path to its goal. We provide the details of the
+
+VLM/LLM-based high-level planner in Section IV-A. Once
+
+a leader and its waypoints are obtained, the MRS reconfig-
+
+ures into a leader-follower formation. The leader-follower
+
+assignment is done by sequentially assigning the closest
+
+unassigned follower to its closest assigned agent as its leader.
+
+The MRS remains in the leader-follower mode for a fixed
+
+time TLF > 0, which is a user-defined hyper-parameter. The
+
+complete leader-follower assignment algorithm is described
+
+in Appendix B.
+
+Multi-leader assignment using k-means clustering In
+
+the cases of large-scale MRS, e.g., N  10, assigning one
+
+leader to the MRS might lead to a sub-optimal performance.
+
+To this end, we decompose the MRS into sub-teams and
+
+assign a sub-leader to each of the sub-teams along with a
+
+main leader for the complete MRS. The decomposition of the
+MRS agents into K  1 disjoint clusters Vka, k = 1, ..., K
+such that Va = kK=1Vka and Via  Vja =  for i = j, is
+performed based on the inter-agent distances using k-means
+clustering [38]. The main leader lM  Va is chosen as the
+Fig. 2: "Room" environment with N = 5 (left) and "Maze"              walls and other obstacles in the room. The agents start in
+environment with N = 25 (right). The agents are shown in             one corner of the room and propagate their way through the
+blue, the goals in green, and the obstacles in red color.            obstacle environment to reach their respective destinations.
+                                                                     The obstacles in the room environment are designed in such
+for the leader. To help constrain the model's output and             a manner that the low-level GCBF+ control policy invariably
+enable consistent output parsing, we request the generated           gets stuck in a deadlock, making it essential to use a high-
+response to be formatted as a JSON object with fields                level planner. We generate 20 environments with random
+"Leader" and "Waypoints", with an expected output of the             angles, lengths, and locations of the walls.
+form {"Leader" : Id, "Waypoints" : [[x1, y1], . . . , [xP , yP ]]}.
+                                                                        "Maze" environment The "Maze" environment consists
+B. Distributed low-level policy                                      of N initial and goal locations and M rectangular obstacles
+                                                                     of randomly generated sizes and locations. For testing, we
+   The high-level planner provides the leader and the way-           use 20 Maze environments with N = 25 and M = 100, and
+point information to the low-level controller. One desirable         11 Maze environments with N = 50 and M = 375.
+property of the low-level controller is scalability and gener-
+alizability to new environments (i.e., changing the number              Foundation models and baselines We use
+of agents and obstacles) while keeping the MRS safe and              Claude3-Sonnet (or simply, Claude3S)1,
+connected. Given the leader and goal information in terms            Claude3-Opus (or simply, Claude3O), GPT-4o2
+of the immediate waypoint to follow, the low-level controller        and GPT4-Turbo (or simply, GPT4) models as VLMs for
+synthesizes an input ui to maintain connectivity, keep the           the high-level planner, and GPT4, GPT3.5, Claude23,
+system collision-free, and drive the system trajectories to-         and Claude3O as the LLMs for the high-level planner.
+ward its goals (and in the case of the leader robot, toward          In all the generated environments, the low-level controller
+its waypoint). While any low-level controller that can satisfy       leads to a deadlock and as a result, the reach rate for just the
+the requirements from Problem 1 can be used, we extend               low-level controller is exactly 0. Hence, we do not include
+the distributed graph-based policy from [10]. Since the main         that as a baseline. We use an A*-based high-level planner
+focus of this paper is on the high-level planner, the details of     and a "Random" high-level planner where the leader and the
+the low-level controller are provided in Appendix . We also          waypoints are drawn randomly, as baselines for comparison.
+show that the proposed hierarchical architecture does not get
+stuck in any deadlocks in the Appendix H.                               Roll-out for evaluation To evaluate the effectiveness of
+                                                                     the high-level planner, we roll out MRS trajectories for a
+                         V. EVALUATIONS                              fixed number of steps T = 4000 (i.e., TF = 1200s) for
+                                                                     the Maze environment with N = 25 and T = 5000 (i.e.,
+   To assess the effectiveness of the high-level planner, we         TF = 1500s) for the Maze environment with N = 50, and
+perform extensive experiments on a variety of MRS envi-              T = 3000 (i.e., TF = 900s) for Room environments. As
+ronments with the objective of measuring the performance in          discussed in Section IV, the high-level planner intervenes
+terms of i) the reach rate or the percentage of agents reaching      when the MRS is stuck in a deadlock, defined according
+their goals; ii) the number of high-level interventions needed       to the minimum average speed criteria. In this work, we
+during the rollout; iii) the time taken in calling the high-level    use v = 0.2 and d = 0.4 as the threshold to define
+planner and iv) the tokens used in each intervention (for            deadlocks. Once the high-level planner assigns a leader, the
+assessing the cost-efficiency of using proprietary pre-trained       MRS remains in the same leader-follower configuration for
+foundation models).                                                  TLF = 100 steps. This is useful as it helps prevent Zeno
+                                                                     behaviors, and sets an upper bound on the frequency at
+A. Experiment setup                                                  which the foundation model is queried, making the proposed
+                                                                     framework applicable to real-time robotic applications.
+   We perform experiments on two sets of environ-
+ments, namely structured hand-crafted environments (termed           B. Results
+"Room") with a small number of agents, i.e., N = 5, and
+unstructured maze-like environments (termed "Maze") with                Figure 3 plots the various performance criteria for each
+a large number of agents, i.e., N = 25 or 50 (see Figure 2).         of the test environments for the considered foundation
+                                                                     models and baseline method. The broad observations and
+   "Room" environments: The "Room" represents an en-                 conclusions are summarized below. For the large-scale Maze
+closed warehouse or an apartment scenario where the agents           environments with N = 50 and M = 375, the prompts
+are required to reach another part of the environment while          for LLM-based planners GPT3.5 and Claude2 exceed
+remaining inside the boundary and avoiding collisions with           the maximum allowed context window. Videos from the
+                                                                     experiments and the code for running the experiments are
+                                                                     included in the Supplementary material.
+
+                                                                        Foundation models are more effective than the grid-
+                                                                     based and random method: An important feature we
+
+                                                                        1https://www.anthropic.com/news/claude-3-family
+                                                                        2https://platform.openai.com/docs/models
+                                                                        3https://www.anthropic.com/news/claude-2
+                                  Results for "Room" environments with 5 agents
+
+         Random           0.5     1.0 10 20 30                 0            20 0   2000         2.5 5.0
+               A*     Reach rate            Interventions                          Tokens   Distance traveled
+
+    GPT4-VLM
+   GPT4o-VLM
+Claude3O-VLM
+Claude3S-VLM
+
+    GPT4-LLM
+  GPT3.5-LLM
+  Claude3-LLM
+  Claude2-LLM
+
+                 0.0
+
+                                                                  Time (s)
+
+                                  Results for "Maze" environments with 25 agents
+
+         Random           0.5     1.0  25 50                   0            20  0  5000        2  3
+               A*     Reach rate       Interventions                               Tokens   Distance traveled
+
+    GPT4-VLM
+   GPT4o-VLM
+Claude3O-VLM
+Claude3S-VLM
+
+    GPT4-LLM
+  GPT3.5-LLM
+  Claude3-LLM
+  Claude2-LLM
+
+                 0.0
+
+                                                                  Time (s)
+
+                                  Results for "Maze" environments with 50 agents
+
+Random
+
+               A*
+
+GPT4-VLM
+
+GPT4o-VLM
+
+Claude3O-VLM
+
+Claude3S-VLM
+
+GPT4-LLM
+
+Claude3-LLM
+
+               0.0 0.5 1.0 25 50 75                            0  25               103 104  2        3
+                      Reach rate       Interventions                               Tokens   Distance traveled
+                                                                  Time (s)
+
+Fig. 3: Performance of various high-level planners for "Room" environments with N = 5 agents (Top plots), "Maze"
+
+environments with N = 25 agents (Middle plots), and "Maze" environments with N = 50 agents (Bottom plots). From
+
+left to right: 1) The bar shows the ratio of the trajectories where all the agents reach their goals over the total number of
+
+trajectories, and the orange dot shows the ratio of agents that reach their goals over all agents; 2) Box plot of the number of
+
+times the high-level planner intervened; 3) Box plot of the time spent for each high-level planner intervention; and 4) Box
+
+plot for the input + output token per intervention. In the box plots, the median values are in orange and the mean values
+
+are in green.
+
+note from the experiments is that foundation models do            obstacles increases, while that of foundation models remains
+not require any in-context examples to achieve such high          the same. Note also that a randomly chosen leader along
+performance. This corroborates our motivation for using           with randomly chosen waypoints results in less than 0.5
+these models due to their low data requirement. When it           reach rage in all cases, with its performance dropping as
+comes to comparison to the A*-based planner, it is evident        the number of agents becomes larger. This illustrates that
+from all environments that foundation models achieve better       the foundation models provide much better inference than
+performance in terms of higher average reach rate. For the        a randomly generated one, resulting in a higher completion
+small-scale Room environments, the mean reach rate for A*         rate.
+across 20 test environments is lower than LLMs such as
+GPT4, GPT3.5 and Claude3, as well as Claude3-Opus                    LLMs outperform VLMs: We observe that the text-
+LLM. For the large-scale Maze environments, the mean reach        based foundation models outperform text-and-image-based
+rate for A* is lower than most of the foundation models. Note     foundation models when it comes to performance in terms
+that the computation time of A* increases as the complexity       of reach rate. Moreover, from the number of high-level
+of the environment in terms of its size and number of             interventions, we infer that LLMs achieve similar or better
+                                                                  performance than VLMs while requiring a lesser number
+                                                                 VI. CONCLUSIONS AND DISCUSSION
+
+Fig. 4: Snapshots from robot experiments with the proposed          In this work, we tested the hypothesis that text-based
+hierarchical control (top figures) and only the low-level con-   and text-and-image-based foundation models can be used
+troller (bottom figures). The hierarchical architecture leads    as high-level planners for deadlock resolution in MRS with
+to a successful run while just the low-level controller results  safety and connectivity constraints. We performed extensive
+in a deadlock.                                                   experiments on a variety of foundation models to understand
+                                                                 their utility in this task. In comparison to grid-based planners,
+of interventions. That signifies better leader and waypoint      the foundation models generally performed better, resulting
+assignment by LLMs than VLMs, resulting in the completion        in an affirmative answer to our hypothesis. Our experiments
+of tasks with fewer interventions.                               also provided interesting observations and insights on the
+                                                                 relative performance of LLMs and VLMs for small- and
+   VLMs are cheaper and faster than LLMs for large-              large-scale MRS problems, as well as their time and cost
+scale MRS: It is evident that the average number of total        efficiency.
+tokens required for VLMs remains similar ( 1000) across
+the various environments. On the other hand, the tokens for         The high performance of the zero-shot foundation model
+LLMs increase with the increased complexity of the envi-         across various MRS environments is good evidence that they
+ronment in terms of the number of obstacles. This directly       are promising high-level planners for deadlock resolution.
+affects the cost of using proprietary foundation models, as      We are encouraged that in many cases LLM-based planners
+well as the speed of inference. This is also evident when we     need to intervene less frequently, implying better intervention
+compare the time of intervention for the same model (e.g.,       quality. However, the prompt size for LLMs increases signif-
+GPT4) used as VLM and LLM. Furthermore, the variance in          icantly as the complexity of the environment increases. The
+the average tokens used by VLMs across experiments is close      prompt design used in this work is the result of manual trial
+to zero, while LLMs have a significant amount of variance.       and error while following generally accepted practices for
+This is because as the MRS collects more information about       prompt engineering. We note that the text-based environment
+its environment (i.e., observes newer obstacles), the text-      description has much more flexibility as compared to the
+based description becomes longer. On the other hand, all the     image-based description. One implication of this is the
+new information can be plotted on the same-sized graphic,        freedom to modify and optimize the prompt to obtain better
+resulting in the same-sized input to the VLMs. This feature      performance. Another implication is the increased variability
+of VLMs is advantageous as it provides predictable costs,        and, as a result, the high sensitivity of the performance of
+runtime, and scalability, especially for large-scale real-time   the model to the prompt design. Recently, there has been
+systems. One way of reducing the prompt size for LLMs            an increasing interest in automatic prompt optimization for
+is to use a portion of the available information instead of      black-box LLMs to find the best prompt design for a given
+the complete available information about the obstacles. We       task [39]­[41] with results showing significant performance
+perform ablation on the available information as well as on      improvement over human-designed prompts. Future work
+the utility of multi-leader assignment over just one leader in   includes applying such techniques to the problem of deadlock
+large-scale MRS and report the results in Appendix G.            resolution to maximize the performance of LLMs as a high-
+                                                                 level planner.
+      a) Hardware demonstration: We also validate our ap-
+proach in hardware experiments on the first scenario, i.e.,                               VII. LIMITATIONS
+the room environment, using four Turtlebot3 ground robots.
+We use an off-board ground computer for sending control             One limitation of using a proprietary foundation model
+commands to the robots via ROS, while the state information      as a high-level planner is the time it takes to query the
+of the robots is obtained using a Vicon motion capture           model and receive a response. For real-time intervention,
+system. Figure 4 shows the snapshots from the experiments        fast performance can often be a prerequisite. Future work
+under the proposed framework with GPT3.5 LLM as the              involves investigating possible methods to improve the run-
+high-level planner as well as just the low-level controller      time, such as using smaller, open-source models, running
+without any high-level planner intervention. The experiments     locally, fine-tuned to the specific task, or using embedding
+confirm the fact that only the low-level controller leads        models that can capture semantic context with significantly
+to deadlocks, while the proposed method is capable of            lower runtime. In this work, the high-level planner intervenes
+completing the tasks.                                            according to a heuristic threshold of average agent velocity,
+                                                                 which may not be an optimal indicator of the failure mode
+                                                                 of the low-level controller. If the system can better anticipate
+                                                                 deadlocks, the high-level planner can intervene earlier. Future
+                                                                 work includes embedding the local environment information,
+                                                                 either as text or image, to classify whether a deadlock is
+                                                                 likely to occur.
+                            REFERENCES                                                  Embodied reasoning through planning with language models," in
+                                                                                        Conference on Robot Learning. PMLR, 2023, pp. 1769­1782.
+ [1] B. Li and H. Ma, "Double-deck multi-agent pickup and delivery:               [23] Y. Chen, J. Arkin, Y. Zhang, N. Roy, and C. Fan, "Scalable multi-robot
+      Multi-robot rearrangement in large-scale warehouses," IEEE Robotics               collaboration with large language models: Centralized or decentralized
+      and Automation Letters, vol. 8, no. 6, pp. 3701­3708, 2023.                       systems?" in International Conference on Robotics and Automation.
+                                                                                        IEEE, 2024.
+ [2] P. R. Wurman, R. D'Andrea, and M. Mountz, "Coordinating hundreds             [24] ----, "Autotamp: Autoregressive task and motion planning with llms
+      of cooperative, autonomous vehicles in warehouses," AI magazine,                  as translators and checkers," in International Conference on Robotics
+      vol. 29, no. 1, pp. 9­9, 2008.                                                    and Automation, 2024.
+                                                                                  [25] Y. Chen, R. Gandhi, Y. Zhang, and C. Fan, "NL2TL: Transforming
+ [3] J. Dinneweth, A. Boubezoul, R. Mandiau, and S. Espié, "Multi-                      natural languages to temporal logics using large language models," in
+      agent reinforcement learning for autonomous vehicles: a survey,"                  Proceedings of the 2023 Conference on Empirical Methods in Natural
+      Autonomous Intelligent Systems, vol. 2, no. 1, p. 27, 2022.                       Language Processing, 2023, p. 15880­15903.
+                                                                                  [26] Y. Xie, C. Yu, T. Zhu, J. Bai, Z. Gong, and H. Soh, "Translating
+ [4] Y. Tian, K. Liu, K. Ok, L. Tran, D. Allen, N. Roy, and J. P. How,                  natural language to planning goals with large-language models," arXiv
+      "Search and rescue under the forest canopy using multiple uavs," The              preprint arXiv:2302.05128, 2023.
+      International Journal of Robotics Research, vol. 39, no. 10-11, pp.         [27] T. Silver, V. Hariprasad, R. S. Shuttleworth, N. Kumar, T. Lozano-
+      1201­1221, 2020.                                                                  Pérez, and L. P. Kaelbling, "PDDL planning with pretrained
+                                                                                        large language models," in NeurIPS 2022 Foundation Models
+ [5] J. Cortes, S. Martinez, T. Karatas, and F. Bullo, "Coverage control                for Decision Making Workshop, 2022. [Online]. Available: https:
+      for mobile sensing networks," IEEE Transactions on robotics and                   //openreview.net/forum?id=1QMMUB4zfl
+      Automation, vol. 20, no. 2, pp. 243­255, 2004.                              [28] B. Liu, Y. Jiang, X. Zhang, Q. Liu, S. Zhang, J. Biswas, and P. Stone,
+                                                                                        "Llm+ p: Empowering large language models with optimal planning
+ [6] F. Mehdifar, C. P. Bechlioulis, F. Hashemzadeh, and M. Baradarannia,               proficiency," arXiv preprint arXiv:2304.11477, 2023.
+      "Prescribed performance distance-based formation control of multi-          [29] M. Kwon, H. Hu, V. Myers, S. Karamcheti, A. Dragan, and
+      agent systems," Automatica, vol. 119, p. 109086, 2020.                            D. Sadigh, "Toward grounded social reasoning," arXiv preprint
+                                                                                        arXiv:2306.08651, 2023.
+ [7] C. Dawson, S. Gao, and C. Fan, "Safe control with learned certificates:      [30] X. Ma, S. Yong, Z. Zheng, Q. Li, Y. Liang, S.-C. Zhu, and S. Huang,
+      A survey of neural lyapunov, barrier, and contraction methods for                 "Sqa3d: Situated question answering in 3d scenes," in International
+      robotics and control," IEEE Transactions on Robotics, vol. 39, no. 3,             Conference on Learning Representations, 2023.
+      pp. 1749­1767, 2023.                                                        [31] L. Wen, X. Yang, D. Fu, X. Wang, P. Cai, X. Li, T. Ma, Y. Li,
+                                                                                        L. Xu, D. Shang et al., "On the road with gpt-4v (ision): Early
+ [8] S. Zhang, K. Garg, and C. Fan, "Neural graph control barrier functions             explorations of visual-language model on autonomous driving," arXiv
+      guided distributed collision-avoidance multi-agent control," in 7th               preprint arXiv:2311.05332, 2023.
+      Annual Conference on Robot Learning, 2023.                                  [32] B. Chen, Z. Xu, S. Kirmani, B. Ichter, D. Driess, P. Florence,
+                                                                                        D. Sadigh, L. Guibas, and F. Xia, "Spatialvlm: Endowing vision-
+ [9] K. Garg, S. Zhang, O. So, C. Dawson, and C. Fan, "Learning                         language models with spatial reasoning capabilities," arXiv preprint
+      safe control for multi-robot systems: Methods, verification, and open             arXiv:2401.12168, 2024.
+      challenges," Annual Reviews in Control, vol. 57, p. 100948, 2024.           [33] J. Gao, B. Sarkar, F. Xia, T. Xiao, J. Wu, B. Ichter, A. Majumdar, and
+                                                                                        D. Sadigh, "Physically grounded vision-language models for robotic
+[10] S. Zhang, O. So, K. Garg, and C. Fan, "Gcbf+: A neural graph control               manipulation," arXiv preprint arXiv:2309.02561, 2023.
+      barrier function framework for distributed safe multi-agent control,"       [34] Y. Jiang, A. Gupta, Z. Zhang, G. Wang, Y. Dou, Y. Chen, L. Fei-
+      arXiv preprint arXiv:2401.14554, 2024.                                            Fei, A. Anandkumar, Y. Zhu, and L. Fan, "Vima: General robot
+                                                                                        manipulation with multimodal prompts," in NeurIPS 2022 Foundation
+[11] Y. Zhou, H. Hu, Y. Liu, S.-W. Lin, and Z. Ding, "A distributed method              Models for Decision Making Workshop, 2022.
+      to avoid higher-order deadlocks in multi-robot systems," Automatica,        [35] D. Shah, M. R. Equi, B. Osin´ski, F. Xia, B. Ichter, and S. Levine,
+      vol. 112, p. 108706, 2020.                                                        "Navigation with large language models: Semantic guesswork as a
+                                                                                        heuristic for planning," in Conference on Robot Learning. PMLR,
+[12] J. S. Grover, C. Liu, and K. Sycara, "Deadlock analysis and resolution             2023, pp. 2683­2699.
+      for multi-robot systems," in Algorithmic Foundations of Robotics            [36] V. S. Dorbala, J. F. Mullen, and D. Manocha, "Can an embodied agent
+      XIV: Proceedings of the Fourteenth Workshop on the Algorithmic                    find your "cat-shaped mug"? llm-based zero-shot object navigation,"
+      Foundations of Robotics 14. Springer, 2021, pp. 294­312.                          IEEE Robotics and Automation Letters, vol. 9, no. 5, pp. 4083­4090,
+                                                                                        2024.
+[13] J. Grover, C. Liu, and K. Sycara, "The before, during, and after             [37] D. Shah, B. Osin´ski, S. Levine et al., "Lm-nav: Robotic navigation
+      of multi-robot deadlock," The International Journal of Robotics Re-               with large pre-trained models of language, vision, and action," in
+      search, vol. 42, no. 6, pp. 317­336, 2023.                                        Conference on robot learning. PMLR, 2023, pp. 492­504.
+                                                                                  [38] J. MacQueen et al., "Some methods for classification and analysis
+[14] Y. Chen, M. Guo, and Z. Li, "Deadlock resolution and recursive                     of multivariate observations," in Proceedings of the fifth Berkeley
+      feasibility in mpc-based multi-robot trajectory generation," IEEE                 symposium on mathematical statistics and probability, vol. 1, no. 14.
+      Transactions on Automatic Control, 2024.                                          Oakland, CA, USA, 1967, pp. 281­297.
+                                                                                  [39] Q. Guo, R. Wang, J. Guo, B. Li, K. Song, X. Tan, G. Liu,
+[15] T. Kojima, S. S. Gu, M. Reid, Y. Matsuo, and Y. Iwasawa, "Large                    J. Bian, and Y. Yang, "Connecting large language models with
+      language models are zero-shot reasoners," in ICML 2022 Workshop                   evolutionary algorithms yields powerful prompt optimizers," in The
+      on Knowledge Retrieval and Language Models, 2022. [Online].                       Twelfth International Conference on Learning Representations, 2024.
+      Available: https://openreview.net/forum?id=6p3AuaHAFiN                            [Online]. Available: https://openreview.net/forum?id=ZG3RaNIsO8
+                                                                                  [40] X. Wang, C. Li, Z. Wang, F. Bai, H. Luo, J. Zhang, N. Jojic, E. Xing,
+[16] A. Z. Ren, J. Clark, A. Dixit, M. Itkina, A. Majumdar, and D. Sadigh,              and Z. Hu, "Promptagent: Strategic planning with language models
+      "Explore until confident: Efficient exploration for embodied question             enables expert-level prompt optimization," in The Twelfth International
+      answering," arXiv preprint arXiv:2403.15941, 2024.                                Conference on Learning Representations, 2024.
+                                                                                  [41] C. Fernando, D. Banarse, H. Michalewski, S. Osindero, and T. Rock-
+[17] W. Huang, F. Xia, D. Shah, D. Driess, A. Zeng, Y. Lu, P. Florence,                 täschel, "Promptbreeder: Self-referential self-improvement via prompt
+      I. Mordatch, S. Levine, K. Hausman et al., "Grounded decoding:                    evolution," arXiv preprint arXiv:2309.16797, 2023.
+      Guiding text generation with grounded models for embodied agents,"          [42] M. Mesbahi and M. Egerstedt, "Graph theoretic methods in multiagent
+      Advances in Neural Information Processing Systems, vol. 36, 2024.                 networks," in Graph Theoretic Methods in Multiagent Networks.
+                                                                                        Princeton University Press, 2010.
+[18] T. Brown, B. Mann, N. Ryder, M. Subbiah, J. D. Kaplan, P. Dhariwal,
+      A. Neelakantan, P. Shyam, G. Sastry, A. Askell et al., "Language mod-
+      els are few-shot learners," Advances in neural information processing
+      systems, vol. 33, pp. 1877­1901, 2020.
+
+[19] W. Huang, P. Abbeel, D. Pathak, and I. Mordatch, "Language models
+      as zero-shot planners: Extracting actionable knowledge for embodied
+      agents," in International Conference on Machine Learning. PMLR,
+      2022, pp. 9118­9147.
+
+[20] A. Brohan, Y. Chebotar, C. Finn, K. Hausman, A. Herzog, D. Ho,
+      J. Ibarz, A. Irpan, E. Jang, R. Julian et al., "Do as i can, not as i say:
+      Grounding language in robotic affordances," in Conference on robot
+      learning. PMLR, 2023, pp. 287­318.
+
+[21] K. Lin, C. Agia, T. Migimatsu, M. Pavone, and J. Bohg, "Text2motion:
+      From natural language instructions to feasible plans," Autonomous
+      Robots, vol. 47, no. 8, pp. 1345­1365, 2023.
+
+[22] W. Huang, F. Xia, T. Xiao, H. Chan, J. Liang, P. Florence, A. Zeng,
+      J. Tompson, I. Mordatch, Y. Chebotar et al., "Inner monologue:
+[43] L. Wang, A. D. Ames, and M. Egerstedt, "Safety barrier certificates for
+      collisions-free multirobot systems," IEEE Transactions on Robotics,
+      vol. 33, no. 3, pp. 661­674, 2017.
+                              APPENDIX                                    A. Graph control barrier functions (GCBF)
+
+   We start with describing the dynamics of the individual                   Given sensing radius R and safety distance r, define
+robots (referred to as agents henceforth), and then, we list
+the individual as well as the team objective for the system.              Ns - 1  N as the maximum number of neighbors that
+The agent dynamics are given by x i = f (xi) + g(xi)ui,
+where f, g are locally Lipschitz continuous functions with                each agent can have while all the agents in the neighborhood
+xi  X  Rnx denoting agents' state space and ui                            remain safe. Define N~i as the set of Ns closest neighboring
+U  Rnu the control constraint set for i  {1, 2, . . . , N }.4.
+The state xi consists of the position pi  R2 in the global                nodes to agent i which also includes agent i and x¯N~i as
+coordinates along with other states, such as the orientation              the concatenated vector of xi and the neighbor node states
+and the velocity of the agent i. The state space X consists
+of stationary obstacles Ol  R2 for l  {1, 2, . . . , M },                 with fixed size Ns that is padded with a constant vector if
+denoting walls, blockades and other obstacles in the path of              |N~i| < Ns. Considering only collision avoidance constraints,
+the moving agents. Each agent has a limited sensing radius                the safe set SN  X N can be defined as:
+R > 0 and the agents can only sense other agents or obstacles
+if it lies inside its sensing radius. The agents use LiDAR to             SN := x¯  X N             yj(i) > r, i  Va, j  nrays
+sense the obstacles, and the observation data for each agent
+consists of nrays evenly-spaced LiDAR rays originating from                                                   min pi - pj > 2r ,
+each robot and measures the relative location of obstacles.
+We denote the j-th ray from agent i by yj(i)  X for j                                                                    i,j V a ,i=j
+{1, 2, . . . , nrays} that carries the relative position information
+of the j-th LiDAR hitting point to agent i, and zero padding              where x¯ denotes the joint state vector for the MRS. The
+for the rest of the states.                                               unsafe, or avoid set can be defined accordingly as AN =
+                                                                          X N \ SN . We now introduce the notion of GCBF for
+   The time-varying connectivity graph G(t) = (V(t), E(t))                encoding safety for MAS. Considering the smoothness of
+dictates the network among the agents and obstacles. Here,                GCBF, we impose the condition that for a given agent i  Va,
+V(t) = Va  Vo(t) denotes the set of nodes, where Va =                     a node j where pi - pj  R does not affect the GCBF h.
+{1, 2, . . . , N } denotes the set of agents, Vo(t) is the collec-        Specifically, for any neighborhood set Ni, let Ni<R denote
+tion of all LiDAR hitting points at time t  0, and E(t)                   the set of neighbors in Ni that are strictly inside the sensing
+Va × V denotes the set of edges, where (i, j)  E(t) means                 radius R as
+the flow of information from node j to agent i. We denote the
+time-varying adjacency matrix for agents by A(t)  RN×N ,                              Ni<R := {j : pi - pj < R, j  Ni}.                  (1)
+where Aij(t) = 1 if (i, j)  E(t), i, j  Va, and 0 otherwise.
+The set of all neighbors for agent i is denoted as Ni(t) :=               Using these notations, the notion of GCBF is defined in [10]
+{j | (i, j)  E(t)}, while the set of agent neighbors of agent             as:
+i is denoted as Nia(t) := {j | Aij(t) = 1}. The MRS is said
+to be connected at time t if there is a path between each                 Definition 1 (GCBF). A continuously differentiable function
+pair of agents (i, j), i, j  Va at t. One method of checking              h : X M  R is termed as a Graph CBF (GCBF) if there
+the connectivity of the MRS is through the Laplacian matrix,
+defined as L(A(t)) := D(t)-A(t), where D(t) is the degree                 exists an extended class-K function  and a control policy
+matrix defined as Dij(t) = Aij(t) when i = j and 0                        i : X M  U for each agent i  Va of the MAS such that,
+                                                                          for all x¯  X N with N  M ,
+                                                      j
+                                                                                      h (x¯Ni ) + (h(x¯Ni ))  0, i  Va                   (2)
+otherwise. From [42, Theorem 2.8], the MRS is connected
+at time t if and only if the second smallest eigenvalue of the            where
+Laplacian matrix is positive, i.e., 2(L(A(t))) > 0.
+                                                                                 h (x¯Ni )  =       h(x¯Ni )  (f (xj)  +  g(xj )uj )  ,  (3)
+   Any low-level controller that can satisfy the requirement                                          xj
+from Problem 1 can be used as the low-level control policy,                                    jNi
+such as one from a distributed CBF-QP method [43] or a
+learned control policy. Since the low-level control policy is             for uj = j(x¯Nj ), and the following two conditions hold:
+supposed to be distributed with low computational complex-
+ity, we choose to use the recently proposed learning-based                · The gradient of h with respect to nodes R away is 0,
+GCBF+ controller from [10]. Here, we briefly review the
+GCBF+ controller and present the details of how the safety                     i.e.,        h
+and connectivity constraints are encoded.                                                   xj (x¯Ni ) = 0,
+                                                                                                              j  Ni \ Ni<R.              (4)
+   4In this work, we consider robots modeled using single integrator dy-
+namics operating in 2D plane, i.e., nx = nu = 2                           · The value of h does not change when restricting to
+                                                                            neighbors that are in Ni<R, i.e.,
+
+                                                                                               h(x¯Ni ) = h(x¯Ni<R ).                    (5)
+
+                                                                          It is proved in [10, Theorem 1] GCBF certifies the forward
+
+                                                                          invariance of its 0-superlevel set under control inputs in the
+
+                                                                          set
+
+                                                                           UsNafe := u¯  U N h (x¯Ni ) + (h(x¯Ni ))  0, i  Va .
+                                                                                                                                                (6)
+
+                                                                          We start with this formulation and modify it to additionally
+                                                                          account for the connectivity requirement, as explained below.
+B. Learning GCBF with safety and connectivity constraints         as a leader at time t, iteration k, initiated as Vlead(t, 0) =
+                                                                  {ilead,0}, where ilead,0  V is the leader agent. Then, the
+   Following [10], we use graph neural networks (GNN) to          k-th follower with k  1 is chosen as
+parameterize GCBF. For agent i, the input features of the
+GNN contain the node features vi and vj for j  Ni, and            ifollow,k = arg min  min pi - pj, (8)
+edge features eij for j  Ni. The node features vi  Rv             jV\Vlead(t,k-1) iVlead(t,k-1)
+encode information specific to each node. In this work,
+we take v = 3 and use the node features vi to one-hot             and this follower is added to the set of the leaders, i.e.,
+encode the type of the node as either an agent node, goal
+                                                                  Vlead(t, k) = Vlead(t, k - 1)  {ifollow,k}. The leader for the
+node or LiDAR ray hitting point node. The edge features
+eij  Re , where e > 0 is the edge dimension, are defined          k-th follower is given as ilead,k = arg min p - ifollow,k
+as the information shared from node j to agent i, which
+depends on the states of the nodes i and j. Since the safety                                                                    iVlead (t,k-1)
+
+objective depends on the relative positions, one component        pi. The process is repeated till each agent i is assigned an
+of the edge features is the relative position pij = pj - pi.
+The rest of the edge features can be chosen depending             agent ilead to follow. Next, for each agent i that is a given
+                                                                  minimum distance away from its goal, i.e., if pi - pgi oal 
+on the underlying system dynamics, e.g., relative velocities      dmin for some dmin > 0, their temporary goal is chosen as
+                                                                  the location of their leaders, i.e., p¯igoal = pilead .
+for double integrator dynamics. However, apart from the
+                                                                  D. Leader-follower for large MRS
+safety constraints considered in [10], we also consider the
+                                                                     As discussed in Section IV, for large-scale MRS, i.e.,
+connectivity constraints. Therefore, the design of the node       N  NM = 10, a main leader is assigned for the MRS,
+                                                                  and sub-leaders are assigned for each of the clusters. The
+features and edge features needs to be modified for adding        agents in clusters will undergo a leader-follower formation
+                                                                  with their respective sub-leaders while these sub-leaders
+the connectivity information. To this end, given the desired      will follow the main leader. The complete leader-follower
+connectivity of the MRS in terms of the desired adjacency         assignment algorithm is given in Algorithm 1.
+matrix Ad where the desired adjacency matrix is designed
+
+such that the MRS is connected, we add the connectivity
+
+information in the edge features of GCBF. In particular, we
+append the edge features with [0, 1] in eij if the agents (i, j)
+are required to be connected, i.e., Adij = 1, and [1, 0] if they
+are not required to be connected, i.e., Adij = 0. Furthermore,
+we add the connectivity constraint in the GCBF by redefining
+
+the safe and the unsafe sets corresponding to the required
+
+connectivity, such that the safe set is defined as
+
+SNc := x¯  X N  yj(i) > r, i  Va, j  nrays
+
+   min pi - pj > 2r
+
+i,j Va ,i=j
+
+                max pi - pj < R .                   (7)
+i,jVa,Aidj =1
+
+Consequently, the unsafe, or avoid set with the connectivity
+constraint is defined as AcN = X N \ SNc . Since the GCBF
+h certifies the forward-invariance of its 0-superlevel set, the
+
+safety and connectivity constraints are satisfied.
+
+The training framework is the same as [10]. In the original
+
+GCBF+ training framework, it is essential that the initial
+
+and goal locations are safe. In the current work, we also
+
+need to make sure that the initial conditions and the goal
+
+locations sampled for training the GCBF satisfy the MRS
+
+connectivity condition, in addition to the safety condition in
+
+the original GCBF+ framework. To this end, we sample the
+
+initial and goal locations such that their corresponding graph
+
+topology are connected, and define the desired adjacency
+matrix Ad = A(0). The same loss function from [10] is
+
+used to train the distributed control policy, with the safe set
+
+definition modified as per (7).
+
+C. Leader-follower for small MRS
+
+   The follower assignment is carried out in an iterative way.
+Let Vlead(t, k) be the set of agents that have been assigned
+Algorithm 1: Leader-follower and temporary goal
+assignment
+
+Data: {pi}, K, dmin, N, NM
+Result: lM , {lk}, {pgteomapl}
+
+/* Find the main leader                         */
+
+lM = arg min pi - pgi oal
+
+/* Find the clusters using k-means
+
+clustering                                      */
+
+if N < NM then
+    {Vka} = {Va}
+
+else
+    {Vka} = kmeans({pi}, K)
+
+end
+
+/* Find sub-leaders for each of the
+
+cluster                                         */
+
+for k in range(K) do
+
+    lk = arg miniVka minjVM a pi - pj 
+end
+
+/* Assign temporary goals to each
+
+agent                                           */
+
+for k  [1, 2, · · · , K] do
+
+/* Initial set of leaders to be
+
+followed in cluster Vka                         */
+
+Vlead(k) = {lk}
+
+/* Assign main leader's location
+
+as the temporary goal for
+
+cluster leader                                  */
+
+ptgeomalp,lk = plM
+for i  range|Vak| do
+
+/* Find closest agent to the
+
+       set of leader as the new
+
+       follower                                 */
+
+ifollow =
+
+ arg minjVka\Vlead(k) minlVlead(k) pl - pj 
+/* Find leader for this
+
+       follower                                 */
+
+klead = arg minjVlead(k) pifollow - pj 
+
+/* Assign temporary goal to the
+
+       follower                                 */
+
+if  pifollow  -  pgoal              dmin  then
+
+                   ifollow
+    p = p goal
+                             klead
+      ifollow ,temp
+
+else
+
+    p = p goal               goal
+                             ifollow
+      ifollow ,temp
+
+end
+
+         /* Update the set of leaders */
+         Vlead(k) = Vlead(k)  {ifollow}
+    end
+
+end
+E. Task and output description prompts
+
+   The task description prompts used for VLMs are given in
+Figure 5 while those used for LLMs are given in Figure 6.
+
+Fig. 5: Description prompts used for vision-based (i.e.,
+VLMs) high-level planners.
+
+Fig. 6: Description prompts used for text-based (i.e., LLMs)  Fig. 8: Environment prompt for LLM for "Maze" environ-
+high-level planners.                                          ment with N = 50 and M = 375.
+
+F. Environment description
+
+   The environment description prompts used for VLMs are
+given in Figure 7 while those used for LLMs are given in
+Figure 8. For VLMs, an additional text prompt is appended
+at the end with the location of the agent(s) and goal(s)
+provided in the image prompt to aid the VLM with waypoint
+assignment.
+
+Fig. 7: Environment prompt for VLM for "Maze" environ-
+ment with N = 50 and M = 375.
+
+G. Output of foundation models
+
+   The output of the LLM or VLM is a JSON object. As
+an example, for the input in Figure 7, the output from
+Claude3-Opus VLM is: {"Leader" : 1, "Waypoint" :
+[[2.8, 4.5], [5.5, 4.5], [5.5, 7.9]]}.
+   In Figure 9, we report the mean distance traveled by           of high-level planner interventions is generally inversely
+the MRS under various high-level planners normalized by           proportional to the quality of the plan they suggest. As
+the mean initial distance of MRS from the goal locations.         evident from the figure, the number of interventions with
+For "Room" environment, "random" baseline has the highest         partial information is, on average, more than the case when
+mean distance traveled among all methods, while having a          all the known information is provided to the foundation
+relatively lower reach rate, compared to some of the founda-      models. We infer that the quality of the plan provided drops
+tion models. There does not seem to be much variation in the      as the amount of data provided to the foundation models
+distance traveled among LLM-based high-level planners for         decreases.
+"Maze" environments. While GPT4-VLM has a relatively
+higher mean traveled distance, the A*-based baseline has             Inference cost and time improves significantly As
+the highest distance traveled for "Maze" environment with         expected, the average query time to foundation models
+N = 25. For "Room" environment, Claude3O-VLM has                  (particularly LLMs) reduces significantly when using partial
+the highest mean distance traveled by MRS. An interesting         information. This provides a good trade-off metric for the
+observation here is that unlike other performance metric          user to determine how much data they should provide to the
+which seem to have a stronger correlation among themselves,       LLMs based on the desired level of performance and how
+the mean distance traveled does not seem to have such             much delay can be tolerated for a particular problem at hand.
+property. As an example, for "Room" environment and               As stated in the beginning of the section, the motivation of
+"Maze" environment with N = 50 with VLMs as high-                 conducting this ablation study is to see the cost-efficiency
+level planners, the distance traveled seems to follow the same    of providing partial information to the foundation models.
+pattern as the number of calls. However, the same cannot be       While the average number of tokens used for VLMs does not
+said about "Maze" environment with N = 25.                        change, there is a significant (at least an order of magnitude)
+                                                                  reduction in the case of LLMs. Since the number of tokens is
+H. Effect of partial environment infromation                      directly proportional to the cost associated with querying the
+                                                                  proprietary foundation models, this trade-off study illustrates
+   We evaluate the effect of providing partial environment        that an optimal amount of information can be provided to the
+information to the foundation models to study the trade-          foundation models to obtain desirable performance within a
+off between cost (in terms of the tokens) and performance.        given cost and time budget.
+Figure 10 compares the performance of querying a given
+foundation model with all collected observations of obstacles     I. Effect of multi-leader assignment
+and querying it with only the most recent observations of
+obstacles (50 for LLMs and 100 for VLMs). The rationale               Additionally, we evaluate the effect of using just one leader
+behind choosing the last few observations is twofold: 1) it
+reduces the number of tokens in the prompt provided to the        for large-scale MRS instead of the proposed multi-leader
+foundation model, thereby reducing the time and cost per
+query, and 2) in the considered environments, the initially       assignment as described in Section D.
+observed obstacles do not play much role in determining the
+waypoints for the leader.                                             As can be seen from the figure, the performance in terms
+
+   GPT4o-VLM and GPT4-LLM perform better with                     of reach rate drops significantly when only one leader is
+partial information We can observe that, with the exception
+of GPT-4o VLM and GPT4 LLM, the performance drops                 used and all the other robots in MRS directly follow that
+when partial information is used. It is not entirely clear why
+GPT-4o VLM and GPT4 LLM perform better with partial               leader as compared to the proposed multi-leader assignment
+information. Our understanding is that the performance of
+GPT-4o VLM and GPT4 LLM is poor with the complete                 where robots follow their local leaders. The number of
+information due to their ability (or in this case, inability) of
+utilizing the provided information to make a good decision        interventions needed by the high-level planner is also higher
+for this problem.
+                                                                  when one leader is used instead of the proposed multi-leader
+   Smaller models perform better with partial informa-
+tion From the results on Claude3-Sonnet-VLM, we can               framework. This illustrates the efficacy of the multi-leader
+observe that the performance of a smaller model (in terms of
+the model parameters) improves when partial information is        assignment in large-scale systems.
+used. On the other hand, for larger models like GPT4-VLM
+and Claude3-LLM, the performance drops when only the                  Recall that a deadlock is defined as the existence of an
+partial information is used. It provides evidence in support of
+the intuition that smaller models do not perform well when        interval   R, given as  = [a, b) where a, b  R, where
+more information is provided.
+                                                                  the  average   speed     of  the  MRS  1     i |pi|(t) = 0 for all t  
+   Quality of high-level commands deteriorates with less                                                 N
+information As discussed in the main paper, the number
+                                                                  and the Lebesgue measure of the interval µ( ) > 0, where
+
+                                                                  µ( ) = | | := b - a. Let a  R be a time instant when the
+
+                                                                  average  speed      of  the  MRS  is  zero,  i.e.,  1  i |pi|(a) = 0. Per
+                                                                                                                      N
+
+                                                                  the leader-assignment condition based on the average speed
+
+                                                                  of  the  MRS,  the      condition  1      i pi(t) < umin triggers a
+                                                                                                     N
+
+                                                                  leader assignment step at time t. The leader is chosen as the
+
+                                                                  agent    that  has  the  minimum      value  of       . pi -pgi   There  are
+
+                                                                                                                      pi|pgi,temp 
+
+                                                                  two cases possible: pi|pgi,temp  = 0 for all i  V or there
+
+                                                                  exists at least one i  V such that pi|pgi,temp  > 0. The
+
+                                                                  latter case leads to a non-zero average speed of the MRS,
+
+                                                                  leading to b = a in  = [a, b), and thus, a deadlock cannot
+
+                                                                  occur in this case. Next, we prove that
+
+                                                                                               pi|pgi,temp  = 0
+                         Results for "Room" environments with 5 agents
+
+       Random            0.5         1.0 0 25 50 75                      2     4
+            A*           Reach rate  Number of LLM calls                 Distance traveled
+
+   GPT4-VLM
+  GPT4o-VLM
+Claude3O-VLM
+Claude3S-VLM
+    GPT4-LLM
+  GPT3.5-LLM
+ Claude3-LLM
+ Claude2-LLM
+
+              0.0
+
+                         Results for "Maze" environments with 25 agents
+
+       Random            0.5         1.0 0 25 50 75                         4             6
+            A*           Reach rate  Number of LLM calls                 Distance traveled
+
+   GPT4-VLM
+  GPT4o-VLM
+Claude3O-VLM
+Claude3S-VLM
+    GPT4-LLM
+  GPT3.5-LLM
+ Claude3-LLM
+ Claude2-LLM
+
+              0.0
+
+                         Results for "Maze" environments with 50 agents
+
+               A*
+
+               Random
+
+               GPT4-VLM
+
+GPT4o-VLM
+
+Claude3O-VLM
+
+Claude3S-VLM
+
+               GPT4-LLM
+
+Claude3-LLM
+
+               0.0       0.5         1.0 0 25 50 75                         7.5 10.0
+                         Reach rate  Number of LLM calls                 Distance traveled
+Fig. 9: Performance of various high-level planners for "Room" environments with N = 5 agents (Top plots), "Maze"
+
+environments with N = 25 agents (Middle plots), and "Maze" environments with N = 50 agents (Bottom plots). From
+
+left to right: 1) The bar shows the ratio of the trajectories where all the agents reach their goals over the total number of
+
+trajectories, and the orange dot shows the ratio of agents that reach their goals over all agents; 2) Box plot of the number of
+
+times the high-level planner intervened; and 3) Box plot for the mean traveled distance by the multi-robot system normalized
+
+by the mean initial distance from the goal locations. In the box plots, the median values are in orange and the mean values
+
+are in green.
+
+for all i  V is only possible at t = 0. Note that
+pi|pgi,temp  = 0 for all i  V is possible only if all the
+agents are occluded with obstacles and none of the agents
+have any free space to move. This is only possible at a = 0,
+i.e., the MRS is initialized in a location that is occluded by
+obstacles such that it cannot move. For a > 0, since the MRS
+can reach such a location where the average speed becomes
+lower than the leader-assignment threshold, there exists at
+least one agent that has free space around it to move and
+hence, pi|pgi,temp  = 0 is not possible for all i  V for any
+a > 0 and hence, the MRS cannot get stuck in a deadlock.
+   GPT4-VLM-All
+       GPT4-VLM
+
+  GPT4o-VLM-All
+      GPT4o-VLM
+
+Claude3O-VLM-All
+   Claude3O-VLM
+
+Claude3S-VLM-All
+    Claude3S-VLM
+    GPT4-LLM-All
+       GPT4-LLM
+
+ Claude3-LLM-All
+     Claude3-LLM
+
+0.0                 0.5         1.0 0 25 50 75                 5 10 15       103          104
+                    Reach rate  Number of interventions            Time (s)
+                                                                                  Tokens
+
+Fig. 10: Performance of various high-level planners for "Maze" environments with N = 50 agents with all known environment
+information and partial information (the case with all known environment information is indicated with the suffix "-All", e.g.
+"GPT4-VLM-All"). From left to right: 1) The bar shows the ratio of the trajectories where all the agents reach their goals
+over the total number of trajectories, and the orange dot shows the ratio of agents that reach their goals over all agents; 2)
+Box plot of the number of times the high-level planner intervened; 3) Box plot of the time spent for each high-level planner
+intervention; and 4) Box plot for the input + output token per intervention. In the box plots, the median values are in orange
+and the mean values are in green.
+
+Claude3S-VLM-Multi
+
+Claude3S-VLM-One
+
+GPT3.5-Multi
+
+GPT3.5-One             0.5      1.0 0 25 50 75                 2  Time (s)4  103               104
+          0.0       Reach rate        Number of interventions
+
+                                                                                  Tokens
+
+Fig. 11: Performance of Claude3-Sonnet-VLM planner for "Maze" environments with N = 50 agents and GPT3.5-LLM
+for "Maze" environment with N = 25 with a single leader and multi-leader assignment (the case with one leader is indicated
+with suffix "-One", and that with multi-leader with "-Multi". From left to right: 1) The bar shows the ratio of the trajectories
+where all the agents reach their goals over the total number of trajectories, and the orange dot shows the ratio of agents
+that reach their goals over all agents; 2) Box plot of the number of times the high-level planner intervened; 3) Box plot of
+the time spent for each high-level planner intervention; and 4) Box plot for the input + output token per intervention. In the
+box plots, the median values are in orange and the mean values are in green.
+

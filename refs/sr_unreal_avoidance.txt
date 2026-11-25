@@ -1,0 +1,82 @@
+ 
+ Using Avoidance With the Navigation System in Unreal Engine | Unreal Engine 5.8 Documentation | Epic Developer Community 
+ Table of Contents Developer Using Avoidance With the Navigation System Using Avoidance With the Navigation System This guide shows how to use avoidance with the Navigation System. On this page Overview 
+ Unreal Engine's Navigation System allows Agents to traverse the Level using a Navigation Mesh for pathfinding. 
+ While pathfinding can determine a path around objects that don't move, avoidance algorithms are better suited to handle moving obstacles. There are two methods of avoidance the Agents can use to navigate around dynamic obstacles and each other, Reciprocal Velocity Obstacles (RVO) and Detour Crowd Manager . 
+ The Reciprocal Velocity Obstacles (RVO) system calculates the velocity vectors for each Agent to avoid a collision with nearby Agents. This system looks at the nearby Agents and assumes they are traveling with a constant velocity within each time step of the calculation. The optimal velocity vector chosen is the closest match to the Agent's preferred velocity in the direction of its target. 
+ Unreal Engine's implementation of RVO includes optimizations to reduce frame rate dependencies. It also includes improvements to avoid constant path recalculation and a priority system to help resolve potential collisions. RVO does not use the Navigation Mesh for avoidance, so it can be used separately from the Navigation System for any Character. The system is included in the Character Movement component of the Character class. 
+ The Detour Crowd Manager system handles avoidance between Agents by using an adaptive RVO sampling calculation. It does this by calculating a coarse sample of velocities with a bias toward the Agent's direction that allows for a significant improvement in the quality of the avoidance over the traditional RVO method. This system also uses visibility and topology path corridor optimizations to further improve collision avoidance. 
+ The Detour Crowd Manager system is highly configurable with options to specify sampling patterns, the maximum number of Agents, and Agent Radius. The system is included in the DetourCrowd AI Controller class and can be used with any Pawn class. 
+ Both systems work independently and should be used exclusively in your project. 
+ High-Level Comparison of Avoidance Methods 
+ Method 
+ Description 
+ Limitations 
+ Reciprocal Velocity Obstacles 
+ Agents avoid obstacles by using velocity vectors within a specified radius. 
+ Included in the Character Movement component of the Character class. 
+ Less configurable compared to the Detour Crowd Manager. 
+ Limited to the Character class. 
+ Does not use the Navigation Mesh for avoidance so Agents can potentially go "out of bounds". 
+ Detour Crowd Manager 
+ Agents avoid obstacles by using path optimizations along with velocity vectors within a specified radius. 
+ Included in the DetourCrowd AI Controller class. | Has a fixed maximum number of Agents defined in the project settings. 
+ Has a fixed maximum number of Agents defined in the project settings. 
+ Goals 
+ In this guide, you will learn how to use the Reciprocal Velocity Obstacles and Detour Crowd avoidance methods by comparing the behavior of several Agents interacting with each other. 
+ Objectives 
+ Modify the ThirdPersonCharacter Blueprint so it navigates toward a target. 
+ Modify the Agent Blueprint to use RVO avoidance. 
+ Modify the Agent Blueprint to use Crowd Detour avoidance. 
+ 1 - Required Setup 
+ In the New Project Categories section of the Unreal Project Browser, select Games > Third Person template. 
+ Select the Blueprint and No Starter Content options and click Create . 
+ Section Results 
+ You created a new Third Person project and are now ready to learn about the avoidance methods available in Unreal Engine. 
+ 2 - Creating Your Test Level 
+ Click File > New Level on the Menu Bar. 
+ Select the Default Level. 
+ Select the Floor Static Mesh Actor in the Outliner and under the Details panel, set the Scale to X = 10, Y = 10, Z = 1. 
+ Go to the Place Actors panel and search for NavMeshBoundsVolume . Drag it into the Level and place it on the floor mesh. Scale the NavMeshBoundsVolume to X = 7, Y=10, Z = 1. 
+ Go to the Place Actors panel and from the Shapes category, drag two Sphere Actors into the Level. 
+ Section Results 
+ In this section, you created a new Level and added a Navigation Mesh. You also added two Sphere Actors that will serve as targets for your Agents. 
+ 3 - Creating Your Agent 
+ In the Content Drawer , right-click and select New Folder to create a new folder. Name the folder NavigationSystem . 
+ In the Content Drawer , go to ThirdPerson > Blueprints and select the BP_ThirdPersonCharacter Blueprint. Drag it into the NavigationSystem folder and select the option Copy Here . 
+ Navigate to the NavigationSystem folder and rename the Blueprint to BP_NPC_NoAvoidance . Double-click the Blueprint to open it and go to the Event Graph . Select all input nodes and delete them. 
+ Right-click the Event Graph , then search for and select Add Custom Event . Name the event MoveNPC . 
+ Go to the My Blueprint panel and click the Add (+) button next to Variables to create a new variable. Name the variable Target . 
+ Go to the Details panel and click the Variable Type dropdown. Search for Actor and select the Object Reference . Enable the Instance Editable checkbox. 
+ Drag the Target variable into the Event Graph and select Get Target . Drag from the Target node, then search for and select the Is Valid macro, as shown below. 
+ Right-click the Event Graph , then search for and select Get reference to self . 
+ Right-click the Event Graph , then search for and select AI Move To . 
+ Connect the Is Valid pin of the Is Valid node to the AIMoveTo node. Connect the Self node to the Pawn pin of the AIMoveTo node. Drag the Target variable and connect it to the Target Actor pin of the AIMoveTo node. 
+ Right-click the Event Graph , then search for and select Event Begin Play . Drag from the Event Begin Play node, then search for and select MoveNPC . 
+ Compile and Save the Blueprint. The final Blueprint should look like the image below. 
+ Drag the BP_NPC_NoAvoidance Blueprint into your Level and from the Details panel, click the dropdown next to Target, then search for and select the Sphere Actor in front of the Agent. 
+ Duplicate the BP_NPC_NoAvoidance Blueprint as seen below. 
+ Repeat the last two steps to create another group of Agents on the opposite side of the Level with the Sphere placed in front of them as their target. 
+ Click Simulate and watch as the Agents navigate toward their goals. Notice how the lack of avoidance creates collisions in the center of the Level. 
+ Section Results 
+ In this section, you created an Agent that navigates toward its goal without using avoidance. 
+ 4 - Adding Reciprocal Velocity Obstacles Avoidance to Your Agent 
+ In the Content Drawer , right-click the BP_NPC_NoAvoidance Blueprint and select Duplicate . Name the new Blueprint BP_NPC_RVO . 
+ Double-click the BP_NPC_RVO Blueprint to open it in the Blueprint editor. Select the Character Movement component and in the Details panel, navigate to the Character Movement: Avoidance section. 
+ Enable the Use RVOAvoidance checkbox and set Avoidance Consideration Radius to 100 . 
+ Compile and Save the Blueprint . Reciprocal Velocity Obstacles avoidance is now enabled in your Agent. 
+ Drag several BP_NPC_RVO Blueprints to your Level and follow the same configuration as before. Click Simulate to see the results. 
+ Section Results 
+ In this section, you learned how to add Reciprocal Velocity Obstacles avoidance to your Agent. 
+ 5 - Adding Detour Crowd Avoidance to Your Agent 
+ In the Content Drawer , right-click the BP_NPC_NoAvoidance Blueprint and select Duplicate . Name the new Blueprint BP_NPC_DetourCrowd . 
+ Double-click the BP_NPC_DetourCrowd Blueprint to open it. Go to the Details panel and search for AI Controller . 
+ Click the dropdown next to AI Controller Class and select DetourCrowdAIController . 
+ Compile and Save your Blueprint. Detour Crowd avoidance is now enabled in your Agent. 
+ Drag several BP_NPC_DetourCrowd Blueprints to your Level and follow the same configuration as before. Click Simulate to see the results. 
+ You can adjust the Detour Crowd Manager settings by going to Settings > Project Settings and navigating to the Crowd Manager section. 
+ In this section, you can adjust several settings for the Detour Crowd Manager system, such as the Max Agents used by the system and the Max Agent Radius used for the avoidance calculation. 
+ Section Results 
+ In this section, you learned how to add Detour Crowd avoidance to your Agent. 
+ ai Ask questions and help your peers  Developer Forums Write your own tutorials or read those from others  Learning Library On this page Overview High-Level Comparison of Avoidance Methods Goals Objectives 1 - Required Setup Section Results 2 - Creating Your Test Level Section Results 3 - Creating Your Agent Section Results 4 - Adding Reciprocal Velocity Obstacles Avoidance to Your Agent Section Results 5 - Adding Detour Crowd Avoidance to Your Agent Section Results 
+ 

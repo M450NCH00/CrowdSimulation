@@ -16,7 +16,9 @@ See `integration/crowdgym_mapping.md` for exactly how records feed CrowdGym.
 
 ## Current focus (second supervisor meeting onward)
 
-The dataset work below is **Phase 1 and is on hold, not abandoned** — see `CLAUDE.md`.
+The dataset work below is **Phase 1**. It was put on hold after the second supervisor
+meeting ("on hold, not abandoned"); issue #24 (2026-10-13) describes it as retired, and
+nothing in `llm_negotiation/` uses it.
 The project now has LLM agents *communicate with each other* to resolve a conflict
 (starting with two agents crossing a narrow hallway), then looks for a reusable
 resolution pattern that can be applied without re-running the exchange.
@@ -24,16 +26,63 @@ resolution pattern that can be applied without re-running the exchange.
 Standing supervisor instruction: **no new dataset generation and no simulation or
 experiment code until the literature review is complete and discussed.**
 
+> **Status of that instruction: unconfirmed (2026-10-13).** Issue #24 commissioned the
+> simulator in `llm_negotiation/` and made it conditional on `CLAUDE.md`, which on this
+> branch does not carry the instruction, so the work went ahead. Nothing in the
+> repository records the supervisor lifting it. See `WORK_LOG-24.md`, open question Q1.
+
 | # | Roadmap step | Status |
 |---|---|---|
 | 1 | Literature review — `literature/llm-conflict-resolution/` | **delivered** (issue #8); awaiting supervisor discussion |
-| 2 | Design a small-scale conflict scenario (2-agent hallway) | blocked on step 1 discussion |
-| 3 | Implement the LLM-to-LLM exchange | not started |
+| 2 | Design a small-scale conflict scenario (2-agent hallway) | **built** (issue #24) — `llm_negotiation/configs/scenarios/hallway.yaml`; its sizes and speeds are unsourced placeholders |
+| 3 | Implement the LLM-to-LLM exchange | **built and smoke-tested** (issue #24) — `llm_negotiation/`; 12 paid smoke runs, no experiment yet |
 | 4 | Analyse exchanges for a reusable pattern | not started |
 | 5 | Validate the pattern against real data or sociology | **coding scheme drafted** (issue #12) — `literature/human-conflict-resolution/` |
 | 5a | Demographic personas: realism vs LLM bias | **delivered** (issue #16) — `literature/demographic-personas/` |
 | 5b | Game theory: communication-free conflict rules | **delivered** (issue #20) — `literature/game-theory/` |
+| 5c | Implemented rules in simulators, games, robots, traffic | **delivered** (issue #22) — `literature/simulation-rules/` |
+| 5d | LLMs resolving spatial conflict without conversation | **draft** (no issue; search of 2026-10-05) — `literature/llm-behavioural-conflict/` |
 | 6 | Bridge into CrowdGym — `integration/crowdgym_mapping.md` | not started |
+
+From building the negotiation simulator (issue #24) — see `llm_negotiation/README.md` for
+how to run it and for the results, and `WORK_LOG-24.md` for what needs sign-off:
+
+- **The platform exists and runs.** `llm_negotiation/` reimplements GameChat for two
+  agents in a doorway, an intersection and a head-on hallway, with age-and-gender
+  personas, switchable situational information, and a full log of every conversation.
+  All tests run on a mock LLM at no cost. It was built without the paper's MPC
+  controller, with DeepSeek's `deepseek-flash` in place of gpt-4o-mini, and with a
+  different turn format; `llm_negotiation/docs/gamechat-notes.md` lists every departure.
+- **Twelve paid smoke runs, about USD 0.004.** Task-only agents put the higher-priority
+  task first in 6 of 6 doorway runs, as the paper reports. In 6 hallway runs with
+  personas, the first speaker gave way in 5. Six runs per condition show that the
+  platform works and are not an estimate of anything.
+- **Three things the build turned up.** GameChat's dialogue code is on its repository's
+  default branch, not on `model-arcs` as issue #24 says. The formula issue #24 calls
+  garbled is intact in the paper; only the PDF text extract breaks it. And the paper's
+  speed formula, applied literally to disc-shaped agents, lets them overlap at a
+  right-angle crossing, so the conflict "point" had to become a zone
+  (`llm_negotiation/docs/derivations.md`).
+
+Three findings from the simulation-rules review (issue #22), all drafts needing supervisor
+sign-off — see `literature/simulation-rules/`. The review is seed-led (27 sources, 5 papers
+unobtained), so read these as findings about what was read, not about the field:
+
+- **The mechanism exists; the precedence order is the missing piece.** Avoidance rules for
+  pedestrians and game characters stall in symmetric conflicts — six sources report it and
+  one proves why. Arbitration rules that fix this exist for grid robots, for vehicles, and
+  in one case for the same kind of continuous-space agent. But the order they apply ("who
+  goes first") is a random draw, an arbitrary identifier, or first-come-first-served in
+  almost every rule read, and is called arbitrary by its own authors. See
+  `research-gap.md` §4–§5.
+- **Issue #20's open question is answered: an arrival-order rule does exist.** It is the
+  standard baseline for unsignalised intersections — and the one paper with numbers shows
+  it performing badly under load (delay 1.3 s → 39.8 s as demand doubles). See
+  `rule-catalogue-simulation.md` §3.
+- **A precedence rule's content is local, not universal.** The one rule taken from an
+  outside source copies a national traffic code and notes that other countries differ
+  ("left in Japan, right in Australia"). For pedestrians there is no statute to copy —
+  which is the opening for a Singapore-specific, elicited rule.
 
 Three findings from the game-theory review (issue #20) that bear on the project's
 direction, all needing supervisor sign-off — see `literature/game-theory/`:
@@ -100,6 +149,9 @@ CrowdSimulation/
     personas.yaml                   5 age groups x 2 genders + SG population weights
     generated/                      pipeline output (git-ignored) — see "Output files" below
   literature/
+    papers.md                       reviewed papers backing the LLM-as-behaviour-source claim
+    refs.bib                        BibTeX for the above
+    search-log.md                   what was searched, rejected, and where access failed
     game-theory/                    issue #20: game theory for communication-free rules
       g1-conflict-games-conventions.md   conventions as correlated equilibria (priority)
       g2-norm-emergence.md               how a shared rule arises, spreads, breaks
@@ -110,6 +162,18 @@ CrowdSimulation/
       candidate-rule-catalogue.md        *** 11 candidate runtime rules, all sourced ***
       search-log.md                      what was searched; framing check; acquisition list
       refs-game-theory.bib               36 entries, each with read-depth recorded
+    simulation-rules/               issue #22: rules as implemented in working systems
+      s1-crowd-simulation.md             pedestrian / crowd models (6 entries)
+      s2-games.md                        games and engines (4 entries, industry only)
+      s3-mapf-robotics.md                path finding and multi-robot navigation (10 entries)
+      s4-traffic-vehicles.md             intersections, merging, right-of-way (7 entries)
+      rule-catalogue-simulation.md       *** 35 implemented rules, all sourced, none merged ***
+      category-summary.md                avoid / communicate / arbitrate counts + hard cases
+      research-gap.md                    the gap, derived from the entries, with its conditions
+      pre-window-foundations.md          pre-2016 methods as pointers only (no summaries)
+      missing-papers.md                  5 papers + 1 doc that could not be obtained
+      search-log.md                      searches run, mistakes caught, open risks
+      refs-simulation-rules.bib          records for every source, with the copy read
     (see also demographic-personas/, human-conflict-resolution/,
      llm-conflict-resolution/, paper-summaries/ from issues #8/#12/#14/#16/#18)
   pipeline/
@@ -127,10 +191,16 @@ CrowdSimulation/
     requirements.txt
   integration/
     crowdgym_mapping.md             record -> CrowdGym AgentType / journey / action handler
-  literature/
-    papers.md                       reviewed papers backing the LLM-as-behaviour-source claim
-    refs.bib                        BibTeX for the above
-    search-log.md                   what was searched, rejected, and where access failed
+  llm_negotiation/                  issue #24: two-agent LLM negotiation simulator (has its own README)
+    run_experiment.py               run an experiment config; --client mock (free) or deepseek (paid)
+    configs/                        scenarios, personas, experiment designs C0-C4, task strings, API prices
+    negsim/                         the package: core, scenarios, conflict, control, llm,
+                                    negotiation, personas, runlog, metrics, viz, experiment
+    tests/                          432 tests, all on the mock client, no network, no spend
+    docs/                           architecture, gamechat-notes, derivations, llm-backend, log-schema
+    runs/                           committed run logs: C0 (no LLM) and the paid smoke runs
+    spend_ledger.jsonl              one line per paid API call for this work (Phase 1 spend is
+                                    tracked separately in pipeline/config.py)
   refs/                             cached copies of every cited source (re-checkable)
 ```
 

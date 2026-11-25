@@ -1,0 +1,450 @@
+                                        GROVE: Grounded Pedestrian Simulation via Natural Language for
+                                                              Interactive Social Robot Navigation
+
+                                                                    Duc Tai Nguyen1, Volodymyr Shcherbyna1,2, Anh Do Duc1,
+                                                                       Zhengcheng Shen3, Teham Buiyan3, and Linh Kästner1
+                                                                                    1Singapore Management University
+                                                                                        2Technical University Berlin
+                                                                                     3National University of Singapore
+
+arXiv:2606.25504v1 [cs.RO] 24 Jun 2026  Fig. 1: GROVE is a novel pedestrian scenario generation approach for social robotic simulation. GROVE transforms natural
+                                        language prompts into high-fidelity social simulations. Starting from a user prompt and world database, the pipeline extracts
+                                        semantic Regions of Interest and utilizes Retrieval-Augmented Generation to fetch relevant Behavior Nodes. A Large
+                                        Language Model synthesizes these inputs into behavior trees. A Global Planner resolves navigation waypoints, which are
+                                        either re-inserted into the behavior trees or converted into velocity fields based on the user preset. Finally, the post-processed
+                                        behavior trees and a Social Force Model execute realistic human navigation and social interactions within simulators such
+                                        as Isaac Sim or Gazebo.
+
+                                        Abstract-- Pedestrian simulation is a critical component for       trian simulation. Multiple modules separately ensure the real-
+                                        training and deploying social robot navigation approaches, yet it  ism and soundness of long-horizon human behavior, medium-
+                                        remains a largely rigid system that repeatedly requires manual     horizon pedestrian navigation, and short-horizon robot/social
+                                        data generation to define even simple scenarios. We propose        interactions. Each module is tuned by the prompt in a way
+                                        GROVE, a text-to-scenario pedestrian simulation framework          that reflects the user intent across all aspects of pedestrian
+                                        that combines state-of-the-art approaches to produce realistic,    simulation. By dynamically selecting one of several state-of-the-
+                                        socially challenging scenarios for social robot navigation. Our    art (SotA) approaches in our modules based on the scenario,
+                                        framework allows users to customize one of several common          we capture many situational nuances of pedestrian behavior
+                                        presets (emergency, queuing, normal) or even enter a fully         in order to narrow the simulation-to-real (sim2real) gap. The
+                                        independent prompt to generate a highly customizable pedes-        human simulation is directly integrated into Isaac Sim, Gazebo,
+and RViz simulators for robot deployment in highly social          ity and controllability, but remain largely disconnected from
+environments. We validate our approach through qualitative         interactive robotics simulators.
+comparison against existing pedestrian simulation baselines
+across scenarios of varying complexity in residential, hospital,   On the robotics simulator side, PedsimROS and
+and office environments. The result is a high-fidelity pedestrian  MengeROS [11] brought SFM-based simulation into ROS
+simulation that challenges social robot navigation with complex,   but were deprecated alongside ROS 1 and assign uniform
+diverse, realistic human behaviors.                                behavioral parameters to all agents. SocialGym 2.0 [2]
+                                                                   supports RL-based multi-robot training in structured
+                         I. INTRODUCTION                           social bottlenecks but inherits the same limitations.
+                                                                   SocNavBench [1] and nuScenes [27] provide trajectory-
+Social robot navigation in human-populated environments            level realism by replaying real pedestrians, but static
+remains one of the most challenging problems in mobile             trajectories prevent robot reactivity. Arena 5.0 [4] offers
+robotics. Robots not only must plan collision-free paths,          Isaac Sim rendering, ROS 2 support, and modular scenario
+but also anticipate and respond to the complex, context-           definitions, yet scenario generation remains template-driven.
+dependent behaviors of surrounding pedestrians [8].                SEAN 2.0 [3] introduces Behavior Graphs for group-level
+                                                                   interactions but is restricted to Unity and ROS 1 with no
+Current pedestrian simulators share a common failure mode:         mechanism for novel scenario generation.
+they decouple scenario definition from the simulation itself,
+requiring researchers to manually specify agent positions,         HuNavSim 2.0 [5] achieves individual-level fidelity through
+goals, and behaviors for every scenario they wish to test. This    per-agent behavior trees and supports Isaac Sim, Gazebo,
+manual bottleneck forces practitioners to work with small,         and Webots. Its core limitation is that behavior trees dispatch
+fixed sets of hand-crafted scenarios [3], [4] that fail to cover   semantic intent to SFM without intermediate waypoints, pro-
+the long tail of real-world social situations. Beyond this,        ducing implausible straight-line paths through complex envi-
+most simulators apply uniform behavioral models across all         ronments, with all scenario configuration remaining manual.
+agents [9], collapsing the rich diversity of human pedestrian      We build directly on HuNavSim 2.0 for its powerful behavior
+behavior into a single parameterization [10]. They further         tree engine. Text-Crowd [6] demonstrates LLM-driven crowd
+rely on the Social Force Model (SFM) [11], [12], [13], as          generation from free-text but lacks simulator integration and
+the sole navigation primitive, a local collision avoidance         interactive pedestrian-robot dynamics. TRACE & PACE [7]
+mechanism never designed to guide agents through complex           generates realistic, waypoint-conditioned trajectories and,
+environments with semantic intent.                                 though not designed for robotics, directly addresses Hu-
+                                                                   NavSim 2.0's navigation gap; we leverage it as an optional
+The result is a persistent sim-to-real gap [14]: simulated         high-fidelity medium-horizon planner.
+pedestrians that behave implausibly the moment they must
+navigate purposefully through a crowded scene.                     Our work addresses the gaps across all of the above: auto-
+                                                                   matic text-driven scenario generation over HuNavSim 2.0,
+We propose GROVE, a generative framework combining                 and Theta*-based waypoint planning [28] that bridges be-
+RAG-based retrieval and social behavior trees for pedestrian       havioral intent and physical navigation, with TRACE as a
+data synthesis, closing this gap. Given a free-text description,   high-fidelity alternative, across long-, medium-, and short-
+our framework automatically generates a fully configured,          horizon behavior.
+high-fidelity pedestrian simulation ready for robot deploy-
+ment.                                                                                     III. METHODOLOGY
+
+                        II. RELATED WORK                           A. System Design
+
+Numerous works study pedestrian representation and trajec-         We propose a hierarchical crowd generation pipeline that
+tory prediction [17], but most adopt a robot-centric or first-     separates semantic reasoning, behavioral planning, and geo-
+person perspective [18], [19], [20], limiting applicability to     metric motion planning. The system is divided into a genera-
+global, multi-agent crowd simulation.                              tion side, responsible for semantic and behavioral reasoning,
+                                                                   and a simulation side, responsible for geometric planning
+Learning-based crowd generation methods fall into three            and execution, connected through a structured behavior tree
+directions. Data-driven approaches learn pedestrian dynam-         interface. To ensure scalability, robustness, and modularity,
+ics from real-world videos using diffusion or VAE-based            the architecture follows a hierarchical decomposition into
+models [21], [22], [23], producing realistic motion but re-        three horizons.
+lying heavily on large-scale labeled data. Physics-informed
+methods integrate diffusion models with social-force or fluid-     a) Strategic layer: Regions of Interest (RoIs) are extracted
+based formulations [13], [24], though at higher computa-           from natural language input by matching the user prompt
+tional cost and with restricted behavioral diversity. Text-        against candidates defined in a semantic world representation
+guided approaches leverage LLMs to synthesize crowd be-            using an LLM.
+haviors from user prompts [6], [25], [26], improving flexibil-
+Method             Social Force  Navigation                     Behavior  Heterogeneous  Natural Language
+
+SFM-based                                                                                          
+PedsimROS                                                                                          
+MengeROS
+                                                                                                   
+Learning-based                                                                                     
+SocNavBench [1]
+SocialGym 2.0 [2]                                                                                  
+                                                                                                   
+Scenario-based                                                                                     
+SEAN 2.0 [3]
+Arena 5.0 [4]                                                                                     
+HuNavSim 2.0 [5]                                                                                   
+                                                                                                  
+Other
+Text-Crowd [6]
+TRACE & PACE [7]
+
+GROVE (Ours)
+
+TABLE I: Feature comparison of popular pedestrian simulators.  supports,  does not support,  partially supports.
+
+Fig. 2: System Design: The framework employs a decoupled hierarchical approach to scenario generation. To mitigate model
+hallucination of complex behavioral logic, a RAG module fetches precise Behavior Node descriptions from a ChromaDB
+vector database. The LLM architecture utilizes a task-specific multi-model strategy: a lightweight model (Gemini 2.5
+Flash [15] or Qwen-3-0.6B [16] on a local machine) performs rapid RoI selection, while a better reasoning model (Gemini
+3 Pro or Qwen-3-4B) synthesizes error-free, semantically structured BTs. Navigation is resolved via a Theta* acting directly
+on the BTs to prevent local minima. Depending on the selected preset (dashed lines), waypoints are either injected as reactive
+nodes or transformed into velocity fields. The final execution loop integrates a Social Force Model to provide real-time,
+physically-consistent commands to the simulator.
+
+b) Tactical layer: A structured database of behavior nodes is   information in a structured and explicit manner. The world
+embedded into a vector store, and relevant nodes are retrieved  is represented as a list of zones corresponding to RoIs
+via a Retrieval-Augmented Generation (RAG) module imple-        such as rooms, sections, and hallways, each containing
+mented with ChromaDB before being provided to the LLM           structural elements, entities, and semantic attributes enabling
+for behavior tree generation that defines geometric goals and   unambiguous reference from natural language. An excerpt of
+execution logic.                                                world.yaml is shown in the left top panel of Figure 1.
+
+c) Operational layer: A global planning algorithm operates      RoIs are indexed at load time and stored with structured
+directly on navigation-related nodes in the generated behav-    metadata consisting of zone name, door name, entity name,
+ior tree to compute static-obstacle collision-free paths for    entity type, and associated geometric attributes. During
+human agents.                                                   prompt processing, semantic tokens extracted from the user
+                                                                input are matched against this metadata to identify relevant
+1) World Semantic Representation and RoIs extraction: To        RoIs. Irrelevant zones are filtered out before constructing the
+bridge the gap between natural language intent and simu-        LLM context. For each selected RoI, a structured summary
+lation geometry, we define a human-LLM-readable YAML            is constructed containing metadata, boundary coordinates,
+format world.yaml that encodes spatial and semantic             entrance coordinates, and selected entity information from
+Fig. 3: User Story: The proposed pipeline is integrated into the RViz2 visualization environment for enhanced usability and
+reproducibility. The UI allows users to input natural language prompts and select generation presets, which are then processed
+into visible artifacts. The interface provides a real-time synchronous link between the generation-side data--including velocity
+fields, global waypoints, and agent poses--and high-fidelity physics simulators such as Isaac Sim, Gazebo, and Unity via
+the ROS 2 ecosystem.
+
+world.yaml. This filtered representation is injected into       ioral diversity in the node database. We further introduce a
+the LLM prompt to provide spatial grounding while avoiding      new node, FollowVelocityField, to support scalable
+unnecessary context expansion.                                  group-level motion control. Each group is associated with
+                                                                an independent velocity field that governs collective flow
+2) LLM-Based Behavior Tree Generation with RAG:                 while the BT maintains decision-level control. This hybrid
+                                                                design enables scalable crowd control through velocity fields
+a) Behavior Tree as Intermediate Representation: behavior       while preserving structured decision logic through behavior
+trees (BTs) are adopted as the intermediate representation      trees. To our knowledge, this is one of the first integrations
+due to their hierarchical structure, modularity, and determin-  of velocity-field crowd control directly into a behavior tree-
+istic execution semantics. Unlike direct policy generation      based language-conditioned generation framework.
+or trajectory synthesis, BTs provide an interpretable and
+verifiable symbolic program that mediates between language      c) RAG module: The BT XML schema contains hetero-
+intent and simulation control. This choice enables structured   geneous node types with strict parameter constraints and
+decomposition of complex crowd scenarios into reusable          non-trivial semantic dependencies. Providing the full node
+sub-behaviors while preserving execution transparency. In       specification inside the LLM prompt introduces excessive
+our pipeline, the BT functions as a contract between the        context length and amplifies hallucination risk. We therefore
+generation side and the simulation side, ensuring that all      design a RAG module that dynamically injects only task-
+language-derived decisions are grounded in executable logic.    relevant node specifications. The retrieval corpus encodes
+                                                                node descriptions, parameter types, semantic constraints, and
+b) Node Wrapping Strategy: Primitive HuNavSim nodes             template structures. Given a user prompt, the retriever selects
+are insufficiently abstracted for language-driven generation    the most relevant node specifications from the database.
+because they expose low-level bookkeeping requirements          These specifications are injected into the LLM context to
+such as explicit ID references for shared entities like group   guide schema generation. This mechanism improves syntac-
+centers, leader agents, or navigation goals. In complex sce-    tic validity, reduces hallucinated node types, and accelerates
+narios with a large number of agents and navigation goals,      inference by minimizing unnecessary context.
+maintaining consistent ID bindings becomes challenging for
+the LLM and leads to brittle generations. We therefore          3) Global planner on behavior trees: While the SFM han-
+introduce an automatic ID management module that de-            dles local collision avoidance among agents, it does not
+terministically allocates and resolves identifiers for agents,  guarantee collision-free motion with respect to obstacles
+goals, and groups as a post-processing stage. This design       in densely structured environments as there are no hard
+offloads symbolic overhead and pointer tracking from the        constraints in SFMs to avoid situations where forces cancel
+model's context window. In addition, we encode high-level       out each other, leading to collision situations. A geometric
+multi-agent behaviors such as queuing and group formation       global planner is therefore integrated to ensure static obstacle
+as structured BT subtrees. This design decouples high-level     avoidance.
+intent from geometric execution while increasing behav-
+a) Static Obstacle Avoidance via Theta*: Thanks to our          supervision signals analogous to the label velocity fields used
+semantic world representation, our world can easily be          for training their diffusion-based velocity field model. This
+decomposed into a 2D occupancy grid. This grid map enables      yields more stable and globally consistent guidance, while
+the use of classical graph-based planners. We adopt Theta* to   overcoming the limitation of a fixed set of predefined start
+compute efficient and near-line-of-sight collision-free paths   and goal regions. Overall, this configuration reformulates
+between goal locations. Theta* is chosen for its ability to     the generation task from compositional social reasoning to
+generate shorter and smoother paths compared to standard        constrained crowd flow optimization.
+A* [29] while maintaining computational efficiency.
+                                                                2) Queuing Mode: Queuing Mode targets structured wait-
+b) Planning Strategy: Direct navigation command nodes           ing scenarios such as service counters, ticket booths, or
+(i.e. GoTo node) within the behavior tree are analyzed to       checkpoints where ordered spatial arrangement is required.
+identify consecutive goal-directed actions. For each adja-      The behavior generation stage activates a dedicated Queue
+cent pair of navigation goals, a global path is computed        subtree template that encodes ordered agent insertion and
+on the occupancy grid. The resulting intermediate way-          spacing constraints within a structured behavior tree. Goal
+points are injected into the behavior tree as explicit sub-     assignment follows a sequential allocation policy consistent
+goals. By performing planning at the behavior tree level,       with queue ordering rather than independent sampling. In
+we preserve hierarchical structure while guaranteeing static    contrast to Emergency Mode, the Theta*-based global plan-
+obstacle avoidance. This integration establishes a principled   ner remains enabled to guarantee static obstacle avoidance in
+connection between symbolic task programs and classical         confined service areas. The RAG module prioritizes queue-
+motion planning.                                                related node definitions while preserving geometric feasibil-
+                                                                ity through global planning.
+B. User Interface
+                                                                3) Normal Mode: Normal Mode represents daily-life mixed
+A GUI within RViz2 allows users to input prompts, select        scenarios involving heterogeneous social interactions and
+presets, and verify LLM-generated velocity fields and way-      moderate crowd density. The full social behavior node set
+points before committing to full physical simulation. Figure 3  is available, including group formation, conversation, fol-
+showcases the workflow                                          lowing, and general roaming behaviors. Both hierarchical
+                                                                behavior tree control and Theta*-based global planning are
+C. Optimized Presets                                            enabled to balance expressiveness and geometric feasibility.
+                                                                This mode preserves maximal behavioral diversity while
+To further reduce generation latency and improve controlla-     maintaining hierarchical feasibility guarantees across all lay-
+bility for common scenario types, we introduce presets as       ers.
+structured constraint layers applied to the behavior genera-
+tion and planning stages. Each preset modifies specific com-                             IV. EVALUATIONS
+ponents of the pipeline, including the LLM prompt template,
+retrievable node set, goal sampling strategy, velocity control  The proposed hierarchical pipeline is evaluated against
+policy, and global planning configuration. Rather than alter-   two existing language-driven crowd generation frameworks
+ing the architecture itself, presets operate as deterministic   across three scenario presets. We evaluate semantic align-
+configuration overlays.                                         ment and realism quantitatively via VLM-based scoring and
+                                                                navigation behavior through trajectory visualization across
+1) Emergency Mode: Emergency Mode targets evacuation            three scenario presets. Generalization is tested across struc-
+                                                                tured public, semi-structured professional, and unstructured
+scenarios characterized by high-density crowds, urgency-        domestic layouts through experiments in hospital, office,
+                                                                and residential environments. The hospital environment, of-
+driven motion, and dominant exit-seeking behavior. The          fering the richest semantic structure and most challenging
+                                                                navigation layout among the three, serves as our primary
+LLM prompt template is biased toward evacuation se-             evaluation setting. The comparison baselines are our re-
+                                                                implementations of Text-Crowd [6] and TRACE [7], which
+mantics, and the RAG module restricts retrieval to              represent two recent crowd generation paradigms with differ-
+                                                                ing assumptions on world representation and agent control.
+FollowVelocityField-based navigation to ensure scal-            To ensure comparability despite architectural differences, we
+                                                                adapt each environment to satisfy the input requirements
+ability and coherent group-level motion. Complex social         of the baselines while preserving the underlying geometry
+                                                                and semantic structure. Text-Crowd's limited semantic map
+interaction nodes such as conversation, roaming, or dis-        format was derived automatically from world.yaml by
+                                                                directly mapping our semantic annotations. TRACE provides
+cretionary following are disabled to eliminate non-essential    neither a spawning sampler, nor an explicit waypoint gen-
+                                                                eration mechanism. LLM-generated spawn positions and a
+branching. In this preset, the LLM generates spawn positions,
+
+group assignments for each pedestrian, and a single exit
+
+door represented as a 2D point e shared by all pedestri-
+
+ans. For each group Gi, we compute its centroid ci using
+
+ci  =   1    pGi p, where p denotes an individual pedestrian
+       |Gi|
+
+position.
+
+Theta* computes a feasible path between each group centroid
+ci and the exit e. These paths are subsequently converted into
+a velocity field, following the procedure in [6], to generate
+Fig. 4: Side-by-side scenario comparison under identical prompts across Normal, Queuing, and Emergency presets in the
+Hospital world. GROVE produces semantically coherent spatial organization -- notably structured queue formation and
+exit-oriented crowd flow -- that is absent or weakly represented in both baselines.
+
+single waypoint per agent were provided as minimal guid-        wall structures that are weakly encoded in its agent-centric
+ance for the model to function properly. This setup ensures     top-down semantic representation.
+that both baselines operate under comparable semantic input
+and geometric constraints without artificially enhancing their  b) Text-Crowd: Text-Crowd demonstrates stronger static ob-
+capabilities.                                                   stacle avoidance due to ORCA-based post-processing that
+                                                                enforces collision-free velocity updates. Nevertheless, tra-
+Preliminary experiments confirmed that providing the full       jectory endpoints are often weakly aligned with prompt
+node specification without retrieval consistently increased     semantics. Although candidate start and goal regions are au-
+hallucinated node types and inference latency; the RAG          tomatically derived from zone centers to reduce manual bias,
+module was adopted as a direct result of these observations.    goal sampling remains decoupled from fine-grained semantic
+Similarly, omitting the global planner produced frequent wall   reasoning. Agents therefore terminate in geometrically valid
+collisions and semantically implausible straight-line paths in  but semantically implausible positions.
+structured environments, motivating its integration as a hard
+geometric feasibility guarantee.                                c) GROVE: Our method maintains collision-free trajec-
+                                                                tories while preserving strong semantic grounding across
+A. Path Generation                                              all presets. In Emergency Mode, velocity-field guidance
+                                                                produces coherent crowd flow toward exits without wall
+Figure 5 shows representative trajectory results focuses        penetration. In Queuing and Normal modes, behavior tree
+on static obstacle avoidance, semantic alignment with the       execution preserves long-horizon intent, while Theta*-based
+prompt, and long-horizon navigation consistency.                waypoint injection guarantees geometric feasibility. Com-
+                                                                pared to TRACE and Text-Crowd, goal allocation is directly
+a) TRACE: TRACE produces visually smooth short-horizon          grounded in RoI extraction, preventing semantically implau-
+trajectories in all scenarios. However, in the Emergency        sible terminal states. Notably, GROVE is the only method
+scenario in Figure 5a, although the LLM assigns goals near      capable of generating structured queues in which agents line
+the exit, only a subset of agents consistently move toward it   up and progressively advance toward the referenced region.
+even with waypoint guidance enabled. We observe frequent        Furthermore, the use of behavior trees enables explicit stop-
+wall penetration across scenarios, which we attribute to thin-
+(a) Scenario Emergency  (b) Scenario Normal                                       (c) Scenario Queuing
+
+Fig. 5: Trajectory generation comparison across TRACE, Text-Crowd, and GROVE in the Hospital world. (a) Emergency:
+GROVE's velocity-field guidance produces coherent exit-directed flow without wall penetration, unlike TRACE which
+shows frequent wall collisions and incomplete exit-seeking. (b) Normal: GROVE exhibits long-horizon goal consistency
+and stop-and-go patterns absent in both baselines. (c) Queuing: GROVE is the only method producing structured queues
+with progressive agent advancement; note agents near the pharmacy adjusting toward the robot while maintaining queue
+structure.
+
+and-go patterns that frequently occur in real-world pedestrian  Model       Alignment Plausibility  Visual  Average
+dynamics but are absent in the baselines. As shown in
+Figure 5c, agents near the pharmacy queue adjust their          TRACE             Emergency          4.64     4.09
+motion toward the robot while maintaining queue structure,      Text-Crowd                           4.86     4.43
+producing realistic interactive behavior. These results demon-  GROVE       2.09  5.55               4.83     5.33
+strate that coupling symbolic task structure with geometric
+certification improves semantic fidelity, structural realism,   Text-Crowd  2.71  5.71               5.50     4.89
+and navigation robustness.                                      TRACE                                5.17     5.50
+                                                                GROVE       4.50  6.67               5.71     6.57
+B. Realism and Complexity
+                                                                TRACE             Normal             4.50     4.39
+Evaluations relying on trajectory-based metrics cannot cap-     Text-Crowd                           5.17     4.61
+ture alignment between prompt semantics and global scene        GROVE       2.50  6.67               5.57     6.62
+structure. We therefore adopt a Vision-Language Model
+(VLM)-based evaluation protocol following [30], which                       4.17  7.17
+demonstrated VLM-based scoring correlates strongly with
+human judgment in scene evaluation tasks. For each method                   6.29  7.71
+and scenario, we collect multiple screenshots from different
+viewpoints together with the annotated floor plan contain-                        Queuing
+ing zone names. These images, along with the original
+user prompt, are evaluated with GPT-5, a state-of-the-art                   2.83  5.83
+VLM with strong vision-language reasoning capabilities.
+The model is instructed to rate each scenario along three                   1.50  7.17
+dimensions, namely Prompt Alignment (correspondence be-
+tween the generated scene and the user's semantic intent),                  6.86  7.43
+Plausibility (could the scenario reasonably occur in the real
+world without counterintuitive artifacts?), Visual Realism      TABLE II: Quantitative Evaluations of Scenarios (0­10
+(perceptual credibility of pedestrian appearance and spatial    scale, N = 3 scenarios per preset, K = 64 screenshots total).
+arrangement)                                                    GROVE achieves the highest average across all presets, with
+on a 0­10 scale.                                                the largest gains in Prompt Alignment.
+
+Results are reported in Table II. Across all presets, GROVE     achieves moderate plausibility and visual realism scores
+achieves the highest average score. The most significant im-    but lower alignment, indicating smooth local motion with-
+provement is observed in Prompt Alignment, where GROVE          out strong semantic control. Notably, in the Queuing pre-
+consistently outperforms both baselines. This reflects the      set, GROVE substantially improves both alignment and
+effectiveness of RoI-grounded start and goal allocation.        plausibility, demonstrating its ability to generate structured
+Text-Crowd exhibits comparatively low alignment scores,         multi-agent behaviors that are absent or weakly represented
+particularly in Emergency and Queuing scenarios, due to         in the baselines. A side-by-side qualitative comparison in
+its decoupled start and goal sampling strategy. TRACE           Figure 4 corroborates these findings, where GROVE pro-
+                                                                duces semantically coherent spatial organization and goal-
+                                                                consistent agent configurations. The qualitative samples fur-
+                                                                ther reveal clearer queue formation, exit-oriented crowd flow,
+                                                                and interaction-consistent grouping patterns. Together, these
+                                                                quantitative and visual results indicate that coupling semantic
+                                                                grounding with hierarchical planning improves geometric
+                                                                correctness, structural organization, and perceived scenario
+                                                                realism.
+
+                                                                C. Optimized Presets
+
+                                                                We evaluate the effectiveness of our optimized presets
+                                                                against a vanilla variant of GROVE. In the vanilla setting,
+                                                                the full world description is injected into the prompt, no
+restriction is imposed on the RAG candidate behavior nodes,                    [7] D. Rempe, Z. Luo, X. B. Peng, Y. Yuan, K. Kitani, K. Kreis, S. Fidler,
+and the model autonomously selects behavior nodes without                           and O. Litany, "Trace and pace: Controllable pedestrian animation
+scenario-specific system guidance. Results are reported in                          via guided trajectory diffusion," in Proceedings of the IEEE/CVF
+Table III.                                                                          Conference on Computer Vision and Pattern Recognition (CVPR),
+                                                                                    2023, pp. 13 756­13 766.
+Method       Emergency  Normal  Queuing
+                                                                               [8] A. Rudenko, L. Palmieri, M. Herman, K. M. Kitani, D. M. Gavrila,
+Vanilla         14296    14329   14343                                              and K. O. Arras, "Human motion trajectory prediction: A survey,"
+GROVE            9250    7323     8575                                              The International Journal of Robotics Research, vol. 39, no. 8, pp.
+                                                                                    895­935, 2020.
+Improvement      35%      49%     40%
+                                                                               [9] C. Mavrogiannis, F. Baldini, A. Wang, D. Zhao, P. Trautman, A. Ste-
+TABLE III: Token count, averaged over N = 10 cold-cache                             infeld, and J. Oh, "Evaluation of socially-aware robot navigation,"
+runs (lower is better). GROVE presets provide significant                           Frontiers in Robotics and AI, vol. 8, 2021.
+double digit token efficiency improvements.
+                                                                              [10] X. Chen, M. Treiber, V. Kanagaraj, and H. Li, "Social force models
+                          V. CONCLUSION                                             for pedestrian traffic ­ state of the art," Transport Reviews, vol. 38,
+                                                                                    no. 5, pp. 625­653, 2018.
+In this paper, we introduced GROVE as a novel approach to
+pedestrian simulation, using generative models to combine                     [11] D. Helbing and P. Molnár, "Social force model for pedestrian dynam-
+multiple SotA approaches into an adaptive, high-fidelity                            ics," Physical Review E, vol. 51, no. 5, pp. 4282­4286, 1995.
+simulation. We have validated our system against established
+baselines and demonstrated a more accessible, efficient, and                  [12] M. Moussaïd, N. Perozo, S. Garnier, D. Helbing, and G. Theraulaz,
+more behaviorally realistic pedestrian simulation directly                          "The walking behaviour of pedestrian social groups and its impact on
+compatible with ROS2 and popular robot simulators.                                  crowd dynamics," PloS one, vol. 5, no. 4, p. e10047, 2010.
+
+Several limitations remain. The computational cost of com-                    [13] H. Chen, J. Ding, Y. Li, Y. Wang, and X.-P. Zhang, "Social physics
+bining multiple state-of-the-art approaches is high; while                          informed diffusion model for crowd simulation," in Proceedings of the
+we streamlined the generation process and simulation loop                           AAAI Conference on Artificial Intelligence, vol. 38, no. 1, 2024, pp.
+where possible, inference remains expensive compared to                             474­482.
+most existing approaches. Additionally, our pipeline assumes
+a static obstacle map and does not account for dynamic                        [14] W. Zhao, J. P. Queralta, and T. Westerlund, "Sim-to-real transfer
+environmental changes such as moving furniture or tem-                              in deep reinforcement learning for robotics: A survey," in IEEE
+porary obstructions. We aim to address the computational                            Symposium Series on Computational Intelligence (SSCI), 2020, pp.
+cost in future work by introducing world-level caches pre-                          737­744.
+computed ahead of time, and plan to explore automated
+world representation extraction from sensor data to reduce                    [15] G. Comanici, E. Bieber, M. Schaekermann, I. Pasupat, N. Sachdeva,
+manual authoring overhead.                                                          I. Dhillon, M. Blistein, O. Ram, D. Zhang, E. Rosen, et al., "Gemini
+                                                                                    2.5: Pushing the frontier with advanced reasoning, multimodality,
+                            REFERENCES                                              long context, and next generation agentic capabilities," arXiv preprint
+                                                                                    arXiv:2507.06261, 2025.
+ [1] A. Biswas, A. Wang, G. Silvera, A. Steinfeld, and H. Admoni, "Soc-
+      NavBench: A grounded simulation testing framework for evaluating        [16] A. Yang, A. Li, B. Yang, B. Zhang, B. Hui, B. Zheng, B. Yu, C. Gao,
+      social navigation," ACM Transactions on Human-Robot Interaction,              C. Huang, C. Lv, et al., "Qwen3 technical report," arXiv preprint
+      vol. 11, no. 3, pp. 26:1­26:24, 2022.                                         arXiv:2505.09388, 2025.
+
+ [2] J. Holtz and J. Biswas, "SOCIALGYM 2.0: Simulator for multi-robot        [17] R. Bokkasam, S. Gangisetty, A. A. Hafez, and C. Jawahar, "Pedes-
+      learning and navigation in shared human spaces," in Proceedings of            trian intention and trajectory prediction in unstructured traffic using
+      the AAAI Conference on Artificial Intelligence, vol. 38, no. 21, 2024,        idd-ped," in 2025 IEEE International Conference on Robotics and
+      pp. 23 778­23 780.                                                            Automation (ICRA). IEEE, 2025, pp. 763­770.
+
+ [3] N. Tsoi, A. Xiang, P. Yu, S. S. Sohn, G. Schwartz, S. Ramesh,            [18] S. Li, P. Li, Q. Lian, P. Yun, and X. Chen, "Learning better representa-
+      M. Hussein, A. W. Gupta, M. Kapadia, and M. Vázquez, "SEAN 2.0:               tions for crowded pedestrians in offboard lidar-camera 3d tracking-by-
+      Formalizing and generating social situations for robot navigation,"           detection," in 2025 IEEE International Conference on Robotics and
+      IEEE Robotics and Automation Letters, vol. 7, no. 4, pp. 11 047­              Automation (ICRA). IEEE, 2025, pp. 2740­2747.
+      11 054, 2022.
+                                                                              [19] Z. Jiang, R. Liu, Y. Zhou, H. Lu, B. Yang, D. Lin, and W. Zhang,
+ [4] L. Kästner, V. Shcherbyna, H. Soh, G. N. H. Truong, D. D. Anh, T. M.           "Physgcn-dl: Physics-informed graph convolutional networks with
+      Kien, T. Seeger, A. Martban, V. T. Lam, N. Q. Hung, P. T. H. Tung,            diversity-aware loss optimization for multimodal pedestrian trajectory
+      T. D. An, E. Wiese, and M. H.-K. Schreff, "Demonstrating Arena                prediction," in 2025 IEEE/RSJ International Conference on Intelligent
+      5.0: A Photorealistic ROS2 Simulation Framework for Developing                Robots and Systems (IROS). IEEE, 2025, pp. 38­45.
+      and Benchmarking Social Navigation," in Proceedings of Robotics:
+      Science and Systems, LosAngeles, CA, USA, June 2025.                    [20] D. Shenkut and B. V. Kumar, "Visual-linguistic reasoning for pedes-
+                                                                                    trian trajectory prediction," in 2025 IEEE International Conference on
+ [5] I. Escudero, N. Pérez-Higueras, F. Caballero, and L. Merino,                   Robotics and Automation (ICRA). IEEE, 2025, pp. 771­778.
+      "HuNavSim 2.0: An extended ROS 2 human navigation simulator,"
+      2025. [Online]. Available: https://arxiv.org/abs/2507.17317             [21] Z. Yao, G. Zhang, D. Lu, and H. Liu, "Learning crowd behavior
+                                                                                    from real data: A residual network method for crowd simulation,"
+ [6] X. Ji, Z. Pan, X. Gao, and J. Pan, "Text-guided synthesis of crowd             Neurocomputing, vol. 404, pp. 173­185, 2020.
+      animation," in ACM SIGGRAPH 2024 Conference Papers, 2024.
+                                                                              [22] Z. Liu, J. Lin, W. Wu, and B. Zhou, "Learning to generate diverse
+                                                                                    pedestrian movements from web videos with noisy labels," in The
+                                                                                    Thirteenth International Conference on Learning Representations,
+                                                                                    2024.
+
+                                                                              [23] I. Bae, J. Lee, and H.-G. Jeon, "Continuous locomotive crowd behavior
+                                                                                    generation," in Proceedings of the Computer Vision and Pattern
+                                                                                    Recognition Conference, 2025, pp. 22 416­22 431.
+
+                                                                              [24] Y. Li, Y. Chen, J. Liu, and T. Huang, "Efficient crowd simulation in
+                                                                                    complex environment using deep reinforcement learning," Scientific
+                                                                                    Reports, vol. 15, no. 1, p. 5403, 2025.
+
+                                                                              [25] H. Shi, Q. Yao, and Y. Li, "Learning to simulate crowd trajectories
+                                                                                    with graph networks," in Proceedings of the ACM Web Conference
+                                                                                    2023, 2023, pp. 4200­4209.
+
+                                                                              [26] L. Wang, Y. Ling, Z. Yuan, M. Shridhar, C. Bao, Y. Qin, B. Wang,
+                                                                                    H. Xu, and X. Wang, "GenSim: Generating robotic simulation tasks
+                                                                                    via large language models," in International Conference on Learning
+                                                                                    Representations (ICLR), 2024.
+
+                                                                              [27] H. Caesar, V. Bankiti, A. H. Lang, S. Vora, V. E. Liong, Q. Xu,
+                                                                                    A. Krishnan, Y. Pan, G. Baldan, and O. Beijbom, "nuscenes: A
+                                                                                    multimodal dataset for autonomous driving," in Proceedings of the
+      IEEE/CVF conference on computer vision and pattern recognition,
+      2020, pp. 11 621­11 631.
+[28] K. Daniel, A. Nash, S. Koenig, and A. Felner, "Theta*: Any-angle
+      path planning on grids," Journal of Artificial Intelligence Research,
+      vol. 39, pp. 533­579, 2010.
+[29] P. E. Hart, N. J. Nilsson, and B. Raphael, "A formal basis for the
+      heuristic determination of minimum cost paths," IEEE transactions on
+      Systems Science and Cybernetics, vol. 4, no. 2, pp. 100­107, 1968.
+[30] H. I. I. Tam, H. I. D. Pun, A. T. Wang, A. X. Chang, and M. Savva,
+      "Sceneeval: Evaluating semantic coherence in text-conditioned 3d
+      indoor scene synthesis," in Proceedings of the IEEE/CVF Winter
+      Conference on Applications of Computer Vision, 2026, pp. 7355­7365.
+

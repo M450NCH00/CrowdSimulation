@@ -1,0 +1,634 @@
+                                        Multi-Agent LLM Actor-Critic Framework for Social Robot Navigation
+
+                                                                              Weizheng Wang, Ike Obi, and Byung-Cheol Min
+
+                                           Abstract-- Recent advances in robotics and large language                             Safety Zone   a aA 1 LLM           1           RE-
+                                        models (LLMs) have sparked growing interest in human-                                    Comfort Zone
+                                        robot collaboration and embodied intelligence. To enable the                    Robot-2  Destination    tAk-c1t+o1 r1       tk-11+1 Query Output
+                                        broader deployment of robots in human-populated environ-                          FOV
+                                        ments, socially-aware robot navigation (SAN) has become a key                                          ...                  ...
+                                        research area. While deep reinforcement learning approaches                                                                             False True
+                                        that integrate human-robot interaction (HRI) with path plan-
+                                        ning have demonstrated strong benchmark performance, they                                              A a a NLLM           N
+                                        often struggle to adapt to new scenarios and environments.                                                                  tk -1N+1
+                                        LLMs offer a promising avenue for zero-shot navigation                                                  Atk -c1t+o1rN
+                                        through commonsense inference. However, most existing LLM-
+arXiv:2503.09758v1 [cs.RO] 12 Mar 2025  based frameworks rely on centralized decision-making, lack                                                                              EVA
+                                        robust verification mechanisms, and face inconsistencies in
+                                        translating macro-actions into precise low-level control signals.                                                                       Thres
+                                        To address these challenges, we propose SAMALM, a decen-                                                                                hold
+                                        tralized multi-agent LLM actor-critic framework for multi-
+                                        robot social navigation. In this framework, a set of parallel                                          Q a a 1 LLM          1
+                                        LLM actors, each reflecting distinct robot personalities or                                                                 tk -11+1
+                                        configurations, directly generate control signals. These actions                                        LtkC-1r+it1ic1
+                                        undergo a two-tier verification process via a global critic that
+                                        evaluates group-level behaviors and individual critics that assess                       Robot-3       ...                  ...
+                                        each robot's context. An entropy-based score fusion mechanism                              FOV
+                                        further enhances self-verification and re-query, improving both                                        aLtNCk-Lr1L+itM1icN  QN
+                                        robustness and coordination. Experimental results confirm that       Robot-1                           atG1k-LC1L+rM1itic
+                                        SAMALM effectively balances local autonomy with global                 FOV                                                  aQ1
+                                        oversight, yielding socially compliant behaviors and strong                                                                   tk -1 +1
+                                        adaptability across diverse multi-robot scenarios. More details     Trajectory
+                                        and videos about this work are available at: https://sites.            Data
+                                        google.com/view/SAMALM.
+                                                                                                            Fig. 1. SAMALM procedure in a multi-robot social navigation scenario:
+                                                                 I. INTRODUCTION                            The decentralized decision-making system supports self-verification and re-
+                                                                                                            query, consisting of multiple parallel LLM-actors, evaluated by both the
+                                           Current advancement in robotics, exemplified by Tesla's          individual LLM-critic and a global LLM-critic.
+                                        Optimus and Boston Dynamics' Spot, are driving exten-
+                                        sive research into human-robot cooperation and embodied                To address this limitation, large language model (LLM)-
+                                        intelligence [1]­[5]. To facilitate the seamless integration of     powered executors can be employed to navigate unfamiliar
+                                        robotics and artificial intelligence into daily human environ-      spaces in a zero-shot manner, leveraging their powerful
+                                        ments, research on socially-aware robot navigation (SAN) is         commonsense inference capabilities. For instance, [14] in-
+                                        crucial for broader robotic deployment. Recent SAN studies          troduced multi-modal LLMs to infer contextual semantic
+                                        [6]­[10] highlight the importance of integrating both human-        correlations for generating macro-actions (destinations) in
+                                        robot interaction (HRI) and robot-robot interaction (RRI) into      zero-shot navigation. Additionally, [15], [16] extended this
+                                        social robot path planners, as these interactions are inherently    concept to multi-robot scenarios by utilizing LLM-based path
+                                        dynamic and heterogeneous.                                          planners as task allocators. However, these methods rely
+                                                                                                            on centralized decision-making systems that fail to account
+                                           To enable large-scale robotic applications, it is essential      for the unique configurations and preferences of individual
+                                        for robot agents to exhibit human-level cognitive abilities         robots. Furthermore, they lack the ability to directly control
+                                        and adhere with social norms. Currently, deep reinforcement         robots or multi-robot systems via low-level controller signals.
+                                        learning (DRL)-based approaches that integrate HRI infer-
+                                        ence with path planning [6], [11]­[13] demonstrate strong              Most existing zero-shot LLM-based approaches face sev-
+                                        benchmark performance during iterative DRL training. How-           eral challenges: (1) the centralized single-LLM execution
+                                        ever, these pre-trained policies are often constrained to their     paradigm struggles to account for the unique characteristics
+                                        original training datasets and environmental configurations,        and properties of different robot types; (2) low-level robot
+                                        limiting their adaptability to new environments.                    control signals (e.g., [vx, vy]) are typically derived from
+                                                                                                            macro-actions, creating a disconnect between LLM infer-
+                                           SMART Laboratory, Department of Computer and Information         ence and the robot controller, which can lead to reasoning
+                                        Technology, Purdue University, West Lafayette, IN, USA.             instability and inconsistency; and (3) the absence of a veri-
+                                        [wang5716,obii,minb]@purdue.edu.                                    fication step undermines the robustness and cooperativeness
+                                                                                                            of multi-robot systems, increasing the risk of LLM-induced
+                                                                                                            hallucinations or numerical errors.
+
+                                                                                                               Inspired by the successes of multi-LLM coordination in
+                                                                                                            multi-agent paradigm [17], [18], this paper presents a de-
+                                                                                                            centralized multi-agent LLM actor-critic framework that sup-
+                                                                                                            ports self-verification and re-querying to address the afore-
+                                                                                                            mentioned challenges in multi-robot SAN tasks, as shown in
+                                                                                                            Fig. 1. Specifically, a set of individual LLM-based actors is
+                                                                                                            designed to reflect the unique personalities or characteristics
+of different robots, enabling them to generate direct control    individual models but also creates a synergistic network
+actions. These actions are then evaluated and refined through    capable of addressing the diverse challenges encountered in
+a two-tier verification process until satisfactory results are   dynamic scenarios.
+achieved: a global critic assesses group-level behaviors of
+the multi-robot system, while individual critics evaluate each      Hence, the success of the multi-agent LLM paradigm
+robot's actions in context. The main contributions of this       has also motivated the development of LLM-powered multi-
+paper can be summarized as follows:                              robot systems. For example, [15] introduced SMART-LLM,
+                                                                 a framework that decomposes high-level natural language
+   · We propose a novel Socially-Aware Multi-Agent actor-        instructions into detailed sub-tasks while orchestrating coali-
+      critic LLM framework, called SAMALM, to address            tion formation and task allocation among robots. Similarly,
+      multi-robot social navigation tasks.                       [20] leverages linear programming and dependency graphs to
+                                                                 capture the latent correlations between task steps in LLM-
+   · SAMALM develops the multi-LLM world model                   based multi-robot cooperation. However, these systems are
+      for understanding environmental dynamics, where the        limited by their reliance on centralized LLM planners, which
+      world model constructs personal knowledge of the task      struggle to adequately represent the heterogeneous attributes
+      scenario based on each robot's interactions with the       of individual robots. Alternatively, [21] and [22] designed the
+      environment. Additionally, SAMALM employs a multi-         multi-robot system planner with respect to the decentralized
+      LLM agent system with the personalized prompt engi-        multiple LLMs. Herein, SAMALM also explicitly consider
+      neering to represent distinct robot preferences, allowing  each robot's unique types and properties within a decen-
+      for asynchronous queries from each LLM actor or critic.    tralized multi-LLM actor-critic framework, enabling tailored
+                                                                 coordination and adaptive task execution that better captures
+   · SAMALM leverages a multi-LLM actor-critic frame-            the heterogeneity inherent in the multi-robot SAN task.
+      work for self-verification and enhanced group cooper-
+      ation, incorporating a global LLM critic and a set of      B. Large Language Models for Social Navigation
+      local LLM critics with an entropy-based score fusion
+      mechanism.                                                    As a fundamental topic in robotics, socially-aware navi-
+                                                                 gation has recently benefited from the advent of LLMs as
+   · SAMALM demonstrates promising socially compliant            promising tools for robust task execution. While state-of-
+      behaviors across various experiments.                      the-art DRL-based approaches such as GST [12], NaviSTAR
+                                                                 [11], and NaviDIFF [6] have set performance benchmarks,
+                         II. BACKGROUND                          these pre-trained DRL-based strategies often struggle when
+                                                                 transferred to unfamiliar environments. To adapt environ-
+A. Multi-Agent LLM Framework for Robotics                        mental generalization, LLM-based social planners have been
+                                                                 developed for zero-shot or few-shot scenarios. Benefiting
+   The advancements in LLMs have dramatically broadened          from LLM's exceptional commonsense understanding, LLM-
+the scope of artificial intelligence, revolutionizing natural    based social planners also demonstrate anticipated naviga-
+language processing by delivering unprecedented capabil-         tion capabilities. For example, [23] introduced a multi-task
+ities in language generation and semantic understanding.         social navigation planner that hybridizes LLMs with DRL
+Recently, breakthroughs in LLMs have spurred innovative          to enhance policy transferability. Moreover, recent advances
+research in robotics and embodied intelligence [14], [19],       in visual language models have shown particular promise in
+where LLMs' commonsense inference abilities are leveraged        supporting social navigation tasks [24], [25]. These models
+for contextual environmental understanding and execution         parse perception images from robot cameras to extract latent
+generation, even in zero-shot or few-shot settings. Moreover,    cues for HRI inference and socially-aware path planning.
+integrating multiple LLMs allows researchers to leverage
+their diverse strengths and mitigate individual limitations,        Furthermore, SAN tasks have been extended to multi-robot
+as demonstrated in applications such as multi-agent com-         scenarios [26]. In these settings, these planners have to con-
+munication [17] and cooperative software development [18].       sider not only latent HRI features but also RRI and system-
+By orchestrating several specialized models within a unified     level cooperative behavior execution among the multi-robot
+framework, multi-LLM systems strive to enhance perfor-           system, throughout the navigation process. [26] leveraged
+mance on complex tasks, improve reliability, and facilitate      spatial-temporal transformer and multi-agent proximal policy
+more nuanced reasoning.                                          optimization algorithm to address the multi-robot SAN task
+                                                                 within the Dec-POSMDP (decentralized partially observable
+   The integration of LLMs into multi-robot systems has un-      semi-Markov decision process). [27], [28] developed neural
+locked transformative opportunities in communication, task       network architectures based on gated recurrent unit and
+planning, social navigation, and human-robot interaction.        graph attention network to estimate latent HRI and RRI for
+LLMs excel at interpreting intricate instructions, reasoning     coordinated path planning. These models are further fine-
+through multifaceted tasks, and facilitating natural communi-    tuned using multi-agent reinforcement learning as well. More
+cation. When deployed within multi-robot frameworks, em-         recently, [7] unified multi-robot task allocation and social
+ploying multiple LLMs each specialized for distinct robots       navigation by leveraging a hypergraph diffusion mechanism
+such as unmanned aerial vehicles, humanoid robots, or            that captures high-order correlations among robots, humans,
+mobile robots enables the entire system to heterogeneously
+achieve robust coordination, adaptive decision-making, and
+enhanced autonomy in complex environments. This multi-
+LLM approach not only leverages the unique strengths of
+  Local Observation                                                               Multi-Robot LLM-Actors            Action List  Multi-Robot LLM-Critics        Output
+
+H1                                                                            o1  Robot-1 World Model                  A1        Global LLM                 Execution
+                                                                          H2                                                         Critic               {A1, A2 ,..., AN}
+                                                                                  1  2                 1               A2                                 True
+
+                                                                                                       LLM Actor-1                                            Evaluation
+                                                                                                                                                              Threshold
+           Robot-1                                                                Robot-2 World Model                            Local LLM
+                                                                                                                                   Critic-1
+   LegeNnodteNote                                                                 1                    2
+                                                                                                                                 Local LLM
+  Destination                                                                           ...            LLM Actor-2                 Critic-2  Global-
+R Social Robot                                                                                                                                Local
+H Human                                                                                             ...                                       Score
+                                                                                                                                             Fusion
+                                        ...
+H1
+                  ...
+
+                    o H2                                                          Robot-N World Model
+                            N
+                                                                                  1  2                 N                         Local LLM
+                                                                                                                                   Critic-N
+                                                                                                                    AN
+
+    Robot-N                                                                                            LLM Actor-N
+
+                                                                                                                                                          False
+
+                                                                                                                    Re-Query with (Critic Feedback)
+
+Fig. 2. SAMALM architecture: SAMALM is a decentralized multi-agent LLM actor-critic framework designed for multi-robot social navigation. In
+SAMALM, a set of LLM-actors generates low-level control signals for the robots, respectively. These generated actions are then evaluated by relative
+LLM-critics from both the team-level and agent-level perspective, which either confirms the actions or prompts a re-query with critic feedback. Once the
+actions pass the evaluation threshold, they are executed by the system's executors in the multi-robot environment.
+
+and points-of-interest. This innovative approach facilitates a                                                      for the effective deployment of our LLM-based actor-critic
+comprehensive understanding of the intricate dependencies                                                           framework.
+within the system, thereby enhancing coordinated perfor-
+mance across complex environments.                                                                                     At each timestep, the system collects local observations
+                                                                                                                    from the environment to generate actions. These actions
+   Apart from that, LLM-based path planners have also been                                                          interact with the environment, updating the system state S^
+adapted to this scenario. Despite existing LLM-based path                                                           corresponding to the system's translation function P^ and the
+planners [15], [16] have been developed for cooperative                                                             detection of conditional events such as arrivals or collisions.
+navigation, the specific paradigm of multi-robot socially-                                                          Notably, human actions are driven externally by individual
+aware navigation remains largely unexplored in current re-                                                          motion policies that is also integrated into the simulation.
+search. Thus, to the best of our knowledge, we are the first
+to implement a multi-LLM framework, termed SAMALM                                                                      Furthermore, due to the deployment of LLMs, SAMALM
+for multi-robot SAN tasks. SAMALM addresses dynamic                                                                 processes environmental feedback by generating both a nu-
+semantic inference in both HRI and HHI to enhance co-                                                               merical score and descriptive text through a set of critics.
+ordinated navigation behavior representation. Moreover, the                                                         This design establishes a self-verification mechanism: if
+framework leverages a self-verification and re-query proce-                                                         an action fails to meet a predefined evaluation threshold,
+dure via a multi-LLM actor-critic approach, refining social                                                         it is re-queried along with the associated critic reasoning
+robots' executions based on evaluations from both group-                                                            text. This approach removes the need for a conventional
+level and agent-level perspectives.                                                                                 reward function in the original MDP configuration, while
+                                                                                                                    still preserving the environmental translation function based
+                         III. PRELIMINARY                                                                           on uniform motion kinematics.
+
+   According to [6], [7], [13], we reformulate the multi-                                                                                   IV. METHODOLOGY
+robot social navigation task as a textual decentralized par-
+tially observable Markov decision process (Dec-POMDP)                                                                  SAMALM presents a decentralized multi-robot coopera-
+S^, A^ , O^ , P^ , S^0, n. Here, the joint observations, denoted as                                                 tive social navigation planner that combines an actor executor
+o^ = [o1, o2, · · · , on]  O^ are transformed into a multi-                                                         and a critic scorer framework for each individual robot,
+robot world model representation that serves as input for                                                           all powered by LLMs. In contrast to previous works [15],
+a set of LLM-actors. Subsequently, individual actions A^ =                                                          [16], SAMALM not only enables each robot's LLM actor to
+[A1, A2, · · · , An]  A^ , A = [vx, vy] are generated as                                                            generate actions tailored to its unique preferences, but also
+multi-robots' executions. In the formulation, n denotes the                                                         employs a global LLM critic to verify team-level coordina-
+number of social robots, and S^0 presents the initialized                                                           tion and local LLM critics to maintain individual rationality.
+state distribution. In contrast to traditional MDP, we convert                                                      In our multi-robot configuration, a bi-directional communica-
+the observation and action pairs into textual representations                                                       tion message chain facilitates information sharing, directing
+during the interaction between the robots and their envi-                                                           whole team data to the leader robot for global critic's
+ronment. This textualization via world model is essential                                                           evaluation. SAMALM focuses on representing cooperative
+                                                                                                                    behaviors through an LLM-powered multi-robot framework,
+Multi-Robot World Model Construction              Textual Representation  modeled using HRI and RRI spatial edges, which describe
+                                               Individual WM Template:    both the trend and value of the relative distance dynamics
+Robot-1 World Model        Human-3   Human-3                              between the robot and the observed entities at the current
+from local observation      T step   T-1 step  Robot Node: pr, vr, gr     timestep. Furthermore, the temporal edge associated with
+                                               Robot TEdge: dis(r, g)     the robot's self-node represents the relative distance to its
+           Temporal Edge   Robot-1   Robot-2                              destination. For the observed human and robot nodes, the
+                            T step    T step   Humans Nodes: ph, vh       temporal edges capture both the acceleration (i.e., the change
+            Spatial Edge                       Humans TEdges: v, pt+1     in speed) and next timestep's position estimation, based on
+                                                                          uniform linear motion kinematics using the current velocity.
+ Human-1                                       O-Robot Nodes: pr', vr'
+   T step                                      O-Robot TEdges: v, pt+1    B. Multi-Agent LLM Actors
+
+ Human-1                   Robot-1...Robot-2   HRI SEdges: dis(r, h)         Figure 4 illustrates that we leverage the LLM directly as
+  T-1 step                 T-1 step  T-1 step  RRI SEdges: dis(r, r')     the robot's policy network, utilizing its strong commonsense
+                                                                          inference capabilities to understand latent environmental
+Robot-N World Model        Robot-N   Robot-1                              dynamics for robot action generation. Unlike previous ap-
+from local observation      T step    T step                              proaches [14], [16], SAMALM's LLM-actors produce direct
+                                                                          control commands A = [vx, vy], rather than macro actions
+           Temporal Edge                                                  or instructions, thereby preserving inference consistency and
+             Spatial Edge                                                 coherence.
+
+ Human-3                                                                     Based on [16], [32], the prompt engineering for LLM-
+   T step                                                                 actors involves two key components: the task configura-
+                                                                          tion textual description T¯, and the environmental dynamics
+Human-3                    Robot-N   Robot-1                              textual description Ti, derived from the world model. The
+T-1 step                   T-1 step  T-1 step                             information in T¯ which includes the overall task and data
+                                                                          descriptions, is commonly shared to all actors. In contrast,
+Fig. 3. An illustration of multi-robot world model construction.          Ti captures the specific observations and HRI semantic
+                                                                          details pertinent to each actor. Eventually, the chain chaining
+supporting self-verification and re-query capabilities within             inference technology, Auto-CoT [33] is employed to enhance
+a multi-agent actor-critic architecture. Our approach is de-              actors' reasoning ability as follows:
+picted in Fig.2, with further details on the multi-robot world
+model in Fig.3 and the multi-agent actor-critic framework in               Pi(ai | Ti, T¯, Ei) = Pi(ai | I[s]) × Pi(I[s] | Ti, T¯, Ei) (2)
+Fig. 4.
+                                                                          where Ei is the prompt engineering with i-th robot's pref-
+A. Multi-Agent World Model                                                erence, and I[s] denotes the total s-step reasoning chain that
+                                                                          is generated by Auto-CoT [33].
+   Humans maintain a dynamic internal thought paradigm,
+a richly detailed and continuously updated mental represen-                  Inspired by [22], [34], SAMALM integrates robot-specific
+tation of their surroundings that enables them to simulate                preferences into its prompt engineering framework to accom-
+potential actions and accurately predict their outcomes. This             modate the diverse attributes of different robotic platforms.
+sophisticated cognitive framework underpins not only basic                This integration focuses on two key aspects: the robot's speed
+functions like motor control and sensory perception but                   preference and its designated socially acceptable distance.
+also higher-level abilities such as mental imagery, logical               For example, robotic dogs and humanoid robots have dif-
+inference, and strategic decision making. Inspired by recent              ferent speed configurations and distinct notions of personal
+research on world models applied to mathematical problem                  space, which SAMALM addresses by tailoring the prompt
+[29] and robot navigation [30], [31], we develop a spatio-                parameters accordingly.
+temporal graph structural multi-robot world model for tex-
+tually representing human-robot interactions (HRI) in LLM-                C. Multi-Agent LLM Critics
+based multi-robot SAN tasks, as shown in Fig. 3.
+                                                                             Once the robot actions are generated by LLM-actors, the
+   Formally, the multi-agent world model {G1, · · · , Gn} is              self-verification mechanism is utilized to evaluate and grade
+constructed to facilitate the understanding of HRI and RRI                such actions via a set of LLM-critics with a rule-based check-
+for each robot by capturing both environmental dynamics.                  list prompt Ec(·). As shown in Fig. 2 and Fig. 4, SAMALM
+It describes the interactive process with spatial-temporal                is composed by both individual LLM-critics Qi(oi, Ai, Eci)
+correlations modeled as a graph denote the vertices or                    and a global LLM-critic Q¯g(o^, A^, E^cg). According to [35],
+nodes corresponding to robots and humans, respectively,                   SAMALM motivates LLM-critics to verify robot action with
+while represent the spatial and temporal edges that capture               respect to external curial checklist and current observation
+their interactions. Notably, SAMALM constructs a dedicated                condition. Considering both preferred speed and type of
+spatial-temporal graph for each individual robot, derived                 robot personality. In details, the prompt engineering of each
+from its unique local observations, thereby ensuring tailored             local LLM-critic is designed to evaluate robot action via
+and contextually representations as follows:
+
+ {T1, · · · , Tn} = {G1(V1, E1 | o1), · · · , Gn(Vn, En | on)} (1)
+
+where Ti denotes the textual world model representation.
+   In details, the world model nodes of i-th robot, denoted as
+
+Vi = {Vr, VR, VH }, consist of following components: self-
+node Vr = [pr, vr, gr] contains this robot's own location,
+velocity, and goal information; observed humans and other
+robots nodes VR, VH = [p, v] provide the position and
+velocity data with respect to robot observation oi. As shown
+in Fig. 3, the spatial relationships among these nodes are
+          Observation             Initialized Distribution                                    Verified Distribution
+
+[Config Prompt-1]: Task                                          Threshold False                                                          [Verified Act]
+Description, Environment                                                                                                                  [[1, -0.7], ... , [-0.5,
+Description (...)                 A1 A2 A3                                th                  Re-Query                    A3              1.1]]
+[WM-1]: 1,T1 (...)                                                                            with          A1 A2
+(...)                                                                         True
+[Config Prompt-N]: Task                                                                       Critic-Text
+Description, Environment
+Description (...)                 Auto-CoT                       [Initialized Act]                                         Entropy Fusion Mechanism
+[WM-N] N ,TN                        Individual Actors            [[1, -0.7], ... , [1.2, 1]]
+                                                                                                           Global & Local
+  [SAMALM Inference]                                                                                            Critics
+[Act]: [[1, -0.7; text-1], ... ,
+[1.2, 1; text-n]]                 [Actor-1]: According to the             [Act List]: [[1, -0.7], ... , [1.2, 1]]         [Act-1]: [1, -0.7]
+[Local-Critics]: [[80, text-      world model text of local               [Global Critic]:                                [Local Critic]: 1
+1], ... , [40, text-n]]           observation, to infer HRI and           [Prompt]: E^cg
+[Global-Critic]: [65, text]       HHI for cooperative and                                                                 [Text-LCritic]: R1
+[Verified Act]: [[1, -0.7; text-  social acceptable navigation            [Text-GCritic]: R
+1], ... , [-0.5, 1.1; text-n]]    behavior generation                                                                     [Score-LCritic]: 80
+                                  (...)                                   The inference procedure on several
+                                  [Actor-N]: (...)                        items for the entire multi-robot                [Act-N]: [1.2, 1]
+                                                                          system.                                         [Local Critic]: N
+                                                                          [Score-GCritic]: 65
+                                                                                                                          [Text-LCritic]: RN
+
+                                                                                                                          [Score-LCritic]: 40
+
+Fig. 4. Multi-Agent LLM Actor-Critic Framework: SAMALM facilitates multi-robot social navigation using a set of parallel LLM actors that extract
+semantic correlations from local world model observations and work in tandem with both global and local critics. The global critic assesses multi-robot
+behaviors by considering both inter-group and intra-group dynamics, while local critics evaluate individual actions based on long-term and short-term
+factors. Ultimately, the global and local critic scores are integrated via an entropy-based fusion mechanism that accounts for the level of disagreement
+among the critics, enabling self-verification and re-query with critic feedback.
+
+both short-term and long-term penalty (l). In Qi's short-                 robots who are surrounding within more than nth humans'
+term evaluation, local critic is encouraged to check the rel-             uncomfortable distance area, and #R is the number of
+ative distance among local robot and neighbor humans with                 robots. Lastly, the global critic score is defined as Q¯ =
+respect to current situation and next timestep's prediction.
+Meanwhile, the long-term factors check the appearance of                  100 - ((g))  (-, 100].
+high risk area (more than nth humans will be involved within
+the uncomfortable distance area of the i-th robot) on next k-             Algorithm 1: Socially-Aware Multi-Agent LLM
+timestep that when as follows:
+                                                                          1 Initialization: Initialize the joint state s^o 
+
+              ×  nth,             if dis(r, h) < diss                         S0; LLM-Actors {P1, · · · , PN }; LLM-Critics {Q1, · · · ,
+          -5                      if dis(r, h) < disc + 0.1                   QN , Q^}, and other hyperparameters;
+          
+                                                                          2 Reset the environment and data buffer D;
+i(l) = -10 × nth,
+                                                                          3 for step  stepmax do
+          -5 × (nht+k - 3), if nth+k > nth
+                                                                    (3)   4 Update robots' observations o^t;
+
+where nth denotes the humans who are involved within un-                  5 Construct world models {T1, · · · , TN } by Eq.(1);
+
+comfortable distance from local robot on t-timestep. diss =               6 Sample actions from LLM-Actors Ai  Pi(Ti),
+
+pref + r + h present the social distance, and pref is the                         to update joint action {A1, · · · , AN } by Eq.(2);
+                                                                          7 Query scores from LLM-Critics {Q^, Q¯, R^, R¯};
+social acceptable distance of robot personality configuration,
+                                                                          8 Calculate critic fusion score Z by Eq.(8);
+and disc = r + h is the collision distance. The local critic
+score is defined as Qi = 100 - (i(l))  (-, 100].                          9 while Z < Zth do
+
+Similarly, the global critic applies penalties that account               10                  Re-query
+
+for both intra-group and inter-group evaluation factors. The                                  Ai     A^,    Qi        <Z                  = Pi(Ti, Di);
+
+                                                                                                                                 : Ai              Q¯ ,            R¯
+
+intra-group factor emphasizes cooperative navigation and                  11                  Generate    new         verification        {Qi,           Ri     ,      };
+
+collision detection among robots, while the inter-group factor            12                  Update   the  data          buffer    Di    =          ,  R¯  ];
+
+                                                                                                                                             [Ri
+
+focuses on interactions between the multi-robot system and                13                  Calculate and update the fusion score
+
+humans, as well as the overall effectiveness of the navigation                                      =  f           ,  Q¯  ),  Z  =        by  Eq.(8)            ;
+
+                                                                                              Z           (Qi                       Z
+
+task. Specifically, the global critic penalty (g) is defined as           14 end
+
+follows:                                                                  15 Generate the execution A^;
+
+               ×  ntr  ,          if dis(r, r) < disc + 0.1               16 Environment transformation s^t+1 = P^ (s^t, A^t);
+          -10
+                                                                          17 end
+
+(g) = -1.25 × (t - tm), if t > 30
+
+          -15 × (#Rht+rk), if #Rht+rk > #R/2                              D. Entropy Fusion Mechanism
+                                                                     (4)
+                                                                             Herein, we propose an entropy-based critic scores fusion
+where nrt denotes the other robots who are involved within                mechanism, which adaptively integrate both local scores and
+                                                                          global score with respect to the disagreement-level weighting
+collision distance from local robot on t-timestep, and tm
+
+is the hyperparameter of the average navigation time that
+
+refer to the robot types, and #Rht+rk presents the number of
+scheme. Firstly, each local critic score Qi is normalized to
+produce the confidence distribution Ci of the sum as follows:
+
+                    Ci =         Qi                  (5)
+
+                                 N    Qj
+                                 j=1
+
+   Subsequently, the entropy of each local score is defined
+to estimate the disagreement-level among local critic evalu-
+ations as follows:
+
+               Hi = -      N     Ci log(Ci)
+
+                           i=1                       (6)
+
+where  is the entropy hyperparameter, log is the logarithm
+
+with the constant e base.
+
+Hence, the system local critic score entropy can be ob-            Fig. 5. The illustration of heterogeneous multi-robot social navigation
+                                                                   simulation scenario, where 3 robots are navigating by individual LLM-actor
+tained as H =  N    Hi     from  above    equation.  Furthermore,  to distinct destinations across the crowd with 10 humans.
+               i=1
+                                                                   A. Experimental Setup
+the disagreement weight  between global critic score and
+                                                                      As shown in Fig. 5, our experiments are conducted in a
+local critic scores is defined as follows:                         simulation environment consistent with previous works [7],
+                                                                   [26], where each robot is endowed with a F  (0, 2] degree
+               =        H  =          H              (7)           field-of-view (FOV) to ensure locally situational awareness.
+                                                                   The multi-robot system is controlled by a decentralized
+                    Hmax log(1/N )                                 LLM-powered decision-making paradigm. In this setup,
+                                                                   individual robots operate autonomously, making decisions
+where Hmax denotes the maximum entropy of multi-robot              based on local observation data and communicating directly
+system local critic scores, implying the lowest evaluation         with nearest robot along the message chain [36], rather
+disagreement among local critics.                                  than relying on a centralized controller. This decentralized
+                                                                   approach enables each robot to process information, plan
+   Eventually, the critic fusion score Z is leveraged by the       actions, and coordinate with its peers, leading to emergent
+entropy-based weighted local critic scores and global critic       collective behavior that reflects both group-level intelligence
+score as follows:                                                  and individual intrinsic properties such as preferred speed
+                                                                   and acceptable social distance. Particularly, the communica-
+          1                N Qi) + (1 - )Q¯g         (8)           tion chain of multi-robot system is employed to facilitate
+Z = (                                                              connection among agents, enabling the system to leverage
+                           i=1                                     both local and global information during decision-making.
+          N
+                                                                      In our setup, social robots are tasked with cooperatively
+   Notably, the critic fusion score Z implies an evaluation        navigating toward distinct destinations while maintaining
+tendency that favors local critic scores when they are more        appropriate social distances from pedestrians. We set the con-
+centralized, indicating a high degree of consensus. Con-           figuration of three typical robot types with respect to mobile
+versely, when local scores are ambiguous and disordered, the       robot (preferred velocity = 1.25 m/s; social distance = 0.45
+global score becomes more influential. After the estimation        m), robot dog (preferred velocity = 1 m/s; social distance
+of critic fusion score, the evaluation threshold is set as         = 0.3 m), and drone (preferred velocity = 1.5 m/s; social
+a hyperparameter Zth to determine whether to re-query              distance = 0.85 m). Additionally, these three robot types are
+or proceed with execution. If the robot actions meet the           randomly assigned for 5-robots 10-humans scenario. Human
+threshold as Z  Zth, they are transmitted as controller            pedestrians are simulated using a personalized policy [37],
+signals to drive the robot. Otherwise, any local action with       which allows them to change velocities and adjust their goals
+a critic score lower than the fusion score Z is updated by         randomly, reflecting realistic behavior. Importantly, sensitive
+the corresponding actor, incorporating evaluation reasoning        information regarding pedestrian policies and intended goals
+records from the relative local critic Ri and the global critic    remains inaccessible to the robots.
+R¯. For example, the critic reasoning record (e.g. a critic
+might indicate that the action would bring the robot too close     B. Baselines and Ablation Models
+to human-7) is shared to actor for the enhancement, avoiding
+the same issue.                                                       We evaluate three categories of models. First, we se-
+                                                                   lect several baseline models: LLaMA-8B, LLaMA-70B,
+               V. EXPERIMENTS                                      LLaMA-405B [38], GPT-3.5, GPT-4, and GPT-4o [39].
+                                                                   These baselines are employed within a centralized LLM
+   In this section, we evaluate the performance of our pro-        decision-making framework and Auto-CoT inference proce-
+posed SAMALM framework in multi-robot social navigation            dure, where they convert aggregated observations from all
+tasks. The experiments are designed to assess not only
+the multi-robot navigation success but also the degree of
+social compliance exhibited by the robots. To this end,
+we compare our complete models against several baselines
+and ablation variants, under a simulated environment that
+replicates realistic human-populated scenarios.
+robots directly into execution commands, without utilizing            still struggle often making value errors and variable mis-
+an actor-critic structure.                                            calculations--rendering their occasional successes largely
+                                                                      fortuitous. Notably, LLaMA-405B and GPT-4o demonstrate
+   For the ablation studies, we construct two variants using          promising reasoning abilities by accurately performing calcu-
+LLaMA-405B and GPT-4o as the LLM backbones, but                       lations and properly utilizing variables, resulting in average
+without the critic modules; these are denoted as Ablation-L           scores of (SR = 12, SS = 8) and (SR = 20, SS = 18),
+and Ablation-G, respectively. In contrast, the full SAMALM            respectively.
+model incorporates the critic structure to enable self-
+verification support. The zero-shot baselines directly em-               2) Ablation Study: Table I demonstrates that the multi-
+ploy large language models for planning without additional            LLM actor-critic framework substantially improves perfor-
+verification, while the ablation studies help quantify the            mance. For the LLaMA-based SAMALM, the averaged SR
+contribution of the critic modules. In our full SAMALM                increases from 23 to 33 with a 30% improvement, while
+models, the two-tier critic system (local and global) coupled         the averaged SS rises from 17 to 22, representing a 23%
+with an entropy-based fusion mechanism ensures that initial           gain compared with the corresponding ablation models.
+action proposals are iteratively refined until they satisfy a         Similarly, for the GPT-4o based SAMALM, the averaged
+predefined evaluation threshold.                                      SR is enhanced from 42 to 56 (a 25% increase) and the
+                                                                      averaged SS from 35 to 55 (a 36% improvement). These
+C. Evaluation Metrics                                                 enhancements highlight the effectiveness of incorporating
+                                                                      a multi-critic architecture, as well as the benefits of self-
+   Two primary metrics are used to gauge performance within           verification and entropy-based score fusion mechanisms.
+total 50 same testcases: (1) Success Rate (SR): This metric
+quantifies the percentage of episodes in which the robots                The ablation studies clearly demonstrate that removing
+successfully reach their designated goals without collisions          the critic modules drastically impairs performance. This
+or timeouts; (2) Social Score (SS): Derived from [26], this           finding underscores the importance of our two-tier verifi-
+score assesses the quality of robot behaviors with respect            cation process, where local and global critics, coupled via
+to social compliance. It is computed based on several fac-            an entropy-based fusion mechanism, work together to refine
+tors, including path quality, adherence to personalized safe          action proposals and ensure both robust navigation and social
+distances, and the frequency of human discomfort incidents.           appropriateness. Additionally, the enhanced social scores in-
+                                                                      dicate that SAMALM not only improves navigation success
+VI. EXPERIMENTS AND RESULTS                                           but also reliably maintains safe distances and facilitates
+                                                                      smooth human interactions. Beyond these quantitative im-
+TABLE ISIMULATION EXPERIMENT RESULTS                                  provements, qualitative observations reveal that SAMALM
+                                                                      generates smoother, more adaptive trajectories and is better
+                    Success Rate      MR-SAN Social Score             equipped to handle dynamic changes in the environment. In
+                                                                      practice, the critics' feedback proves invaluable--helping the
+       Methods   FOV&Human&Robot      FOV&Human&Robot                 actors adjust their actions to address specific issues at both
+                                                                      the group and individual levels, as long as these issues are
+     LLaMA-8B    90° 360° 360°        90° 360° 360°                   effectively identified by the critics.
+    LLaMA-70B
+   LLaMA-405B    5&3 5&3 10&5         5&3 5&3 10&5                       In summary, SAMALM's integration of decentralized
+     Ablation-L                                                       decision-making, personalized LLM-based actor modules,
+SAMALM-L (ours)  0  0             0   0   0  0                        and dynamic self-verification mechanisms significantly ad-
+                                                                      vances the state-of-the-art in socially-aware navigation. This
+       GPT-3.5   4  4             0   1   0  0                        approach not only enhances the robots' ability to navigate
+        GPT-4                                                         complex environments but also ensures that their behaviors
+       GPT-4o    22 14            0   15  8  0                        remain socially compliant, paving the way for safer and more
+     Ablation-G                                                       adaptive multi-robot systems in human-populated settings.
+SAMALM-G (ours)  34 30            4   29 21  2
+                                                                                               VII. CONCLUSION
+                 44 42 12             31 31  5                           We first propose a novel LLM-based multi-robot social
+                                                                      navigation approach, termed SAMALM. SAMALM rep-
+                 0  0             0   0   0  0                        resents multi-robot social norm compliance and coopera-
+                                                                      tive navigation behaviors within a multi-LLM actor-critic
+                 6  6             0   3   2  0                        framework. By harnessing the diverse strengths of multiple
+                                                                      LLMs and employing rigorous self-verification mechanisms,
+                 32 26            2   27 15  0                        our approach paves the way for more adaptable, resilient,
+                                                                      and socially compliant robotic applications in complex and
+                 56 52            18  47 42  15                       dynamic human environments. Moreover, the entropy-based
+                                                                      critic evaluation fusion mechanism adaptively facilitates the
+                 68 70 30             72 69 25                        incorporation of both group-level and agent-level behavior
+                                                                      management.
+   1) Baselines Result: Table I summarizes our experimental
+findings and underscores the effectiveness of the SAMALM
+framework for multi-robot social navigation. Across various
+configurations, SAMALM consistently outperforms both tra-
+ditional centralized baselines and its ablation variants. For
+example, in a 90° FOV scenario with 5 robots and 3 humans,
+SAMALM-L achieves an SR of 44 and an SS of 31--double
+the performance of the LLaMA-405B baseline (SR 22, SS
+15). Similarly, SAMALM-G records an SR of 68 and an SS
+of 72, substantially surpassing the GPT-4o baseline.
+
+   In contrast, earlier LLMs such as LLaMA-8B and GPT-
+3.5 yield negligible performance in multi-robot SAN tasks,
+as evidenced by zero-averaged SR and SS. Their output
+files show that these models produce only fixed actions
+(e.g., [[0, 0], ..., [0, 0]]), and their trajectory histories reveal
+a clear inability to process multi-variable inputs and task
+requirements. Although larger models like LLaMA-70B and
+GPT-4 perform better than their smaller counterparts, they
+                            REFERENCES                                       [20] K. Obata, T. Aoki, T. Horii, T. Taniguchi, and T. Nagai, "Lip-llm:
+                                                                                   Integrating linear programming and dependency graph with large
+ [1] G. Li, X. Liu, and G. Loianno, "Human-aware physical human-robot              language models for multi-robot task planning," IEEE Robotics and
+      collaborative transportation and manipulation with multiple aerial           Automation Letters, 2024.
+      robots," IEEE Transactions on Robotics, 2024.
+                                                                             [21] Z. Mandi, S. Jain, and S. Song, "Roco: Dialectic multi-robot col-
+ [2] F. Graf, J. Lindermayr, B. Graf, W. Kraus, and M. F. Huber, "Hiper:           laboration with large language models," in 2024 IEEE International
+      A human-inspired scene perception model for multifunctional mobile           Conference on Robotics and Automation (ICRA). IEEE, 2024, pp.
+      robots," IEEE Transactions on Robotics, 2024.                                286­299.
+
+ [3] J. Lachner, F. Allmendinger, E. Hobert, N. Hogan, and S. Stramigioli,   [22] Q. Wu, G. Bansal, J. Zhang, Y. Wu, B. Li, E. Zhu, L. Jiang, X. Zhang,
+      "Energy budgets for coordinate invariant robot control in physical           S. Zhang, J. Liu, A. H. Awadallah, R. W. White, D. Burger, and
+      human­robot interaction," The International Journal of Robotics Re-          C. Wang, "Autogen: Enabling next-gen LLM applications via multi-
+      search, vol. 40, no. 8-9, pp. 968­985, 2021.                                 agent conversations," in First Conference on Language Modeling,
+                                                                                   2024.
+ [4] H. Liu, S. Nasiriany, L. Zhang, Z. Bao, and Y. Zhu, "Robot learn-
+      ing on the job: Human-in-the-loop autonomy and learning during         [23] W. Zu, W. Song, R. Chen, Z. Guo, F. Sun, Z. Tian, W. Pan,
+      deployment," The International Journal of Robotics Research, p.              and J. Wang, "Language and sketching: An llm-driven interactive
+      02783649241273901, 2022.                                                     multimodal multitask robot navigation framework," in 2024 IEEE
+                                                                                   International Conference on Robotics and Automation (ICRA). IEEE,
+ [5] E. Roesler, D. Manzey, and L. Onnasch, "A meta-analysis on the ef-            2024, pp. 1019­1025.
+      fectiveness of anthropomorphism in human-robot interaction," Science
+      robotics, vol. 6, no. 58, p. eabj5425, 2021.                           [24] D. Song, J. Liang, A. Payandeh, A. H. Raj, X. Xiao, and D. Manocha,
+                                                                                   "Vlm-social-nav: Socially aware robot navigation through scoring us-
+ [6] W. Wang, C. Yu, Y. Wang, and B.-C. Min, "Human-robot cooperative              ing vision-language models," IEEE Robotics and Automation Letters,
+      distribution coupling for hamiltonian-constrained social navigation,"        2024.
+      2025 international conference on robotics and automation (ICRA).
+                                                                             [25] A. J. Sathyamoorthy, K. Weerakoon, M. Elnoor, A. Zore, B. Ichter,
+ [7] W. Wang, A. Bera, and B.-C. Min, "Hyper-samarl: Hypergraph-                   F. Xia, J. Tan, W. Yu, and D. Manocha, "Convoi: Context-aware
+      based coordinated task allocation and socially-aware navigation for          navigation using vision language models in outdoor and indoor envi-
+      multi-robot systems," 2025 international conference on robotics and          ronments," in 2024 IEEE/RSJ International Conference on Intelligent
+      automation (ICRA).                                                           Robots and Systems (IROS). IEEE, 2024, pp. 13 837­13 844.
+
+ [8] O. De Groot, L. Ferranti, D. M. Gavrila, and J. Alonso-Mora,            [26] W. Wang, L. Mao, R. Wang, and B.-C. Min, "Multi-robot cooperative
+      "Topology-driven parallel trajectory optimization in dynamic environ-        socially-aware navigation using multi-agent reinforcement learning,"
+      ments," IEEE Transactions on Robotics, 2024.                                 2024 international conference on robotics and automation (ICRA).
+
+ [9] S. Samavi, J. R. Han, F. Shkurti, and A. P. Schoellig, "Sicnav: Safe    [27] L. Dong, Z. He, C. Song, X. Yuan, and H. Zhang, "Multi-robot social-
+      and interactive crowd navigation using model predictive control and          aware cooperative planning in pedestrian environments using attention-
+      bilevel optimization," IEEE Transactions on Robotics, 2024.                  based actor-critic," Artificial Intelligence Review, vol. 57, no. 4, p. 108,
+                                                                                   2024.
+[10] X. Zhou, S. Piao, W. Chi, L. Chen, and W. Li, "Her-drl: Heterogeneous
+      relational deep reinforcement learning for decentralized multi-robot   [28] E. Escudie and L. M. J. Saraydaryan, "Attention graph for multi-robot
+      crowd navigation," arXiv preprint arXiv:2403.10083, 2024.                    social navigation with deep reinforcement learning," in International
+                                                                                   Conference on Autonomous Agents and Multiagent Systems (AAMAS),
+[11] W. Wang, R. Wang, L. Mao, and B.-C. Min, "Navistar: Socially aware            2024.
+      robot navigation with hybrid spatio-temporal graph transformer and
+      preference learning," in 2023 IEEE/RSJ International Conference on     [29] A. Opedal, N. Stoehr, A. Saparov, and M. Sachan, "World models
+      Intelligent Robots and Systems (IROS), 2023, pp. 11 348­11 355.              for math story problems," in Findings of the Association for Com-
+                                                                                   putational Linguistics: ACL 2023, A. Rogers, J. Boyd-Graber, and
+[12] S. Liu, P. Chang, Z. Huang, N. Chakraborty, K. Hong, W. Liang, D. L.          N. Okazaki, Eds. Toronto, Canada: Association for Computational
+      McPherson, J. Geng, and K. Driggs-Campbell, "Intention aware robot           Linguistics, Jul. 2023, pp. 9088­9115.
+      crowd navigation with attention-based interaction graph," in 2023
+      IEEE International Conference on Robotics and Automation (ICRA).       [30] J. Xiang, T. Tao, Y. Gu, T. Shu, Z. Wang, Z. Yang, and Z. Hu,
+      IEEE, 2023, pp. 12 015­12 021.                                               "Language models meet world models: Embodied experiences enhance
+                                                                                   language models," Advances in neural information processing systems,
+[13] Y. F. Chen, M. Everett, M. Liu, and J. P. How, "Socially aware                vol. 36, pp. 75 392­75 412, 2023.
+      motion planning with deep reinforcement learning," in 2017 IEEE/RSJ
+      International Conference on Intelligent Robots and Systems (IROS).     [31] A. Bar, G. Zhou, D. Tran, T. Darrell, and Y. LeCun, "Navigation world
+      IEEE, 2017, pp. 1343­1350.                                                   models," arXiv preprint arXiv:2412.03572, 2024.
+
+[14] D. Shah, B. Osin´ski, S. Levine et al., "Lm-nav: Robotic navigation     [32] S. Yao, J. Zhao, D. Yu, N. Du, I. Shafran, K. Narasimhan, and Y. Cao,
+      with large pre-trained models of language, vision, and action," in           "React: Synergizing reasoning and acting in language models," in
+      Conference on robot learning. PMLR, 2023, pp. 492­504.                       International Conference on Learning Representations (ICLR), 2023.
+
+[15] S. S. Kannan, V. L. Venkatesh, and B.-C. Min, "Smart-llm: Smart         [33] Z. Zhang, A. Zhang, M. Li, and A. Smola, "Automatic chain
+      multi-agent robot task planning using large language models," in 2024        of thought prompting in large language models," arXiv preprint
+      IEEE/RSJ International Conference on Intelligent Robots and Systems          arXiv:2210.03493, 2022.
+      (IROS). IEEE, 2024, pp. 12 140­12 147.
+                                                                             [34] G. Jiang, M. Xu, S.-C. Zhu, W. Han, C. Zhang, and Y. Zhu,
+[16] R. Chen, W. Song, W. Zu, Z. Dong, Z. Guo, F. Sun, Z. Tian, and                "Evaluating and inducing personality in pre-trained language models,"
+      J. Wang, "An llm-driven framework for multiple-vehicle dispatching           Advances in Neural Information Processing Systems, vol. 36, pp.
+      and navigation in smart city landscapes," in 2024 IEEE International         10 622­10 643, 2023.
+      Conference on Robotics and Automation (ICRA). IEEE, 2024, pp.
+      2147­2153.                                                             [35] Z. Gou, Z. Shao, Y. Gong, yelong shen, Y. Yang, N. Duan, and
+                                                                                   W. Chen, "CRITIC: Large language models can self-correct with tool-
+[17] J. S. Park, J. O'Brien, C. J. Cai, M. R. Morris, P. Liang, and                interactive critiquing," in The Twelfth International Conference on
+      M. S. Bernstein, "Generative agents: Interactive simulacra of human          Learning Representations, 2024.
+      behavior," in Proceedings of the 36th annual acm symposium on user
+      interface software and technology, 2023, pp. 1­22.                     [36] R. Parasuraman, J. Kim, S. Luo, and B.-C. Min, "Multipoint ren-
+                                                                                   dezvous in multirobot systems," IEEE transactions on cybernetics,
+[18] C. Qian, W. Liu, H. Liu, N. Chen, Y. Dang, J. Li, C. Yang, W. Chen,           vol. 50, no. 1, pp. 310­323, 2018.
+      Y. Su, X. Cong, J. Xu, D. Li, Z. Liu, and M. Sun, "ChatDev:
+      fcommunicative agents for software development," in Proceedings        [37] J. Van Den Berg, S. J. Guy, M. Lin, and D. Manocha, "Reciprocal
+      of the 62nd Annual Meeting of the Association for Computational              n-body collision avoidance," in Robotics Research: The 14th Interna-
+      Linguistics (Volume 1: Long Papers), L.-W. Ku, A. Martins, and               tional Symposium ISRR. Springer, 2011, pp. 3­19.
+      V. Srikumar, Eds. Bangkok, Thailand: Association for Computational
+      Linguistics, Aug. 2024, pp. 15 174­15 186.                             [38] H. Touvron, T. Lavril, G. Izacard, X. Martinet, M.-A. Lachaux,
+                                                                                   T. Lacroix, B. Rozière, N. Goyal, E. Hambro, F. Azhar et al., "Llama:
+[19] M. Ahn, A. Brohan, Y. Chebotar, C. Finn et al., "Do as i can, not             Open and efficient foundation language models," arXiv preprint
+      as i say: Grounding language in robotic affordances," in 6th Annual          arXiv:2302.13971, 2023.
+      Conference on Robot Learning, 2022.
+                                                                             [39] J. Achiam, S. Adler, Agarwal et al., "Gpt-4 technical report," arXiv
+                                                                                   preprint arXiv:2303.08774, 2023.
+
