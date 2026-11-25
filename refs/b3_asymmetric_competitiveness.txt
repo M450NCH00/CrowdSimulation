@@ -1,0 +1,814 @@
+Article
+Modeling and Research on Multi-Speed Heterogeneous Crowd Evacuation with Asymmetric Competitiveness
+Yuanchun Ding 1,2,* and Binwen Liu 1,2
+
+1 Ganzhou Key Laboratory of Industrial Safety and Emergency Technology, Jiangxi University of Science and Technology, Ganzhou 341000, China
+2 School of Emergency Management and Safety Engineering, Jiangxi University of Science and Technology, Ganzhou 341000, China
+* Correspondence: dyc@mail.ustc.edu.cn; Tel.: +86-13576787002
+
+Academic Editor: Christos Volos
+Received: 19 January 2025 Revised: 7 February 2025 Accepted: 13 February 2025 Published: 16 February 2025
+Citation: Ding, Y.; Liu, B. Modeling and Research on Multi-Speed Heterogeneous Crowd Evacuation with Asymmetric Competitiveness. Symmetry 2025, 17, 298. https:// doi.org/10.3390/sym17020298
+Copyright: © 2025 by the authors. Licensee MDPI, Basel, Switzerland. This article is an open access article distributed under the terms and conditions of the Creative Commons Attribution (CC BY) license (https://creativecommons.org/ licenses/by/4.0/).
+
+Abstract: In order to investigate the influence of factors such as pheromones and avoidance behavior on the evacuation of heterogeneous crowds, a multi-speed cellular automata evacuation model based on asymmetric competitiveness is proposed for the evacuation of the complex groups in a single-exit room. By optimizing the crowd density and pedestrian speed equations, multi-speed heterogeneous crowds can be obtained in the model. In order to achieve the description of a multi-dimensional asymmetric competitiveness heterogeneous population, the evacuation competitiveness is considered in the pedestrians with different speed, age, gender, etc., and by considering the avoidance character existing among pedestrians, the avoidance behavior is also discussed in this model. It is well known that the information received by different pedestrians is different. In order to consider the asymmetry of information, the pheromones are introduced into the evacuation model to discuss the effect of information differences on evacuation. The evacuation results show that the asymmetry of information has a facilitating effect on the evacuation speed of pedestrians, and the best evacuation effect is obtained when the radius of the pheromone is about 3 m. Moreover, evacuation time is weakly correlated with pedestrians' gender but strongly correlated with pedestrians' age. The avoidance behavior plays a positive role in evacuation, and the evacuation time reaches the minimum value when the avoidance probability is about 0.5. The slope of the reduction in evacuation time is greatest when the avoidance threshold is 0.4 to 0.8. The findings can support evacuation capacity assessment, emergency planning, and decision making.
+Keywords: pheromones; heterogeneous crowds; avoidance behavior; cellular automata; personnel evacuation
+1. Introduction
+With the acceleration of urbanization, there has been a significant increase in high-rise buildings, large-scale public facilities, and entertainment venues in urban areas. It is well known that most of those places are densely populated; thus, the evacuations in those places are difficult and time-consuming when some disasters, such as fires, earthquakes, or man-made accidents, happen. In the event of a disaster, it is undoubtedly of great significance to reduce the loss of life and property if a more reasonable evacuation strategy can be adopted [1­3]. Fortunately, in recent years, based on the efforts made by scholars, some results about pedestrians' evacuation were also achieved. For example, literature [4] achieved customized evacuation guidance services for different populations by integrating
+
+Symmetry 2025, 17, 298
+
+https://doi.org/10.3390/sym17020298
+
+Symmetry 2025, 17, 298
+
+2 of 23
+the effects of gender, age, and psychological state on individual evacuation behavior. Literature [5] suggested that the rational use of evacuation simulation tools can help predict the behavior and evacuation time of evacuees under different environmental factors. By introducing the symmetry-breaking effect of pedestrian behavior, literature [6] showed some improvement in the accuracy of the model in simulating pedestrian behavior. According to the model scales, the existing evacuation models can be categorized into three types: macro, micro, and meso evacuation models [7­9]. The cellular automata (CA) model, as a kind of macro model, has some significant advantages, such as high efficiency, scalability, and simplicity of implementation, and it has attracted extensive attention from scholars in recent years, e.g., ship evacuation models considering pedestrian interaction [10], subway station evacuation models considering guidance [11], and models dealing with large-scale crowd evacuation [12]. At the same time, Kirchner et al. [13] proposed a method for simulating dynamic fields by diffusion and attenuation that mimics chemotaxis to describe pedestrian interactions. Some scholars simulated the movement behavior of the pedestrians in fire accident by introducing the pheromone-like dynamic fields [14,15]. Burstedde et al. [16] proposed an improved evacuation algorithm by applying asymmetric pheromone dynamic fields.
+The related studies provided some references for modeling evacuation, obviously. However, it is worth pointing out that using single personnel attribute to describe the evacuees is unreasonable because most of the evacuees are complex. For example, the evacuees can be composed of the individuals of different ages, genders, and physical qualities, and different kinds of individuals have different evacuation performances, obviously. Thus, considering the asymmetry of the people's movement characteristics is necessary and important. Fortunately, scholars have made some efforts in this area, and some results have been achieved. For example, Fang et al. [17] found that women have some disadvantages over men during evacuation by performing some virtual reality experiments. Hu et al. [18] studied the evacuation characteristics of partially differing crowds based on a cellular automata model by introducing asymmetric competitiveness to obtain a power function jointly determined by the external environment and pedestrian perception. Qiu et al. [19] developed an extended CA model considering competitiveness to deal with the simultaneous evacuation of pedestrians with multiple speeds in the model. The above related studies, while shedding light on the heterogeneity of personnel competitiveness, failed to extend sufficiently to other dimensions of heterogeneity in competitiveness across sport types and pedestrians. In order to consider more broadly the heterogeneity of different movement types and pedestrian competitiveness, Wang et al. [20] argued that pedestrians' behavior in emergencies is influenced by a variety of factors, such as age, gender, and familiarity with the environment. Forrest et al. [21] found significant correlations between gender and age and speed and stride frequency of individuals. The statistics of Shi et al. [22] showed that males were overall 0.2 m/s to 0.3 m/s faster than females on average. Meanwhile, some scholars have concluded that the walking speed of a human is 0.8~1.8 m/s [23], the average evacuation speed is 2.03 m/s in a smoke-free situation (the average age is 41.3 years old) [24], and the evacuation speed is 1.2~2.19 m/s in emergency situations [25] through field tests or data analysis. Predtechenskii et al. analyzed the trend of evacuation velocity under normal and fire conditions in literature [26]. Togawa et al. derived the relationship between evacuation velocity and crowd density in literature [27]. Fang et al. [28] dealt with the evacuation response of people by using kinetic flow principles, while the empirical evacuation response equations were further refined.
+The above related results provide a good generalization and analysis of evacuation velocity variability but less involved in evacuation and physical simulation of complex groups with multiple velocities. To address the above problems, in order to understand
+
+Symmetry 2025, 17, x FOR PEER REVIEW Symmetry 2025, 17, 298
+
+3 of 24 3 of 23
+
+groups with multiple velocities. To address the above problems, in order to understand
+the cchhaarraacctteerriissttiiccssooffhheteetreorgoegneneoeuosuscrcorwowd deveavcaucautiaotnioannadntdhethcheacrhaacrtearcitsetricisstiocfsitosfimitspiamct-, tphaicstp, athpiesrpfoapcuesrefsoocunsiems pornoviminpgrtohveinegmtphieriecaml pfoirrimcaullfaosrfmoruclaros wfodr dcreonwsidtydaenndsiptyedaensdtripaensdpeesetrdiaannsdpmeeodvainngd tmheomviningtothtehme cineltloutlhare acueltloumlaartauetvoamcuataatieovnamcuoadtieoln. Cmoomdeple. tCitoivmepnetsisitsivceonuepssleids wcoiuthplaegde,wgiethndaegre,,agnedndspere,eadnfdacstpoeresdtofaocbtotarisntoevoabctuaainteedvpacoupautleadtiopnosputhlaattioanres dthifafteraernetdiaitffeedrebnytimateodvebmyemntocvheamreanctecrhisatricasctaenridstincsdaivniduinadl icvoimdupaeltictoivmepnetsist,ivtaenkiensgs, itnatkoainccgoiunntot caocmcopuentitivcoemlypdeetritiviveedlyavdoeirdivanedceabveohiadvainocres (baeshyamvmioertsri(caaslybmehmaevtiroicras)l. bTehheaevfifoercst)s. oTfhpeheeffreocmtsoonfepsh, aegroem, aonndesg,eangdee, ranodn geevnadcueratoionnevaarecuaalstiooenxaprleoarelsdo, eaxnpdlothreedc,haanrdacthteericshtiacrsoafcttehreistmicosvoefmtheenmt aonvdembeenhtaavniodrbaleheavvoilourtaiol nevooflutthioeneovfacthueateevdaccuroatwedd carroewddearirveedderfirvoemd mfromdeml soimdeullsaitmiounlsa.tTiohnes.fiTnhdeinfignsdcianngsucpanposurtpepvoarctueavtaiocnuactaiponacciatypacsisteyssamsseensst,meemnet,rgeemnecrypgleanncnyinpgla, nanidngd,eacinsdiodnemciasikoingm. aking.
+
+2. Models and Methods
+Based on the pprinciple of cceelllluular aauuttoomata, this ppaaper ddiivviides tthhee eevvaaccuuation sspace inttoo aannuummbbeerrooffddisicsrcerteetetwtwo-od-idmimenesnisoinoanlatlutpulpesle, sw, iwthitthhethdeimdiemnseinosnisonofs ionfdiinvdidivuiadlutualptleusspeltesasse0t.4asm0.×4 0m.4×m0.[429m]. D[2e9p]e. nDdeipnegnodnintgheonactthueaal cstiutuaaltsiiotnu,athioenre, tahreerteharreeetshtaretessftoatreesafcohr ceealcl:hoceclul:pioecdcubpyipedeobpylepoerowpalellso(robwsatallcsle(so)basntadcildesle). aFnodr tihdelec.oFnovrenthieencceonofvtehneieenvcaecuoaftitohne seivmacuulaattiioonn, sitimisualasstiuomn,eidt ihsearesstuhmateedachherme ethtaacteellaccahnmaectcaocmelml coadnataeccaotmmmosotdoantee aptemrsoonst. Tohnee npeeirgshobno. rThhoeodneisigohfbaorMhoooodreitsypofe,awMithootrhee tryapdeiu, swtiatkhetnheasroandeiutsuptalkeelnenagstho,naendtutphlee rleannggteho, af ntudptlheenreainggheboorfhtuoopdlesnaenidghtbhoerirhopoodsssiabnleddthireeicrtipoonsssiobflemdoivreecmtioennts aorfemshovoewmneinnt Fairgeusrheo1w, nwhinerFeigthuereo1ra, nwgheetrueptlhees orerpanregseentut pthleeslorecpartieosnenotftthheelpoecrastoionnneolf, tahnedptehresognreneenl, taunpdletsheregprreeesnentut tphleesnreeipgrhebsoernitntghteunpeleigshrbeaocrhinagblteubpyletshreeapcehrasobnlenbely. the personnel.
+
+TTyyppoollooggyy VVeelloocciittyy((mm//ss))
+
+FFiigguurree 11.. NNeeiigghhbboorrhhoooodd eexxtteenntt ooff mmeettaacceellllss aanndd tthheeiirr ppoossssiibbllee ddiirreeccttiioonnss ooff mmoottiioonn..
+
+22..11.. PPeerrssoonnnneell AAttttrriibbuutteess PPeerrssoonnnneell aarree ccaatteeggoorriizzeedd bbyy aaggee aass oolldd,, mmiiddddllee--aaggeedd aanndd yyoouunngg,, aanndd bbyy ggeennddeerr aass
+mmaallee aanndd ffeemmaallee..InIntutrunr,nth, ethreeraereasriexsciaxtecgaotergieosroiefspoefrspoenrnseolncnhealrachctaerraizcetedriazseodldaesromldeenr, moledne,r owldomerewn,ommiednd,lem-aigdeddlem-agened, mmidend,lem-aigdeddlew-aogmedenw, yoomuenng, myoeunnagndmeynouanngdwyoomunegn w[3o0m­3e3n].[T3h0­e3d3i]s.tTrihbeutdioisntroibfusptieoendoffosrpeeaecdhfcoarteegaochrycoatfepgeorrsyononf eple[r2s1o­n2n5e]li[s2s1h­o2w5]nisinshToawblne i1n. TInabthlee1m. oIndetlh, ethme dodisetrl,ibthuetiodnisotrfisbpueteiodns foofrsepaecehdcsaftoegroeraychofcpaetersgoonrnyeolfwpaesrdsoentenreml iwneads duestinergmainneodrmuasilndgisatrnibourmtioanl ,dii.set.r,iabusytimonm, ie.ter.i,cadsiysmtrimbuettiroicndaipstprribouactiho.n approach.
+
+Table 1. Velocity distribution of personnel. Table 1. Velocity distribution of personnel.
+
+OOllddeerr MMeenn 00..88~~11..22
+
+OOllddeerr WWoommeenn 00..88~~11..22
+
+MMiiddMdMdlleaea-l-lAeAe ggeedd 11..44~~11..88
+
+MMiiWdWdddoollmeme--eAAennggeedd 11..22~~11..66
+
+YYoouunngg MMeenn 11..77~~22..11
+
+WWYYooooumumnneeggnn 11..55~~11..99
+
+CCoonnssiiddeerriinngg tthhaatt ppeeooppllee wwiitthh ddiiffffeerreenntt aattttrriibbuutteess hhaavvee ddiiffffeerreenntt pprroobbaabbiilliittiieess ooff wwiinn-nniinngg tthheeeevvaaccuuaattiioonnccoommppeetittiitoionn; ;foforrexeaxmampplel,ei,ninthteheeveavcaucautaiotinoncocmompeptiettioitnio, ny,oyuonugnpgepopeoleopblevioobuvsiloyuhsalyvehaavheigahheirgphreorbparboilbitaybioliftywionfnwiningnthinagntohladneropldeeorpplee,otphlies,ptahpiserpianpteror dinutcreosadupceeospalepaetotrpilbeuattet:ricboumtep: ectoimtivpeentietsivs.enTehses.mTohreemcoomrepceotmitipveetitthiveeptehresopnerisso, nthies,etahseieeraistieisr
+
+SSyymmmmeettrryy 22002255,, 1177,, 2x9F8OR PEER REVIEW
+
+4 of 24 4 of 23
+
+Parameters Typology
+Ratio
+
+fitoirstfhoartthpaetrspoenrstoonwtoinwtihnethceomcopmeptietitoitnioannadndsuscuccecsessfsuflulyllyenentetrerththeeeevvaaccuuaattioionnggrriidd ppooiinntt wwhheenn ccoommppeettiittiivvee bbeehhaavviioorr ooccccuurrss [[1177]].. TThhee mmeetthhoodd ooff ccaallccuullaattiinngg tthhee ccoommppeettiittiivveenneessss ooff ppeeddeessttrriiaannss iiss sshhoowwnn iinn EEqquuaattiioonn ((11))..
+
+1
+
+i=i
+
+= ii1ui i ui i
+
+(1) (1)
+
+where  (1    0) is the gender factor for personnel ,  (  0) is the age factor for wpehresroenni(e1l , i ( 0) i0s)tihsetgheensdpeerefdacftaocrtoforropf epresrosnonnenlei,l ,i(anid0)(1istheage0fa)citsorcofomr ppeetr-sitoivnenneel si,sueix(upiress0e)disasthaepsopweeedr ffaucntoctrioonf pfoerrspoenrnseolnin, ealnd. i(1 i  0) is competitiveness expreTshseedcaosmappeotiwtiveernfuesnsctpioonwfeorrfpuenrcstoionnnebl oi.rrows from Stevens' law in psychophysics [34]. TThheiscloamwpdeetictliavreenseassppoowweerrrfeulantcitoionnshbioprbroewtwseferonmtwSotedvieffnesr'elnawt tyinpepssyocfhpospyhcyhsoilcosg[i3c4a]l. Tinhtiesnlsaiwtiedseacnladrehsaas pboeewnersureclcaetsisofnuslhlyipabpeptlwieedenintwmoandyifffieerlednst,tsyupcehs aosf pinsyhcuhmolaongidcaelciisnitoenn-smitaieksinagndphroacsebseseesn osuf cicnetsesrfpurlelytinagppplireodbainbimlitaynywfeiiegldhsti,nsgucfhunasctiinonhsum[1a8n] adnedcisiinone-xmteankdinedg pmreotcaecseslelus loafrianutetorpmreattianmg opdroeblsabchilaitryacwteeriigzhintigngcofmunpcettiiotinvse[n1e8s]sa[n1d9]i.nTheextveanldueeds omf etthaeceplelur-lsaornanuetloamgeatcaomeffiocdieelnstcsh, ara, catnedrigzienngdceormcopeeffitictiivenentse,ss [,1a9r]e.TshheowvanluinesToafbtlhee2.pIenrsthone nmeol dagele, cthoeefafigceiecnotesffi, cii,enantsdogf ethnedeevr accoueafftiecdiepnetsr,soni,naerleasrheodwetnerimn iTnaebdleby2.taIkninthgeamraonddeol,mthdeisatgriecoefficients of the evacuated personnel are determined by taking a random distribution. bution. When the age coefficients are taken at the median, the competitiveness intervals When the age coefficients are taken at the median, the competitiveness intervals for each for each pedestrian source are shown in Figure 2. The color scale in Figure 2 indicates the pedestrian source are shown in Figure 2. The color scale in Figure 2 indicates the values ovfalcuoemspoeftcitoimvepneetsistivcoernreessspcoonrdreinspgotonddiinffgerteondticffoelroerns,t wcohloerres,rwedhdeerre croedlodresrincdoliocarsteingdreicaateter cgoremapteertictoivmepneetsistiavnednegsrseaenndergcroeleonresricnodliocrasteinldesicsactoemlepssetciotimvepneetistsi.veInnetshse. Isnamtheessiatumaetisoint-, muaatlieosna, rme aalbeosuatre19a%bomutor1e9%commpoeretitciovme tpheatnitifveemtahlaens [f2e1m,2a2l,e3s5][.21A,2s2c,a3n5]b. eAsseceanninbeFisgeuernei2n, tFhigeudriestr2i,btuhteiodniostfrciboumtpioentitoivf ecnoemsspaemtitoivnegndeisfsfearemnot ncagtedgioffreireesnotf cpaetresgoonrnieesl iosfaspyemrsmonentreilcaisl. asymmetrical.
+
+Table 2. Age and gender coefficients of personnel. Table 2. Age and gender coefficients of personnel.
+
+Parameters
+
+Age of Personnel
+
+Age of Personnel
+
+Youthful YTeyaproslogy MiYdodulethAfugleYears MOildddAlegAege
+
+3~4 Ratio
+
+1~2 3~4
+
+0~11~.25
+
+Gender of Personnel Gender of Personnel Old AgMe ale Male WoWmoemnen
+
+0~1.5 0.5 0.5
+
+0.40.4
+
+Figure 2. Competitiveness range by pedestrian source.
+22..22.. RReellaattiioonnsshhiipp BBeettwweeeenn PPeerrssoonnnneell DDeennssiittyy aanndd EEvvaaccuuaattiioonn SSppeeeedd IItt iiss wweellll kknnoowwnn tthhaatt tthheerree iiss aa ssttrroonngg rreellaattiioonnsshhiipp bbeettwweeeenn ppeerrssoonnnneell ddeennssiittyy aanndd
+ppeerrssoonnnneell vveelloocciittyy [[2266­­2288,,3366]].. FFiigguurree 33 [[3366]] sshhoowwss tthhee ssttaattiissttiiccss ooff ddiiffffeerreenntt sscchhoollaarrss wwhhoo
+
+Symmetry 2025, 17, x FOR PEER REVIEW
+
+5 of 24
+
+Symmetry 2025, 17, 298
+
+5 of 23
+have studied the relationship between personnel density and personnel velocity. As can be seen in Figure 3, the speed of personnel will decrease as the density of personnel inhcraevaessetsu. dCioednstihdeerienlagtitohneschoipmbbeintwedeeenffpecetrsoofnlnefetl/rdiegnhsti,tfyroantd/bpaecrksocnronweldvienlgocaintyd. Aotshcearnfabcesteoerns oinnFeivgaucruea3t,iothnessppeeeedddoufrpinergsoenvanceul awtiollnd,etchreearseelaatisotnhsehdipenbseitywoeef npepresrosnonnenleilndcreenassietsy. Canodnspideresroingnetlhsepeceodmcbainebde defefseccrtiboefdleinft/threigfhotr,mfrofnat/nbinacdkexcraoswfodllionwg saEnqduoathioenrsf(a2c)t­o(r4s) o[2n8e].vacuation speed during evacuation, the relationship between personnel density and
+personnel speed can be describeud( in1, th2e) f=o0rm( 1ofan1min, d2ex as2mfo)llows Equations (2)­(4) [2(82]).
+
+u ( 1,
+
+2
+
+) = um
+u(1,
+
+ 2)
+
+l=lnn((um11mm//1l1cln)n)((+11mm//2u2mm1(1c-)-)1,+22c2+)=22mm0(-(-1c1<22c +11<m, 1(m2,1c2c<<2m1)2
+
+< <
+
+2m )
+1m, 2c
+
+<
+
+2
+
+<
+
+2m )
+
+(2)
+(3) (3)
+
+u(u1,(21,)=2 )u=mu(m(11 1c1,c, 2 222cc))
+
+((44))
+
+wwhheerreeum isiasnanupuppeprebrobuonudnodnotnhethsepespedeeadt wathwichhicpherpseornssoncasncamnomveofvreeeflrye,emly/, sm. 1sa. nd
+a2ndarethe afrroentt-hbeackfraonndt-bleafctk-rigahntddilreefct-trioignhatl lidnieredcetinosniatilesl,inreespdeecntisvietileys. ,perressopne/cmtiv. el1yc. and2c/are. the farnedelymoavraebtlheeffrroenetl-y mbaocvkaabnledfrleofntt--briagchktacnrditilceaflt-lrinigehdt ecrnistiictiaelsl,inreesdpeenc-tsiivtieelsy, (rpeesrpseocnti/vmel)y. (p1merasonnd/m2)m. are thaenfdron t-baarcektahnedfrloefntt--briagchkt acnridticlaelftl-inrieghdtencrsiittiiceasl, rleinsepedcetnivseitliye,sw, rheesnpeccrotiwvedlyin,gwphreenvecnrotswmdionvgempreenvte(nptesrmsoonv/emm)e.nt (person/m).
+
+FFiigguurree 33.. Plot of croowwdd ddeennssiittyy vveerrssuuss eemmppiirriiccaallppeeddeessttrriiaannssppeeeedd.. AAddaapptteedd ffrroommRReeff. [36].
+
+CCoonnssiiddeerr tthhee mmaaxxiimmuumm lliinnee ddeennssiittyy wwhheenn ppeeddeessttrriiaannss aarree iinn pphhyyssiiccaall ccoonnttaacctt wwiitthh
+
+eeaacchh ootthheerr ((ii..ee..,, tthheerree iiss nnoo ffrreeee ssppaaccee iinn bbootthh tthhee ffrroonntt--bbaacckk aanndd lleefftt--rriigghhtt ddiirreeccttiioonnss,, bbuutt
+
+nnoo bbooddyy ccrruusshh)).. DDuuee ttoo tthhee ddiissccrreettee nnaattuurree ooff ssppaaccee ooff tthhee cceelllluullaarr aauuttoommaattoonn,, tthhee ssiizzee ooff
+
+tthhee cceelllluullaarr ssppaaccee iinn wwhhiicchh tthhee ppeeddeessttrriiaannss aarree llooccaatteedd iiss tthhee ssaammee;; tthheenn,, tthhee ffrroonntt--bbaacckk
+
+aanndd lleefftt--rriigghhtt ccrriittiiccaall lliinnee ddeennssiittiieess wwhheenn tthheeyy aarree uunnaabbllee ttoo mmoovvee dduuee ttoo oovveerrccrroowwddiinngg
+
+ccaann bbee ccoonnssiiddeerreedd ttoo bbee eeqquuaall ii..ee..,, m ==22.5.5ppeersrosonn//mm..SSoommeelliitteerraattuurree ssuuggggeessttss tthhaatt tthhee
+
+ccrriittiiccaall ddiissttaannccee ffoorr ffrreeee mmoovveemmeenntt ooff ppeerrssoonnnneell iiss 00..7755 mm [[3366]],, wwhhiillee ootthheerrss ssuuggggeesstt iitt iiss
+
+00..7755 ttoo 11..1122 mm [[2288]].. CCoonnssiiddeerriinngg tthhaatt tthhee ddiissttaannccee bbeettwweeeenn ppeerrssoonnss iinn tthhee cceelllluullaarr aauuttoommaattaa
+
+mmooddeell sshhoouulldd bbee aann iinntteeggeerr mmuullttiippllee ooff tthhee ssiizzee ooff tthhee cceelllluullaarr ssppaaccee,, tthhee ccrriittiiccaall ddiissttaannccee
+
+ffoorr ffrreeee mmoovveemmeennttininthtehefrofrnotn-bt-abcakcaknadnldeftle-rfitg-rhitgdhitredcitrieocntisoinsstaiksetnaktoenbeto0.8bem0, .i8.e.m, ,i.e=.,
+
+1c.2=5 1p.e2r5sopnerss/mon.s/Tmhe. Tcohnevceornsvioenrsiroenlarteiolantiobnetbweetweneelninleindeednesnitsyityanadndssuurrfafaccee ddeennssiittyy iiss
+
+sshhoowwnn iinn EEqquuaattiioonn ((55)) [[3366]]..
+
+
+
+= 
+
+=1122
+
+(5) (5)
+
+wdwehhneesrrieteiesi,sritsehstephseeucstrifuvarecfelaycd,ependersesintoysn,it/pyme,rs.poenrs/omn2/.m1.
+
+andan2dare
+
+the front-back and are the front-back
+
+left-right line and left-right
+
+line densities, respectively, person/m.
+
+Symmetry 2025, 17, x FOR PEER REVIEW
+
+6 of 24
+
+Symmetry 2025, 17, 298
+
+6 of 23
+
+Therefore, the crowd density and pedestrian speed equation is updated as Equation
+
+(6).
+
+Therefore, the crowd density and pedestrian speed equation is updated as Equation (6).
+
+( ) u
+u()
+
+(
+=
+
+)=
+um
+
+umlnln(llnnmm(//mm/c/)c+)
+
++ 
+
+mm-m-m--cc ++
+
+   
+
+((66))
+
+wpSEcwp1rure.qh2hoerbue5wevssaroretpedteinniteiou/tnrnsmtsigsiomn(itn.6psgho)/reSetmveyhuasvei,ecuebemhilrsnndsfteotuatissnotfcruEteftmE,athqdiqpceonueeuevgaanraetbdssitmoiooeeitoavnnnyenc,es/n(hpi7mc(tte6,yo).r).o,npsyfsoepticrnaeetshiln/rosdsetmnosst,/hn2Eame./bqmm.ofumrv=ae.etiesi2loyt.icn5hsomep(nt7hicesos)retrv.iasttafonhircbnteeasle/el,clmlyrciinrtmaieitcnidoa=cdlevanla2lisbcl.n5iilt=neeypedecw1drre.i2hsento5einscnnpisat/ieylotmryvlsi,wenoprahencener/rdondsmewono,ndsvi/niientmty=rgo-,.
+
+{ ( ) ( ) } u
+u()
+
+(=
+
+)u=m
+
+{um[1.341.-341-.414.4l4nl(n)]
+
+ +
+
++(2
+
+-2 -00.8.8)
+
+++
+
+}
+
+((77))
+
+HHeerree,, tthhee oobbsseerrvveedd ddaattaa ffrroomm lliitteerraattuurree [[3366]] aarree uusseedd,, aanndd tthhee ffiittttiinngg ccuurrvvee ccaann bbee
+
+oobbttaaiinneedd bbyy ooff EEqquuaattiioonn
+
+f(fi(i77tt)t)t,ii,nngg,,
+
+EEqqauuanaandttdiioonn,,a((ar77er)),,esaahssshossowhhwoonwnwinnninTiinnTaabFFbliieggleuu33rr. ee.FF44rr,,oowwmmhhFeeFirrigeeguutthhrreeee4vv4,aa,illituutceecassannooffbbtteehhseeseecceeoonneetfffitfhhiaccaiitteettnnhhtteess
+
+ddiissttrriibbuuttiioonn ooff tthhee oobbsseerrvveedd ddaattaa aarree bbaassiiccaallllyy iinn llooggaarriitthhmmiicc ffoorrmm,, aanndd tthhee ddaattaa aarree iinn
+
+ggoooodd aaggrreeeemmeenntt wwiitthhtthheefiftitteteddcucurvrvese.sF. rFormomFigFuigruer4ea4nadnTdabTlaeb3le, i3t,ciatncabne sbeeensetehnatththaet
+
+laotaFfwahrnnfroteeudFdeniirgrwntauh-'lebisatnifaapgor'cpsophbkopnoetsfteeabp-tarrshbevsreoraesarnsfcvftonektriahnogoetpngnaenioetaetfdinr-tlrvsbiaoevdsoatn,paenacwt,atknh-awcbheapihalnisheccasgarihkpscslhoafiaapsacnrielcidsganrntrueosedggoerlduenfstierapdoffnactaienettofcohlrfgieertesnehrnprsgefecaaaneffnccfrcaatifgoecnrctemtohftgosrmatorffht0amrra.ttoac0hhttmn1teeothg4hrfe0eietrt.so0tafiifv1nnvrt04atogga.il1mneltucuo9sgeu,e00frocr.io.v2nuo1ffe89rmttwhv,othoeeifhe0n0oF.oio2c.wtrf5t8hhuh7Fheite,rntiorhrauc'ohsn0eoinb.dobt5s'hbss7eteseh,rorveveavbraanlvaslavtudetaitiaorteoetivlnrnouhoaasnsee-fl,,
+
+ndttiieaooctnnaesidisssaanitrnaeyctiteshoseisnianprtcoyhrseettauopsreioenstocthurfeeraavesnaoeelfugtheaaetonivfveeag-lasuatlneiovdpoeef-dsleliocnrpeaeeanardsliefnudtehneacecrrtveifouaanslnue.ceTttihhooefenrv.eTafalohtureteehr,eoetffhosearemf,iatettthittneihmgefieftsutatinonmcgetenifotusinumnrciees-
+
+tthoaetntshueriemthagate tihsetiilmtedagteo itshteilrtiegdhttoanthdesrhiigfhtetdanddowshniwfteadrdd, othwunsw, raeradli,ztihnugst,hreeadlaiztainpgotihnet
+
+fditattiangp.oIinntafidtdtiintigo.nIn, tahdedfiittitoedn,ctuhrevfietstesdhocwurvtheaststhhoewmthagatntihtuedme aogfnitvuedresuosf isvmerosures thains
+
+1m0otrime tehsa, nw1h0icthimisecso, wnshisictehnitswcoitnhsitshteenfitnwdiinthgsthoef fithnedliintegrsaotuf rtehe[2l8it]e. rature [28].
+
+FFiigguurree 44.. PPeerrssoonnnneell ddeennssiittyy vveerrssuuss ssppeeeedd..
+
+TTaabbllee33.. VVaalluueessooff,,anadnd fo rfoearcehacohbsoebrsveartvioatni.on.
+
+PPaarraammeetteerrss
+   RR--ssqquuaarree
+
+AAnnddoo
+00.4.488 00.0.01144 00.1.144 00.9.999
+
+PPrreeddtteecchheennsskkiiii
+0.28 00..0044 00..1166 00..9999
+
+HHaannkkiinn
+00.5.577 00.0.03355 00.0.08855 00.9.999
+
+FFrruuiinn
+00..4488 00..1199 --00..1155 00..9999
+
+2.3. Avoidance Behavior
+Avoidance behavior is probabilistic and asymmetric. Specifically, it means that the dominant group (competitive) will not always choose to give way when competing with
+
+Symmetry 2025, 17, 298
+
+2.3. Avoidance Behavior
+
+Avoidance behavior is probabilistic and asymmetric. Specifically, it means tha7tofth23e
+
+dominant group (competitive) will not always choose to give way when competing with
+
+the disadvantaged group (weak) for evacuation grid points, but only some of the domi-
+
+tnhaendtisgardovuapnwtaiglledchgoroosuept(owseaackri)fifcoer ethveaicrueavtiaocnugatriiodnpeoffiinctsie, nbcuyt otonlhyeslopmtheeofdtihsaeddvoamntiangaendt
+
+ggrroouuppwevilalccuhaotoesme otoresaqcuriicfikcley.thTehierreevfoarceu,atthioenaveoffiidciaenncceyptroohbealbpiltihtye, disadv,ainstsaegtesducghrothuapt
+
+ewvhaceunattheemavooreidqeur'isckcolym. Tpheteirteivfoernee,stsh, eav, iosidance pgrorebaatbeirlitthya, npatvhoeida, visosidetedsu'scchotmhaptewtithiveen-
+
+tnheesas,void,etrh'es caovmoipdeatnitcievebneehsasv, ioir, iosccuavrosidwgirtehaaterthan tlhikeealivhooiodded, 'asncdompetitivreepnreessse, ntjs,
+
+tthheeatvhoreidshanolcde abtehwahviicohr tohcecuarvsowidiathncaepbaevhoiadvliiokreloihcocuords,.and avoid represents the threshold at whOicnh tthhee oatvhoeirdhanancedb, tehheavaviooridoeccduprse.rson, j, in order to travel to the target lattice point, will Oinncrtehaeseothhiesrshpaenedd,wthitehatvhoeidheedlppoefrssoelnf,-dj,riinveoradnedr tthoetraavvoeildteor,thaendtatrhgeetslpaetetidcechpaoningte, wisilslhionwcrneaisneEhqisusaptieoend(w8)i.th the help of self-drive and the avoider, and the speed change is shown in Equation (8).
+
+uj =u ju=j(uj)(+ )(+1 (-1-j)ju)uj,mj,m
+
+(8)
+
+wwhheerreewwhheennuj uj,m, anadnduj==uj,m,. .
+
+22..44.. UUppddaattiinngg RRuulleess aanndd MMooddeell SSiimmuullaattiioonn
+IInnoorrddeerrttooffaacciilliittaatteetthhee coonnssiiddeerraattiioonnoofftthhee impaacctt of exit information on evacuation, tthhiiss ppaappeerr ddiivviiddeess tthhee ppeeddeessttrriiaann mmoovveemmeenntt aarreeaa iinnttoo ttwwoo ppaarrttss:: tthhee eexxiitt cclleeaarr zzoonnee aanndd tthhee eexxiitt ffuuzzzzyy zzoonnee ((FFiigguurree 55)),,aannddtthheeaarreeaaisisssyymmmmeettrriiccaalluuppaannddddoowwnn.. TThheeppeerrssoonnnneell llooccaatteedd iinn the clear exit aarreeaa ccaanncclleeaarrllyyrreecceeiviveeththeeeexxititininfoformrmataitoionn, a, nadnditsitsmmovoevmemenetnits ims mainailnylyaffaeffcetectdedbybythtehestsattaitcicfifeieldld; ;ththeeppeerrssoonnnneellllooccaatteeddiinn tthhee fuzzy exit aarreeaa ccaannnnoott cclleeaarrllyy rreecceeiivvee tthhee eexxiitt iinnffoorrmmaattiioonn dduuee ttoo tthhee ddiissttaannccee ffrroomm tthhee eexxiitt,, ssoo iittss mmoovveemmeenntt iiss aaffffeecctteeddbbyytthheessttaattiiccffiieelldd,,ddyynnaammiiccffiieelldd,,rreeppuulslsiviveeffoorrcceefifieeldld,,aannddooththeerrfafacctotorrss. .
+
+FFiigguurree55.. ZZoonniinngg ooff ppeerrssoonnnneell mmoovveemmeennttss..
+
+TThheepprroobbaabbiilliittyypx,y, ofoaf apepresrosnonmmovoivnigngtotwowaradrdceclleullluarla(rx,(y), is) ciaslccaullcauteladteadccaocrcdoirndgtiongEqtouaEtqiounasti(o9n)sa(n9d) a(1n0d).(10).
+
+px,y =pNx, y ·=exNp(ekxspS(xk,ys S) xe, yx)pe(xkpD(kDDxD,yx), ye)xepxp(k(kFFFFx,xy, y))((11 --nnx,xy,)y)x, yx,y
+
+(9)
+
+  N
+
+=
+
+ N=
+
+(x,y)
+
+e(xxp, y )(ekxs pS(xk,ys
+
+)Sxe,xy )pe(xkpD(kDDxD,yx),ye)xepx(pk(kFFFFx,xy,
+
+)y ()(11-- nnx,xy,y))x,xy,y-1 -1
+
+((1100))
+
+wwhheerree Nisisththeennoorrmmaalliizzaattiioonn ffaaccttoorr ttoo eennssuurreetthhaatt  x,,yp x,,y ==11.. n x,,y aanndd x,,y aarreecceelllluullaarr ssttaatteeppaararammeetetersr,si,fitfhtehceelcleulllaurlaisr oisccoucpciuepdibedy abywaallwoarlalnoor basntaoclbes,tnaxc,lye,=1, a=nd1v, iacne dvevriscae, nvxe,yrs=a, 0. ,if =the0.cieflltuhlearceilsluolcacruipsioecdcubypipededbeystprieadness,trixa,yns=, 1 ,, an=d1v, iacnedvevriscae,vexr,ysa=, 0 ., k=S i0s .the stiasticthfeielsdtaptaicrafimeeldterp, aSrxa,ymisettehre, sta,tic ifsieltdh,ekDstaistitchefiedlydn, am icifsietlhdepadryanmaemteicr, Dfiexl,yd is the dynamic field, kF is the repulsive field parameter, and Fx,y is the repulsive field of the wall.
+
+The static field, Sx,y, at standard distance is calculated according to Equation (11).
+
+Symmetry 2025, 17, 298
+
+8 of 23
+
+sx,y = max(x,y) mine (xe - xo)2 + (ye - yo)2 - mine (xe - xo)2 + (ye - yo)2
+
+(11)
+
+where (xe, ye) are the position coordinates of the exit, e, and (xo, yo) are the position coordinates of cellular o.
+The concept of pheromones is introduced here (analogous to the role of pheromones in biology [13]), since individuals receive different information depending on their location and context. In order to represent the effect of the pheromone on the movement of the person, the dynamic field, Dx,y, is introduced to represent the virtual trajectory left by the person. When a pedestrian moves from the current position (x, y) to another position, a pheromone is dropped at position (x, y), which can be expressed as Dx,y = Dx,y + 1, where Di,j is the number of pheromones at position (x, y) i.e., the value of the dynamic field at that location. Multiple pheromones can occupy the same cellular at the same time and can diffuse and decay. Calculating the dynamic field is divided into four steps [14­16]:
+Step 1: Initially Dx,y = 0; Step 2: When someone passes by cell (x, y);
+
+Dx,y = Dx,y + 1
+
+(12)
+
+Step 3: Calculate the dynamic field based on the attenuation and diffusion probabilities;
+
+
+
+
+
+  Dx,y
+
+=
+
+(1
+
+-
+
+)(1
+
+-
+
+)Dx,y
+
++
+
+(1 - ) x+(r/gridsize)
+
+num
+
+
+x=x-(r/gridsize)
+
+y+(r/gridsize) y=y-(r/gridsize)
+
+Dx,y
+
+-
+
+Dx,y 
+
+(13)
+
+where  is the diffusion probability,  is the decay probability, num is the number of persons within the diffusion radius, r is the pheromone diffusion radius, and gridsize is the cellular size.
+Step 4: In order to avoid the individual being affected by the pheromone that they release, hindering their movement, the pheromone left by the individual in the previous step is eliminated from themselves. Pheromones are distinguished according to different individuals, with Dx,y denoting the global dynamic field information, and Dx,y(-k) denoting the pheromone left behind by personnel other than individual, k. After distinguishing thepheromone, Equations (9) and (10) for the probability, px,y, of a person moving toward cellular (x, y) are updated to Equations (14) and (15).
+
+px,y = N · exp(ksSx,y) exp(kD Dx,y(-k)) exp(kF Fx,y)(1 - nx,y)x,y
+
+(14)
+
+
+
+-1
+
+N =   exp(ksSx,y) exp(kD Dx,y(-k)) exp(kF Fx,y)(1 - nx,y)x,y
+
+(15)
+
+(x,y)
+
+During evacuation, people are often reluctant to walk towards the wall, so a repulsive field is introduced. The repulsive force field, Fx,y, represents the repulsive force of the personnel to the wall, which is inversely proportional to the distance from the personnel to the wall, and it is calculated as shown in Equation (16):
+
+Fx,y
+
+=
+
+1 sx,y
+
+(16)
+
+where sx,y denotes the shortest distance from the personnel to the wall.
+
+Symmetry 2025, 17, 298
+
+9 of 23
+
+Pedestrian competition is implemented using synchronized updating with a twotraversal method, where the first traversal obtains pre-movement positions for all pedestrians and the second traversal assigns pre-movement positions. For each individual, there are so many ways to end up winning in the competition that it is impractical to calculate the probability of winning for each individual and then select the winner according to that probability, which is realized using the method as in Equation (17).
+
+pi
+
+=
+
+i i + j
+
+(17)
+
+where pi is the winning probability of person . i and j are the competitiveness of persons  and j, respectively. H = {I |I = 1, 2, . . . , k} is the set of competitiveness of persons competing for the same lattice point, where k  8. If a person, i, wins, eliminate the outed, so that j = I+1, and they can compete again. Otherwise i = I+1 and they compete again until the two-by-two competition between all ends and a winner is determined.
+In order to solve the problem of being difficult to update the position of multi-velocity people and the difficulty to calculate the evacuation time, combined with the characteristics of discrete time of cellular automata, the discrete time step method is used to control the evacuation process of people with different velocities. For personnel i, the attribute of deficit time is assigned. The distance between neighboring cellulars is defined as L, and the calculation of the deficit time is shown in Equation (18).
+
+Ti,t
+
+=
+
+L vi,t
+
+-t
+
+(18)
+
+where Ti,t and vi,t are the deficit time and movement speed of a person, i, within time step t, respectively. t is the time step length.
+When Ti,t > 0, it indicates that the person, i, is unable to move to the target cellular with velocity, vi,t, in the specified time step, t, and its deficit time in the next time step is calculated as shown in Equation (19).
+
+Ti,t+1 = Ti,t - t
+
+(19)
+
+When Ti,t < 0, the person, i, is able to move to the target cellular within that time step, and its deficit time at the next time step is calculated as shown in Equation (20).
+
+Ti,t+1
+
+=
+
+L vi,t+1
+
+- Ti,t
+
+-t
+
+(20)
+
+The total evacuation time is calculated as shown in Equation (21).
+
+T = (m - 1)t + Ti,(m-1)t
+
+(21)
+
+where m is the total number of time steps. Ti,(m-1)t is the deficit time of the last successful evacuee.
+A person arriving at an exit location is considered to have successfully evacuated the evacuation area and is removed from the system at the next time step, and the scene information is updated synchronously.
+
+3. Simulation Result and Discussion
+The simulation scene is set as a 20 m × 20 m room, with one 1.2 m-wide exit in the left center of the room. The initial position of pedestrians is randomly distributed in theroom,
+
+Symmetry 2025, 17, 298
+
+10 of 23
+
+Symmetry 2025, 17, x FOR PEER REVaIEnWd the number of pedestrians is set as N. The basic parameters are set [10,12­16,1307o,3f82]4
+ = 0.5,  = 0.04,  = 0.16,  = 1.2, t = 0.4, ks = 1.2, kD = 0.5, kF = 0.5,  = 0.2,  = 0.2, daonirrde0c.t5iL7onims).taI(nkdeioanrgdaosenrtahtloedviimarelpucrteoioovnfe)0.t.h4Inemfoer(aidnseihbr iotloritiyzimoonpftrathol evoerexvthpeeretrificemaalsedinbitiraleilctyrteioosnuf)ltthosre, e0ea.x5cp7hemerixm(pdeeiranigtmaolenrnaetlwsualstsr,eepaecahteedxp50ertiimmeenst, awnads trheepeaavteerdag5e0 otifmthese,5a0ndretshueltasvweraasgceaolcfutlhaete5d0arsestuhletsfiwnaalsrceasluclut.Hlaetreed, tahsetheeffeficntsalorfepsuhletr.oHmeoren,ethdeiffeuffseicotns roafdpihuesr, opmerosnoenndeiffl ucosmionporsaidtiiouns,, panerdsoanvnoeidl acnomcebpeohsaivtiioonr,oanndevaavcouiadtaionncerebseuhlatsvaiorre omnaeinvlaycucoantisoinderreesdu.lts are mainly considered.
+33.1.1..EEffffeeccttooffPPhheerroommoonneeDDiiffffuussiioonnRRaaddiiuussoonnEEvvaaccuuaattioionn TThheennuummbbeerrooffeevvaaccuueeeess,,N, ,bbeetwtweeeenn5500aanndd440000wwaassmmeeaassuurreeddinin88ddaattaauussiinnggeeqquuaall
+vvaarriiaannccee((tthheeeexxaaccttvvaalluueessaarreesshhoowwnniinnFFiigguurree66)),,wwiitthhaammaalelettooffeemmaalleeggeennddeerrrraattiiooooff 11:1:1..TThheeaaggeeccoommppoossiittiioonniissddiissttrriibbuutteeddaaccccoorrddiinnggttooyyoouunngg,,mmiiddddllee--aaggeeddaannddoolldd,,wwiitthhaa rraattiiooooffyyoouunngg//mmiiddddllee//oolldd == 55::33::22.. AAfftteerr ccoommppuutteerr ssiimmuullaattiioonn,, tthhee rreellaattiioonnsshhiippbbeettwweeeenn pphheerroommoonnee ddiiffffuussiioonn rraaddiiuuss aanndd eevvaaccuuaattiioonn ttiimmee iiss sshhoowwnn iinn FFiigguurree 66.. FFrroomm FFiigguurree 66,, iitt ccaannbbeesseeeennththaattwwhheennNis ilseslesstshtahna1n5105, 0th, etheeveavcuacautiaotniotnimtiemdeecdreecarseeasswesitwhitthhethinecirneacrseaisne pinheprhomeronmeodnieffduisffiounsiroandriuads.iuWs.hWenhNenisgriesagterreathtearnth15a0n,1th50e,ptherpohmeoronme odnifefudsiiffounsriaodniurasidnicuresainsecsrefarsoems f0romm t0omabtoouabt o4umt 4, man,dantdhetheeveavcuacautiaotniotnimtime ededcerceraesaessessisgignnifiificacanntltylywwiitthh tthheeiinnccrreeaasseeiinntthheepphheerroommoonneeddiiffffuussiioonnrraaddiiuuss..HHoowweevveerr,,wwhheenntthheepphheerroommoonneeddiiffffuussiioonn rraaddiiuussiinnccrreeaasseessffrroommaabboouutt44mmttoo1100mm,,tthheeeevvaaccuuaattiioonnttiimmeetteennddssttooininccrreeaassee.. TThhaatt iiss,, ooppttiimmaalleevvaaccuuaattiioonn is achieved when tthhee pphheerroommoonneeddiiffffuussiioonnrraaddiuiussisisaapppproroxximimaatetleyly3 3mm. .
+
+FFiigguurree66..RReellaattiioonnsshhiippbbeettwweeeennpphheerroommoonneeddififffuussioionnrraaddiuiussaannddeevvaaccuuaatitoionntitmimee. .
+TTooffuurrtthheerruunnddeerrssttaannddtthheeeeffffeeccttooff pphheerroommoonneess on the evacuation of peoppllee,, r == 00.4.4 mmaanndd33.2.2mmwwereeresesleelcetcetded, a, nanddththeecocommppaarirsiosonnooffeevvaaccuuaatitoionnttimimeeiisssshhoowwnniinnFFiigguurree 77. WWhheennththeennuummbbeerroof fevevacaucueesesisismsmalal,llt,htehebobxoxrarnagnegoefoefveavcaucautiaotniotnimtiemies liasrlgaerrg,ewr,hwichicish disuedtuoethtoe tfhacet ftahcatt thaetrathnedoramndoismtribduisttiroinbuotfiothneoinf ithiael lioncitaitailonloocaf tpioedneostfrpiaendsemstariyanapspmeary taopbpeecaorntocebnetrcaotnecdeinntrtahteedarienatnheaarrethaeneexairt tohreaewxiatyofrraowmatyhferoemxittahreeeax. iTtaakrienag. TNak=in5g0 an d= 150 asnadn1e5x0aamspalne,etxhaemrp=le0,.4thme an=d 03.42 mm pahnedro3m.2omne pdhisetriobmutoinoensdaisntdribinuitioalnlsoacnatdioinnsitoiafl ploedcaetsitorniasnosfapredsehsotwriannisnaFriegsuhroew8.nGinreFeingsuqrue a8r.eGs raereenfosrquyoaruensgaarendfomr yidodulneg-aagnedd mpeiodpdle,aangdedblpueospqluea, raensdfobrluoledseqrupaeroepslefo. rFrooldmerFipgeuorpel8ea. ,Fdr,oitmcaFnigbuersee8ean,dth, ait tchaenebveacsueeantiothnattimthee iesvleascsutahtiaonn5t0ims ewihselenstshtehraena5re0 fsewwehrepneothpelreedairsepeferwseedripnetohpelespdaicsepearnsdedthine ethldeesrplyacaereanind tthheepeoldsietriolynacrleosinerthtoe tphoeseitxioitn, acnlodsethretoevthaecueaxtiito, nantdimtheeisehviagchueartitohnantim70esiswhhigenhetrhethreanar7e0 s when there are more people dispersed in the space and there are elderly people in the position far away from the exit.
+
+Symmetry 2025, 17, 298
+
+dense pheromone distribution), it will result in the gradient of pheromone distribution decreasing, resulting in no gradient difference in the information received by the people in the center from the periphery. When there is no gradient difference in the pherom11oonf 2e3s received from the surrounding area, the evacuees will have difficulty in choosing a path to produce a blind detour, which will lead to an increase in the evacuation time. Therefore, mthoererigpheot pamleoduisnpteorfsecdroiwn dthdeesnpsaitcye and tphheerreoamreoneledreardlyiupsecoapnleeiffnetchtievpeloysihtieolpn feavraacwueaeys ftroomfintdhexeixtsitf.aster and, thus, increase the speed of evacuation.
+
+Symmetry 2025, 17, x FOR PEER REVIEW
+
+12 of 24
+
+Number of Personnel N (Persons)
+
+50
+
+100 150 200
+
+250
+
+r = 0.4 m (sec)
+
+59.7 66.6 85.3 109.3 134.0
+
+r = 3.2 m (sec)
+
+59.6 64.6 68.8 85.7 108.6
+
+FFiPniiggeeuurvrcreaeecn77u.t.aCaCgtooiemomnrppeatdairrmuiisscooetnni(o%oonff)r==00.0.12.2%mmaannd3d%r==3.32.2m1m9e%veavcaucau2tai2oti%nontimtime.1e.9%
+
+Table 4. Evacuation time at =0.2 m vs. =3.2 m.
+
+300
+159.1 129.8
+18%
+
+350
+183.9 151.0
+18%
+
+400
+209.5 172.9
+17%
+
+Figure 8. Pheromone distribution and initial pedestrian location.
+3.2. ImApt athcteosfaPmedeetsitmriaen, aCsotmheponsuitmiobneornoEf vpaecdueasttiorinans increases, the effect of expanding r on 3ev.2a.1cu. Gateionndetirme reduction diminishes. Taking N = 100, 200, 300, and 400 as an example, r is enlTahrgeegdenfrdoemr c0o.4mmpotsoit3i.o2nmwaansdlineevaarcluyaitniotenrptiomlaeteisdrferdoumce0dtoby1 i3n%s,te2p2s%o,f108.%1 a, cacnodrd17in%g, wtctmttsrutforoohhoeeufpi=hsaereaaret4wpenlnvhncv0erne3eaeasea0f1cp.rldrc,N2gt5micodeuisut0uovmdhaam,c=ethleetelrattsliie.Teishytgood2/fltiEanefnhnr0n(ibaedviTffe0rgamttla;aeirei,ennwmctwbdtrat4hsuhlehulhee,eheeaienavcewsert4cetnrpnaien5i)eoaivcolr.t%1tatnouharnwThi5tpcoaieehttl0rvuaotiohx(,eamisnearmwpeottteutitthneaiiioaevaoomonenrklvatnoncredibceiatrm/fnhou=eneetrftiecidfaaarehmartmns0tr,ooeteifee.ieofrfa4atodeoboinhslprnnmvureemeaeetsa)cdtteid5,itchmaaxn0oui0teuneohra.f,esc4aetdnmentttahtrrihmsuil3ieseoipolsheau.dmn2lnfponttemueaohbwrmrs,mtgcoeaei3wtieomn,tprisa.lioff2aicoloobeoitnetronrhfmerhgihtmprsleieeeFoaa,oevsx(pistwerdng6taaiaov,o=ac6uemtorsa1u.siriedi6of5cntp4eetaroui0sme0l-coit9ew.aas0hwhn,,Wa,tn,e6inwiwtlansow4ethwths.hghnsh.ae6ae1eaebe2hns)te,nrlr/i2evaedmett%v6saNahitt6aksec.earh.ucwee=t6Wwenuhpnana=uaeteao1dhsittvms0osore.3itiaeo0nnrB%atbbdc,enikyvetuNtedu.iehretmaoucAni5eotimtbec:seiisf3ftooffesooeg:hpecdnn2erraraebo,m,cervtdndtefaaiaaimuenntntoaab5eilsddlnngo0aeer-l
+When the age composition is taken as 4:3:3, 1:0:0, 0:1:0, and 0:0:1, the evacuation time changes as shown in Figure 10. Gender composition was not significantly correlated with evacuation time at pedestrian counts below 150 was not affected by age composition. As can be seen from Figure 9 and Figure 10a,b, the effect of gender ratio on evacuation time
+
+Symmetry 2025, 17, 298
+
+12 of 23
+
+Number of Personnel N (Persons)
+r = 0.4 m (sec) r = 3.2 m (sec) Percentage reduction in evacuation time (%)
+
+the evacuation process, it is found that when N is greater than 150 with the increase in pheromone diffusion radius, the people flock to the exit collectively, resulting in congestion and blockage of the exit, which in turn results in an increase in evacuation time.
+Table 4. Evacuation time at r = 0.2 m vs. r = 3.2 m.
+
+50
+
+100
+
+59.7
+
+66.6
+
+59.6
+
+64.6
+
+0.1%
+
+3%
+
+150
+
+200
+
+250
+
+300
+
+350
+
+400
+
+85.3
+
+109.3
+
+134.0
+
+159.1
+
+183.9
+
+209.5
+
+68.8
+
+85.7
+
+108.6
+
+129.8
+
+151.0
+
+172.9
+
+19%
+
+22%
+
+19%
+
+18%
+
+18%
+
+17%
+
+N = 50 and 150 were selected, and the pheromone distribution when r = 0.4 m and 3.2 m is shown in Figure 8, with the darker red color representing the denser pheromone distribution. As can be seen in Figure 8, the pheromone area tends to expand when the number of evacuated people increases; see that the dark red part in Figure 8c,f is obviously wider than Figure 8b,e. This suggests that an increase in the number of evacuees for the same value of r increases the range of pheromone distribution, i.e., it favors pheromone diffusion. However, when the pheromone distribution is too dense (e.g., an increase in the density of people and the radius of pheromone diffusion may result in a dense pheromone distribution), it will result in the gradient of pheromone distribution decreasing, resulting in no gradient difference in the information received by the people in the center from the periphery. When there is no gradient difference in the pheromones received from the surrounding area, the evacuees will have difficulty in choosing a path to produce a blind detour, which will lead to an increase in the evacuation time. Therefore, the right amount of crowd density and pheromone radius can effectively help evacuees to find exits faster and, thus, increase the speed of evacuation.
+3.2. Impact of Pedestrian Composition on Evacuation 3.2.1. Gender
+The gender composition was linearly interpolated from 0 to 1 in steps of 0.1 according to the male/female ratio (male/female), the sum of the ratios was 1, N was taken to be 50 to 400, the difference was taken to be 50, the age composition was taken to be 5:3:2, and r = 3.2 m. Evacuation time variations are shown in Figure 9, where the evacuation time curve goes flat when the number of pedestrians is below 150. When the number of pedestrians is higher than 150, the increase in the proportion of males has a positive effect on the reduction in evacuation time, for example, with N = 400, the evacuation time of all male pedestrians is 5% lower than that of all female pedestrians.
+When the age composition is taken as 4:3:3, 1:0:0, 0:1:0, and 0:0:1, the evacuation time changes as shown in Figure 10. Gender composition was not significantly correlated with evacuation time at pedestrian counts below 150 was not affected by age composition. As can be seen from Figures 9 and 10a,b, the effect of gender ratio on evacuation time is stable without changing the pedestrian body. As can be seen in Figure 10b,c, gender composition has a greater impact on evacuation time for middle-aged people than for young people. Using N = 400 as an example, the age composition of 1:0:0 and 0:1:0 reduces the evacuation time by 7 and 8%, respectively. From Figure 10d, it can be seen that the evacuation time of the elderly is not affected by the gender composition, and the time curve goes flat, which is due to the fact that the elderly, both men and women, move slower, and the increase in the proportion of males does not enable them to reach the exit more quickly.
+
+SSSyyymmmmmmeetterrtyyry222000222555,, ,111777,, ,2xx9F8FOORRPPEEEERRRREEVVIEIEWW
+
+113133ooofff 222434
+
+FFFiiggiguuurrreee999.. .RRReeellaalattitiooionnnssshhhiippipbbbeeettwwtweeeeeennnssseeexxxrrraaattiitooioaaannndddeeevvvaaacccuuuaaattiitooionnnttiitmmimeeeaaatttaaagggeeecccooommmpppooossisittiiitooionnn555::33:3::22:2.. .
+
+Figure 10. Relationship between sex ratio and evacuation time under other age compositions. FFigiguurree1100. .RReelalatitoionnsshhipipbbeetwtweeeennsseexxrraatitoioaannddeevvaaccuuaatitoionntitmimeeuunnddeerrooththeerraaggeeccoommppoossitiitoionnss. . 3.2.2. Age
+33.2.2.2.2.I.nAAgogereder to better analyze the influence of age on evacuation, the age composition ratioIoInnf oyorordudenergrt,tomobibdeetdttetleerr-aaagnneaadlyl,yzazenedtthhteheeininefllflduueeernnlcyceeisooftfaakagegeneoaonsn1ee:v0va:0ac,cuu0a:a1tti:oi0on,na,,ntthdhee0a:a0gg:e1e,crcoeomsmppepocotsisivtitieoilonyn, raaraannantddtidoiottothhohfeefeynnyonuouuuummnmngbbgb,ee,emrrmrooiodiffdfdeedelvvelvaea-ac-accauugugeeeeeedeedss,s,,,a,aNnnd,,d,iitssithshtetaetaaekkekleedlednnenerffrlrfrylrooyommismist55ta5a00k0keppepneeneooaoappspsll1eel1:e0:tt0:oto0:o0,44,04000:0001:01:pp0:p0,ee,eaooaonppnpdlldeele00bb:b0:yy0:y1:tt1,hth,hreereeesiisnnpinptteeteecerrctrvvtivviaavaellellooyloyff,f,
+
+SSyymmmmeettrryy22002255,,1177,,x29F8OR PEER REVIEW
+
+14 of 24 14 of 23
+
+eeqquuaallddiiffffeerreenncceeooff5500..TThheepphheerorommoonneeddiffifufusisoionnraraddiuiussr==33..22 m. TThhee rraattiioo ooff mmaallee ttoo ffeemmaalleeggeennddeerrccoommppoossiittiioonn iiss ttaakkeenn aass11::11..AAfftteerrccoommppuutteerrssimimuullaattiioonn,,tthheeeevvaaccuuaattiioonnttiimmee iisssshhoowwnniinnFFiigguurree1111..WWhheenn N is lower than 150, the eevvaaccuuaattiioonn ttiimmeeoofftthheemmiiddddllee--aaggeedd ggrroouuppiissnnoottmmuucchhddiiffffeerreennttffrroommtthhaattoofftthheeyyoouutthhggrroouupp((tthheeeevvaaccuuaattiioonnttiimmeeoofftthheeyyoouutthh iisssslliigghhttllyyssmmaallleerrtthhaanntthhaattooff tthhee mmiiddddllee--aaggeedd,,ffoorreexxaammppllee,,tthheeeevvaaccuuaattiioonnttiimmeeoofftthhee yyoouutthhisis55%%lelsessthtahnanthtahtaotfotfhtehme imddidled-laeg-eadgefdorfor =N 1=001)0, 0b)u, tbtuhtetehveaecuvatciuoantitoimn etiomf ethoef etlhdeerellydegrrlyougproiusp3i3s~3432~%42a%ndan2d3~2331~%31h%ighhiegrhethrathnatnhathtaotfofthteheyyoouuththaanndd mmiiddddllee--aaggeedd ggrroouuppss,,rreessppeecctitviveelyly..WWhehnenthethneunmubmerbeorf eovf aecvuaeceuse, es,, rNe,acrheaesch4e0s0,4t0h0e, gthape wgaipdewnsidfuenr-s tfhuerrt,hweri,thweivthaceuvaatciounattiiomnetsimfoersthfoeroltdheroalgdeergraoguepgsrboeuipngs b47eianngd4371%anhdig3h1%er thhiagnhefor rththaen yforunthgeaynodumngidadnlde-magieddd,lere-asgpedct,irveeslpye, cattivwehlyic, hatpwohinitchthpeoeivnat cthueateiovnactuimateiosnfotrimthees yfoorutnhge
+ayroeumngoraeroermleosrse1o1r%lehsisg1h1e%r thhaignhfeorr tthhaenmfoidrdtlhee-amgeid.dFler-oamgetdh.eFarboomvethaenaalbyosivse, iatncalnysbies,
+sietecnanthbaet tsheencotrhraetlathtieoncobrertewlaeteionnebveatcwuaeteinonevtiamcueaatniodnatgiemceoamnpdoasigteiocnoims lpaorsgiet,ioenspiescliaarlglye,
+wesitphecthiaelliyncwreitahsethine tihnecrneuasmebienrtohfeenvuacmubeers,otfheveavcauceueast,iothnespeveeadcuoaftiyoonunspgeaenddomf yidodulneg-
+aagneddmpiedodpllee-aisgesdignpiefiocpalnetilsysbigenttiefrictahnatnlytbheattteorf tthhaenetlhdaetrloyf. tAhfeterldoebrslye.rvAifntgertohbesseirmviunlgattehde esvimacuulatieodnepvraoccueastsi,oint wpraoscfeosus,nidt wthaastfwouhnedn tha>t w1h5e0n, tNhe>ev1a5c0u,atthieoneveaxcituraetaiocnheesxitthreemacahxe-s
+itmheumatxhirmougmhpthurto,uagnhdptuhte, apnedopthlee wpehooplceanwnhoot ceasncanpoet efsrcoampethfreoemxitthienetximit eingtaimtheergantehaerr tnheeaerxtihteanexditcoanmdpceotemwpietthe ewaicthhoetahcehr olethaderinlegatdoinpgrotloonpgroeldonevgaecdueavtiaocnuatitmioen. tTimakein. gTakin=g 1N50=a1n5d0 a2n00d a2s00anaseaxnamexpalme,ptlhee, tahgeeagcoemcopmospiotisointioins iasllalelldeledrelyrl,ya, nadndththeeddisistrtribibuutitoionnooff
+ppeeooppllee aanndd tthhee ccoommppeettiittiioonnooff ggrriidd ppooiinnttss wwhheenn tthhee eevvaaccuuaattiioonnpprroocceessssiiss iitteerraatteeddttoo tthhee 110000tthhsstteeppiisssshhoowwnniinnFFiigguurree1122..AAssccaannbbeesseeeennffrroommFFigiguurree1122,,wwhheenn N ==115500,,tthheerreeiiss nnoo ssiiggnniifificcaanntt congestion at thhee eexxiitt,,aannddwwhheennN==220000, t,htehreereisias saigsinginfiicfiacnatngtagthatehrienrginogf
+opfepoepolpelaetabtobtohthflaflnaknsksofotfhtheeexexiti,t,aannddththeemmaaxxiimmuummnnuummbbeerrooff lattice point ccoommppeettiittiioonnss aatt N == 220000 iissnneeaarrllyy twice as high aass tthhaattaatt N == 115500 ((GGrraayy indicates that the nnuummbbeerrooff
+llaattttiiccee ppooiinnt competitions iisszzeerroo;;ththeeddaarkrkeerrththeecocloolro,rt,htehme moroerientienntesenstehethceomcopmetpiteiotintiofonr
+floarttliactetipceoipnotsin).ts).
+
+FFiigguurree1111. .ChCahnagnegseisnienvaevcuaacutiaotniotnimteims weshwenhtehnetahgeeacgoemcpoomsiptioosnitisonallisyoaullnygo, umnigd,dmlei-dagdeled-,aagnedd, ealndderelyld. erly.
+
+SSyymmmmeetrtryy22002255, ,1177, ,2x98FOR PEER REVIEW
+
+1155 ooff 2234
+
+FFiigguurree1122..PPeeddeessttrriaiannddisitsrtirbibuutitoinoncocmompepteetsews withithgrgidripdopinotisnwtshwehneNn =1=51050anadnd20200.0.
+WWhheenn the aggeeccoommppoossititioionnisistatkaeknenasa1s:01::00,:08:,18:1:1, :61:,2:62:,25:2:3,:25,:35::22,:35,:a2n:3d, 4a:n3d:3,4t:h3:e3e, vthaceeuvaatciuonatitoimn etimvaervieasriaess sahsoswhonwin iFnigFuigruer1e31a3.aA. nAninicnrceraesaeseininththeeppeerrcceennttaaggee oof youth hhaassaa ppoossititiviveeeeffffecetctononthtehreedreudcuticotnioinn ienvaecvuaactuioantiotinmtei,mwei,thwait1h0a%1r0e%durcetidouncitnioenvaincueavtaiocnuatitmioen wtihmeenwthheepnetrhceenpteargcenotfaygoeuotfhyionuctrheaisnecsrefarosems f4r0o%mt4o08%0%to. 8T0h%e.aTgheecoagmepcoosmitipoonsi5t:i3o:n2 5a:n3d:2 5a:n2:d3 5cu:2r:v3ecsusrhvoeswsthhoawt wthhaetnwyhoeunngyopuenogplpeeaorpeltehaerme tahine mboadiny boof dpyedoefsptreiadnes,trainanisn,carenaisneicnrethaseeniunmthbeenruomf obledreorfpoeldoperlepleeoapdlse tleoaadns itnocarneaisnecrienaesevaincueavtaiocunattiimone.tiTmaek.inTgakNing=40=0 a4s0a0naseaxnamexpalme,pthlee, tdhiestdribsturtibiountiofntohfeth1e001t0h0thimtiemsetespteapnadnd20200t0hthtitmimeestsetpepwwaalklkeerrsswwiitthh aaggeeccoommppoossiittiioonnss ooff 55::33::22 aanndd55::11::44 iisssshhoowwnn iinnFFiigguurree1144,,wwhheerreetthheerreeddssqquuaarreessddeennoottee tthhee yyoouutthh,, tthhee ggrreeeenn ssqquuaarreess ddeennoottee tthhee mmiiddddllee--aaggeedd,, aanndd tthhee bblluuee ssqquuaarreess ddeennoottee tthhee eellddeerrllyy. .BByyoobbsseerrvvininggtthheeeevvaaccuuaatitoionnpprroocceesss, ,ititccaannbbeesseeeenntthhaatttthheeiinnccrreeaasseeiinntthheennuummbbeerr ooff eellddeerrllyy ppeeooppllee iinn tthhee ccoommppoossiittiioonn ooff tthhee ppooppuullaattiioonn lleeaaddss ttoo mmoorree eellddeerrllyy ppeeooppllee iinn tthhee mmiiddddlleeaannddbbaacckkoofftthheeccrroowwdd,,wwhhiicchhiinnccrreeaasseesstthheeeevvaaccuuaattiioonnttiimmee..AAllssooffrroommFFiigguurree1144 iittccaannbbeeoobbsseerrvveeddtthheeccllaassssiiccaallcchhaarraacctteerriissttiiccpphheennoommeennoonniinntthheeddyynnaammiiccssooffppeeddeessttrriiaann ffllooww eevvaaccuuaattiioonn ``aarrcchh--ffoorrmmiinngg bblloocckkaaggee'' [[3399]],, wwiitthh aann aarrcchh--sshhaappeedd ddiissttrriibbuuttiioonn ooff ppeeooppllee aatt tthhee eexxiitt..
+WWhheenn tthhee aaggeeccoommppoossititioionnisistatkaeknenasa0s:10::01,:01:,81:1:8, :21:,6:22:,63:2:2,:53,:22::53,:52,:a3n:5d, 3a:n4d:3,3t:h4:e3e, vthaceeuvaatciounattiiomnetivmareievsaraisesshaoswshnoiwn nFiignuFreig1u3rbe.1A3nb.inAcnreianscereinastehienptrhoepporrotipoonrtoifomn oidfdmlei-dadgleedapgeeodppleeohpasleahpaossaitpivoesietiffveecet fofenctthoenrtehdeurcetdiounctiinonevinaceuvaatciounattiiomnet,imbuet, tbhuits tehffisecetffiescnt oist nsiogtsnigifinciafincta,nwt,iwthitahnainncirnecarseeasine itnhethperopproorptoiorntioonf mofidmdilded-aleg-eadgepdeoppeloepflreomfro4m0%40t%o 8to0%80r%erseusultlitninggininaa3%3%reredduucctitoionninineevvaaccuuaattiioonnttiimmee..AAtttthheessaammee ttiimmee,, wwhheenn mmiiddddllee--aaggeeddppeeooppllee aarree tthheemmaaiinnbbooddyyooffppeeddeessttrriiaannss,, aann iinnccrreeaassee iinn tthhee nnuummbbeerr ooff oollddeerr ppeeooppllee lleeaaddss ttoo aann iinnccrreeaasseeininevevaacucuataitoinontimtime,ew, whihchichis itshethseamsaemcehacrhaacrtaecritsetriicstaisc washewnhyeonuynogupnegoppleeoaprleetahree mthaeinmbaoindyboodf ypeoofppleeo. pFuler.tFhuerrmthoerrem, oinrel,inine wlinitehwainthotahneor tchlaesrsciclaaslsfiecaatlufreeatoufrtehoefptehdeepsetrdiaensetvriaacnuaetvioancudaytinoanmdicysnpahmeincosmpehneonno,m`heentoenro,g'heneeteoruosgcelnuesoteursflcoluws'te[4r0fl,4o1w],'th[4e0m,4o1r],e tchoemmploerxe tchoemcpolmexptohseiticoonmopfotshiteiopneoofptlhee, tpheeolpolne,gtehreiltotnegnedrsittotetnadksettootabkeeetvoabceuaetveadc.uaDtiefdfe.rDeniffceersbeentcweesebnetfwaseteanndfassltoawndtrsalvoewletrrsadvuelreinrsgdeuvraicnugaetivoancucaantiolenadcatno leerardattioc celrursatteicr cfllouwstse,rwflhoiwchs, ewxahciechrbaetxeacceornbfautseiocnoannfudscioonngaensdtiocnonangdesutilotinmaantedlyurletidmuaceteolyverreadlluecveaocuvaetriaolnl espvaeceudas.tion
+speeds.
+
+Symmetry 2025, 17, 298
+
+relative to the young and middle-aged people are disadvantaged groups, and the proportion of the young and middle-aged change cannot change the elderly due to the competitiveness of the weak by the young and middle-aged people crowded inside the crowd who cannot move, or due to the slow speed of the movement of the phenomenon 1o6fotfh2e3 crowd at the end of the crowd.
+
+Symmetry 2025, 17, x FOR PEER REVIEW
+FFiigguurree 1133.. OOtthheerr AAggee CCoommppoossiittiioonn aanndd EEvvaaccuuaattiioonn TTiimmee RReellaattiioonnsshhiippss..
+
+17 of 24
+
+FFiigguurree1144.. TThhee 110000tthh ttiimmeesstteeppaannddtthhee220000tthhttiimmeeppeeddeessttrriiaannddiissttrriibbuuttiioonn..
+3.3. Effects of Avoidance Behavior on Evacuation  = 0.5,  = 0.7,  is taken from 50 to 400, the difference is taken as 50,  =
+3.2 , the age composition is taken as 4:3:3, the gender composition is taken as 1:1, and
+
+Symmetry 2025, 17, 298
+
+17 of 23
+
+When the age composition is taken as 0:0:1, 1:1:8, 2:2:6, 3:2:5, 2:3:5, and 3:3:4, the evacuation time varies as shown in Figure 13c. An increase in the proportion of older people had a negative effect on the reduction in evacuation time, with an increase in the proportion of older people from 40% to 80%, resulting in a 13% increase in evacuation time. Through the proportion of middle-aged and old people being 3:2:5 and 2:3:5, the curve can be seen; when the elderly is the main body of pedestrians, the proportion of young and middle-aged change on the evacuation time is not much, this is because the elderly relative to the young and middle-aged people are disadvantaged groups, and the proportion of the young and middle-aged change cannot change the elderly due to the competitiveness of the weak by the young and middle-aged people crowded inside the crowd who cannot move, or due to the slow speed of the movement of the phenomenon of the crowd at the end of the crowd.
+3.3. Effects of Avoidance Behavior on Evacuation
+avoid = 0.5, pavoid = 0.7, N is taken from 50 to 400, the difference is taken as 50, r = 3.2 m, the age composition is taken as 4:3:3, the gender composition is taken as 1:1, and the comparison of evacuation time with and without avoidance behavior is shown in Figure 15. When the number of pedestrians is less than 150, the presence or absence of avoidance behavior has little effect on evacuation time due to the low number of pedestrians in the space, the abundance of available evacuation space per capita, and the lack of competition between pedestrians. When the number of pedestrians is higher than 150, the avoidance behavior can significantly reduce the evacuation time when the avoidance behavior reduces the total evacuation time by 12 to 17% compared with no avoidance behavior. Taking N = 300 as an example, the distribution of walkers and the competition of grid points at the 150th time with or without avoidance behavior are shown in Figure 16. Under the avoidance behavior, the elderly people in the middle and the back section of the crowd near the exit are obviously reduced, while the competition of the grid points near Symmetry 2025, 17, x FOR PEER REVtIhEWe exit is obviously weakened, and the disadvantaged groups in the crowd can ar1r8ivoef a2t4 the exit more quickly and reduce the evacuation time.
+
+FFiigguurree1155.. CCoommppaarriissoonnooffeevvaaccuuaattiioonnttiimmeesswwiitthhaannddwwiitthhoouuttaavvooiiddaanncceebbeehhaavviioorr..
+
+Symmetry 2025, 17, 298
+
+Figure 15. Comparison of evacuation times with and without avoidance behavior.
+
+18 of 23
+
+FFiigguurree1166..PPeeddeesstrtriaiannddisitsrtirbibutuiotinoncocmompepteetsews withitghrgidripdopinotisnwtshwenheNn =3=0300.0.
+WWhheenn the age ccoommppoossiittiioonnoof fyoyuonugngtotmo imddidled-laeg-aegdetdo otoldoilsdinisthine rtahteioroafti1o:0o:0f,18::01::01,, 86:1:2:1:2,,65:2:3:2:2,,55:3:2:2:3, ,54:2:3:3:3, ,4:w3:i3th, woirthwoitrhwouitthaovuotiadvaonicdeanbecehabveihoarv, itohre, tahgeeacgoemcpoomspitoiosnitiofntohfe tphedpeesdtreiastnrsiaannsdatnhde trheelarteiolantsiohnipshbieptwbetewnetehne tehveaceuvaatciuonattioimnetiims sehioswshnoiwnnFiignuFrieg1u7r.eT1h7e. Tphrespernecseenocreaobrseanbcsenocfeaovfoaidvaonidceanbceehbaevhioarvhioardhlaitdtlleitetlffeeecftfeocnt eovnaecvuaactiuoantitoinmteimwehwenhtehne tnhuemnubemrboefrpoefdpesetdrieasntrsiawnasswbealsowbel1o5w0 w15a0s nwoatsanffoetctaefdfebcyteadgbeycoamgepocosimtiopno.siFtrionm. FFirgoumre F1i7gau,dre, i1t7caa,dn,biet sceaennbtehasteewnhtehnathwe hyeonunthgeaynodumngidadnled-amgeiddalree-atgheedmaarientbhoedmy aoifnpbeoddeysotfripaends,ebstortihanssh,obwotthheshchowaratchteercihstaircascotef raivstoiicdsaonfcaevboeihdaavnicoer btheahtahvaiosrththeagtrheatsetshteimgrpeaactteostn iemvpaacuctatoionnetvimaceuawtihoenn ttihmeeagwehceonmtphoesaitgioencofmppeodseistitorinanosf ips ecdoemstprlieaxn.sFiosrceoxmamplpelxe., wFoitrh exa=m4p0le0,,wagitehcoNm=po4s0it0i,oangseocfo4m:3:p3o, 3si:t4i:o3n, 8s:o1:f14, :a3n:3d, 13:84:13,re8s:1u:l1t,eadnidn 19:8%:1, 1re8s%u,lt6e%d,iann1d98%%, 1r8e%du, 6c%tio, nasndin8e%varceudautciotinontismine weviathcuaavtoioidnatnimceebwehitahvaiovrosi.dance behaviors.
+When the elderly is the main body of pedestrians, the age composition is from 0:0:1 to 1:1:8 when the gradient of the decline in evacuation time is the largest, and from 1:1:8 to 3:3:4 evacuation time change tends to flatten out. The overall trend in evacuation times reflects the asymmetrical nature of the role of avoidance behaviors on them. Older people are much more affected by avoidance behaviors than young and middle-aged people, and the avoidance behaviors of young and middle-aged people toward older people allow older people to leave the congestion and reach the exit much faster, especially those who are in the middle of the crowd, which dramatically reduces the evacuation time. When the age composition is from 1:1:8 to 3:3:4, the evacuation time tends to flatten to reach the trough; this is due to the elderly being avoided to reach the exit faster, shortening the evacuation time; on the other hand, the number of young and middle-aged people leads to avoiding the elderly in the vicinity of the exit congestion, increasing the evacuation time and the formation time of the hedge.
+
+Symmetry 2025, 17, 298
+
+trough; this is due to the elderly being avoided to reach the exit faster, shortening the
+
+evacuation time; on the other hand, the number of young and middle-aged people leads
+
+to avoiding the elderly in the vicinity of the exit congestion, increasing the evacuation time
+
+and the formation time of the hedge.
+
+19 of 23
+
+Figure 17. Relationship between age composition and evacuation time with or without avoidance bFeighuavreio1r.7. Relationship between age composition and evacuation time with or without avoidance behavior.
+The age composition is taken as 4:3:3, and the ratio of male to female is linearly interpTohleataegde fcroommp1ostiotio0ninissttaekpesnoafs04.:13,:3a,nadndthtehesurmatiofotfhmearlaetitosfeism1a.leTihselinreelaartliyoninshteirpbpeotlwateeednftrhoemg1entode0rinrasttieopasnodf t0h.1e,eavnadcuthaetiosunmtimofetwheitrhatainods iws 1it.hTohuet raevloatiidoannscheipbebheatwvieoerns is shown in Figure 18. The presence or absence of avoidance behavior has little effect on evacuation times when the number of pedestrians is less than 150 and is not affected by gender composition. When the number of pedestrians is higher than 150, the rate of change in evacuation time with the gender ratio is stable, and the effect of avoidance behavior on evacuation time is not affected by the gender composition.
+avoid is taken as 0.5, age composition is taken as 4:3:3, gender composition is taken as 1:1, and the relationship between avoidance probability and evacuation time is shown in Figure 19. When the number of pedestrians is below 150, the avoidance probability has little effect on evacuation time. When the number of pedestrians is above 150, evacuation time reaches a minimum at avoidance probabilities of 0.4 to 0.6 and levels off thereafter. Taking N = 400 as an example, the probability of avoidance is taken at 0.1 intervals from 0 to 1 in this order, and the evacuation time is reduced by 12%, 14%, 16%, 17%, 18%, 18%, 18%, 18%, 18%, 19%, and 19%. Avoidance behavior improves the predicament of vulnerable people during evacuation and reduces their risk during evacuation.
+
+Symmetry 2025, 17, 298
+
+in Figure 18. The presence or absence of avoidance behavior has little effect on evacuation times when the number of pedestrians is less than 150 and is not affected by gender composition. When the number of pedestrians is higher than 150, the rate of change in evacuation time with the gender ratio is stable, and the effect of avoidance behavior on ev2a0coufa2-3 tion time is not affected by the gender composition.
+
+Symmetry 2025, 17, x FOR PEER REVIEW
+
+21 of 24
+
+FFiigguurree 1188.. RReellaattiionship between sseexx rraattiiooaannddeevvaaccuuaatitoionntitmimeewwitihthananddwwitihtohuotuatvaoviodiadnacnecbeebheahvaivor-. ior.
+
+
+
+is taken as 0.5, age composition is taken as 4:3:3, gender composition is taken
+
+as 1:1, and the relationship between avoidance probability and evacuation time is shown
+
+in Figure 19. When the number of pedestrians is below 150, the avoidance probability has
+
+little effect on evacuation time. When the number of pedestrians is above 150, evacuation
+
+time reaches a minimum at avoidance probabilities of 0.4 to 0.6 and levels off thereafter.
+
+Taking N = 400 as an example, the probability of avoidance is taken at 0.1 intervals from
+
+0 to 1 in this order, and the evacuation time is reduced by 12%, 14%, 16%, 17%, 18%, 18%,
+
+18%, 18%, 18%, 19%, and 19%. Avoidance behavior improves the predicament of vulner-
+
+able people during evacuation and reduces their risk during evacuation.
+
+FFiigguurree 1199.. RReellaattiioonnsshhiippbbeettwweeeenn aavvooiiddaannccee pprroobbaabbility and evacuation time.
+p avoid iissttaakkeennaass00..55,, aaggee ccoommppoosition is taken as 4:3:3, gender compositioonn iss taakkeenn aass 11::11,,aannddththeererelalatitoionnshshipipbbetewtweenenavaoviodiadnacnecethtrhersehsohlodldanadnedveavcaucautiaotniotnimtiemise sihs oswhonwinn FinigFuirgeu2r0e.2W0.hWenhtehne tnhuemnbuemr boef rpoedf epsetdrieasntrsiiasnbseilsowbe1lo5w0, t1h5e0,atvhoeidaavnocide athnrceesthhorledshoasldlihttales eliffttelceteofnfecetvoacnueavtiaocnuatitmioens.tiWmhese.nWthheenutmhebneruomfbpeerdoefstpreiadnesstirsiahnigshiserhtihgahner1t5h0a,nth1e5e0v, tahceueavtaicounattiimone tdimeceredaescerseatseasmataxaimauxmimrautme frraotme f0ro.4mto00.4.8toof0.t8heofatvhoeidaavnociedathnrceesthhorleds,haonld, tahnedetvhaeceuvaaticounattiiomnetirmeaecrheeaschaesmainmiminuimmuamt 0ato0f othf tehaevaoviodiadnacnecethtrhersehshooldld. .InInrereaalllliiffee,,tthhee aavvooiidance threshold of 0 iissddiiffifficcuulltt ttooaacchhiieevvee,,aannddbbeeccaauusseeeeaacchhppeerrssoonniissaanniinnddeeppeennddeenntt iinnddiivviidduuaall,, tthheeyy ccaann ffrreeeellyy cchhoooossee ttoo aavvooiidd oorr nnoott;; tthheerreeffoorree,, iitt iiss ddiiffifficcuulltt ttoo uunniiffoorrmmllyy aasssseessss aallll tthhee vvuullnneerraabblleeggrroouuppssttoo aavvooiidd.. AAtttthheessaammeettiimmee,,ffrroommFFiigguurree22,, iitt ccaann bbee sseeeenn tthhaatt tthhee mmaaxxiimmuumm ccoommppeettiittiivveenneessssoofftthheeeellddeerrllyyiissiinntthheerraannggeeooff00..5544ttoo 00..6633,, ssoo iinn tthhee pprroocceessss ooff eevvaaccuuaattiioonn,, tthhee ccoommppeettiittiivveenneessss ooff tthhee eellddeerrllyy aass tthhee aavvooiiddaannccee tthhrreesshhoolldd ccaann mmaaxxiimmiizzee tthhee eeffffeecctt ooff tthhee rreedduuccttiioonn iinn eevvaaccuuaattiioonn ttiimmee..
+
+Symmetry 2025, 17, 298
+
+individual, they can freely choose to avoid or not; therefore, it is difficult to uniformly assess all the vulnerable groups to avoid. At the same time, from Figure 2, it can be seen that the maximum competitiveness of the elderly is in the range of 0.54 to 0.63, so in the process of evacuation, the competitiveness of the elderly as the avoidance threshold21coafn23 maximize the effect of the reduction in evacuation time.
+
+FiFgiugurere202.0R. Relealtaiotinosnhsihpipbebtewtweeenenavaoviodidanacneceththrersehshooldlds sananddevevacaucuataitoionntitmimese.s.
+4. Conclusions
+This paper focuses on the complex crowd evacuation of single-exit rooms in emergency situations and proposes a multi-speed cellular automata evacuation model based on asymmetric competitiveness. The model realizes the dynamic adjustment of pedestrian speed and describes the multidimensional competitiveness of heterogeneous crowds. The effects of competition-derived behaviors (avoidance behaviors) and pheromones on the evacuation of heterogeneous crowds are explored. The research results show that: (1) A crowd density of 0.375 persons/m2 is the watershed for the rate of increase in
+evacuation time. At crowd densities greater than 0.375 persons/m2, the risk of evacuation increases, and a pheromone dispersion radius of 2 to 4 m is optimal. The increase in personnel density and pheromone diffusion radius leads to a decrease in the gradient of pheromone distribution, and when there is no gradient difference in the pheromone received from the center, it becomes difficult for evacuees to choose a path, resulting in an increase in evacuation time. However, when the crowd density is less than 0.375 people/m2, a longer pheromone spreading radius can help pedestrians find the exit faster and shorten the evacuation time. Therefore, the role of pheromones is asymmetric, and the right amount of personnel density and pheromone radius can effectively help evacuees find the exit faster, thus, increasing the evacuation speed; (2) When the number of evacuees is small, the effect of gender on evacuation is small. When the number of evacuees is large, the effect of gender on evacuation is larger, and under the same total number of people, the larger the proportion of men, the shorter the evacuation time. Gender has less influence on the evacuation time of the elderly, and changes in the ratio of men to women do not significantly affect their arrival time at the exit. Elderly people are a vulnerable group in the evacuation process, and the gap between their evacuation ability and that of young and middle-aged people is obvious, and they are easily crowded by young and middle-aged people who cannot move inside the crowd or are at the end of the crowd due to their slow moving speed; (3) The avoidance behavior was effective in reducing the evacuation time, and the intense competition for grid points near the exits was significantly reduced. When young and middle-aged people are the main body of pedestrians, avoidance behavior has a greater effect of shortening evacuation time when the composition of pedestrians is complex. When older adults are pedestrian subjects, evacuation times are most
+
+Symmetry 2025, 17, 298
+
+22 of 23
+
+affected by avoidance behaviors. The above reflects the asymmetry of avoidance behavior. Evacuation time reaches a minimum at avoidance probabilities of 0.5 and decreases at a maximum rate at avoidance thresholds of 0.4 to 0.8. In practice, the competitiveness of the elderly can be considered as an avoidance threshold.
+The findings can support evacuation capacity assessment, emergency planning, and decision making. However, the evacuation environment in this paper is relatively simple, and more evacuation factors will be incorporated in future studies, such as introducing environmental hazards (fire, smoke, obstacles, etc.) and considering group evacuation behavior (leader­follower dynamics, etc.).
+Author Contributions: Conceptualization, Y.D.; Funding acquisition, Y.D.; Writing--original draft: B.L.; Visualization, B.L. All authors have read and agreed to the published version of the manuscript.
+Funding: This research was funded by the National Natural Science Foundation of China, grant numbers 72164016 and 62363013.
+Data Availability Statement: The datasets presented in this article are not readily available because the data are part of an ongoing study. Requests to access the datasets should be directed to dyc@mail.ustc.edu.cn.
+Conflicts of Interest: The authors declare no conflicts of interest.
+References
+1. Lyu, H.-F.; Wang, C.-P.; Deng, J.; Xiao, Y.; Wang, W.-F. Human behaviour and evacuation time for large underground comprehensive buildings during fire risk process. J. Loss Prev. Process Ind. 2023, 84, 105134. [CrossRef]
+2. Wu, J.; Xing, Y.; Bai, Y.; Hu, X.; Yuan, S. Risk assessment of large-scale winter sports sites in the context of a natural disaster. J. Saf. Sci. Resil. 2022, 3, 263­276. [CrossRef]
+3. Agnelli, J.P.; Armas, C.; Knopoff, D.A. Spatial Kinetic Modeling of Crowd Evacuation: Coupling Social Behavior and Infectious Disease Contagion. Symmetry 2025, 17, 123. [CrossRef]
+4. Chu, K.; Zhou, D.; Xu, Z.; Xie, B. Experimental investigation on the evacuation performance of pedestrians in an underwater shield tunnel with evacuation stairs in a fire scenario. Tunn. Undergr. Sp. Technol. 2025, 156, 106247. [CrossRef]
+5. Kinkel, E.; van der Wal, C.N.; Hoogendoorn, S.P. The effects of three environmental factors on problem-solving abilities during evacuation. J. Build. Eng. 2025, 99, 111546. [CrossRef]
+6. Bakhdil, N.; El Mousaoui, A.; Hakim, A. A Kinetic BGK Model for Pedestrian Dynamics Accounting for Anxiety Conditions. Symmetry 2025, 17, 19. [CrossRef]
+7. Kang, Z.X.; Zhang, L.; Li, K. An improved social force model for pedestrian dynamics in shipwrecks. Appl. Math. Comput. 2019, 348, 355­362. [CrossRef]
+8. León, J.; Castro, S.; Mokrani, C.; Gubler, A. Tsunami evacuation analysis in the urban built environment: A multi-scale perspective through two modeling approaches in Vina del Mar, Chile. Coast. Eng. J. 2020, 62, 389­404. [CrossRef]
+9. Ren, J.; Mao, Z.; Gong, M.; Zuo, S. Modified social force model considering emotional contagion for crowd evacuation simulation. Int. J. Disaster Risk Reduct. 2023, 96, 103902. [CrossRef]
+10. Chen, M.; Wu, K.; Zhang, H.; Han, D.; Guo, M. A ship evacuation model considering the interaction between pedestrians based on cellular automata. Ocean. Eng. 2023, 281, 114644. [CrossRef]
+11. Zhou, Y.; Chen, J.; Zhong, M.; Hua, F.; Sui, J. Evacuation effect analysis of guidance strategies on subway station based on modified cellular automata model. Saf. Sci. 2023, 168, 106309. [CrossRef]
+12. Dang, P.; Zhu, J.; Pirasteh, S.; Li, W.; You, J.; Xu, B.; Liang, C. A chain navigation grid based on cellular automata for large-scale crowd evacuation in virtual reality. Int. J. Appl. Earth Obs. Geoinf. 2021, 103, 102507. [CrossRef]
+13. Kirchner, A.; Schadschneider, A. Simulation of evacuation processes using a bionics-inspired cellular automaton model for pedestrian dynamics. Phys. A Stat. Mech. Its Appl. 2002, 312, 260­276. [CrossRef]
+14. Zheng, Y.; Jia, B.; Li, X.-G.; Jiang, R. Evacuation dynamics considering pedestrians' movement behavior change with fire and smoke spreading. Saf. Sci. 2017, 92, 180­189. [CrossRef]
+15. Yi, J.; Pan, S.; Chen, Q. Simulation of pedestrian evacuation in stampedes based on a cellular automaton model. Simul. Model. Pract. Theory. 2020, 104, 102147. [CrossRef]
+16. Burstedde, C.; Klauck, K.; Schadschneider, A.; Zittartz, J. Simulation of pedestrian dynamics using a two-dimensional cellular automaton. Phys. A Stat. Mech. Its Appl. 2001, 295, 507­525. [CrossRef]
+
+Symmetry 2025, 17, 298
+
+23 of 23
+
+17. Fang, Z.; Gao, H.; Jiang, L.; Li, X.; Li, W. Human movement characteristics during emergency evacuations in a virtual environment. Fire Saf. J. 2020, 115, 103147. [CrossRef]
+18. Hu, X.; Chen, T.; Deng, K.; Wang, G. Effects of aggressiveness on pedestrian room evacuation using extended cellular automata model. Phys. A Stat. Mech. Its Appl. 2023, 619, 128731. [CrossRef]
+19. Qiu, H.; Wang, X.; Lin, P.; Lee, E.W.M. Effects of step time and neighbourhood rules on pedestrian evacuation using an extended cellular automata model considering aggressiveness. Phys. A Stat. Mech. Its Appl. 2024, 636, 129567. [CrossRef]
+20. Wang, Z.; Zhang, C.; Wang, J.; Zheng, Z.; Li, L. Research on Path Planning Algorithm for Crowd Evacuation. Symmetry 2021, 13, 1339. [CrossRef]
+21. Forrest, B.; Gales, J.; Van Ooteghem, K.; Weckman, E. Using Older Adult Walking Speeds from Controlled Trials as Inputs for Occupants in Simulations. Fire Technol. 2024, 60, 3295­3320. [CrossRef]
+22. Shi, M.; Zhang, Z.; Zhang, W.; Ma, Y.; Li, H.; Lee, E.W.M. The study of self-organised behaviours and movement pattern of pedestrians during fire evacuations: Virtual experiments and survey. Saf. Sci. 2024, 170, 106373. [CrossRef]
+23. Yan, G.; Wang, M.; Yan, T.; Qin, P. Evacuation speed of human beings in road tunnels at different altitudes. Tunn. Undergr. Sp. Technol. 2022, 128, 104651. [CrossRef]
+24. Seike, M.; Kawabata, N.; Hasegawa, M. Walking speed under emergency situation in smoke-filled tunnel with obstacles. Tunn. Undergr. Sp. Technol. 2023, 133, 104939. [CrossRef]
+25. Li, X.-J.; Chen, W.-B.; Chen, R.-X.; Chang, C.-T.; Chen, S.-H. Evacuation-path-selection model of real-time fire diffusion in urban underground complexes. Comput. Ind. Eng. 2023, 177, 109014. [CrossRef]
+26. Predtechenskii, V.; Milinski, A. Planning for Foot Traffic Flow in Buildings; Stroiizdat Publishers: Moscow, Russia, 1969. 27. Togawa, K. Study on Fire Escape Based on the Observations of Multitude Currents; Japan Building Research Institute, Report; The
+Building Research Institute, Ministry of Construction: Tokyo, Japan, 1955. 28. Fang, Z.; Lo, S.M.; Lu, J.A. On the relationship between crowd density and movement velocity. Fire Saf. J. 2003, 38, 271­283.
+[CrossRef] 29. Zheng, X.; Cheng, Y. Conflict game in evacuation process: A study combining Cellular Automata model. Phys. A Stat. Mech. Its
+Appl. 2011, 390, 1042­1050. [CrossRef] 30. Liu, B.; Han, Y.; Zhang, H.; Qin, X. Research of crowd evacuation simulation based on the machine learning. J. Comput. Theor.
+Nanosci. 2017, 14, 815­820. [CrossRef] 31. Vieira, A.; Santos, B.; Picado-Santos, L. Modelling Road Work Zone Crashes' Nature and Type of Person Involved Using
+Multinomial Logistic Regression. Sustainability 2023, 15, 24. [CrossRef] 32. Wang, L.; Zheng, J.H.; Zhang, X.S.; Zhang, J.L.; Wang, Q.Z.; Zhang, Q. Pedestrians' behavior in emergency evacuation: Modeling
+and simulation. Chin. Phys. B 2016, 25, 10. [CrossRef] 33. Ye, J.; Chen, X.; Jian, N. Impact analysis of human factors on pedestrian traffic characteristics. Fire Saf. J. 2012, 52, 46­54. [CrossRef] 34. Takahashi, T. Time-estimation error following Weber­Fechner law may explain subadditive time-discounting. Med. Hypotheses
+2006, 67, 1372­1374. [CrossRef] [PubMed] 35. Cashdan, E. Are men more competitive than women? Br. J. Soc. Psychol. 1998, 37, 213­229. [CrossRef] [PubMed] 36. Thompson, P.A.; Marchant, E.W. Computer and fluid modelling of evacuation. Saf. Sci. 1995, 18, 277­289. [CrossRef] 37. Cao, S.; Qian, J.; Li, X.; Ni, J. Evacuation simulation considering the heterogeneity of pedestrian under terrorist attacks. Int. J.
+Disaster Risk Reduct. 2022, 79, 103203. [CrossRef] 38. Zou, B.; Lu, C.; Li, Y. Simulation of a hospital evacuation including wheelchairs based on modified cellular automata. Simul.
+Model. Pract. Theory. 2020, 99, 102018. [CrossRef] 39. Dong, H.; Zhou, M.; Wang, Q.; Yang, X.; Wang, F.Y. State-of-the-Art Pedestrian and Evacuation Dynamics. IEEE Trans. Intell.
+Transp. Syst. 2020, 21, 1849­1866. [CrossRef] 40. Ma, R.; Huang, A.; Jiang, Z.; Wang, Z.A.; Luo, Q.; Zhang, X. A data-driven optimal method for massive passenger flow evacuation
+at airports under large-scale flight delays. Reliab. Eng. Syst. Saf. 2024, 245, 109988. [CrossRef] 41. Wang, K.; Yuan, W.; Yao, Y. Path optimization for mass emergency evacuation based on an integrated model. J. Build. Eng. 2023,
+68, 106112. [CrossRef]
+Disclaimer/Publisher's Note: The statements, opinions and data contained in all publications are solely those of the individual author(s) and contributor(s) and not of MDPI and/or the editor(s). MDPI and/or the editor(s) disclaim responsibility for any injury to people or property resulting from any ideas, methods, instructions or products referred to in the content.
+
+
