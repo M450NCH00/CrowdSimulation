@@ -42,7 +42,7 @@ AS8 is withdrawn and AS9's order amended; this branch records both in `docs/acti
 ## Settings agreed with the user before building (2026-11-25, in conversation)
 The user answered "Yes start" to these, proposed by the assistant:
 - deadlock after N ticks with no progress: proposed 16 ticks (about 5 s), a placeholder
-  (**changed while building; see the progress log, 09:40**);
+  (**changed while building; see the progress log, 09:26**);
 - **crossing paths** (an assumption of the assistant's, not an RF-42 decision): two people swapping
   cells, or cutting through each other diagonally in one tick, are blocked;
 - slower walkers advance one cell each time their walked distance reaches the next cell;
@@ -55,6 +55,55 @@ The user answered "Yes start" to these, proposed by the assistant:
   RF-41 through in #55 and added the amendment to the order of work; cut this branch.
 - Next step: build `negsim/grid/`.
 
+### 2026-11-25 09:26 UTC — the package, and the deadlock window
+- What I did: wrote `configs/grid/corridor_v1.yaml` (tagged values) and `negsim/grid/`: `world.py`
+  (config, moves, the tick, `run`), `measures.py`, `render.py`, `walkers.py`, `cases.py`,
+  `__main__.py`.
+- **Decision changed from what the user agreed:** the deadlock window is **3.0 s (10 ticks)**, not the
+  16 ticks (about 5 s) I proposed. Reason: 3.0 s is issue #24's window and round 1's corridor's
+  (`configs/scenarios/wide_corridor_head_on.yaml`, `deadlock.window_s`), which I had not checked
+  when I proposed 16; with the same window the two worlds' deadlock rates compare. It is still a
+  placeholder (section 11) and one number in the config. Flagged to the user at the end. (Entry times corrected at 09:33 from the files' modification times: I first wrote estimates, 09:40, 10:05 and 10:20.)
+- One difference stays: round 1 counts a deadlock when nobody *moved*; the grid when nobody
+  *advanced* (a sideways step is no progress), so two people dancing in place end as a deadlock.
+- Starts: with 50 rows there is no middle cell, so "20 cells from the middle" is read as *in the 20th
+  cell from the middle*: rows 5 and 44, centres 7.8 m from the middle (round 1: 8 m).
+- Parallel update read literally from Burstedde et al.: occupancy at the start of the tick, so a
+  cell vacated in the same tick is still occupied.
+
+### 2026-11-25 09:28 UTC — first run of the scripts; the passing distance redefined
+- What I did: `python -m negsim.grid scripts --seeds 20`.
+- Found: random walkers showed a passing distance of 0.0 m in 4 runs. The first definition took the
+  fewest lanes over every tick the two were within a row, so an earlier face-to-face moment counted
+  as the passing distance.
+- Changed to: the sideways gap at the moment they were level: on a tick in one row if there was
+  one, otherwise halfway through the tick in which they went by (each moving in a straight line),
+  the mean of the signed gaps before and after. It can be half a lane (0.6 m), so H1 applies in
+  steps of 0.2 m. Sliding past diagonally from face to face is then one lane (0.4 m): squeezed.
+- Checked that `analysis.lateral.when_level` reads a grid `trajectory.csv` unchanged (with
+  `analysis/requirements.txt`): 0.8 m apart, the yielder 0.8 m to its own right.
+
+### 2026-11-25 09:33 UTC — tests; the docs section
+- `tests/test_grid.py`: 38 tests (sizes, own frame, every clash rule, slow walkers, arrival, the
+  scripted walkers' expected outcomes over 5 seeds × 2 geometries, invariants and rebuild over 40
+  random seeds, three hand-built passing-distance cases, round 1's cases, the print, the entry point,
+  and that no module outside `negsim/grid/` imports it). All pass (1.1 s).
+- `docs/action-space.md`: section 8.1 "As built in RF-50" (moves, tick, geometries and what
+  rounding loses, measures, the scripts' results, what `analysis.gate`/`lateral` can read), 8.2 the
+  decision points left to RF-51, the amendment to AS8/AS9 in section 10, and section 11's deadlock
+  placeholder. This is the one existing file edited, as task 4 asks.
+
 ## Open questions / risks
+1. **Deadlock window** 3.0 s (10 ticks) instead of the agreed 16 ticks: see 09:26. For the user.
+2. **Crossing paths blocked** is RF-50's assumption, not Burstedde et al.'s; agreed by the user
+   before building. A blocked X leaves both in place, and two scripts that repeat it would deadlock.
+3. **Which person is off the centre line** in `one_lane_apart` (walker 0 keeps the centre lane):
+   a `[design]` choice; RF-51 may counterbalance it.
+4. **`analysis.gate` needs `*_plan_orca` and `*_plain_orca`**, which the grid cannot give (no
+   ORCA). RF-52 decides: scripted walkers as the grid's baseline, or a grid-only gate.
+5. **The corridor is 2.0 m, round 1's 1.75 m** (AS6), and starts 15.6 m apart against 16 m: grid
+   rates compare with round 1's by rate only (section 3).
+6. **README status lines** (root `README.md`, `llm_negotiation/README.md`) are not updated: under
+   the user's AS1 rule ("ask the user before changing any existing file for it"), asked at the end.
 
 ## Summary (fill in at the end)
