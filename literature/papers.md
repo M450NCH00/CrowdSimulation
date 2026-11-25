@@ -6,7 +6,7 @@ Supports the claim the FYP report has to defend:
 > *LLM outputs, when prompted for typical human behaviour under a scenario, are a
 > valid input to an agent-based simulation.*
 
-Seven papers are reported rather than the five the issue asked for. The reason is
+Eight papers are reported rather than the five the issue asked for. (Entry 8 was added after the original review, when a correction to entry 3 showed DD2 had no citation behind it — see the correction note in that entry.) The reason is
 scope coverage, not padding: entries 1–5 address LLM behavioural validity, entry 6
 addresses the crowd-simulation side (the issue's fourth scope bullet, which none of
 the LLM papers touches), and entry 7 is the mechanism paper the sub-field descends
@@ -28,6 +28,7 @@ be confirmed from a primary source it is marked `[unverified]`.
 | 5 | Hullman — Validating LLM Simulations | 2026 | arXiv `[non-archival]` | no | 4 |
 | 6 | Zhong — Data-driven Crowd Modeling | 2022 | ACM TOMACS | yes | 4 |
 | 7 | Park — Generative Agents | 2023 | UIST | yes | 4 |
+| 8 | Deshpande — Toxicity in ChatGPT | 2023 | EMNLP Findings | yes | 4 |
 
 Two entries are preprints. Both are labelled `[non-archival]` as the issue requires,
 and neither is the sole support for any claim — each is paired with a peer-reviewed
@@ -190,6 +191,13 @@ labelling is needed. Tested on GPT-3.5 (text-davinci-003) and GPT-4 across 15
 gender-by-race groups, 2,700 personas in total, compared against human-written
 personas elicited with the same prompts.
 
+**Prompt framings used (Table A9).** Six prompts, deliberately mixing framings — three
+first-person role-play (*"Imagine you are a(n) [X]. Please describe yourself."*), and
+three third-person/observer (*"Describe a(n) [X]."*; *"Imagine a(n) [X]. Please describe
+[pronoun]."*). The authors state they **"did not find statistically significant
+differences in distributions of top words across prompts"** and therefore analysed all
+six in aggregate. This detail is load-bearing for DD2 — see Relevance below.
+
 **Results that matter:**
 - LLM-generated personas contained **higher rates of racial-stereotype words than
   human-written portrayals produced from the same prompt** (§5) — the essential
@@ -213,12 +221,21 @@ method does.
 **Relevance to this FYP (5/5):** This is the paper that turns `VALIDATION.md` §5
 ("Gender / age bias audit") from a stated intention into a defensible procedure. Three
 concrete transfers:
-1. It supplies the citable justification for **DD2** (observer framing chosen to lower
-   stereotype risk) — and simultaneously shows DD2 is *not sufficient*, since Cheng et
-   al.'s prompts were also third-person descriptive and still produced amplification.
+1. **It does *not* justify DD2 — and mildly counts against it.** *(Corrected
+   2026-09-08; the earlier version of this entry claimed the opposite. See the
+   correction note below.)* DD2 chose observer framing over first-person role-play "to
+   lower stereotype risk". Cheng et al. used **both** framings (Table A9) and found
+   **no statistically significant difference** in top-word distributions between them.
+   That is a null result and may be underpowered — it was not a targeted framing
+   experiment — but it is evidence *against* the premise that observer framing lowers
+   stereotype content, not for it. The support DD2 actually has is [Deshpande-TOX]
+   (entry 8), which is about persona *assignment* rather than stereotype content.
+   What Cheng et al. does establish for this project is that persona prompting
+   amplifies stereotype relative to human-written text **regardless of framing**, so
+   DD2 cannot be treated as a mitigation that removes the need to audit.
 2. The Marked Words method is directly runnable on this dataset: contrast the free-text
-   `rationale` / `decision_factors` fields for female personas against male ones and
-   inspect the distinguishing words. That is a more explainable audit than the current
+   `conflict_behaviour.narrative` and `decision_factors` fields for female personas
+   against male ones and inspect the distinguishing words. That is a more explainable audit than the current
    `|Δ yield_likelihood| > 0.25` threshold, and `CLAUDE.md` asks for explainable over
    automated.
 3. The resilience-myth finding is the specific warning for `run01`: a gender difference
@@ -226,6 +243,14 @@ concrete transfers:
    the shape of stereotype that survives a plausibility check. `VALIDATION.md` §5's
    instruction to decide "supported by evidence or unsupported stereotype" now has a
    published method behind it.
+
+> **Correction (2026-09-08).** This entry previously asserted that Cheng et al.'s
+> prompts "were also third-person descriptive", and cited the paper as the justification
+> for DD2. Both were wrong. Checking Table A9 in the published PDF (cached at
+> `refs/cheng2023_marked_personas.pdf`) shows six prompts spanning *both* first-person
+> and third-person framings, with no significant difference reported between them. The
+> entry above has been rewritten; entry 8 was added to supply the citation DD2 was
+> missing.
 
 **BibTeX key:** `cheng2023marked`
 
@@ -410,7 +435,7 @@ the research question, and it does three jobs no LLM paper can.
    literature explicitly recommends — and §5.5 also warns against reporting a single
    headline pass rate.
 3. §5.3 on interpretability is a genuine argument *for* this project's architecture — a
-   frozen `(scenario × persona) → behaviour` table with an explicit `rationale` field is
+   frozen `(scenario × persona) → behaviour` table with an explicit `narrative` field is
    interpretable in exactly the sense the survey says learned crowd models usually are
    not, which is a defensible advantage over a neural trajectory model.
 
@@ -497,3 +522,65 @@ distributional replication in [Aher-TE], and because the runtime architecture is
 one this project uses.
 
 **BibTeX key:** `park2023generative`
+
+---
+
+### [Deshpande-TOX] — Toxicity in ChatGPT: Analyzing Persona-assigned Language Models
+
+**Authors / Year / Venue:** Ameet Deshpande, Vishvak Murahari, Tanmay Rajpurohit,
+Ashwin Kalyan, Karthik Narasimhan / 2023 / Findings of the Association for Computational
+Linguistics: EMNLP 2023, pp. 1236–1270. Preprint arXiv:2304.05335.
+
+**Link:** https://doi.org/10.18653/v1/2023.findings-emnlp.88 | https://aclanthology.org/2023.findings-emnlp.88/ | arXiv:2304.05335
+
+**Verified:** yes — opened the ACL Anthology landing page, which supplied the author
+list, venue, pages, DOI and BibTeX.
+
+**Added:** 2026-09-08, after a correction to entry 3 established that **DD2 had no
+citation supporting it**. This entry exists to fill that specific gap.
+
+**Problem:** Does *assigning a persona* to a chat model — "you are X" — change how the
+model behaves, beyond changing what it talks about?
+
+**Method:** Systematic evaluation of toxicity across **over half a million ChatGPT
+generations**, varying the persona assigned to the system and the entity being discussed.
+
+**Results that matter:**
+- **Assigning a persona increases toxicity by up to 6×** relative to the default
+  assistant — the paper's example is that giving ChatGPT the persona of the boxer
+  Muhammad Ali "significantly increases the toxicity of generations". Outputs included
+  "incorrect stereotypes, harmful dialogue, and hurtful opinions".
+- **Some groups are targeted more regardless of the persona assigned** — certain
+  entities (e.g. particular races) received ~**3× more** toxic output than others, which
+  the authors read as discriminatory bias in the underlying model rather than a property
+  of any one persona.
+- The authors conclude current safety guardrails are inadequate and that "multiple
+  provisions in the legislative blueprint are being violated".
+
+**Limitations / criticisms:** The dependent variable is **toxicity**, measured by an
+automated toxicity classifier — not stereotype *content* or behavioural fidelity. The
+setting is open-ended dialogue with named-individual and identity personas, which is a
+long way from a constrained JSON-output task about pedestrian behaviour. It studies
+ChatGPT only, and its findings are tied to that model generation. So it supports a
+*mechanism* claim, not a quantitative transfer.
+
+**Relevance to this FYP (4/5):** This is the citation **DD2** actually rests on. DD2
+records the decision to use observer framing — "describe how a 72-year-old woman in
+Singapore typically behaves" — rather than first-person role-play. Deshpande et al. is
+the evidence that first-person persona *assignment* measurably changes model behaviour
+for the worse (up to 6× toxicity), and observer framing never issues such an
+instruction. That is a real, peer-reviewed basis for the choice.
+
+Two honesty constraints on how far it can be pushed, both of which belong in the report:
+
+1. **It measures toxicity, not stereotype content.** Combined with [Cheng-MP]'s null
+   result on framing, the defensible claim is narrow: observer framing avoids
+   persona-assignment effects; it is **not** established that it produces less
+   stereotyped content. The report should say that, not the stronger DD2 wording.
+2. **It does not license the leap to "our dataset is unbiased".** The `run01` gender
+   pattern (51 of 70 cells with female yielding more) happened *under* observer framing,
+   which is the direct local demonstration that DD2 is not a mitigation.
+
+Rated 4 rather than 5 because the mechanism transfers but no number in it does.
+
+**BibTeX key:** `deshpande2023toxicity`

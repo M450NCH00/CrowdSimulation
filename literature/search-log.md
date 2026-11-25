@@ -9,7 +9,7 @@ and re-run.
 
 ## Outcome summary
 
-The issue asked for **5** papers. **7** are reported. This is a deliberate overshoot on
+The issue asked for **5** papers. **8** are reported (7 in the original review, plus one added 2026-09-08 — see the addendum below). This is a deliberate overshoot on
 scope coverage, not padding, and each extra entry is justified below:
 
 - Five entries (Aher, Argyle, Cheng, Wang, Hullman) address the primary claim — the
@@ -20,6 +20,8 @@ scope coverage, not padding, and each extra entry is justified below:
 - One entry (Park et al.) is the mechanism/existence-proof paper, retained mainly for a
   *negative* result: its cost figure is the evidence for this project's DD1 decision to
   freeze answers offline rather than call an LLM per agent per step.
+- One entry (Deshpande et al.) was **added after the fact**, when correcting entry 3
+  left DD2 with no citation supporting it. See the addendum below.
 
 No entry is included that lacks a specific, stated transfer to this project. Every
 entry is marked `Verified: yes`; two are preprints, both labelled `[non-archival]`.
@@ -78,7 +80,7 @@ is itself a two-party conflict over a contested resource and therefore closer to
 FYP's scenarios. Horton et al. also report qualitative correspondence with classic
 findings rather than a fidelity metric against human response distributions, which is
 what this project's validation needs. **Recommend citing it in the FYP report as
-supporting context; it is simply not one of the seven load-bearing entries.** Note also
+supporting context; it is simply not one of the load-bearing entries.** Note also
 that Semantic Scholar's venue field for it ("ACM Conference on Economics and
 Computation") was **not** independently confirmed and should be checked before citing.
 
@@ -110,6 +112,33 @@ detail with no bearing on the dataset's validity argument.
 prompt-engineering how-to material with no behavioural evaluation; pure
 pathfinding/physics crowd papers. Several such results appeared in query 5 and were
 discarded without further checking.
+
+## Addendum (2026-09-08) — one correction and one paper added
+
+After the review was written, a question about **DD2** (observer framing vs first-person
+role-play) prompted a re-check of Cheng et al.'s actual prompt set. That check changed
+two things:
+
+- **Correction to entry 3.** The entry claimed Cheng et al.'s prompts "were also
+  third-person descriptive", and cited the paper as the justification for DD2. Both were
+  wrong. **Table A9** of the published paper (now cached at
+  `refs/cheng2023_marked_personas.pdf`, extracted to `.txt`) lists **six** prompts
+  spanning *both* framings — three first-person (*"Imagine you are a(n) [X]. Please
+  describe yourself."*) and three third-person (*"Describe a(n) [X]."*, *"Imagine a(n)
+  [X]. Please describe [pronoun]."*). The authors state they "did not find statistically
+  significant differences in distributions of top words across prompts" and analysed
+  them in aggregate. So the paper does not support DD2 and, if anything, mildly counts
+  against it.
+- **Entry 8 added: Deshpande et al. (2023), EMNLP Findings.** The correction left DD2
+  with no citation at all. This paper — persona *assignment* raises ChatGPT toxicity up
+  to 6x across >500k generations — is the closest peer-reviewed support for the
+  mechanism DD2 relies on. Found by searching for work on persona-assignment effects
+  after the Cheng re-check; verified from the ACL Anthology landing page.
+
+Method note for future searches: the original review verified Cheng et al. from the ACL
+Anthology landing page and the ar5iv HTML, neither of which renders appendix Table A9.
+The error would have been caught earlier by reading the published PDF. **Where a claim
+depends on exactly what a prompt said, go to the PDF appendix.**
 
 ## Dead ends and failures
 
@@ -181,6 +210,8 @@ refs/park2023_generative_agents_abs.html
 refs/wang2026_not_yet_reliable_abs.html
 refs/zhong2022_data_driven_crowd_survey.pdf
 refs/zhong2022_survey.txt          (pdftotext extraction of the above)
+refs/cheng2023_marked_personas.pdf (published PDF — added 2026-09-08 for Table A9)
+refs/cheng2023_marked_personas.txt (pdftotext extraction of the above)
 refs/semanticscholar.json          (API responses, mostly 429s — kept as the record)
 refs/s2_preprints.json             (follow-up API attempt for the two preprints)
 ```
