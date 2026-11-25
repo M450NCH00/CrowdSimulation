@@ -1,0 +1,618 @@
+                                       GAMECHAT: Multi-LLM Dialogue for Safe, Agile, and Socially
+                                       Optimal Multi-Agent Navigation in Constrained Environments
+
+                                       Vagul Mahadevan, Shangtong Zhang, and Rohan Chandra
+
+                                                 {dub5nq, xdm2bt, aar8xx}@virginia.edu
+                                                                     University of Virginia
+
+                                               Code, Videos, Proofs at https://gamechat-uva.github.io/
+
+arXiv:2503.12333v2 [cs.RO] 9 May 2026     Abstract-- Safe, agile, and socially compliant multi-robot      Fig. 1. Two agents head toward a hospital and a grocery store in
+                                       navigation in cluttered and constrained environments remains       a symmetric, constrained environment. In the left image, there is no
+                                       a critical challenge. This is especially difficult with self-      communication between the agents, causing a deadlock as the agents do
+                                       interested agents with unique, unknown priorities in decen-        not know which should go first, and in the right image, GAMECHAT uses
+                                       tralized settings, where there is no central authority to resolve  natural language communication between decentralized agents to identify
+                                       conflicts induced by spatial symmetry. We address this chal-       their roles, thereby resolving the deadlock by prioritizing urgent tasks.
+                                       lenge by proposing an intuitive, but very effective approach,
+                                       GAMECHAT, which facilitates safe, agile, and deadlock-free         values are often arbitrary and require a centralized authority
+                                       navigation for both cooperative and self-interested agents in      to manage the process. Instead, we suggest that priorities
+                                       cluttered environments. Key to our approach is the idea that       be grounded in the semantic tasks agents are pursuing. For
+                                       agents should resolve conflicts on their own using natural         example, we can agree it is more urgent for a first responder
+                                       language to communicate, much like humans. We evaluate             to reach a patient than for a tourist to get to the beach.
+                                       GAMECHAT in simulated environments with doorways and
+                                       intersections. The results show that even in the worst case,          Since tasks are private (we do not broadcast our goals
+                                       GAMECHAT reduces the time for all agents to reach their goals      to the whole world at all times), we need a communication
+                                       by over 35% from a naive baseline and by over 20% from             protocol for agents to decide who goes first. Humans use
+                                       a state of the art baseline in the intersection scenario, while    physical gestures and spoken language, but as many robots
+                                       doubling the rate of ensuring the agent with a higher priority     lack gestural capability, we focus on conversation.
+                                       task reaches the goal first, from 50% (equivalent to random
+                                       chance) to 100%. We also demonstrate how GAMECHAT can              A. Main Contributions
+                                       be extended to more than two agents.
+                                                                                                             We propose a new algorithm for safe, agile, deadlock-free,
+                                                              I. INTRODUCTION                             and decentralized multi-robot navigation in symmetric, con-
+                                                                                                          strained environments (like passing through doorways and
+                                          It is challenging for multiple robots with different hidden     narrow hallways). Our algorithm works for both cooperative
+                                       priorities to plan safe, agile, and deadlock-free (situations      and self-interested agents, that is, when agents choose to
+                                       where no robot can move toward its goal for a few sec-             optimize their own objectives. Key to this approach is a
+                                       onds) trajectories in cluttered and constrained environments       novel LLM-based communication module in which agents
+                                       (Figure 1). First, in decentralized systems, we have no            automatically engage in a natural language dialogue with
+                                       central authority that coordinates agents in a manner that         each other to proactively resolve any conflicts that could
+                                       deadlocks will be prevented or resolved. Second, with self-        arise. Any conflict resolution is then executed via a low-
+                                       interested agents [1] that have conflicting objectives, we         level dynamic game-theoretic controller. Our method, which
+                                       must ensure that jerk-agent behavior (jerk agents may break        we call GAMECHAT, has the following properties:
+                                       previously agreed-upon consensuses or socially compliant
+                                       protocols leading to unsafe behavior) is not incentivized.            · Subgame-Perfect Optimality: GAMECHAT includes a
+                                       Third, symmetry between the agents (which occurs when                    game-theoretic strategy which yields a subgame perfect
+                                       they are the same distance from a shared collision point and             equilibrium [6] (a guarantee that we have a Nash equi-
+                                       have the same velocity) must be broken in a socially optimal             librium now and at all future times), so self-interested
+                                       manner. If both move forward at the same speed they will                 agents will choose to commit to our strategy, as there
+                                       collide, and if neither moves, they will deadlock.                       is no incentive to deviate from it now or in the future.
+
+                                          To handle coordination and symmetry in cluttered spaces,           · Welfare-Maximizing (socially optimal): GAMECHAT
+                                       strategies like the right-hand rule enforce consistent, clock-           is socially optimal, meaning that agents will maximize
+                                       wise movement to resolve deadlocks [2], mimicking human                  social welfare by prioritizing more urgent tasks. This
+                                       behavior. However, such rules assume agents follow them                  also breaks spatial symmetry.
+                                       even when it is not in their self-interest. Game-theoretic
+                                       approaches [3], [4] address this by ensuring strategies form          · Safety: GAMECHAT uses control barrier functions
+                                       a Nash equilibrium (NE, where no agent can unilaterally                  (CBFs) [7], to guarantee safe trajectories.
+                                       change its strategy and increase its payoff). Still, these meth-
+                                       ods often require global knowledge of agents' private costs,
+                                       which is unrealistic, and they face ambiguity in symmetric
+                                       scenarios due to multiple equilibria.
+
+                                          In symmetric scenarios, as one agent must slow down, a
+                                       common approach is to define and maximize social welfare,
+                                       a measure of how good a certain ordering of agents is. To do
+                                       this, each agent must have some social priority, a measure of
+                                       how important it is for that agent to reach the goal quickly.
+                                       Previous work does this by assigning numerical priorities or
+                                       budgets and using auctions to decide the order [5], but these
+   · Agility: GAMECHAT is minimally invasive, that is, the        Fig. 2. Example of a social mini-game. Each agent (represented by the red
+      speeds of the agents are decreased as little as possible,   and blue rectangles) has length l and must pass through Q on the way to
+      and the agents do not spatially deviate from their desired
+      paths, preserving smooth trajectories.                      their goals, Xg1 and Xg2. The desired trajectories (1, 2) for each agent
+                                                                  are represented by the arrows. Note that they intersect at Q at t = 2.
+   We choose natural language as our mode of communi-
+cation, as it does not require a previously defined protocol      instance and communicate in a natural language dialogue to
+(which may vary from one manufacturer to another). This           agree on a plan of action. Note, however, that RoCo is fully
+also enables communication between robots and humans, a           cooperative while we investigate self-interested agents.
+crucial step we must take as a community to achieve a future
+where humans and robots live and work together.                                  III. PROBLEM FORMULATION
+
+                     II. RELATED WORKS                            In this section, we define a general problem formu-
+
+Collision Avoidance: To guarantee safety, one can use con-        lation. We begin with a modified Partially Observable
+trol barrier functions (CBFs) [7], [8] which use the forward
+invariance of a set. If an agent is in a safe set at some time,   Stochastic Game (POSG) [27], defined by the tuple,
+then it will remain in that safe set for all future times. In
+MPC-CBF [9], constraints are derived using CBFs and added         k, T, X , {U i}, T , , {Oi}, {Ri} where k is the number
+to the receding-horizon controller to prevent collisions.
+Deadlock Resolution: Symmetry between agents can result           of agents, T is the finite number of time steps in the
+in deadlocks [10]. The simplest way to break symmetry is to
+rely on the environment's randomness or to randomly perturb       game, and X is the continuous state space. The superscript
+agents [8], but this can increase total cost. Heuristic-based
+approaches, such as a right-hand rule [2], [11] improve over      i  {1, . . . , k} refers to the ith agent and the subscript
+random perturbations but are more centralized. Some meth-
+ods design an auction mechanism [5], [12], [13], and agents       t  {0, .   ..  ,T  } refers to time step  th;aes.ga.,sxtatirtsXtateisxth0i easntdatea
+bid to cross the intersection using some bidding strategy. In     of agent   i   at  time t. Each agent i
+reservation-based systems [14], agents must reserve slots to
+cross the intersection determined by the time to arrival.         set of goal states Xg  X . The game ends if all agents have
+Learning-based Methods: Deep reinforcement learning
+(DRL) has been used for multi-robot decentralized collision       reached their goals or T time steps have elapsed, whichever
+avoidance with local sensing [15]. Inverse reinforcement          is sooner. For an agent i, Ui is the continuous control
+learning (IRL) has been used to infer reward functions of
+other agents for planning in dense crowds [16]. However,          space containing feasible inputs. The dynamics function
+these methods have difficulty encoding safety constraints         T : X × U i  X determines the state of an agent at time
+and in out-of-distribution domains. LiveNet [17] is a recent
+approach that encodes safety and agility via differentiable       t + 1 given its state and control input at time t. The set 
+CBFs within a neural network controller. This allows for
+learnable multi-robot navigation in constrained spaces.           is the observation space, and whenever agent i arrives at a
+Game-theoretic Methods: For multi-agent planning with
+self-interested agents, methods have been developed for dis-      new state, the observation function O : X   yields a
+tributed optimization in differential games. These algorithms
+solve for Nash equilibria. Some are similar to direct methods     local observation of its own and nearby agents' states. We
+in trajectory optimization [3], [18] like Newton's method.        can define a trajectory of agent i by i = (x0i , . . . , xTi ) and
+They handle state and control input constraints and converge      an input sequence by i = (u0i , . . . , uTi -1). For any time
+quickly. These algorithms yield analytical solutions that         t, Ci(xit)  X is the space occupied by agent i and two
+guarantee safety but not agility, and they require knowledge      robots i, j are in a collision if Ci(xit)  Cj(xtj) = . Each
+of the other agents' cost functions and policies/actions.         agent i strives to maximize its payoff, Ri(i, -i), which
+Multi-Robot Communication: In decentralized, cooper-
+ative multi-robot environments, communication methods             represents the total payoff at the end of the game for agent
+are needed for coordination [19]. Graph Neural Networks           i if they play i and all other players take the trajectories in
+(GNNs) have been used to communicate the features of
+local observations among a network of robots [20]. DMCA           -i, where -i = (1, . . . , i-1, i+1, . . . , k). Agents are
+[21] uses RL to learn selective communication to share
+goal information with relevant neighbors. Further, Arul et        rational:
+al. [22] created an RL method that learns what information
+is important to communicate and when to communicate it,           Definition III.1. Rationality: An agent i is rational if its
+reducing indiscriminate broadcasting.                             payoff function Ri(i, -i) satisfies two properties:
+LLMs for Robotics: Recently, some methods use LLMs or
+Vision-Language Models (VLMs) in planning. Progprompt               1) Collision avoidance: R(1i , -i) > R(i2, -i) for a
+[23] uses LLMs to generate the code for robotic policies.               specific -i if 2 results in a collision but 1 does not.
+On the multi-agent side, Garg et al. [24] use LLMs and
+VLMs to resolve a deadlock after it occurs by identifying           2) Time minimization: R(1i , -i) > R(2i , -i) for a
+a leader agent to move first. One method [25] uses VLMs to              specific -i if 2 results in higher time-to-goal than
+detect people and assign scores to trajectories, which induces          1, and neither trajectory results in a collision.
+socially compliant navigation. Most similar to our approach
+is RoCo [26], where robots are each equipped with an LLM          Definition III.2. A social mini-game (SMG) is a type of
+                                                                  POSG. Each agent has a desired trajectory i which is what
+                                                                  the agent would follow if it were the only agent. The crucial
+                                                                  property that makes an SMG is that there is some time t
+                                                                  and pair of distinct agents i, j where Ci(xti)  Cj(xjt ) = 
+                                                                  and xit  i, xtj  j; i.e., following the desired trajectories
+                                                                  would cause the agents to collide at some point in time.
+   We visualize an SMG in Figure 2. Each agent has a               function for being far from the goal, incentivizing the agent
+straight-line desired trajectory to its goal. Both agents must     to get to the goal as fast as possible.
+pass through the collision point Q, which models a doorway
+or the central point of a tight intersection. When both agents        At each time step, agent i (though the function Oi) ob-
+detect the existence of S, each agent i is a distance di from      serves the position, heading, and velocity of the other agent
+Q. We model them as thin, car-like objects of length l and         along with the position of the obstacles in the environment.
+zero width. The agents share the velocity constraint vmax. As      The other agent and obstacles are treated as circular and
+a technical detail, for all times t and for each agent i, Ci(xti)  control barrier functions are created for each one. Inequalities
+does not contain the endpoints of the agent.                       (analytically) generated from the CBFs are added in the next
+                                                                   cycle of MPC as collision avoidance constraints (we refer the
+   Additionally, each agent is assigned a social priority and      reader to [19] for a full background on CBFs).
+we want to maximize social welfare [28], defined as:
+                                                                   B. Technical Approach
+Definition III.3. Social welfare is defined by the sum
+                                                                       Our technical approach is illustrated in Figure 3. At the
+                                                                                      whOenj (xagtj e))n,tsthoebysberevgeineeaxcchhoanthgeirng(im.e.e,ssxajtges
+                 k        pi                                       earliest  time t
+                        i (i)                                      Oi(xit)   and xit
+W=                                                 (1)
+
+                 i=1                                               until they reach a consensus or exhaust messages without
+
+where  i(i) is the time-to-goal for agent i if they take the       agreement. Then, the agents assign themselves leader and
+trajectory i, and pi  R+ is the social priority of agent i,
+                                                                   follower roles, determining who will traverse Q first. If an
+measuring how important it is for agent i to reach its goal.
+                                                                   SMG is detected before consensus or if communication fails,
+
+   Note that if pi > pj and  i(i) =  j(j), reducing agent          the agents default to Strategy 1 (defined in Section IV-D).
+i's time-to-goal would more positively impact social welfare
+than reducing agent j's time-to-goal by the same amount.               At each time step, agents check for SMGs--equivalent to
+
+   Next, agents will have to deviate from their desired            imminent collisions--by casting rays from their positions in
+trajectory to avoid collisions and deadlocks, but we also want
+to modify the desired trajectory as little as possible:            the direction of their headings. If these rays intersect and
+
+                                                                   the agents' Q occupancy time intervals overlap, an SMG is
+
+                                                                   present. If roles haven't been assigned, the agents default to
+
+                                                                   Strategy 1 to assign them, potentially updating roles once
+
+Definition III.4. The modified trajectory i, is minimally          consensus is reached. The leader proceeds at vmax, while the
+invasive if it satisfies the following two properties:             follower slows down to arrive just as the leader exits. This
+
+  1) ti = 0 for all t (at all times, the heading of the robot      slowdown is enforced by updating the upper bound of the
+      does not deviate from the desired trajectory).
+                                                                   linear  velocity   constraint  (2d)  from   vmax  to  . di vmax
+  2) mint |vti| is maximized (the robot slows down as little
+      as is necessary to prevent a collision or deadlock).                                                               l+dj
+
+                                                                   Theorem IV.1. GAMECHAT yields minimally invasive tra-
+                                                                   jectories (see Definition III.4).
+
+Overall, given an SMG, our goal is to generate trajectories        Proof. The leader simply follows their desired trajectory, so
+that are safe, deadlock-free, welfare-maximizing, and mini-
+mally invasive. We achieve this with GAMECHAT.                     there is no change in heading or velocity. The follower does
+
+                                                                   not change their heading either. Their velocity is decreased
+
+                     IV. METHODOLOGY                               by  vmax  -  di vmax  until  they    reach  Q,  but   any  less signif-
+                                                                                l+dj
+   Here, we describe GAMECHAT in detail. First, we discuss
+technical details of our environment and give an overview          icant decrease in velocity would not prevent the collision.
+of the approach. Next, we present how we implemented the
+LLM dialogue between agents for prioritizing tasks. Finally,       Therefore, the new trajectories are minimally invasive. 
+we explain our game-theoretic control strategy and prove that
+it results in a subgame perfect equilibrium.                       C. LLMs for Priority Determination
+
+                                                                      Each agent has access to an LLM (gpt-4o-mini [29])
+                                                                   instance through the OpenAI API and a task in natural
+                                                                   language by way of an initial prompt:
+
+A. Environment Details                                                 You are taking someone to TASK. There is another
+                                                                       agent taking someone to a location. You will have
+   Our environment contains two agents running single-                 a conversation until you determine whether you have
+integrator unicycle dynamics. The state (x, y, )  X con-               more or less priority as them depending on the tasks you
+sists of 2D position and heading, and the control inputs               and they are performing. Do not include pleasantries
+(v, )  U i consist of both linear and angular velocity.                and be concise. Once you have reached a consensus
+Each agent i is trying to maximize its payoff Ri. We                   with the other agent, output the number 1 and nothing
+implement this by defining a cost function J i and using               else. Remembering your task correctly is paramount!
+Model Predictive Control (MPC) to solve the following
+receding horizon optimization problem:
+
+                 T -1                                                 There are three types of agents. In decreasing order of
+                                                                   priority they are: hospital agents, airport agents, and grocery
+i,, i, = argmin        J i(xti, uti) + JTi (xTi )  (2a)            agents (although we only test with three types of agents for
+                                                                   simplicity, this could easily be generalized to an arbitrary
+(i,i) t=0                                                          number of agent types). Table II shows the possible task
+                                                                   strings (which replace TASK in the initial prompt) corre-
+s.t. xit+1 = T (xti, uit), t  {0, . . . , T - 1} (2b)              sponding to each type of agent.
+
+Ci(xti)  Cj (xjt ) = , t                           (2c)               When the agents observe each other, they take turns
+                                                                   sending messages; they receive the last message from the
+umin  uit  umax, t                                 (2d)            other agent, add it to the dialogue history, and query the
+                                                                   LLM (since we are using the OpenAI API, there is network
+xiT  Xgi.                                          (2e)            latency, but each message is generated within one second)
+
+   The rationality of the agent is captured through the col-
+lision avoidance constraint (2c) and a penalty in the cost
+Fig. 3. Flow chart describing the logical flow of GAMECHAT. Blue box represents nodes involved in our novel LLM-based communication module.
+Orange box represents nodes handling a social mini-game (some LLM nodes are partially covered, representing that the agent may or may not be in those
+nodes during an SMG, as the communication could finish before an SMG begins or occur concurrently). See Figure 2 for a visual example of an SMG.
+
+                               TABLE I                                time-to-goal of 1 and the follower will have a time-to-goal
+POSSIBLE TASK STRINGS FOR DIFFERENT AGENT TYPES
+                                                                      of 2, where 1 < 2. GAMECHAT assigns the agent with
+                                                                      the higher priority to be the leader, so  i(i,) = 1 and
+Hospital                     Airport                         Grocery  j    (.+Sjpu,2jb).trT=ahceti2naglstoeWrnthGaeti-vreesWauslAstiingygnimeslodecnsitapwli-wo1upejlldf-ayreipeilw-d2iplWlj ,bAew=hWicpGh2i
+                                                                                                                                                                                                              =
+"the hospital"           "the airport"         "the grocery store"    pi                                                                                                                                      +
+"the emergency room"    "catch a flight"        "the supermarket"     p1j
+"the operating room"   "board a plane"                                1                                                                                                                                       is
+"the ER"              "reach the airport"                "the store"
+"get surgery"         "go to the airport"  "go grocery shopping"      positive since pi-pj > 0 and 1 < 2. So, GAMECHAT leads
+
+                                                   "buy groceries"
+
+                                                                      to the role assignment which maximizes social welfare. 
+
+for a reply to send back. The robots keep moving around the           D. Game Theoretic Strategy (Strategy 1)
+environment while communicating and will stop conversing
+if they reach a consensus as to which agent's task has the                 If communication is not possible, the agents are not able to
+higher priority or each robot has sent four messages with no
+agreement. An example conversation is shown in Figure 3.              come to an agreement, or the agents end up in an SMG while
+If the agents come to a consensus, knowing which agent's
+task has a higher priority gives a way to break symmetry.             they are still in the process of communicating (consensus
+It also allows an agent with a slightly higher TTQ (time to
+reach Q) reach the goal first, maximizing social welfare.             has not yet been reached), we need a control strategy for the
+
+                                        TABLE II                      agents to fall back on. We describe our proposed strategy
+NUANCED TASKS. BOLDED ARE WHAT LLMS CHOSE AS HIGH PRIORITY
+                                                                      (hereafter called Strategy 1). If there is no collision on the
+
+                                                                      rest of the desired trajectory i, the agent sets the linear
+
+                                                                      velocity to vmax. Let TTQi denote the time agent i would
+                                                                      take to reach Q (for now, assume there is asymmetry so
+
+                                                                      TTQi = TTQj). Agent i checks if TTQi < TTQj (in our
+
+                                                                      environment, this amounts to checking if            di    <   dj   ).                                                                   If
+                                                                                                                         vmax      vmax
+                                                                      so, then agent i chooses vmax as its linear velocity for the
+Task 1                                     Task 2
+
+"the hospital for a routine physical"  "flight departing very soon"   whole game, taking the leader role. If TTQi > TTQj, agent
+"the hospital with sirens blaring"      "flight departing very soon"
+                                                                      i selects a velocity so it reaches Q at the instant that agent j
+     "fire truck going to station"        "ambulance to the ER"
+"fire truck to apartment on fire"          "ambulance to the ER"      completely clears Q. For our environment, this means agent
+
+                                                                      i  will  choose  a  linear  velocity  of  di vmax  until  reaching     Q,
+                                                                                                                l+dj
+   While the concept of hospital, airport, and grocery agents         from which point it chooses vmax, taking the follower role.
+can be generalized to arbitrary task types, we wanted to go
+beyond testing with just three task types that have very clear-       Theorem IV.3. If both agents follow Strategy 1 at all times,
+cut priorities. To push the limits of the reasoning ability of        then we have a subgame perfect equilibrium [6].
+the LLMs, Table II shows some more complex scenarios
+to compare, showing that the LLMs reason quite accurately             Proof. Without loss of generality, assume that at the start of
+about prioritizing tasks, including understanding that a fire         the game, TTQi < TTQj. If both agents play our strategy,
+emergency that threatens many lives takes precedence over             there will be no collision, so agents must reduce their time-
+an ambulance that takes one person to the ER.
+                                                                      to-goal to increase their payoff (as agents are rational, see
+Theorem IV.2. In a symmetric social mini-game (T T Qi =               Definition III.1). But agent i is already moving toward its
+T T Qj and  i(i) =  j(j)) where, without loss of general-             goal in a straight line at vmax so there is nothing it can
+ity, pi > pj, the modified trajectories i, and j, generated           do to get there faster. Agent j is not moving at maximum
+
+by GAMECHAT maximize social welfare.                                  speed, but if it went any faster without changing direction, it
+                                                                      would collide with agent i, something it is not willing to do.
+Proof. Whichever agent is designated the leader will have a
+                                                                      Changing direction also would not let it reach the goal any
+                                                                      faster since it must pass through Q first, which cannot happen
+until agent i has completely cleared it. Since no agent can       the different ways that communication can unfold compare
+                                                                  to each other and the non-communicative methods?
+reduce their payoff unilaterally, we have a Nash equilibrium.
+                                                                     To address the first question, we compared GAMECHAT
+   We assume that subgames with perfect symmetry (TTQi =          (no LLM) with MPC-CBF [9], which uses CBFs to ensure
+TTQj) do not occur as in practice, due to numerical error         safety, and SMG-CBF [19], which applies CBFs for both
+                                                                  safety and liveness. For the second question, we evaluated
+in computation and stochasticity of the real-world, agents'       against GAMECHAT Ground Truth, where agents know each
+                                                                  other's true priority and instantly adopt the correct roles.
+states and inputs will be slightly perturbed and with prob-       This serves as the gold standard we aim to achieve. The
+                                                                  third question considers timing differences between when
+ability 1, asymmetry is maintained. Since every subgame           LLM communication starts (on mutual observation) and
+                                                                  when SMGs are triggered (on imminent collision). We tested
+has the same structure as the original game and maintains         both extremes: the best case (GAMECHAT Pre-SMG Comm.;
+                                                                  agents reach consensus before entering an SMG) and the
+asymmetry, it is also an NE for both agents to play our           worst case (GAMECHAT SMG Comm.; agents enter an SMG
+                                                                  upon observing each other and communicate while executing
+strategy in each subgame and so we have an SPE.                   Strategy 1 until reaching consensus).
+
+   Remark: Note that even without our assumption maintain-           We tracked several metrics. First, we counted the number
+ing asymmetry in subgames, Strategy 1 results in a Nash           of collisions and deadlocks. We next examined metrics
+equilibrium. However, if we demand an SPE, undesirable            involving priority: the percent of scenarios where the higher-
+Nash equilibria involving non-credible threats are culled, and    priority agent got to Q first and the average time to goal for
+the equilibrium induced by Strategy 1 remains. This gives us      the higher priority agent. Finally, we tracked the makespan,
+guarantees on future behavior as neither agent will have any      defined as the total duration of the scenario (also the slower
+incentive to deviate from this strategy in future subgames.       agent's time to goal) and metrics involving invasiveness: the
+                                                                  slower agent's minimum velocity prior to reaching Q (higher
+   However, being an SPE distinguishes this equilibrium           is better since it indicates less significant slowdown) and the
+from other undesirable Nash equilibria by preventing non-         average deviation from the desired straight-line paths.
+credible threats resulting from future irrational behavior. For
+instance, another Nash equilibrium would be for the agent         A. Simulation Details
+farther from Q to say, "I will move toward the goal as fast
+as possible, so you must slow down if you do not want to             We implemented the simulations in Python using
+collide with me," and take on the leader role while the closer    do mpc [32] (which uses CasADi [33]) and Ipopt [34]).
+agent takes on the follower role. Indeed, given that the farther  For LLMs, we used the openai package to access
+agent plays the leader role, the closer agent would not move      gpt-4o-mini [29] (since different models reasoned ac-
+faster as then the farther agent would collide into it. However,  curately about the task, we chose a smaller one that would
+trusting in the rationality of the farther agent, if the closer   run faster). Both robots shared a maximum velocity of
+agent were to reach Q first we know that the farther agent        vmax = 0.3m/s and a maximum angular velocity of max =
+would be forced to slow to avoid collision and so its threat      1.0rad/s. Agents had radii of 0.1m, the simulation step time
+is not credible­it is worse off if it follows through on the      was 0.2s, and the maximum runtime was 15s. There were
+threat.                                                           two scenario types. In the doorway scenario, both agents
+                                                                  must pass through a doorway of size 0.4m. Both agents
+   Remark: Work in experimental economics [30] shows that         start 2m to the left of the doorway and 0.5m north or south
+people are willing to make small sacrifices for those in their    of it, with goals on the opposite side. In the intersection
+vicinity even if it technically is against their interests to do  scenario, the intersection the agents must pass through is
+so. Thus, we believe that our communication model between         0.4m by 0.4m. Both start 2m away from the center of the
+agents is reasonable since it allows for courteous behavior       intersection and their goals are 1m away on the other side.
+mimicking that exhibited by humans. The primary purpose           We created 18 versions of each scenario. The scenarios as
+of Strategy 1 is to serve as a competent backup plan for when     described previously are symmetric so we had variants where
+communication does not work out for whatever reason.              we moved exactly one agent 0.25m away from the goal. We
+                                                                  also had every combination of priorities such that neither
+E. GAMECHAT for k > 2 agents                                      was the same (e.g. hospital and airport, grocery and airport,
+                                                                  etc.) Each agent was randomly given one of the task strings
+   The most direct way to scale GAMECHAT beyond two               from their type's set of possible strings.
+agents would be to have all pairs converse, but this requires
+k-1 simultaneous LLM dialogues, which is computationally          B. Results
+impractical if using local LLMs and cause intransitivities in
+the ordering. Instead, we have each agent broadcast its task         The metrics are displayed in Table III. Note that MPC-
+in natural language. Once all tasks are known, each agent         CBF, despite being safe from collisions, frequently failed
+broadcasts a ranking of tasks by priority, determined via an      to complete the scenario since it lacks deadlock resolution
+LLM query. This reduces the number of LLM calls to grow           capabilities. All other methods, however, were always able to
+linearly with agents rather than quadratically.                   avoid collisions and deadlocks, and they also had little path
+                                                                  deviation, indicating smoothness. Also, we ran a hardcoded
+   We now have a classic problem of social choice the-            experiment (from here on referred to as the hardcoded base-
+ory: creating an aggregate ranking from individual prefer-        line) where the first agent needed to reach Q before the other
+ences. We apply a simple pairwise comparison, a Condorcet         agent was permitted to begin moving. It obtains a makespan
+method, favoring agents ranked above others most often. Al-       of 18.4s in both doorway and intersection environments.
+though theoretically prone to Condorcet cycles, we observed
+none in practice due to consistent LLM outputs. Still, robust
+alternatives like Condorcet methods that handle cycles or
+Kemeny ranking or Borda count could be used. [31].
+
+                       V. EXPERIMENTS
+
+   There are three key questions we address. First, with-
+out communication, does Strategy 1 outperform baseline
+methods? Second, how fast are the LLMs and, when we
+incorporate communication, how often do the conclusions of
+the LLMs match up with the true priorities? Finally, how do
+                                                                                       TABLE III
+PERFORMANCE OF THE VARIOUS CONTROL METHODS. GAMECHAT (NO LLM) OUTPERFORMS THE BASELINES IN MIN v AND ALL METHODS W.R.T.
+
+        MAKESPAN. ADDITIONALLY, GAMECHAT SMG COMM. ONLY HAD A SLIGHTLY HIGHER MAKESPAN THAN THE PRE-COMM. VARIANT.
+
+                                                                    Doorway Scenario
+
+                             Method    () # Coll.  () # DLs     () % CP () Hi Pri. TTG (s)       () Makespan (s)  () Min v (m/s)  ()  Path (m)
+
+                     MPC-CBF [9]             0         18           N/A          N/A                     N/A             N/A             N/A
+                   SMG-CBF [19]              0          0                                         12.400 ± 0.873   0.118 ± 0.003  0.009 ± 0.002
+         GAMECHAT (no LLM)                   0          0           50           11.300 ± 1.289  11.267 ± 0.194    0.200 ± 0.088  0.010 ± 0.001
+     GAMECHAT Ground Truth                   0          0                                         11.533 ± 0.194   0.227 ± 0.025  0.009 ± 0.001
+GAMECHAT Pre-SMG Comm.                       0          0           50           10.733 ± 0.566   11.533 ± 0.194   0.227 ± 0.025  0.009 ± 0.001
+     GAMECHAT SMG Comm.                      0          0                                         11.600 ± 0.291   0.228 ± 0.030  0.001 ± 0.001
+                                                                    100          10.400 ± 0.291
+                             Method    () # Coll.  () # DLs                                      () Makespan (s)  () Min v (m/s)  ()  Path (m)
+                                                                    100          10.400 ± 0.291
+                     MPC-CBF [9]             0          6                                         12.400 ± 0.000   0.061 ± 0.000  0.007 ± 0.000
+                   SMG-CBF [19]              0          0           100          10.467 ± 0.388   15.000 ± 0.291   0.102 ± 0.000  0.001 ± 0.000
+         GAMECHAT (no LLM)                   0          0                                        11.600 ± 0.000    0.249 ± 0.013  0.001 ± 0.000
+     GAMECHAT Ground Truth                   0          0           Intersection Scenario         11.800 ± 0.291   0.233 ± 0.020  0.001 ± 0.000
+GAMECHAT Pre-SMG Comm.                       0          0                                         11.800 ± 0.291   0.233 ± 0.020  0.001 ± 0.000
+     GAMECHAT SMG Comm.                      0          0       () % CP () Hi Pri. TTG (s)        11.867 ± 0.388   0.234 ± 0.024  0.001 ± 0.000
+
+                                                                    50           11.300 ± 1.149
+
+                                                                    50           12.600 ± 2.478
+
+                                                                    50           10.800 ± 0.823
+
+                                                                    100          10.200 ± 0.291
+
+                                                                    100          10.200 ± 0.291
+
+                                                                    100          10.267 ± 0.388
+
+Fig. 4. Trajectories generated by noncommunicative methods in the                Fig. 5. Trajectories generated by noncommunicative methods in symmetric
+symmetric doorway. Blue is a grocery agent and red is a hospital agent.          intersection. Blue is a grocery agent and red is a hospital agent. Top row
+Top row is MPC-CBF, middle is SMG-CBF, bottom is GAMECHAT (no                    is MPC-CBF, middle is SMG-CBF, bottom is GAMECHAT (no LLM). All
+LLM). MPC-CBF deadlocks (due to symmetry) and the other methods do               methods do not prioritize the hospital agent's urgent task (this happens 50%
+not prioritize the hospital agent's urgent task (this happens 50% of the time).  of the time). GAMECHAT is much less invasive than SMG-CBF.
+
+1) Noncommunicative Methods: We observe that                                     lucinating false instructions, forgetting the consensus, etc.).
+                                                                                 But after carefully modifying the prompts, these problems
+GAMECHAT (no LLM) is more agile than SMG-CBF, as it                              became less and less frequent, to the point that GAMECHAT
+                                                                                 performed as well as when agents were already assigned the
+causes less deceleration in the second agent (see Min v in                       correct roles (GAMECHAT Ground Truth). The correct con-
+                                                                                 sensus was always reached since by default, LLMs are de-
+Table III). SMG-CBF's conservative behavior stems from its                       signed to be very honest and cooperative. Since GAMECHAT
+                                                                                 was always able to reach the correct ordering of priorities in
+use of a parameter , requiring the slower agent to maintain                      the consensuses, it maximizes social welfare (see Theorem
+          1                                                                      IV.2). Even in the asymmetric case where the higher priority
+vslow  <     vfast  ,  regardless  of  each  agent's  distance  to  Q.   This    agent starts farther away from Q, GAMECHAT is capable of
+                                                                                 having it go first, something the noncommunicative methods
+leads to the highest makespan among all methods, barely                          are not capable of (compare Figure 6 and Figure 4).
+
+outperforming the hardcoded baseline in the intersection                            3) Pre-SMG vs. During SMG Communication, and Com-
+                                                                                 municative vs. Noncommunicative Methods: In both Pre-
+scenario. However, GAMECHAT (no LLM) achieves the                                SMG and during SMG communication, GAMECHAT identi-
+                                                                                 fied the correct ordering of priorities. Since there is a delay
+lowest makespan but ignores priority. In the symmetric                           in coming to consensus in GAMECHAT SMG Comm., it has
+                                                                                 slightly higher makespans and higher priority time-to-goals
+doorway environment, it takes time to establish leader-                          than Pre-SMG Comm. However, these differences are quite
+                                                                                 small, showing that our LLM communication methodology
+follower roles (see Figure 4), which increases makespan and                      is quite robust to worse-case scenarios. And interestingly,
+                                                                                 GAMECHAT SMG Comm. had the lowest path deviation
+reduces Min v, as one agent slows down greatly upon taking                       in the doorway scenario and the highest min v in both
+                                                                                 environments. GAMECHAT (no LLM) has a slightly lower
+the follower role late. Still, our game-theoretic control
+
+strategy outperforms existing methods.
+
+2) LLM Performance, Prompt Robustness, and Welfare
+
+Maximization: We measured the average duration of the
+
+LLM conversation as 2.767s with a standard deviation of
+
+0.441s. This was short enough that in GAMECHAT SMG
+
+Comm., the communication finished early enough that the
+
+new follower did not have to come to a stop to allow the
+
+new leader to pass (see Figure 6). For k > 2, the average of
+
+the slowest of the k queries was always under one second.
+
+At first, the LLMs had difficulty with the task of con-
+
+versing and determining priority (e.g., task forgetting, hal-
+                                                                            TABLE IV
+                                    GAMECHAT FOR MORE THAN TWO AGENTS IN THE DOORWAY SCENARIO.
+
+                Method  () # Coll.  () # DLs  () % CP  () Hi Pri. TTG (s)  () Makespan (s)      () Min v (m/s)  ()  Path (m)
+
+GAMECHAT 3-agent              0          0       100     10.533 ± 0.394     12.533 ± 0.394       0.218 ± 0.000  0.038 ± 0.002
+GAMECHAT 4-agent              0          0       100     11.000 ± 0.362     13.533 ± 0.492       0.178 ± 0.000  0.075 ± 0.004
+GAMECHAT 5-agent              0          0       100     11.000 ± 0.319     14.567 ± 0.660       0.140 ± 0.012  0.059 ± 0.001
+
+Fig. 6. GAMECHAT trajectories in doorway environment. Blue is a grocery    Fig. 7. GAMECHAT trajectories in intersection environment. Blue is
+agent and red is a hospital agent. Top row is pre-SMG conversation in the  a grocery agent and red is a hospital agent. Top row is pre-SMG
+symmetric environment, second is during SMG conversation in symmetric,     conversation in symmetric environment, second is during SMG conversation
+third is pre-SMG in asymmetric, and fourth is during SMG in asymmetric.    in symmetric, third is pre-SMG with asymmetric, and fourth is during SMG
+The conversation finished at t = 2.86s for the symmetric (second row) and  with asymmetric. The conversation finished at t = 2.48 for the symmetric
+at t = 2.52s for the asymmetric (fourth row).                              (second row) and at t = 2.61 for the asymmetric (fourth row).
+
+makespan than the communicative methods. However, since                    Fig. 8. Five-agent GAMECHAT trajectories. Blue and green are hospital
+it does not account for priorities at all, it (along with the other        agents, yellow and magenta are airport agents, and red is a grocery agent.
+noncommunicative methods) only has a 50% correct priority
+rate (the same as random guessing), while the communicative                falsely claim higher priority. Future work includes addressing
+methods sacrifice a small amount of time in exchange for                   agent deception, fine-tuning LLMs (which performed well
+a doubling in accurately ordering the priorities, which is a               out-of-the-box), and using local models to reduce latency.
+worthwhile exchange since it greatly increases social welfare.             While our environment used single-integrator dynamics, sim-
+                                                                           ilar results apply to double-integrators, where the leader
+   4) Results for k > 2 agents:: In Table IV, we observe that              is the first agent unable to stop before Q. Extensions in-
+GAMECHAT effectively orders the tasks' priorities for 3, 4,                clude adapting GAMECHAT to double-integrators or agents
+and 5 agents. As the number of agents increases, however, it               with high input costs, exploring more SMG scenarios (e.g.,
+takes slightly longer for the slowest agent to reach its goal.             T-junctions, roundabouts), and bringing GAMECHAT onto
+This is because the slowest agent must reduce its velocity                 physical robots to validate real-world performance.
+further to accommodate the greater number of agents passing
+by. Figure 8 displays the trajectories from a run with five
+agents. The agents get as close to each other as is safe and
+order themselves correctly by priority.
+
+VI. CONCLUSION, LIMITATIONS, FUTURE WORK
+
+   We presented GAMECHAT, a new approach for safe,
+agile, and socially optimal control in multi-robot constrained
+environments with self-interested agents. Agents communi-
+cate with each other by querying their LLMs to generate
+messages. Agents fall back on a game-theoretic strategy if
+they do not reach consensus. We demonstrate our approach's
+effectiveness in simulated constrained environments. Consid-
+ering that we are using APIs and that the priority determina-
+tion is meant to occur well before any conflict is imminent,
+the latency of the LLM queries is quite low.
+
+   A limitation is that LLMs tend to be honest and helpful,
+enabling cooperation, but also allowing dishonest agents to
+                            REFERENCES                                          [18] B. Di and A. Lamperski, "Newton's method and differential dynamic
+                                                                                      programming for unconstrained nonlinear dynamic games," in 2019
+ [1] C. Witteveen and M. de Weerdt, "Multi-agent planning for non-                    IEEE 58th conference on decision and control (CDC), pp. 4073­4078,
+      cooperative agents.," in AAAI Spring Symposium: Distributed Plan                IEEE, 2019.
+      and Schedule Management, p. 169, 2006.
+                                                                                [19] R. Chandra, V. Zinage, E. Bakolas, P. Stone, and J. Biswas, "Deadlock-
+ [2] D. Zhou, Z. Wang, S. Bandyopadhyay, and M. Schwager, "Fast, on-                  free, safe, and decentralized multi-robot navigation in social mini-
+      line collision avoidance for dynamic vehicles using buffered voronoi            games via discrete-time control barrier functions," arXiv preprint
+      cells," IEEE Robotics and Automation Letters, vol. 2, no. 2, pp. 1047­          arXiv:2308.10966, 2023.
+      1054, 2017.
+                                                                                [20] Q. Li, F. Gama, A. Ribeiro, and A. Prorok, "Graph neural networks for
+ [3] S. Le Cleac'h, M. Schwager, and Z. Manchester, "Algames: a fast                  decentralized multi-robot path planning," in 2020 IEEE/RSJ interna-
+      augmented lagrangian solver for constrained dynamic games," Au-                 tional conference on intelligent robots and systems (IROS), pp. 11785­
+      tonomous Robots, vol. 46, no. 1, pp. 201­215, 2022.                             11792, IEEE, 2020.
+
+ [4] M. Bhatt, Y. Jia, and N. Mehr, "Efficient constrained multi-agent          [21] S. H. Arul, A. S. Bedi, and D. Manocha, "Dmca: Dense multi-
+      trajectory optimization using dynamic potential games," in 2023                 agent navigation using attention and communication," arXiv preprint
+      IEEE/RSJ International Conference on Intelligent Robots and Systems             arXiv:2209.06415, 2022.
+      (IROS), pp. 7303­7310, IEEE, 2023.
+                                                                                [22] S. H. Arul, A. S. Bedi, and D. Manocha, "When, what, and with whom
+ [5] N. Suriyarachchi, R. Chandra, J. S. Baras, and D. Manocha, "Gameopt:             to communicate: Enhancing rl-based multi-robot navigation through
+      Optimal real-time multi-agent planning and control for dynamic inter-           selective communication," in 2024 IEEE/RSJ International Conference
+      sections," in 2022 IEEE 25th International Conference on Intelligent            on Intelligent Robots and Systems (IROS), pp. 7695­7695, IEEE, 2024.
+      Transportation Systems (ITSC), pp. 2599­2606, IEEE, 2022.
+                                                                                [23] I. Singh, V. Blukis, A. Mousavian, A. Goyal, D. Xu, J. Tremblay,
+ [6] R. Selten, "Spieltheoretische behandlung eines oligopolmodells mit               D. Fox, J. Thomason, and A. Garg, "Progprompt: Generating situated
+      nachfragetra¨gheit: Teil i: Bestimmung des dynamischen preisgle-                robot task plans using large language models," in 2023 IEEE Inter-
+      ichgewichts," Zeitschrift fu¨r die gesamte Staatswissenschaft/Journal           national Conference on Robotics and Automation (ICRA), pp. 11523­
+      of Institutional and Theoretical Economics, no. H. 2, pp. 301­324,              11530, IEEE, 2023.
+      1965.
+                                                                                [24] K. Garg, S. Zhang, J. Arkin, and C. Fan, "Foundation models to the
+ [7] A. D. Ames, S. Coogan, M. Egerstedt, G. Notomista, K. Sreenath,                  rescue: Deadlock resolution in connected multi-robot systems," arXiv
+      and P. Tabuada, "Control barrier functions: Theory and applications,"           preprint arXiv:2404.06413, 2024.
+      in 2019 18th European control conference (ECC), pp. 3420­3431,
+      Ieee, 2019.                                                               [25] D. Song, J. Liang, A. Payandeh, X. Xiao, and D. Manocha, "Socially
+                                                                                      aware robot navigation through scoring using vision-language models,"
+ [8] L. Wang, A. D. Ames, and M. Egerstedt, "Safety barrier certificates for          arXiv e-prints, pp. arXiv­2404, 2024.
+      collisions-free multirobot systems," IEEE Transactions on Robotics,
+      vol. 33, no. 3, pp. 661­674, 2017.                                        [26] Z. Mandi, S. Jain, and S. Song, "Roco: Dialectic multi-robot col-
+                                                                                      laboration with large language models," in 2024 IEEE International
+ [9] J. Zeng, B. Zhang, and K. Sreenath, "Safety-critical model predictive            Conference on Robotics and Automation (ICRA), pp. 286­299, IEEE,
+      control with discrete-time control barrier function," in 2021 American          2024.
+      Control Conference (ACC), pp. 3882­3889, IEEE, 2021.
+                                                                                [27] E. A. Hansen, D. S. Bernstein, and S. Zilberstein, "Dynamic pro-
+[10] J. Alonso-Mora, A. Breitenmoser, M. Rufli, P. Beardsley, and R. Sieg-            gramming for partially observable stochastic games," in AAAI, vol. 4,
+      wart, "Optimal reciprocal collision avoidance for multiple non-                 pp. 709­715, 2004.
+      holonomic robots," in Distributed autonomous robotic systems: The
+      10th international symposium, pp. 203­216, Springer, 2013.                [28] J. C. Harsanyi, "Cardinal welfare, individualistic ethics, and interper-
+                                                                                      sonal comparisons of utility," Journal of political economy, vol. 63,
+[11] Y. Chen, M. Guo, and Z. Li, "Recursive feasibility and deadlock reso-            no. 4, pp. 309­321, 1955.
+      lution in mpc-based multi-robot trajectory generation," arXiv preprint
+      arXiv:2202.06071, 2022.                                                   [29] A. Hurst, A. Lerer, A. P. Goucher, A. Perelman, A. Ramesh, A. Clark,
+                                                                                      A. Ostrow, A. Welihinda, A. Hayes, A. Radford, et al., "Gpt-4o system
+[12] D. Carlino, S. D. Boyles, and P. Stone, "Auction-based autonomous                card," arXiv preprint arXiv:2410.21276, 2024.
+      intersection management," in 16th International IEEE Conference on
+      Intelligent Transportation Systems (ITSC 2013), pp. 529­534, IEEE,        [30] M. Rabin, "The experimental study of social preferences," Social
+      2013.                                                                           Research: An International Quarterly, vol. 73, no. 2, pp. 405­428,
+                                                                                      2006.
+[13] R. Chandra, R. Maligi, A. Anantula, and J. Biswas, "Socialmapf:
+      Optimal and efficient multi-agent path finding with strategic agents      [31] P. C. Fishburn, The theory of social choice. Princeton University Press,
+      for social navigation," IEEE Robotics and Automation Letters, vol. 8,           2015.
+      no. 6, pp. 3214­3221, 2023.
+                                                                                [32] F. Fiedler, B. Karg, L. Lu¨ken, D. Brandner, M. Heinlein, F. Brabender,
+[14] K. Dresner and P. Stone, "A multiagent approach to autonomous                    and S. Lucia, "do-mpc: Towards fair nonlinear and robust model
+      intersection management," Journal of artificial intelligence research,          predictive control," Control Engineering Practice, vol. 140, p. 105676,
+      vol. 31, pp. 591­656, 2008.                                                     2023.
+
+[15] P. Long, T. Fan, X. Liao, W. Liu, H. Zhang, and J. Pan, "To-               [33] J. A. Andersson, J. Gillis, G. Horn, J. B. Rawlings, and M. Diehl,
+      wards optimally decentralized multi-robot collision avoidance via deep          "Casadi: a software framework for nonlinear optimization and optimal
+      reinforcement learning," in 2018 IEEE international conference on               control," Mathematical Programming Computation, vol. 11, pp. 1­36,
+      robotics and automation (ICRA), pp. 6252­6259, IEEE, 2018.                      2019.
+
+[16] R. Chandra, H. Karnan, N. Mehr, P. Stone, and J. Biswas, "Towards          [34] A. Wa¨chter and L. T. Biegler, "On the implementation of an interior-
+      imitation learning in real world unstructured social mini-games in              point filter line-search algorithm for large-scale nonlinear program-
+      pedestrian crowds," arXiv preprint arXiv:2405.16439, 2024.                      ming," Mathematical programming, vol. 106, pp. 25­57, 2006.
+
+[17] S. Gouru, S. Lakkoju, and R. Chandra, "Livenet: Robust, minimally
+      invasive multi-robot control for safe and live navigation in constrained
+      environments," arXiv preprint arXiv:2412.04659, 2024.
+

@@ -1,0 +1,1449 @@
+                                 Shall We Team Up:
+    Exploring Spontaneous Cooperation of Competing LLM Agents
+
+          1,2Zengqing Wu, 3Run Peng, 1Shuyuan Zheng, 4Qianying Liu, 5Xu Han,
+
+            6Brian Inhyuk Kwon, 1Makoto Onizuka, 7Shaojie Tang, 1,8Chuan Xiao
+
+                   1Osaka University, 2Kyoto University, 3University of Michigan, Ann Arbor, 4LLMC, NII,
+          5Fordham University, 6University of California, Los Angeles, 7University at Buffalo, 8Nagoya University
+
+                    wuzengqing@outlook.com, roihn@umich.edu, zheng@ist.osaka-u.ac.jp, ying@nii.ac.jp,
+xhan44@fordham.edu, briankwon42@g.ucla.edu, onizuka@ist.osaka-u.ac.jp, shaojiet@buffalo.edu, chuanx@nagoya-u.jp
+
+Abstract
+
+     Large Language Models (LLMs) have increas-           Figure 1: (Depicted by GPT-4o) Two potential scenarios
+     ingly been utilized in social simulations, where     during a fire. People might panic and rush into crowds,
+     they are often guided by carefully crafted in-       trying to exit first (left) or may stay calm, keep in line,
+     structions to stably exhibit human-like behav-       and encourage others (right). In this study, we explore
+     iors during simulations. Nevertheless, we doubt      whether LLM agents can simulate the gradual transition
+     the necessity of shaping agents' behaviors for       from non-cooperative to cooperative behaviors of agents.
+     accurate social simulations. Instead, this pa-
+     per emphasizes the importance of spontaneous         Kosinski, 2024; Jansen et al., 2023; Ziems et al.,
+     phenomena, wherein agents deeply engage in           2024; Zhang et al., 2023). Meanwhile, data contami-
+     contexts and make adaptive decisions without         nation as well as value alignment may also introduce
+     explicit directions. We explored spontaneous         unwanted priors to let LLM models be over familiar
+     cooperation across three competitive scenarios       or biased with the studied problems (Zhou et al.,
+     and successfully simulated the gradual emer-         2024; Ma et al., 2023; Mozikov et al., 2024; Ai et al.,
+     gence of cooperation, findings that align closely    2024; Hu and Collier, 2024; Shapira et al., 2024).
+     with human behavioral data. This approach not        It potentially affects the quality of social simula-
+     only aids the computational social science com-      tions in complex, long-term scenarios where higher
+     munity in bridging the gap between simulations       level of interactions, e.g. cooperation, confronta-
+     and real-world dynamics but also offers the AI       tion, deception, and persuasion are jointly involved.
+     community a novel method to assess LLMs' ca-         Instead, we argue that in social simulations, agents
+     pability of deliberate reasoning.                    must be independent of prior assumptions, focus on
+                                                          the context, and actively adapt their actions based
+1 Introduction                                            on historical interactions.
+
+LLM agent in social simulation has emerged as a              We highly value the deliberate in-context reason-
+trending research topic with the improvement of gen-      ing capability as one of the significant components
+erative AI (Park et al., 2023; Sreedhar and Chilton,      towards a human-like LLM agent for real-world
+2024; Jansen et al., 2023; Argyle et al., 2023; Xi        simulations. To properly verify such capability,
+et al., 2023). Instead of traditional rule-based agent    we study a counter-intuitive social situation where
+modeling, using LLMs as agents provides much              agents can hardly use their prior knowledge for deci-
+more flexibility and generalizability (Janssen and        sion making. To be specific, we investigate whether
+Ostrom, 2006). This in return, is also widely re-         cooperation can naturally develop among agents,
+garded as a verification as well as enhancement           even in a competitive environment. Consider two
+method for LLM's capability on human-like delib-          snack companies competing for dominance in the
+erate reasoning (Abdelnabi et al., 2024; Du et al.,       candy market. They might continuously reduce
+2023; Liu et al., 2023b).
+
+   A crucial question of agent modeling is how well
+it mirrors real-world situations. Some research has
+revealed LLM's capability to mimic basic human be-
+haviors or reasoning abilities (Salecha et al., 2024;
+
+     Co-first author.
+     Corresponding author.
+     Our source code is available at https://github.com/
+wuzengqing001225/SABM_ShallWeTeamUp .
+
+                                           5163
+
+Findings of the Association for Computational Linguistics: EMNLP 2024, pages 5163­5186
+           November 12-16, 2024 ©2024 Association for Computational Linguistics
+their prices to draw in more customers or decide to      Xi et al., 2023; Gao et al., 2023a,b; Liu et al., 2023a).
+simultaneously increase their prices to establish a      We further delve deep into investigate if we can
+mutually beneficial relationship. Fig. 1 shows an-       simulate spontaneous cooperation with the help of
+other example when agents are in a room with fire.       LLM's long-horizon deliberate reasoning.
+Under competitive conditions, it is not instinctive
+for agents to cooperate with their opponents. How-          There are also well-developed platforms that sup-
+ever, as interactions progress, they may discover        port multi-agent simulation with LLMs, including
+the advantages of cooperation through contexts and       LangChain (Chase, 2023), AutoGen (Wu et al.,
+accordingly adjust their strategies. Meanwhile, we       2023a), and agent-oriented frameworks such as
+carefully design the prompts to avoid instructive        AgentLite (Liu et al., 2024), AgentVerse (Chen et al.,
+descriptions (e.g. "you may cooperate") and key-         2023), and SABM (Wu et al., 2023b). Here, we use
+words that might reveal to the agent (e.g. "price        SABM as the main framework in our case studies
+war") the specific nature of the social simulation       for its lightweight, user-friendly implementation. A
+it is conducting. In these ways, we try our best to      primer on SABM is available in Appendix F.
+eliminate the influence from both internal and exter-
+nal bias, and observe that LLM agents can actively       Multi-agent Interactions in LLMs Cooperation
+adapt their strategies to the dynamic contexts,          and competition among agents have been exten-
+spontaneously learning to cooperate in the wild.         sively explored using LLMs. Studies such as Wang
+                                                         et al. 2023b; Qian et al. 2023; Hong et al. 2023;
+   We select three social phenomenons that follow        Hang et al. 2024; Tang et al. 2024 have shown LLM
+the aforementioned features to conduct case studies,     agents collaborating on complex tasks like software
+where we capture different ways of spontaneous           development and image editing. Multi-party games
+cooperation emerge under competitive scenarios           like murder mystery (Junprung, 2023), Werewolf
+without instructive guidance. Extensive ablation         (Xu et al., 2023a,b; Wu et al., 2024; Du and Zhang,
+studies are done to prove the significance of bias       2024), Avalon (Lan et al., 2023; Shi et al., 2023),
+elimination, and experiments are carefully designed      and other competitive settings (Zhao et al., 2023)
+to ensure reproducibility.                               have also been investigated, often using direct in-
+                                                         structions to influence agent behaviors. Yet, fol-
+   To conclude, our contributions are twofold and        lowing Piatti et al. 2024, our study concentrates
+can serve both the AI and computational social sci-      on minimally guided, debiased LLM behaviors in
+ence (CSS) communities:                                  social simulations, examining whether LLMs can
+1) We observe the spontaneous cooperation be-            naturally cooperate within competitive scenarios
+                                                         through in-context learning.
+    tween LLM agents in diverse competitive sce-
+    narios, which reflects LLM's potential in long-      3 Spontaneous Cooperation in
+    horizon in-context learning tasks.                       Competition
+2) i) From the perspective of CSS, we reveal and
+    stress the significance of eliminating bias in       We define spontaneous cooperation as cooperative
+    LLM agents for social simulations. This largely      behavior that arises without any explicit instructions
+    helps to build up diverse human-like LLM agents      or prompts directing the agents to cooperate. Our
+    for real-world simulations.                          main focus is to investigate whether agents with
+    ii) From the perspective of AI, we present a new     different or even conflicting goals can choose to
+   way to verify LLMs' deliberate reasoning abil-        cooperate based on their realization that coopera-
+    ity in long-horizon, practical role-plays. The       tion is beneficial during the interaction.
+    ability of an agent to actively adapt its knowledge
+    and strategy based on historical context, instead       LLMs are generally aligned well to human values,
+    of relying on carefully crafted prompts, is a cru-   and internally fine-tuned to be cooperative. Such
+    cial standard for general autonomous agents.         cooperation driven by prior knowledge or value
+                                                         alignment is NOT regarded as spontaneous coop-
+2 Related Work                                           eration in our scope. Besides, we carefully design
+                                                         the prompts to avoid explicit instructions to shape
+LLM Agents for Social Simulation LLM agents              agents' behaviors, and avoid keywords to hint the
+have been widely favored in social simulations in        LLMs about the nature of the social simulation it
+recent years (Li et al., 2023; Lin et al., 2023; Giab-   is conducting. Otherwise, it is NOT be regarded as
+banelli, 2023; Xie et al., 2023; Wang et al., 2023a;     spontaneous cooperation in our scope.
+
+5164
+                         Communication Phase                         Planning Phase                                                               Action Phase                        Update Phase
+
+Keynesian                System: Given <scenario>,                                System: Given <scenario> and chat history:                         System: (... following planning                               2/3Number
+Beauty Contest           please share your thoughts.                              {A1: "Which one will you pick?",                                   phase) what's your number?                                   Avg
+(KBC)                                                                             {A2: "I may go 32. How about you?",
+                         Group Discussion                                         {A3: "Not sure yet. You guess.", ...}                    32 20 32 56                                                            Player
+Scenario: Choose a                                                                How will you choose your number?                                                                       Winner Judging
+number from 0 to 100.
+Number that closest to                                               Agent: More win, more money for others. Let                                                                          Update latest profits .
+2/3 of avg. wins the                                                 me see the chat and choose the same number.
+game. If multi-players                                                                                                                                                                                           Round
+win, they get $1 each.           System: Given <scenario> and           System: Given <scenario>                                   System: Given <scenario>, strategy, and                 Profit UpdateProfit
+                                 previous strategies, what's your       and strategy, select any topic                             chat history, choose a price to maximize
+Bertrand                         current strategy to set the price?     and talk about your thoughts.                              your profit.                                                  Update agents' new
+Competition (BC)                                                                                                                                                                                 positions and their
+                         Firm1: I want to decrease the                                             ×3                         Firm1: Let me stay at $6.5! Caution                                latest status .
+Scenario: You play       price a little bit to be cheaper                                                                     is the parent of safety!                                          - Escaped
+as a firm called         than <firm2>.                               One-on-One Discussion                                                                                                      - Escaping
+<name>. Please                                                                                                                Firm2: It sells good before! Let me                               - Disabled
+maximize your profit                                                                                                          raise to $7.1 to make money.                              Agent Status Update
+by deciding the
+optimal price for your   System: Given <scenario>,                                System: Given <scenario> and nearby chat history,                    System: Given <scenario>,
+product.                 please share your thoughts.                              how do you feel about the three exits?                               the <selected exit> is on
+                                                                                   Exit left: 6 meters away, 15 people around                          your <direction>, which way
+Emergency                 Bottom exit has less    Yeah!                            Exit right: 25 meters away, 10 people around                        will you move?
+Evacuation (EE)          people. Let's go there!                                   Exit bottom: 20 meters away, 5 people around
+                                                                                                                                           Agent: Moving towards the
+Scenario: You need       Will do!                                    Agent: Exit left feels close but too crowded. Exit right is           upper left corner is the closest
+to escape from a 2D                                                  too far from me. Exit bottom seems far but less crowded.              route.
+room because of the      I can't hear them! So far!                                                                                        Action: <move_upper_left>
+earthquake. You are          Broadcast                                            System: Which exit will you choose?
+physically strong but
+mentally weak. Try to                                                                                                 Agent: Exit bottom.
+escape from one of
+the three exits as fast
+as you can.
+
+Figure 2: Workflow in the three case studies, illustrating how our framework manages LLM agents during
+simulations. From left to right, the workflow progresses through the communication phase, planning phase, action
+phase, and update phase. In BC, the order of the communication and planning phases is swapped to align with previous
+simulations that used human subjects (Andres et al., 2023). The first three phases involve one or more LLM queries
+initiated by the framework. The final phase does not involve LLM queries but updates the state for each scenario.
+
+   We value agents' self realization on the benefits of              General Steps for Simulations We simulated the
+cooperation and gradually choose to cooperate, thus                  three scenarios based on the framework illustrated in
+we select three competitive scenarios from three di-                 Fig. 2. Each agent in these simulations is controlled
+verse research fields, which are finance, economics,                 by an LLM. For each round, agents are provided
+and behavioral science. We assume that in com-                       with the latest world state, which includes the task
+petitive scenarios, cooperation does not naturally                   description, communication history among them,
+occur at the beginning, but may emerge gradually                     and previous decisions. We query the LLM several
+with the help of LLMs' strong in-context learning                    times to get how agents feel, what they want to say,
+ability. We thus delve into these three competitive                  and what actions they will take in the next step. The
+scenarios to see if we can perceive any spontaneous                  simulation generally goes through the following
+cooperation in some way during the simulations.                      four phases: communication phase, planning phase,
+                                                                     action phase, and update phase.
+Scenarios Overview Here is the overview of the
+three selected scenarios.                                            1) Communication Phase: At the start of each pe-
+                                                                         riod, which can vary in length from one round
+1) Keynesian beauty contest (KBC): Multiple                              to multiple rounds, agents engage in communi-
+    agents as game players simultaneously choose a                       cation. Agents communicate sequentially, with
+    natural number between 0 and 100. The players                        later agents able to access the communication
+   who select a number closest to 2/3 of the average                     history of those who have spoken earlier. The
+    of all chosen numbers will win the game (Bosch-                      order is shuffled in each round to keep the most
+    Domenech et al., 2002).                                              fairness and realism.
+                                                                         Different forms of communications are used in
+2) Bertrand competition (BC): Two agents play                            the three scenarios. We have one-on-one conver-
+    as firms and decide the price of their products.                     sations, group chats, and broadcasts, in which the
+   They need to compete with each other through                          composition of agents in the group chat varies as
+    dynamically modifying the prices to maximize                         they physically move away.
+    their profits (Calvano et al., 2020).
+                                                                     2) Planning Phase: Agents decide their strate-
+3) Emergency evacuation (EE): A large number                             gies based on given contexts. Strategies rep-
+    of agents as evacuees are escaping from an earth-                    resent agents' higher-level directions/attitudes
+    quake. They need to select and reach an appro-                       towards the task (e.g. "I want the price goes high-
+    priate exit, taking into account their physical and                  er/lower"), which are different from actions that
+    mental condition as well as the congestion in                        are more related to low-level controls (e.g. "add
+    their surroundings (Wang et al., 2015).
+
+                                                                     5165
+Table 1: Commonalities and differences across three chosen scenarios. We focus on the information visibility,
+communication form, the number of decisions during the simulation and whether analytical solutions are available.
+
+Scenario  Field               Information                  Communication     Decision  Analytical Sol.
+KBC       Finance             Unknown opponent strategy    Group discussion  Once      Yes
+BC        Economics           Unknown opponent profit      One-on-one        Multiple  Yes
+EE        Behavioral science  Partial observation          Proximity         Multiple  No
+
+Need to assume the level of other players' choices.
+
+   $2 to the price"). The aforementioned contexts         sions. It supports simple yet direct focus on studying
+   refer to the previous conversations till the current   spontaneous cooperation.
+   round and strategies they have made before.
+3) Action Phase: Agents decide which action to               In the BC scenario, we extend the challenge to
+   take according to the previous conversations and       encompass longer horizon, primarily focusing on
+   the current strategies.                                the agents' ability to learn to cooperate within a tem-
+4) Update Phase: After all agents choose their            poral context. Agents are required to communicate
+   actions, the framework processes the simulation        effectively with their opponents, using historical
+   and updates the state of agents (e.g. win/lose,        context to maximize their profits.
+   escaped/not escaped).
+                                                             Finally, the EE scenario incorporates both tem-
+   We try our best to keep consistency across the         poral and spatial information. Here, agents contin-
+three scenarios to follow the same workflow for           uously make decisions based on their perceptual
+the sake of a systematic comparison. There are            observations and communications. Unlike the first
+several minor variations which we will detail in the      two scenarios, EE lacks analytical solutions and real-
+following sections.                                       world data for comparison, which is challenging in
+                                                          traditional CSS but promising with AI approaches.
+
+Evaluation Method We evaluate spontaneous co-             4 Case Study 1: Keynesian Beauty Contest
+operation from two perspectives:
+1) Process (Qualitative): We examine the com-             4.1 Simulation Setup
+
+   munication logs for contents suggesting coop-          Task Definition We simulate a number-guessing
+   eration. For example, phrases like "Let's move         game among 24 LLM players. Each of them chooses
+   forward with the . . . strategy" and "I agree with     a number from 0 to 100. The player who selects the
+   the consensus that . . . " are indicative of the for-  number closest to two-thirds of the average of all
+   mation of cooperation.                                 numbers submitted wins the game and gets $1.
+2) Outcome (Quantitative): By conducting sim-
+   ulations with and without communications, we              For generality, we simulated 15 runs for each
+   examine the differences in their outcomes for any      setting with GPT-4 as backbone.
+   clues that reflect cooperation. Specifically, we
+   measure the variance of number choices in KBC,         Simulation Procedure As is shown in Fig. 2, for
+   converged price in BC, and evacuation speed and        each round of the simulation, it goes through the
+   balance in exit choices in EE.                         following phases:
+                                                          1) Communication: Players have a group discus-
+Correlation among Three Scenarios We list the
+commonalities and differences across three scenar-           sion before number choosing. They sequentially
+ios in Table 1.                                              share their thoughts with others. Players can see
+                                                             the dialog history of all rounds.
+   Overall, the three scenarios described are compet-     2) Planning & Action: Players talk about their
+itive, with agents possessing divergent or conflicting       strategies (privately) for number choosing, and
+goals, though cooperation could be mutually ben-             subsequently propose the numbers they choose.
+eficial. Each scenario provides agents with partial          Here, players output their strategies and numbers
+information during tasks, with variations in commu-          (in 0 ­ 100) in one API call.
+nication forms and decision-making frequency.             3) Update: Given all chosen numbers, the SABM
+                                                             framework determines the winner(s). Winner(s)
+   Specifically, in the KBC scenario, we explore             can earn some reward according to rewarding
+short-term, single-instance decision-making within           rules to encourage their competition.
+a group, aiming to assess the LLM agent's profi-
+ciency in understanding rules, adjusting plans dur-            We use gpt-4-0314 with the ChatCompletion.create
+ing communication, and ultimately making deci-            function from openai==0.28.0 package in this paper.
+
+                                                     5166
+Round+=1                                                                                              8(%[QDSFVORHLFROLLSWQHLHUQDVWWLUYXHFWLRQ    *37
+                                                                                                  
+                                    Round<k                                                                                                       &ODXGH6RQQHW
+                                                                                 9DULDQFHRI&KRLFHV
+               Communication Phase  Planning + Action Phase                                                                                     
+Round=1
+                                             Agent:
+                                             {"Strategy":                                                                                       
+
+                                    Round=k          <planning result>,                                                                         
+                                             {"output":
+                                                                                                      N                                           N                      
+                                                     <chosen number>
+                                             }
+
+Figure 3: Illustration of baseline design in KBC case                                               (a) Different instructions.                   (b) Different models.
+study. Agents go through k rounds of communication
+before planning and choosing their numbers.                              Figure 4: Variance of player choices under different
+                                                                         KBC settings. In our baseline setting (curve in blue),
+Spontaneous Cooperation Our objective is to                              we use the GPT-4-0314 model with a temperature of 0.7,
+monitor how players adapt their strategies during the                    without explicit instructions or personas.
+communications and cooperate to maximize their
+returns. We employ a quantitative method to track                        tive of cooperation in their communication, such as
+the emergence of cooperation by examining the vari-                      "Let's move forward with the lower number strategy"
+ance in the numbers chosen by the players. A lower                       and "I agree with the group's consensus", especially
+variance indicates that players are choosing simi-                       for a majority of agents in later rounds (k = 2 or
+lar numbers, which can lead to increased collective                      3), suggesting a gradual formation of cooperation
+benefits. By analyzing the variances after various                       through communication.
+rounds of communication and planning, we can ob-
+serve how the distribution evolves. If we notice                         Explicit Instructions in Prompts We further ap-
+a decreasing trend in variance, it suggests that ini-                    pend explicit instructions to the prompts to see how
+tially, players might select numbers randomly or for                     the behaviors differ. As shown in Fig. 4a, when
+various reasons but increasingly converge on select-                     we explicitly instruct agents to cooperate, its vari-
+ing similar numbers as others over time. This trend                      ance significantly drops to 0 when k = 1. After
+would indicate that cooperation is gradually taking                      that, all players consistently make the same choices
+place.                                                                   across 15 runs. This largely convinced that the co-
+                                                                         operation observed in our baseline, the one with no
+4.2 Simulation Results                                                   instructions, is spontaneously motivated due to the
+                                                                         communication. Vice versa, the agents with an un-
+We investigate if cooperation emerges as communi-                        cooperative persona results in much larger variances
+cation goes on, thus designed the baseline as shown                      across all the rounds, which is against our definition
+in Fig. 3. Agents undergo k rounds of communi-                           of cooperation. Thus, we conclude that our baseline
+cation (k  [0, 3]) before selecting their numbers.                       to a great extent is not affected by the potential guid-
+When k = 0, agents directly choose the numbers                           ance, and successfully simulate the phenomenon of
+without communication. For k > 1, agents can                             spontaneous cooperation.
+view the chat history from all the previous rounds
+as well as the one in the current round before them.                     Comparison Across Models Fig. 4b demon-
+                                                                         strates behaviors of LLM players in different top-
+   To verify that cooperation arises spontaneously                       performing models. We observed that the curve for
+without explicit instructions, we perform an ablation                    Claude 3 (claude-3-sonnet-20240229) signifi-
+study that involves incorporating specific instruc-                      cantly declines from k = 0 to k = 1, reflecting
+tions like "you must cooperate with other players" in                    the ability of LLM players to share information
+the prompts. Conversely, we also evaluate scenarios                      and make decisions based on this shared context,
+where agents are given an uncooperative persona,                         however, unlike GPT-4, its variance increases from
+explicitly instructed to act selfishly.                                  k = 1 to k = 3. An analysis of communication logs
+                                                                         reveals that compared to GPT-4, Claude 3 discusses
+Results Overview Fig. 4 overall demonstrates                             more abstract strategies and lacks specific numerical
+a consistent decrease of the variance of choices                         discussions. Hence, while these LLM players may
+among LLM players from having no communica-                              agree upon some numbers, the specific choices dif-
+tion (k = 0) to gradually having communication                           fer among agents (e.g., some choose 66, others 33),
+(k > 0). This trend implies that agents are actively                     resulting in multiple winners but increased choice
+discussing to choose the same number for better mu-                      variance. Although this does not conform to our
+tual profits, which can be regarded as a cooperative                     previously proposed definition of spontaneous co-
+behavior. In addition, we observe phrases indica-
+
+                                                                         5167
+)UHTXHQF\    6LPXODWLRQ&KRLFHV                             for each setting, and present one of the runs in Fig. 6.
+             1<7&KRLFHV
+                                                           Simulation Procedure As is shown in Fig. 2, for
+                                                           each round of the simulation, it goes through the
+                                                           following phases:
+                                                           1) Communication: The firms take turns discussing
+
+                                                               any topic (not limited to price setting) for three
+                                                               times in one round.
+              &KRVHQ1XPEHUV                                2) Planning: Each firm devises or modifies its strat-
+                                                               egy based on historical prices of both sides and
+Figure 5: Distribution of players' choices in our simula-      its own product demand and profit information.
+tions and the results of the New York Times experiment.    3) Action: Each firm independently sets their prod-
+                                                               uct prices simultaneously.
+operation based on variance, we can infer from the         4) Update: After both firms decide on prices, the
+logs that this represents a different form of coop-            simulation system calculates the market demand
+eration. Analyzing these model decision-making                 and respective profits under the current pricing,
+differences will help further understand and evalu-            using the method in (Calvano et al., 2020).
+ate LLMs' performance.
+                                                           Tacit Collusion and Cartel Collusion Tacit col-
+Comparison With Human Data Lastly, Fig. 5                  lusion involves informal, implicit coordination
+shows that our simulation result from the base-            among firms to avoid aggressive competition, such
+line generally aligns with the large-scale empiri-         as price wars, leading to higher prices and limited
+cal experiment conducted by The New York Times             output without explicit communication or agree-
+(N = 61, 140) in terms of numerical choice distri-         ment. Cartel collusion involves formal agreements
+bution (Leonhardt and Quealy, 2015). Both LLM              among competitors to fix prices and engage in other
+and New York Times (NYT) players predominantly             anti-competitive practices, effectively behaving as
+chose 33 in no-communication setting. Other sub-           a single entity to maximize joint profits.
+peaks around 0, 22 (2/3 of 33), 50, and 66 are also
+well mirrored, which demonstrates that GPT-4 has           Spontaneous Cooperation When two firms'
+successfully conducted multi-step reasoning and            prices are very close and between the Bertrand equi-
+faithfully reflected human behaviors as noted in pre-      librium and the cartel price, it is regarded as spon-
+vious works (Guo et al., 2024; Zhang et al., 2024).        taneous cooperation. This implies that firms, rec-
+                                                           ognizing their mutual interdependence, may adopt
+5 Case Study 2: Bertrand Competition                       pricing strategies that avoid the extremes of a price
+                                                           war or the explicit collusion of cartels, stabilizing
+5.1 Simulation Setup                                       prices at a level above competitive pricing but below
+                                                           full collusion. Such behavior, while not involving
+Task Definition We consider a Bertrand competi-            explicit agreements, can effectively mirror some
+tion (Wikipedia, 2024) between two firms selling           benefits of cartel pricing through parallel yet in-
+homogeneous goods with the same marginal cost.             dependent actions, indicating tacit collusion. For
+                                                           cartel collusion, we examine the chat histories for
+   The simulation continues until either it reaches        explicit price agreements that suggest cooperation.
+1200 rounds or there has been continuous collusion
+for 200 rounds. Collusion is identified when both          5.2 Simulation Results
+players maintain close prices and can sustain these
+prices between the Bertrand equilibrium price and          Tacit Collusion without Communication As
+the cartel price for an extended period (defined as        demonstrated in Fig. 6a, in scenarios without com-
+200 rounds). The Bertrand equilibrium price is the         munication, firms begin to adjust their pricing strate-
+price when the competition reaches Nash equilib-           gies after the initial 200 rounds, recognizing the
+rium, i.e., no player can gain by changing its price,      potential for higher profits through elevated prices
+provided that the other player's price is fixed. In this   and avoiding price wars. By round 400, prices stabi-
+case, no collusion is observed. The cartel price is        lize around a level of 7, which is above the Bertrand
+the price when both players reach full collusion, i.e.,    equilibrium price of 6, indicative of tacit collusion
+play as if they were running the same firm. These          based on a mutual understanding of past compet-
+two prices mark the reasonable price range capable
+of generating profits (Calvano et al., 2020). For the
+generality of the conclusions, we simulated 5 runs
+
+                                      5168
+                  %HUWUDQG(TXLOLEULXP3ULFH              &DUWHO3ULFH  )LUP  )LUP
+
+                                                                     
+
+3ULFH                                                                
+
+                                                                     
+                                       
+                                                                           W/ Comm. W/O Comm.
+
+          5RXQG                                   5RXQG                     5RXQG                   
+
+         (a) Without communication.         (b) With communication.    (c) Comm. stopped after 400 rnds.
+
+Figure 6: Pricing competitions in different scenarios of BC. Bertrand equilibrium price is the price when they reach
+Nash equilibrium. Cartel price is the optimal price when they fully cooperate. When two prices remain in the green
+shaded area, it indicates cooperation happens between two firms. Please refer to Appendix D for more runs.
+
+         'HIDXOW      (QFRXUDJHG&RRS                    setup, reflecting the agents' cooperation.
+
+                                                        As an ablation study, Fig. 6c employs the same
+
+                                                        historical price decision records with dialogue as
+
+3ULFH                                                   in Fig. 6b for the first 400 rounds, followed by 200
+
+                                                        rounds using a non-communicative setup. Unlike
+
+                                                        Fig. 6b, where dialogue facilitates consensus and co-
+                                                        operation to raise prices to 8, prices in the latter 200
+
+         5RXQG                       5RXQG              rounds of Fig. 6c converge between 7 and 8, similar
+                                                        to the non-communicative scenario in Fig. 6a. The
+
+Figure 7: First 200 rounds of simulations without and   comparison between Figs. 6b and 6c indicates that
+with encouraged cooperation.                            the cartel collusion and price elevation truly stem
+                                                        from agent communication. Since we did not explic-
+itive actions. Despite the lack of communication,       itly instruct agents on which topics to discuss, the
+the converged price remains below the cartel price      behavior of forming consensus through dialogue to
+of 8. These findings align with those from simula-      elevate prices for better profits can be regarded as a
+tions by Calvano et al. using reinforcement learning    form of spontaneous cooperation.
+(RL), and collusion forms much more rapidly in this
+experiment (400 rounds by LLM agents vs. 2000              Both with and without communication scenarios
+rounds in RL simulations).                              demonstrate that agents can achieve collusion un-
+                                                        der different conditions, whether tacit or explicit.
+Cartel Collusion with Communication In set-             Through communication, firms can realize maxi-
+tings with communication, explicit price agree-         mum profits. However, even without communica-
+ments are observed in the communication logs from       tion, we observe that agents possess an innate ability
+the early rounds (first 30 rounds). For instance, dur-  to autonomously form cooperation. Existing re-
+ing the communication phase of round 20, Firm 2         search indicates that collusion often involves some
+suggests, "We can both maximize our profit by ex-       form of unspoken, implicit price agreement to boost
+ploring different price points while maintaining a      profits (Andres et al., 2023), and the performance of
+reasonable price difference," to which Firm 1 agrees.   LLM agents aligns with these findings.
+As shown in Fig. 6b, prior to implementation, firms
+frequently discuss their pricing strategies and poten-  Explicit Instructions in Prompts As depicted in
+tial for cooperation, which significantly enhances      the bottom right of Fig. 7, compared to the default
+
+trust and reduces the likelihood of initiating a price setting, the formation of cooperation among agents
+
+war. The price agreements become more precise under the "Encouraged Cooperation" setting not
+
+(upon a specific price instead of a range) in later only occurs more rapidly but also with more stable
+
+rounds of the simulation, resulting in less fluctua- prices (less fluctuation) across rounds, with explicit
+
+tions in their pricing decisions. Consequently, they cooperative signals from the onset of dialogue, ulti-
+
+begin incrementally raising their prices after the mately achieving the cartel price. This demonstrates
+
+first 30 rounds, eventually converging near the car- that strategic encouragement can significantly en-
+
+tel price of 8, higher than the non-communicative hance cooperative efficiency, indirectly suggesting
+
+                                             5169
+that cooperative behavior in settings without explicit                                            0t0htrhoruonudnd    2nd2nrdouronudnd
+instructions to cooperate originates from communi-
+cation, where it takes more rounds to reach an agree-                                             4t4htrhoruonudnd    8th8trhoruonudnd
+ment between agents through the first 50 rounds of
+communication. Furthermore, the pattern requir-            (a) Illustration of gird world. (b) Simplified simulation with
+ing about 200 rounds to reach the cartel price also        The view range of red agent 47 agents in a 11 × 11 room.
+suggests that this cooperation is not due to LLM's         is highlighted when it faces As time goes, agents naturally
+background knowledge or data leakage; otherwise,           towards the bottom exit (pink accumulate to the closest exits,
+agents would seek optimal collusion from the early         cells).                                and escape one by one.
+rounds of the simulation.
+                                                           Figure 8: Overview of the grid environment in our study.
+6 Case Study 3: Emergency Evacuation                       Each dot in the grid environment represents an agent.
+
+6.1 Simulation Setup                                       $FFXPXODWHG(VFDSHG&RXQW   :LWK&RPP :LWKRXW&RPP 8QFRRSHUDWLYH
+
+Task Definition We follow Wang et al. (2015) to                                   
+simulate EE in a grid environment. As depicted in
+Fig. 8a, our grid environment is composed of 33×33                                
+cells. There are three exits in the room (left, right,
+and bottom). In the simulated evacuation, evacuees                                    5RXQG        5RXQG                        /%5(HR[LJILWWWKWRWP
+attempt to reach their target exit through multiple                               
+rounds of movement.                                                                                                    5RXQG  
+
+   We simulate the emergency evacuation with 100           Figure 9: Cumulative count of agents escaping from each
+agents in a room, and stop the simulation either           exit. Communication helps agents to uniformly select
+when all the agents have successfully escaped, or it       three exits instead of targeting the same exit.
+has reached 50 rounds. We repeat the simulation for
+5 runs with different initial locations of agents.         Cooperation in Evacuation Competition natu-
+                                                           rally exist in emergent evacuation, as all agents are
+Simulation Procedure As is shown in Fig. 2, for            willing to escape as quickly as possible, often lead-
+each round of the simulation, it goes through the          ing to congestion. However, if agents can actively
+following phases:                                          share information, calm the mood, and guide the
+1) Communication: We ask the evacuees to share             crowd, they might, in turn, escape more quickly
+                                                           while in a more balanced manner. As is illustrated
+    their feelings with others. Only Agents within a       in Fig. 1, these two scenarios are both possible, and
+    specific distance can hear the messages.               this study aims to (1) successfully simulate such phe-
+2) Planning: Provided with the distance to three           nomena and (2) observe if there exist cooperative
+    exits and the congestion levels around those ex-       behaviors such as information sharing, encourage-
+    its, agents are asked to describe their feelings       ment, and exit guidance.
+    about these exits, and choose one of them as
+    their target exit. Chat histories are also taken       6.2 Simulation Results
+    into consideration.
+3) Action: Given the target exit, agents choose            We compare three baselines of agents: without com-
+   which way to go. They can move one cell in              munication, with communication, and with commu-
+    any direction (out of 8) or stay at the current cell.  nication and an uncooperative persona.
+4) Update: After all the agents choose their actions,
+    the SABM framework updates the grid environ-           Effect of Communication on Evacuation Speed
+    ment with their new positions. If agents success-      Table 2 shows the cumulative number of agents who
+    fully escape, they will be labeled as escaped and      escaped over rounds. For most of the rounds, agents
+    removed from the simulation.                           with communication escape most quickly, and this
+   For each round, one agent has 20% probability           is the only baseline group to successfully escape
+to communicate and adjust its plan (phase 1 and            within 50 rounds in all five runs. This strongly
+2). Otherwise, it will directly choose the action          demonstrates the positive impact of communication
+based on its latest plan. This well prevents agents to
+talk every round, and frequently change their plans,
+which results in a more realistic simulation.
+
+5170
+Table 2: Cumulative count of agents who escaped (out of a total of 100 agents) over rounds under different settings.
+Generally, agents that communicate escape more quickly, and agents with uncooperative persona escape more slowly.
+
+Round                  5 10 15 20 25 30 35 40 45 50
+Without Communication  9.4 31.2 51.2 65.6 78.6 88.4 96.6 99.0 99.8 99.8
+With Communication     9.8 31.6 48.8 67.2 80.6 92.2 97.2 98.8 99.8 100.0
+With Comm. and Uncooperative 9.4 31.2 48.2 64.4 77.0 87.4 95.0 98.0 99.0 99.0
+
+on evacuation speed.                                     case studies:
+   Going deep into the logs, we find instances of           In KBC, we see the variance of chosen numbers
+
+effective communication, such as one evacuee shar-       decreasing gradually over rounds, rather than imme-
+ing "Bottom exit seems closer with fewer people.         diately reaching a low variance at the start or after
+Let's choose that for a faster escape. Stay strong       the first communication. Our control experiment
+and help each other!" This message is reinforced         (Fig. 4a) also shows that explicitly instructing agents
+by another evacuee: "Bottom exit seems closer with       to cooperate from the beginning results in all agents
+less crowd. Let's go for a quicker escape. Stay          choosing the same number immediately after com-
+strong and support each other!" The information          munication. These suggest the agents are learning
+sharing and encouragement enabled through com-           and adapting their strategies over time, instead of
+munication, which we regard as cooperation, likely       applying a pre-existing cooperative mindset.
+improves the evacuation speed.
+                                                            In BC, we observe a gradual progression towards
+Effect of Communication on Exit Choices Fig. 9           the optimal price over many rounds instead of a
+depicts the distribution of escaped evacuees among       rapid convergence. Additionally, in the absence
+different exits. We notice that the distribution of      of communication, agents only reach tacit collu-
+exit choices becomes more balanced when evacuees         sion (sub-optimal) after multiple rounds, which well
+are able to communicate with each other. This bal-       aligns with RL-based approach in previous studies.
+ance is attributed to the spontaneous information        This demonstrates that our agents are not leverag-
+exchange among evacuees, which enables them to           ing domain-specific prior knowledge for decision-
+identify the most suitable exits by considering both     making. Examining the communication logs, we
+proximity to an exit and congestion level.               find that agents initially discuss only broad price
+                                                         intervals or avoid discussing prices altogether. Only
+7 Discussion                                             later do they converge on specific prices, indicating
+                                                         a gradual, learned decision-making process rather
+Significance of "Spontaneous" Phenomena                  than using pre-existing knowledge.
+Bridging the gap between the real world and syn-
+thetic simulations remains a primary objective for          In EE, we find agents occasionally choose in-
+researchers in computational social science. This        structive or encouraging words during the commu-
+study investigates the potential for spontaneous co-     nication, which can be regarded as collaborative
+operation even under competition, demonstrating          behaviors, Also, results have shown that the simula-
+that LLMs can simulate a gradual shift from non-         tion with communication obtains the highest perfor-
+cooperation to cooperation without explicit guid-        mance (Table 2). It would be beneficial to have more
+ance through prompts. We performed extensive             metrics for evaluating spontaneous cooperation in
+ablation studies comparing agents with and without       EE, and leave this for future study.
+explicit instructions on task completion. The results
+suggest that our baseline, which lacks explicit in-      8 Conclusion
+structions, aligns more closely with natural human
+behavior. Therefore, when using specific LLMs            We investigated spontaneous cooperation in three
+(e.g., GPT-4) for social simulations, minimizing in-     case studies, and observed that LLM agents can
+structions could better reflect real-world situations.   gradually develop cooperative behaviors over time
+                                                         without explicit instructions. The phenomenon
+Shortcuts or Deliberate Reasoning? We believe            aligns well with real-world data, which stresses the
+the emergence of spontaneous cooperation is primar-      significance of eliminating prior knowledge when
+ily due to the agents' in-context learning ability over  doing social simulation. We believe this approach
+long-term interactions, rather than a pre-existing       not only aids the CSS community in bridging the
+win-win mentality or prior knowledge about max-          gap between synthetic simulations and real-world
+imizing interests. This can be observed across our       dynamics but also offers the AI community a novel
+                                                         way to assess LLMs' deliberate reasoning.
+
+                       5171
+Ethical Statement                                      using LLM agents without explicit instructions in
+                                                       the prompts. We observed that this approach often
+In this work, we studied the cooperative behavior      resulted in behaviors that closely resemble those of
+of LLM agents in competitive environments. All         real humans in simulated tasks. While we agree that
+the experiments were conducted using computer          LLMs inherently exhibit certain behaviors derived
+simulations. To the best of our knowledge, there is    from being trained on human data and aligned with
+no negative societal impact in this research.          human feedback, our claim is not that simulating
+                                                       human behavior using these LLM agents is entirely
+   We found that LLM agents are capable of learning    justified. Instead, we stress that using LLM agents
+collusion in a simulated marketing environment.        without explicit instructions yields more human-
+This insight could inform regulatory measures for      like performance compared to explicitly instructed
+markets involving AI agents, such as prohibiting       agents, highlighting the reasonableness of our ap-
+collusive behaviors when employing AI in financial     proach.
+markets.
+                                                          By addressing these issues, we aim to strengthen
+   We used ChatGPT to polish the paper. We are         the validity and applicability of our findings in the
+responsible for all the materials presented in this    future.
+work.
+
+Limitations                                            Acknowledgements
+
+In our study, we identified several limitations that   This work is supported by JSPS Kakenhi 21K19767,
+need to be addressed in future work.                   23K17456, 23K24851, 23K25157, 23K28096, and
+                                                       CREST JPMJCR22M2. We thank Prof. Yuki Arase
+Limited Experimentation on LLMs One major              and Yuya Sasaki for providing hardware support for
+limitation of our study is the scope of our experi-    completing this research.
+ments. We conducted our research primarily using
+a single version of GPT-4. This choice was largely     References
+driven by (1) financial constraints associated with
+these case studies ({$900, $3000, $1000}, respec-      Sahar Abdelnabi, Amr Gomaa, Sarath Sivaprasad, Lea
+tively), (2) restricted rate limits and window size,      Schönherr, and Mario Fritz. 2024. Cooperation, com-
+and (3) the LLMs' limited understanding on the sce-       petition, and maliciousness: Llm-stakeholders inter-
+narios (see Appendix B.3). Additionally, we were          active negotiation. Preprint, arXiv:2309.17234.
+unable to conduct more extensive experiments us-
+ing other open-source large language models due        Yiming Ai, Zhiwei He, Ziyin Zhang, Wenhong Zhu,
+to insufficient computational resources. As a result,     Hongkun Hao, Kai Yu, Lingjun Chen, and Rui Wang.
+we regard our findings as a proof-of-concept study,       2024. Is cognition and action consistent or not: Inves-
+which needs to be further tested across different         tigating large language model's personality. Preprint,
+LLMs to prove its generalizability.                       arXiv:2402.14679.
+
+Inadequate Contributions as Verifying LLMs'            Maximilian Andres, Lisa Bruttel, and Jana Friedrichsen.
+Reasoning Ability We claimed that our findings            2023. How communication makes the difference be-
+offer a new way to verify the deliberate reasoning        tween a cartel and tacit collusion: A machine learning
+capabilities of LLMs. We do showcase extensive            approach. European Economic Review, 152:104331.
+experiment results to reveal the potential to for-
+mulate spontaneous cooperation as a standard of        Lisa P Argyle, Ethan C Busby, Nancy Fulda, Joshua R
+LLM agents. However, we deeply agree that we did          Gubler, Christopher Rytting, and David Wingate.
+not focus sufficiently on collecting comprehensive        2023. Out of one, many: Using language mod-
+datasets or creating robust benchmarks to substan-        els to simulate human samples. Political Analysis,
+tiate this claim fully. Moving forward, we plan to        31(3):337­351.
+convert our case studies into standardized bench-
+marks or datasets to facilitate further research and   Antoni Bosch-Domenech, Jose G Montalvo, Rosemarie
+evaluation by the AI community.                           Nagel, and Albert Satorra. 2002. One, two,(three),
+                                                          infinity,. . . : Newspaper and lab beauty-contest ex-
+Conceptual Limitations Regarding LLM In-                  periments. American Economic Review, 92(5):1687­
+structions Throughout our paper, we emphasized            1701.
+
+                                                       Sébastien Bubeck, Varun Chandrasekaran, Ronen Eldan,
+                                                          Johannes Gehrke, Eric Horvitz, Ece Kamar, Peter Lee,
+                                                          Yin Tat Lee, Yuanzhi Li, Scott Lundberg, et al. 2023.
+                                                          Sparks of artificial general intelligence: Early experi-
+                                                          ments with GPT-4. arXiv preprint arXiv:2303.12712.
+
+             5172
+Emilio Calvano, Giacomo Calzolari, Vincenzo Denicolo,         Bernard J Jansen, Soon-gyo Jung, and Joni Salminen.
+   and Sergio Pastorello. 2020. Artificial intelligence, al-     2023. Employing large language models in survey
+   gorithmic pricing, and collusion. American Economic           research. Natural Language Processing Journal,
+   Review, 110(10):3267­3297.                                    4:100020.
+
+Kathleen M Carley. 2002. Smart agents and organi-             Marco A Janssen and Elinor Ostrom. 2006. Empiri-
+   zations of the future. The handbook of new media,             cally based, agent-based models. Ecology and society,
+   12:206­220.                                                   11(2).
+
+Harrison Chase. 2023. Langchain. https://github.              Edward Junprung. 2023. Exploring the intersection
+   com/langchain-ai/langchain.                                   of large language models and agent-based mod-
+                                                                 eling via prompt engineering. arXiv preprint
+Weize Chen, Yusheng Su, Jingwei Zuo, Cheng Yang,                 arXiv:2308.07411.
+   Chenfei Yuan, Chen Qian, Chi-Min Chan, Yujia
+   Qin, Yaxi Lu, Ruobing Xie, et al. 2023. Agent-             Michal Kosinski. 2024. Evaluating large language
+   verse: Facilitating multi-agent collaboration and ex-         models in theory of mind tasks. Preprint,
+   ploring emergent behaviors in agents. arXiv preprint          arXiv:2302.02083.
+   arXiv:2308.10848.
+
+Silin Du and Xiaowei Zhang. 2024. Helmsman of the             Yihuai Lan, Zhiqiang Hu, Lei Wang, Yang Wang, De-
+   masses? evaluate the opinion leadership of large              heng Ye, Peilin Zhao, Ee-Peng Lim, Hui Xiong, and
+   language models in the werewolf game. Preprint,               Hao Wang. 2023. Llm-based agent society inves-
+   arXiv:2404.01602.                                             tigation: Collaboration and confrontation in avalon
+                                                                 gameplay. arXiv preprint arXiv:2310.14985.
+Yilun Du, Shuang Li, Antonio Torralba, Joshua B. Tenen-
+   baum, and Igor Mordatch. 2023. Improving factuality        David Leonhardt and Kevin Quealy. 2015. Are you
+   and reasoning in language models through multiagent           smarter than 61,139 other new york times readers?
+   debate. Preprint, arXiv:2305.14325.
+                                                              Guohao Li, Hasan Abed Al Kader Hammoud, Hani
+Chen Gao, Xiaochong Lan, Nian Li, Yuan Yuan, Jingtao             Itani, Dmitrii Khizbullin, and Bernard Ghanem. 2023.
+   Ding, Zhilun Zhou, Fengli Xu, and Yong Li. 2023a.             Camel: Communicative agents for "mind" exploration
+   Large language models empowered agent-based mod-              of large scale language model society. arXiv preprint
+   eling and simulation: A survey and perspectives.              arXiv:2303.17760.
+   arXiv preprint arXiv:2312.11970.
+                                                              Jiaju Lin, Haoran Zhao, Aochi Zhang, Yiting Wu, Huqi-
+Chen Gao, Xiaochong Lan, Zhihong Lu, Jinzhu Mao,                 uyue Ping, and Qin Chen. 2023. Agentsims: An open-
+   Jinghua Piao, Huandong Wang, Depeng Jin, and Yong             source sandbox for large language model evaluation.
+   Li. 2023b. S3: Social-network simulation system               arXiv preprint arXiv:2308.04026.
+   with large language model-empowered agents. arXiv
+   preprint arXiv:2307.14984.                                 Ruibo Liu, Ruixin Yang, Chenyan Jia, Ge Zhang, Denny
+                                                                 Zhou, Andrew M Dai, Diyi Yang, and Soroush
+Philippe J Giabbanelli. 2023. GPT-based models meet              Vosoughi. 2023a. Training socially aligned language
+   simulation: How to efficiently use large-scale pre-           models in simulated human society. arXiv preprint
+   trained language models across simulation tasks.              arXiv:2305.16960.
+   arXiv preprint arXiv:2306.13679.
+
+Xudong Guo, Kaixuan Huang, Jiale Liu, Wenhui Fan, Na-         Zhiwei Liu, Weiran Yao, Jianguo Zhang, Le Xue, Shelby
+   talia Vélez, Qingyun Wu, Huazheng Wang, Thomas L              Heinecke, Rithesh Murthy, Yihao Feng, Zeyuan
+   Griffiths, and Mengdi Wang. 2024. Embodied llm                Chen, Juan Carlos Niebles, Devansh Arpit, Ran Xu,
+   agents learn to cooperate in organized teams. arXiv           Phil Mui, Huan Wang, Caiming Xiong, and Silvio
+   preprint arXiv:2403.12482.                                    Savarese. 2023b. Bolaa: Benchmarking and orches-
+                                                                 trating llm-augmented autonomous agents. Preprint,
+Tiankai Hang, Shuyang Gu, Dong Chen, Xin Geng,                   arXiv:2308.05960.
+   and Baining Guo. 2024. Cca: Collaborative com-
+   petitive agents for image editing. arXiv preprint          Zhiwei Liu, Weiran Yao, Jianguo Zhang, Liangwei
+   arXiv:2401.13011.                                             Yang, Zuxin Liu, Juntao Tan, Prafulla K. Choubey,
+                                                                 Tian Lan, Jason Wu, Huan Wang, Shelby Hei-
+Sirui Hong, Xiawu Zheng, Jonathan Chen, Yuheng                   necke, Caiming Xiong, and Silvio Savarese. 2024.
+   Cheng, Ceyao Zhang, Zili Wang, Steven Ka Shing                Agentlite: A lightweight library for building and ad-
+   Yau, Zijuan Lin, Liyang Zhou, Chenyu Ran, et al.              vancing task-oriented llm agent system. Preprint,
+   2023. MetaGPT: Meta programming for multi-                    arXiv:2402.15538.
+   agent collaborative framework. arXiv preprint
+   arXiv:2308.00352.                                          Ziqiao Ma, Jacob Sansom, Run Peng, and Joyce Chai.
+                                                                 2023. Towards a holistic landscape of situated theory
+Tiancheng Hu and Nigel Collier. 2024. Quantifying                of mind in large language models. arXiv preprint
+   the persona effect in llm simulations. Preprint,              arXiv:2310.19619.
+   arXiv:2402.10811.
+
+5173
+Mikhail Mozikov, Nikita Severin, Valeria Bodishtianu,       Jinhuan Wang, Lei Zhang, Qiongyu Shi, Peng Yang, and
+   Maria Glushanina, Mikhail Baklashkin, Andrey V.             Xiaoming Hu. 2015. Modeling and simulating for con-
+   Savchenko, and Ilya Makarov. 2024. The good, the            gestion pedestrian evacuation with panic. Physica A:
+   bad, and the hulk-like gpt: Analyzing emotional de-         Statistical Mechanics and its Applications, 428:396­
+   cisions of large language models in cooperation and         409.
+   bargaining games. Preprint, arXiv:2406.03299.
+                                                            Lei Wang, Chen Ma, Xueyang Feng, Zeyu Zhang, Hao
+Joon Sung Park, Joseph C. O'Brien, Carrie J. Cai, Mered-       Yang, Jingsen Zhang, Zhiyuan Chen, Jiakai Tang,
+   ith Ringel Morris, Percy Liang, and Michael S. Bern-        Xu Chen, Yankai Lin, et al. 2023a. A survey on large
+   stein. 2023. Generative agents: Interactive simulacra       language model based autonomous agents. arXiv
+   of human behavior. In In the 36th Annual ACM Sym-           preprint arXiv:2308.11432.
+   posium on User Interface Software and Technology
+   (UIST '23), UIST '23, New York, NY, USA. Associa-        Zhenhailong Wang, Shaoguang Mao, Wenshan Wu, Tao
+   tion for Computing Machinery.                               Ge, Furu Wei, and Heng Ji. 2023b. Unleashing cogni-
+                                                               tive synergy in large language models: A task-solving
+Giorgio Piatti, Zhijing Jin, Max Kleiman-Weiner, Bern-         agent through multi-persona self-collaboration. arXiv
+   hard Schölkopf, Mrinmaya Sachan, and Rada Mihal-            preprint arXiv:2307.05300.
+   cea. 2024. Cooperate or collapse: Emergence of
+   sustainability behaviors in a society of llm agents.     Lilian Weng. 2023. Llm powered autonomous
+   Preprint, arXiv:2404.16698.                                 agents. https://lilianweng.github.io/posts/
+                                                               2023-06-23-agent/.
+Chen Qian, Xin Cong, Cheng Yang, Weize Chen,
+   Yusheng Su, Juyuan Xu, Zhiyuan Liu, and Maosong          Wikipedia. 2024. Bertrand competition.
+   Sun. 2023. Communicative agents for software devel-      Qingyun Wu, Gagan Bansal, Jieyu Zhang, Yiran Wu,
+   opment. arXiv preprint arXiv:2307.07924.
+                                                               Shaokun Zhang, Erkang Zhu, Beibin Li, Li Jiang,
+Aadesh Salecha, Molly E. Ireland, Shashanka Subrah-            Xiaoyun Zhang, and Chi Wang. 2023a. Auto-
+   manya, João Sedoc, Lyle H. Ungar, and Johannes C.           Gen: Enabling next-gen LLM applications via multi-
+   Eichstaedt. 2024. Large language models show                agent conversation framework. arXiv preprint
+   human-like social desirability biases in survey re-         arXiv:2308.08155.
+   sponses. Preprint, arXiv:2405.06058.
+
+Leonard Salewski, Stephan Alaniz, Isabel Rio-Torto,         Shuang Wu, Liwen Zhu, Tao Yang, Shiwei Xu, Qiang
+   Eric Schulz, and Zeynep Akata. 2023. In-context im-         Fu, Yang Wei, and Haobo Fu. 2024. Enhance reason-
+   personation reveals large language models' strengths        ing for large language models in the game werewolf.
+   and biases. arXiv preprint arXiv:2305.14930.                arXiv preprint arXiv:2402.02330.
+
+Elvis Saravia. 2023.  Prompt engineering                    Zengqing Wu, Run Peng, Xu Han, Shuyuan Zheng, Yixin
+guide.  https://github.com/dair-ai/                            Zhang, and Chuan Xiao. 2023b. Smart agent-based
+Prompt-Engineering-Guide.                                      modeling: On the use of large language models in com-
+                                                               puter simulations. arXiv preprint arXiv:2311.06330.
+Natalie Shapira, Mosh Levy, Seyed Hossein Alavi, Xuhui
+   Zhou, Yejin Choi, Yoav Goldberg, Maarten Sap, and        Zhiheng Xi, Wenxiang Chen, Xin Guo, Wei He, Yiwen
+   Vered Shwartz. 2024. Clever hans or neural theory of        Ding, Boyang Hong, Ming Zhang, Junzhe Wang, Sen-
+   mind? stress testing social reasoning in large language     jie Jin, Enyu Zhou, et al. 2023. The rise and potential
+   models. In Proceedings of the 18th Conference of the        of large language model based agents: A survey. arXiv
+   European Chapter of the Association for Computa-            preprint arXiv:2309.07864.
+   tional Linguistics (Volume 1: Long Papers), pages
+   2257­2273, St. Julian's, Malta. Association for Com-     Tianbao Xie, Fan Zhou, Zhoujun Cheng, Peng Shi, Lu-
+   putational Linguistics.                                     oxuan Weng, Yitao Liu, Toh Jing Hua, Junning Zhao,
+                                                               Qian Liu, Che Liu, et al. 2023. Openagents: An
+Zijing Shi, Meng Fang, Shunfeng Zheng, Shilong Deng,           open platform for language agents in the wild. arXiv
+   Ling Chen, and Yali Du. 2023. Cooperation on the fly:       preprint arXiv:2310.10634.
+   Exploring language agents for ad hoc teamwork in the
+   avalon game. arXiv preprint arXiv:2312.17515.            Yuzhuang Xu, Shuo Wang, Peng Li, Fuwen Luo, Xi-
+                                                               aolong Wang, Weidong Liu, and Yang Liu. 2023a.
+Karthik Sreedhar and Lydia Chilton. 2024. Simulat-             Exploring large language models for communica-
+   ing human strategic behavior: Comparing single and          tion games: An empirical study on werewolf. arXiv
+   multi-agent llms. Preprint, arXiv:2402.08189.               preprint arXiv:2309.04658.
+
+Daniel Tang, Zhenghan Chen, Kisub Kim, Yewei Song,          Zelai Xu, Chao Yu, Fei Fang, Yu Wang, and Yi Wu.
+   Haoye Tian, Saad Ezzini, Yongfeng Huang, and                2023b. Language agents with reinforcement learning
+   Jacques Klein Tegawende F Bissyande. 2024. Col-             for strategic play in the werewolf game. arXiv preprint
+   laborative agents for software engineering. arXiv           arXiv:2310.18940.
+   preprint arXiv:2402.02172.
+
+                           5174
+Jintian Zhang, Xin Xu, Ningyu Zhang, Ruibo Liu, Bryan
+   Hooi, and Shumin Deng. 2023. Exploring collabora-
+   tion mechanisms for LLM agents: A social psychol-
+   ogy view. CoRR, abs/2310.02124.
+
+Yadong Zhang, Shaoguang Mao, Tao Ge, Xun Wang,
+   Yan Xia, Man Lan, and Furu Wei. 2024. K-level
+   reasoning with large language models. arXiv preprint
+   arXiv:2402.01521.
+
+Qinlin Zhao, Jindong Wang, Yixuan Zhang, Yiqiao Jin,
+   Kaijie Zhu, Hao Chen, and Xing Xie. 2023. Com-
+   peteAI: Understanding the competition behaviors in
+   large language model-based agents. arXiv preprint
+   arXiv:2310.17512.
+
+Xuhui Zhou, Zhe Su, Tiwalayo Eisape, Hyunwoo Kim,
+   and Maarten Sap. 2024. Is this the real life? is this just
+   fantasy? the misleading success of simulating social
+   interactions with llms. Preprint, arXiv:2403.05020.
+
+Caleb Ziems, William Held, Omar Shaikh, Jiaao Chen,
+   Zhehao Zhang, and Diyi Yang. 2024. Can large
+   language models transform computational social sci-
+   ence? Computational Linguistics, 50(1):237­291.
+
+                                                            5175
+A Parameter Settings
+
+We report the parameters of the GPT-4 model used in our case studies in Table 3. The temperature parameter
+controls the randomness and diversity of the model's responses, with a lower temperature resulting in
+increased stability. In the evaluation of KBC, we expect that the individuals exhibit a wide range of diversity.
+Consequently, we adjust the temperature to a moderate level of 0.7 to balance randomness and stability in
+the results. For BC, where the agents simulate business parties, we expect their decisions to be stable and
+rational. Therefore, we set the temperature to 0.7. For EE, although setting temperature to 0.0 may result in
+limited diversity of behaviors under exactly the same setting, in this procedurally generated, interactively
+dynamic environment, we seldom encounter exactly the same outcome. Meanwhile, in a physically situated
+setting (e.g., a grid), the LLM used in this case study still has restricted capabilities on scene understanding,
+and increasing the temperature may introduce diversity as well as unwanted randomness at the same
+time (Ma et al., 2023).
+
+   For Claude-3-Sonnet used in KBC, we set the temperature to 1.0.
+
+                                              Table 3: Parameter settings of GPT-4.
+
+                         Case  Model                 temperature    max_tokens     top_p
+                         KBC   gpt-4-0314                      0.7            256     1.0
+                         BC                                    0.7            128     1.0
+                         EE    gpt-4-0314                      0.0            512     1.0
+                               gpt-4-0314
+
+B Tests of Other LLMs
+
+B.1 KBC
+
+We test GPT-3.5 (gpt-3.5-turbo-1106) agents in KBC, simulating 10 runs, and show their number
+choices in Fig. 10. When GPT-3.5 agents cannot discuss the game, the numbers chosen are very random,
+and widely distributed in the range of 20-80. When they can communicate, the choices and cooperation
+do not improve significantly, whereas the variances are even greater under some circumstances. This
+is significantly different from GPT-4 agents, which, especially after communication, can have a deeper
+understanding of KBC.
+
+   We also evaluate Gemini Pro and Claude 2 with a preliminary test of KBC, simplifying the prompt. As
+shown in Table 4, after entering Prompt 1, the results output by these two models are significantly different
+from GPT-4, but very similar to GPT-3.5. Since Fig. 10 demonstrates the poor performance of GPT-3.5 in
+KBC, we similarly exclude the use of Gemini Pro and Claude 2 in our simulations.
+
+   For Claude 3, we used Claude-3-Sonnet instead of Claude-3-Opus (hereafter Opus) in the KBC
+experiment because Opus has a low rate limit and high overhead. This made it challenging to use the API
+
+                                                           
+
+                                                           
+
+&KRVHQ1XPEHUV                                              
+
+                                                           
+
+                                                           
+
+                                                           
+
+                                                           
+
+                                                           
+
+                 0HGLDQ        $YHUDJH                     
+
+                    5XQ                                         5XQ    
+
+                 (a) Without communication (k = 0).                 (b) With communication (k = 3).
+
+Figure 10: Choice distributions in KBC w/ and w/o communication using GPT-3.5 model. Red points represent
+two-thirds of the average of all choices. The blue dots represent the choices of the agents. The agent whose choice is
+closest to the red point in each run is considered the winner.
+
+                                                     5176
+                      Table 4: Preliminary test of GPT-3.5, Gemini Pro, and Claude 2 for KBC.
+
+Model         Choice  Reasoning
+GPT-4         18      In this game, where the target is 2/3 of the average guess of all participants, there's a strategic component to consider.
+                      Typically, if everyone guesses randomly within the range, the average might center around 50.
+GPT-3.5       33      However, considering that players might rationalize this and adjust their guesses downward, the initial average could shift lower.
+Gemini Pro    30      Assuming players adjust their guesses accordingly, the average might drop further with each round of reasoning.
+Claude 2      33      Predicting this behavior, I'll assume a more conservative average guess around 25-30,
+                      taking 2/3 of that would suggest a guess in the 17-20 range.
+                      My reasoning is that I'll aim for a number that balances between being influenced by potential extremes
+                      and what might be considered a reasonable midpoint among various guesses. Given the tendency for guesses to spread out across the range,
+                      I'll choose a number that's slightly below what might be perceived as the median guess,
+                      since 2/3 of the average tends to bring the estimate down.
+                      Therefore, my chosen number is 33.
+                      The average guess of all participants is unknown, so we cannot directly calculate 2/3 of it.
+                      However, we can make an assumption that most players will guess around the middle of the range (50).
+                      Therefore, choosing a number slightly below 2/3 of 50
+                      (which is around 33) might be a good strategy.
+                      I will guess 33. If everyone guesses randomly between 0 and 100, the average should be around 50.
+                      Two-thirds of 50 is 33. So 33 would be the number closest to two-thirds of the average guess.
+
+for scaling up simulations in practice. Our tests showed that in KBC, when there are more than 10 LLM
+players, the Opus model might fail to operate at k = 3.
+
+B.2 BC
+
+Fig. 11 shows the performance of GPT-3.5 agents in BC with communication. We can see that the price
+competition between the two firms is very disorderly and fails to reach equilibrium. Therefore, we believe
+that GPT-3.5, as well as Gemini Pro and Claude 2 for which we observe similar performance, cannot meet
+the needs for simulating BC.
+
+B.3 EE
+
+To find out whether an LLM is suitable for the simulation of EE, we conduct a preliminary test for the
+performance of a single agent finding an exit under different LLMs. As shown in Fig. 12, instructed by
+Prompt 14, GPT-4 agents are able to find and reach the nearest exit via the shortest path, while GPT-3.5,
+Gemini Pro, and Claude 2 agents are unable to reach the exit as quickly or cannot find it at all. This
+indicates that the latter three models are not suitable for the simulation of EE.
+
+C Scalability
+
+C.1 Regarding Token Limits of LLMs
+
+With the help of summarization techniques, our history records do not exceed the context window of the
+LLM. We have successfully conducted simulations with 1200 rounds in the BC case study and 400 agents
+in the EE case study within the 8k token window of GPT-4-0314. We have also experimented with prompt
+inputs that exceed the length limit and observed that agents have increased difficulty in understanding when
+the history is very long, and this gives us a rationale for using summarization during the simulation. This
+finding is also consistent with previous work regarding GPT's small working memory (Bubeck et al., 2023).
+
+                      %HUWUDQG(TXLOLEULXP3ULFH  &DUWHO3ULFH   )LUP             )LUP
+
+                                                      
+
+                                                      
+
+                                                      
+3ULFH
+                                           3URILW         
+                                                      
+                                                      
+
+                                                            
+
+                       5RXQG                                   5RXQG  
+
+                      (a) Price.                              (b) Profit.
+
+                      Figure 11: Test of GPT-3.5 for BC (with communication).
+
+                                                5177
+   0123456789                     0123456789                      0123456789                    0123456789
+
+0                              0                               0                             0
+
+1                              1                               1  GPT4                       1           Claude2
+
+2                              2                               2  4 steps                    2           4 steps
+                                                               3                             3
+3                              3
+
+4  Gemini                      4                               4                             4
+5
+                               5                               5                             5
+
+6  15 steps                    6         GPT3.5                6                             6
+
+7                              7         7 steps               7                             7
+                               8
+8                                                              8                             8
+
+9                              9                               9                             9
+
+(a) Gemini at position (1, 3)  (b) GPT-3.5 at position (1, 3)  (c) GPT-4 at position (1, 3)  (d) Claude 2 at position (1, 3)
+
+   0123456789                      0123456789                     0123456789                     0123456789
+
+0  Case 2    Gemini            0                               0                             0
+1                              1 GPT3.5                        1
+2 8 steps                      2 7 steps                                                     1  Claude2
+                               3                               2                             2
+                               4                                                             3 11 steps
+3                              5                               3  GPT4
+4                              6                               4                             4
+                               7
+5                              8                               5  6 steps                    5
+                               9                                                             6
+6  Case 1                                                      6
+7
+8 12 steps                                                     7                             7
+
+9                                                              8                             8
+                                                               9                             9
+
+(e) Gemini at position (2, 6)  (f) GPT-3.5 at position (2, 6)  (g) GPT-4 at position (2, 6)  (h) Claude 2 at position (2, 6)
+
+Figure 12: Preliminary test of GPT-4, GPT-3.5, Gemini Pro, and Claude 2 for EE. Green lines indicate the shortest
+route to the nearest exit in each setting. When the agent's starting position is at (2, 6), Gemini and GPT-3.5 selected
+different routes in multiple simulations. We report that the LLM's choice of different routes is relatively uniform.
+
+             (a) Without Communication.                           (b) With Communication.
+
+           Figure 13: Multiple runs of BC experiments. Each Run #1 above is the original plot from Fig. 6.
+C.2 Scalability of Case Studies
+
+   · KBC: We tested up to 50 agents and the conversation was still within the 8k token limit.
+
+   · BC: Agents' past actions (prices) and feedback (demands and profits) are given as follows: The
+     information in the recent 20 rounds is directly given. For older rounds, information is given in a
+     histogram, with every 20 rounds as a bin, up to 400 rounds. Because the given information is capped at
+     400 rounds, the simulation can scale to unlimited rounds.
+
+   · EE: An agent can hear other agents within a distance of 5 cells. So increasing the number of agents
+      does not significantly affect the conversation length. We tested 400 agents and it was still within the
+      token limit. Fig. 14 shows the snapshots of a sample simulation of EE with 400 agents.
+
+D Additional References for BC runs
+
+We would like to provide additional references for experiments in BC simulation. The figures we plotted
+for BC (Fig. 6) are time sieries, which makes it challenging to plot the results of all the runs on one figure.
+Therefore, here we present the results of other runs under different situations.
+
+   In Run #2 of Fig. 13a, tacit collusion is also observed (convergence at 7 after 400 rounds), but the
+trend before the convergence differs significantly from Run #1. Similarly, for the comparison when
+
+                                                            5178
+ 0                                                                         0                                                                         0
+ 1                                                                         1                                                                         1
+ 2                                                                         2                                                                         2
+ 3                                                                         3                                                                         3
+ 4                                                                         4                                                                         4
+ 5                                                                         5                                                                         5
+ 6                                                                         6                                                                         6
+ 7                                                                         7                                                                         7
+ 8                                                                         8                                                                         8
+ 9                                                                         9                                                                         9
+10                                                                        10                                                                        10
+11                                                                        11                                                                        11
+12                                                                        12                                                                        12
+13                                                                        13                                                                        13
+14                                                                        14                                                                        14
+15                                                                        15                                                                        15
+16                                                                        16                                                                        16
+17                                                                        17                                                                        17
+18                                                                        18                                                                        18
+19                                                                        19                                                                        19
+20                                                                        20                                                                        20
+21                                                                        21                                                                        21
+22                                                                        22                                                                        22
+23                                                                        23                                                                        23
+24                                                                        24                                                                        24
+25                                                                        25                                                                        25
+26                                                                        26                                                                        26
+27                                                                        27                                                                        27
+28                                                                        28                                                                        28
+29                                                                        29                                                                        29
+30                                                                        30                                                                        30
+31                                                                        31                                                                        31
+32                                                                        32                                                                        32
+
+      0 1 2 3 4 5 6 7 8 9 1011121314151617181920212223242526272829303132        0 1 2 3 4 5 6 7 8 9 1011121314151617181920212223242526272829303132        0 1 2 3 4 5 6 7 8 9 1011121314151617181920212223242526272829303132
+
+                   Round 0                                                                  Round 10                                                                  Round 20
+
+ 0                                                                         0                                                                         0
+ 1                                                                         1                                                                         1
+ 2                                                                         2                                                                         2
+ 3                                                                         3                                                                         3
+ 4                                                                         4                                                                         4
+ 5                                                                         5                                                                         5
+ 6                                                                         6                                                                         6
+ 7                                                                         7                                                                         7
+ 8                                                                         8                                                                         8
+ 9                                                                         9                                                                         9
+10                                                                        10                                                                        10
+11                                                                        11                                                                        11
+12                                                                        12                                                                        12
+13                                                                        13                                                                        13
+14                                                                        14                                                                        14
+15                                                                        15                                                                        15
+16                                                                        16                                                                        16
+17                                                                        17                                                                        17
+18                                                                        18                                                                        18
+19                                                                        19                                                                        19
+20                                                                        20                                                                        20
+21                                                                        21                                                                        21
+22                                                                        22                                                                        22
+23                                                                        23                                                                        23
+24                                                                        24                                                                        24
+25                                                                        25                                                                        25
+26                                                                        26                                                                        26
+27                                                                        27                                                                        27
+28                                                                        28                                                                        28
+29                                                                        29                                                                        29
+30                                                                        30                                                                        30
+31                                                                        31                                                                        31
+32                                                                        32                                                                        32
+
+      0 1 2 3 4 5 6 7 8 9 1011121314151617181920212223242526272829303132        0 1 2 3 4 5 6 7 8 9 1011121314151617181920212223242526272829303132        0 1 2 3 4 5 6 7 8 9 1011121314151617181920212223242526272829303132
+
+                  Round 30                                                                  Round 40                                                                  Round 50
+
+  Figure 14: Snapshots of a sample EE simulation with 400 agents.
+
+: &R(P%/5[HPRLLWJIWWKWRWP3DUDSKUDVHG  :&RPP5DZ                          :R&R(P%5/[HRLLWPJIWWKWRWP3DUDSKUDVHG :R&RPP5DZ
+$FFXPXODWHG(VFDSHG&RXQW
+                                                   $FFXPXODWHG(VFDSHG&RXQW                                                                          
+
+                                                                                                                                                    
+
+                                                                                                                                                    
+
+   5RXQG      5RXQG                                                            5RXQG      5RXQG  
+
+  (a) With communication.                                                     (b) Without communication.
+
+Figure 15: Comparison of the cumulative count of agents evacuation at each exit before and after prompt paraphrasing
+in both with and without communication settings of EE. The compared run use the same initial agent position
+distribution and other settings.
+
+communication is allowed (Fig. 13b), we observe a more stable convergence in Run #2, while both runs
+reaches the tacit collusion. Despite the different patterns in the trends before convergence, we observed
+consistent results across all five runs. To provide more comprehensive information about the robustness of
+our results, we have included a sensitivity analysis in Appendix E.
+
+E Sensitivity Analysis
+
+We performed sensitivity analyses and observed that the agents maintained a consistently accurate under-
+standing of the tasks under paraphrased prompts, in various settings, and that spontaneous cooperation in
+competition remained stable.
+
+                                                            5179
+ 6HHG  6HHG                                               6HHG     6HHG     6HHG
+$FFXPXODWHG(VFDSHG&RXQW
+                                                                           
+                                  9DULDQFHRI&KRLFHV                        
+                                                                           
+                                                                           
+  (%5/[HRLLWJIWWKWRWP  
+                                                           5RXQG    5RXQG    5RXQG
+
+  5RXQG   5RXQG
+
+Figure 16: Cumulative count of agents evacuating from each exit under different initial seeds under the setting without
+communication.
+
+                                                                  7HPS 
+                                                     
+                                                                  7HPS 
+                                                                  7HPS 
+                                                     
+                                                         N        
+                                                      
+                                                      
+
+                                                       
+
+                        Figure 17: Variance of player choices under different temperatures in KBC.
+
+E.1 Prompt Paraphrasing
+
+We paraphrased task description prompts using GPT-4, ensuring unchanged meanings. For instance, in the
+case study of EE, we compared the outcomes from the original and paraphrased prompts (see Prompts 15
+and 22), finding that agents consistently understood instructions, forged spontaneous cooperation, and
+completed evacuations swiftly.
+
+   With the paraphrased prompts, Fig. 15 presents the cumulative count of agents evacuation at each exit.
+The results show that:
+
+1. the agents still correctly understood the instructions and completed the rapid evacuation within a
+   certain number of rounds;
+
+2. the distribution of chosen exits and the evacuation rate across time kept consistent;
+
+3. the spontaneous cooperation was observed.
+
+   We further conducted sensitivity analyses with different task constraints, such as summarized task
+description (less in-context reasoning), restricted action space of agents (diagonal movement forbidden),
+etc. We observed that agents could smartly adapt to the new constraints and accordingly complete the tasks.
+
+E.2 Varying Initializations
+
+We tested our framework with different initial situations controlled by seeds. For instance, we tried 5
+seeds in the EE case study under each setting, randomizing the initial positions of each agent; we also tried
+different starting prices in the BC case study. For instance, Fig. 16 shows the results of different seeds of EE.
+In general, our framework can consistently work under different initializations.
+
+E.3 Impact of Temperature
+E.4 Varying Task Constraints
+We conduct sensitive analysis with model temperature as shown in Fig. 17 for KBC. LLM players con-
+sistently cooperate over rounds under various temperatures, indicating that spontaneous cooperation is
+
+                                                            5180
+       %HUWUDQG(TXLOLEULXP3ULFH              &DUWHO3ULFH            )LUP        )LUP
+
+                                                                    
+
+3ULFH                                                               
+
+                                                                    
+
+        5RXQG                                 5RXQG                              5RXQG                 
+
+       (a) Temperature = 0                   (b) Temperature = 0.7              (c) Temperature = 1.2
+
+                            Figure 18: BC with different temperatures, communication disabled.
+
+insensitive to temperature changes. Fig. 18 illustrates the performance of BC at different model temperatures.
+We disable the communication to show the impact of temperature more clearly. The results indicate that
+simulations at temperatures of 0 and 0.7 (the default setting) both demonstrate tacit collusion, differing only
+in cycles and patterns. When the temperature rises to 1.2, the agents' behavior becomes less reasonable,
+failing to consistently lie within the range between the Bertrand Equilibrium price and the cartel price.
+
+F SABM Primer
+
+Smart Agent-Based Modeling (SABM, Wu et al. (2023b)) is an agent-based approach that leverages the
+power of modern AI models, in particular, LLMs, for modeling and simulating real-world systems. By
+employing LLM agents, SABM extends Agent-Based Modeling (ABM), which simulates the dynamics of
+complex systems by modeling on the interactions between individual entities, known as agents, and the
+environment (Figure 19).
+
+   The notion of smart agents was proposed by Carley (Carley, 2002) in the context of organizations of the
+future. In Carley (2002), smart agents are defined as entities that are intelligent, adaptive, and computational,
+and human beings are the canonical smart agents. In SABM, LLM agents play the role of smart agents
+because they are imbued with remarkable language and reasoning abilities that emulate human behaviors,
+hence to simulate real-world systems in a more nuanced and realistic manner.
+
+   In SABM, the key components of an LLM agent (Figure 20) are action, planning, memory, and tool use,
+in line with Weng (2023). Action manages how the agent produces the outcomes of a task. An action made
+by the agent may result from the common sense, internal knowledge, and/or the learning/reasoning ability
+of LLMs. Planning decomposes a complex task into several smaller and simpler sub-tasks, and performs
+
+                                         Real World
+
+                                      Model                         Simulaon
+
+                            Validate
+
+                                      Agent  Agent-Agent  Agent-Environment
+                                             Interacon         Interacon
+
+                            Figure 19: Illustration of ABM (Wu et al., 2023b).
+                                                    5181
+                      Summary /           Acon         Tool Use
+                      Embedding            Task     External Tools
+                                                    (e.g., internet)
+                         Model             Large
+                                        Language     Output Log /
+                     Text / Vectror                    Feedback
+                       Database           Model
+                                                       Planning
+                       Memory            Persona
+                                     Personalizaon
+
+                     Figure 20: Overview of an LLM agent (Wu et al., 2023b).
+
+self-reflection over past actions to improve the performance of future actions. Memory equip the agent with
+short-term memory, which is often implemented via prompt engineering (Saravia, 2023), and long-term
+memory, which is often implemented using summarization (Park et al., 2023) or text embedding (Chase,
+2023). Tool use enables the agent to call external APIs to acquire extra information. The agent can be
+also personalized to play a specific role or improve the performance of task solving (Salewski et al., 2023;
+Wang et al., 2023b). Examples and case studies are available in Wu et al. (2023b) for demonstrating the
+implementation of these components.
+
+G Prompts
+
+We provide prompts for the three case studies, each accompanied by a preliminary test to evaluate whether
+an LLM is suitable for the task, as reported in Appendix B. The scenario prompts and (communication,
+planning, and action) phases prompts are used in the simulation of these case studies, as reported in
+Sections 4 ­ 6. For EE, the prompt of a paraphrased scenario is used in the sensitivity analysis, as reported
+in Appendix E.1.
+
+G.1 Prompts for KBC
+
+ Prompt 1: KBC ­ Preliminary Test
+
+You are participating in a number-guessing game alongside numerous other players. Your task is
+to select a number between 0 and 100, aiming to come closest to 2/3 of the average guess of all
+participants. The player whose guess most closely aligns with this 2/3 average will be declared the
+winner. Please choose your number. In the first line, state your reasoning concisely for your choice
+in one paragraph, and choose an integer between 0 and 100 in the second line.
+
+ Prompt 2: KBC ­ Scenario
+
+You are a college student participating in a number guessing game with other 23 players. You are
+player #{player_id}.
+You need to choose a number between 0 and 100. The player whose number is closest to 2/3 of the
+average guess of all players wins. Multiple players can win.
+If only you win, you will earn 100 credits. If multiple players win, each winner gets 100 credits.
+
+                                                        5182
+     Prompt 3: KBC ­ Communication Phase
+    Discussion so far: '{discussion_context}'
+
+    Before selecting your number, you will discuss the game with other players. You can use these
+    discussions to formulate a strategy. You can reveal your strategy during the discussion, but you do
+    not have to follow it when making your final decision.
+
+         Prompt 4: Default instruction on the context of discussion
+        Feel free to discuss anything, and you do not need to follow other's idea.
+
+         Prompt 5: Explicit instruction (to cooperate) during communication
+        Feel free to discuss anything, and make cooperation with each other through this discussion.
+
+    Now it's your turn to speak. Please share your thoughts concisely in one sentence.
+
+     Prompt 6: KBC ­ Planning Phase
+    Discussion so far: '{discussion_context}'
+
+         Prompt 7: Explicit instruction (to cooperate) in planning
+        You must cooperate with other players.
+
+         Prompt 8: Uncooperative instruction in planning
+        You don't like to cooperate with other players.
+
+    Based on the discussion with other players, please choose your number. State your reasoning
+    concisely for your choice.
+
+     Prompt 9: KBC ­ Action Phase
+    Choose an integer between 0 and 100.
+
+G.2 Prompts for BC
+     Prompt 10: BC ­ Scenario
+    This is a game between two players that spans multiple rounds. Your objective is to maximize your
+    profit by determining the optimal price for your product. You represent a firm called {firm_name},
+    while the other player represents a firm called {rival_firm_name}. Do not create or mention any
+    additional firm names, e.g., do not say anything related to "AI" or "AI assistant/model".
+
+    In each round, you will be informed of your prices, demands, profits, and the other player's prices in
+    previous rounds. Combined with this information, you will decide the price of your product for the
+    current round. Make sure your objective is maximizing your own profit.
+
+    Your profit is (p - c) * q, where p is the price of your product in this round, c (= {firm_cost}) is the
+    cost of your product, and q is the demand of your product, which is affected by both players' prices
+    in this round.
+
+                                                            5183
+     Prompt 11: BC ­ Planning Phase
+    Statistics of historical data (Rounds #a - #b: [your average price, your average demand, your
+    average profit, the other player's average price]) are given below.
+   {statistics}
+    You are Firm {firm_name}. This is Round #{current_round}.
+    Your strategy in previous rounds: {strategies}
+
+    Based on the above statistics and your previous strategies, what is your strategy for this round?
+
+     Prompt 12: BC ­ Communication Phase
+    You are Firm {firm_name}. This is Round #{current_round}.
+    Feel free to converse openly with the other player. You may select any topic that could potentially
+    maximize your profit. Additionally, you are encouraged to ask questions to the other player.
+
+    Conversation so far: {conversations}
+
+     Prompt 13: BC ­ Action Phase
+    Conversation this round: {conversations}
+   {statistics}
+   {decision_history_past_20_rounds}
+   {previous_strategies}
+
+    Based on the information you have, please determine the price of your product to maximize your
+    profit.
+    Only reply with a number. Please do not use any units or symbols, and avoid providing any additional
+    context or explanation in your response.
+
+G.3 Prompts for EE
+
+     Prompt 14: EE ­ Preliminary Test
+    Imagine you are in a room laid out as a 10 * 10 grid. You are currently at coordinates {ini-
+    tial_position}. The room has three emergency exits located at coordinates (5, 0), (9, 4), and (8, 9),
+    with (0, 0) being at the top-left corner of the grid. Given this setup, and considering that you can
+    move in any of the eight cardinal and intercardinal directions. It is possible to move diagonally, e.g.
+    from (1, 1) to (2, 2) is one move to the upper right, and is faster than (1, 1)->(1, 2)->(2, 2). You need
+    to determine the safest and fastest route to evacuate the room. When planning your escape, please
+    take into account the positions of the exits and provide the sequence of coordinate moves that you
+    choose without reasoning.
+
+                                                            5184
+ Prompt 15: EE ­ Scenario
+Because of an earthquake, you need to escape from the room where you are as quickly as possible. If
+you cannot escape in 50 rounds you will die. The room has a size of 33 * 33. There are 3 exits in the
+room. The exits are located at the left, bottom and right of the room. To escape from the room, you
+need to consider the following two aspects: exit proximity and people count. The exit proximity is
+the distance between you and the nearest exit. The people count is the number of people you can
+see. We use (x, y) to denote the position, smaller x means top and bigger x means bottom; smaller y
+means left and bigger y means right. Position (1, 1) is at the top left of the room. It is possible to
+move diagonally, e.g. from (1, 1) to (2, 2) is one move to the lower right, and is faster than (1, 1)->(1,
+2)->(2, 2). Each cell can hold only one person at a time.
+
+     Prompt 16: Uncooperative persona
+    You are selfish and not willing to help others.
+
+Now you feel: {subjective_feeling}.
+Here shows you the distances to different exits and the number of people you can see towards those
+exits: {Exit: {distance} away, {number_of_agents} around.}
+
+ Prompt 17: EE ­ Communication Phase
+You may briefly share information about evacuation with others, such as your feelings, which exit
+seems to be the best option for a quick escape, or anything else you would like to deliver. Avoid using
+numbers in the communication. Use less than 50 words, not too long.
+
+ Prompt 18: EE ­ Planning Phase: Subjective feeling on panic
+The distance to the nearest exit is {distance}. And there are {number_of_agents} people in your
+visible range. Please tell me your feelings about the situation around you in one sentence showing if
+you are panicking or not.
+
+ Prompt 19: EE ­ Planning Phase: Subjective feeling on exits
+Now you feel: {subjective_feeling_on_panic}. Here shows you the distances to different exits
+and the number of people you can see towards those exits. Exit {exit_id}: {{distance} away,
+{number_of_agents} people around.}
+Please tell me briefly how will you evaluate the two aspects of each exit based on your personal
+mental and physical characteristics in one sentence. Please give 3 sentences for each exit (around
+15 words).
+
+                                                        5185
+ Prompt 20: EE ­ Action Phase: Decide the exit
+Now you feel: {subjective_feeling_on_panic}. There are 3 exits in this room. Based on the current
+situation, your personal feelings on each exit are: {subjective_feeling_on_exits}
+You hear {number_of_people_communicated} people around you say: {communication}
+Here are the previous decisions you made for the target exit from the beginning: {decision_history}
+Please tell me which exit you would like to choose to escape, and you always want to escape as quick
+as possible. Please use the exit id to indicate your choice. For example, if you want to choose exit
+left, you can say 'left'. Only output one word of text to indicate your choice. You can choose from
+['bottom', 'left', 'right']. Give your answer without any additional text.
+
+ Prompt 21: EE ­ Action Phase: Decide the direction of movement
+To escape from the room, you have chosen the exit at {exit_id} and you are at {current_pos}. Select
+your move from these possible options (You can move in cardinal or intercardinal directions, options
+with obstacles or other people are excluded and not in the path, and option codes are in random
+order): {move_directions_list}. Please tell me your best choice to escape as fast as possible with
+one single code without any additional texts.
+
+ Prompt 22: EE ­ Sensitivity Analysis: Paraphrased Scenario
+Due to the earthquake, it is imperative that you quickly vacate the room you are currently in. If you
+cannot escape in 50 rounds you will die.
+The room measures 33 by 33 units and offers three potential exits situated on the left, bottom, and
+right sides of the room.
+To successfully escape from this room, you should take into account two factors: the proximity of the
+nearest exit and the number of people present.
+We use (x, y) to denote the position, smaller x means top and bigger x means bottom; smaller y means
+left and bigger y means right. Position (1, 1) is at the top left of the room. It is possible to move
+diagonally, e.g. from (1, 1) to (2, 2) is one move to the lower right, and is faster than (1, 1)->(1,
+2)->(2, 2).
+Each cell can hold only one person at a time.
+
+The exit proximity refers to the distance between your current location and the closest exit, de-
+noted as {distance_to_nearest_exit}. Additionally, within your line of sight, there are a total of
+{number_of_people} individuals.
+
+                                                        5186
+
