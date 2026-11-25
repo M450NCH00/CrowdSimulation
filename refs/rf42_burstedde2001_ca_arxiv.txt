@@ -1,0 +1,803 @@
+arXiv:cond-mat/0102397v1  [cond-mat.stat-mech]  22 Feb 2001
+Simulation of pedestrian dynamics using a
+2-dimensional cellular automaton
+C. Burstedde a, 1 K. Klauck a, 2 A. Schadschneider a, 3 J. Zittartz a, 4
+aInstitut f¨ ur Theoretische Physik, Universit¨ at zu K¨ oln, D-50923 K¨ oln, Germany
+Abstract
+W e propose a 2-dimensional cellular automaton model to simulate pedestrian traﬃc.
+It is a vmax = 1 model with exclusion statistics and parallel dynamics. L ong-range
+interactions between the pedestrians are mediated by a so ca lled ﬂoor ﬁeld which
+modiﬁes the transition rates to neighbouring cells. This ﬁe ld, which can be discrete
+or continuous, is subject to diﬀusion and decay . F urthermor e it can be modiﬁed by
+the motion of the pedestrians. Therefore the model uses an id ea similar to chemo-
+taxis, but with pedestrians following a virtual rather than a chemical trace. Our
+main goal is to show that the introduction of such a ﬂoor ﬁeld i s suﬃcient to model
+collective eﬀects and self-organization encountered in pe destrian dynamics, e.g. lane
+formation in counterﬂow through a large corridor. As an appl ication we also present
+simulations of the evacuation of a large room with reduced vi sibility , e.g. due to fail-
+ure of lights or smoke.
+Key words:cellular automata, nonequilibrium physics, pedestrian dy namics
+1 Introduction
+Considerable research has been done on the topic of traﬃc ﬂowusing methods
+from physics during the last decade [1–8]. Cellular automat a inspired by the
+pioneering works [9,11,10] compose by now an important clas s of models. Most
+studies have been devoted to one-dimensional systems, wher e several analytic
+approaches exist to calculate or approximate the stationar y state.
+1 E-mail: cb@thp.uni-koeln.de
+2 E-mail: kok@thp.uni-koeln.de
+3 E-mail: as@thp.uni-koeln.de
+4 E-mail: zitt@thp.uni-koeln.de
+Preprint submitted to Elsevier Preprint 26 November 2024
+The majority of these models deals with particles which can m ove by more
+than one cell per time step (maximal velocity vmax > 1). Furthermore, it seems
+to be widely accepted that the most suitable update procedur e is the parallel
+(synchronous) update. Both open and periodic boundary cond itions have been
+considered, where problems with open boundaries are genera lly harder to treat
+analytically (for a review, see [12]).
+On the other hand, pedestrian dynamics has not been studied as extensively
+as vehicular traﬃc, especially using a cellular automata ap proach. One reason
+is probably its generically two-dimensional nature. In rec ent years, continuum
+models have been most successful in modelling pedestrian dy namics. An im-
+portant example are the social force models (see e.g. [4,8,13] and references
+therein). Here pedestrians are treated as particles subjec t to long-ranged 5
+forces induced by the social behaviour of the individuals. T his leads to (cou-
+pled) equations of motion similar to Newtonian mechanics. T here are, however,
+important diﬀerences since e.g. in general the third law (“a ctio = reactio”) is
+not fulﬁlled.
+In contrast to the social force models our approach is closerin spirit to the
+general strategy of modelling (elementary) forces on a micr oscopic level by
+the exchange of mediating particles which are bosons. It is t herefore similar
+to active walker models [14,15] used so far mainly to describe trail formation,
+chemotaxis (see [16] for a review) etc. Here the walker leave s a trace by modi-
+fying the underground on his path. This modiﬁcation is real i n the sense that
+it could be measured in principle. For trail formation veget ation is destroyed
+by the walker and in chemotaxis he leaves a chemical trace. In contrast in our
+model the trace is virtual. Its main purpose is to transform e ﬀects of long-
+ranged interactions (e.g. following people walking some di stance ahead) into a
+local interaction (with the “trace”). This allows e.g. for a much more eﬃcient
+simulation on a computer.
+Cellular automata for pedestrian dynamics have been proposed in [17–22].
+These models can be considered as generalizations of the Bih am-Middleton-
+Levine model for city traﬃc [10]. Most works have focussed on the occurrence
+of a jamming transition as the density of pedestrians is incr eased. All mod-
+els have vmax = 1, except for the generalization proposed in [22] which is
+used for analyzing evacuation processes on-board passenge r ships. The other
+models use a kind of ”sublattice-dynamics” which distingui shes between diﬀer-
+ent types of pedestrians according to their preferred walki ng direction. Such
+an update is not easy to generalize to more complex situation s where the
+walking direction can change. T o our knowledge so far most ot her collective
+eﬀects encountered empirically [4,23,24,26,25] have not b een reproduced using
+these models. Another discrete model has been proposed earl ier by Gipps and
+5 typically decaying exponentially
+2
+Marksj¨ os [27]. This model is somewhat closer in spirit to ou r model than the
+cellular automata approaches of [17–22] since the transiti ons are determined
+by the occupancies of the neighbouring cells. However, also this model can not
+reproduce all the collective eﬀects. In [28] a discretized v ersion of the social
+force model has been introduced. The repulsive potentials b y the pedestrians
+are stored in a global potential, with pedestrians reacting to the gradients
+of this global potential. Although this model is able to repr oduce collective
+eﬀects it suﬀers from some drawbacks [29]. It is not ﬂexible e nough to treat
+individual reactions to other pedestrians, and collision- avoidance is not always
+guaranteed for velocities greater than 1.
+First we discuss some general principles we took into account in the devel-
+opment of our model. In contrast to vehicular traﬃc the time n eeded for
+acceleration and braking is negligible. The velocity distr ibution of pedestrians
+is sharply peaked [23]. These facts naturally lead to a model with vmax = 1
+(if space is discrete), i.e. only transitions to nearest nei ghbours 6 are allowed.
+Furthermore, a greater vmax would be harder to implement in 2 dimensions,
+especially when combined with parallel dynamics, and reduc e the computa-
+tional eﬃciency . The number of possible target cells increa ses quadratically
+with the interaction range. Furthermore one has to check whe ther the path
+is blocked by other pedestrians. This might even be ambigiou s for diagonal
+motion and crossing trajectories.
+T o keep the model simple, we strongly emphasize the principle to provide the
+particles with as little intelligence as possible and to ach ieve the formation of
+complex structures and collective eﬀects by means of self-o rganization. Eﬀec-
+tively , there is absolutely no intelligence (i.e. look-ahe ad distances or multiple
+moves per update step depending on the distribution of occup ied neighbour
+sites) in our model. In contrast to older approaches we do not make detailed
+assumptions about the human behaviour. Nevertheless the mo del is able to
+reproduce many of the basic phenomena.
+The key feature to substitute individual intelligence is the ﬂoor ﬁeld. Apart
+from the occupation number each cell carries an additional q uantity (ﬁeld)
+which can be either discrete or continuous. This ﬁeld can hav e its own dy-
+namics given by diﬀusion and decay coeﬃcients.
+Interactions between pedestrians are repulsive for short distances. One likes
+to keep a minimal distance to others in order to avoid bumping into them. In
+the simplest version of our model this is taken into account t hrough hard-core
+repulsion which prevents multiple occupation of the cells. For longer distances
+the interaction is often attractive. E.g. when walking in a c rowded area it is
+usually advantageous to follow directly behind the predece ssor. Large crowds
+6 Here the four diagonal neighbours are included.
+3
+may also be attractive due to curiosity .
+In order to produce a ﬂow around obstacles in a simple way we also present
+a variant of our model where the pedestrians can be in one of tw o modes (or
+moods), ”happy” or ”unhappy”. These two modes are distingui shed by their
+ﬂuctuations. ”Happy” pedestrians try to move in a preferred direction whereas
+”unhappy” pedestrians move in a more random fashion. This is suﬃcient to
+avoid a jamming transition due to obstacles at unrealistica l low densities.
+With two particle species moving in opposite directions, ea ch with its own
+ﬂoor ﬁeld, eﬀects can be observed which are so far only achiev ed by continuous
+models: lane formation and oscillation of the direction of ﬂ ow at doors. W e
+consider this model to be another proof of the ability of cell ular automata to
+create complex behaviour out of simple rules and the great ap plicability to all
+kinds of traﬃc ﬂow problems.
+The model can be used together with models for route selection which assign
+certain routes to each pedestrian. It only assumes that at ev ery timestep for
+each pedestrian a transition matrix (matrix of preferences ) is given.
+2 Model
+The underlying structure is a 2-dimensional grid which can be closed period-
+ically in one or both directions. Each cell can either be empt y or occupied
+by exactly one particle (pedestrian). The size of a cell corr esponds to approx-
+imately 40 × 40 cm2. This is the typical space occupied by a pedestrian in
+a dense crowd [26]. For special situations it might be desira ble to use a ﬁner
+discretization, e.g. such that each pedestrian occupies fo ur cells instead of one.
+In this paper, however, we concentrate on the simplest case w hich seems to be
+suﬃcient for most purposes. The update is done in parallel fo r all particles.
+This introduces a timescale into the dynamics which can roug hly be identi-
+ﬁed with the reaction time treac. In the deterministic limit, corresponding to
+the maximal possible walking velocity in our model, a single pedestrian (not
+interacting with others) moves with a velocity of one cell pe r timestep, i.e.
+40 cm per timestep. Empirically the average velocity of a pedestr ian is about
+1. 3 m/s [26]. This gives an estimate for the real time corresponding to one
+timestep in our model. It is approximately 0 . 3 sec, i.e. of the order of the
+reaction time treac, and thus is consistent with our microscopic rules.
+4
+M−1,−1 M−1,0
+M0,1M0,0M0,−1
+M1,−1 M1,0 M1,1
+M−1,1
+Fig. 1. A particle, its possible transitions and the associa ted matrix of preference
+M = ( Mij ).
+2.1 Basic Rules
+Each particle is given a direction of preference. ¿From thisdirection, a 3 × 3
+matrix of preferences is constructed which contains the probabilities for a move
+of the particle. The central element describes the probabil ity for the particle
+not to move at all, the remaining 8 correspond to a move to the n eighbouring
+cells. The probabilities can be related to the velocity and t he longitudinal
+and transversal standard deviations (see appendix A for det ails). In practice
+all particles of the same species share the values of these pa rameters and in
+consequence the same matrix. In the simplest case the pedest rian is allowed
+to move in one direction only without ﬂuctuations and in the c orresponding
+matrix of preference only one element is one and all others ar e zero (see Fig. 1).
+This ansatz can easily be extended by ﬁxing the direction of p reference for each
+cell separately , e.g. to handle structures inside building s. Then the particles
+would use the matrix belonging to the cell they occupy at a giv en step.
+In each update step, for each particle a desired move is chose n according to
+these probabilities. This is done in parallel for all partic les. If the target cell is
+occupied, the particle does not move. If it is not occupied an d no other particle
+targets the same cell, the move is executed. If more than one p article share
+the same target cell, one is chosen according to the relative probabilities with
+which each particle chose their target. This particle moves while its rivals for
+the same target keep their position (see Fig. 2).
+The matrix used to achieve maximum ﬂow is clearly the simplest case of uni-
+directional ﬂuctuation-free motion described above. T ran sversal ﬂuctuations
+reduce the ﬂow by introducing interference between lanes. H owever, this set-
+ting is not suﬃcient to avoid e.g. jams behind obstacles. T o e scape a jammed
+situation, the particles need a mode where they can select be tween diﬀerent
+cells to move backwards or sideways in order to eventually ma ke their way
+around the obstacle.
+5
+M (2)
+−1,1
+p1 =
+M (1)
+1, 0
+M (1)
+1, 0 +M (2)
+−1, 1
+p2 =
+M (2)
+−1, 1
+M (1)
+1, 0 +M (2)
+−1, 1
+becomes or
+M (1)
+1,0
+Fig. 2. Solving conﬂicts according to the relative probabil ities for the case of two
+particles with matrices of preference M (1) and M (2).
+The rules presented up to here are a straightforward general ization of the CA
+rules used so far for the description of traﬃc ﬂow [17–21]. Th e main diﬀerence
+is that in principle transitions in all directions are possi ble and each pedestrian
+j might have her own preferred direction of motion characteri zed by a matrix
+of preferences M (j). The only interaction between particles taken into account
+so far is hard-core exclusion.
+2.2 Floor Field
+In order to reproduce certain collective phenomena it is necessary to introduce
+further longer-ranged interactions. In some continuous mo dels this is done
+using the idea of a social force [4,8,13]. Here we introduce a diﬀerent approach.
+Since we want to keep the model as simple as possible we try to a void using a
+long-range interaction explicitly . Instead we introduce t he concept of a ﬂoor
+ﬁeld which is modiﬁed by the pedestrians and which in turn modiﬁes the
+transition probabilities. This allows to take into account interactions between
+pedestrians and the geometry of the system (building) in a un iﬁed and simple
+way without loosing the advantages of local transition rule s. The ﬂoor ﬁeld
+modiﬁes the transition probabilities in such a way that a mot ion into the
+direction of larger ﬁelds is preferred.
+The ﬂoor ﬁeld can be thought of as a second grid of cells underlying the
+grid of cells occupied by the pedestrians. It can be discrete or continuous. In
+this paper we will give examples for both variants. In genera l we distinguish
+between static and dynamic ﬂoor ﬁelds. The static ﬂoor ﬁeld S does not evolve
+with time and is not changed by the presence of pedestrians. S uch a ﬁeld can be
+used to specify regions of space which are more attractive, e .g. an emergency
+exit (see the example in Sec. 3.1) or shop windows. This has an eﬀect similar
+to a position-dependent matrix of preference but is much eas ier to realize.
+6
+In contrast the dynamic ﬂoor ﬁeld D is modiﬁed by the presence of pedestrians
+and has its own dynamics, i.e. diﬀusion and decay . Usually th e dynamic ﬂoor
+ﬁeld is used to model a (“long-ranged”) attractive interact ion between the
+pedestrians. Each pedestrian leaves a “trace”, i.e. the ﬂoo r ﬁeld of occupied
+cells is increased. Since the total transition probability is proportional to the
+dynamic ﬂoor ﬁeld it becomes more attractive to follow in the footsteps of
+other pedestrians. Explicit examples where such an interac tion is relevant will
+be given in Sec. 3. The dynamic ﬂoor ﬁeld is also subject to diﬀ usion and
+decay which leads to a dilution and ﬁnally the vanishing of th e trace after
+some time.
+In general thetransition probability pij in direction ( i, j ) (see Fig. 1) is given
+by 7
+pij = N Mij Dij Sij (1 − nij ). (1)
+Here nij is the occupation number of the target cell in direction ( i, j ), i.e. nij =
+0 for an empty cell and nij = 1 for an occupied cell. Therefore transitons to
+occupied cells are forbidden. N is a normalization factor to ensure ∑
+(i,j) pij = 1
+where the sum is over the nine possible target cells. In Sec. 2 .4.2 we will also use
+a slightly diﬀerent form for the transition probabilities w hich is more general
+than (1).
+The update rules of the full model including the interactionwith the ﬂoor
+ﬁelds then have the following structure:
+(1) The dynamic ﬂoor ﬁeld D is modiﬁed according to its diﬀusion and decay
+rules (see Sec. 2.3 and 2.4).
+(2) For each pedestrian, the transition probabilities for a move to an unoccu-
+pied neighbour cell ( i, j ) is determined by the matrix of preferences and
+the local dynamic and static ﬂoor ﬁelds, e.g. pij ∝ Mij Dij Sij .
+(3) Each pedestrian chooses a target cell based on the probab ilities of the
+transition matrix P = ( pij ).
+(4) The conﬂicts arising by any two or more pedestrians attem pting to move
+to the same target cell are resolved, e.g. using the procedur e described in
+Sec. 2.1.
+(5) The pedestrians which are allowed to move execute their s tep.
+(6) The pedestrians alter the dynamic ﬂoor ﬁeld of the cell th ey occupied
+before the move.
+The explicit form of the interaction between the pedestrian s and the ﬂoor ﬁeld
+and the dynamics of the ﬂoor ﬁeld will be speciﬁed in Sec. 2.3 a nd 2.4.
+7 Note that this is not a product of matrices but just the produc t of the corre-
+sponding matrix elements.
+7
+If more than one pedestrian species exists (i.e. two groups m oving in opposite
+directions), each species interacts with its own ﬂoor ﬁeld. In the simplest case
+these ﬁelds are independent from each other.
+2.3 Discrete ﬂoor ﬁelds
+In the discrete case the ﬁelds are realized through noninteracting particles
+which do not obey a hard-core exclusion principle. Therefor e they will be called
+bosons in the following. Since the particles corresponding to the p edestrians
+are not allowed to share a cell these will be called fermions. The fermions
+couple to the bosons locally which drives the fermions in a pr eferred direction
+and induces a long-range interaction between the fermions.
+The essence of our approach is that for each fermion the probability to jump
+into a direction with a larger number of bosons is increased. Thus, the motion
+is simply driven by gradients in the ﬂoor ﬁeld, i.e. in the den sity of the bosons.
+The ﬁrst type of bosons ( s-bosons) is completely static. At the beginning of
+a simulation for each cell ( x, y ) the occupation number of s-bosons τ s(x, y )
+is ﬁxed to a speciﬁc value. Furthermore, at the beginning eve ry cell is void
+of bosons of the second type, the dynamic bosons ( d-bosons). Whenever a
+fermion jumps from site ( x, y ) to one of the neighbouring cells, the d-boson
+occupation number of cell ( x, y ) is increased by one (fermions leave a trace):
+τ d(x, y ) → τ d(x, y ) + 1 . (2)
+After all motions of the fermions during one timestep have be en performed,
+the oldest d-boson of each cell is destroyed with probability α , if the lifetime
+of this boson is larger than one (i.e. it has been created duri ng the previous
+update step or earlier).
+Now that the two bosonic ﬂoor ﬁelds have been introduced, theupdate proce-
+dure for the fermions can be given. At every discrete time ste p t → t + 1 each
+fermion veriﬁes which of its neighbouring cells ( i, j ) are empty ( nij = 0). The
+transition probability to occupied neighbouring cells is s et to zero. Thus, the
+probability for a jump from the center cell (0 , 0) to an unoccupied neighbour
+site ( i, j ) is given by
+pij = N exp(βJ s△s(i, j )) · exp(βJ d△d(i, j )) · (1 − nij ) · dij (3)
+where
+△s(i, j ) = τ s(i, j ) − τ s(0, 0) and △d(i, j ) = τ d(i, j ) − τ d(0, 0). (4)
+8
+N is again a normalization factor to ensure ∑
+(i,j) pij = 1. di is a correction
+factor taking into account the direction the particle in cel l 0 has been com-
+ing from. The variables Js and Jd control the coupling strength between the
+fermions and the s-bosons and the d-bosons, respectively . β plays the rˆ ole of an
+inverse temperature. Note that the d-bosons lead to a long range interaction
+between fermions in space and time.
+The correction factor is introduced in order to prevent thatthe fermions are
+not confused by their own trace. One has to distinguish betwe en three cases:
+If the fermion at 0 has been sitting at i at time t − 1, the d-boson sitting on
+top of i has been left by the fermion under consideration. Setting
+dij = exp( −βJ d) (5)
+this fermion is not taken into account in the calculation of t he transition
+probabilities. If during the time step from t − 1 → t the fermion has moved
+into the direction of the vector pointing from (0 , 0) → (i, j ), this motion shall
+be enhanced
+dij = exp( βJ 0). (6)
+Therefore, J0 is a parameter which can be used to tune the inertia of the
+fermions. In all other case dij equals one.
+This prescription is not free of collisions. Therefore, if m fermions try to per-
+form a move onto the same site, only one of these fermions is al lowed to
+perform this move. This fermion is picked at random with prob ability 1 /m .
+Of course one can also use the method described in Sec. 2.1 for the resolution
+of the conﬂicts. For the problem studied in Sec. 3.1 the detai ls of the conﬂict
+resolution turned out to play no important role and we theref ore used the
+simpler rule.
+2.4 Continuous ﬂoor ﬁeld
+In the continuous variant each cellj of the ﬂoor ﬁeld carries a continuous
+ﬁeld value fj between 0 and 1. The basic purpose of the ﬂoor ﬁeld is again to
+determine the transition probabilities of the pedestrians .
+In the example studied in Sec. 3.2 we will only use a dynamic ﬂo or ﬁeld, but a
+generalization which includes also a static ﬁeld is straigh tforward. Since we are
+interested in applications related to the ﬂow around obstac les we introduce
+two kinds of states in which pedestrian can be: ”happy” or ”un happy”. A
+pedestrian becomes ”unhappy” if several consecutive desir ed moves could not
+be carried out due to conﬂicts. She then changes her strategy , i.e. her matrix
+9
+of preferences (see Sec. 2.4.2). The interaction of the pede strians with the ﬂoor
+ﬁeld is then as follows: ”Happy” pedestrians locally increa se the ﬁeld, and a
+large ﬁeld aids ”unhappy” pedestrians to become ”happy” aga in, in a sense to
+be speciﬁed below. This is suﬃcient to produce a ﬂow around ob stacles, e.g.
+lane formation (see Sec 3.2) or oscillations of the directio n of ﬂow at doors.
+Without the distinction between the two states pedestrians would have the
+tendency to pile up in front of obstacles. If a constant ﬂow fr om behind exists
+it will become increasingly diﬃcult for these pedestrians t o turn around and
+avoid the obstacle and therefore the pile will grow. For stat ic obstacles this
+eﬀect is related to the fact that our pedestrians have minima l intelligence.
+This assumption should be well justiﬁed in situations where they move in
+unknown territory and at a reduced visibility , e.g. due to sm oke or failing
+lights. In normal situations the pedestrians can see a stati c obstacle (e.g. a
+wall) from some distance and will try to avoid them early . Thi s can easily
+be incorporated in our model using a static ﬂoor ﬁeld which be comes smaller
+just in front of the obstacle and thus reduces the correspond ing transition
+probabilities. For dynamical obstacles, e.g. other pedest rians moving in the
+opposite direction, one way of avoiding unrealistic jammin g properties is the
+introduction of diﬀerent modes.
+2.4.1 Diﬀusion and decay
+The dynamic ﬂoor ﬁeldF is subject to diﬀusion and decay . It evolves according
+to
+∂F
+∂t = D · ∆ F − δ · F (7)
+which is discretized in the standard manner. Here D is the diﬀusion constant
+and δ the decay constant. The ranges are restricted to D ∈ [0, 1
+8 ] and δ ∈ [0, 1
+2 ]
+to suppress oscillations in the ﬂoor ﬁelds and insure that th e values do not
+leave the interval [0 , 1].
+2.4.2 Floor ﬁeld aﬀects the pedestrian ’s desire and state
+As mentioned above there are diﬀerent ways to model the interaction of the
+ﬂoor ﬁelds with the pedestrians. Here we present a prelimina ry solution for
+the situation of pedestrians with minimal intelligence whi ch can probably be
+simpliﬁed further. The form of the transition rates is sligh tly more general than
+(1). Furthermore we allow the pedestrians to be in two diﬀere nt modes (or
+moods) described by diﬀerent matrices of preference. The tr ansitions between
+these two modes are controlled by the ﬂoor ﬁeld. The rates are , however,
+subject to two restrictions:
+10
+• A uniform ﬂoor ﬁeld should not alter the matrix of preference s.
+• A non-uniform ﬂoor ﬁeld should be able to change a matrix elem ent from
+zero to a nonzero value.
+A per-element addition of the matrix of preferences and the ﬂ oor ﬁeld violates
+the ﬁrst principle, while a multiplication by e.g. Boltzman n factors violates
+the second. Therefore, we are working with a compromise betw een the two by
+slightly generalizing eq. (1)
+pij = N (Mij + b2) · exp
+(
+(Fij − Favg ) · b1
+)
+, (8)
+where F denotes the ﬂoor ﬁeld matrix, Favg the ﬂoor ﬁeld averaged over all nine
+relevant cells and P = ( pij ) the transition matrix which has to be normalized
+by a normalization factor N . The parameters of this rule are b1 and b2.
+W e introduce a second mode by switching to a diﬀerent matrix o f preferences.
+The mode described so far will be called happy, while the unhappy mode is
+realized by a diﬀerent matrix of preferences which is simply characterized by
+greater standard deviations and a reduced velocity . This ha ppens typically in
+high-density situations. The motion then becomes less dire cted and the larger
+ﬂuctuations help to avoid clogging. Happy pedestrians whic h could not move
+to their desired target ﬁeld in several consecutive timeste ps (the exact number
+is a parameter of the model, in our simulations set to 3) enter the unhappy
+mode, while unhappy pedestrians become happy again after a c ertain number
+of consecutive allowed desires (4 in our simulations). The o ptimal values for
+these two parameters depend on the preferences of the given s imulation (i.e.
+maximum ﬂow versus ﬂexible obstacle avoidance). Of course t his requires a
+minimal per-pedestrian memory consisting of two counters.
+One could easily alter this deﬁnition by allowing a continuous choice of matrix
+by interpolating between the two states. This would corresp ond to introducing
+a continuous spectrum of moods instead of the discrete states ”happy” and
+”unhappy”.
+In addition to the mechanism for transitions between the modes described
+above, a unhappy pedestrian changes to a happy one immediate ly if the value
+of the ﬂoor ﬁeld at its cell of origin is greater than a certain threshold. This
+leads to a smooth integration into a calm region of high ﬂow of pedestrians
+which have run into an obstacle or a jam.
+2.4.3 Pedestrians aﬀect the ﬂoor ﬁeld
+After a pedestrian has completed a certain number of total allowed moves
+(the value of which is usually 3) in the happy mode, the value o f the ﬂoor ﬁeld
+of its originating cell is increased. This introduces a thir d counter residing in
+11
+the per-pedestrian memory . The counter is set to zero at mode changes. The
+prescription to alter the ﬂoor ﬁeld reads
+F → F + min
+(
+(1 − F ) g1, g 2
+)
+. (9)
+The parameters of this rule are g1 ∈ [0, 1] and g2 ∈ [0, 1]. The way how pedes-
+trians aﬀect the ﬂoor ﬁeld can certainly be altered slightly without changing
+the overall behaviour.
+It is important to ignore this change in the ﬁeld while modifying the matrix in
+the next update step to avoid artifacts (pedestrians moving backwards without
+reason).
+With this extension, the jam behind a single obstacle composed by a line
+of several forbidden cells can be reduced signiﬁcantly . The trade-oﬀ lies in an
+overall reduced ﬂow, as the unhappy pedestrians gravely dis turb the previously
+unhindered movement of the pedestrians which pass to the sid es of the obsta-
+cle. This evokes the need to ﬁnd out for each pedestrian indiv idually whether
+it might be necessary to switch to the happy state instantane ously , depending
+on the local situation. This should be achieved without the i ntroduction of
+per-pedestrian intelligence.
+3 Simulations
+In the following we describe the results of simulations of two typical situations,
+i.e. the evacuation of a large room [25] (e.g. in the case of a ﬁ re) and the
+formation of lanes in a large corridor [13]. W e use diﬀerent v ariants of the
+basic model in order to elucidate the potential of the diﬀere nt approaches.
+3.1 Evacuation of a large room
+For simplicity , in the case of discrete ﬂoor ﬁelds pedestrians are only allowed
+to move in north ( N ), west ( W ), south ( S), and east ( E) direction, which
+leads to the following form of the matrix of preferences:
+M =
+
+
+
+
+
+
+
+0 MN 0
+MW M0 ME
+0 MS 0
+
+
+
+
+
+
+
+(10)
+This choice means no severe restriction since transitions i nto the diagonal
+directions can be implemented quite easily .
+12
+In our simulations we have investigated the behaviour of peo ple leaving a
+quadratic room with one door only . The s-bosonic ﬁeld has been chosen such
+that the occupation number of s-bosons decreases radially from a maximum
+value at the door to zero at the corners opposite to the door. T ypical stages
+Fig. 3. People leaving a room with one door only . Displayed ar e three typical stages
+of the dynamics.
+of the dynamics are shown in Fig. 3.
+As an example we have studied the inﬂuence of the lifetime ofd-bosons (i.e.
+their decay probability α ) on the evacuation time, i.e., the time it takes for all
+people to leave the room. W e have seen that if the coupling str ength Js to the
+static bosons is rather large, the evacuation time increase s with an increase of
+the lifetime of d-bosons (see Fig. 4). Most interestingly , if Js becomes smaller,
+the best evacuation times are found when the lifetime of d-bosons is ﬁxed at
+some intermediate values (see Fig. 5).
+Tev
+200
+400
+600
+800
+1000
+1200
+1400
+0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9
+α
+Fig. 4. Mean evacuation times Tev as function of the decay probability α of the
+d-bosons. The parameters are: Js = 2, Jd = J0 = 1, β = 10. The errorbars display
+the mean standard deviation.
+This ﬁnding is very interesting, because it has the consequence that the at-
+tractive interaction of particles can lead to crucial diﬀer ences in the particles’
+behaviour. These changes become more severe if the particle s have no clear
+13
+Tev
+200
+400
+600
+800
+1000
+1200
+1400
+1600
+1800
+2000
+2200
+0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9
+α
+Fig. 5. Same as Fig. 4, but with Js = 1 / 2. All other parameters are the same.
+idea what the best way to the next exit is. In addition, one can see that ﬂuc-
+tuations become much more dominant if Js goes to zero. Therefore, in case of
+evacuation simulations, studying average evacuation time s or – even worse –
+looking at one sample only might lead to wrong conclusions.
+3.2 Lane formation in a long corridor
+W e present simulations of a rectangular corridor which is populated by two
+species of pedestrians moving in opposite directions. Para llel to the direction of
+motion we assume the existence of walls. Orthogonal to the di rection of motion
+we investigated both periodic and open boundary conditions . The length of
+the corridor is set to 200 cells. Widths of 15 and 25 cells have been used.
+With periodic boundary conditions, the density of pedestri ans is ﬁxed for each
+run. The program ensures that the overall number of pedestri ans is evenly
+divided by the numbers for the diﬀerent species. For open bou ndaries, wie ﬁx
+the rate at which pedestrians enter the system at the boundar ies (ASEP style
+insertion rates). The pedestrians leave the system as soon a s they reach the
+opposite end of the corridor.
+This model clearly provides the option for a complete jam. The jamming prob-
+ability with periodic boundaries at constant density incre ases with the length
+of the system. An open system can be thought of as the limit of a n inﬁnitely
+long periodic system, although density and entry rates do no t correspond
+absolutely (the density in the open system is always higher t han twice the
+insertion rate).
+The update rules have the same structure as described in Sec.2.2. Only step
+(6) is modiﬁed to
+14
+(6’) The pedestrians change their mode if necessary based on their history
+and the ﬂoor ﬁeld. They alter the (dynamic) ﬂoor ﬁeld of the ce ll they
+occupied before the move.
+W e performed several runs for diﬀerent densities and insert ion rates, respec-
+tively . The focus of our attention is the parameter range whe re the transition
+from a stable ﬂow to a complete jam takes place. The complete s et of param-
+eters for the simulations can be found in appendix B.
+Fig. 6. Snapshot of a simulation with ρ = 0 . 17, w = h = 50. The left part shows
+the parameter control. The central window is the corridor an d the light and dark
+squares are right- and left-moving pedestrians, respectiv ely . The right part shows
+the ﬂoor ﬁelds for the two species.
+Figure 6 shows the graphical frontend running a simulation of a small periodic
+system. The lanes can be spotted easily , both in the main wind ow showing
+the cell contents and the small windows on the right showing t he ﬂoor ﬁeld
+intensity for the two species.
+-1
+-0.5
+0
+0.5
+1
+0 5 10 15 20 25
+Fig. 7. V elocity proﬁle of a periodic system with ρ = 0 . 10.
+T o obtain information about the lanes we accumulated the ped estrian veloc-
+15
+-0.4
+-0.2
+0
+0.2
+0.4
+0 5 10 15 20 25
+Fig. 8. V elocity proﬁle of an open system taken at x = L
+2 with α = 0 . 04.
+-0.4
+-0.2
+0
+0.2
+0.4
+0 5 10 15 20 25
+Fig. 9. V elocity proﬁle of an open system taken at x = L
+4 with α = 0 . 04.
+ities at a cross section perpendicular to the direction of ﬂo w. This is done
+according to the formula jn+1 = jn · r + v, where j is the accumulated value
+and v = 0 , 1 is the velocity of the pedestrian crossing the line. r < 1 is set to
+such a value that the characteristic number of contributing pedestrians is 100.
+Selected proﬁles are shown in Figs. 7–9. The values of the oth er parameters
+are given in the table in Appendix B. Qualitatively our resul ts are in good
+agreement with those of [30] where the lane formation has bee n interpreted as
+an optimal self-organization process.
+It is obvious that the lane formation in the periodic system works far better
+than in the open system. The ﬂoor ﬁeld leads to an eﬀective att raction of
+identical pedestrians while diﬀerent pedestrian species s eparate. This results
+in the formation of a stable pattern in the periodic case.
+In a certain density regime, these lanes are metastable. Spontaneous ﬂuctua-
+tions can disrupt the ﬂow in one lane causing the pedestrians to spread and
+interfere with other lanes. Eventually the system can run in to a jam by this
+mechanism. The average time after which the system is blocke d by a jam is
+an interesting observable which depends on the density of pe destrians. W e
+observe large ﬂuctuations of this observable which require many samples to
+ﬁnd statistically signiﬁcant information.
+16
+W e have also found the formation of an odd number of lanes unde r certain
+conditions. This corresponds to a spontaneous breaking of t he left-right sym-
+metry of the system.
+Due to the complexity of our model, the computational speed is signiﬁcantly
+lower compared to the original models of traﬃc ﬂow. A typical value measured
+on a SUN Sparc-10 workstation is 0 . 24 mega updates per second. It should
+still be way faster than continuous models.
+4 Conclusions
+W e have introduced a stochastic cellular automaton to simulate pedestrian
+behaviour. W e focused on the general concept and the eﬀects w hich can be
+observed with the basic approach, i.e. particle attraction and repulsion be-
+tween identical and diﬀerent particles respectively and la ne formation.
+The key mechanism is the introduction of the ﬂoor ﬁeld which a cts as a substi-
+tute for pedestrian intelligence and leads to collective ph enomena. This ﬂoor
+ﬁeld makes it possible to translate spatial long-ranged int eractions into non-
+local interactions in time. The latter can be implemented mu ch more eﬃciently
+on a computer. Another advantage is an easier treatment of co mplex geome-
+tries. In models with long-range interactions, e.g. the soc ial-force models, one
+always has to check explicitly whether pedestrians are sepa rated by walls in
+which case there should be no interaction between them. Furt hermore, the
+computational eﬀort in these models increases proportiona lly to the square
+of the number of individuals. In contrast, in our approach it increases only
+linearly with the system size which is usually ﬁxed.
+The general idea in our model is similar to chemotaxis. However, the pedestri-
+ans leave a virtual trace rather than a chemical one. This vir tual trace has its
+own dynamics (diﬀusion and decay) which e.g. restricts the i nteraction range
+(in time). It is realized through a dynamcical ﬂoor ﬁeld whic h allows to give
+the pedestrians only minimal intelligence and to use local i nteractions. T o-
+gether with the static ﬂoor ﬁeld it oﬀers the possibility to t ake diﬀerent eﬀects
+into account in a uniﬁed way , e.g. the social forces between t he pedestrians or
+the geometry of the building.
+W e presented a rather general form of the model. Not all the features are
+needed in all the cases. E.g. for lane formation we do not need a static ﬁeld. A
+static ﬁeld might lead to a ”pinning” of lanes. W e have shown t hat our model is
+a good starting point for realistic applications since it is able to reproduce the
+basic phenomena encountered empirically . In contrast the o ther CA models
+so far have not been shown to exhibit some of the collective ph enomena,
+17
+e.g. lane formation etc. Other features, e.g. oscillations at doors [13], have
+also been observed in our simulations [31]. Quantitative re sults will presented
+elsewhere. The model can also be applied to more complex geom etries and
+various characteristics of a crowd can be simulated without major changes.
+So it should be possible to study the eﬀects of panic (see [25] and references
+therein).
+The description of pedestrians using a cellular automaton approach allows for
+very high simulation speeds. Therefore, we have the possibi lity to extract the
+complete statistical properties of our model using Monte Ca rlo simulations.
+This knowldege is of major importance if one wants to establi sh risk manage-
+ment techniques that are nowadays used for the hedging of ﬁna ncial assets all
+over the world [32].
+Acknowledgment
+Acknowledgements:Part of this work has been performed within the re-
+search program of the SFB 341 (K¨ oln–Aachen–J¨ ulich). W e li ke to thank H.
+Kl¨ upfel, A. Keßel and D. Helbing for useful discussions.
+A Construction of the matrix of preferences
+The aim of this appendix is to show that the matrix of preferences can be
+directly related to observable quantities, namely the aver age velocities and
+their ﬂuctuations. The procedure explained here to constru ct the matrix of
+preferences is not essential for the model. One could freely choose the nine
+matrix elements to achieve the desired behaviour of the pede strians. However,
+it is not straightforward to choose ﬁve independent probabi lities (one is de-
+termined by normalization and three by symmetry) in a consis tent way . It is
+therefore convenient to look for a simpler principle, which might even simplify
+some calculations.
+W e consider ﬁrst a one-dimensional setup of three adjacent ﬁelds which rep-
+resents the velocities in I := {−1, 0, 1} from left to right. T o these cells the
+probabilities p−1, p0 and p1 are assigned. The values of the average velocity v
+and of the standard deviation σ are the parameters of this construction. This
+18
+leads to three conditions which uniquely determine the prob abilities:
+∑
+i∈I
+pi = 1 (A.1)
+∑
+i∈I
+ipi = v (A.2)
+∑
+i∈I
+(i − v)2pi = σ 2 (A.3)
+Not all combinations of v ∈ [−1, 1] and σ ∈ [0, 1] are allowed. One ﬁnds
+p−1 = 1
+2
+(
+σ 2 + v2 − v
+)
+(A.4)
+p0 = 1 −
+(
+σ 2 + v2
+)
+(A.5)
+p1 = 1
+2
+(
+σ 2 + v2 + v
+)
+, (A.6)
+where σ is conﬁned to the interval [ σ l, σ h] with
+σ 2
+l = 1
+4 −
+(
+|v| − 1
+2
+) 2
+(A.7)
+σ 2
+h = 1 − v2 . (A.8)
+These restrictions are shown in ﬁgure A.1.
+0
+0.2
+0.4
+0.6
+0.8
+1
+0 0.2 0.4 0.6 0.8 1
+Fig. A.1. σ l and σ h depending on v.
+T o create a 3 × 3 matrix M , one creates two such sets: {p−1, p 0, p 1} with the
+parameters {v, σ v } which correspond to the forward and backward movement
+and {q−1, q 0, q 1} with the parameters {0, σ t} for the (symmetric) transversal
+movement. These are simply multiplied:
+Mij = qi · pj , (A.9)
+which produces a movement to the right for positive v. This matrix is normal-
+ized by construction. W e have now achieved a reduction of fre e parameters
+from 5 to 3 and as a side eﬀect formulated a starting point for a nalytical
+calculations.
+19
+B Typical parameter values
+The following table contains the typical parameter values used in the simula-
+tions of lane formation in Sec. 3.2.
+Description
+Symbol V alue
+steps to happy transition 4
+steps to unhappy transition 3
+ﬂoor ﬁeld diﬀusion D 0.01875
+ﬂoor ﬁeld decay δ 0.005
+ﬁrst active ﬂoor parameter b1 0.15
+second active ﬂoor parameter b2 0.15
+ﬁrst passive ﬂoor parameter g1 0.23
+second passive ﬂoor parameter g2 0.10
+The ﬁrst two lines show the number of consecutive allowed mov es which a
+particle in unhappy mode needs to become happy again and the n umber of
+consecutive forbidden moves for the inverse transition, re spectively .
+The following two lines give the parameters for the modiﬁcat ion of the ﬂoor
+ﬁeld as shown in (7).
+The active ﬂoor parameters determine the inﬂuence of the ﬂoor ﬁeld on the
+particles (8), whereas the passive ﬂoor parameters describ e the action of the
+particles on the ﬂoor ﬁeld (9).
+The ﬁrst six of these values can be found in the lower half of the conﬁguration
+panel in Figure 6 (the diﬀusion constant is scaled by 1
+8 ).
+References
+[1] D.E. W olf, M. Schreckenberg, A. Bachem (Eds.):Traﬃc and Granular Flow
+(W orld Scientiﬁc, Singapore 1996)
+[2] M. Schreckenberg, D.E. W olf (Eds.): Traﬃc and Granular Flow ’97 (Springer
+1998)
+[3] D. Helbing, H. J. Herrmann, M. Schreckenberg and D. E. W ol f (Eds.): Traﬃc
+and Granular Flow ’99: Social, Traﬃc, and Granular Dynamics (Springer 2000)
+20
+[4] D. Helbing, Verkehrsdynamik: Neue Physikalische Modellierungskonze pte, (in
+German) (Springer, 1997)
+[5] D. Chowdhury , L. Santen, A. Schadschneider, Phys. Rep. 329, 199 (2000)
+[6] A. Schadschneider, Physica A285, 101 (2000)
+[7] K. Nagel, J. Esser and M. Rickert, in: Annu. Rev. Comp. Phy s. 7, p. 151, ed.
+D. Stauﬀer (W orld Scientiﬁc, 2000)
+[8] D. Helbing, cond-mat/0012229
+[9] K. Nagel and M. Schreckenberg, J. Physique I, 2, 2221 (1992)
+[10] O. Biham, A.A. Middleton, D. Levine, Phys. Rev. A 46, R6124 (1992)
+[11] M. Schreckenberg, A. Schadschneider, K. Nagel and N. It o, Phys. Rev. E 51,
+2939 (1995)
+[12] B. Derrida, Phys. Rep. 301, 65 (1998)
+[13] D. Helbing, P . Molnar, Phys. Rev. E51, 4282 (1995)
+[14] D. Helbing, F. Schweitzer, J. Keltsch, P . Molnar, Phys. Rev. E56, 2527 (1997)
+[15] D. Helbing, J. Keltsch, P . Molnar, Nature 388, 47 (1997)
+[16] E. Ben-Jacob, Contemp. Phys. 38, 205 (1997)
+[17] M. F ukui, Y. Ishibashi, J. Phys. Soc. Jpn. 68, 2861 (1999)
+[18] M. F ukui, Y. Ishibashi, J. Phys. Soc. Jpn. 68, 3738 (1999)
+[19] M. Muramatsu, T. Irie, T. Nagatani, Physica A267, 487 (1999)
+[20] M. Muramatsu, T. Nagatani, Physica A275, 281 (2000)
+[21] M. Muramatsu, T. Nagatani, Physica A286, 377 (2000)
+[22] H. Kl¨ upfel, T. Meyer-K¨ onig, J. W ahle, M. Schreckenbe rg, in Theory and
+Practical Issues on Cellular Automata , S. Bandini, T. W orsch (Eds.), Springer
+(2000)
+[23] L.F. Henderson, Nature 229, 381 (1971)
+[24] L.F. Henderson, D.J. Lyons, Nature 240, 353 (1972)
+[25] D. Helbing, I. F arkas, T. Vicsek, Nature 407, 487 (2000)
+[26] U. W eidmann, Transporttechnik der Fussg¨ anger, Schriftenreihe des IVT 80,
+ETH Z¨ urich (1992)
+[27] P .G. Gipps, B. Marksj¨ os, Math. and Comp. in Simulation 27, 95 (1985)
+[28] K. Bolay , Diploma Thesis, Suttgart University (1998); Java applets for the
+model can be found at http://www.trafficforum.org/links.html
+21
+[29] D. Helbing, private communication
+[30] D. Helbing, T. Vicsek, New J. Phys.1, 13.1 (1999)
+[31] C. Burstedde, Diploma Thesis, University of Cologne (2 001); available for
+download at http://www.burstedde.de/carsten/diplom.html
+[32] J.-P . Bouchaud and M. Potters, Theory of Financial Risk (Cambridge
+University Press 2000)
+22

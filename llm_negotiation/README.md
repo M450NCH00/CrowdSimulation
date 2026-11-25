@@ -125,6 +125,16 @@ of paid runs and a cap for its round, recorded in `CLAUDE.md`.
   order of 2026-10-27:* RF-18 before RF-32 and RF-14, so that a rule is first run in the
   simulation (does it help?) and then checked against human evidence; a verdict in RF-18 does not
   remove a rule from RF-14 (track #55, "Decisions", the two filters).
+- **Round 1, continued: the action space** (the supervisor's suggestions of November 2026,
+  SV7 to SV14; the user's decisions AS1 to AS9 in `docs/action-space.md`, issue #131):
+  - RF-42 (#131) records them (*done*);
+  - free work: RF-43 (#132) left and right in the literature; RF-44 (#133) the YC Labs game
+    agents; RF-45 (#134) the share of hallucinated decisions; then RF-41 (#130);
+  - RF-46 (#135, paid): behave like the person, with no need to speak like them;
+  - the menu: RF-47 (#136) a menu of described actions; RF-48 (#137) an absolute frame;
+    RF-49 (#138, paid) runs both;
+  - the grid: RF-50 (#139) and RF-51 (#140) build it, RF-52 (#141, paid) runs it. **The grid is
+    an add-on that modifies no existing code** (AS1).
 - **Round 2, meeting in a narrow passage (lean):** RF-19 (#75) screening; RF-13 (#68) Phase B
   (optional; moved from round 1 by the user, 2026-10-27); RF-20 (#76) extract, test with earlier
   rules, verify.

@@ -93,6 +93,9 @@ Constraints for every RF issue (from #55):
 - Every feature is built and tested on the mock client first.
 - Configs and templates from before this track must keep behaving exactly as
   before.
+- *Added 2026-11-25 (issue #131, AS1), the user's decision:* the grid environment
+  (RF-50 to RF-52) is an add-on. It must not modify the current environment's code;
+  ask the user before changing any existing file for it.
 
 Budget:
 - LLM used for dataset generation: **DeepSeek API** (~$2 credit budget; current
@@ -214,6 +217,33 @@ The user's notes from the meeting, word for word:
   sign-off is pending, see below).
 - The rule format no longer matters much, since an LLM can translate a rule for
   each simulator. Rules may be more specific, for example "keep left".
+
+### Meeting of November 2026 (after RF-40; exact date not recorded)
+The user presented round 1's results (`presentations/2026-11_supervisor_meeting_round1.pptx`).
+The user's notes from the meeting, word for word:
+
+> 1. Can try grid environment, because this will limit the action space of the agents, especially for decisions like turning left or right (as this will get rid of the angle stuff)
+> 2. Search online on left and right orientation, because deepseek keeps mistaking the other person's left and right as its own elft and right despite already telling it that they are opposite direction facing
+> 3. Can test with absolute positioning
+> 4. Can have LLM output qualitative (word) description instead of absolute action space
+> 5. Describe the action that the LLM can take and have it choose, instead of having it decide the angles and stuff
+> 6. Check whether the decisions it made are hallucinated choices (Assess the percentage on the hallucination responses)
+> 7. Can tell the agent you are supposed to behave like this person, but no need to speak like the person
+> 8. My professor said I can take a look at this and see how they model the agent's decisions: https://labs.ycombinator.com/projects/games/index.html#mindustry-bloopers
+
+**Summary (not the supervisor's words; the notes above are the record):**
+- These are suggestions ("can ..."), not instructions. They are numbered SV7 to SV14 in
+  `llm_negotiation/docs/architecture.md`, section 8.8, and are acted on in RF-42 to RF-52
+  (#131 to #141, track #55).
+- *Decided by the user on 2026-11-25, on their own authority* (AS1 to AS9, recorded in
+  `llm_negotiation/docs/action-space.md`):
+  - **AS1, the grid is an add-on:** it must not modify the current environment's code. It
+    lives only in new files with its own entry point, and if an existing file would have to
+    change, the user is asked first.
+  - **AS4, the menu in the existing corridor** extends the existing code behind a template
+    flag, and earlier templates and configs must behave exactly as before.
+  - The rest cover the conditions, the menu's amounts, the absolute frame (provisional until
+    RF-43), the grid's cells and clash rule, when RF-41 runs, and the order of work.
 
 ## Pending sign-offs
 Items 1 and 5 are still pending (item 1 was approved for issues #64, #65, #98, #100, #101, #104, #66, #67, #108, #110, #115, #117, #119, #127 and #129 only).
