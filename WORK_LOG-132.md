@@ -40,6 +40,16 @@ Assumptions:
 - Result: LLM side has five text-only or text-relevant studies with numbers (SpatialText, FoREST, GSU, Cohn & Blackwell, VoT) plus one image study (Leonard et al.); human side has Tversky & Hard, van der Ham et al., Gormley et al.; Siebinga's model of the pavement dance. Nothing found on what pedestrians or cyclists say to someone coming the other way.
 - Next step: write `literature/frames-of-reference/README.md`.
 
+### 2026-11-25 06:39 UTC — README, probes, and the 5b check
+- What I did: wrote `literature/frames-of-reference/README.md` (source table; questions 1 to 4; the AS5 recommendation; limits) and `probes.md` (task 4: 20 static prompts with worked answers, **not run**). Re-read every number against the extracts.
+- Corrections made during the check:
+  - GSU has **14** prompted models, not 13: the fixed frame wins in 12, Gemini-3-Pro ties, QwenVL-32b is the exception.
+  - Removed a "coin would score 50%" comparison for FoREST: its answers are not a binary choice, so that was not supported.
+  - Added FoREST `:610-650` and Cohn `:436-462` to the excerpts, so that two cited passages (Qwen2 ignoring the stated perspective; person form) are in the tracked file.
+- Verification: `tests/test_repo_hygiene.py` 7 passed (`.gitignore` changed). No code changed, so the full suite was not run.
+- Decisions (mine, flagged as recommendations in the README, section 6): agree with AS5 on not telling the heading and on code converting; recommend neutral landmark names over compass names; recommend thinking mode only as a static probe first.
+- Next step: commit, push, open the PR into `feat/129-rf40-turn-taking-talk`.
+
 ## Search terms
 Web search (standard unless marked):
 1. LLM spatial perspective-taking benchmark frame of reference left right another person's viewpoint → FoREST, ViewSpatial-Bench (VLM)
@@ -61,5 +71,34 @@ Web search (standard unless marked):
 Also reused: `literature/environment-description/` (#52) for Martorell's grid encodings and Chen's MAPF.
 
 ## Open questions / risks
+1. **No source tests RF-40's exact case** (two people facing each other, in text, one telling the other a side). FoREST (objects, a camera) and Leonard et al. (images) are the nearest; every carry-over is an inference.
+2. **Most LLM sources are preprints** (SpatialText, GSU, Leonard et al., Siebinga), each with one run per setting. SpatialText's text names a "Qwen-Flash" that is missing from its Table 3.
+3. **Model drift:** Cohn & Blackwell's deepseek-chat and deepseek-reasoner are 2025 versions; SpatialText's DeepSeek-V3.2 is not this project's `deepseek-flash`.
+4. **Not read in the original:** Levinson 2003, Majid et al. 2004, Schober 1993, Hill 1982. Cited `[secondary]` only; the issue's `[to check]` on Levinson stays open. The user could fetch them in a browser.
+5. **The landmark-name recommendation has no direct evidence.** No study compares compass and landmark names for LLMs; it rests on the default-heading errors in GSU and SpatialText. Probes 13 to 16 would test it.
+6. **Code-written notes for heard messages** (README 5.1) are untested anywhere; they would be a new template version in RF-47 or later.
+7. **For the user:** whether to switch AS5 to landmark names; whether to run the probe (paid, needs an approval and cap); thinking mode on or off in it.
+8. **GSU's best-prompt tables** (its Tables 9 and 15) were not checked; marked `[unverified]` in the README.
 
 ## Summary (fill in at the end)
+**What changed**
+- `literature/frames-of-reference/README.md`: 12 sources in one table, then answers to the issue's questions 1 to 4, a labelled recommendation for AS5, and the limits.
+- `literature/frames-of-reference/probes.md`: task 4's 20 static prompts, not run.
+- `refs/rf43_excerpts.txt`: every cited passage, with line numbers. `refs/rf43_vanderham2021.*` (CC BY 4.0) is tracked in full; the other full copies are local only (`.gitignore`).
+
+**Findings in short**
+- **Converting another person's left and right is a known LLM weakness.** FoREST's text conversion into the other object's own view reaches at most 55.5% (GPT-4o with CoT: 53.0%), and Llama3-70B systematically swaps left and right. In GSU a fixed frame beats a turning frame in 12 of 14 models.
+- **The fix with the most support is to remove the conversion from the model:** an absolute frame and no heading, with code converting (AS5's structure). Stating the rule helps only in the exact 180° case, and on images (Leonard et al.). Stating the frame helps identify it, not convert it (FoREST).
+- **For DeepSeek:**
+  - reasoning mode scored 0.84 against chat's 0.48 on compass questions (Cohn & Blackwell);
+  - DeepSeek-V3.2 led SpatialText's perspective transformation at 86%.
+  
+  So thinking mode is worth a static probe first.
+- **People:**
+  - a facing person's left and right is harder for people too: 28.7% rate themselves poor at it, against 14.6% for their own;
+  - yet people get it right about 9 in 10 times, against about 1 in 3 for RF-40's listeners;
+  - people often use the other's frame (25 to 50%) and rarely say whose left they mean (13 to 21%).
+  
+  No study was found on what pedestrians say head-on.
+
+**How it was verified:** workflow 5b. Every number was re-read against its extract, with three corrections (see the 06:39 entry). Every question is answered or marked "could not find". The open questions above are not empty. The sources are cached. `test_repo_hygiene.py` passed: 7 tests.
