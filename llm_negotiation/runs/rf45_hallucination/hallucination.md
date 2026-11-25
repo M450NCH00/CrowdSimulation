@@ -64,3 +64,51 @@ Design sessions with a headline flag: resolved 88, not 124; without: resolved 36
 Flags by rule: `1:misread_heard_side` 14, `1:moved_into_line` 12, `1:moved_side` 41, `1:position_side` 5, `1:signal_wave` 10, `1:speech` 20, `1:trait_elderly` 7, `1:trait_suitcase` 2, `2:own_signal` 3, `2:own_speech` 2, `3:intent_against_plan` 1234, `4:coming_through_on_your_side` 16, `4:keeping_to_my_side` 2, `5:unreadable` 121, `7:no_room` 33, `7:wall_close` 17.
 Tags: {'misread_heard_side': 14}.
 
+## The hand check
+
+337 decision points judged.
+
+| Category | Precision (flags judged right) | Recall on the random sample |
+| --- | --- | --- |
+| 1. misperceived the other | 55 / 124 (44.4%, 35.9 to 53.1) | 2 / 9 (22.2%, 6.3 to 54.7) |
+| 2. misremembered itself | 4 / 7 (57.1%, 25.0 to 84.2) | – |
+| 3. says one thing, plans another | 24 / 77 (31.2%, 21.9 to 42.2) | 11 / 12 (91.7%, 64.6 to 98.5) |
+| 4. says a side it does not take | 30 / 31 (96.8%, 83.8 to 99.4) | – |
+| 5. not an available action (unreadable) | 5 / 5 (100.0%, 56.6 to 100.0) | 5 / 5 (100.0%, 56.6 to 100.0) |
+| 7. misstated the setting | 4 / 37 (10.8%, 4.3 to 24.7) | – |
+
+**The true share, from the random sample read in full** (flags judged right plus misses; both runs pooled):
+
+| | Share of the random sample |
+| --- | --- |
+| **Headline (1, 2, 5, 7)** | 14 / 150 (9.3%, 5.6 to 15.1) |
+| Self-contradiction (3, 4) | 12 / 150 (8.0%, 4.6 to 13.5) |
+| 1. misperceived the other | 9 / 150 (6.0%, 3.2 to 11.0) |
+| 2. misremembered itself | 0 / 150 (0.0%, 0.0 to 2.5) |
+| 3. says one thing, plans another | 12 / 150 (8.0%, 4.6 to 13.5) |
+| 4. says a side it does not take | 0 / 150 (0.0%, 0.0 to 2.5) |
+| 5. not an available action (unreadable) | 5 / 150 (3.3%, 1.4 to 7.6) |
+| 7. misstated the setting | 0 / 150 (0.0%, 0.0 to 2.5) |
+
+**Precision by rule** (judged flags; rules with fewer than 30 flags are judged in full):
+
+| Rule | Flags | Judged right | Estimated right flags |
+| --- | --- | --- | --- |
+| `1:misread_heard_side` | 14 | 10 / 14 (71.4%, 45.4 to 88.3) | 10.0 |
+| `1:moved_into_line` | 16 | 16 / 16 (100.0%, 80.6 to 100.0) | 16.0 |
+| `1:moved_side` | 52 | 25 / 27 (92.6%, 76.6 to 97.9) | 48.1 |
+| `1:position_side` | 8 | 0 / 8 (0.0%, 0.0 to 32.4) | 0.0 |
+| `1:signal_wave` | 15 | 1 / 15 (6.7%, 1.2 to 29.8) | 1.0 |
+| `1:speech` | 26 | 1 / 26 (3.8%, 0.7 to 18.9) | 1.0 |
+| `1:trait_elderly` | 15 | 2 / 15 (13.3%, 3.7 to 37.9) | 2.0 |
+| `1:trait_suitcase` | 3 | 0 / 3 (0.0%, 0.0 to 56.1) | 0.0 |
+| `2:own_position` | 1 | 1 / 1 (100.0%, 20.7 to 100.0) | 1.0 |
+| `2:own_signal` | 4 | 3 / 4 (75.0%, 30.1 to 95.4) | 3.0 |
+| `2:own_speech` | 2 | 0 / 2 (0.0%, 0.0 to 65.8) | 0.0 |
+| `3:intent_against_plan` | 1997 | 24 / 77 (31.2%, 21.9 to 42.2) | 622.4 |
+| `4:coming_through_on_your_side` | 29 | 29 / 29 (100.0%, 88.3 to 100.0) | 29.0 |
+| `4:keeping_to_my_side` | 2 | 1 / 2 (50.0%, 9.5 to 90.5) | 1.0 |
+| `5:unreadable` | 233 | 5 / 5 (100.0%, 56.6 to 100.0) | 233.0 |
+| `7:no_room` | 56 | 2 / 21 (9.5%, 2.7 to 28.9) | 5.3 |
+| `7:wall_close` | 33 | 2 / 16 (12.5%, 3.5 to 36.0) | 4.1 |
+

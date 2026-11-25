@@ -474,6 +474,49 @@ def score_hand_check(points: Sequence[Mapping[str, Any]], chosen: Mapping[str, l
         out[number] = {"precision": _rate(right[number], judged[number]),
                        "recall_on_sample": _rate(hits[number], hits[number] + missed[number])}
     out["judged_points"] = len(judgements)
+    out["rules"] = rule_precision(points, judgements)
+    out["sample_true"] = sample_true_shares(chosen["sample"], judgements, by_key)
+    return out
+
+
+def rule_precision(points: Sequence[Mapping[str, Any]], judgements: Mapping[str, Any]) -> dict[str, Any]:
+    """Per rule: flags in all, flags judged, judged right, and the estimated right flags in all
+    (flags times precision). Rules with few flags are judged in full, so their estimate is exact."""
+    by_key = {p["key"]: p for p in points}
+    total, judged, right = Counter(), Counter(), Counter()
+    for p in points:
+        for f in p["flags"]:
+            total[f"{f['category']}:{f['rule']}"] += 1
+    for key, entry in judgements.items():
+        if key not in by_key:
+            continue
+        for name, verdict in (entry.get("flags") or {}).items():
+            judged[name] += 1
+            right[name] += bool(verdict)
+    out = {}
+    for name in sorted(total):
+        rate = _rate(right[name], judged[name])
+        out[name] = {**rate, "flags": total[name],
+                     "estimated_right": round(total[name] * rate["rate"], 1) if rate["rate"] is not None else None}
+    return out
+
+
+def sample_true_shares(sample: Sequence[str], judgements: Mapping[str, Any], by_key: Mapping[str, Any]) -> dict[str, Any]:
+    """From the random sample, read in full: the share of decision points that truly fall in each
+    category (flags judged right, plus misses), the headline and self-contradiction. This does not
+    depend on the coder's precision or recall, only on the judge."""
+    present = {}
+    for key in sample:
+        entry = judgements.get(key)
+        if entry is None or key not in by_key:
+            continue
+        found = {name.split(":")[0] for name, verdict in (entry.get("flags") or {}).items() if verdict}
+        found |= {str(c) for c in entry.get("missed") or []}
+        present[key] = found
+    n = len(present)
+    out = {number: _rate(sum(number in f for f in present.values()), n) for number in CATEGORIES}
+    out["headline"] = _rate(sum(bool(f & set(HEADLINE)) for f in present.values()), n)
+    out["self_contradiction"] = _rate(sum(bool(f & set(CONTRADICTION)) for f in present.values()), n)
     return out
 
 
@@ -518,6 +561,15 @@ def markdown(summary: Mapping[str, Any], hand: Optional[Mapping[str, Any]]) -> s
                 "| Category | Precision (flags judged right) | Recall on the random sample |", "| --- | --- | --- |"]
         for n in CATEGORIES:
             out.append(f"| {n}. {NAMES[n]} | {_pct(hand[n]['precision'])} | {_pct(hand[n]['recall_on_sample'])} |")
+        s = hand["sample_true"]
+        out += ["", "**The true share, from the random sample read in full** (flags judged right plus misses; both runs pooled):", "",
+                "| | Share of the random sample |", "| --- | --- |",
+                f"| **Headline (1, 2, 5, 7)** | {_pct(s['headline'])} |", f"| Self-contradiction (3, 4) | {_pct(s['self_contradiction'])} |"]
+        out += [f"| {n}. {NAMES[n]} | {_pct(s[n])} |" for n in CATEGORIES]
+        out += ["", "**Precision by rule** (judged flags; rules with fewer than 30 flags are judged in full):", "",
+                "| Rule | Flags | Judged right | Estimated right flags |", "| --- | --- | --- | --- |"]
+        for name, r in hand["rules"].items():
+            out.append(f"| `{name}` | {r['flags']} | {_pct(r)} | {r['estimated_right'] if r['estimated_right'] is not None else '–'} |")
         out.append("")
     return "\n".join(out) + "\n"
 
