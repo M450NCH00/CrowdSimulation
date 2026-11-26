@@ -165,6 +165,69 @@ This applies to RF-47 and RF-48 only. The grid is an add-on (AS1).
 
 *Revised by the user on 2026-11-26* (the recheck above, asked at the start of RF-47, #136): **the walls get neutral landmark names, not compass names**, as RF-43 recommends (`literature/frames-of-reference/README.md`, section 6, item 3): compass words carry habits models fall back on (north as straight ahead, "left = west"), and a landmark name has none `[inference]`. The rest of AS5 stands: positions from one wall, moves named by the walls, the parser converting, talk naming walls, no facing note, and the heading not told. The landmark words themselves are RF-48's to draft. No study compares compass and landmark names for LLMs (RF-43's gap).
 
+### 7.1 As built in RF-48 (#137)
+
+*Built on 2026-11-26, mock only.* RF-47's menu in the corridor's own frame.
+- **Template:** `resolve_menu_abs_v1`, frozen.
+- **Table:** `configs/resolution/menu_table_abs_v1.yaml`.
+- **Config:** `configs/resolution/round1_head_on_menu_abs.yaml`.
+- **Tests:** `tests/test_rf48_absolute_frame.py`.
+- **Code:** the frame is read from the template's `walls` in `view.py` (`Frame`), `perceive.py`, `prompt.py`, `menu.py` and `reply.py`. The scenario plug-in's place lines take an override, and the cost preview's worst view has the frame.
+
+**The walls' names** (*the assistant's draft, for the user*): **"the blue wall"** (wall a, at +y) and **"the yellow wall"** (wall b, at -y).
+- Colours are landmarks with no direction habit: no "north is ahead", no "left = west", and no idiom such as "a brick wall".
+- RF-43's examples ("the window side", "the shop side") were not used, because a shop could draw an agent towards it.
+- Which colour is at +y is fixed by the template. In head-on, the person walking +x has the blue wall on their left, and the person walking -x has it on their right. RF-49 could counterbalance this with a second template that swaps the names (section 11).
+
+**What the agent is told**, against `resolve_menu_v1`:
+- **The instructions:** "Left and right always mean your own left and right" becomes "The passage has two long walls, the blue wall and the yellow wall. They are the same two walls for everyone here, so where people are and which way anyone moves is told by these walls."
+  - In talk, one more sentence follows: "If you say which way you or anyone should go, name the wall: the blue wall or the yellow wall."
+  - The reply formats and retries are RF-47's, word for word.
+- **WHERE YOU ARE:** "You are in a passage 1.75 m wide, between the blue wall and the yellow wall. You are 0.77 m from the blue wall and 0.98 m from the yellow wall." This replaces `scenario_passing_v1`'s "the wall on your left is …" line.
+  - The agent gets both distances. AS5 says positions are measured from one wall, and that holds for the people the agent sees.
+  - Giving both keeps the same information as RF-47's view, which also gives both.
+- **WHO YOU CAN SEE:** "Person 1, 9.8 m away, ahead of you, 0.98 m from the blue wall."
+  - A person is *ahead of*, *level with* (85° to 95°) or *behind* the agent, with no angle and no side. Their distance from the blue wall says where they are across the passage.
+  - What one person is told of the other's place is what the other is told of their own (tested).
+- **Drifts, crossings and moves over:**
+  - "drifting towards the yellow wall by 15°";
+  - "across your direction of travel towards …";
+  - "moved over towards the blue wall".
+- **An unseen voice:** "Someone towards the yellow wall from you, close by, says …". Ahead and behind are as before.
+- **What came of a decision:** "Since then you have moved 0.5 m over towards the yellow wall". The wall is the one on that side when the agent decided.
+- **No facing note:** `heard_frame` is off. A message is shown as said.
+- **The heading is not told.** No compass word appears anywhere in the template (tested).
+
+**The menu.**
+- The four sidesteps become:
+  - "step a little towards the blue wall" / "… the yellow wall";
+  - "step well towards the blue wall" / "… the yellow wall".
+
+  Each has the same sentence as in RF-47, with "towards the … wall" for "to your left/right". The other five options, and every number, are RF-47's.
+- The table names a sidestep `towards: a` or `b` in place of `to: left` or `right`. The conversion turns the wall into the agent's own side from the wall on its left when it chooses (`menu_context`, from where it faces, as its view has it). The executor then gets exactly RF-47's sidestep, and the wall cap and its flags name that side.
+- **What is refused:**
+  - a table naming moves both ways;
+  - a wall table under a template with no walls;
+  - a side table under a template with walls.
+- An own-side option such as "step a little to your right" is not on this menu, so it is unreadable (`unknown_action`).
+
+**Tested (the acceptance criterion):**
+- for each heading, aligned and 20 cm apart, "step a little towards the blue wall" moves the person to +y, and "… the yellow wall" moves them to -y;
+- two people who both choose the blue wall get different own sides (one left, one right), and both move to +y. This is the trap issue #137 expects, which RF-49 measures.
+
+**Unchanged (AS4, tested):**
+- `resolve_v1` to `resolve_v9` and `resolve_menu_v1` have no walls;
+- a view without a frame records no `frame`, `from_a_m` or `left_wall`, so earlier records are written as before;
+- RF-47's sessions record and render as before;
+- the scenario's place lines with no override are as before.
+
+**Mock rehearsal:** see `WORK_LOG-137.md`.
+
+**Cost estimate for RF-49's frame arm:** as RF-47's, about **USD 0.71 to 0.82** off-peak for 544 sessions.
+- The fixed text is about the same length.
+- The view lines are a few words longer per person (a distance from the blue wall in place of an angle), which is about 1% of the input.
+- The same assumptions as RF-47's apply.
+
 ## 8. The grid (AS1, AS6, AS7)
 
 **AS1. The grid is an add-on. It does not modify the current environment's code** (the user, 2026-11-25).
@@ -313,6 +376,7 @@ RF-50 can be built alongside RF-47 and RF-48.
 - **The way back to the continuous simulator.** The 10,000-agent goal runs ORCA plus rules in continuous space. A grid result could be read as a rule and translated (as RF-12 and RF-31 translate rules), or kept only as a check of the LLM's reasoning. To be decided with RF-52's results in hand (RF-52, task 3).
 - **Whether RF-46's line on speech goes into the menu and grid templates:** after RF-46's result.
 - **AS5's heading:** rechecked after RF-43.
+- **The walls' names and sides (RF-48):** "the blue wall" and "the yellow wall" are the assistant's draft. In head-on, the blue wall is always on the left of the person walking +x. Whether RF-49 counterbalances this with a second template that swaps the names is the user's choice (section 7.1).
 - **The placeholders, for the supervisor:**
   - "slow down a lot" × 0.5;
   - "stop and wait" 1 s;
