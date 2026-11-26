@@ -119,6 +119,63 @@ Fixed before this issue (recorded in `CLAUDE.md` and on #141):
   `--limit`, `--client deepseek --confirm`, own frame then absolute, stopping at the cap. About 17 s a
   session, so about 2.5 h: well inside off-peak (until 01:00 UTC).
 
-## Open questions / risks
+### 2026-11-26 10:09 to 12:02 UTC — the run of record (paid)
+- Both frames completed, 272 of 272 sessions each (264 run now plus the pilot's 8), with no aborted
+  session. 1,506 and 1,490 calls, all fingerprint `bc19ba97...`. USD 0.1719 and 0.1757: **USD 0.3476
+  against the shared cap of 0.80**.
+- **Balance after: USD 2.62** (12:02 UTC; 2.96 before, which matches the ledger). Recorded in `CLAUDE.md`.
+- The full negsim suite, run during the paid run (off-peak): **2,446 passed, 16 skipped** (41 min).
+- **AS1:** `git diff --name-status` against the base: 8 added files, and 2 modified, `CLAUDE.md` (the
+  user's approval) and `spend_ledger.jsonl` (lines appended by the paid run, none removed).
+- **Unreadable:** 8 of 944 own-frame decision points, all with the action written as "step a little to
+  **my** left" instead of "your". RF-47's parser takes exact names, so they changed nothing, as the
+  design says. The template and parser are frozen and left as they are; reported.
 
-## Summary (fill in at the end)
+### 2026-11-26 12:02 to 12:20 UTC — analysis, hand check, report
+- `negsim.grid.baseline` on both runs, then `analysis.grid` with RF-40 and the hand check.
+- **Changed in the analysis after reading the flags** (no session changed):
+  - `intent_side` and `intent_wall` read any side or wall in the intent. In 10 sampled flags, 9 were
+    the other's side ("since she drifted toward the yellow wall"). They now read only an intent that
+    opens with the speaker's own move (`SELF_MOVE`).
+  - The move checks skip a view that gives no move since the agent was last asked: the claim may be
+    about an earlier move.
+  - `exact_binomial_two_sided` overflowed on numpy integers (`2 ** n`), which gave p = 1.0. Fixed
+    with `int()`, and a test added. The frames' pairing was unaffected: it passed Python ints.
+  - New: `move_side_comparison` (the SV8 check like for like on RF-40's silent points) and
+    `paired_with_rf40`.
+  - A bash heredoc turned `\b` into backspace characters in one regex; rewritten from a script file,
+    and checked that no `\x08` is left.
+- **Hand check, RF-45's method, 150 points:** a seeded sample of 50 per frame (seed 141) plus an extra
+  25 per frame from the rest (seed 1410), each read against its prompt by the assistant. RF-45
+  recommends 150 per run; RF-52 is counted as one run of two frames.
+  - Headline: own 5 of 75, absolute 1 of 75.
+  - Moves against their own geometry: 9 and 5 of 75.
+- **Report:** `llm_negotiation/runs/rf52_grid_analysis/report.md`. Updated `docs/action-space.md`
+  (new section 8.4, and section 11), the root and `llm_negotiation` READMEs, and the `CLAUDE.md`
+  balance.
+
+## Open questions / risks
+- **Task 3, for the user:** how a grid result reaches the continuous simulator. The options and the
+  assistant's recommendation are in the report, section 8. Not decided here.
+- **The yellow-wall lean:** name, lane number or position? Only a template with the names swapped
+  (open since RF-48) would tell. That is the user's call.
+- **RF-49 (the menu in the corridor) not run:** the grid's gain over RF-40 mixes world and action space.
+- **The hand check has one judge (the assistant).** The 14 judgements with notes are listed for the
+  user to check.
+- **Assumption (flagged):** "move against its own geometry" is a category of the assistant's,
+  reported beside RF-45's, not in its headline.
+
+## Summary
+- **Built** (new files only, AS1): the paid entry point for the grid with one cap over both frames,
+  the configs, the scripted baseline, and the grid analysis with tests.
+- **Ran** RF-40's 272 silent sessions in each frame, paid, off-peak, pilot first. USD 0.348 of 0.80;
+  balance USD 2.62; RF-40's fingerprint on every call.
+- **Answers:**
+  - **The gate passes in both frames:** 0.87 and 0.85.
+  - **More than RF-40's free steps** (0.64), paired p < 0.001, but the world and the action space
+    change together, and RF-49 has not run.
+  - **The absolute frame** removes the wrong-way step when the two start one lane apart, but both
+    agents lean to one wall when they start aligned.
+  - **The left and right errors persist in the own frame:** every claim of the other's move in the
+    other's own sides is wrong (43 of 43).
+  - **Hallucinated decisions:** 0.07 (own frame) and 0.01 (absolute frame).

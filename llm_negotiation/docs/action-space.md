@@ -429,6 +429,52 @@ The mock is not a model, so its outcomes say nothing about behaviour.
   - about double at peak.
 - RF-52 needs its own approval and cap.
 
+### 8.4 As run in RF-52 (#141)
+
+*Run on 2026-11-26, paid, approved for #141 only with a cap of USD 0.80 over both frames* (`CLAUDE.md`). The report is `runs/rf52_grid_analysis/report.md`.
+
+**What was added, all new files (AS1):**
+- `negsim/grid/paid.py`, the paid entry point (`python -m negsim.grid.paid <config> --client deepseek --confirm`). It adds:
+  - one budget guard over both frames' ledger lines;
+  - the ethics gates;
+  - a refusal in peak hours;
+  - aborted sessions set aside and run again on resume;
+  - each reply's model fingerprint in `summary.json`.
+- `negsim/grid/baseline.py`: RF-50's scripted walkers on each session's lanes and seed.
+- The configs `configs/grid/rf52_round1_grid.yaml` and `rf52_round1_grid_abs.yaml`, which name RF-51's configs as their base.
+- `analysis/grid.py`, the analysis.
+
+RF-51's mock-only runner is unchanged. The only existing file that changes is `spend_ledger.jsonl`, which every paid run appends to.
+
+**The run:**
+- RF-40's 272 silent sessions per frame;
+- `deepseek-flash` with RF-40's settings, and RF-40's fingerprint on all 2,996 calls;
+- USD 0.348, which took the balance from USD 2.96 to 2.62.
+
+**Results:**
+- **The gate (RF-10's 0.50; the grid's measures stand for `plan_only`, no ORCA baselines):**
+  - own frame 237 of 272 (0.87);
+  - absolute frame 231 of 272 (0.85);
+  - both pass.
+- **Against RF-40's silent condition** (free steps, continuous corridor, 175 of 272, 0.64): both frames resolve more, paired McNemar p < 0.001. This changes the world and the action space at once. **RF-49 (the menu in the corridor) has not run, so the comparison with the menu alone is not available.**
+- **Context:** any fixed convention resolves all 272 sessions on the grid, and random walkers 125 (0.46).
+- **The frames differ by layout, not overall** (paired p = 0.54):
+  - **One lane apart:** the absolute frame removes the wrong-way step. 2 of 272 agents stepped towards the other, against 50 of 272 in the own frame.
+  - **Aligned:** both agents lean to "the yellow wall", 180 of 209 wall moves, whichever of their own sides it is on. 63 of 136 pairs went the same way and danced, and 100 of 136 resolved, against 118 in the own frame.
+  - In the own frame, the lean to one's own right (about 2 to 1) is mirrored, so it coordinates.
+- **The left and right errors (SV8) persist in the own frame:**
+  - every claim of the other's move in the other's own sides was wrong (43 of 43, "she moved to her left" after a move to her right);
+  - every claim in the agent's own sides was right (50 of 50);
+  - RF-40 silent: 3 of 4 and 1 of 89.
+
+  The absolute frame has no such claims.
+- **Hallucinated decisions (RF-45's method, 75 points per frame, read in full):** own frame 5 of 75 (0.07), absolute frame 1 of 75 (0.01); RF-40 8 of 84 (RF-45). Moves that close the gap by the reply's own account: 9 of 75 and 5 of 75.
+- **Factors:** none changes whether a session resolves once the layout is in the model. Assertive agents hold their lane. Slowing is too rare on the grid (39 of 1,088 agents) to test RF-40's effects on it.
+
+**Open, for the user:**
+- how a grid result reaches the continuous simulator (task 3; section 11 and the report's section 8);
+- whether a template with the wall names swapped tests the yellow-wall lean (section 11).
+
 ## 9. Template names
 
 *The assistant's choice*, written into the issues on 2026-11-25. The user was not asked and may change them. They are set now so that issues worked in parallel do not collide:
@@ -465,7 +511,7 @@ RF-50 can be built alongside RF-47 and RF-48.
 
 ## 11. Still open
 
-- **The way back to the continuous simulator.** The 10,000-agent goal runs ORCA plus rules in continuous space. A grid result could be read as a rule and translated (as RF-12 and RF-31 translate rules), or kept only as a check of the LLM's reasoning. To be decided with RF-52's results in hand (RF-52, task 3).
+- **The way back to the continuous simulator.** The 10,000-agent goal runs ORCA plus rules in continuous space. A grid result could be read as a rule and translated (as RF-12 and RF-31 translate rules), or kept only as a check of the LLM's reasoning. To be decided with RF-52's results in hand (RF-52, task 3). *RF-52's results are in (section 8.4); the options and the assistant's recommendation are in its report, section 8.*
 - **Whether RF-46's line on speech goes into the menu and grid templates:** after RF-46's result.
 - **AS5's heading:** rechecked after RF-43.
 - **The walls' names and sides (RF-48):** "the blue wall" and "the yellow wall" are the assistant's draft. In head-on, the blue wall is always on the left of the person walking +x. Whether RF-49 counterbalances this with a second template that swaps the names is the user's choice (section 7.1).

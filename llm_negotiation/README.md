@@ -137,8 +137,10 @@ of paid runs and a cap for its round, recorded in `CLAUDE.md`.
     *done*, mock only: `resolve_menu_abs_v1`, "the blue wall" and "the yellow wall");
     RF-49 (#138, paid) runs both;
   - the grid: RF-50 (#139, *done*: `negsim/grid/`) and RF-51 (#140, *done*, mock only: `negsim/grid/agents.py`,
-    `python -m negsim.grid.experiment`) build it, RF-52 (#141,
-    paid) runs it. **The grid is an add-on that modifies no existing code** (AS1).
+    `python -m negsim.grid.experiment`) build it, RF-52 (#141, *done*, paid: `python -m negsim.grid.paid`,
+    `runs/rf52_grid_analysis/report.md`) runs it. The gate passed in both frames (0.87 and 0.85, against
+    RF-40's 0.64); the absolute frame removes the wrong-way steps but both agents lean to one wall when aligned.
+    **The grid is an add-on that modifies no existing code** (AS1).
 - **Round 2, meeting in a narrow passage (lean):** RF-19 (#75) screening; RF-13 (#68) Phase B
   (optional; moved from round 1 by the user, 2026-10-27); RF-20 (#76) extract, test with earlier
   rules, verify.
