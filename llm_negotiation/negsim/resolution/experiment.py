@@ -100,7 +100,10 @@ from .scenario import Scenario
 from .screening import base_count, resolution
 from .scenarios import load_scenario, plugin_for
 from .transcript import render as render_transcript
-from .view import ALL_CONDITIONS, CHANGES, CONDITION_TALK, DETAIL_FULL, DETAIL_SHORT, MOTION_WALKING, Done, Heard, Me, SeenPerson, TimeToMeet, View
+from .view import (
+    ALL_CONDITIONS, CHANGES, CONDITION_TALK, DETAIL_FULL, DETAIL_SHORT, MOTION_WALKING, WALL_A, WALL_B, Done, Frame, Heard, Me,
+    SeenPerson, TimeToMeet, View,
+)
 
 LAYER_RESOLUTION = "resolution"
 SCHEMA_VERSION = 1  # of the config
@@ -460,18 +463,29 @@ def worst_view(
         1, DETAIL_FULL, 9.99, 1.0, 1.99, 3.0, 1.99, 0.99, MOTION_WALKING, 120, "female", _longest_signal(core), CHANGES,
         factor_lines=tuple(lines.get("other", ())), pairwise_lines=tuple(lines.get("pairwise", ())),
     )
+    done = Done(99.9, "", "replaced", "", _longest_signal(core), -9.99, 9.99)
+    place = scenario.place_lines(case, record)
+    frame = None
+    walls = core.walls
+    if walls is not None:  # issue #137: the corridor's own frame, every number at its widest
+        frame = Frame(WALL_A, 9.99, 9.99)
+        person, done = replace(person, from_a_m=9.99), replace(done, left_wall=WALL_A)
+        place = scenario.place_lines(
+            case, record, core.frame_place_lines, wall_a=walls[WALL_A], wall_b=walls[WALL_B], from_a="9.99", from_b="9.99",
+        )
     return View(
         agent_id=case["agents"][0],
         decision_point=2 if history else 1,
         me=Me(1.99, 1.99, 1.99, 0.99, 120, "female", errand, factor_lines=tuple(lines.get("self", ()))),
-        place=(*scenario.place_lines(case, record), *lines.get("place", ())),
+        place=(*place, *lines.get("place", ())),
         notes=tuple(lines.get("note", ())),
         templates={"core": core.identity(), "scenario": scenario.identity()},
         seen=tuple(replace(person, label=n) for n in range(1, seen + 1)),
         heard=tuple(Heard("", None, "behind", "close") for _ in range(heard)),
-        history=tuple(Done(99.9, "", "replaced", "", _longest_signal(core), -9.99, 9.99) for _ in range(history)),
+        history=tuple(done for _ in range(history)),
         extra_blocks=tuple(scenario.extra_blocks(case, record)),
         time_to_meet=TimeToMeet(1, 99.9) if seen else None,
+        frame=frame,
     )
 
 

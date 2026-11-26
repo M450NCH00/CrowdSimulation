@@ -48,7 +48,7 @@ handed only to the scenario plug-in.
 from __future__ import annotations
 
 import math
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 from typing import Any, Collection, Mapping, Optional, Sequence
 
@@ -56,11 +56,12 @@ from ..avoidance.perception import heading_of, perceive
 from ..configutil import PACKAGE_ROOT, ConfigError, as_bool, as_number, check_keys, load_yaml
 from ..core.geometry import Rect, Vec, point_segment_distance, wrap_angle
 from .adapter import _person
+from ..rulegen.describe import across
 from .prompt import SIMULATION_CORE_TEMPLATE, CoreTemplate
 from .scenario import Scenario
 from .view import (
     CHANGES, DETAIL_FULL, DETAIL_SHORT, FRAME_FACING, FRAME_SAME_WAY, MOTION_BACKING, MOTION_STILL, MOTION_WALKING,
-    OUTCOMES, SIGNALS, Block, Done, Heard, Me, SeenPerson, TimeToMeet, View,
+    OUTCOMES, SIGNALS, WALL_A, WALL_B, Block, Done, Frame, Heard, Me, SeenPerson, TimeToMeet, View,
 )
 
 LLM_VIEW_CONFIG = PACKAGE_ROOT / "configs" / "resolution" / "llm_view_v1.yaml"
@@ -172,6 +173,12 @@ def body_of(agent: Any) -> Body:
 
 def _left(rad: float) -> Vec:
     return (-math.sin(rad), math.cos(rad))
+
+
+def left_wall_of(facing_rad: float) -> str:
+    """Issue #137: the wall on the own left of someone facing ``facing_rad`` in a corridor along x:
+    wall a (+y) when their left points to +y, else wall b (-y)."""
+    return WALL_A if _left(facing_rad)[1] > 0.0 else WALL_B
 
 
 def where(observer: Body, point: Vec) -> tuple[float, float]:
@@ -377,6 +384,7 @@ class Perceiver:
         factor_lines: Optional[Mapping[int, Sequence[str]]] = None,
         pairwise_lines: Optional[Mapping[int, Sequence[str]]] = None,
         labels: Optional[Mapping[str, Any]] = None,
+        wall_distances: Optional[tuple[float, float]] = None,
     ) -> View:
         """The view of the agent's next decision point, at ``time_s``.
 
@@ -384,7 +392,10 @@ class Perceiver:
         order; carrying plans out is RF-4's, so the caller says. ``safety_distance_m`` is the
         encounter's (:func:`safety_distance`): without it there is no time-to-meet line.
         ``factor_lines`` and ``pairwise_lines`` are the lines RF-5 and RF-6 render for a person,
-        by agent id.
+        by agent id. ``wall_distances`` (issue #137) are the agent's distances to wall a and wall b
+        of a corridor along x: given, the view carries the corridor's own frame (``view.Frame``),
+        each person's distance from wall a and, for each earlier decision, the wall then on the
+        agent's left.
         """
         if len(self.looks) != len(self.decisions):
             raise ValueError("the agent has not replied to its last decision point: call decided() first")
@@ -425,6 +436,14 @@ class Perceiver:
                 meet = TimeToMeet(self.labels[self.partner_id], approach[0])
 
         history = tuple(self._done(decision, outcome, observer, time_s) for decision, outcome in zip(self.decisions, outcomes))
+        frame = None
+        if wall_distances is not None:  # issue #137: the corridor's own frame
+            from_a, from_b = (float(d) for d in wall_distances)
+            frame = Frame(left_wall_of(observer.facing_rad), from_a, from_b)
+            # Wall a is at +y: someone further towards +y than the agent is that much nearer it.
+            seen = tuple(replace(p, from_a_m=from_a - (by_id[a].position[1] - observer.position[1]))
+                         for p, a in zip(seen, (b.agent_id for b in visible)))
+            history = tuple(replace(done, left_wall=left_wall_of(decision.facing_rad)) for done, decision in zip(history, self.decisions))
         self.looks.append(_Look(time_s, {b.agent_id: b for b in visible}))
         return View(
             agent_id=self.agent_id,
@@ -438,6 +457,7 @@ class Perceiver:
             notes=tuple(notes),
             extra_blocks=tuple(extra_blocks),
             time_to_meet=meet,
+            frame=frame,
             labels={
                 **dict(labels or {}),
                 "time_s": time_s,
@@ -684,13 +704,22 @@ def view_in(
         errand=info.get("errand"),
         factor_lines=tuple(own_lines),
     )
+    place = perceiver.scenario.place_lines(scene, record)
+    wall_distances = None
+    walls = perceiver.core.walls
+    if walls is not None:  # issue #137: the corridor's own frame
+        wall_distances = _wall_distances(agent, record)
+        place = perceiver.scenario.place_lines(
+            scene, record, perceiver.core.frame_place_lines, wall_a=walls[WALL_A], wall_b=walls[WALL_B],
+            from_a=across(wall_distances[0]), from_b=across(wall_distances[1]),
+        )
     return perceiver.look(
         simulation.world.time if look_time_s is None else look_time_s,
         bodies_in(simulation),
         simulation.world.obstacles,
         me,
         exchange,
-        place=[*perceiver.scenario.place_lines(scene, record), *situation_lines],
+        place=[*place, *situation_lines],
         extra_blocks=perceiver.scenario.extra_blocks(scene, record),
         notes=notes,
         outcomes=outcomes,
@@ -702,4 +731,23 @@ def view_in(
             "step": simulation.world.step_index,
             "partner_id": perceiver.partner_id,
         },
+        wall_distances=wall_distances,
     )
+
+
+#: Issue #137: the corridor's own frame is for a corridor along x; a path more than this far off
+#: the x axis has no wall a and wall b to its sides.
+FRAME_MAX_OFF_AXIS_DEG = 45.0
+
+
+def _wall_distances(agent: Any, record: Mapping[str, Any]) -> tuple[float, float]:
+    """Issue #137: the agent's distances to wall a (+y) and wall b (-y), from its own record (the
+    free width to each side across its path, ``environment_features``)."""
+    path_rad = agent.spec.path.heading_at(agent.path_s)
+    if abs(math.cos(path_rad)) < math.cos(math.radians(FRAME_MAX_OFF_AXIS_DEG)):
+        raise ConfigError(f"the corridor's own frame needs a path along x; agent {agent.agent_id} heads {math.degrees(path_rad):.0f} degrees")
+    environment = record["environment"]
+    left, right = environment["free_width_left_m"], environment["free_width_right_m"]
+    if left is None or right is None:
+        raise ConfigError(f"the corridor's own frame needs a wall on each side; agent {agent.agent_id} has none in range on one side")
+    return (left, right) if left_wall_of(path_rad) == WALL_A else (right, left)

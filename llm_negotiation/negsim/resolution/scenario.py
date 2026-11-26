@@ -107,8 +107,13 @@ class Scenario:
         """Each ``until`` event's name and the words that tell the agent what it means, in order."""
         return dict(self.data["events"])
 
-    def place_lines(self, case: Mapping[str, Any], record: Mapping[str, Any]) -> list[str]:
-        """The WHERE YOU ARE lines of an agent with perception record ``record`` in ``case``."""
+    def place_lines(
+        self, case: Mapping[str, Any], record: Mapping[str, Any], lines: Optional[Mapping[str, str]] = None, **values: Any,
+    ) -> list[str]:
+        """The WHERE YOU ARE lines of an agent with perception record ``record`` in ``case``.
+        ``lines`` replaces some of the template's place lines and ``values`` fills more
+        placeholders in them (issue #137: the core template's lines in the corridor's own frame);
+        with neither, the scenario's own lines, as before."""
         raise NotImplementedError
 
     def extra_blocks(self, case: Mapping[str, Any], record: Mapping[str, Any]) -> list[Block]:

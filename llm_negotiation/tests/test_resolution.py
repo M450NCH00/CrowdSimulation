@@ -489,6 +489,7 @@ def test_the_debrief_mock_paths():
     assert set(mock.POLICIES) == {
         "resolve_paths_v1", "debrief_paths_v1", "resolution_rehearsal_v1",  # the last: issue #58
         "menu_paths_v1", "resolution_menu_rehearsal_v1",  # issue #136 (RF-47): replies with an action, for resolve_menu_v1
+        "menu_abs_paths_v1", "resolution_menu_abs_rehearsal_v1",  # issue #137 (RF-48): the same, by the walls, for resolve_menu_abs_v1
     }
 
 

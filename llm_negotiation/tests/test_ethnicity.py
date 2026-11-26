@@ -444,7 +444,9 @@ def test_configs_written_before_have_no_ethnicity_anywhere(path):
                       "round1_head_on_sidestep_reprompt.yaml",  # issue #127: RF-39, RF-30's sessions under resolve_v8, repeated
                       "round1_head_on_turn_taking.yaml",  # issue #129: RF-40, RF-39's sessions as a turn-taking exchange
                       "round1_head_on_menu.yaml",  # issue #136: RF-47, RF-40's sessions with a menu of actions
-                      "menu_table_v1.yaml")):  # issue #136: the menu's table of plans, not an experiment config
+                      "menu_table_v1.yaml",  # issue #136: the menu's table of plans, not an experiment config
+                      "round1_head_on_menu_abs.yaml",  # issue #137: RF-48, RF-47's sessions in the corridor's own frame
+                      "menu_table_abs_v1.yaml")):  # issue #137: the same table by the walls, not an experiment config
         pytest.skip("not an experiment config written before issue #92")
     c = E.ResolutionConfig.load(path)
     assert not c.design.uses_ethnicity and c.design.ethnicity_shares is None and "ethnicity_shares" not in c.design.as_dict()

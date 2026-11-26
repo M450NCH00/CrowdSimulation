@@ -658,7 +658,7 @@ class EncounterSession:
             context = replace(context, distance_m=self._partner_distance(member, context.distance_m))
         menu = self.core.menu
         if menu is not None:  # issue #136: the reply names an option, turned into steps for this agent now
-            context = replace(context, menu=menu, **menu_context(sim, agent))
+            context = replace(context, menu=menu, **menu_context(sim, agent, frame=self.core.walls is not None))
         metadata = {
             **self.labels, "kind": "decision", "agent_id": agent, "agent_slot": member.slot,
             "decision_point": member.prompts + 1, "step": step,

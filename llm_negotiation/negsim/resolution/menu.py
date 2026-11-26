@@ -22,6 +22,12 @@ side: the distance from the agent's centre to the wall, across its path, less it
 (less ``WALL_MARGIN_M``). With less room than ``MIN_SIDESTEP_M`` there is no sidestep: the plan
 is ``[]`` and the reply is flagged ``no_room:<side>``. A shortened sidestep is flagged
 ``capped_by_wall:<side>``. With no wall in range on that side, nothing is capped.
+
+**Moves named by a wall** (issue #137, RF-48; AS5 as revised by the user on 2026-11-26). In a table
+for the corridor's own frame, a sidestep goes ``towards`` wall a or wall b (``view.WALLS``) rather
+than ``to`` a side. The conversion turns the wall into the agent's own left or right from the wall
+on its left now (``left_wall``), so the executor gets the same sidestep as before; the flags name
+that side. A table names its moves one way or the other, never both.
 """
 
 from __future__ import annotations
@@ -35,6 +41,9 @@ from ..configutil import ConfigError, load_yaml, resolve_path
 
 KINDS = ("carry_on", "slow", "wait", "sidestep", "back_up")
 SIDES = ("left", "right")
+#: Issue #137: the walls a sidestep may go towards (``view.WALLS``; here to keep this module free of
+#: the view's imports).
+WALLS = ("a", "b")
 #: A sidestep planned up to the wall stops this far short of touching it (m). **[design]**: ORCA
 #: keeps a body off a wall by its own margin, and a sidestep that cannot reach its distance never
 #: ends; 0.05 m is a numerical allowance, not a behaviour.
@@ -58,6 +67,7 @@ class Option:
     seconds: Optional[float] = None
     to: Optional[str] = None
     metres: Optional[float] = None
+    towards: Optional[str] = None  # issue #137: wall a or wall b, in place of ``to``
 
     def as_dict(self) -> dict[str, Any]:
         return {k: v for k, v in self.__dict__.items() if v is not None}
@@ -78,7 +88,7 @@ def _option(name: str, raw: Any, where: str) -> Option:
         raise ConfigError(f"{where}.plan: one of {KINDS}, got {kind!r}")
     allowed = {
         "carry_on": {"plan"}, "slow": {"plan", "speed_factor", "until"}, "wait": {"plan", "seconds"},
-        "sidestep": {"plan", "to", "metres"}, "back_up": {"plan", "metres"},
+        "sidestep": {"plan", "to", "towards", "metres"}, "back_up": {"plan", "metres"},
     }[kind]
     extra = set(raw) - allowed
     if extra:
@@ -94,6 +104,12 @@ def _option(name: str, raw: Any, where: str) -> Option:
     if kind == "wait":
         return Option(name, kind, seconds=_positive(raw, "seconds", where))
     if kind == "sidestep":
+        if "towards" in raw:  # issue #137: towards a wall, in the corridor's own frame
+            if "to" in raw:
+                raise ConfigError(f"{where}: a sidestep goes to a side or towards a wall, not both")
+            if raw["towards"] not in WALLS:
+                raise ConfigError(f"{where}.towards: one of {WALLS}, got {raw['towards']!r}")
+            return Option(name, kind, towards=raw["towards"], metres=_positive(raw, "metres", where))
         if raw.get("to") not in SIDES:
             raise ConfigError(f"{where}.to: one of {SIDES}, got {raw.get('to')!r}")
         return Option(name, kind, to=raw["to"], metres=_positive(raw, "metres", where))
@@ -123,7 +139,10 @@ class Menu:
             if normalise(str(name)) != str(name):
                 raise ConfigError(f"{where}.options: {name!r} is not written as it is matched ({normalise(str(name))!r})")
             built.append(_option(str(name), entry, f"{where}.options.{name}"))
-        return cls(Path(where).stem, tuple(built))
+        menu = cls(Path(where).stem, tuple(built))
+        if menu.by_wall and menu.by_side:
+            raise ConfigError(f"{where}: names some moves by the walls and some by left and right")
+        return menu
 
     @property
     def names(self) -> tuple[str, ...]:
@@ -136,13 +155,30 @@ class Menu:
     def events(self) -> tuple[str, ...]:
         return tuple(option.until for option in self.options if option.until is not None)
 
+    @property
+    def by_wall(self) -> bool:
+        """Issue #137: whether the table names its moves by the walls (the corridor's own frame)."""
+        return any(option.towards is not None for option in self.options)
+
+    @property
+    def by_side(self) -> bool:
+        """Whether the table names its moves by the agent's own left and right."""
+        return any(option.to is not None for option in self.options)
+
     def steps_for(
         self, option: Option, usual_speed_mps: float, room_m: Mapping[str, Optional[float]], radius_m: float,
+        left_wall: Optional[str] = None,
     ) -> tuple[tuple[Any, ...], tuple[str, ...]]:
         """The plan of ``option`` for an agent walking at ``usual_speed_mps`` by habit, with
         ``room_m`` (centre to wall across its path, None with no wall in range) on each side and a
-        body of ``radius_m``. Returns the steps and any flags."""
+        body of ``radius_m``. ``left_wall`` (issue #137) is the wall on the agent's own left now,
+        needed for a move named by a wall. Returns the steps and any flags."""
         from .reply import Sidestep, Step, Until  # here: reply imports this module
+
+        if option.towards is not None:  # issue #137: the wall becomes the agent's own side now
+            if left_wall not in WALLS:
+                raise ValueError(f"the option {option.name!r} moves towards a wall: the wall on the agent's left is needed, got {left_wall!r}")
+            option = Option(option.name, option.kind, to="left" if option.towards == left_wall else "right", metres=option.metres)
 
         if option.kind == "carry_on":
             return (), ()
@@ -173,16 +209,22 @@ def load_menu(path: str) -> Menu:
     return _CACHE[path]
 
 
-def menu_context(simulation: Any, agent: int) -> dict[str, Any]:
+def menu_context(simulation: Any, agent: int, frame: bool = False) -> dict[str, Any]:
     """What the conversion needs of ``agent`` now: its usual speed, its body radius, and the room
-    to each wall across its path (``avoidance.perception.environment_features``)."""
+    to each wall across its path (``avoidance.perception.environment_features``). With ``frame``
+    (issue #137), also the wall on its own left, from where it faces now, as its view has it."""
     from ..avoidance.perception import environment_features
 
     a = simulation.world.agents[agent]
     features = environment_features(a, simulation.world.obstacles, (), simulation.environment_range)
-    return {
+    context = {
         "usual_speed_mps": a.spec.preferred_speed,
         "radius_m": a.spec.radius,
         "room_left_m": features.free_width_left_m,
         "room_right_m": features.free_width_right_m,
     }
+    if frame:
+        from .perceive import body_of, left_wall_of
+
+        context["left_wall"] = left_wall_of(body_of(a).facing_rad)
+    return context

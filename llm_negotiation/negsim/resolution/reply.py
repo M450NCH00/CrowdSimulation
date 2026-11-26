@@ -197,6 +197,9 @@ class ReplyContext:
     radius_m: float = 0.0
     room_left_m: Optional[float] = None
     room_right_m: Optional[float] = None
+    #: Issue #137: the wall on the agent's own left now (``view.WALLS``), for a menu whose moves are
+    #: named by the walls; None otherwise.
+    left_wall: Optional[str] = None
 
     def __post_init__(self) -> None:
         if self.condition not in ALL_CONDITIONS:
@@ -430,6 +433,7 @@ def _menu_reply(
         raise ValueError("a menu reply needs the agent's usual speed (ReplyContext.usual_speed_mps)")
     steps, menu_flags = context.menu.steps_for(
         option, context.usual_speed_mps, {"left": context.room_left_m, "right": context.room_right_m}, context.radius_m,
+        context.left_wall,
     )
     flags.extend(menu_flags)
     reason = _text(data, "reason", required=False)
