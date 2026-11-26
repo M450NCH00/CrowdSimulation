@@ -140,6 +140,7 @@ Budget:
   checked 2026-11-01.
   After issue #129's run with its pilot (USD 1.2261 in the ledger, cap 1.80): **USD 2.96**,
   checked 2026-11-02.
+  Checked again before issue #141's approval: **USD 2.96**, 2026-11-26 (no paid call since #129).
 
 ### Phase 1 (on hold): the behaviour dataset
 The task from the first supervisor meeting, on hold since the second meeting.
@@ -246,7 +247,7 @@ The user's notes from the meeting, word for word:
     RF-43), the grid's cells and clash rule, when RF-41 runs, and the order of work.
 
 ## Pending sign-offs
-Items 1 and 5 are still pending (item 1 was approved for issues #64, #65, #98, #100, #101, #104, #66, #67, #108, #110, #115, #117, #119, #127 and #129 only).
+Items 1 and 5 are still pending (item 1 was approved for issues #64, #65, #98, #100, #101, #104, #66, #67, #108, #110, #115, #117, #119, #127, #129 and #141 only).
 **Do not treat any of them as approved** until the user records the
 supervisor's answer in this file, with a date. Items 2 and 3, the ethics
 sign-offs for perceived attractiveness and real ethnicity, were recorded by the
@@ -359,6 +360,16 @@ used in this track). Numbers in brackets are the decisions of track issue #55.
      user decided that everyone in the encounter hears a message said in the pause, whatever the
      distance (`protocol.always_heard`), that an answer reaches the first speaker only at its next
      decision point, and accepted `resolve_v9`'s wording and RF-10's gate (0.50) as drafted.
+   - **Approved for issue #141 only, 2026-11-26:** the user approved paid runs for RF-52's run of round 1 on
+     the grid (#141), and only for it, choosing "RF-52 only, USD 0.80 (Recommended)": a cap of **USD 0.80**
+     on that issue's own calls, for both of its frames together (`resolve_grid_v1` and `resolve_grid_abs_v1`;
+     RF-51's configs `configs/grid/round1_grid.yaml` and `round1_grid_abs.yaml` with RF-52's own experiment
+     names; 272 silent sessions per frame, about USD 0.53 to 0.63 off-peak from RF-51's estimate calibrated
+     on RF-40's silent calls, `WORK_LOG-140.md`), run off-peak, a pilot first. The balance was USD 2.96. The
+     same day the user chose **RF-10's gate (0.50)** for the grid ("0.50, as before (Recommended)"): the
+     share of sessions the agents' own plans resolve, with the grid's measures standing for `plan_only`
+     and the ORCA baselines reported as not available. RF-49 (#138) is **not** approved: it needs its own
+     approval and cap.
 2. **Approved by the supervisor, 2026-10-24** — Ethics sign-off for perceived
    attractiveness as a factor (#55, 3). *The user decided on 2026-10-24* that
    attractiveness (both directions) is **in** RF-10's design, because bias can
