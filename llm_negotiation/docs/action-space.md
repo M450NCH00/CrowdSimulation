@@ -106,6 +106,49 @@ Each paid issue needs its own approval and cap in `CLAUDE.md`.
 
 This applies to RF-47 and RF-48 only. The grid is an add-on (AS1).
 
+### 6.1 As built in RF-47 (#136)
+
+*Built on 2026-11-26, mock only.* Code: `negsim/resolution/menu.py` (new), with the flag read in `reply.py`, `prompt.py` and `protocol.py`. Table: `configs/resolution/menu_table_v1.yaml` (AS3's numbers, each tagged). Templates: `resolve_menu_v1` and `resolve_debrief_v3`, both frozen. Config: `configs/resolution/round1_head_on_menu.yaml`. Tests: `tests/test_rf47_menu.py`.
+
+- **The template** (`resolve_menu_v1`) is `resolve_v9` word for word, with these changes:
+  - each condition's first instruction says how the agent moves is "chosen from the ACTIONS below";
+  - the reply has `"action"` (one option's name) in place of `"steps"`;
+  - an ACTIONS block replaces the STEPS block: the nine options, each with one sentence that has no number and no angle, and no option says who goes first;
+  - the wrapper and the three history outcomes no longer speak of "steps".
+
+  All four conditions have a section. The wording is the assistant's draft.
+- **The flag:** `menu_table` names the table. The template lists the options' names and words, and the table must list the same names in the same order, or the template is refused.
+- **Reading a reply:**
+  - the name is matched ignoring case, extra spaces, surrounding quotes and a full stop;
+  - a missing `action`, or a name not on the menu, is unreadable (`missing_action`, `unknown_action`), with one retry as for any other failure;
+  - a `steps` key beside it is ignored and flagged (`steps_ignored`);
+  - the record keeps the option as `parsed.action`, and earlier records are written as before.
+- **What each option becomes**, given to the executor unchanged:
+  - "carry on" is `[]`, exactly a free-step reply's "carry on as you are": keep the line (`keep_line_replan`) at the usual speed;
+  - the two slow-downs are one step at 0.81 or 0.5 × the agent's *usual* speed, until `other_passes`. This is a `[design]` choice, as is the event: Huber's ratio compares two walking speeds, not a slowing from the current one;
+  - "stop and wait" is `speed_mps` 0 for 1 s. The plan then ends, and D5 asks again if the meeting is still predicted;
+  - the sidesteps use `resolve_v8`'s sidestep (30°, then parallel) at the usual speed;
+  - "step back" is `back_up_m` 0.5 at the backing speed.
+- **As far as the wall allows:**
+  - a sidestep is planned no further than the room to the wall across the path (from the perception record's `free_width_left_m` or `free_width_right_m`), less the body radius and a 0.05 m margin (`[design]`, so that ORCA's wall margin does not stop the step short of its distance). From an aligned start in round 1's corridor, "step well to your right" becomes **0.57 m**, against AS3's "about 0.6 m", and the step ends `sidestepped` (tested);
+  - with under 0.05 m of room there is no sidestep: the plan is `[]`, flagged `no_room:<side>`;
+  - a shortened sidestep is flagged `capped_by_wall:<side>`.
+- **The debrief, `resolve_debrief_v3`** (*the assistant's choice, for the user; section 3 names `resolve_debrief_v2`*): it is `resolve_debrief_v2` with one more line. A menu decision is listed as `You chose: "step a little to your right".`, where v2 would print the steps code made of it (`"metres": 0.47`), numbers the agent never saw. Decisions with steps read exactly as under v2.
+- **The mock:** `resolution_menu_rehearsal_v1` covers every option, a name in other case with a full stop, a signal, a talk message, an option not on the menu, and an unreadable reply.
+- **Unchanged (AS4, tested):** `resolve_v1` to `resolve_v9` have no menu; a reply under them reads as before, even with an `action` key; RF-40's config loads as before; and `resolve_debrief_v2` prints steps as before.
+- **Mock rehearsal** (`runs_mock/rf47_rehearsal`, not tracked): the whole design ran, RF-40's 272 silent and 272 talk sessions, and all 544 completed.
+  - 3,458 decision points, 3,802 attempts;
+  - every option was chosen;
+  - 386 sidesteps were capped by the wall, and 112 had no room;
+  - 168 replies named an option not on the menu and were unreadable after the retry.
+
+  The mock is not a model, so its outcomes say nothing about behaviour.
+- **Cost estimate for RF-49** (from RF-40's ledger, `spend_ledger.jsonl`, off-peak):
+  - RF-40's silent and talk sessions cost USD 0.375 and 0.445, so USD 0.82 for 544 sessions.
+  - Under the menu the fixed text is about 750 characters shorter. That saves almost nothing, because it is the cached prefix (about USD 0.003 per million tokens).
+  - A reply without the steps JSON should be shorter. Taking 50 fewer output tokens a decision as an assumption, not a measurement, the total is about **USD 0.71 to 0.82** for 544 sessions, if the menu needs as many calls as RF-40 did.
+  - RF-49 runs the menu in two frames, so about USD 1.4 to 1.6 in all. It still needs its own approval and cap.
+
 ## 7. The absolute frame (AS5)
 
 **AS5. Compass walls, heading not told: provisional, to be rechecked after RF-43** (the user, 2026-11-25).
@@ -119,6 +162,8 @@ This applies to RF-47 and RF-48 only. The grid is an add-on (AS1).
 - **Talk:** the instructions ask the agent to name sides by the walls. There is no facing note.
 - **Recheck:** before RF-48 is built, the user rechecks AS5 against RF-43's literature search (#132).
 - **The expected trap:** two agents can both choose "the north wall". RF-49 and RF-52 measure how often they do.
+
+*Revised by the user on 2026-11-26* (the recheck above, asked at the start of RF-47, #136): **the walls get neutral landmark names, not compass names**, as RF-43 recommends (`literature/frames-of-reference/README.md`, section 6, item 3): compass words carry habits models fall back on (north as straight ahead, "left = west"), and a landmark name has none `[inference]`. The rest of AS5 stands: positions from one wall, moves named by the walls, the parser converting, talk naming walls, no facing note, and the heading not told. The landmark words themselves are RF-48's to draft. No study compares compass and landmark names for LLMs (RF-43's gap).
 
 ## 8. The grid (AS1, AS6, AS7)
 
@@ -216,11 +261,24 @@ H2 applies in the same steps as H1. H3 (where a move aside starts) applies in ce
 
 - **Decision points:** event-driven as in D5, up to 6, never every tick. "Wait" lasts 1 s (about 3 ticks) and is then asked again (AS3). Between decisions, a lane change happens once, then the walker goes forward.
 
+*Decided by the user on 2026-11-26* (asked at the start of RF-51, which then waited for RF-47 and RF-48):
+- **The grid's menu is AS3's menu done in cells**, with the same words as the corridor's menu, so that the grid and the menu arms differ only by world. The proposal put to the user:
+  - "carry on";
+  - slow a little (the walker moves on 81% of ticks) or a lot (half);
+  - "stop and wait" (1 s, 3 ticks);
+  - step a little = one lane, moving while walking;
+  - step well = two lanes;
+  - step back = one cell.
+
+  RF-51 fixes the details.
+- **RF-51 counterbalances who starts off the centre lane** in `one_lane_apart`: half the sessions put person 2 in the centre lane instead, so that who starts off centre does not mix with the factors.
+- **The absolute frame uses neutral landmark names** (AS5 as revised, section 7).
+
 ## 9. Template names
 
 *The assistant's choice*, written into the issues on 2026-11-25. The user was not asked and may change them. They are set now so that issues worked in parallel do not collide:
 - `resolve_v10` (RF-46);
-- `resolve_menu_v1` (RF-47);
+- `resolve_menu_v1` (RF-47), with the debrief `resolve_debrief_v3` (added in RF-47);
 - `resolve_menu_abs_v1` (RF-48);
 - `resolve_grid_v1` and `resolve_grid_abs_v1` (RF-51).
 
@@ -247,6 +305,8 @@ RF-50 can be built alongside RF-47 and RF-48.
 - **The grid moves ahead:** RF-50 (#139) is next.
 - RF-46 and the menu (RF-47 to RF-49) stay open, after or alongside the grid. Whether RF-51 and RF-52 also come before them is not yet decided.
 - Track #55 records the same change.
+
+*Amended by the user on 2026-11-26, after RF-50:* **RF-47 and RF-48 come before RF-51**, so that the grid's template reuses the menu and the absolute frame. RF-50 is done (#139). The order is now RF-47, RF-48, then RF-51, with RF-49 and RF-52 after their builds.
 
 ## 11. Still open
 

@@ -132,7 +132,8 @@ of paid runs and a cap for its round, recorded in `CLAUDE.md`.
     game agents (*done*); RF-45 (#134) the share of hallucinated decisions (*done*); RF-41 (#130)
     is *dropped* (the user, 2026-11-25: the grid moved ahead; `docs/action-space.md` section 10);
   - RF-46 (#135, paid): behave like the person, with no need to speak like them;
-  - the menu: RF-47 (#136) a menu of described actions; RF-48 (#137) an absolute frame;
+  - the menu: RF-47 (#136) a menu of described actions (*done*, mock only: `negsim/resolution/menu.py`);
+    RF-48 (#137) an absolute frame, with neutral landmark names for the walls (AS5 as revised, 2026-11-26);
     RF-49 (#138, paid) runs both;
   - the grid: RF-50 (#139, *done*: `negsim/grid/`) and RF-51 (#140) build it, RF-52 (#141,
     paid) runs it. **The grid is an add-on that modifies no existing code** (AS1).
