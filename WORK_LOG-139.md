@@ -114,8 +114,23 @@ The user answered "Yes start" to these, proposed by the assistant:
 - `git diff --stat origin/feat/129-rf40-turn-taking-talk`: only new files, plus
   `docs/action-space.md` (task 4) and this log.
 
+### 2026-11-26 02:15 UTC — the user's answers: manifest fix, deadlock window, READMEs
+- The user's words: "yes I want you to help me fix the resolve_v9, and then do the 3.0s and update
+  the README".
+- **`resolve_v9`'s manifest entry:** added `"kind": "resolution"` on RF-40's branch, committed
+  there without a checkout (plumbing on `origin/feat/129-rf40-turn-taking-talk`, commit
+  `4667d77f0`, pushed), then merged into this branch. The two template tests pass
+  (`test_personas_and_prompts.py`: 43 passed). The template file and its hash are unchanged.
+- **Deadlock window:** 3.0 s (10 ticks), round 1's, accepted by the user. Recorded in
+  `docs/action-space.md` sections 8.1 and 11 and in the config's comment; the value has no source,
+  so its tag stays `[placeholder]`.
+- **READMEs:** root `README.md` rows RF-41 (dropped), RF-43, RF-44, RF-45 and RF-50 (done);
+  `llm_negotiation/README.md`'s roadmap the same. RF-43 to RF-45 were still "not started" though
+  their PRs (#143, #145, #146) had merged.
+
 ## Open questions / risks
-1. **Deadlock window** 3.0 s (10 ticks) instead of the agreed 16 ticks: see 09:26. For the user.
+1. ~~**Deadlock window** 3.0 s (10 ticks) instead of the agreed 16 ticks: see 09:26. For the user.~~
+   Accepted by the user, 2026-11-26.
 2. **Crossing paths blocked** is RF-50's assumption, not Burstedde et al.'s; agreed by the user
    before building. A blocked X leaves both in place, and two scripts that repeat it would deadlock.
 3. **Which person is off the centre line** in `one_lane_apart` (walker 0 keeps the centre lane):
@@ -126,8 +141,9 @@ The user answered "Yes start" to these, proposed by the assistant:
    rates compare with round 1's by rate only (section 3).
 6. **README status lines** (root `README.md`, `llm_negotiation/README.md`) are not updated: under
    the user's AS1 rule ("ask the user before changing any existing file for it"), asked at the end.
+   Updated on 2026-11-26 at the user's request.
 7. **`resolve_v9` has no `kind` in the template manifest** (RF-40's commit `85a577386`): two
-   existing tests fail on the base branch. A one-line fix on RF-40's branch; for the user.
+   existing tests fail on the base branch. Fixed on RF-40's branch (`4667d77f0`), 2026-11-26.
 
 ## Summary (fill in at the end)
 **What changed.** A grid corridor as an add-on world, with no model call (USD 0):

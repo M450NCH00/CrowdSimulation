@@ -187,9 +187,9 @@ The corridor is also 0.25 m wider than round 1's (AS6).
 - **Squeezed past** (the grid's near miss): passed, but with a passing distance under two body radii (0.5 m). Adjacent lanes count, and so does sliding past diagonally from face to face (half a lane each).
 - **The pavement dance:** before passing, either both changed lane towards the same wall on one tick (`dance_ticks`), or they ended up in one lane facing each other after either had changed lane. `first_changes_towards_same_wall` compares each one's first lane change, as `analysis.lateral`'s `towards_same_wall` does.
 - **Deadlock:** no one advanced towards their goal for **3.0 s (10 ticks)**. A sideways step or a wait is no progress, so a dance in place ends as a deadlock.
-  - *Changed while building* from the 16 ticks (about 5 s) the assistant proposed: 3.0 s is issue #24's window and round 1's corridor's (`deadlock.window_s`), so the two worlds' deadlock rates compare.
+  - *Changed while building* from the 16 ticks (about 5 s) the assistant proposed: 3.0 s is issue #24's window and round 1's corridor's (`deadlock.window_s`), so the two worlds' deadlock rates compare. **Accepted by the user on 2026-11-26** ("do the 3.0s").
   - Round 1's rule is "nobody has moved". The grid's is "nobody has advanced", which also counts a dance in place.
-  - The number is still a placeholder (section 11).
+  - The number has no source of its own, so it stays a placeholder (section 11).
 - **Resolved:** passed, never blocked face to face, not squeezed, no deadlock, within the time limit. This is round 1's definition.
 - **Also reported:** ticks to pass, lane changes, waits, backs and refused moves, per person.
 
@@ -258,7 +258,7 @@ RF-50 can be built alongside RF-47 and RF-48.
   - "stop and wait" 1 s;
   - "step back" 0.5 m;
   - the 30° sidestep angle;
-  - the grid's N ticks for a deadlock: 10 ticks (3.0 s) as built in RF-50, round 1's window (section 8.1).
+  - the grid's N ticks for a deadlock: 10 ticks (3.0 s) as built in RF-50, round 1's window, accepted by the user on 2026-11-26 (section 8.1).
 
 ## 12. Sources
 
