@@ -139,20 +139,81 @@ This applies to RF-47 and RF-48 only. The grid is an add-on (AS1).
 - the winner is drawn from the session's seed;
 - two people facing each other in one lane cannot swap cells: they block.
 
-*Proposed, for RF-50 and RF-51 to settle:*
-- **Moves:** forward; forward and one lane to the left or right (the paper's 3 × 3 neighbourhood includes diagonals); one lane aside in place; wait; one cell back.
-- **Slower walkers:** a walker slower than 1.3 m/s advances when its walked distance reaches the next cell (deterministic, rebuildable from the seed).
-- **Geometries:** round 1's "aligned" puts both in the centre lane. "20 cm apart" (±0.1 m) would round to the same lane, so the second geometry is one lane apart (0.4 m, like `apart_40cm` in `configs/cases/source_head_on.yaml`).
-- **Grid measures:**
-  - passed;
-  - blocked face to face (the grid's collision);
-  - squeezed past in adjacent lanes (the grid's near miss);
-  - deadlock (no progress for N ticks);
-  - the dance;
-  - ticks to pass;
-  - lanes apart when they pass.
+### 8.1 As built in RF-50 (#139)
 
-  H1 and H2 apply in steps of 0.4 m, and H3 (where a turn starts) in cells. Targets on speed change apply only through "wait" and slower walkers; RF-52 says which targets apply.
+*Settled in RF-50, 2026-11-25.* The proposals below were put to the user before building, and the user answered "Yes start". Where the build departs from them, it says so. The code is `negsim/grid/` (its own entry point, `python -m negsim.grid`), its parameters `configs/grid/corridor_v1.yaml` and its tests `tests/test_grid.py`. No existing file of the environment was edited (AS1).
+
+**The corridor.** Lane 0 is the wall at -y and row 0 the end at -x. Cell centres in metres put the middle at x = 0 and the centre line at y = 0, as in round 1's corridor. With 50 rows there is no middle cell. Each person starts in the 20th cell from the middle on their side: rows 5 and 44, centres 7.8 m from the middle, 15.6 m apart (round 1: 8 m and 16 m). A person who reaches the last row on their way has arrived and leaves the grid. A run ends when both have arrived, at a deadlock, or after 60 s (195 ticks), as round 1's corridor.
+
+**Moves**, in the walker's own frame:
+- forward;
+- forward and one lane to the left or right (the paper's 3 × 3 neighbourhood includes diagonals);
+- one lane to the left or right in place;
+- wait;
+- one cell back.
+
+Heading +x, one's own left is +y; heading -x, it is -y. This is how `analysis.lateral` counts it.
+
+**The tick** is a parallel update. Occupancy is read at the start of the tick, as in the paper, so a cell left in the same tick is still occupied, and a follower does not move up into it until the next tick. Each tick runs in this order:
+1. A slower walker acts only on the ticks at which its walked distance reaches the next cell; otherwise it holds. At 0.65 m/s it acts every second tick.
+2. A move into a wall, or out past the end behind the walker, does not happen.
+3. A move into an occupied cell does not happen. This rules out swaps.
+4. **Crossing paths.** Two diagonal moves through one midpoint, to different cells, both do not happen: two people cannot cut through each other in an X. This is an **assumption of RF-50's**, agreed by the user on 2026-11-25, and is not in Burstedde et al.
+5. A contest for one empty cell: one winner is drawn from the session's seed and the others stay (AS7).
+
+Every refused move is recorded with its reason: `not_due`, `wall`, `occupied`, `crossing` or `contest_lost`. A run rebuilds exactly from its seed. The contest draws and each walker's own random stream are separate streams of the seed.
+
+**Geometries** (`negsim/grid/cases.py`):
+
+| Round 1's case | Layout | Continuous offsets (m) | Grid lanes | Lost to rounding (m) |
+| --- | --- | --- | --- | --- |
+| `head_on_de176842` | aligned | 0.0, 0.0 | 2, 2 | 0.0, 0.0 |
+| `head_on_02dfbadb` | apart_20cm | +0.1, -0.1 | 2, 2 | 0.1, 0.1 |
+
+An offset rounds to the nearest lane centre, and half a lane rounds towards +y. **What rounding loses:** 0.1 m is a quarter of a lane, so on the grid `apart_20cm` *is* the aligned case. The grid's two geometries are therefore:
+- **`aligned`:** lanes 2 and 2.
+- **`one_lane_apart`:** lanes 2 and 1, 0.4 m apart. With 5 lanes, one lane apart cannot be symmetric about the centre line. Walker 0 (person 1) keeps the centre lane and walker 1 is one lane to -y. This keeps `apart_20cm`'s sense: each is off to its own left and sees the other to its own right. Which person is off the centre line is a `[design]` choice that RF-51 may counterbalance.
+
+The corridor is also 0.25 m wider than round 1's (AS6).
+
+**Measures** (`negsim/grid/measures.py`):
+- **Passed:** the first tick at which each is beyond the other along its own way. In one lane they cannot pass, because there are no swaps.
+- **Passing distance:** the sideways gap at the moment they were level.
+  - If they were in one row on a tick before passing, it is the fewest lanes between them on those ticks.
+  - If they went from one side of each other to the other within a tick, each is taken to move in a straight line, so they were level halfway: the mean of the signed gaps before and after.
+  - So H1 applies in steps of 0.2 m, not 0.4 m. Two lanes is 0.8 m, inside H1's 0.76 to 1.10 m.
+  - *Changed while building:* the first version took the fewest lanes over every tick they were within a row, which counted an earlier face-to-face moment as the passing distance (`WORK_LOG-139.md`).
+- **Blocked face to face** (the grid's collision): before passing, in one lane, in adjacent rows, facing. The centres are 0.4 m apart, closer than two bodies (0.5 m).
+- **Squeezed past** (the grid's near miss): passed, but with a passing distance under two body radii (0.5 m). Adjacent lanes count, and so does sliding past diagonally from face to face (half a lane each).
+- **The pavement dance:** before passing, either both changed lane towards the same wall on one tick (`dance_ticks`), or they ended up in one lane facing each other after either had changed lane. `first_changes_towards_same_wall` compares each one's first lane change, as `analysis.lateral`'s `towards_same_wall` does.
+- **Deadlock:** no one advanced towards their goal for **3.0 s (10 ticks)**. A sideways step or a wait is no progress, so a dance in place ends as a deadlock.
+  - *Changed while building* from the 16 ticks (about 5 s) the assistant proposed: 3.0 s is issue #24's window and round 1's corridor's (`deadlock.window_s`), so the two worlds' deadlock rates compare. **Accepted by the user on 2026-11-26** ("do the 3.0s").
+  - Round 1's rule is "nobody has moved". The grid's is "nobody has advanced", which also counts a dance in place.
+  - The number has no source of its own, so it stays a placeholder (section 11).
+- **Resolved:** passed, never blocked face to face, not squeezed, no deadlock, within the time limit. This is round 1's definition.
+- **Also reported:** ticks to pass, lane changes, waits, backs and refused moves, per person.
+
+H2 applies in the same steps as H1. H3 (where a move aside starts) applies in cells. Targets on speed change apply only through "wait" and slower walkers. RF-52 says which targets apply.
+
+**What `analysis.gate` and `analysis.lateral` can read.**
+- The grid writes `trajectory.csv` with `step`, `agent_id`, `x_m` and `y_m` (cell centres). `analysis.lateral.when_level` reads it unchanged (checked on 2026-11-25).
+- `measures.gate_columns` gives `outcome`, `resolved_plan_only` and `collision_plan_only`. The grid carries out moves with no avoidance steering, so its result stands for `plan_only`.
+- The grid has no ORCA, so it cannot give `*_plan_orca` or `*_plain_orca`, which `analysis.gate` reads for its baselines. RF-52 decides how to fill them: for example, scripted walkers as the grid's baseline, or a grid-only gate. No existing analysis module was changed.
+
+**Scripted walkers** (`negsim/grid/walkers.py`, no LLM). Each reacts when the other is ahead within 6 cells (2.4 m, a `[design]` choice for the scripts). Over seeds 1 to 20 (`python -m negsim.grid scripts`; the rows are tested):
+
+| Script | aligned | one_lane_apart |
+| --- | --- | --- |
+| both keep right (one lane in from their right wall) | resolved, 0.8 m | resolved, 0.8 m |
+| both keep left | resolved, 0.8 m | resolved, 0.8 m |
+| one holds its lane, the other steps 2 lanes away | resolved, 0.8 m | resolved, 0.8 m |
+| one holds, the other steps 1 lane away | squeezed past, 0.4 m | resolved, 0.8 m (it starts a lane off) |
+| both step towards the same wall, in step (the dance) | dance, deadlock | dance, deadlock |
+| both hold their lane | blocked face to face, deadlock | squeezed past, 0.4 m |
+| random moves (mostly forward) | resolved in 10 of 20 | resolved in 10 of 20 |
+
+### 8.2 For RF-51 to settle
+
 - **Decision points:** event-driven as in D5, up to 6, never every tick. "Wait" lasts 1 s (about 3 ticks) and is then asked again (AS3). Between decisions, a lane change happens once, then the walker goes forward.
 
 ## 9. Template names
@@ -181,6 +242,12 @@ Each is frozen once it is built, like every template.
 
 RF-50 can be built alongside RF-47 and RF-48.
 
+*Amended by the user on 2026-11-25, after RF-45:*
+- **RF-41 is dropped**, so AS8 is withdrawn. #130 is closed as not planned, before any work started, and its text keeps the design and the user's decisions of 2026-11-02. The user's reason: "I think that the issue where we try to use a discrete environment, like a grid environment instead, I think this will provide more insights".
+- **The grid moves ahead:** RF-50 (#139) is next.
+- RF-46 and the menu (RF-47 to RF-49) stay open, after or alongside the grid. Whether RF-51 and RF-52 also come before them is not yet decided.
+- Track #55 records the same change.
+
 ## 11. Still open
 
 - **The way back to the continuous simulator.** The 10,000-agent goal runs ORCA plus rules in continuous space. A grid result could be read as a rule and translated (as RF-12 and RF-31 translate rules), or kept only as a check of the LLM's reasoning. To be decided with RF-52's results in hand (RF-52, task 3).
@@ -191,7 +258,7 @@ RF-50 can be built alongside RF-47 and RF-48.
   - "stop and wait" 1 s;
   - "step back" 0.5 m;
   - the 30° sidestep angle;
-  - the grid's N ticks for a deadlock.
+  - the grid's N ticks for a deadlock: 10 ticks (3.0 s) as built in RF-50, round 1's window, accepted by the user on 2026-11-26 (section 8.1).
 
 ## 12. Sources
 
