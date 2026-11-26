@@ -82,12 +82,33 @@ def test_an_intent_naming_one_side_or_wall_and_an_option_to_the_other_is_a_side_
 
 
 def test_lane_numbers_are_checked_from_one_at_the_blue_wall():
-    good = adapted("Keep to lane 3.", "I am in lane 3 and Person 1 is in lane 2.", frame="absolute", lane=2, other_lane=1)
+    # As the prompt numbers them (RF-52's pilot): 5 lanes, internal lane 2 is lane 3, internal lane 1 is lane 4.
+    assert G.lane_number({"lanes": 5}, 4) == 1 and G.lane_number({"lanes": 5}, 0) == 5
+    good = adapted("Keep to lane 3.", "I am in lane 3 and Person 1 is in lane 4.", frame="absolute", lane=2, other_lane=1)
     assert rules(good) == []
-    bad = adapted("Keep to lane 3.", "I am in lane 2 and Person 1 is in lane 3.", frame="absolute", lane=2, other_lane=1)
+    approaching = adapted("Keep to lane 3.", "He is coming toward me in lane 4.", frame="absolute", lane=2, other_lane=1)
+    assert rules(approaching) == []
+    bad = adapted("Keep to lane 3.", "I am in lane 2 and Person 1 is in lane 2.", frame="absolute", lane=2, other_lane=1)
     assert rules(bad) == ["other_lane_number", "own_lane_number"]
+    head_on = adapted("Keep my line.", "We are head-on in lane 3.", frame="absolute", lane=2, other_lane=2)
+    assert rules(head_on) == []
     leaked = adapted("Move to my left.", frame="absolute")
     assert rules(leaked) == ["uses_own_sides"]
+
+
+def test_a_move_put_on_the_others_wrong_side_is_a_side_error():
+    # The reader heads +x; the other moved one lane to the reader's left (+y): to the other's own right.
+    right = adapted("Keep clear.", "She moved a lane to her right.", moved=1)
+    assert rules(right) == []
+    assert rules(adapted("Keep clear.", "They moved one lane to my left.", moved=1)) == []
+    wrong = adapted("Keep clear.", "She moved a lane to her left, into my line.", moved=1)
+    assert rules(wrong) == ["other_move_side"]
+    assert rules(adapted("Keep clear.", "He has drifted two lanes to my left.", moved=1)) == ["other_move_side"]
+    # Towards the blue wall is +y.
+    blue = adapted("Keep clear.", "She appears to have moved towards the blue wall too.", frame="absolute", moved=1)
+    assert rules(blue) == []
+    yellow = adapted("Keep clear.", "She appears to have moved towards the yellow wall too.", frame="absolute", moved=1)
+    assert rules(yellow) == ["other_move_wall"]
 
 
 def test_the_side_kept_when_passing_and_the_first_lane_change():

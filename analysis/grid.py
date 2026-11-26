@@ -350,7 +350,7 @@ def coder_shares(points: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
 # --- side errors on the grid -------------------------------------------------------------------------
 
 OTHER = r"(?:person 1|they|he|she|the other (?:person|pedestrian)|the (?:man|woman|guy|lady|person))"
-LINK = r"(?:'s|'re| is| are| was| were| has| have| now| still| already| currently)*"
+LINK = r"(?:'s|'re|'ve| is| are| was| were| has| have| now| still| already| currently)*"
 NUMBERS = {"one": 1, "a": 1, "an": 1, "two": 2, "three": 3, "four": 4, "1": 1, "2": 2, "3": 3, "4": 4}
 #: "Person 1 is one lane to my right", "they are two lanes to my left", "he is on my right".
 OTHER_LANES_SIDE = re.compile(
@@ -358,11 +358,29 @@ OTHER_LANES_SIDE = re.compile(
     re.IGNORECASE)
 #: "Person 1 is in my lane", "we are in the same lane".
 OTHER_SAME_LANE = re.compile(rf"\b(?:{OTHER}{LINK}\s+(?:directly\s+)?in\s+my\s+lane|we(?:'re| are)\s+in\s+the\s+same\s+lane)\b", re.IGNORECASE)
-#: "Person 1 is in lane 3"; "I am in lane 2".
-OTHER_LANE_NUMBER = re.compile(rf"\b{OTHER}{LINK}\s+in\s+lane\s+(?P<lane>[1-5])\b", re.IGNORECASE)
-OWN_LANE_NUMBER = re.compile(r"\b(?:I(?:'m| am)|I'm currently|I am currently)\s+in\s+lane\s+(?P<lane>[1-5])\b", re.IGNORECASE)
-WALL_WORDS = re.compile(r"\b(blue|yellow)\s+wall\b", re.IGNORECASE)
+#: "Person 1 is in lane 3", "he is coming toward me in lane 2"; "I am in lane 2", "we are head-on in lane 3".
+OTHER_LANE_NUMBER = re.compile(
+    rf"\b{OTHER}{LINK}\s+(?:(?:walking|coming|approaching|heading|moving)\b[^.,;]{{0,25}}?\s)?in\s+lane\s+(?P<lane>[1-5])\b", re.IGNORECASE)
+OWN_LANE_NUMBER = re.compile(
+    r"\b(?:I(?:'m| am)(?:\s+currently)?|we(?:'re| are)\s+(?:both\s+|head-on\s+)?)\s*in\s+lane\s+(?P<lane>[1-5])\b", re.IGNORECASE)
+#: "She moved a lane to her left", "they have drifted one lane to my right" (RF-52's pilot wording).
+OTHER_MOVE_SIDE = re.compile(
+    rf"\b{OTHER}{LINK}\s+(?:moved|shifted|drifted|stepped|edged|eased|swung)\s+(?:over\s+|back\s+)?"
+    rf"(?:(?P<n>one|two|three|four|a|an|1|2|3|4)\s+lanes?\s+)?(?:to|towards?)\s+(?:the\s+)?(?P<whose>my|her|his|their)\s+(?P<side>left|right)\b",
+    re.IGNORECASE)
+#: "She appears to have moved towards the yellow wall", "he has drifted towards the blue side".
+OTHER_MOVE_WALL = re.compile(
+    rf"\b{OTHER}{LINK}(?:\s+(?:appears|seems)\s+to\s+have)?\s+(?:moved|shifted|drifted|stepped|edged|eased|swung)\s+(?:over\s+|back\s+)?"
+    r"(?:(?:one|two|a|1|2)\s+lanes?\s+)?(?:to|towards?)\s+the\s+(?P<wall>blue|yellow)\s+(?:wall|side)\b",
+    re.IGNORECASE)
+WALL_WORDS = re.compile(r"\b(blue|yellow)\s+(?:wall|side)\b", re.IGNORECASE)
 SIDE_WORDS = re.compile(r"\b(left|right)\b", re.IGNORECASE)
+
+
+def lane_number(view: Mapping[str, Any], lane: int) -> int:
+    """The lane's number as the absolute-frame prompt gives it: lane 1 is next to the blue wall (+y),
+    so lane ``lanes - lane`` (``negsim.grid.prompt``, ``_lane_number``)."""
+    return int(view["lanes"]) - int(lane)
 
 
 def _option_wall(option: Optional[str]) -> Optional[str]:
@@ -375,7 +393,11 @@ def side_flags(point: Mapping[str, Any]) -> list[dict[str, Any]]:
 
     - ``other_side``: puts the other on the wrong side, or the wrong number of lanes away (own frame);
     - ``other_same_lane``: says the other is in its lane when the prompt put them in another;
-    - ``other_lane_number`` / ``own_lane_number``: names the wrong lane (absolute frame; lanes from 1);
+    - ``other_move_side``: says the other moved to one side (theirs or the reader's own) when the prompt
+      gave the other one, or no move: the error the supervisor raised (SV8);
+    - ``other_move_wall``: says the other moved towards one wall when the prompt gave the other one;
+    - ``other_lane_number`` / ``own_lane_number``: names the wrong lane (absolute frame; lane 1 is next
+      to the blue wall, at +y, so lane ``lanes - lane``);
     - ``intent_side``: the intent names one own side, and the option moves to the other one;
     - ``intent_wall``: the intent names one wall, and the option moves towards the other one;
     - ``uses_own_sides``: an absolute-frame reply that speaks of left or right at all (not an
@@ -396,12 +418,32 @@ def side_flags(point: Mapping[str, Any]) -> list[dict[str, Any]]:
                 flags.append({"rule": "other_side", "claim": match.group(0), "evidence": f"the prompt: {abs(offset)} lane(s) to the {actual or 'same lane'}"})
         if offset != 0 and OTHER_SAME_LANE.search(texts):
             flags.append({"rule": "other_same_lane", "claim": OTHER_SAME_LANE.search(texts).group(0), "evidence": f"the prompt: {abs(offset)} lane(s) off"})
-        for match in OTHER_LANE_NUMBER.finditer(texts):
-            if int(match.group("lane")) != seen["lane"] + 1:
-                flags.append({"rule": "other_lane_number", "claim": match.group(0), "evidence": f"the prompt: lane {seen['lane'] + 1}"})
-    for match in OWN_LANE_NUMBER.finditer(texts):
-        if int(match.group("lane")) != view["lane"] + 1:
-            flags.append({"rule": "own_lane_number", "claim": match.group(0), "evidence": f"the prompt: lane {view['lane'] + 1}"})
+        moved_left = int(seen.get("lanes_moved_left") or 0)
+        for match in OTHER_MOVE_SIDE.finditer(texts):
+            side, whose = match.group("side").lower(), match.group("whose").lower()
+            n = NUMBERS.get((match.group("n") or "").lower())
+            # The view gives the move in the reader's own frame; the other faces the other way, so their
+            # own left is the reader's right.
+            to_readers_left = side == "left" if whose == "my" else side == "right"
+            if moved_left == 0 or (moved_left > 0) != to_readers_left or (n is not None and n != abs(moved_left)):
+                flags.append({"rule": "other_move_side", "claim": match.group(0),
+                              "evidence": f"the prompt: moved {moved_left:+d} lane(s) to own left"})
+        moved_plus_y = int(seen.get("lanes_moved_plus_y") or 0)
+        for match in OTHER_MOVE_WALL.finditer(texts):
+            to_blue = match.group("wall").lower() == "blue"  # the blue wall is at +y
+            if moved_plus_y == 0 or (moved_plus_y > 0) != to_blue:
+                flags.append({"rule": "other_move_wall", "claim": match.group(0),
+                              "evidence": f"the prompt: moved {moved_plus_y:+d} lane(s) towards the blue wall"})
+        if point["frame"] == "absolute":
+            for match in OTHER_LANE_NUMBER.finditer(texts):
+                if int(match.group("lane")) != lane_number(view, seen["lane"]):
+                    flags.append({"rule": "other_lane_number", "claim": match.group(0),
+                                  "evidence": f"the prompt: lane {lane_number(view, seen['lane'])}"})
+    if point["frame"] == "absolute":
+        for match in OWN_LANE_NUMBER.finditer(texts):
+            if int(match.group("lane")) != lane_number(view, view["lane"]):
+                flags.append({"rule": "own_lane_number", "claim": match.group(0),
+                              "evidence": f"the prompt: lane {lane_number(view, view['lane'])}"})
     option = point.get("option")
     if point["frame"] == "own":
         said = code_intent(point["texts"]["intent"], load_intent_codebook())[1]
@@ -418,7 +460,8 @@ def side_flags(point: Mapping[str, Any]) -> list[dict[str, Any]]:
     return flags
 
 
-SIDE_ERRORS = ("other_side", "other_same_lane", "other_lane_number", "own_lane_number", "intent_side", "intent_wall")
+SIDE_ERRORS = ("other_side", "other_same_lane", "other_move_side", "other_move_wall", "other_lane_number", "own_lane_number",
+               "intent_side", "intent_wall")
 
 
 def side_error_table(points: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
@@ -455,12 +498,13 @@ def facts(point: Mapping[str, Any]) -> str:
     v = point["grid_view"]
     lanes, lane, d = v["lanes"], v["lane"], v["direction"]
     left = (lanes - 1 - lane) if d > 0 else lane
-    parts = [f"own lanes to the wall: left {left}, right {lanes - 1 - left}; lane {lane + 1} from the blue wall"]
+    parts = [f"own lanes to the wall: left {left}, right {lanes - 1 - left}; lane {lane_number(v, lane)} from the blue wall"]
     for s in v.get("seen") or []:
         off = s["lanes_left"]
         where = "same lane" if off == 0 else f"{abs(off)} lane(s) to own {'left' if off > 0 else 'right'}"
-        parts.append(f"other: {s['cells_ahead']} cells ahead, {where} (lane {s['lane'] + 1}), {s['motion']}, changes {s['changes'] or '-'}"
-                     + (f", moved {s['lanes_moved_left']:+d} lane(s) to own left" if s.get("lanes_moved_left") else ""))
+        parts.append(f"other: {s['cells_ahead']} cells ahead, {where} (lane {lane_number(v, s['lane'])}), {s['motion']}, changes {s['changes'] or '-'}"
+                     + (f", moved {s['lanes_moved_left']:+d} lane(s) to own left, {s.get('lanes_moved_plus_y', 0):+d} towards the blue wall"
+                        if s.get("lanes_moved_left") else ""))
     for h in v.get("history") or []:
         parts.append(f"history: {h['ago_s']:.1f} s ago '{h['intent']}' ({h['outcome']}), moved {h['lanes_left']:+d} lane(s) to own left, back {h['cells_back']}")
     lines = [line for s in v.get("seen") or [] for line in s.get("factor_lines") or []]

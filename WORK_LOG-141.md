@@ -90,6 +90,35 @@ Fixed before this issue (recorded in `CLAUDE.md` and on #141):
   it is an existing file (AS1), and nothing in it changed.
 - **Peak hours until 10:00 UTC** (a Thursday): no paid call before then.
 
+### 2026-11-26 10:01 to 10:09 UTC — the pilot (paid), and the run of record started
+- **Balance before:** USD 2.96 (08:47 UTC; no paid call between then and the pilot).
+- **Pilot:** 8 sessions per frame (`--limit 8`), 10:01:14 to 10:05:48 UTC. Own frame USD 0.006286
+  (50 calls), absolute frame USD 0.004649 (36 calls); USD 0.0109 against the shared cap of 0.80.
+  At about USD 0.0007 a session, all 544 come to about USD 0.38.
+- **Fingerprint:** `bc19ba97cbe016479903222bb1578db6` on all 86 calls, RF-40's. No unreadable reply, no
+  parse error.
+- **Gate on the pilot:** 7 of 8 in each frame (not a result, 8 sessions).
+- **Read every reply against its view** (`scratchpad/readpilot.py`). The views are right: the other's
+  side and lane match the lanes, and the absolute prompt numbers lanes from the blue wall.
+  - Own frame: the mix-up of the other's left and right is still there: "She moved a lane to her left"
+    when she moved to her own right (two sessions), "They've drifted a lane to their left" after a move
+    to their right. One dance where an agent steps towards the side the other just moved to.
+  - Absolute frame: lane numbers are cited correctly ("She is in lane 4, so I shift towards the blue
+    wall (lane 2)"). A new failure appears: both choose the same wall ("yellow"), which on the grid is
+    the same direction, and they squeeze past one lane apart.
+- **Fixed in the analysis after reading the replies** (no session changed):
+  - **A bug of mine:** the analysis numbered lanes as internal lane + 1; the prompt numbers them
+    `lanes - lane` (lane 1 at the blue wall, +y; `negsim/grid/prompt.py`, `_lane_number`). Now
+    `lane_number()`, used by the lane checks and the hand-check sheet, and only in the absolute frame.
+  - **New checks** for the error the supervisor raised (SV8): `other_move_side` (the other "moved to
+    her left / my right" against the view's `lanes_moved_left`, the other's own sides being the
+    reader's opposite) and `other_move_wall` (against `lanes_moved_plus_y`). Wider patterns for the
+    pilot's wording ("coming toward me in lane 2", "we are head-on in lane 3", "the yellow side",
+    "they've"). Test added; the analysis's 9 grid tests pass.
+- **Run of record started 10:09 UTC** (`scratchpad/full.sh`): the rest of each frame, without
+  `--limit`, `--client deepseek --confirm`, own frame then absolute, stopping at the cap. About 17 s a
+  session, so about 2.5 h: well inside off-peak (until 01:00 UTC).
+
 ## Open questions / risks
 
 ## Summary (fill in at the end)
