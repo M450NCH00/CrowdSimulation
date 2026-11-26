@@ -56,6 +56,40 @@ Fixed before this issue (recorded in `CLAUDE.md` and on #141):
 
 ## Progress log
 
+### 2026-11-26 08:20 to 08:47 UTC — the build (mock only)
+- **Read:** RF-51's runner, session, records and work log; the continuous runner's paid path
+  (`make_client`, `run_resolution`, the ethics gates, `stop_at_cap`); the budget guard; RF-45's coder
+  and report; `analysis.load` and `analysis.effects`; RF-40's comparison report.
+- **Built, new files only (AS1):**
+  - `negsim/grid/paid.py`: the paid entry point. RF-52's config names RF-51's as `base_config` and
+    sets only the name, the model settings and the budget. `SharedBudgetGuard` puts one cap on both
+    frames' ledger lines together. `--confirm`, a refusal in peak hours (checked before every
+    session), the ethics gates, aborted sessions set aside and rerun on resume, fingerprints in
+    `summary.json`.
+  - `configs/grid/rf52_round1_grid.yaml` and `rf52_round1_grid_abs.yaml`: RF-40's model settings
+    (`deepseek-flash`, temperature 1.0, 300 tokens, thinking off), cap USD 0.80 shared, gate 0.50,
+    RF-40's fingerprint expected.
+  - `negsim/grid/baseline.py`: RF-50's scripted pairs on each session's lanes and seed, written as
+    `scripted_walkers.csv` beside the run (context for the gate, USD 0).
+  - `analysis/grid.py`: the gate, RF-50's measures, the frames paired (McNemar), sides, RF-45's coder
+    through an adapter, the grid's own side checks, the hand-check sheet, and the factor effects
+    through `analysis.effects` unchanged, on RF-40's factor columns for the same sessions.
+  - Tests: `tests/test_grid_paid.py` (6) and `analysis/tests/test_grid.py` (8).
+- **Changed while building:**
+  - The first cap test used USD 0.0005, below one call's worst case (3 attempts × about USD 0.001),
+    so nothing was sent. Raised to 0.006.
+  - Resuming after a raised cap was refused as "another config". The comparison now leaves out the
+    budget as well as the source path: a cap changes no session. (The continuous runner leaves out
+    only the source.)
+- **RF-40's silent rate:** `docs/action-space.md` quotes 163 of 256; over all 272 silent sessions it
+  is 175 (0.64 either way). The 256 leave out the 16 counterfactual-pair sessions. The analysis
+  reports both, and the grid the same two ways.
+- **DeepSeek's pricing page** (fetched 08:4x UTC): `deepseek-flash` is still DeepSeek-V4.1-Flash-1017;
+  prices (0.003 / 0.15 / 0.60 off-peak, double at peak) and peak hours (01-04 and 06-10 UTC, weekdays)
+  match `configs/llm/deepseek_pricing.yaml` exactly. Its `date_checked` (2026-11-02) is left as it is:
+  it is an existing file (AS1), and nothing in it changed.
+- **Peak hours until 10:00 UTC** (a Thursday): no paid call before then.
+
 ## Open questions / risks
 
 ## Summary (fill in at the end)
