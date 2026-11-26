@@ -41,6 +41,15 @@ the same side; a sidestep cannot walk backwards nor stand still (``speed_mps`` 0
 ``until`` is optional (the step ends when the agent is that far aside, or at the ``until`` if that
 comes first). Under every earlier template a ``sidestep`` key is an unknown step key, flagged and
 ignored, as before.
+
+**Under a template with a menu** (``resolve_menu_v1``, issue #136; the template's ``menu_table``)
+a reply names one option, ``"action": "<an option's name>"``, in place of ``steps``. The name is
+matched ignoring case, extra spaces, surrounding quotes and a full stop
+(:func:`negsim.resolution.menu.normalise`). A missing ``action`` (``missing_action``) or a name
+that is not on the menu (``unknown_action``) makes the reply unreadable, with one retry as for any
+other failure. A ``steps`` key is ignored and flagged (``steps_ignored``). The steps are the
+menu's plan of the option (:meth:`Menu.steps_for`), and the record keeps the option as ``action``.
+Under every other template nothing changes, and an ``action`` key is an extra key, as before.
 """
 
 from __future__ import annotations
@@ -146,9 +155,11 @@ class ParsedReply:
     steps: tuple[Step, ...]
     reason: str
     flags: tuple[str, ...] = ()
+    #: Issue #136: the option chosen from a menu (``resolve_menu_v1``); None for free steps.
+    action: Optional[str] = None
 
     def as_dict(self) -> dict[str, Any]:
-        return {
+        out = {
             "condition": self.condition,
             "message": self.message,
             "signal": self.signal,
@@ -157,6 +168,9 @@ class ParsedReply:
             "reason": self.reason,
             "flags": list(self.flags),
         }
+        if self.action is not None:  # only then, so that earlier records are written as before
+            out["action"] = self.action
+        return out
 
 
 @dataclass(frozen=True)
@@ -175,6 +189,14 @@ class ReplyContext:
     until_at_distance: bool = False
     until_event_as_object: bool = False
     sidestep: bool = False
+    #: Issue #136: the menu a reply chooses from (a :class:`negsim.resolution.menu.Menu`), and what
+    #: turning an option into steps needs: the agent's usual speed, its body radius and the room
+    #: from its centre to the wall on each side, across its path (None: no wall in range).
+    menu: Optional[Any] = None
+    usual_speed_mps: Optional[float] = None
+    radius_m: float = 0.0
+    room_left_m: Optional[float] = None
+    room_right_m: Optional[float] = None
 
     def __post_init__(self) -> None:
         if self.condition not in ALL_CONDITIONS:
@@ -377,6 +399,9 @@ def parse_reply(raw: Optional[str], context: ReplyContext) -> ParsedReply:
     if not intent:
         raise _fail("empty_intent")
 
+    if context.menu is not None:  # issue #136: one option of a menu, in place of steps
+        return _menu_reply(data, context, message, signal, intent, flags)
+
     if "steps" not in data:
         raise _fail("missing_steps")
     if not isinstance(data["steps"], list):
@@ -387,6 +412,30 @@ def parse_reply(raw: Optional[str], context: ReplyContext) -> ParsedReply:
     if reason is None:
         flags.append("no_reason")
     return ParsedReply(context.condition, message, signal, intent, steps, reason or "", tuple(flags))
+
+
+def _menu_reply(
+    data: Mapping[str, Any], context: ReplyContext, message: str, signal: str, intent: str, flags: list[str],
+) -> ParsedReply:
+    """A reply under a template with a menu (issue #136): the option named, turned into steps."""
+    name = _text(data, "action", required=True)
+    option = context.menu.find(name) if name else None
+    if option is None:
+        raise _fail("unknown_action", f"action: got {name!r}; the menu's options are {context.menu.names}")
+    if option.until is not None and option.until not in context.events:
+        raise ValueError(f"menu option {option.name!r} ends at {option.until!r}, not an event of this scenario {context.events}")
+    if "steps" in data:
+        flags.append("steps_ignored")
+    if context.usual_speed_mps is None:
+        raise ValueError("a menu reply needs the agent's usual speed (ReplyContext.usual_speed_mps)")
+    steps, menu_flags = context.menu.steps_for(
+        option, context.usual_speed_mps, {"left": context.room_left_m, "right": context.room_right_m}, context.radius_m,
+    )
+    flags.extend(menu_flags)
+    reason = _text(data, "reason", required=False)
+    if reason is None:
+        flags.append("no_reason")
+    return ParsedReply(context.condition, message, signal, intent, tuple(steps), reason or "", tuple(flags), option.name)
 
 
 def reply_parser(context: ReplyContext) -> Callable[[Optional[str]], ParsedReply]:

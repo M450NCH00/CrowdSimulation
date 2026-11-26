@@ -86,6 +86,7 @@ from .execute import COMPLETED, EXECUTION_RF4, EXECUTIONS, MODE_PLAN_ONLY, RUNNI
 from .perceive import (
     Exchange, LLMViewSettings, Perceiver, bodies_in, changes_since, in_sight, perceiver_for, safety_distance, sees, view_in,
 )
+from .menu import menu_context
 from .prompt import CoreTemplate, DebriefTemplate, RenderedPrompt, debrief_messages, render
 from .reply import START_AFTER_SECONDS, START_AT_DISTANCE, ParsedReply, ReplyContext, Step, parse_debrief, reply_parser
 from .scenario import Scenario
@@ -655,6 +656,9 @@ class EncounterSession:
         )
         if self.settings.distance_to_partner:
             context = replace(context, distance_m=self._partner_distance(member, context.distance_m))
+        menu = self.core.menu
+        if menu is not None:  # issue #136: the reply names an option, turned into steps for this agent now
+            context = replace(context, menu=menu, **menu_context(sim, agent))
         metadata = {
             **self.labels, "kind": "decision", "agent_id": agent, "agent_slot": member.slot,
             "decision_point": member.prompts + 1, "step": step,
