@@ -79,6 +79,11 @@ def test_an_intent_naming_one_side_or_wall_and_an_option_to_the_other_is_a_side_
     assert rules(blue) == []
     yellow = adapted("Move towards the blue wall.", option="step a little towards the yellow wall", side="right", frame="absolute")
     assert rules(yellow) == ["intent_wall"]
+    # A wall or side that is where the other went, not the speaker's own move, is not checked (RF-52's replies).
+    theirs = adapted("Give her room, since she has drifted toward the yellow wall.", option="step a little towards the blue wall",
+                     side="left", frame="absolute")
+    assert rules(theirs) == []
+    assert rules(adapted("Give her room now that she's also moved right.", option="step a little to your left", side="left")) == []
 
 
 def test_lane_numbers_are_checked_from_one_at_the_blue_wall():
@@ -104,11 +109,22 @@ def test_a_move_put_on_the_others_wrong_side_is_a_side_error():
     wrong = adapted("Keep clear.", "She moved a lane to her left, into my line.", moved=1)
     assert rules(wrong) == ["other_move_side"]
     assert rules(adapted("Keep clear.", "He has drifted two lanes to my left.", moved=1)) == ["other_move_side"]
+    # No move since the reader was last asked: the claim may be about an earlier one, so it is not checked.
+    assert rules(adapted("Keep clear.", "She moved a lane to her left.", moved=0)) == []
     # Towards the blue wall is +y.
     blue = adapted("Keep clear.", "She appears to have moved towards the blue wall too.", frame="absolute", moved=1)
     assert rules(blue) == []
     yellow = adapted("Keep clear.", "She appears to have moved towards the yellow wall too.", frame="absolute", moved=1)
     assert rules(yellow) == ["other_move_wall"]
+
+
+def test_move_side_claims_are_counted_against_the_views_move():
+    # moved_left > 0: to the reader's left, the other's own right.
+    assert G.move_side_claims("She moved a lane to her right. They shifted to my left.", 1) == (2, 0)
+    assert G.move_side_claims("She moved a lane to her left.", 1) == (1, 1)
+    assert G.move_side_claims("She moved a lane to her left.", 0) == (0, 0)
+    row = G._move_side_row([("He moved to his left.", -1), ("He moved to his right.", -1), ("Nothing said.", 1), ("x", 0)])
+    assert (row["points_with_a_move"], row["points_claiming"], row["claims"], row["wrong_claims"]) == (3, 2, 2, 1)
 
 
 def test_the_side_kept_when_passing_and_the_first_lane_change():
@@ -132,6 +148,10 @@ def test_the_paired_frames_and_mcnemars_exact_test():
     assert (paired["both"], paired["own_only"], paired["absolute_only"], paired["neither"]) == (3, 6, 0, 2)
     assert paired["mcnemar_exact_p"] == pytest.approx(2 / 2 ** 6)
     assert G.exact_binomial_two_sided(0, 0) == 1.0
+    import numpy as np
+    as_numpy = G.exact_binomial_two_sided(np.int64(26), np.int64(114))
+    assert as_numpy == pytest.approx(G.exact_binomial_two_sided(26, 114))
+    assert as_numpy < 1e-6
 
 
 def test_conventions_count_one_each_as_towards_the_same_wall():

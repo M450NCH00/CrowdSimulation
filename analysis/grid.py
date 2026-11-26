@@ -53,7 +53,7 @@ import pandas as pd
 from . import effects as EF
 from . import load as L
 from .hallucination import CATEGORIES, HEADLINE, check_point, checkable, load_codebook, wilson
-from .intent import code_intent, load_codebook as load_intent_codebook
+from .intent import load_codebook as load_intent_codebook
 
 FRAMES = {"rf52_round1_grid": "own", "rf52_round1_grid_abs": "absolute"}
 CONDITION_OF = {"own": "grid_own", "absolute": "grid_absolute"}
@@ -150,6 +150,7 @@ def measures_table(sessions: pd.DataFrame) -> list[dict[str, Any]]:
 
 def exact_binomial_two_sided(k: int, n: int) -> float:
     """McNemar's exact test: the discordant pairs against a fair coin."""
+    k, n = int(k), int(n)  # numpy integers overflow in 2 ** n
     if n == 0:
         return 1.0
     tail = sum(math.comb(n, i) for i in range(0, min(k, n - k) + 1)) / 2 ** n
@@ -165,6 +166,21 @@ def paired_frames(sessions: pd.DataFrame, measure: str = "resolved") -> dict[str
     discordant = table["own_only"] + table["absolute_only"]
     return {"measure": measure, "pairs": int(len(both)), **table,
             "mcnemar_exact_p": exact_binomial_two_sided(table["own_only"], discordant)}
+
+
+def paired_with_rf40(sessions: pd.DataFrame, rf40_silent: pd.DataFrame) -> list[dict[str, Any]]:
+    """Each frame against RF-40's silent condition, session by session (the same session ids): resolved in
+    the agents' own plans on the grid against RF-40's ``resolved_plan_only``, with McNemar's exact test."""
+    rf40 = rf40_silent.set_index("session_id")["resolved_plan_only"].eq("True")
+    out = []
+    for frame in ("own", "absolute"):
+        grid = sessions.loc[sessions["frame"] == frame].set_index("session_id")["resolved"].astype(bool)
+        both = grid.index.intersection(rf40.index)
+        g, r = grid[both], rf40[both]
+        table = {"both": int((g & r).sum()), "grid_only": int((g & ~r).sum()), "rf40_only": int((~g & r).sum()), "neither": int((~g & ~r).sum())}
+        out.append({"frame": frame, "pairs": int(len(both)), **table,
+                    "mcnemar_exact_p": exact_binomial_two_sided(table["rf40_only"], table["grid_only"] + table["rf40_only"])})
+    return out
 
 
 def scripted_table(folders: Sequence[Path]) -> list[dict[str, Any]]:
@@ -373,6 +389,12 @@ OTHER_MOVE_WALL = re.compile(
     rf"\b{OTHER}{LINK}(?:\s+(?:appears|seems)\s+to\s+have)?\s+(?:moved|shifted|drifted|stepped|edged|eased|swung)\s+(?:over\s+|back\s+)?"
     r"(?:(?:one|two|a|1|2)\s+lanes?\s+)?(?:to|towards?)\s+the\s+(?P<wall>blue|yellow)\s+(?:wall|side)\b",
     re.IGNORECASE)
+#: An intent that opens with the speaker's own move to a side or a wall: "Step a little to my right",
+#: "I'll move over towards the blue wall", "Keep to the yellow side".
+SELF_MOVE = re.compile(
+    r"\s*(?:I(?:'ll| will| am going to)?\s+)?(?:move|step|shift|ease|edge|keep|stay|go|head|veer|drift|swing|slide)\b"
+    r"[^.,;]{0,30}?\b(?:(?:to|towards?|on)\s+(?:my|the)\s+(?P<side>left|right)\b|(?:to|towards?)\s+the\s+(?P<wall>blue|yellow)\s+(?:wall|side)\b)",
+    re.IGNORECASE)
 WALL_WORDS = re.compile(r"\b(blue|yellow)\s+(?:wall|side)\b", re.IGNORECASE)
 SIDE_WORDS = re.compile(r"\b(left|right)\b", re.IGNORECASE)
 
@@ -425,13 +447,15 @@ def side_flags(point: Mapping[str, Any]) -> list[dict[str, Any]]:
             # The view gives the move in the reader's own frame; the other faces the other way, so their
             # own left is the reader's right.
             to_readers_left = side == "left" if whose == "my" else side == "right"
-            if moved_left == 0 or (moved_left > 0) != to_readers_left or (n is not None and n != abs(moved_left)):
+            # A move the view does not give (none since the reader was last asked) cannot be checked: the
+            # claim may be about an earlier one (RF-52's flags read against the replies).
+            if moved_left != 0 and ((moved_left > 0) != to_readers_left or (n is not None and n != abs(moved_left))):
                 flags.append({"rule": "other_move_side", "claim": match.group(0),
                               "evidence": f"the prompt: moved {moved_left:+d} lane(s) to own left"})
         moved_plus_y = int(seen.get("lanes_moved_plus_y") or 0)
         for match in OTHER_MOVE_WALL.finditer(texts):
             to_blue = match.group("wall").lower() == "blue"  # the blue wall is at +y
-            if moved_plus_y == 0 or (moved_plus_y > 0) != to_blue:
+            if moved_plus_y != 0 and (moved_plus_y > 0) != to_blue:
                 flags.append({"rule": "other_move_wall", "claim": match.group(0),
                               "evidence": f"the prompt: moved {moved_plus_y:+d} lane(s) towards the blue wall"})
         if point["frame"] == "absolute":
@@ -445,19 +469,79 @@ def side_flags(point: Mapping[str, Any]) -> list[dict[str, Any]]:
                 flags.append({"rule": "own_lane_number", "claim": match.group(0),
                               "evidence": f"the prompt: lane {lane_number(view, view['lane'])}"})
     option = point.get("option")
+    # The intent's own move: only an intent that opens with a move of the speaker's own ("Step to my
+    # right", "Move towards the blue wall"). A side or wall named anywhere else in it is, as often as
+    # not, where the other is or went (RF-52's flags read against the replies).
+    own_move = SELF_MOVE.match(point["texts"]["intent"] or "")
     if point["frame"] == "own":
-        said = code_intent(point["texts"]["intent"], load_intent_codebook())[1]
+        said = own_move.group("side").lower() if own_move and own_move.group("side") else None
         moved = point["coded"].get("side")
         if said in SIDES and moved in SIDES and said != moved:
-            flags.append({"rule": "intent_side", "claim": point["texts"]["intent"], "evidence": f"option: {option}"})
+            flags.append({"rule": "intent_side", "claim": own_move.group(0), "evidence": f"option: {option}"})
     else:
-        walls = {w.lower() for w in WALL_WORDS.findall(point["texts"]["intent"])}
+        said = own_move.group("wall").lower() if own_move and own_move.group("wall") else None
         wall = _option_wall(option)
-        if len(walls) == 1 and wall is not None and walls != {wall}:
-            flags.append({"rule": "intent_wall", "claim": point["texts"]["intent"], "evidence": f"option: {option}"})
+        if said is not None and wall is not None and said != wall:
+            flags.append({"rule": "intent_wall", "claim": own_move.group(0), "evidence": f"option: {option}"})
         if SIDE_WORDS.search(texts):
             flags.append({"rule": "uses_own_sides", "claim": SIDE_WORDS.search(texts).group(0), "evidence": "absolute frame"})
     return flags
+
+
+def move_side_claims(texts: str, moved_left: int) -> tuple[int, int]:
+    """``(claims, wrong)``: the claims in ``texts`` about which side the other moved to ("she moved a lane to
+    her left", "they shifted to my right"), and how many put it on the wrong side, against the view's move
+    in the reader's own frame (``moved_left`` > 0: to the reader's left, which is the other's own right).
+    Only a view that gives a move is checked (as ``side_flags``)."""
+    if moved_left == 0:
+        return 0, 0
+    claims = wrong = 0
+    for match in OTHER_MOVE_SIDE.finditer(texts):
+        side, whose = match.group("side").lower(), match.group("whose").lower()
+        claims += 1
+        wrong += (moved_left > 0) != (side == "left" if whose == "my" else side == "right")
+    return claims, wrong
+
+
+def _move_side_row(rows: Iterable[tuple[str, int]]) -> dict[str, Any]:
+    with_move = [(t, m) for t, m in rows if m != 0]
+    counted = [move_side_claims(t, m) for t, m in with_move]
+    claiming = sum(1 for c, _ in counted if c)
+    wrong_points = sum(1 for _, w in counted if w)
+    return {"points_with_a_move": len(with_move), "points_claiming": claiming, "claims": sum(c for c, _ in counted),
+            "wrong_claims": sum(w for _, w in counted), "wrong_among_claiming": _rate(wrong_points, claiming),
+            "wrong_among_points_with_a_move": _rate(wrong_points, len(with_move))}
+
+
+def move_side_comparison(points: Sequence[Mapping[str, Any]], rf40: Optional[Path]) -> dict[str, Any]:
+    """The supervisor's left-and-right point (SV8), like for like: claims about the side the other moved to,
+    on the grid (each frame) and in RF-40's silent condition (the continuous corridor, free steps), where
+    the view gives the move as ``moved_left`` / ``moved_right`` in the reader's own frame."""
+    out = {}
+    for frame in ("own", "absolute"):
+        rows = []
+        for p in points:
+            if p["frame"] != frame or not p["readable"]:
+                continue
+            seen = (p["grid_view"].get("seen") or [None])[0]
+            rows.append((f"{p['texts']['intent']} {p['texts']['reason']}", int((seen or {}).get("lanes_moved_left") or 0)))
+        out[frame] = _move_side_row(rows)
+    if rf40 is not None and (rf40 / "sessions").is_dir():
+        rows = []
+        for path in sorted((rf40 / "sessions").glob("*.json")):
+            record = json.loads(path.read_text(encoding="utf-8"))
+            if record.get("condition") != "silent":
+                continue
+            for point in record.get("decision_points") or []:
+                parsed = point.get("parsed") or {}
+                if point.get("parse_error") is not None or not parsed:
+                    continue
+                seen = ((point.get("view") or {}).get("seen") or [None])[0] or {}
+                changes = seen.get("changes") or []
+                moved = 1 if "moved_left" in changes else -1 if "moved_right" in changes else 0
+                rows.append((f"{parsed.get('intent') or ''} {parsed.get('reason') or ''}", moved))
+        out["rf40_silent"] = _move_side_row(rows)
+    return out
 
 
 SIDE_ERRORS = ("other_side", "other_same_lane", "other_move_side", "other_move_wall", "other_lane_number", "own_lane_number",
@@ -526,7 +610,13 @@ def hand_sheet(points: Sequence[Mapping[str, Any]], chosen: Sequence[str]) -> st
 
 
 def score_hand(points: Sequence[Mapping[str, Any]], judgements: Mapping[str, Any]) -> dict[str, Any]:
-    """Shares from the hand check: ``judgements[key] = {"categories": [...], "note": ...}``."""
+    """Shares from the hand check: ``judgements[key] = {"categories": [...], "side_error": bool,
+    "move_against_geometry": bool, "note": ...}``, either as the mapping itself or under ``"judgements"``.
+
+    ``move_against_geometry`` is RF-52's own: a move that, by the reply's own account of where the other
+    is or went, closes the gap while the reply says it gives room. It is not one of RF-45's categories."""
+    if "judgements" in judgements and isinstance(judgements["judgements"], Mapping):
+        judgements = judgements["judgements"]
     by_key = {key_of(p): p for p in points}
     out = {}
     for frame in ("own", "absolute", "all"):
@@ -534,7 +624,9 @@ def score_hand(points: Sequence[Mapping[str, Any]], judgements: Mapping[str, Any
         hall = sum(1 for k in keys if set(judgements[k].get("categories") or []) & set(HEADLINE))
         contra = sum(1 for k in keys if set(judgements[k].get("categories") or []) & {"3", "4"})
         side = sum(1 for k in keys if judgements[k].get("side_error"))
-        out[frame] = {"headline": _rate(hall, len(keys)), "self_contradiction": _rate(contra, len(keys)), "side_error": _rate(side, len(keys))}
+        geometry = sum(1 for k in keys if judgements[k].get("move_against_geometry"))
+        out[frame] = {"headline": _rate(hall, len(keys)), "self_contradiction": _rate(contra, len(keys)), "side_error": _rate(side, len(keys)),
+                      "move_against_geometry": _rate(geometry, len(keys))}
     return out
 
 
@@ -625,6 +717,8 @@ def analyse(folders: Sequence[Path], rf40: Optional[Path], threshold: float = 0.
         result["rf40_silent"] = _rate(int((silent["resolved_plan_only"] == "True").sum()), len(silent))
         alone = silent.loc[silent["pair_id"].isna()]  # RF-40's report quotes 163 / 256: its pairs left out
         result["rf40_silent_without_pairs"] = _rate(int((alone["resolved_plan_only"] == "True").sum()), len(alone))
+        result["paired_with_rf40"] = paired_with_rf40(sessions, silent)
+        result["move_side"] = move_side_comparison(points, rf40)
         raw = effects_raw(rf40 / "outcomes.csv", sessions, agents)
         terms, models = factor_effects(raw)
         result["effects"] = {"significant": terms.loc[terms.get("significant", pd.Series(dtype=bool)).fillna(False).astype(bool)].to_dict("records")
@@ -666,6 +760,11 @@ def markdown(r: Mapping[str, Any]) -> str:
     if "rf40_silent" in r:
         lines += ["", f"RF-40's silent condition (free steps, continuous corridor, `plan_only`): {_pct(r['rf40_silent'])}; "
                   f"pairs left out, as RF-40's report: {_pct(r['rf40_silent_without_pairs'])}."]
+    if "paired_with_rf40" in r:
+        lines += ["", "Session by session against RF-40's silent condition (the same session ids):", "",
+                  "| Frame | Pairs | Both resolved | Grid only | RF-40 only | Neither | McNemar exact p |", "| --- | --- | --- | --- | --- | --- | --- |"]
+        for p in r["paired_with_rf40"]:
+            lines.append(f"| {p['frame']} | {p['pairs']} | {p['both']} | {p['grid_only']} | {p['rf40_only']} | {p['neither']} | {p['mcnemar_exact_p']:.3g} |")
     lines += ["", "## Scripted walkers on the same lanes and seeds (context only)", "", "| Run | Script | Resolved | Dance | Deadlock |",
               "| --- | --- | --- | --- | --- |"]
     for s in r["scripted"]:
@@ -688,6 +787,14 @@ def markdown(r: Mapping[str, Any]) -> str:
               "| --- | --- | " + " | ".join("---" for _ in range(len(SIDE_ERRORS) + 1)) + " | --- |"]
     for s in r["side_errors"]:
         lines.append(f"| {s['frame']} | {s['readable']} | " + " | ".join(str(s[k]) for k in (*SIDE_ERRORS, "uses_own_sides")) + f" | {_pct(s['any_side_error'])} |")
+    if "move_side" in r:
+        lines += ["", "## Which side the other moved to: the grid against RF-40's silent condition (SV8)", "",
+                  "Readable decision points whose view gives a move of the other; a claim is \"she moved to her left\", \"they shifted to my right\".", "",
+                  "| Run | Points with a move | Points with a claim | Claims | Wrong claims | Wrong, of points with a claim | Wrong, of points with a move |",
+                  "| --- | --- | --- | --- | --- | --- | --- |"]
+        for name, m in r["move_side"].items():
+            lines.append(f"| {name} | {m['points_with_a_move']} | {m['points_claiming']} | {m['claims']} | {m['wrong_claims']} | "
+                         f"{_pct(m['wrong_among_claiming'])} | {_pct(m['wrong_among_points_with_a_move'])} |")
     lines += ["", "## Unreadable replies and RF-45's coder", ""]
     for fr in ("own", "absolute"):
         lines.append(f"- {fr}: unreadable after the retry {_pct(r['unreadable'][fr])}; coder, reliable rules {_pct(r['coder'][fr]['reliable'])}; "
@@ -696,7 +803,8 @@ def markdown(r: Mapping[str, Any]) -> str:
     if "hand_check" in r:
         lines += ["", "## The hand check", ""]
         for fr, v in r["hand_check"].items():
-            lines.append(f"- {fr}: hallucinated {_pct(v['headline'])}; self-contradiction {_pct(v['self_contradiction'])}; side error {_pct(v['side_error'])}")
+            lines.append(f"- {fr}: hallucinated {_pct(v['headline'])}; self-contradiction {_pct(v['self_contradiction'])}; side error {_pct(v['side_error'])}; "
+                         f"move against its own geometry {_pct(v['move_against_geometry'])}")
     if "effects" in r:
         lines += ["", f"## Factor effects (Holm over all {r['effects']['models']} models; significant terms)", "",
                   "| Outcome | Subset | Term | OR (logistic) or coefficient | 95% CI | Holm p |", "| --- | --- | --- | --- | --- | --- |"]
