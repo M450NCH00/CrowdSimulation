@@ -125,6 +125,12 @@ the same question, for later issues (recorded here and in `docs/action-space.md`
   - assuming 50 fewer output tokens a decision (not measured), the total is **USD 0.71 to 0.82**
     per frame at RF-40's call counts, or about USD 1.4 to 1.6 for both of RF-49's frames.
 
+### 2026-11-26 04:20 UTC — the rehearsal finished
+- `runs_mock/rf47_rehearsal` (gitignored): "completed: 544 session(s) run, 0 already done; actual cost
+  USD 0.000000"; `outcomes.csv`, `summary.json` and `report.md` written.
+- `python -m analysis.gate` reads it unchanged: 37 of 128 design sessions resolved in `plan_only`
+  under the mock. The mock is not a model, so this checks only that the pipeline runs end to end.
+
 ## Open questions / risks
 1. **For the user, before RF-49's paid run:** the four choices above (the slow-downs' base speed,
    "carry on" as `[]`, the 0.05 m wall margin, `resolve_debrief_v3`) and the option sentences.
@@ -140,3 +146,23 @@ the same question, for later issues (recorded here and in `docs/action-space.md`
    again, for example after each 1 s wait.
 
 ## Summary (fill in at the end)
+**What changed.** A menu of described actions, behind a template flag (AS4), mock only (USD 0):
+- `negsim/resolution/menu.py` (new) and `configs/resolution/menu_table_v1.yaml`: AS3's nine options
+  and the plan each becomes in the existing step format, with the wall cap;
+- `reply.py`, `prompt.py`, `protocol.py`, `mock.py`: extended behind the template's `menu_table`;
+  nothing changes for any earlier template;
+- templates `resolve_menu_v1` and `resolve_debrief_v3` (frozen); config `round1_head_on_menu.yaml`;
+- `tests/test_rf47_menu.py` (27 tests); two enumeration tests updated with a note;
+- `docs/action-space.md`: section 6.1, AS5 as revised (landmark names), RF-51's decisions in 8.2,
+  the order amended in section 10; both READMEs.
+
+**Why.** The supervisor's points 4 and 5: the agent chooses a described action instead of writing
+angles and metres. Code supplies the amounts, so RF-49 can test whether that resolves more meetings
+and leaves fewer unreadable replies than RF-40's free steps, session by session.
+
+**How it was verified.**
+- The new tests pass.
+- The full suite: 2388 passed, 12 skipped. The 3 failures were the two enumeration entries (fixed)
+  and the known peak-hours `stop_at_cap` test, which passed off-peak at 04:11 UTC.
+- The whole design ran as a mock rehearsal, all 544 sessions, and `analysis.gate` reads it.
+- The cost estimate for RF-49 is above: about USD 0.71 to 0.82 off-peak per frame.
