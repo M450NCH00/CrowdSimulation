@@ -24,6 +24,7 @@ from typing import Any, Mapping, Optional, Sequence
 from ..configutil import ConfigError
 from ..negotiation.prompts import load_template_data
 from ..rulegen.describe import _direction, _heading, across, along, fill, speed
+from .menu import Menu, load_menu
 from .scenario import Scenario
 from .view import ALL_CONDITIONS, CONDITIONS, DETAIL_FULL, MOTION_BACKING, MOTION_STILL, View
 
@@ -178,6 +179,25 @@ class CoreTemplate:
         (``resolve_v9``, issue #129: "their left is on your right")."""
         return bool(self.data.get("heard_frame", False))
 
+    @property
+    def menu(self) -> Optional[Menu]:
+        """The menu a reply chooses from (``resolve_menu_v1``, issue #136), or None for the earlier
+        templates, whose replies give steps. The template lists the options' names and words; the
+        table they are turned into steps by (``menu_table``) must name the same options, in order."""
+        path = self.data.get("menu_table")
+        if path is None:
+            return None
+        menu = load_menu(str(path))
+        listed = tuple(str(name) for name in self.data.get("menu_options", {}))
+        if listed != menu.names:
+            raise ConfigError(f"prompt template {self.key!r} lists the options {listed}, its table {path} has {menu.names}")
+        return menu
+
+    def actions_text(self) -> str:
+        """The menu's options as the ACTIONS block lists them, one a line (issue #136)."""
+        item = self.data["action_item"]
+        return "\n".join(fill(item, name=name, says=says) for name, says in self.data["menu_options"].items())
+
     def offers(self, condition: str) -> bool:
         """Whether the template has a section for ``condition`` (silent: ``resolve_v9`` on)."""
         return condition in self.data["conditions"]
@@ -204,12 +224,15 @@ class CoreTemplate:
         """The fixed text of a condition in a scenario: the same for every agent and decision point."""
         self._check_offers(condition)
         section = self.data["conditions"][condition]
+        values = {"events": self.events_text(scenario)}
+        if "menu_options" in self.data:  # issue #136: the ACTIONS block in place of the step format
+            values["actions"] = self.actions_text()
         return fill(
             self.data["system"],
             role=self.data["role"].strip(),
             instructions=section["instructions"].strip(),
             reply_format=section["reply_format"].strip(),
-            step_format=fill(self.data["step_format"].strip(), events=self.events_text(scenario)),
+            step_format=fill(self.data["step_format"].strip(), **values),
         ).strip()
 
     def retry(self, condition: str) -> str:
@@ -406,9 +429,13 @@ class DebriefTemplate:
             raise ValueError("a debrief is for an agent that made at least one decision")
         d, lines = self.data, []
         for decision in decisions:
-            steps = json.dumps([step.as_dict() for step in decision.steps], ensure_ascii=False) if decision.steps else d["no_steps"]
             lines.append(fill(d["decision"], intent=decision.intent))
-            lines.append(fill(d["steps"], steps=steps))
+            if getattr(decision, "action", None) is not None and "action" in d:
+                # Issue #136 (resolve_debrief_v3): the option chosen, not the numbers it was turned into.
+                lines.append(fill(d["action"], action=decision.action))
+            else:
+                steps = json.dumps([step.as_dict() for step in decision.steps], ensure_ascii=False) if decision.steps else d["no_steps"]
+                lines.append(fill(d["steps"], steps=steps))
             if decision.message:
                 lines.append(fill(d["said"], message=decision.message))
             if decision.signal != "none":

@@ -109,7 +109,53 @@ def resolution_rehearsal_v1(request: LLMRequest) -> str:
     return resolve_paths_v1(replace(request, metadata={**meta, "path_index": index}))
 
 
+def _choose(intent: str, action: str, reason: str = "A mock reply.", **extra: Any) -> str:
+    return json.dumps({**extra, "intent": intent, "action": action, "reason": reason})
+
+
+#: Issue #136 (RF-47): the paths of ``menu_paths_v1``, for a template with a menu
+#: (``resolve_menu_v1``): every option of ``menu_table_v1``; one written in other case with a full
+#: stop; a signal; a talk message; an option not on the menu; unreadable once, then valid.
+MENU_CARRY_ON = _choose("Carry on as I am.", "carry on")
+MENU_PATHS: dict[str, Any] = {
+    "carry_on": MENU_CARRY_ON,
+    "slow_a_little": _choose("Slow down a little.", "slow down a little"),
+    "slow_a_lot": _choose("Slow right down.", "slow down a lot"),
+    "stop_and_wait": _choose("Stop for a moment.", "stop and wait"),
+    "little_left": _choose("Move over a little to my left.", "step a little to your left"),
+    "little_right": _choose("Move over a little to my right.", "step a little to your right"),
+    "well_left": _choose("Move well over to my left.", "step well to your left"),
+    "well_right": _choose("Move well over to my right.", "Step Well To Your Right."),
+    "step_back": _choose("Step back.", "step back"),
+    "signal_wave_on": _choose("Wave them on and wait.", "stop and wait", signal="wave_on"),
+    "talk_message": _choose("Tell them and keep right.", "step a little to your right", message="I'll keep to my right.", signal="none"),
+    "unknown_action": _choose("Step aside.", "step aside"),
+    "unreadable_then_carry_on": None,
+}
+MENU_PATH_NAMES = tuple(MENU_PATHS)
+
+
+def menu_paths_v1(request: LLMRequest) -> str:
+    meta = request.metadata
+    path = MENU_PATH_NAMES[int(meta.get("path_index", 0)) % len(MENU_PATH_NAMES)]
+    if path == "unreadable_then_carry_on":
+        return UNREADABLE if int(meta.get("attempt", 1)) == 1 else MENU_CARRY_ON
+    return MENU_PATHS[path]
+
+
+def resolution_menu_rehearsal_v1(request: LLMRequest) -> str:
+    """``resolution_rehearsal_v1`` for a template with a menu (issue #136): a debrief as there, and a
+    decision point one of ``menu_paths_v1``, chosen in the same way."""
+    meta = request.metadata
+    slot, number = int(meta.get("agent_slot", 0)), int(meta.get("decision_point") or 1)
+    index = int(meta.get("path_index", 0)) + 7 * slot + 3 * (number - 1)
+    if meta.get("kind") == "debrief":
+        return _debrief_answer(request, int(meta.get("path_index", 0)) + slot)
+    return menu_paths_v1(replace(request, metadata={**meta, "path_index": index}))
+
+
 POLICIES: dict[str, Callable[[LLMRequest], str]] = {
     "resolve_paths_v1": resolve_paths_v1, "debrief_paths_v1": debrief_paths_v1,
     "resolution_rehearsal_v1": resolution_rehearsal_v1,
+    "menu_paths_v1": menu_paths_v1, "resolution_menu_rehearsal_v1": resolution_menu_rehearsal_v1,
 }

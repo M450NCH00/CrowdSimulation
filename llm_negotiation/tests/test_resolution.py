@@ -486,7 +486,10 @@ def test_the_debrief_mock_paths():
     for index, name in enumerate(mock.DEBRIEF_PATH_NAMES):
         result = ask(mock.debrief_paths_v1, index, None, DEBRIEF.retry(), parse=parse_debrief)
         assert result.failure is None and (result.parsed.source is None) == (name == "none")
-    assert set(mock.POLICIES) == {"resolve_paths_v1", "debrief_paths_v1", "resolution_rehearsal_v1"}  # the last: issue #58
+    assert set(mock.POLICIES) == {
+        "resolve_paths_v1", "debrief_paths_v1", "resolution_rehearsal_v1",  # the last: issue #58
+        "menu_paths_v1", "resolution_menu_rehearsal_v1",  # issue #136 (RF-47): replies with an action, for resolve_menu_v1
+    }
 
 
 # --- a second scenario: added without touching the core template or the parser ------------------------------
