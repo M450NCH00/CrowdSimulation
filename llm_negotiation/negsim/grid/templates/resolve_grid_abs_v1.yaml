@@ -1,0 +1,137 @@
+# Prompt template resolve_grid_abs, version 1.  FROZEN — do not edit.
+# The hash of this file is pinned in negsim/grid/templates/MANIFEST.json and checked every time it
+# is loaded. To change any wording, copy the file to resolve_grid_abs_v2.yaml, change it there,
+# freeze it, and record the reason in the work log.
+template_id: resolve_grid_abs
+version: 1
+kind: grid_resolution
+description: >-
+  Step 1 of track #55 on the grid in the absolute frame (issue #140, RF-51; docs/action-space.md,
+  variant E): resolve_grid_v1 with the corridor's own frame of RF-48. The lanes are numbered from
+  the blue wall, a person in view is in a numbered lane, and moves across go towards a wall. Silent
+  only (AS2).
+provenance: >-
+  Issue #140 (RF-51), the supervisor's points 1, 3 and 5 (SV7, SV9, SV11), AS5 as revised by the
+  user on 2026-11-26 (neutral landmark names; lanes counted from one wall, "lane 1, next to the
+  north wall" in AS5's words). The fixed text is resolve_menu_abs_v1's silent section and ACTIONS
+  block word for word (the walls named in place of "Left and right always mean your own left and
+  right"; moves towards the blue or the yellow wall). The view is resolve_grid_v1's with lane numbers
+  from the blue wall in place of lanes to the left and right. The agent is not told which way it
+  walks. Wording of the view drafted by the assistant (2026-11-26).
+frame: absolute
+# The menu: the corridor's own table, read as it is; negsim.grid.menu turns its amounts into cells.
+menu_table: configs/resolution/menu_table_abs_v1.yaml
+# The corridor's own frame (RF-48): wall a is the long wall at +y, wall b the one at -y.
+walls:
+  a: the blue wall
+  b: the yellow wall
+
+system: |-
+  {role}
+
+  {instructions}
+
+  {reply_format}
+
+  {actions}
+
+role: |-
+  You are playing the part of the person described below, on foot. Decide as this person would.
+
+# resolve_menu_abs_v1's silent section, word for word.
+instructions: |-
+  Below you are told what you can see and hear around you right now. Say what you do from now on: how you move, chosen from the ACTIONS below.
+  The passage has two long walls, the blue wall and the yellow wall. They are the same two walls for everyone here, so where people are and which way anyone moves is told by these walls.
+  Other people see how you move, if you are in their view. Nobody else knows your intent or your reason.
+  You may be asked again later, if something changes.
+reply_format: |-
+  HOW TO REPLY
+  Reply with a single JSON object and nothing else, with these keys in this order:
+  "intent": what you are trying to do, in your own words.
+  "action": the one action you choose (see ACTIONS), written exactly as it is named there.
+  "reason": why, in your own words. Nobody else sees it.
+  The format, with placeholders: {"intent": "<what you are trying to do>", "action": "<the name of one action>", "reason": "<why>"}
+retry: >-
+  Your last reply could not be read. Reply again with only a JSON object of the form {"intent": "<what you are trying to do>", "action": "<the name of one action, exactly as in ACTIONS>", "reason": "<why>"}.
+
+# resolve_menu_abs_v1's ACTIONS block and options, word for word.
+actions: |-
+  ACTIONS
+  Choose one of these. You do it from now on, until it is done or you choose again. Write its name exactly as it is given in quotes.
+  {actions}
+action_item: '"{name}": {says}'
+menu_options:
+  carry on: keep walking along the line you are on, at your usual speed.
+  slow down a little: keep walking along your line, a little slower than your usual speed, until the person you would meet has passed you.
+  slow down a lot: keep walking along your line, much slower than your usual speed, until the person you would meet has passed you.
+  stop and wait: stand still for a moment. Then you walk on along your line, unless you are asked again.
+  step a little towards the blue wall: move a little over towards the blue wall as you walk, then walk on along that new line.
+  step a little towards the yellow wall: move a little over towards the yellow wall as you walk, then walk on along that new line.
+  step well towards the blue wall: move well over towards the blue wall as you walk, unless the wall stops you sooner, then walk on along that new line.
+  step well towards the yellow wall: move well over towards the yellow wall as you walk, unless the wall stops you sooner, then walk on along that new line.
+  step back: walk backwards a short way. Then you walk on along your line, unless you are asked again.
+
+# The description, in cells and lanes (issue #140): ABOUT YOU, YOUR NOTES, WHERE YOU ARE, WHO YOU
+# CAN SEE, WHAT YOU HAVE DONE SO FAR, and the time to meet. An empty block is left out, except WHO
+# YOU CAN SEE. Nobody's body width is told: everyone takes up one cell.
+view:
+  self_header: "ABOUT YOU"
+  self_age: "- You are {age} years old."
+  self_gender: "- You are {gender}."
+  self_errand: "- You are on your way to {errand}."
+  self_motion: "- You are walking at {speed} m/s. Your usual walking speed is {preferred} m/s."
+  self_still: "- You are standing still. Your usual walking speed is {preferred} m/s."
+  self_backing: "- You are walking backwards. Your usual walking speed is {preferred} m/s."
+  notes_header: "YOUR NOTES"
+  note: "- {note}"
+  place_header: "WHERE YOU ARE"
+  # Issue #140: the grid. A cell is 0.4 m and a step one cell; at the usual speed, a step a tick.
+  place_grid: "- You are in a corridor {lanes} wide. The floor is divided into square cells {cell} m across, in lanes along the corridor. Each person takes up one cell, and nobody can step into a cell someone else is in. Walking at {preferred} m/s, you move forward one cell about every {tick} s."
+  # Issue #140: lanes numbered from the blue wall (AS5: "lane 1, next to the north wall", with RF-48's names).
+  place_lane: "- The lanes are numbered from {wall_a}: lane 1 is next to {wall_a}, and lane {last} is next to {wall_b}. You are in lane {lane}."
+  seen_header: "WHO YOU CAN SEE"
+  seen_nobody: "- You do not see anyone nearby."
+  seen: "- Person {n}, {where}, {across}: {motion}."
+  ahead: "{cells} ahead of you"
+  behind: "{cells} behind you"
+  level: "level with you"
+  in_lane: "in lane {lane}"
+  motions:
+    towards: "walking towards you at {speed} m/s"
+    away: "walking away from you at {speed} m/s"
+    same_way: "walking the same way as you at {speed} m/s"
+    still: "standing still"
+    backing: "walking backwards"
+  seen_age: "  They look about {age} years old."
+  seen_gender: "  They look like {gender}."
+  seen_changes: "  Since you last looked, they have {changes}."
+  seen_extra: "  {line}"
+  since_last_look:
+    slowed_down: slowed down
+    sped_up: sped up
+    stopped: stopped
+    started_walking: started walking again
+    backing_up: started walking backwards
+    came_into_view: just come into view
+  moved_across: "moved {count} towards {wall}"
+  history_moved: "  Since then you have moved {count} towards {wall}."
+  history_header: "WHAT YOU HAVE DONE SO FAR"
+  history_intent: '- {ago} s ago you decided: "{intent}"'
+  history_not_moved: "  Since then you have not moved to another lane."
+  history_back: "  You are now {cells} further back than where you were then."
+  history_outcome:
+    completed: "  You have finished that."
+    ongoing: "  You are still doing that."
+    replaced: "  You changed that at your next decision."
+  time_to_meet: "At your current speeds you would meet Person {n} in about {seconds} s."
+  genders: {female: a woman, male: a man, nonbinary: a non-binary person}
+  cell_word: cell
+  cells_word: cells
+  lane_word: lane
+  lanes_word: lanes
+  numbers: {0: no, 1: one, 2: two, 3: three, 4: four, 5: five}
+  and: and
+
+decision_point:
+  opening: "What do you do now? Reply with the JSON object only."
+  again: "Something has changed since you last decided. What do you do now? Your choice replaces whatever is left of your earlier one. Reply with the JSON object only."
