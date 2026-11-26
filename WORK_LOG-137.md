@@ -137,6 +137,30 @@ The landmark words are this issue's to draft.
 - **Started in the background:** the full suite, and the full mock rehearsal into `runs_mock/rf48_rehearsal`.
   This is DeepSeek's peak window, so the known `test_stop_at_cap_...` failure is expected.
 
+### 2026-11-26 06:30 UTC — the full suite
+- 05:51 to 06:30 UTC: **2419 passed, 16 skipped, 1 failed.**
+  - The failure was `test_repo_hygiene.py::test_only_pinned_third_party_packages_are_imported`: my
+    test file imported constants from `test_rf47_menu`, a test module that test does not list.
+  - I copied the constants into `test_rf48_absolute_frame.py` (with a note) rather than edit the
+    hygiene test. Rerun with it: 38 passed.
+  - The peak-hours `test_stop_at_cap_...` passed this time.
+
+### 2026-11-26 06:45 UTC — the mock rehearsal
+- **The first background run** (05:51 to 06:38 UTC) wrote all 544 sessions, but printed nothing and
+  wrote no `outcomes.csv`, `summary.json` or `report.md`. I do not know why.
+- **Resumed** with the same command: "completed: 0 session(s) run, 544 already done; actual cost USD
+  0.000000", with every output written.
+- **`runs_mock/rf48_rehearsal`** (gitignored): RF-47's 544 silent and talk sessions, all completed.
+  - 3,411 decision points, 3,727 attempts;
+  - **every decision point's view has the frame, and no prompt (fixed text or view) has an own-side
+    phrase** (the test's pattern);
+  - every option was chosen;
+  - 362 sidesteps were capped by the wall and 8 had no room;
+  - 152 replies were unreadable after the retry (`unknown_action`). Among them is the mock's own-side
+    option, "step a little to your right".
+- **`python -m analysis.gate`** reads the run unchanged: 24 of 128 design sessions resolved in
+  `plan_only` under the mock. The mock is not a model, so this says nothing about behaviour.
+
 ## Open questions / risks
 1. **For the user, before RF-49's paid run:** the wall names, the two distances for the agent, the
    ahead/level/behind words, the talk sentence, and whether to counterbalance which colour is on
@@ -149,3 +173,31 @@ The landmark words are this issue's to draft.
    inherit the place-line override, but RF-48 neither runs nor tests them in the frame.
 
 ## Summary (fill in at the end)
+**What changed.** RF-47's menu in the corridor's own frame, behind a template flag (`walls`), mock
+only (USD 0):
+- **The view** (`view.py`, `perceive.py`, `prompt.py`):
+  - the two long walls have landmark names, "the blue wall" and "the yellow wall";
+  - the agent is told its distance to each, and the people it sees by their distance from the blue wall;
+  - drifts, moves over, unseen voices and its own moves aside go towards a wall;
+  - there is no facing note, and the heading is not told.
+- **The menu** (`menu.py`, `reply.py`, `protocol.py`): the sidesteps go "towards" a wall, and code
+  turns the wall into the agent's own side.
+- **New files:** template `resolve_menu_abs_v1` (frozen), table `menu_table_abs_v1.yaml`, config
+  `round1_head_on_menu_abs.yaml`, mock policy `resolution_menu_abs_rehearsal_v1`, and 31 tests.
+- **Other changes:**
+  - the scenario plug-in's place lines take an override;
+  - the cost preview's worst view has the frame;
+  - two enumeration tests updated with a note;
+  - `docs/action-space.md` section 7.1, both READMEs.
+
+**Why.** The supervisor's point 3. RF-40's agents mistook the other's left and right for their own.
+In a shared frame nobody converts, and RF-49 measures whether that helps, or whether both now head
+for the same wall.
+
+**How it was verified.**
+- **The new tests**, including the acceptance criterion: for each heading, a move towards a wall
+  goes to that wall, read from the simulation's positions.
+- **The full suite:** 2419 passed. The one failure was a hygiene rule my test file broke; after the
+  fix, the rerun of the affected tests passed.
+- **The mock rehearsal:** the whole design ran (544 sessions), every view had the frame and no prompt
+  named an own side, and `analysis.gate` reads it.

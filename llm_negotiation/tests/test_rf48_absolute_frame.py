@@ -29,8 +29,22 @@ from negsim.resolution.view import (
     DETAIL_FULL, MOTION_WALKING, WALL_A, WALL_B, Done, Frame, Heard, Me, SeenPerson, View,
 )
 from negsim.rulegen.replay import source_plan
-from test_encounter_protocol import points_of, session_on
-from test_rf47_menu import ALIGNED, APART, CONFIG as RF47_CONFIG, EVENTS, MENU, MENU_T, TURN, choose
+from negsim.resolution import execute as X
+from negsim.resolution import protocol as P
+from test_encounter_protocol import STORE, points_of, session_on
+
+# As in tests/test_rf47_menu.py (repeated here: test_repo_hygiene allows imports from listed test modules only).
+MENU_T = CoreTemplate.load("resolve_menu_v1")
+MENU = load_menu("configs/resolution/menu_table_v1.yaml")
+RF47_CONFIG = "configs/resolution/round1_head_on_menu.yaml"
+EVENTS = ("other_passes", "other_stops", "i_am_out_of_the_stretch")
+TURN = P.ProtocolSettings(execution=X.EXECUTION_KEEP_LINE_REPLAN, max_decision_points=6, exchange=P.EXCHANGE_TURN_TAKING)
+ALIGNED = STORE.get("head_on_de176842", 2)
+APART = STORE.get("head_on_02dfbadb", 2)
+
+
+def choose(action, **extra):
+    return json.dumps({**extra, "intent": "Do this.", "action": action, "reason": "r"})
 
 TABLE = "configs/resolution/menu_table_abs_v1.yaml"
 ABS_T = CoreTemplate.load("resolve_menu_abs_v1")
