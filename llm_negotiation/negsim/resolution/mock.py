@@ -154,8 +154,53 @@ def resolution_menu_rehearsal_v1(request: LLMRequest) -> str:
     return menu_paths_v1(replace(request, metadata={**meta, "path_index": index}))
 
 
+#: Issue #137 (RF-48): the paths of ``menu_abs_paths_v1``, for a template in the corridor's own frame
+#: (``resolve_menu_abs_v1``): every option of ``menu_table_abs_v1``; one written in other case with a
+#: full stop; a signal; a talk message naming a wall; an option by the agent's own side, which is not
+#: on this menu; unreadable once, then valid.
+MENU_ABS_PATHS: dict[str, Any] = {
+    "carry_on": MENU_CARRY_ON,
+    "slow_a_little": _choose("Slow down a little.", "slow down a little"),
+    "slow_a_lot": _choose("Slow right down.", "slow down a lot"),
+    "stop_and_wait": _choose("Stop for a moment.", "stop and wait"),
+    "little_blue": _choose("Move over a little towards the blue wall.", "step a little towards the blue wall"),
+    "little_yellow": _choose("Move over a little towards the yellow wall.", "step a little towards the yellow wall"),
+    "well_blue": _choose("Move well over towards the blue wall.", "step well towards the blue wall"),
+    "well_yellow": _choose("Move well over towards the yellow wall.", "Step Well Towards The Yellow Wall."),
+    "step_back": _choose("Step back.", "step back"),
+    "signal_wave_on": _choose("Wave them on and wait.", "stop and wait", signal="wave_on"),
+    "talk_message": _choose(
+        "Tell them and keep to the blue wall.", "step a little towards the blue wall",
+        message="I'll keep to the blue wall.", signal="none",
+    ),
+    "own_side": _choose("Step to my right.", "step a little to your right"),
+    "unreadable_then_carry_on": None,
+}
+MENU_ABS_PATH_NAMES = tuple(MENU_ABS_PATHS)
+
+
+def menu_abs_paths_v1(request: LLMRequest) -> str:
+    meta = request.metadata
+    path = MENU_ABS_PATH_NAMES[int(meta.get("path_index", 0)) % len(MENU_ABS_PATH_NAMES)]
+    if path == "unreadable_then_carry_on":
+        return UNREADABLE if int(meta.get("attempt", 1)) == 1 else MENU_CARRY_ON
+    return MENU_ABS_PATHS[path]
+
+
+def resolution_menu_abs_rehearsal_v1(request: LLMRequest) -> str:
+    """``resolution_menu_rehearsal_v1`` for a template in the corridor's own frame (issue #137): a
+    debrief as there, and a decision point one of ``menu_abs_paths_v1``, chosen in the same way."""
+    meta = request.metadata
+    slot, number = int(meta.get("agent_slot", 0)), int(meta.get("decision_point") or 1)
+    index = int(meta.get("path_index", 0)) + 7 * slot + 3 * (number - 1)
+    if meta.get("kind") == "debrief":
+        return _debrief_answer(request, int(meta.get("path_index", 0)) + slot)
+    return menu_abs_paths_v1(replace(request, metadata={**meta, "path_index": index}))
+
+
 POLICIES: dict[str, Callable[[LLMRequest], str]] = {
     "resolve_paths_v1": resolve_paths_v1, "debrief_paths_v1": debrief_paths_v1,
     "resolution_rehearsal_v1": resolution_rehearsal_v1,
     "menu_paths_v1": menu_paths_v1, "resolution_menu_rehearsal_v1": resolution_menu_rehearsal_v1,
+    "menu_abs_paths_v1": menu_abs_paths_v1, "resolution_menu_abs_rehearsal_v1": resolution_menu_abs_rehearsal_v1,
 }

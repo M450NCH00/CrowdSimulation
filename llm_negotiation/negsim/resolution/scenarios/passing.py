@@ -112,9 +112,12 @@ class PassingScenario(Scenario):
     #: passage widths and narrowings, so a case of another type renders the same way.
     CASE_TYPES = ("wide_corridor_head_on", "passage_meeting", "overtaking")
 
-    def place_lines(self, case: Mapping[str, Any], record: Mapping[str, Any]) -> list[str]:
-        """``describe._place``, the lines of ``rulegen_negotiate_v2`` (issue #32), unchanged."""
-        return _place(case, record, self.data["place"])
+    def place_lines(
+        self, case: Mapping[str, Any], record: Mapping[str, Any], lines: Optional[Mapping[str, str]] = None, **values: Any,
+    ) -> list[str]:
+        """``describe._place``, the lines of ``rulegen_negotiate_v2`` (issue #32), unchanged; with
+        ``lines``, those replace the template's (issue #137), filled with ``values`` as well."""
+        return _place(case, record, {**self.data["place"], **dict(lines or {})}, **values)
 
     # --- the execution side (issue #59) ---------------------------------------------------------
 

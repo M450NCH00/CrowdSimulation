@@ -70,6 +70,38 @@ FRAME_FACING = "facing"  # walking towards the listener: their left is the liste
 FRAME_SAME_WAY = "same_way"  # walking the listener's way: their left is the listener's left
 HEARD_FRAMES = (FRAME_FACING, FRAME_SAME_WAY)
 
+#: Issue #137 (RF-48, AS5 as revised by the user on 2026-11-26): the corridor's own frame. Its two
+#: long walls are named by the core template (``walls``); wall a is the one at +y, wall b the one at -y.
+WALL_A, WALL_B = "a", "b"
+WALLS = (WALL_A, WALL_B)
+
+
+def other_wall(wall: str) -> str:
+    return WALL_B if wall == WALL_A else WALL_A
+
+
+@dataclass(frozen=True)
+class Frame:
+    """Issue #137: where the agent is in the corridor's own frame, for a core template with walls.
+
+    ``left_wall`` is the wall on the agent's own left as it faces now (``WALLS``); the view's left
+    and right (bearings, drifts, changes, an unseen voice) are turned into walls through it.
+    ``from_a_m`` and ``from_b_m`` are from the agent's centre to each wall, across its path."""
+
+    left_wall: str
+    from_a_m: float
+    from_b_m: float
+
+    def __post_init__(self) -> None:
+        if self.left_wall not in WALLS:
+            raise ValueError(f"left_wall: one of {WALLS}, got {self.left_wall!r}")
+
+    def wall_on(self, side: str) -> str:
+        """The wall on the agent's own ``side`` ("left" or "right") now."""
+        if side not in ("left", "right"):
+            raise ValueError(f"side: left or right, got {side!r}")
+        return self.left_wall if side == "left" else other_wall(self.left_wall)
+
 
 @dataclass(frozen=True)
 class Me:
@@ -104,6 +136,9 @@ class SeenPerson:
     changes: tuple[str, ...] = ()
     factor_lines: tuple[str, ...] = ()  # what the observer can see of their factors (RF-5)
     pairwise_lines: tuple[str, ...] = ()  # for this observer only (RF-6)
+    #: Issue #137: their centre's distance from wall a, in a view with a ``Frame``; else None (and
+    #: left out of the record).
+    from_a_m: Optional[float] = None
 
     def __post_init__(self) -> None:
         if self.detail not in DETAILS:
@@ -153,12 +188,17 @@ class Done:
     #: then: to its left (positive) or right, and back (positive) from where it was.
     sideways_m: Optional[float] = None
     back_m: Optional[float] = None
+    #: Issue #137: the wall that was on the agent's own left as it faced then, in a view with a
+    #: ``Frame`` (so ``sideways_m`` can be told as towards a wall); else None (left out of the record).
+    left_wall: Optional[str] = None
 
     def __post_init__(self) -> None:
         if self.outcome not in OUTCOMES:
             raise ValueError(f"outcome: one of {OUTCOMES}, got {self.outcome!r}")
         if self.signal not in SIGNALS:
             raise ValueError(f"signal: one of {SIGNALS}, got {self.signal!r}")
+        if self.left_wall is not None and self.left_wall not in WALLS:
+            raise ValueError(f"left_wall: one of {WALLS}, got {self.left_wall!r}")
 
 
 @dataclass(frozen=True)
@@ -189,6 +229,9 @@ class View:
     extra_blocks: tuple[Block, ...] = ()
     time_to_meet: Optional[TimeToMeet] = None
     labels: Mapping[str, Any] = field(default_factory=dict)  # where the view came from; never rendered
+    #: Issue #137: the corridor's own frame, under a core template with walls; else None (left out
+    #: of the record, as are the frame's fields on each person and earlier decision).
+    frame: Optional[Frame] = None
 
     def __post_init__(self) -> None:
         if self.decision_point < 1:
@@ -213,4 +256,13 @@ class View:
         for heard in described["heard"]:
             if heard["frame"] is None:  # issue #129: named only when set, so earlier records read as before
                 del heard["frame"]
+        # Issue #137: the absolute frame's fields, likewise only when set.
+        if described["frame"] is None:
+            del described["frame"]
+        for person in described["seen"]:
+            if person["from_a_m"] is None:
+                del person["from_a_m"]
+        for done in described["history"]:
+            if done["left_wall"] is None:
+                del done["left_wall"]
         return described

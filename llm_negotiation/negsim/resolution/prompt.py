@@ -26,7 +26,7 @@ from ..negotiation.prompts import load_template_data
 from ..rulegen.describe import _direction, _heading, across, along, fill, speed
 from .menu import Menu, load_menu
 from .scenario import Scenario
-from .view import ALL_CONDITIONS, CONDITIONS, DETAIL_FULL, MOTION_BACKING, MOTION_STILL, View
+from .view import ALL_CONDITIONS, CONDITIONS, DETAIL_FULL, MOTION_BACKING, MOTION_STILL, WALL_A, WALLS, Frame, View, other_wall
 
 KIND_CORE = "resolution"
 KIND_DEBRIEF = "resolution_debrief"
@@ -93,6 +93,36 @@ def _direction_within(bearing: float, phrases: Mapping[str, str], ahead_deg: flo
     return fill(phrases["behind_side"], angle=int(round(180.0 - angle)), side=side)
 
 
+#: Issue #137: in the corridor's own frame, someone more than this many degrees off where the agent
+#: faces, and less than 180 minus it, is level with the agent rather than ahead or behind
+#: (``_direction``'s "to your side" band, 85 to 95 degrees). [design]
+LEVEL_FROM_DEG = 85.0
+
+
+def _frame_direction(bearing: float, phrases: Mapping[str, str], **values: Any) -> str:
+    """Issue #137: where someone is, in the corridor's own frame: ahead of, level with or behind
+    the agent, with no side (their distance from wall a, in ``values``, says where across)."""
+    angle = abs(math.degrees(bearing))
+    key = "ahead" if angle < LEVEL_FROM_DEG else "behind" if angle > 180.0 - LEVEL_FROM_DEG else "level"
+    return fill(phrases[key], **values)
+
+
+def _frame_heading(relative: float, phrases: Mapping[str, str], frame: Frame, walls: Mapping[str, str], drift: bool) -> str:
+    """Issue #137: ``_walking_heading`` (``drift``) or ``describe._heading`` in the corridor's own
+    frame: a drift or a crossing goes towards a wall, not to the agent's left or right."""
+    angle = abs(math.degrees(relative))
+    if angle <= 10.0:
+        return phrases["same"]
+    if angle >= 170.0:
+        return phrases["opposite"]
+    to_wall = walls[frame.wall_on("left" if relative > 0 else "right")]
+    if drift and angle >= 180.0 - DRIFT_MAX_DEG:
+        return fill(phrases["opposite_drifting"], to_wall=to_wall, angle=int(round(180.0 - angle)))
+    if drift and angle <= DRIFT_MAX_DEG:
+        return fill(phrases["same_drifting"], to_wall=to_wall, angle=int(round(angle)))
+    return fill(phrases["across"], to_wall=to_wall, angle=int(round(angle)))
+
+
 def _check_condition(condition: str) -> None:
     if condition not in ALL_CONDITIONS:
         raise ConfigError(f"condition: one of {ALL_CONDITIONS}, got {condition!r}")
@@ -131,6 +161,13 @@ class CoreTemplate:
         missing = [c for c in CONDITIONS if c not in data["conditions"]]
         if missing:
             raise ConfigError(f"prompt template {key!r} has no section for {missing}")
+        if "walls" in data:  # issue #137: the corridor's own frame
+            walls = data["walls"]
+            names = [walls.get(w) if isinstance(walls, Mapping) else None for w in WALLS]
+            if not isinstance(walls, Mapping) or set(walls) != set(WALLS) or not all(isinstance(n, str) and n for n in names) or names[0] == names[1]:
+                raise ConfigError(f"prompt template {key!r}: walls names wall a and wall b, two different names")
+            if not isinstance(data.get("frame_place"), Mapping):
+                raise ConfigError(f"prompt template {key!r}: a template with walls has frame_place, its WHERE YOU ARE lines")
         self.key, self.data, self.sha256 = key, data, sha256
 
     @classmethod
@@ -180,6 +217,20 @@ class CoreTemplate:
         return bool(self.data.get("heard_frame", False))
 
     @property
+    def walls(self) -> Optional[dict[str, str]]:
+        """Issue #137 (``resolve_menu_abs_v1``): the names of the corridor's two long walls, by
+        ``view.WALLS`` (wall a at +y), for a template written in the corridor's own frame; else None."""
+        walls = self.data.get("walls")
+        return None if walls is None else {w: str(walls[w]) for w in WALLS}
+
+    @property
+    def frame_place_lines(self) -> Optional[dict[str, str]]:
+        """Issue #137: the WHERE YOU ARE lines that replace the scenario's own in the corridor's own
+        frame (filled with ``wall_a``, ``wall_b``, ``from_a`` and ``from_b`` as well)."""
+        lines = self.data.get("frame_place")
+        return None if lines is None else {str(k): str(v) for k, v in lines.items()}
+
+    @property
     def menu(self) -> Optional[Menu]:
         """The menu a reply chooses from (``resolve_menu_v1``, issue #136), or None for the earlier
         templates, whose replies give steps. The template lists the options' names and words; the
@@ -191,6 +242,12 @@ class CoreTemplate:
         listed = tuple(str(name) for name in self.data.get("menu_options", {}))
         if listed != menu.names:
             raise ConfigError(f"prompt template {self.key!r} lists the options {listed}, its table {path} has {menu.names}")
+        # Issue #137: moves named by a wall need a template in the corridor's own frame, and a
+        # template in that frame names no move by the agent's own left or right.
+        if menu.by_wall and self.walls is None:
+            raise ConfigError(f"prompt template {self.key!r}: its table {path} names moves by the walls, but the template names no walls")
+        if menu.by_side and self.walls is not None:
+            raise ConfigError(f"prompt template {self.key!r} is in the corridor's own frame, but its table {path} names moves by left and right")
         return menu
 
     def actions_text(self) -> str:
@@ -286,14 +343,21 @@ class CoreTemplate:
         if not view.seen:
             return lines + [v["seen_nobody"]]
         ahead_deg = self.direction_ahead_deg
+        frame, walls = self._frame(view)
         for person in view.seen:
-            if ahead_deg is None:
-                direction = _direction(person.bearing_rad, v["directions"])
+            if frame is not None:  # issue #137: ahead, level or behind, and the distance from wall a
+                if person.from_a_m is None:
+                    raise ConfigError(f"prompt template {self.key!r}: a person in view has no distance from wall a")
+                direction = _frame_direction(person.bearing_rad, v["directions"], from_a=across(person.from_a_m), wall_a=walls[WALL_A])
+                heading = _frame_heading(person.heading_relative_rad, v["headings"], frame, walls, drift=person.motion != MOTION_STILL)
             else:
-                direction = _direction_within(person.bearing_rad, v["directions"], ahead_deg)
-            # A drift is a way of walking, not of facing: someone standing still keeps the old words.
-            describe = _heading if person.motion == MOTION_STILL else _walking_heading
-            heading = describe(person.heading_relative_rad, v["headings"])
+                if ahead_deg is None:
+                    direction = _direction(person.bearing_rad, v["directions"])
+                else:
+                    direction = _direction_within(person.bearing_rad, v["directions"], ahead_deg)
+                # A drift is a way of walking, not of facing: someone standing still keeps the old words.
+                describe = _heading if person.motion == MOTION_STILL else _walking_heading
+                heading = describe(person.heading_relative_rad, v["headings"])
             if person.detail != DETAIL_FULL:
                 motion = fill(v["short_motion"][person.motion], heading=heading)
                 lines.append(fill(v["seen_short"], n=person.label, distance=along(person.distance_m), direction=direction, motion=motion))
@@ -326,10 +390,28 @@ class CoreTemplate:
                 lines.append(fill(v["seen_signal"], signal=v["signals_seen"][person.signal]))
             if person.changes:
                 words = [v["since_last_look"][change] for change in person.changes]
+                if frame is not None:  # issue #137: a move over is towards a wall
+                    words = [self._towards(word, change, frame, walls) for word, change in zip(words, person.changes)]
                 joined = words[0] if len(words) == 1 else ", ".join(words[:-1]) + f" {v['and']} " + words[-1]
                 lines.append(fill(v["seen_changes"], changes=joined))
             lines += [fill(v["seen_extra"], line=line) for line in (*person.factor_lines, *person.pairwise_lines)]
         return lines
+
+    def _frame(self, view: View) -> tuple[Optional[Frame], Optional[dict[str, str]]]:
+        """Issue #137: the view's frame and the template's wall names, under a template with walls;
+        (None, None) under any other template."""
+        walls = self.walls
+        if walls is None:
+            return None, None
+        if view.frame is None:
+            raise ConfigError(f"prompt template {self.key!r} is in the corridor's own frame, and the view has no frame")
+        return view.frame, walls
+
+    @staticmethod
+    def _towards(word: str, change: str, frame: Frame, walls: Mapping[str, str]) -> str:
+        """Issue #137: "moved over towards {wall}" for a move to the agent's left or right."""
+        side = {"moved_left": "left", "moved_right": "right"}.get(change)
+        return word if side is None else fill(word, wall=walls[frame.wall_on(side)])
 
     def _line_offset(self, person: Any) -> list[str]:
         """Where the centre of someone ahead is against the straight line ahead of the agent
@@ -349,9 +431,12 @@ class CoreTemplate:
         if not view.heard:
             return []
         lines = [v["heard_header"]]
+        frame, walls = self._frame(view)
         for heard in view.heard:
             if heard.label is None and heard.direction is not None and "heard_unseen_from" in v:
                 direction, band = v["heard_directions"][heard.direction], v["heard_bands"][heard.band]
+                if frame is not None and heard.direction in ("left", "right"):  # issue #137: from a wall's side
+                    direction = fill(direction, wall=walls[frame.wall_on(heard.direction)])
                 lines.append(fill(v["heard_unseen_from"], direction=direction, band=band, message=heard.message))
             elif heard.label is None:
                 lines.append(fill(v["heard_unseen"], message=heard.message))
@@ -366,6 +451,7 @@ class CoreTemplate:
         if not view.history:
             return []
         lines = [v["history_header"]]
+        frame, walls = self._frame(view)
         for done in view.history:
             lines.append(fill(v["history_intent"], ago=seconds(done.ago_s), intent=done.intent))
             if done.message:
@@ -375,6 +461,11 @@ class CoreTemplate:
             if done.sideways_m is not None and "history_sideways" in v:
                 if along(abs(done.sideways_m)) == along(0.0):
                     lines.append(v["history_no_sideways"])
+                elif frame is not None:  # issue #137: towards the wall that was on that side then
+                    if done.left_wall is None:
+                        raise ConfigError(f"prompt template {self.key!r}: an earlier decision has no wall on its left")
+                    wall = done.left_wall if done.sideways_m > 0.0 else other_wall(done.left_wall)
+                    lines.append(fill(v["history_sideways"], distance=along(abs(done.sideways_m)), wall=walls[wall]))
                 else:
                     side = "left" if done.sideways_m > 0.0 else "right"
                     lines.append(fill(v["history_sideways"], distance=along(abs(done.sideways_m)), side=side))
