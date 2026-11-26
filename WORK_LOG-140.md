@@ -136,6 +136,15 @@ only by importing it:
   - **both: about USD 0.53 to 0.63 off-peak**, at the mock's call counts. A model may need more or
     fewer calls.
 
+### 2026-11-26 07:31 UTC — the full suite
+- 07:13 to 07:31 UTC: **2439 passed, 16 skipped, 1 failed.**
+  - The failure was `test_encounter_protocol.py::test_stop_at_cap_runs_until_the_guard_stops_it_and_the_spend_stays_under_the_cap`,
+    the known one that fails in DeepSeek's peak hours (06-10 UTC on weekdays).
+  - It touches no grid file. It passed off-peak in RF-47's and RF-48's runs of the suite, on the same
+    existing code.
+  - It was not rerun off-peak for this issue.
+- No existing test needed a change: the grid adds only new files.
+
 ## Open questions / risks
 1. **For the user, before RF-52's paid run:** the choices above, especially when an agent is asked
    again, and the view's wording in both frames.
@@ -148,3 +157,24 @@ only by importing it:
 4. **Only `wide_corridor_head_on`'s two geometries** are mapped; other cases are refused.
 
 ## Summary (fill in at the end)
+**What changed.** LLM agents on the grid, in new files only (AS1), mock only (USD 0):
+- **Templates:** `resolve_grid_v1` (own frame) and `resolve_grid_abs_v1` (lanes numbered from the blue
+  wall), frozen in the grid's own template folder and manifest. Their fixed text is the corridor menu's
+  silent text, byte for byte; the view is in cells and lanes.
+- **The menu:** RF-47's and RF-48's, done in cells.
+- **The session:** D4 and D5 on the grid, the plan carried out between decisions, and a debrief.
+- **The experiment:** RF-40's 272 silent sessions on the grid, with who starts off the centre lane
+  counterbalanced, and a cost estimate calibrated on RF-40's silent calls.
+- **Docs:** `docs/action-space.md` section 8.3, both READMEs.
+
+**Why.** The supervisor's points 1, 3 and 5: a grid limits the action space and removes angles. The
+two frames test whether naming walls instead of sides helps there too.
+
+**How it was verified.**
+- **New tests:** 20, among them the view's text for a known grid state in both frames, a move towards
+  a wall for each heading, and the counterbalance.
+- **The full suite:** 2439 passed. The one failure was the known peak-hours test, which no grid file
+  touches.
+- **AS1:** no existing file modified.
+- **The mock rehearsal:** both frames, 272 of 272 sessions each.
+- **Cost estimate for RF-52:** about USD 0.53 to 0.63 off-peak for both frames.
