@@ -59,6 +59,92 @@ only by importing it:
 
 ## Progress log
 
+### 2026-11-26 07:05 UTC — reading, then the build
+- **Read:**
+  - RF-50's `world.py`, `measures.py`, `cases.py` and `__main__.py`;
+  - the continuous protocol: `_ask`, `_apply`, `_factor_lines`, `_debrief`;
+  - the experiment layer: `run_session`, `first_asked`, `session_factors`, `Session`;
+  - `request_with_retry`, `load_template_data`, the price table, and RF-40's records.
+- **Found:**
+  - the existing template manifest is an existing file, so the grid's templates live in their own
+    folder with their own manifest (AS1);
+  - RF-40's 1,632 session records are in the repo with prompts and measured token counts, so the
+    cost estimate can be calibrated on them;
+  - RF-47's and RF-48's mock policies already answer with every option of each menu.
+- **Built (new files only):**
+  - `negsim/grid/menu.py`: RF-47's and RF-48's tables, with the amounts rounded to cells and ticks.
+  - `negsim/grid/prompt.py`: the view as data (`GridView`), and the template's loading, with a hash
+    check against the grid's own manifest, and rendering.
+  - `negsim/grid/templates/`: the two templates and `MANIFEST.json`, generated from `resolve_menu_v1`
+    and `resolve_menu_abs_v1` so that the shared text is copied, not retyped.
+  - `negsim/grid/agents.py`: the session. It uses its own tick loop around RF-50's `step`, with the
+    same end rules as `world.run`, because `run` has no hook after a tick, where a plan's moves are
+    consumed.
+  - `negsim/grid/experiment.py`: RF-40's silent sessions, the counterbalance, records, outcomes and
+    the cost estimate. It refuses any condition but silent, and any paid client or cap.
+  - The two configs.
+- **Smoke run (4 sessions):** the prompts read correctly, and sides and lanes check out from both
+  walkers' positions.
+  - One line lacked a verb ("There two lanes between you and the wall on your left"). It became "You
+    have two lanes on your left before the wall, …", and the template was re-hashed before any use.
+- **AS1 check:** `git diff --cached --diff-filter=M` against the base lists no file. Every change is new.
+- **Choices of mine, flagged for the user:**
+  - **When an agent is asked.** A meeting is predicted when the other is in view, ahead, and at most
+    one lane away (two lanes is 0.8 m, inside H1). An agent is asked again only while that holds: a
+    change of the other's, its own plan ending, or a blocked move, at least 1 s apart, up to 6 times.
+  - **Both asked at the same tick** in `first_asked`'s order. In silent, neither hears the other.
+  - **A move into a taken cell** is tried again next tick (and may prompt a new decision). A move
+    into a wall is dropped.
+  - **The time to meet** is the time until the two are in adjacent rows.
+  - **No body width and no top speed** in the view (one cell each; a cell a tick at most). **One
+    format for everyone in view**, near or far. RF-40's template shows the same lines on a short line
+    too, less the speed and body width.
+  - **The counterbalance** goes by repeat pairs (1-2 against 3-4), so that it does not move with who
+    is asked first, which alternates odd and even. The 8 counterfactual-pair sessions are first runs,
+    so the split is 72 against 64.
+  - **The view's wording.**
+
+### 2026-11-26 07:15 UTC — tests and the rehearsal
+- **`tests/test_grid_agents.py`:** 20 tests, passing together with RF-50's and the hygiene test
+  (65 in all). Three first failures were my own test mistakes:
+  - a walker placed next to the wall it was to step towards;
+  - in the known state each sees the other to its *right*, as in `apart_20cm`;
+  - two who carry on reach the grid's 3 s deadlock after 4 decision points each, not 6.
+- **The mock rehearsal** (`runs_mock/rf51_rehearsal`), both frames, 07:13 to 07:15 UTC: 272 of 272
+  sessions completed in each.
+
+  | | own frame | absolute frame |
+  | --- | --- | --- |
+  | decision points | 1,315 | 1,295 |
+  | calls | 2,070 | 2,054 |
+  | debriefs | 515 | 515 |
+  | unreadable after the retry (`unknown_action`) | 136 | 116 |
+  | capped by the wall | 26 | 32 |
+  | no room | 12 | 0 |
+
+  - Every option was chosen in both.
+  - No agent was asked more than 6 times; 6 was reached in 14 absolute-frame sessions.
+  - No absolute-frame prompt names an own side (0 of 1,295).
+  - The mock's outcomes say nothing about behaviour.
+- **Cost estimate for RF-52** (`summary.json`, `cost_estimate`), calibrated on RF-40's 2,265 silent
+  calls:
+  - **the calibration:** 0.275 tokens per prompt character, 65% of prompt tokens cached, and replies
+    of 155 tokens (decision) and 144 (debrief);
+  - **the range:** RF-40's reply length, and 50 tokens shorter for a decision (an assumption, as in RF-47);
+  - **own frame:** USD 0.263 to 0.310 off-peak (0.526 to 0.620 peak);
+  - **absolute frame:** USD 0.269 to 0.316 off-peak (0.539 to 0.631 peak);
+  - **both: about USD 0.53 to 0.63 off-peak**, at the mock's call counts. A model may need more or
+    fewer calls.
+
 ## Open questions / risks
+1. **For the user, before RF-52's paid run:** the choices above, especially when an agent is asked
+   again, and the view's wording in both frames.
+2. **`analysis.gate` needs the ORCA baselines**, which the grid cannot give. The grid's
+   `outcomes.csv` has `resolved_plan_only` and `collision_plan_only`; the gate is RF-52's to decide
+   (#141, open decision).
+3. **The deadlock window (3 s) can end a run before the agents have used their 6 decision points**
+   (tested: two who carry on are asked 4 times). This is RF-50's rule, accepted by the user, applied
+   to LLM agents. A model that waits twice in a row could be cut off.
+4. **Only `wide_corridor_head_on`'s two geometries** are mapped; other cases are refused.
 
 ## Summary (fill in at the end)

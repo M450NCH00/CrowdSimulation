@@ -337,6 +337,98 @@ H2 applies in the same steps as H1. H3 (where a move aside starts) applies in ce
 - **RF-51 counterbalances who starts off the centre lane** in `one_lane_apart`: half the sessions put person 2 in the centre lane instead, so that who starts off centre does not mix with the factors.
 - **The absolute frame uses neutral landmark names** (AS5 as revised, section 7).
 
+### 8.3 As built in RF-51 (#140)
+
+*Built on 2026-11-26, mock only.* Everything is a new file, and no existing file of the environment changed (AS1). The pieces:
+- `negsim/grid/menu.py`, `prompt.py`, `agents.py`, `experiment.py`;
+- the templates `resolve_grid_v1` and `resolve_grid_abs_v1`, frozen in **`negsim/grid/templates/`** with their **own `MANIFEST.json`**, so the existing manifest is untouched;
+- the configs `configs/grid/round1_grid.yaml` and `round1_grid_abs.yaml`;
+- `tests/test_grid_agents.py`.
+
+Run it with `python -m negsim.grid.experiment <config> --out <dir>`. Existing code is reused only by importing it:
+- RF-40's design and people;
+- RF-47's and RF-48's menu tables and reply parser;
+- the retry and the debrief (`resolve_debrief_v3`);
+- RF-47's and RF-48's mock policies;
+- the view cone.
+
+**The templates (silent only, AS2).**
+- **The fixed text** is `resolve_menu_v1`'s silent section and ACTIONS block, byte for byte (tested), so the grid and the corridor's menu differ only by world. `resolve_grid_abs_v1` uses `resolve_menu_abs_v1`'s.
+- **The view** is in cells and lanes. ABOUT YOU and the factor lines are as in RF-40. The body width and the top speed are not told: everyone takes one cell, and nobody walks faster than a cell a tick.
+- **WHERE YOU ARE:** "You are in a corridor five lanes wide. The floor is divided into square cells 0.4 m across, in lanes along the corridor. Each person takes up one cell, and nobody can step into a cell someone else is in. Walking at 1.30 m/s, you move forward one cell about every 0.3 s." Then where the agent is:
+  - own frame: "You have one lane on your left before the wall, and three lanes on your right before the wall."
+  - absolute frame: "The lanes are numbered from the blue wall: lane 1 is next to the blue wall, and lane 5 is next to the yellow wall. You are in lane 2." This is AS5's "lane 1, next to the north wall", with RF-48's names.
+- **WHO YOU CAN SEE:**
+  - own frame: "Person 1, 8 cells ahead of you, one lane to your right: walking towards you at 1.30 m/s."
+  - absolute frame: "… in lane 3: …"
+  - Changes: "they have moved one lane to your left" or "… towards the yellow wall", stopped, slowed down, and so on.
+- **What came of a decision:** "Since then you have moved one lane to your right" (or "… towards the yellow wall"), and the cells backed.
+- **The time to meet:** the time until the two would be in adjacent rows, at their current speeds.
+- The view's wording is the assistant's draft. One line was reworded before any use ("There two lanes between you …" lacked a verb), and the template was re-hashed.
+
+**The menu in cells** (`negsim/grid/menu.py`, the user's decision of 2026-11-26).
+- **Where the amounts come from:** RF-47's and RF-48's tables, read as they are, with each amount rounded to cells and ticks (`[derived]`).
+- **What each option becomes:**
+  - "carry on": forward;
+  - the slow-downs: the walker's speed × 0.81 or 0.5 until the other has passed. A slower walker moves on fewer ticks (RF-50);
+  - "stop and wait": 1.0 s / 0.31 s = 3.25, so 3 ticks of waiting, then forward;
+  - "step a little": 0.47 m / 0.4 m, so one lane;
+  - "step well": 0.93 m, so two lanes. Each lane is a move forward and one lane over, then forward;
+  - "step back": 0.5 m, so one cell back, then forward.
+- **As far as the wall allows:** with fewer lanes free, as many as there are (`capped_by_wall:<side>`); with none, no move (`no_room:<side>`).
+- **In the absolute frame**, a move towards a wall becomes the walker's own side from its heading. Tested: for each heading, it goes to that wall.
+
+**When an agent is asked** (D4 and D5 on the grid; *the assistant's reading, for the user*).
+- **A meeting is predicted** when the other is in view, ahead, and at most one lane away. The view is RF-40's 10 m and 75° either side, between cell centres. Two lanes apart (0.8 m) is inside H1, so it is no meeting.
+  - The first decision point is the first tick this holds. In round 1's geometries, that is at 9.2 m (23 cells).
+- **Asked again** while a meeting is still predicted and before passing, at least 1 s after the last decision (4 ticks), when any of these holds:
+  - the other has done something new: moved lanes, stopped, started, slowed down, sped up, walked backwards or came into view;
+  - the agent's own plan has ended;
+  - the agent's move was blocked.
+
+  At most 6 times.
+- **Both are asked at the same tick**, in the order `first_asked` gives. In silent, neither hears the other.
+- **An unreadable reply** after the retry changes nothing.
+- **A move into a taken cell** is tried again next tick.
+- **The debrief** (`resolve_debrief_v3`) follows the run.
+
+**The sessions.**
+- **The people and cells:** RF-40's 272 silent sessions (its config is `design_from`), the same people and the same factor lines.
+- **The geometries:**
+  - `head_on_de176842` becomes `aligned` (lanes 2 and 2);
+  - `head_on_02dfbadb` becomes `one_lane_apart`.
+- **Who starts off the centre lane is counterbalanced** (the user, 2026-11-26), by repeat:
+  - in repeats 1 and 2, person 2 is off centre (lanes 2 and 1, RF-50's layout);
+  - in repeats 3 and 4, person 1 is (lanes 3 and 2).
+
+  Either way, each sees the other to its own right. Grouping by repeat pairs keeps this apart from who is asked first, which alternates odd and even.
+- **The split:** the 8 counterfactual-pair sessions in this geometry are first runs, so `one_lane_apart` has person 2 off centre in 72 sessions and person 1 in 64. `aligned` has 136.
+
+**The record** of each session:
+- its decision points: the view as data, the prompt, the attempts, the option, and the grid plan given;
+- the debriefs;
+- RF-50's measures (`pair_outcome`) and `gate_columns`;
+- a trajectory CSV that `analysis.lateral` can read.
+
+`outcomes.csv` and `summary.json` cover the whole run. `analysis.gate` still needs the ORCA baselines the grid cannot give; that is RF-52's to decide (#141).
+
+**Mock rehearsal** (`runs_mock/rf51_rehearsal`, not tracked): both frames, 272 sessions each.
+- All sessions completed.
+- Decision points: 1,315 in the own frame and 1,295 in the absolute frame.
+- Every option was chosen.
+- No agent was asked more than 6 times, and the cap of 6 was reached in 14 sessions.
+- No absolute-frame prompt names an own side.
+
+The mock is not a model, so its outcomes say nothing about behaviour.
+
+**Cost estimate for RF-52**, calibrated on RF-40's 2,265 silent calls (`runs/rf40_round1_head_on_turn_taking`):
+- **The calibration:** 0.275 tokens per prompt character, 65% of prompt tokens from the cache, and replies of 155 tokens (decision) and 144 (debrief).
+- **The low end** takes a decision reply 50 tokens shorter, an assumption as in RF-47.
+- **At the mock's call counts:**
+  - **USD 0.26 to 0.32 off-peak per frame**, so **0.53 to 0.63 for both**;
+  - about double at peak.
+- RF-52 needs its own approval and cap.
+
 ## 9. Template names
 
 *The assistant's choice*, written into the issues on 2026-11-25. The user was not asked and may change them. They are set now so that issues worked in parallel do not collide:

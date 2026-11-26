@@ -136,7 +136,8 @@ of paid runs and a cap for its round, recorded in `CLAUDE.md`.
     RF-48 (#137) an absolute frame, with neutral landmark names for the walls (AS5 as revised, 2026-11-26;
     *done*, mock only: `resolve_menu_abs_v1`, "the blue wall" and "the yellow wall");
     RF-49 (#138, paid) runs both;
-  - the grid: RF-50 (#139, *done*: `negsim/grid/`) and RF-51 (#140) build it, RF-52 (#141,
+  - the grid: RF-50 (#139, *done*: `negsim/grid/`) and RF-51 (#140, *done*, mock only: `negsim/grid/agents.py`,
+    `python -m negsim.grid.experiment`) build it, RF-52 (#141,
     paid) runs it. **The grid is an add-on that modifies no existing code** (AS1).
 - **Round 2, meeting in a narrow passage (lean):** RF-19 (#75) screening; RF-13 (#68) Phase B
   (optional; moved from round 1 by the user, 2026-10-27); RF-20 (#76) extract, test with earlier
