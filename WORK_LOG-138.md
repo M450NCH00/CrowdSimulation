@@ -111,6 +111,62 @@ The user answered four questions (all "Recommended"):
   - peak 01:00 to 04:00 and 06:00 to 10:00 UTC, Monday to Friday;
   - the only newer note is about the search and fetch tools (not used here).
 
+### 2026-11-27 10:00 to 10:12 UTC — the paid pilot, then the rest started
+(Times from the pilot script's `date -u` lines.)
+- **Pilot** (`--client deepseek --confirm --limit`, started by script at 10:00:11 UTC, off-peak):
+  - 12 sessions of the own frame (USD 0.0118);
+  - 8 of the absolute frame, blue at +y (USD 0.0079);
+  - 8 of the swapped half (USD 0.0068);
+  - **USD 0.0265** in all, done 10:09:38 UTC.
+- **Model fingerprint:** `bc19ba97cbe016479903222bb1578db6` on every call (206 in the session
+  records), RF-40's.
+- **Unreadable replies:** 1 decision of 180. In talk, an agent put a signal in `action`: "got
+  'hold_up_hand'".
+- **Cost per session:** USD 0.00099 (own frame), 0.00098 (absolute), 0.00085 (swap), about USD 0.00013
+  per call. RF-40's was 0.00017, so a menu reply is shorter. The full run comes to about **USD 1.07**,
+  inside each config's cap.
+- **Read every pilot session's choices** (`scratchpad/compact.py`):
+  - **Own frame:** 10 of 12 resolved on the plans alone. The choices are almost all "to your right".
+  - **Absolute frame:** 9 of 16 resolved (4 of 8 in each half). Six of the seven collisions are the
+    two people choosing **the same named wall**, so both move to the same side. Every pair that chose
+    different walls passed.
+  - **The seventh collision is genuine, not a fault** (`S_head_on_de176842_51dfba80_r1`). Person 2
+    stepped "well towards the blue wall" up to the 0.05 m margin. Person 1 held the centre with a
+    large suitcase, and the corridor does not leave room (overlap 0.029 m). It is RF-40's geometry,
+    so the comparison is fair.
+- **Checked that the views are right** where an agent's reason looked wrong (`S_head_on_02dfbadb_cb859069_r2`):
+  - Person 1 starts at y = +0.1. Its view says 0.77 m from the blue wall and 0.98 m from the yellow
+    wall, as the trajectory has it.
+  - It chose the yellow wall "the yellow wall side is closer". That misreads its own distances (an
+    RF-45 hallucination), not the view.
+- **Lean in the pilot:** both halves lean to the wall at -y (yellow in RF-48's naming, blue in the
+  swap). So the lean follows the side, not the colour, but 16 sessions settle nothing.
+- **The rest started at 10:12 UTC** (`scratchpad/full.sh`): the three configs one after another,
+  resuming past the pilot, with an off-peak check before each. At about 20 s a session it should end
+  around 16:30 UTC, long before Saturday's 01:00 UTC (and Saturday has no peak).
+
+### 2026-11-27 10:12 to 10:19 UTC — the analysis module, while the run goes
+- **New `analysis/menu.py`** (standard library, no negsim import, as the package requires) with 8
+  tests in `analysis/tests/test_menu.py`. The analysis suite: **133 passed**.
+- **Why a new module:** `analysis.compare` pairs by session id over first runs only. The swap's ids
+  are RF-40's moved by two repeats, and the counterfactual pairs ran in both halves.
+- **What it compares** [my choice, for the report]: RF-40's 256 design sessions per condition (all
+  four repeats, no pairs), each once per arm. Paired by RF-40's id (McNemar). The pairs are left out
+  because they ran twice in the absolute frame.
+- **What it reports:**
+  - the dance at the start (`sidestep_reprompt.start_kind`);
+  - the walls by place and by colour, per half (Fisher's exact test on half by wall and half by
+    colour);
+  - first moves towards the nearer wall;
+  - unreadable replies, `no_room` and `capped_by_wall` flags, and the options chosen;
+  - RF-37's pass distance (the closest approach of the two centres in resolved sessions, from
+    `trajectory.csv`, against H2's 0.93 ± 0.17 m);
+  - walls and sides named in talk.
+- **Checked on RF-40 and the pilot:** RF-40 silent resolves 163 of 256 (0.64), as its report says.
+- **Already visible in RF-40:** in the 20 cm layout each person starts 10 cm to its own left. Yet
+  first moves go towards the farther wall (keep right) 157 to 73 in silent. RF-40 also resolves less
+  there (0.56 against 0.71 aligned).
+
 ## Open questions / risks
 - The swap does not separate the colour's name from its listing order or from being the reference
   wall (see above).
