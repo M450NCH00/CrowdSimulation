@@ -262,7 +262,7 @@ The user answered four questions (all "Recommended"):
 - Two older prompt issues are reported, not fixed: cumulative history lines, and an occasionally
   impossible history distance.
 
-### 2026-11-27 16:40 UTC — PR, #55, #138
+### 2026-11-27 16:39 UTC — PR, #55, #138
 - PR #152 opened into `feat/129-rf40-turn-taking-talk`. The full negsim suite was started, then
   stopped at the user's request (they are shutting down); **the user will run it next session.**
   The PR says so.
