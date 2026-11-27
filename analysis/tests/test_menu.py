@@ -150,3 +150,24 @@ def test_talk_counts_named_walls_and_what_the_speaker_and_listener_did(tmp_path)
     assert out["decisions"] == 2 and out["with_message"] == 1 and out["names_a_wall"] == 1
     assert out["speaker_moved_towards_named_wall"] == 1 and out["listener_towards_other_wall"] == 1
     assert M.replies(M.load(a, "abs"))["unreadable"] == 1
+
+
+def test_the_hand_check_samples_each_arm_and_scores_rf52s_format(tmp_path):
+    t = "resolve_menu_abs_v1"
+    own = experiment(tmp_path / "own", "resolve_menu_v1", [(f"S_c{i}_r1", "silent", True, "", [
+        point(0, 1, "step a little to your right", "right", "resolve_menu_v1")]) for i in range(4)])
+    a = experiment(tmp_path / "abs", t, [(f"S_c{i}_r1", "silent", True, "", [
+        point(0, 1, "step a little towards the blue wall", "left", t)]) for i in range(4)])
+    found = M.points(own, "own") + M.points(a, "abs")
+    chosen = M.hand_sample(found, n_per_arm=2)
+    assert len(chosen) == 4 and sum(k.startswith("own/") for k in chosen) == 2
+    assert chosen == M.hand_sample(found, n_per_arm=2)  # seeded
+    sheet = M.hand_sheet(found, chosen)
+    assert "**option:** step a little towards the blue wall" in sheet or "**option:** step a little to your right" in sheet
+    judged = {chosen[0]: {"categories": ["2"], "side_error": False, "move_against_geometry": True, "note": "x"},
+              chosen[1]: {"categories": [], "side_error": False, "move_against_geometry": False, "note": ""},
+              chosen[2]: {"categories": ["3"], "side_error": True, "move_against_geometry": False, "note": ""}}
+    scored = M.score_hand(found, {"judgements": judged})
+    assert scored["own"]["headline"]["k"] == 1 and scored["own"]["headline"]["n"] == 2
+    assert scored["abs"]["self_contradiction"]["k"] == 1 and scored["abs"]["side_error"]["k"] == 1
+    assert scored["all"]["by_category"]["2"]["k"] == 1 and scored["all"]["move_against_geometry"]["k"] == 1

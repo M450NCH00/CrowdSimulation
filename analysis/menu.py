@@ -50,6 +50,7 @@ import argparse
 import csv
 import json
 import math
+import random
 import re
 import statistics
 from collections import Counter, defaultdict
@@ -58,6 +59,7 @@ from typing import Any, Iterable, Mapping, Optional, Sequence
 
 from .compare import mcnemar_exact
 from .gate import COMPLETED
+from .hallucination import CATEGORIES, HEADLINE, _facts
 from .noise import wilson
 from .sidestep_reprompt import SIDES, fisher_exact, more_room, start_kind
 
@@ -365,6 +367,75 @@ def summarise(arms: Mapping[str, Sequence[Mapping[str, Any]]]) -> dict[str, Any]
     return out
 
 
+# --- the hand check (RF-45's method, as RF-52 ran it) -------------------------------------------
+
+def points(experiment: Path, arm: str) -> list[dict[str, Any]]:
+    """Every decision point of the completed sessions not in a counterfactual pair."""
+    with (experiment / "outcomes.csv").open(encoding="utf-8", newline="") as handle:
+        keep = {r["session_id"] for r in csv.DictReader(handle) if r["outcome"] == COMPLETED and not r.get("pair_id")}
+    out = []
+    for session_id in sorted(keep):
+        record = json.loads((experiment / "sessions" / f"{session_id}.json").read_text(encoding="utf-8"))
+        for point in record.get("decision_points") or []:
+            parsed = point.get("parsed") or {}
+            out.append({"key": f"{experiment.name}/{session_id}/dp{point['index']}", "arm": arm,
+                        "condition": record.get("condition"), "agent_id": point["agent_id"], "number": point["number"],
+                        "readable": point.get("parse_error") is None and bool(parsed), "parse_error": point.get("parse_error"),
+                        "action": parsed.get("action"), "flags": list(parsed.get("flags") or []), "signal": parsed.get("signal"),
+                        "texts": {k: parsed.get(k) or "" for k in ("intent", "reason", "message")},
+                        "coded": point.get("coded") or {}, "view": point.get("view") or {}})
+    return out
+
+
+def hand_sample(found: Sequence[Mapping[str, Any]], n_per_arm: int = 75, seed: int = 138) -> list[str]:
+    """A seeded random sample of ``n_per_arm`` decision points from each menu arm."""
+    rng = random.Random(seed)
+    chosen = []
+    for arm in ("own", "abs"):
+        keys = sorted(p["key"] for p in found if p["arm"] == arm)
+        chosen += sorted(rng.sample(keys, min(n_per_arm, len(keys))))
+    return chosen
+
+
+def hand_sheet(found: Sequence[Mapping[str, Any]], chosen: Sequence[str]) -> str:
+    by_key = {p["key"]: p for p in found}
+    out = ["# RF-49 hand check: hallucinated decisions with the menu", "",
+           "RF-45's definition (categories 1, 2, 5, 7 the headline; 3 and 4 self-contradiction), RF-52's two extra marks "
+           "(a side error; a move against the geometry). Each point read against what its prompt gave.", ""]
+    for key in chosen:
+        p = by_key[key]
+        out += [f"## {key} ({p['arm']} frame, {p['condition']}, agent {p['agent_id']}, decision {p['number']})", ""]
+        out += [f"- {line}" for line in _facts(p)]
+        if p["readable"]:
+            out += [f"- **option:** {p['action']}" + (f" (flags {p['flags']})" if p["flags"] else ""),
+                    f"- **intent:** {p['texts']['intent']}", f"- **reason:** {p['texts']['reason']}"]
+            if p["texts"]["message"] or (p["signal"] and p["signal"] != "none"):
+                out.append(f"- **signal:** {p['signal']}; **message:** {p['texts']['message']}")
+        else:
+            out.append(f"- **unreadable:** {p['parse_error']}")
+        out.append("")
+    return "\n".join(out)
+
+
+def score_hand(found: Sequence[Mapping[str, Any]], judgements: Mapping[str, Any]) -> dict[str, Any]:
+    """``judgements[key] = {"categories": [...], "side_error": bool, "move_against_geometry": bool,
+    "note": ...}``, the mapping itself or under ``"judgements"`` (RF-52's format)."""
+    if isinstance(judgements.get("judgements"), Mapping):
+        judgements = judgements["judgements"]
+    by_key = {p["key"]: p for p in found}
+    out = {}
+    for arm in ("own", "abs", "all"):
+        keys = [k for k in judgements if k in by_key and (arm == "all" or by_key[k]["arm"] == arm)]
+        def share(test) -> dict[str, Any]:
+            return _rate(sum(1 for k in keys if test(judgements[k])), len(keys))
+        out[arm] = {"headline": share(lambda j: bool(set(j.get("categories") or []) & set(HEADLINE))),
+                    "self_contradiction": share(lambda j: bool(set(j.get("categories") or []) & {"3", "4"})),
+                    "side_error": share(lambda j: bool(j.get("side_error"))),
+                    "move_against_geometry": share(lambda j: bool(j.get("move_against_geometry")))}
+        out[arm]["by_category"] = {c: share(lambda j, c=c: c in (j.get("categories") or [])) for c in CATEGORIES}
+    return out
+
+
 # --- report -------------------------------------------------------------------------------------
 
 def _pct(rate: Mapping[str, Any]) -> str:
@@ -428,6 +499,11 @@ def markdown(summary: Mapping[str, Any]) -> str:
     lines += ["", "## 7. Talk", "", "| Arm | Counts |", "| --- | --- |"]
     for arm, c in summary["talk"].items():
         lines.append(f"| {arm} | {c} |")
+    if summary.get("hand_check"):
+        lines += ["", "## 8. The hand check (RF-45's definition; a seeded sample per arm)", "",
+                  "| Arm | Headline (1, 2, 5, 7) | Self-contradiction (3, 4) | Side error | Move against the geometry |", "| --- | --- | --- | --- | --- |"]
+        for arm, h in summary["hand_check"].items():
+            lines.append(f"| {arm} | {_pct(h['headline'])} | {_pct(h['self_contradiction'])} | {_pct(h['side_error'])} | {_pct(h['move_against_geometry'])} |")
     return "\n".join(lines) + "\n"
 
 
@@ -438,11 +514,19 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--abs", dest="abs_", type=Path, required=True, help="RF-49's absolute frame, blue at +y")
     parser.add_argument("--swap", type=Path, required=True, help="RF-49's absolute frame, yellow at +y (r1, r2 = RF-40's r3, r4)")
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--hand", type=Path, default=None,
+                        help="hand-check judgements (default: <out>/hand_judgements.json, if it exists)")
     args = parser.parse_args(argv)
     arms = {"rf40": load(args.rf40, "rf40"), "own": load(args.own, "own"),
             "abs": load(args.abs_, "abs") + load(args.swap, "abs", shift=2)}
     summary = summarise(arms)
+    found = points(args.own, "own") + points(args.abs_, "abs") + points(args.swap, "abs")
+    summary["hand_sample"] = hand_sample(found)
+    hand = args.hand or args.out / "hand_judgements.json"
+    if hand.is_file():
+        summary["hand_check"] = score_hand(found, json.loads(hand.read_text(encoding="utf-8")))
     args.out.mkdir(parents=True, exist_ok=True)
+    (args.out / "hand_check_sheet.md").write_text(hand_sheet(found, summary["hand_sample"]), encoding="utf-8")
     (args.out / "menu.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
     (args.out / "menu.md").write_text(markdown(summary), encoding="utf-8")
     print(f"wrote {args.out / 'menu.json'} and menu.md")
