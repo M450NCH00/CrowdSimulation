@@ -228,6 +228,25 @@ This applies to RF-47 and RF-48 only. The grid is an add-on (AS1).
 - The view lines are a few words longer per person (a distance from the blue wall in place of an angle), which is about 1% of the input.
 - The same assumptions as RF-47's apply.
 
+### 7.2 As run in RF-49 (#138)
+
+*The user's decisions of 2026-11-27:* RF-47's and RF-48's choices accepted as built; the colours counterbalanced at the same size (`resolve_menu_abs_swap_v1`, the yellow wall at +y, run on repeats 3 and 4); RF-52's task 3 as above; a cap of USD 2.00 over the three experiments.
+
+**The run:** RF-40's silent and talk sessions on `deepseek-flash` (RF-40's fingerprint on all 8,348 calls). Own frame 544 sessions, absolute frame 288 per colour half. USD 1.024, which took the balance from USD 2.61 to 1.59.
+
+**Results** (`runs/rf49_analysis/report.md`):
+- **The gate (0.50) fails in every config:** own frame 0.49, absolute 0.31 and 0.30 (RF-40 0.64).
+- **Paired with RF-40 over all four repeats:** silent 0.53 (own) and 0.31 (absolute) against 0.64; talk 0.34 and 0.26 against 0.59.
+- **The own frame:**
+  - "carry on" is a first choice for a third of agents (RF-40: 6%);
+  - "a little" (0.47 m) is under two half-bodies (0.5 m), so one person's little step alone does not clear the other (aligned: 23 of 105 resolved);
+  - two little steps to the same own side always resolved (66 of 66, silent).
+- **The absolute frame:**
+  - first moves lean to the wall at -y (575 to 156), whatever its colour (half by place p = 0.28, by colour p < 0.001). That wall is named second and is not the wall positions are measured from; the swap cannot tell these apart;
+  - so both people often pick the same wall: two little steps went to one wall in 62 silent sessions (2 resolved), to different walls in 36 (34 resolved).
+- **Hallucinated (RF-45's method, 75 per frame):** own 1 of 75, absolute 8 of 75, mostly the other placed by the wrong wall.
+- **For AS3:** if the menu is used again, the amount behind "a little" and the place of "carry on" are the first things to change (the user's decision).
+
 ## 8. The grid (AS1, AS6, AS7)
 
 **AS1. The grid is an add-on. It does not modify the current environment's code** (the user, 2026-11-25).
@@ -456,7 +475,7 @@ RF-51's mock-only runner is unchanged. The only existing file that changes is `s
   - own frame 237 of 272 (0.87);
   - absolute frame 231 of 272 (0.85);
   - both pass.
-- **Against RF-40's silent condition** (free steps, continuous corridor, 175 of 272, 0.64): both frames resolve more, paired McNemar p < 0.001. This changes the world and the action space at once. **RF-49 (the menu in the corridor) has not run, so the comparison with the menu alone is not available.**
+- **Against RF-40's silent condition** (free steps, continuous corridor, 175 of 272, 0.64): both frames resolve more, paired McNemar p < 0.001. This changes the world and the action space at once. *Added after RF-49 (section 7.2):* the menu alone in the continuous corridor does worse than free steps (0.53 and 0.31 on the same 256 silent sessions), so the grid's gain is the grid's.
 - **Context:** any fixed convention resolves all 272 sessions on the grid, and random walkers 125 (0.46).
 - **The frames differ by layout, not overall** (paired p = 0.54):
   - **One lane apart:** the absolute frame removes the wrong-way step. 2 of 272 agents stepped towards the other, against 50 of 272 in the own frame.
@@ -472,8 +491,8 @@ RF-51's mock-only runner is unchanged. The only existing file that changes is `s
 - **Factors:** none changes whether a session resolves once the layout is in the model. Assertive agents hold their lane. Slowing is too rare on the grid (39 of 1,088 agents) to test RF-40's effects on it.
 
 **Open, for the user:**
-- how a grid result reaches the continuous simulator (task 3; section 11 and the report's section 8);
-- whether a template with the wall names swapped tests the yellow-wall lean (section 11).
+- how a grid result reaches the continuous simulator (task 3; section 11 and the report's section 8). *Decided by the user on 2026-11-27:* "Test bench now, RF-49 tests" (the report's option 1, with RF-49 as option 3's test);
+- whether a template with the wall names swapped tests the yellow-wall lean (section 11). *RF-49 ran one (section 7.2): the lean is to the wall at -y, whatever its colour.*
 
 ## 9. Template names
 
@@ -514,7 +533,7 @@ RF-50 can be built alongside RF-47 and RF-48.
 - **The way back to the continuous simulator.** The 10,000-agent goal runs ORCA plus rules in continuous space. A grid result could be read as a rule and translated (as RF-12 and RF-31 translate rules), or kept only as a check of the LLM's reasoning. To be decided with RF-52's results in hand (RF-52, task 3). *RF-52's results are in (section 8.4); the options and the assistant's recommendation are in its report, section 8.*
 - **Whether RF-46's line on speech goes into the menu and grid templates:** after RF-46's result.
 - **AS5's heading:** rechecked after RF-43.
-- **The walls' names and sides (RF-48):** "the blue wall" and "the yellow wall" are the assistant's draft. In head-on, the blue wall is always on the left of the person walking +x. Whether RF-49 counterbalances this with a second template that swaps the names is the user's choice (section 7.1).
+- **The walls' names and sides (RF-48):** "the blue wall" and "the yellow wall" are the assistant's draft. In head-on, the blue wall is always on the left of the person walking +x. Whether RF-49 counterbalances this with a second template that swaps the names is the user's choice (section 7.1). *Decided 2026-11-27: counterbalanced (section 7.2).*
 - **The placeholders, for the supervisor:**
   - "slow down a lot" × 0.5;
   - "stop and wait" 1 s;

@@ -145,6 +145,8 @@ Budget:
   checked 2026-11-26.
   Checked again before issue #138's approval: **USD 2.61**, 2026-11-27 (no paid call since #141; the
   endpoint shows two decimals, and 2.96 less 0.3476 is 2.6124).
+  After issue #138's run with its pilot (USD 1.0239 in the ledger over its three experiments, cap 2.00):
+  **USD 1.59**, checked 2026-11-27.
 
 ### Phase 1 (on hold): the behaviour dataset
 The task from the first supervisor meeting, on hold since the second meeting.

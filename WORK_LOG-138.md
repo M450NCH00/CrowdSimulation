@@ -167,9 +167,97 @@ The user answered four questions (all "Recommended"):
   first moves go towards the farther wall (keep right) 157 to 73 in silent. RF-40 also resolves less
   there (0.56 against 0.71 aligned).
 
+### 2026-11-27 16:02 to 16:17 UTC — the run done; the checks, the analysis, the hand check
+- **The run** (`scratchpad/full.sh`) ended at 16:02:11 UTC, exit 0, every config off-peak:
+  - own frame 10:11 to 13:02, absolute (blue at +y) 13:02 to 14:32, swap 14:32 to 16:02;
+  - every session completed: 544, 288 and 288;
+  - spend in the ledger, pilot included: **0.4870, 0.2687, 0.2682, total USD 1.0239** against the
+    one cap of USD 2.00 (per-config caps 0.95, 0.525, 0.525); 8,348 calls, all `off_peak`, no
+    call error;
+  - fingerprint `bc19ba97cbe016479903222bb1578db6` on every call (RF-40's);
+  - unreadable decision points: own frame 3 of 2,955 (the option written as "step well to **my**
+    left/right"), absolute 0 of 3,143.
+- **The balance** (DeepSeek's endpoint, the key not printed) at 16:03 UTC: **USD 1.59**. 2.61 less
+  1.0239 is 1.586.
+- **`analysis.gate`** (0.50, each config's first repeats): own frame 63 of 128 (0.49), absolute 40
+  of 128 (0.31), swap 38 of 128 (0.30): **all fail**. RF-40 passed at 123 of 192 (0.64).
+  - The gate's reason text, copied from RF-40's configs, still says "192 sessions ... 3 conditions".
+    The threshold is the same; only the wording is stale.
+- **`analysis.menu`** over all four repeats (256 sessions per condition, paired with RF-40):
+
+  | Arm | Silent resolved | Talk resolved |
+  | --- | --- | --- |
+  | RF-40 | 163 (0.64) | 150 (0.59) |
+  | menu, own frame | 136 (0.53), McNemar p = 0.018 | 88 (0.34), p < 0.001 |
+  | menu, absolute | 79 (0.31), p < 0.001 | 66 (0.26), p < 0.001 |
+- **Why the own frame does worse:**
+  - The menu makes "carry on" a first choice: a third of first plans (351 of 1,024) against 6% in
+    RF-40, where 93% of first plans had a sidestep (median 0.4 m, so RF-40's steps were not bigger).
+  - "Step a little" (0.47 m) is under two half-bodies (0.5 m). One person stepping a little while
+    the other carries on: own silent 33 of 99 resolved, talk 31 of 116.
+  - When both stepped a little to the same own side: 66 of 66 resolved (silent).
+- **The absolute frame's walls:** first moves went to wall b (-y) 575 times, to wall a (+y) 156
+  times, in both halves. They follow the place, not the colour: Fisher half by wall p = 0.28, by
+  colour p < 0.001.
+  - Wall b is the one named second and not the one the other is measured from. The design cannot
+    tell these apart.
+  - The lean makes both people pick the same wall: two little steps went to the same wall in 62
+    sessions (2 resolved) and to different walls in 36 (34 resolved), silent.
+- **The hand check:** 150 points (75 own, 75 absolute, seed 138), each read against its prompt, and
+  the doubtful absolute ones against the full prompt (`scratchpad/prompt_of.py`). The judgements are
+  in `hand_judgements.json`.
+  - Headline: own frame **1 of 75**, absolute **8 of 75** (Fisher p = 0.034); self-contradiction 0
+    and 2.
+  - The absolute frame's errors are mostly about where the other is against the walls (6 category
+    1), its own place (2 category 2), and a wall named for a side (2 category 3).
+- **Two things found while judging, neither a hallucination:**
+  - **The history's lines are cumulative** ("Since then you have moved ..." counts from that
+    decision to now, as the template's comment says since `resolve_v2`). Two agents in the sample
+    added them up as separate moves ("I've already shifted right twice"). The wording invites
+    this. Noted, not counted.
+  - **The history's sideways distance can be impossible:** "moved 1.3 m over towards the yellow
+    wall" for a person pressed against the blue wall. `perceive._done` measures against the facing
+    at the decision, which can be turned from the walking line. It happens on 20 of 3,591 RF-40
+    points with a history and 9 of 3,858 RF-49 points (values over 1.25 m, so a lower bound).
+    This predates RF-49 and does not explain the difference. Changing it would change earlier
+    configs' prompts, so it is reported, not fixed.
+- **RF-45's keyword coder** (`rf49_analysis/coder/`), reliable rules only: own frame 23 of 2,955,
+  absolute 8 of 3,143. It reads left and right, so it cannot see the wall errors the hand check
+  found.
+- **`analysis.menu` gained section 9** (the two first options as a pair; the lone little step by
+  layout) and the hand check's Fisher test, with 1 more test. The suite: **135 passed**.
+
+### 2026-11-27 16:17 to 16:25 UTC — the report and the documents
+- `runs/rf49_analysis/report.md`, modelled on RF-52's.
+- Added in the report: the grid against the continuous menu on the same 256 silent sessions. The grid
+  resolved 223 (own) and 216 (absolute), the menu 136 and 79; paired 103 to 16 and 150 to 13. So
+  the grid's gains are the grid's, not the menu's: RF-52's task 3.
+- RF-52's "yellow wall" lean is wall b too (`resolve_grid_abs_v1`: a blue, b yellow), so it is the
+  same lean as here.
+- Factor models were not run [my choice]: the gate failed, and the sessions are kept.
+- Updated:
+  - `README.md` (RF-49's row; RF-52's row now cites RF-49 and task 3's decision);
+  - `llm_negotiation/README.md`;
+  - `analysis/README.md` (`analysis.menu`);
+  - `docs/action-space.md` (new section 7.2; task 3's and the colours' decisions recorded);
+  - `CLAUDE.md` (balance USD 1.59);
+  - `.gitignore` (RF-49's replay interaction logs, as RF-40's).
+
 ## Open questions / risks
 - The swap does not separate the colour's name from its listing order or from being the reference
   wall (see above).
 - 32 more sessions than "same size" (the counterfactual pairs in both halves).
 
 ## Summary (fill in at the end)
+- RF-49 ran: 1,120 sessions, USD 1.024 of a USD 2.00 cap; balance USD 1.59.
+- The gate fails in every config: own 0.49, absolute 0.31 and 0.30; RF-40 passed at 0.64.
+- The menu does worse than RF-40's free steps in both frames, paired with RF-40:
+  - silent 0.53 and 0.31 against 0.64;
+  - talk 0.34 and 0.26 against 0.59.
+- Causes:
+  - "carry on" is a first choice for a third of agents;
+  - a lone "a little" (0.47 m) does not clear two 0.5 m bodies;
+  - in the absolute frame both lean to the -y wall, by place, not colour.
+- Hallucinated (hand check, 75 per frame): own 0.01, absolute 0.11.
+- Two older prompt issues are reported, not fixed: cumulative history lines, and an occasionally
+  impossible history distance.
