@@ -128,7 +128,30 @@ def test_a_run_is_loaded_paired_and_the_walls_counted(tmp_path):
     # 0.77 m from the first-named wall (a): the nearer wall is a; both moved towards b.
     assert summary["nearer"]["abs"] == {"layout=aligned|silent": {"towards_farther": 8}}
     assert summary["pass_distance"]["abs|silent"]["n"] == 2 and summary["pass_distance"]["abs|silent"]["median_m"] == 0.9
-    assert "## 3. The walls" in M.markdown(summary)
+    # Both stepped a little towards one wall in every session: two resolved (the swap), two collided.
+    assert summary["first_options"]["abs|silent"] == {"aside_little + aside_little (same wall)": {"sessions": 4, "resolved": 2, "collision": 2}}
+    assert "rf40|silent" not in summary["first_options"]
+    text = M.markdown(summary)
+    assert "## 3. The walls" in text and "## 9. The first plans as options" in text
+
+
+def test_option_kinds_and_a_lone_little_step(tmp_path):
+    assert [M.option_kind(a) for a in ("step a little to your left", "step well towards the blue wall", "carry on",
+                                       "step back", "slow down a lot", None)] == \
+        ["aside_little", "aside_well", "carry_on", "back", "slow_or_stop", "unreadable"]
+    t = "resolve_menu_v1"
+    own = experiment(tmp_path / "own", t, [
+        ("S_c1_r1", "silent", True, "", [point(0, 1, "step a little to your left", "left", t), point(1, 1, "carry on", "none", t)]),
+        ("S_c1_r2", "silent", False, "", [point(0, 1, "carry on", "none", t), point(1, 1, "step a little to your right", "right", t)]),
+        ("S_c1_r3", "silent", False, "", [point(0, 1, "step a little to your right", "right", t),
+                                          point(1, 1, "step a little to your left", "left", t)]),
+    ])
+    sessions = M.load(own, "own")
+    assert M.lone_step(sessions) == {"layout=aligned|stepped_left": {"sessions": 1, "resolved": 1},
+                                     "layout=aligned|stepped_right": {"sessions": 1, "resolved": 0}}
+    pairs = M.first_options(sessions)
+    assert pairs["aside_little + carry_on"] == {"sessions": 2, "resolved": 1, "collision": 1}
+    assert pairs["aside_little + aside_little (opposite own sides)"] == {"sessions": 1, "resolved": 0, "collision": 1}
 
 
 def test_a_session_twice_in_one_arm_is_refused(tmp_path):

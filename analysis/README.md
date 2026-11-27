@@ -44,6 +44,14 @@ and talk (who changed side, whether a side was said or pointed to); each agent's
 across a cell's repeats against a weighted coin; and the side against the room the agent was told
 it had and the debrief's `side_basis`. Head-on cases only.
 
+**The menu against free steps** (issue #138, RF-49): `python -m analysis.menu --rf40 <RF-40's run>
+--own <own frame> --abs <absolute, blue at +y> --swap <absolute, yellow at +y> --out <folder>`
+pairs RF-49's three runs with RF-40's 256 design sessions per condition (the swap's r1 and r2 are
+RF-40's r3 and r4; counterfactual pairs left out) and writes `menu.md` and `menu.json`: the rates
+paired with RF-40 (McNemar), the dance at the start, the walls by place and by colour, the nearer
+wall, the replies, the pass distance against H2, talk, the two first options as a pair, and the
+hand check (`hand_check_sheet.md`; scored from `hand_judgements.json` in RF-52's format).
+
 An `outcomes.csv` written before issue #63 lacks two kinds of column the analysis needs (what each
 agent was told of the other, and the encounter's order). Running its experiment again rebuilds its
 tables from the session records, with no LLM call; the analysis says so when it meets one.

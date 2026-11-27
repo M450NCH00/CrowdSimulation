@@ -34,6 +34,12 @@ geometries, 4 repeats), and each arm has each of them once. Written to ``menu.js
    resolved sessions, from ``plan_only``'s ``trajectory.csv``; and the share within H2's tolerance
    (0.93 m, within one SD of 0.17, ``docs/human-targets.md``).
 7. **Talk**: messages that name a side or a wall, and what the speaker and the listener did.
+8. **The hand check** (RF-45's definition, scored as RF-52 did), with Fisher's exact test of the
+   own frame's headline share against the absolute frame's.
+9. **The first plans as options** (menu arms): the two first options as a pair of kinds, and how
+   each pair came out; and the sessions where one person stepped a little and the other carried
+   on, by layout and the side stepped to. "A little" is 0.47 m, under two half-bodies (0.5 m), so
+   a lone little step from an aligned start does not clear the other on its own.
 
 Standard library only; it never imports negsim (``analysis/README.md``).
 
@@ -328,6 +334,57 @@ def talk(sessions: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     return dict(out)
 
 
+def option_kind(action: Optional[str]) -> str:
+    """A menu option as a kind: aside a little or well, carry on, step back, or slowing and stopping."""
+    if action is None:
+        return "unreadable"
+    if action.startswith("step a little"):
+        return "aside_little"
+    if action.startswith("step well"):
+        return "aside_well"
+    return {"carry on": "carry_on", "step back": "back"}.get(action, "slow_or_stop")
+
+
+def first_options(sessions: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    """The two first plans as a pair of option kinds (menu arms), and how each pair came out. Two
+    moves aside are split by direction: in the own frame the same own side makes room; in the
+    absolute frame the same wall does not."""
+    out: dict[str, Counter] = defaultdict(Counter)
+    for s in sessions:
+        firsts = {agent: decisions[0] for agent, decisions in s["agents"].items() if decisions}
+        if len(firsts) < 2:
+            key = "only one asked"
+        else:
+            a, b = firsts[0], firsts[1]
+            kinds = sorted((option_kind(a["action"]), option_kind(b["action"])))
+            key = " + ".join(kinds)
+            if all(k.startswith("aside") for k in kinds):
+                if a["wall"] is not None and b["wall"] is not None:
+                    key += " (same wall)" if a["wall"] == b["wall"] else " (different walls)"
+                else:
+                    key += " (same own side)" if a["side"] == b["side"] else " (opposite own sides)"
+        out[key]["sessions"] += 1
+        out[key]["resolved"] += bool(s["resolved"])
+        out[key]["collision"] += bool(s["collision"])
+    return {k: dict(v) for k, v in sorted(out.items(), key=lambda kv: (-kv[1]["sessions"], kv[0]))}
+
+
+def lone_step(sessions: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    """Sessions whose first plans are one 'step a little' and one 'carry on', by layout and the
+    side (own frame) the step went to. In the 20 cm layout the other starts on each person's right."""
+    out: dict[str, Counter] = defaultdict(Counter)
+    for s in sessions:
+        firsts = [decisions[0] for decisions in s["agents"].values() if decisions]
+        kinds = sorted(option_kind(d["action"]) for d in firsts)
+        if kinds != ["aside_little", "carry_on"]:
+            continue
+        mover = next(d for d in firsts if option_kind(d["action"]) == "aside_little")
+        key = f"{s['geometry']}|stepped_{mover['side']}"
+        out[key]["sessions"] += 1
+        out[key]["resolved"] += bool(s["resolved"])
+    return {k: dict(v) for k, v in sorted(out.items())}
+
+
 def _by(sessions: Iterable[Mapping[str, Any]], *keys: str) -> dict[tuple, list]:
     groups: dict[tuple, list] = defaultdict(list)
     for s in sessions:
@@ -343,7 +400,7 @@ def summarise(arms: Mapping[str, Sequence[Mapping[str, Any]]]) -> dict[str, Any]
         if twice:
             raise MenuError(f"{name}: {len(twice)} session(s) of RF-40 appear more than once, e.g. {twice[0]}")
     out: dict[str, Any] = {"arms": {}, "paired": {}, "by_layout": {}, "walls": {}, "nearer": {}, "replies": {},
-                           "pass_distance": {}, "talk": {}}
+                           "pass_distance": {}, "talk": {}, "first_options": {}, "lone_step": {}}
     keyed = {name: {c: {s["rf40_id"]: s for s in sessions if s["condition"] == c} for c in CONDITIONS} for name, sessions in arms.items()}
     for name, sessions in arms.items():
         for condition in CONDITIONS:
@@ -351,6 +408,10 @@ def summarise(arms: Mapping[str, Sequence[Mapping[str, Any]]]) -> dict[str, Any]
             out["arms"][f"{name}|{condition}"] = rates(group)
             out["replies"][f"{name}|{condition}"] = replies(group)
             out["pass_distance"][f"{name}|{condition}"] = pass_distance(group)
+            if name != "rf40":  # RF-40's free steps have no options
+                out["first_options"][f"{name}|{condition}"] = first_options(group)
+        if name != "rf40":
+            out["lone_step"][name] = lone_step(sessions)
         out["nearer"][name] = nearer(sessions)
         for (condition, layout), group in sorted(_by(sessions, "condition", "geometry").items()):
             out["by_layout"][f"{name}|{condition}|{layout}"] = rates(group)
@@ -504,6 +565,19 @@ def markdown(summary: Mapping[str, Any]) -> str:
                   "| Arm | Headline (1, 2, 5, 7) | Self-contradiction (3, 4) | Side error | Move against the geometry |", "| --- | --- | --- | --- | --- |"]
         for arm, h in summary["hand_check"].items():
             lines.append(f"| {arm} | {_pct(h['headline'])} | {_pct(h['self_contradiction'])} | {_pct(h['side_error'])} | {_pct(h['move_against_geometry'])} |")
+        if summary.get("hand_check_test") is not None:
+            lines += ["", f"Headline, own frame against absolute frame: Fisher's exact p = {_p(summary['hand_check_test'])}."]
+    if summary.get("first_options"):
+        lines += ["", "## 9. The first plans as options (menu arms)", "",
+                  "| Arm, condition | The two first options | Sessions | Resolved | Collision |", "| --- | --- | --- | --- | --- |"]
+        for key, pairs in summary["first_options"].items():
+            for pair, c in pairs.items():
+                lines.append(f"| {key} | {pair} | {c['sessions']} | {c.get('resolved', 0)} | {c.get('collision', 0)} |")
+        lines += ["", "One person stepped a little (0.47 m), the other carried on; in the 20 cm layout the other starts on the stepper's right:", "",
+                  "| Arm | Layout, side stepped to | Sessions | Resolved |", "| --- | --- | --- | --- |"]
+        for arm, groups in summary["lone_step"].items():
+            for key, c in groups.items():
+                lines.append(f"| {arm} | {key} | {c['sessions']} | {c.get('resolved', 0)} |")
     return "\n".join(lines) + "\n"
 
 
@@ -525,6 +599,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     hand = args.hand or args.out / "hand_judgements.json"
     if hand.is_file():
         summary["hand_check"] = score_hand(found, json.loads(hand.read_text(encoding="utf-8")))
+        own, abs_ = summary["hand_check"].get("own"), summary["hand_check"].get("abs")
+        if own and abs_ and own["headline"]["n"] and abs_["headline"]["n"]:
+            o, a = own["headline"], abs_["headline"]
+            summary["hand_check_test"] = round(fisher_exact(o["k"], o["n"] - o["k"], a["k"], a["n"] - a["k"]), 6)
     args.out.mkdir(parents=True, exist_ok=True)
     (args.out / "hand_check_sheet.md").write_text(hand_sheet(found, summary["hand_sample"]), encoding="utf-8")
     (args.out / "menu.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
