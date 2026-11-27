@@ -40,7 +40,52 @@ the action space together. RF-49 changes only the action space.
   grid's absolute frame. With blue always at +y, RF-49's absolute arm would confound that lean again,
   so counterbalancing the colours is now more than optional.
 
+### 2026-11-27, about 06:33 UTC — the user's decisions
+The user answered four questions (all "Recommended"):
+- **RF-47's choices accepted as built:** slow-downs of the usual speed; "carry on" as `[]`; the 0.05 m
+  wall margin; `resolve_debrief_v3`; the option sentences.
+- **RF-48's choices accepted as built:** the blue and yellow walls; both wall distances for the
+  agent; ahead/level/behind; the talk sentence.
+- **Counterbalance which colour is at +y, at the same size.**
+- **RF-52's task 3:** "Test bench now, RF-49 tests". The grid shapes how the continuous prompt is
+  written, no grid rule is carried over, and RF-49 tells whether the gain is the menu's.
+  Recorded in #141 and #138.
+
+### 2026-11-27 06:35 to 06:52 UTC — the counterbalance and the configs (mock only)
+(Times from the files and `date -u`: template 06:35, configs 06:39, tests 06:41.)
+- **How to counterbalance without changing existing code.** The design's repeats are the same
+  session (D14), except for who is asked first, which goes by parity (`experiment.first_asked`). So
+  the absolute frame is split over two configs with `repeats: 2` each (one odd and one even repeat).
+  One uses RF-48's template, the other the swapped one. The swapped config's r1 and r2 pair with
+  RF-40's r3 and r4.
+- **New template `resolve_menu_abs_swap_v1`** (frozen with `negsim.negotiation.freeze`) and table
+  `menu_table_abs_swap_v1.yaml`, both written by script (`scratchpad/make_swap.py`). The script
+  exchanges "blue" and "yellow" everywhere below RF-48's header.
+  - The options and the names in each sentence follow the walls (a first), so in the swap, yellow is
+    named first and is the wall positions are measured from.
+  - The swap therefore separates the name from the side, but not from the order of listing or from
+    being the reference wall. Flagged for the report.
+- **Configs** (`scratchpad/make_configs.py`), mock client, `cap_usd: 0.00` until the approval:
+  - `rf49_round1_head_on_menu.yaml`: RF-47's under its own name (544 sessions);
+  - `rf49_round1_head_on_menu_abs.yaml`: RF-48's with `repeats: 2` (288);
+  - `rf49_round1_head_on_menu_abs_swap.yaml`: the same with the swapped template (288).
+- **A dead end, kept for the record.** The first swap config dropped the counterfactual pairs, so
+  that they would run once. Checked against RF-40, 92 of its 256 sessions then met different
+  people: the balanced ethnicity draw is made over the units, and the pairs are units. The pairs are
+  now kept in both halves, which makes 16 sessions per condition more than RF-40's 272 (about 3%),
+  and all 1,120 sessions meet RF-40's people. Flagged to the user as a small departure from "same size".
+- **Tests** `tests/test_rf49_configs.py` (10), with RF-47's, RF-48's and the hygiene tests: **75 passed** (07:01 UTC):
+  - the swap template and table are RF-48's with the names exchanged;
+  - a session under the swap sends RF-48's prompts with the two words exchanged and carries out the
+    same plans, on both geometries, in silent and talk;
+  - the configs differ from RF-47's and RF-48's only as intended, and none is paid;
+  - every session is RF-40's, with the same people, cell and parity.
+  The first run failed only on a wrong record key (`plan`), and the prompts already matched.
+
 ## Open questions / risks
-- The flagged choices and the cap (above).
+- The cap (to be asked once the mock gives the call counts).
+- The swap does not separate the colour's name from its listing order or from being the reference
+  wall (see above).
+- 32 more sessions than "same size" (the counterfactual pairs in both halves).
 
 ## Summary (fill in at the end)
