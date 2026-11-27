@@ -2,17 +2,20 @@
 #
 #   python run_experiment.py configs/resolution/rf49_round1_head_on_menu.yaml --plan
 #   python run_experiment.py configs/resolution/rf49_round1_head_on_menu.yaml --out runs_mock/rf49_menu   # mock rehearsal
-#   python run_experiment.py configs/resolution/rf49_round1_head_on_menu.yaml --client deepseek --confirm --limit N   # paid, once approved
+#   python run_experiment.py configs/resolution/rf49_round1_head_on_menu.yaml --client deepseek --confirm --limit N   # paid pilot, off-peak
 #
 # RF-47's config (configs/resolution/round1_head_on_menu.yaml) with only the experiment name, the
-# description and the budget's note changed. The user accepted RF-47's choices as built on
+# description and the budget's cap changed. The user accepted RF-47's choices as built on
 # 2026-11-27 (slow-downs of the usual speed, "carry on" as [], the 0.05 m wall margin,
 # resolve_debrief_v3, the option sentences). Sessions pair with RF-40's session by session (the
 # same world and people; who is asked first by repeat parity, as in RF-40).
 #
-# NO PAID RUN until CLAUDE.md records the approval and cap for issue #138. RF-49's three configs
-# (this one, rf49_round1_head_on_menu_abs.yaml and rf49_round1_head_on_menu_abs_swap.yaml) share
-# that cap: each experiment's own cap counts only its own ledger lines, so the cap is split.
+# Paid runs approved for issue #138 only (CLAUDE.md, 2026-11-27): USD 2.00 over RF-49's three configs
+# (this one, rf49_round1_head_on_menu_abs.yaml and rf49_round1_head_on_menu_abs_swap.yaml). Each
+# experiment's own cap counts only its own ledger lines, so the 2.00 is split by the estimate, and
+# the three caps sum to it. A cap is part of the config a run resumes, so it is fixed before the
+# pilot; a config stopped at its cap finishes under a new experiment name with what remains.
+# The continuous runner has no peak-hours guard: start paid runs off-peak only.
 schema_version: 1
 layer: resolution
 experiment_name: rf49_round1_head_on_menu
@@ -132,6 +135,6 @@ llm:
   transport_retries: 2
 
 budget:
-  cap_usd: 0.00           # issue #138: no paid run is approved yet; the cap CLAUDE.md records for #138 goes here first
+  cap_usd: 0.95             # issue #138: approved by the user on 2026-11-27, USD 2.00 over RF-49's three configs (CLAUDE.md), split by the estimate: 0.95 own frame, 0.525 each absolute half
   ledger: spend_ledger.jsonl
   over_cap: stop_at_cap

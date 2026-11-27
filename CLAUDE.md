@@ -143,6 +143,8 @@ Budget:
   Checked again before issue #141's approval: **USD 2.96**, 2026-11-26 (no paid call since #129).
   After issue #141's run with its pilot (USD 0.3476 in the ledger, cap 0.80 over both frames): **USD 2.62**,
   checked 2026-11-26.
+  Checked again before issue #138's approval: **USD 2.61**, 2026-11-27 (no paid call since #141; the
+  endpoint shows two decimals, and 2.96 less 0.3476 is 2.6124).
 
 ### Phase 1 (on hold): the behaviour dataset
 The task from the first supervisor meeting, on hold since the second meeting.
@@ -249,7 +251,7 @@ The user's notes from the meeting, word for word:
     RF-43), the grid's cells and clash rule, when RF-41 runs, and the order of work.
 
 ## Pending sign-offs
-Items 1 and 5 are still pending (item 1 was approved for issues #64, #65, #98, #100, #101, #104, #66, #67, #108, #110, #115, #117, #119, #127, #129 and #141 only).
+Items 1 and 5 are still pending (item 1 was approved for issues #64, #65, #98, #100, #101, #104, #66, #67, #108, #110, #115, #117, #119, #127, #129, #141 and #138 only).
 **Do not treat any of them as approved** until the user records the
 supervisor's answer in this file, with a date. Items 2 and 3, the ethics
 sign-offs for perceived attractiveness and real ethnicity, were recorded by the
@@ -372,6 +374,15 @@ used in this track). Numbers in brackets are the decisions of track issue #55.
      share of sessions the agents' own plans resolve, with the grid's measures standing for `plan_only`
      and the ORCA baselines reported as not available. RF-49 (#138) is **not** approved: it needs its own
      approval and cap.
+   - **Approved for issue #138 only, 2026-11-27:** the user approved paid runs for RF-49's run of round 1's
+     head-on sessions with the menu, in the agent's own frame and in an absolute frame (#138), and only for
+     it, choosing "Full run, cap USD 2.00 (Recommended)": a cap of **USD 2.00** on that issue's own calls,
+     one total over its three experiments together (`rf49_round1_head_on_menu`, `rf49_round1_head_on_menu_abs`
+     and `rf49_round1_head_on_menu_abs_swap`; each config's own cap set to what remains of the 2.00 when it
+     starts). 1,120 sessions, silent and talk, about USD 1.45 to 1.77 off-peak from the mock's call counts
+     at RF-40's measured cost per call (`WORK_LOG-138.md`), run off-peak, a pilot first. The balance was
+     USD 2.61. The same day the user accepted RF-47's and RF-48's choices as built and chose to
+     counterbalance which colour is at +y at the same size (`resolve_menu_abs_swap_v1`).
 2. **Approved by the supervisor, 2026-10-24** — Ethics sign-off for perceived
    attractiveness as a factor (#55, 3). *The user decided on 2026-10-24* that
    attractiveness (both directions) is **in** RF-10's design, because bias can

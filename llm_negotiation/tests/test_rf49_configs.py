@@ -110,10 +110,13 @@ def test_rf49s_absolute_configs_are_rf48s_split_in_two_by_repeat_with_the_names_
     assert a.templates == rf48.templates and s.templates == {**rf48.templates, "core": "resolve_menu_abs_swap_v1"}
 
 
-def test_no_rf49_config_is_paid_until_its_cap_is_recorded():
+def test_rf49s_caps_sum_to_the_cap_claude_md_records_and_the_client_is_chosen_on_the_command_line():
+    # CLAUDE.md, 2026-11-27: USD 2.00 for issue #138, over its three experiments together.
+    caps = [load_yaml(resolve_path(path))["budget"]["cap_usd"] for path in (OWN, ABS, SWAP)]
+    assert caps == [0.95, 0.525, 0.525] and round(sum(caps), 6) == 2.00
     for path in (OWN, ABS, SWAP):
         raw = load_yaml(resolve_path(path))
-        assert raw["llm"]["client"] == "mock" and raw["budget"]["cap_usd"] == 0.0
+        assert raw["llm"]["client"] == "mock" and raw["budget"]["over_cap"] == "stop_at_cap"
 
 
 def test_every_rf49_session_is_rf40s_with_the_same_people():

@@ -82,8 +82,36 @@ The user answered four questions (all "Recommended"):
   - every session is RF-40's, with the same people, cell and parity.
   The first run failed only on a wrong record key (`plan`), and the prompts already matched.
 
+### 2026-11-27 07:01 to 08:55 UTC — the rehearsal, the estimate, the approval
+- **Mock rehearsals** (`runs_mock/rf49_menu`, `rf49_abs`, `rf49_abs_swap`, gitignored): 544, 288 and
+  288 sessions completed, USD 0. The background job reported "failed" only because of my closing
+  `tail` over several files; every log ends "completed: N session(s) run".
+- **Mock calls:** own frame silent 2,359 and talk 2,531; absolute silent 1,244 + 1,291 and talk
+  1,269 + 1,410. 10,104 in all.
+- **RF-40's measured cost per call** (`spend_ledger.jsonl`, off-peak): silent USD 0.375 over 2,265
+  calls (0.000166), talk USD 0.445 over 2,432 calls (0.000183). RF-40's real silent sessions made
+  8.3 calls each; the mock makes 8.7 for RF-49's own frame.
+- **Estimate:** own frame USD 0.86, absolute frame USD 0.91, **USD 1.77 in all** at RF-40's cost per
+  call. It would be about USD 1.45 if a menu reply were about 50 output tokens shorter (not measured).
+- **Balance:** USD 2.61 (07:34 UTC, DeepSeek's balance endpoint, the key not printed). 2.96 less RF-52's
+  0.3476 is 2.6124.
+- **The user approved** "Full run, cap USD 2.00 (Recommended)" for this issue only. Recorded in
+  `CLAUDE.md` (Pending sign-offs, item 1, and the balance under Budget).
+- **Caps:**
+  - The continuous runner's resume check compares the whole config, budget included
+    (`experiment._comparable` leaves out only the source), so each cap is fixed before its pilot.
+  - Each experiment's cap counts only its own ledger lines, so the 2.00 is split by the estimate:
+    0.95 for the own frame and 0.525 for each absolute half. The three sum to 2.00 (tested).
+  - If a config stops at its cap, the rest runs under a new experiment name with what remains (as in
+    #100).
+- **No peak guard in the continuous runner** (RF-52's was in the grid's own entry point): I start the
+  paid runs at 10:00 UTC myself.
+- **DeepSeek's prices page** (fetched about 08:50 UTC) matches `configs/llm/deepseek_pricing.yaml`:
+  - DeepSeek-V4.1-Flash-1017; 0.003 / 0.15 / 0.60 off-peak, double at peak;
+  - peak 01:00 to 04:00 and 06:00 to 10:00 UTC, Monday to Friday;
+  - the only newer note is about the search and fetch tools (not used here).
+
 ## Open questions / risks
-- The cap (to be asked once the mock gives the call counts).
 - The swap does not separate the colour's name from its listing order or from being the reference
   wall (see above).
 - 32 more sessions than "same size" (the counterfactual pairs in both halves).
