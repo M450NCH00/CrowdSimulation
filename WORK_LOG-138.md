@@ -261,3 +261,9 @@ The user answered four questions (all "Recommended"):
 - Hallucinated (hand check, 75 per frame): own 0.01, absolute 0.11.
 - Two older prompt issues are reported, not fixed: cumulative history lines, and an occasionally
   impossible history distance.
+
+### 2026-11-27 16:40 UTC — PR, #55, #138
+- PR #152 opened into `feat/129-rf40-turn-taking-talk`. The full negsim suite was started, then
+  stopped at the user's request (they are shutting down); **the user will run it next session.**
+  The PR says so.
+- #55: RF-49 ticked, with the PR and findings; the "Next" paragraph updated. #138: a results comment.
