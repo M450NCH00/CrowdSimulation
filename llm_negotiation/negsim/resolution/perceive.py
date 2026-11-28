@@ -61,7 +61,7 @@ from .prompt import SIMULATION_CORE_TEMPLATE, CoreTemplate
 from .scenario import Scenario
 from .view import (
     CHANGES, DETAIL_FULL, DETAIL_SHORT, FRAME_FACING, FRAME_SAME_WAY, MOTION_BACKING, MOTION_STILL, MOTION_WALKING,
-    OUTCOMES, SIGNALS, WALL_A, WALL_B, Block, Done, Frame, Heard, Me, SeenPerson, TimeToMeet, View,
+    OUTCOMES, SIGNALS, WALL_A, WALL_B, Block, Done, Frame, Heard, Me, SeenPerson, Sideways, TimeToMeet, View,
 )
 
 LLM_VIEW_CONFIG = PACKAGE_ROOT / "configs" / "resolution" / "llm_view_v1.yaml"
@@ -150,6 +150,9 @@ class Body:
     facing_rad: float  # where they look (see the module's assumptions)
     radius_m: float
     backing: bool = False
+    #: Issue #155: the direction their path takes where they are (``body_of``); None where nobody
+    #: worked it out (the grid's bodies), and then their facing stands for it.
+    path_rad: Optional[float] = None
 
     @property
     def speed_mps(self) -> float:
@@ -168,7 +171,7 @@ def body_of(agent: Any) -> Body:
     moving = not _still(math.hypot(vx, vy))
     backing = moving and vx * math.cos(path_rad) + vy * math.sin(path_rad) < 0.0
     facing = heading_of(agent) if moving and not backing else path_rad
-    return Body(agent.agent_id, agent.pose.xy, (vx, vy), facing, agent.spec.radius, backing)
+    return Body(agent.agent_id, agent.pose.xy, (vx, vy), facing, agent.spec.radius, backing, path_rad)
 
 
 def _left(rad: float) -> Vec:
@@ -325,6 +328,7 @@ class Decision:
 class _Look:
     time_s: float
     seen: dict[int, Body]
+    me: Optional[Body] = None  # issue #155: the agent itself at that look
 
 
 @dataclass
@@ -444,7 +448,7 @@ class Perceiver:
             seen = tuple(replace(p, from_a_m=from_a - (by_id[a].position[1] - observer.position[1]))
                          for p, a in zip(seen, (b.agent_id for b in visible)))
             history = tuple(replace(done, left_wall=left_wall_of(decision.facing_rad)) for done, decision in zip(history, self.decisions))
-        self.looks.append(_Look(time_s, {b.agent_id: b for b in visible}))
+        self.looks.append(_Look(time_s, {b.agent_id: b for b in visible}, observer))
         return View(
             agent_id=self.agent_id,
             decision_point=len(self.looks),
@@ -496,6 +500,8 @@ class Perceiver:
             changes=changes,
             factor_lines=tuple((factor_lines or {}).get(body.agent_id, ())),
             pairwise_lines=tuple((pairwise_lines or {}).get(body.agent_id, ())),
+            sideways=sideways_since(last.me, last.seen[body.agent_id], observer, body)
+            if self.core.sideways_gap and last is not None and last.me is not None and body.agent_id in last.seen else None,
         )
 
     def _signal_of(self, agent: int, time_s: float, since: float, exchange: Optional[Exchange]) -> str:
@@ -550,6 +556,27 @@ def frame_of(listener: Body, speaker: Body) -> Optional[str]:
     if angle <= FRAME_WITHIN_DEG + _EPS:
         return FRAME_SAME_WAY
     return None
+
+
+def sideways_since(me_then: Body, them_then: Body, me_now: Body, them_now: Body) -> Sideways:
+    """Issue #155 (RF-54): the sideways gap between the agent and someone, at its last look and now,
+    and how far each moved across in between (``view.Sideways``).
+
+    *Across* is across the agent's path now (``Body.path_rad``; its facing where that is unknown),
+    positive to its left. Not across its direction of travel: mid-sidestep that is turned by up to
+    30 degrees, and the metres between the two along the corridor would read as sideways. [design,
+    the assistant's: in a corridor the path is the corridor's line, so the gap is across the corridor]"""
+    left = _left(me_now.path_rad if me_now.path_rad is not None else me_now.facing_rad)
+
+    def across_of(a: Vec, b: Vec) -> float:
+        return (b[0] - a[0]) * left[0] + (b[1] - a[1]) * left[1]
+
+    return Sideways(
+        gap_then_m=across_of(me_then.position, them_then.position),
+        gap_now_m=across_of(me_now.position, them_now.position),
+        moved_me_m=across_of(me_then.position, me_now.position),
+        moved_them_m=across_of(them_then.position, them_now.position),
+    )
 
 
 def changes_since(then: Body, now: Body, facing_rad: float, settings: LLMViewSettings) -> tuple[str, ...]:
