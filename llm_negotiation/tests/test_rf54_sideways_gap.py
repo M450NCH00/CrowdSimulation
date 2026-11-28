@@ -203,3 +203,11 @@ def test_every_rf54_session_is_rf40s_silent_session_with_the_same_people():
     for key, session in rf54.items():
         theirs = rf40[key]
         assert dict(session.personas) == dict(theirs.personas) and session.cell == theirs.cell and session.repeat == theirs.repeat
+
+
+def test_the_cap_is_the_one_claude_md_records_for_issue_155():
+    from negsim.configutil import REPO_ROOT, load_yaml, resolve_path
+
+    recorded = (REPO_ROOT / "CLAUDE.md").read_text(encoding="utf-8")
+    assert "**Approved for issue #155 only, 2026-11-28:**" in recorded and "**USD 0.60** on" in recorded
+    assert load_yaml(resolve_path("configs/resolution/rf54_round1_head_on_sideways_gap.yaml"))["budget"]["cap_usd"] == 0.60

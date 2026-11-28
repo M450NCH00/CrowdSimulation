@@ -152,6 +152,8 @@ Budget:
   checked 2026-11-28.
   After issue #144's stage 2 pilot (USD 0.7702 in the ledger, cap 1.00): **USD 0.61**,
   checked 2026-11-28.
+  Topped up by the user before issue #155's run (USD 5): **USD 5.61**, checked 2026-11-28
+  (5.61 topped up, 0.00 granted).
 
 ### Phase 1 (on hold): the behaviour dataset
 The task from the first supervisor meeting, on hold since the second meeting.
@@ -263,7 +265,7 @@ on". Numbered SV15 (architecture section 8.8; recorded 2026-11-28, issue #144) a
     RF-43), the grid's cells and clash rule, when RF-41 runs, and the order of work.
 
 ## Pending sign-offs
-Items 1 and 5 are still pending (item 1 was approved for issues #64, #65, #98, #100, #101, #104, #66, #67, #108, #110, #115, #117, #119, #127, #129, #141, #138 and #144 (stage 1 and the stage 2 pilot) only).
+Items 1 and 5 are still pending (item 1 was approved for issues #64, #65, #98, #100, #101, #104, #66, #67, #108, #110, #115, #117, #119, #127, #129, #141, #138, #144 (stage 1 and the stage 2 pilot) and #155 only).
 **Do not treat any of them as approved** until the user records the
 supervisor's answer in this file, with a date. Items 2 and 3, the ethics
 sign-offs for perceived attractiveness and real ethnicity, were recorded by the
@@ -410,6 +412,13 @@ used in this track). Numbers in brackets are the decisions of track issue #55.
      (`configs/resolution/rf53_stage2_pilot_thinking.yaml`; about USD 0.6 to 0.8 off-peak from stage 1's
      reasoning length, `WORK_LOG-144.md`), run off-peak. The balance was USD 1.38. **The full stage 2 is not
      approved.**
+   - **Approved for issue #155 only, 2026-11-28:** the user approved paid runs for RF-54's run of RF-40's
+     silent head-on sessions under `resolve_v11` (the sideways gap since the last look, #155), and only for
+     it, answering "Yes go with your recommendation": all **272 sessions**, with a cap of **USD 0.60** on
+     that experiment's own calls (`experiment_name: rf54_round1_head_on_sideways_gap`; thinking off,
+     everything else RF-40's, `configs/resolution/rf54_round1_head_on_sideways_gap.yaml`; about USD 0.38 to
+     0.46 off-peak from RF-40's measured cost per call, `WORK_LOG-155.md`), run off-peak, a pilot first.
+     The user topped up USD 5 before it; the balance was USD 5.61.
 2. **Approved by the supervisor, 2026-10-24** — Ethics sign-off for perceived
    attractiveness as a factor (#55, 3). *The user decided on 2026-10-24* that
    attractiveness (both directions) is **in** RF-10's design, because bias can
