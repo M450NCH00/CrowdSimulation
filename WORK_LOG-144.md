@@ -224,6 +224,13 @@ off and 10 times with it on, on `deepseek-flash`: 400 calls.
 - **Report:** `runs/rf53_stage2_pilot_thinking/pilot_report.md`. The full stage 2 is projected at
   about USD 5 off-peak for silent and talk, and about 13 hours of calls `[inference]`.
 
+### 2026-11-28 07:29 to 08:07 UTC — full suite before the merge
+- The user asked to merge PR #154. The last full run was before the pilot's code change
+  (`llm.timeout_s`), so the whole negsim suite was rerun on `530fc3ee5`: **2,509 passed, 21
+  skipped, 0 failed** (37 min 56 s).
+- PR #154 retitled and its description updated for the stage 2 pilot, then merged into `main`. Issue
+  #144 stays open: the full stage 2 is neither approved nor dropped.
+
 ## Open questions / risks
 - **`max_tokens` and the reasoning:** the pilot measured it (above). Cut-off replies count as `unclear`.
   Earlier, before the pilot: inferred, not stated by DeepSeek. If 8,000 is too small,
