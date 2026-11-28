@@ -1015,6 +1015,11 @@ later run.
 
 **SV14. See how the YC Labs "Agents in Games" study models its agents' decisions.** RF-44 (#133).
 
+**SV15. Run the experiment with thinking mode on.** Not in the notes above: the user reported it on
+2026-11-25, after RF-43, in their own words: "we can try to run the experiment with thinking mode
+on". Recorded on 2026-11-28 (issue #144, task 1). A suggestion, like SV7 to SV14. RF-53 (#144):
+stage 1, RF-43's static probes with thinking off and on; stage 2, RF-40's sessions with thinking on.
+
 The user's decisions on how to act on them (2026-11-25, on their own authority) are numbered
 **AS1 to AS9** and recorded in `action-space.md`:
 

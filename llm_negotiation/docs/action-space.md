@@ -27,8 +27,11 @@ The decisions are **the user's**, made on 2026-11-25 on their own authority, and
 | SV12 | the share of hallucinated decisions | RF-45 (#134), then every later run |
 | SV13 | behave like the person, with no need to speak like them | RF-46 (#135) |
 | SV14 | how the YC Labs game agents' decisions are modelled | RF-44 (#133) |
+| SV15 | run with thinking mode on (reported by the user on 2026-11-25, not in the notes) | RF-53 (#144) |
 
-All eight are recorded as **suggestions** (the notes say "can ..."), not instructions.
+All eight are recorded as **suggestions** (the notes say "can ..."), not instructions. So is SV15,
+added on 2026-11-28 (issue #144): the supervisor said it in the same meeting, by the user's report of
+2026-11-25, but it is not in the notes `CLAUDE.md` records word for word.
 
 ## 2. The variants
 

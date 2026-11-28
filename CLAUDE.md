@@ -238,6 +238,11 @@ The user's notes from the meeting, word for word:
 > 7. Can tell the agent you are supposed to behave like this person, but no need to speak like the person
 > 8. My professor said I can take a look at this and see how they model the agent's decisions: https://labs.ycombinator.com/projects/games/index.html#mindustry-bloopers
 
+*Reported by the user on 2026-11-25, after RF-43, and not part of the notes above:* the supervisor
+also said in this meeting, in the user's words, "we can try to run the experiment with thinking mode
+on". Numbered SV15 (architecture section 8.8; recorded 2026-11-28, issue #144) and acted on in RF-53
+(#144).
+
 **Summary (not the supervisor's words; the notes above are the record):**
 - These are suggestions ("can ..."), not instructions. They are numbered SV7 to SV14 in
   `llm_negotiation/docs/architecture.md`, section 8.8, and are acted on in RF-42 to RF-52
