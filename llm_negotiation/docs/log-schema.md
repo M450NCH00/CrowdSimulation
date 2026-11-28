@@ -1,4 +1,4 @@
-# Log schema, version 1
+# Log schema, version 5
 
 The logs are this platform's research output: rule extraction will be done from them. This
 file says what every file and field means. The machine-checkable part of the schema, the
@@ -8,6 +8,27 @@ folder against it, and the runner runs that check on every folder it writes.
 **Versioning.** `log_schema_version` is written into every `config.json` and
 `outcome.json`. Raise `LOG_SCHEMA_VERSION` whenever a field is added, removed, renamed or
 changes meaning, and add a line to the change log at the end of this file.
+
+**Two kinds of run.** Since version 2 every `config.json` says which kind of run it
+describes, in `run_kind`:
+
+| `run_kind` | What it is | Its files |
+|---|---|---|
+| `negotiation` | A run of issue #24: two agents, an optional dialogue, the arbiter. | `config.json`, `conversation.jsonl`, `trajectory.csv`, `outcome.json`, `transcript.md` |
+| `avoidance` | A run of the avoidance layer of issue #26: any number of agents under ORCA and directives, which since version 3 may come from rules (issue #28). | `config.json`, `trajectory.csv`, `interactions.jsonl`, `pair_interactions.jsonl` (version 3), `events.jsonl`, `outcome.json` |
+
+The sections from "Layout" to "`summary.csv`" describe a negotiation run; they are those of
+version 1, with the one new field. The section "Avoidance runs" describes the other kind.
+The two have files of the same name with different contents; `run_kind` says which is
+which. Versions 3 to 5 changed only the avoidance run. The folder of a rule-generation
+experiment (issue #30) is not a run of either kind; section "Rule-generation experiments"
+describes it.
+
+**Old folders stay valid.** A folder written under version 1 has no `run_kind` and is a
+negotiation run. `validate_run_dir` checks a folder against the version its own
+`config.json` declares (and its perception records against the perception version it
+declares), and a test runs it over every committed run folder. The 66 run folders of issue
+#24 are version 1 and the 46 of issue #26 version 2; none was rewritten.
 
 ## Layout
 
@@ -37,7 +58,8 @@ The fully resolved configuration: defaults filled in, overrides applied.
 
 | Field | Meaning |
 |---|---|
-| `log_schema_version` | 1 |
+| `log_schema_version` | 5 (1 in a folder written before issue #26; 2, 3 or 4 in one written by issues #26, #28 and #30) |
+| `run_kind` | `negotiation`. Absent from a version 1 folder. |
 | `experiment_name`, `run_id`, `run_index` | Which experiment; this run's id (also its folder name); its position in the design, from 1 |
 | `condition` | `C0` to `C4` |
 | `seed` | The run's seed: the design's base seed plus `run_index`. Governs the simulator's random choices only (task phrasing, a random tie-break). The model cannot be seeded. |
@@ -187,13 +209,586 @@ empty for persona conditions; usage (`llm_calls`, `parse_failures`, `prompt_toke
 
 Empty cells mean null. Booleans are `true` and `false`.
 
+## Avoidance runs
+
+A run of the avoidance layer (`architecture.md`, section 6). It calls no model, so it has
+no conversation and no transcript, and nothing is added to the spend ledger.
+
+```
+llm_negotiation/
+  runs/<experiment_name>/
+    summary.csv                      one row per run
+    <run_id>/
+      config.json                    everything that defines the run
+      trajectory.csv                 one row per agent per time step
+      interactions.jsonl             one line per interaction: the perception record and the directive
+      pair_interactions.jsonl        one line per pair interaction: its outcome, and every rule evaluation and match (version 3)
+      events.jsonl                   one line per event: violations, handoffs, yields, near misses, collisions, rule events
+      outcome.json                   what happened: every metric, per agent and in total
+```
+
+The conventions are those above. Agents are numbered from 0; a JSON object keyed by agent
+uses the number as a string.
+
+### `config.json` of an avoidance run
+
+| Field | Meaning |
+|---|---|
+| `log_schema_version`, `run_kind` | 5 (2 in a folder of issue #26, 3 in one of issue #28, 4 in one of issue #30), `avoidance` |
+| `experiment_name`, `run_id`, `run_index` | Which experiment; the id of this run (also its folder name); its position in the design, from 1 |
+| `seed`, `repeat` | The seed of the run, which seeds a random tie-break by the arbiter and, under a perturbed baseline, the perturbation; which repetition, from 1. How the seed was derived is `seeding` |
+| `seeding` | Version 4. `paired`: the design's base seed plus `repeat`, the same for every level of every factor, so that a baseline run and a rule run of one scenario instance share their seed (the default since issue #30, `baseline.md`, section 6). `per_run`: the base seed plus `run_index`, as every run of versions 2 and 3 was seeded |
+| `created_utc`, `git`, `software` | As for a negotiation run |
+| `scenario_file` | The scenario YAML used |
+| `variant` | The level of each factor of the design, e.g. `{"layout": "offset", "condition": "both_left"}` |
+| `scenario` | The resolved scenario: `schema_version` (2), `type`, `dt_s`, `max_time_s`, `goal_tolerance_m`, `arrival`, `dynamics`, `seed` (of the randomness in the scenario itself), `on_collision`, `geometry`, `agent_types`, `orca` (`tie_break`), `navigation` (`lookahead_m`), `neighbour_search` (`cell_size_m`), `single_file` (`safety_margin_m`, `segments`), `deadlock`, `metrics` (the thresholds), `n_agents`, `obstacles`, and `agents` |
+| `scenario.agents[]` | Per agent: `agent_id`, `agent_type`, `group`, `side`, `radius_m`, `preferred_speed_mps`, `max_speed_mps`, `initial_speed_mps`, `sensing_radius_m`, `max_neighbours`, `time_horizon_s`, `time_horizon_obst_s`, `start`, `goal`, desired `path`, `path_length_m`, and `single_file_stretches` (where its path enters and leaves each single-file segment); and `backing_speed_mps` (issue #32) only if its agent type sets one (`parameters.md`), so that a scenario that does not resolves as before |
+| `population[]` | Per agent: `agent_id`, `group`, `persona_id` and `attributes` (`age`, `gender`, `backstory`), or nulls for an agent with no persona. The task of the persona is not written: it plays no part in an avoidance run |
+| `visibility` | For each attribute, whether an agent could see it of a neighbour |
+| `directives` | The provider (`provider`: `null`, `static`, or `rules`) and `share_policy` (`proportional` or `equal_split`). For `static`, what it was configured with (`default`, `agents`, `pairs`). For `rules` (version 3), **the active rule set**: `database` (the folder), `ruleset` (the name of the rule set the run started from, or null), `rules` (every rule switched on: `rule_id`, `version`, `schema_version` (version 4), `status`, `encounter`, `priority`, `expiry`, and the `sha256` of its frozen file), `hysteresis_steps`, and `unchecked_pairs` (pairs of rules the ambiguity check could not try; `rule-matching.md`) |
+| `arbitration` | `enabled`, `policy`, `tie_break`: how single-file segments were handled |
+| `logging` | `trajectory_stride` (every how-many-th step is in `trajectory.csv`) and `interactions` (whether the per-interaction records, `interactions.jsonl` and, in version 3, `pair_interactions.jsonl`, were filled; the outcome counts them either way) |
+| `perception_schema_version` | Version of the perception record (`perception.md`): 3 since issue #32 (the passage fields and the group), 2 since issue #28, 1 in a folder of issue #26 |
+| `baseline` | Version 3. The frozen baseline the run followed (`baseline.md`), or null: `name`, `version`, `role` (`primary` or `secondary`), `file`, `sha256`, `perturbation`, `orca`, `agent_types` (the settings it laid on every agent type), `sign_off`. A level of the experiment may still have changed a setting after it; `scenario` holds what was used |
+| `perturbation` | Version 3. What was added to every preferred velocity on every step (`kind`: `rvo2_uniform`; `magnitude_mps`, 0 for none) |
+
+### `trajectory.csv` of an avoidance run
+
+One row per agent per time step, for the agents that had not yet arrived, then one final
+row per agent for the state at the end. As for a negotiation run, a row gives the state at
+the *start* of a step and what was done *during* it, and the final rows have only the
+state. With `trajectory_stride` above 1 only every such step is written; the final rows
+always are.
+
+| Column | Meaning |
+|---|---|
+| `step`, `time_s` | Step number from 0, and its start time |
+| `agent_id` | |
+| `x_m`, `y_m`, `theta_rad` | Position of the centre, and the direction of motion |
+| `path_s_m` | Progress along the desired path |
+| `vx_mps`, `vy_mps`, `speed_mps` | The velocity the agent moved at during the step |
+| `pref_vx_mps`, `pref_vy_mps` | The velocity it wanted: along its path at its preferred speed, scaled by its directives and capped by the arbiter |
+| `control_mode` | `orca`; `arbiter` if the agent was in a pair the arbiter held on this step (`architecture.md`, section 6.4); `back_up` (version 5) if it was in a back-up manoeuvre, as the one backing out or as the other (`derivations.md`, section 17); `plan` (issue #59) if an LLM agent's plan set its preferred velocity on this step, which happens only in a replay of plans (below) |
+| `speed_bound_mps` | The bound the arbiter put on the speed the agent wants; empty unless `control_mode` is `arbiter` |
+| `role`, `role_source` | `leader` or `follower`, and where the order came from: `negotiated` (here: the `passage_order` of the directives), `strategy1` (the rule of the arbiter itself) or `physical_precedence`. Empty unless the arbiter held the agent and the conflict was live |
+| `in_conflict` | Whether the arbiter found a live single-file conflict for the agent on this step |
+| `zone_d_in_m`, `zone_d_out_m` | Distance along the path to where the agent enters and leaves the conflict zone at the segment; negative once passed |
+| `n_neighbours` | How many neighbours the agent perceived |
+| `speed_scale` | The scale its directives put on its preferred speed on this step: the smallest `speed_scale` among them, 1 if it perceived nobody |
+| `exposed` | Whether its preferred velocity was outside a half-plane induced by another agent, so that ORCA had to change it (`metrics.md`, section 3) |
+| `fallback` | Whether no velocity satisfied all its half-planes, so that the fallback of ORCA chose (`orca.md`, section 7) |
+| `interactions` | The `interaction_id` of each of its interactions that was active on this step, separated by `;`. **This is how the active directive is recorded**: each id is a line of `interactions.jsonl`, which holds the directive |
+| `back_up` | Version 5. Its part in a back-up manoeuvre on this step: `backing` (backing out of the passage at its backing speed: **intentional backing**), `waiting` (out of the passage, waiting for the other to come through), or `proceeding` (the other, coming on no faster than the one backing out backs); empty otherwise |
+
+### `interactions.jsonl`
+
+One JSON object per line, one line per interaction, in the order they began. An
+interaction is the dealings of one agent with one neighbour, from the step the neighbour
+became one of its perceived neighbours to the step it went out of range
+(`metrics.md`, section 2). Empty if the experiment sets `logging.interactions: false`.
+
+| Field | Meaning |
+|---|---|
+| `interaction_id` | From 0 |
+| `observer_id`, `neighbour_id` | Whose interaction, and with whom |
+| `start_step`, `start_time_s` | When the neighbour came into range |
+| `end_step`, `end_time_s`, `end_reason` | When and why it ended: `out_of_range`, `observer_arrived`, `neighbour_arrived` or `run_ended` |
+| `perception` | **The perception record at the moment the neighbour came into range**, whole (`perception.md`) |
+| `directive` | The directive the provider returned for it when it began: `side_preference`, `responsibility_share`, `speed_scale`, `clearance_margin`, `passage_order`, and (version 5) `back_up`. With `null` and `static` providers it holds for the whole interaction, except that its `speed_scale` stops applying once the encounter has passed (version 3) |
+| `directive_changes` | Version 3. Each later change of the directive by a provider that follows pairs (the rule database), in order: `from_step`, `from_time_s`, and the directive's fields (six from version 5). Empty otherwise. A rule match that begins, is replaced or expires shows here; `pair_interactions.jsonl` says which rule and why |
+| `speed_scale_expired_step`, `speed_scale_expired_time_s` | Version 3. When the directive's `speed_scale` stopped applying because the encounter had passed (`derivations.md`, section 15). Only with a provider that does not follow pairs, and only if the scale was not 1; null otherwise |
+| `effective` | What was actually used, as a list of entries, a new one each time it changed: `from_step`, `mutual` (whether the neighbour perceived the observer too), `responsibility_share`, `side_preference`, `clearance_margin`. It differs from `directive` when the two directives of the pair were combined, when a violation was repaired, and while the arbiter held the pair |
+| `perceived_time_s` | Time during which the neighbour was among the perceived neighbours of the observer |
+| `conflict_exposure_time_s` | Time during which the preferred velocity of the observer was outside the half-plane induced by this neighbour |
+| `arbiter_time_s` | Time during which the arbiter held the pair |
+| `min_separation_m` | Smallest distance between the surfaces of the two bodies during the interaction |
+
+### `pair_interactions.jsonl` (version 3)
+
+One JSON object per line, one line per **pair interaction**, in the order they began. A
+pair interaction is two agents, from the first step on which either perceives the other to
+the first on which neither does, one of them has arrived, or the run has ended. It is the
+unit rules are matched on (`rule-matching.md`) and the unit categorised as avoided,
+resolved or failed (`metrics.md`, section 9). Every avoidance run has them, whatever its
+provider. Empty if the experiment sets `logging.interactions: false`.
+
+| Field | Meaning |
+|---|---|
+| `pair_id` | From 0 |
+| `agents` | The two agents, the lower-numbered first |
+| `start_step`, `start_time_s` | When the pair formed |
+| `encounter_class_at_start` | The pair's encounter class on that step (`perception.md`), or null if hidden |
+| `end_step`, `end_time_s`, `end_reason` | When and why it ended: `out_of_range`, `agent_arrived` or `run_ended` |
+| `passed_step`, `passed_time_s` | The first step on which the encounter had passed: the two separating and clear of each other by more than the pair's clearance margin (`derivations.md`, section 15); null if it never did |
+| `conflict_exposure_time_s` | For each of the two (keyed by agent), the time during which its preferred velocity was outside the half-plane induced by the other. Depends on the responsibility shares (`metrics.md`, section 3) |
+| `pair_exposure_time_s` | Version 4. The time during which the two intended velocities put the pair on a collision course: inside the two bodies' velocity obstacle by more than `pair_exposure_eps_mps` (`metrics.md`, section 11). Does not depend on the shares |
+| `first_pair_exposed_step` | Version 4. The first step on which the pair was exposed; null if it never was |
+| `min_separation_m` | Smallest distance between the two bodies while the pair was open and one perceived the other |
+| `outcome` | `avoided`, `resolved` or `failed` (`metrics.md`, section 9) |
+| `outcome_detail` | What decided it: `exposed` (either had exposure), `pair_exposed` (version 4: the pair had pair exposure, which the category does not use but another reading of it could), `yield_events` (yield events of either that overlapped the pair interaction), `collisions` (collision episodes between the two that did), `deadlock` (the run ended in deadlock with the pair open), `open_at_timeout` (the run reached its time limit with the pair open) |
+| `severity_tier` | Version 4. `T0` (interaction only), `T1` (on a collision course), `T2` (a yield event), `T3` (a near miss) or `T4` (deadlock or collision): the highest that applies (`metrics.md`, section 11) |
+| `tier_detail` | Version 4. What decided the tier: `pair_exposure_time_s`, `yield_events` and `near_misses` (of either, or between the two, that overlapped the pair interaction), `collisions`, `deadlock` |
+| `rules` | Null unless the provider is the rule database; otherwise what the matching policy did, below |
+
+`rules`:
+
+| Field | Meaning |
+|---|---|
+| `state_at_end` | `unmatched`, `held` or `spent` (a match expired and nothing has matched since) |
+| `independent_agrees` | Whether, on the step the pair formed, each agent evaluating the rules on its own perception record got the same directive as the shared snapshot gave it (`rule-matching.md`, "Evaluation on a shared snapshot"). Should always be true |
+| `evaluations` | **Every evaluation, with its outcome.** Consecutive evaluations with the same outcome, rule and encounter class share one entry: `from_step`, `from_time_s`, `to_step`, `count` (how many evaluations, one per step), `encounter_class`, `outcome` (`rule_matched`, `no_rule_matched`, `ambiguous_match`, or `kept`: a held rule stayed because nothing of strictly higher priority matched), `rule` (`rule_id@version` applied, or null), `ambiguous_with` (the other rules at the same priority that matched with different directives), `candidates` (how many rules were tried), and `snapshot`: the values the conditions were evaluated on, at the first evaluation of the entry (null if no rule was tried) |
+| `matches` | Every match, in order: `rule_id`, `version`, `priority`, `encounter`, `expiry`, `outcome` (`rule_matched` or `ambiguous_match`), `ambiguous_with`, `from_step`, `from_time_s`, **the role each agent received** (`roles`, keyed by agent) and **the resulting directive** (`directives`, keyed by agent: all five fields, the rule's and the baseline values of those it leaves out), the `snapshot` it matched on, and **when and why it ended**: `to_step`, `to_time_s`, `end_reason` (`passed`, `replaced` by a rule of higher priority, `out_of_range`, `agent_arrived`, `run_ended`) and `replaced_by`. *Issue #108:* a match of a rule with steps also has `plans`, keyed by agent, for each of the two whose role gave steps: `steps` (as Step 1's reply format writes them) and `started` (false if the person already had a plan in force) |
+| `cross_pair_conflicts` | The cross-pair conflicts this pair was part of, as in `events.jsonl` |
+
+A `snapshot` has `step`, `time_s`, `agents`, `pair` (every pair-level field a rule can
+read) and `agent` (every agent-level field, keyed by agent); a hidden value is null
+(`rule-format.md`). *Issue #108:* a version 4 agent-level field (`mobility_aid`, `load`,
+`distraction`) is in `agent` only when one of the two has a value for it, and each person's own
+private factors are in `self` (keyed by agent) only when one of them has a value; so the snapshots
+of every run before rule format 4 are exactly as they were.
+
+### `events.jsonl`
+
+One JSON object per line, in time order. Every event has `event_index` (from 0), `type`
+and `time_s`.
+
+| `type` | Further fields | Meaning |
+|---|---|---|
+| `reciprocity_violation` | `step`, `field`, `agents`, `given`, `resolved`, `policy` | The two directives of a pair contradicted each other in `field` (`responsibility_share`, `side_preference` or `passage_order`). `given` is what the two asked for, `resolved` what was used, `policy` the rule that decided (`derivations.md`, sections 9 to 11). Logged once, when the pair first perceive each other |
+| `handoff` | `step`, `pair`, `to`, `leader`, `role_source`, `reason` | Control of a pair passed `to` the `arbiter`, back to `orca`, or (version 5) from the arbiter to a back-up manoeuvre (`back_up`) |
+| `yield` | `agent_id`, `start_time_s`, `end_time_s`, `duration_s`, `min_speed_mps` | A yield event (`metrics.md`, section 4). `time_s` is its start |
+| `near_miss` | `pair`, `start_time_s`, `end_time_s`, `min_separation_m` | A near miss (`metrics.md`, section 5) |
+| `collision` | `pair`, `start_time_s`, `end_time_s`, `max_overlap_m` | Two bodies overlapped |
+| `wall_collision` | `agent_id`, `start_time_s`, `end_time_s`, `max_overlap_m` | A body overlapped a wall |
+| `ambiguous_match` | `step`, `pair`, `applied`, `ambiguous_with` | Version 3. Two rules at the top priority matched the pair with different directives; `applied` is the one with the lower `rule_id` (`rule-matching.md`). One event per entry of the pair's evaluation log |
+| `cross_pair_conflict` | `step`, `agent_id`, `field`, `values`, `resolution` | Version 3. The rule matches of one agent's pairs contradict each other in `field` (`side_preference`, `speed_scale`, `passage_order` or, version 5, `back_up`); `values` lists each pair, its rule and its value; `resolution` says how it is settled (`rule-matching.md`). Logged when the conflict appears |
+| `back_up` | `step`, `phase`, `backer`, `other`, `pair_id`, `segment`, and `travelled_m` (with `started`) or `reason` (with `ended`) | Version 5. A back-up manoeuvre (`derivations.md`, section 17): `started` (the `backer`, having walked `travelled_m` into the `segment`, begins to back out for the `other`), `out` (it is out and waits), `ended` (it goes on; `reason` as in `outcome.json`). One manoeuvre gives two or three events |
+
+### `outcome.json` of an avoidance run
+
+| Field | Meaning |
+|---|---|
+| `log_schema_version`, `run_kind`, `run_id` | |
+| `status` | `completed` (every agent arrived), `collision` (two bodies overlapped and the scenario stops on that), `deadlock`, or `timeout` (the `max_time` of the scenario ran out). Never `aborted`: no model is called |
+| `sim_time_s`, `steps` | When the run ended |
+| `n_agents`, `arrived` | How many agents, and how many reached the end of their path |
+| `collisions` | `agent_agent` and `agent_wall` (numbers of episodes), `time_s` (of the first), `agents` involved, `max_overlap_m` (the deepest overlap; null if none). With `on_collision: stop` the run ends at the first; with `continue` they are counted |
+| `deadlock` | true if every agent that had not arrived stayed below the threshold speed for the window |
+| `makespan_s` | When the last agent arrived; null unless all did |
+| `time_to_goal_s` | Per agent; null if it did not arrive |
+| `agents` | Per agent, every metric: `time_to_goal_s`, `distance_m`, `path_deviation_mean_m`, `path_deviation_max_m`, `interactions`, `interaction_time_s`, `conflict_exposure_time_s`, `orca_altered_time_s`, `yield_events`, `yield_time_s`, `near_misses`, `min_separation_m`, `min_wall_gap_m`, `fallback_steps`, `one_sided_steps`, `arbiter_time_s` (`metrics.md`) |
+| `totals` | Over all agents: `interactions`, `conflict_exposure_time_s`, `pair_exposure_time_s` (version 4: summed over the pair interactions), `yield_events`, `yield_time_s`, `near_misses`, `min_separation_m`, `mean_time_to_goal_s`, `mean_path_deviation_m`, `max_path_deviation_m`, `steps_with_fallback`, `fallback_agent_steps`, `one_sided_agent_steps` |
+| `single_file` | Per single-file segment: `segment`, `entry_time_s` per agent, and `first_through` (the agent that entered it first, null on a tie); and (version 5) `exit_time_s` per agent, when it came out at the far end, and `first_out`, the agent that came out first (null on a tie or if neither did). Two agents that start inside a segment (`passage_meeting`) both enter it on the first step, so there `first_through` is null and `first_out` says who got through first |
+| `reciprocity_violations` | Every violation, as in `events.jsonl` without `event_index` and `type` |
+| `handoffs` | Every handoff, likewise |
+| `thresholds` | The metric thresholds the run used (since version 4 also `pair_exposure_eps_mps` and `collision_course_min_s`), and the deadlock settings |
+| `interaction_outcomes` | Version 3. `pairs` (how many pair interactions), `avoided`, `resolved`, `failed`, and `pairs_with`: how many pairs were `exposed`, `pair_exposed` (version 4), `yielded`, `collided`, `deadlocked` and `open_at_timeout` (a pair can count under several). Version 4: `tiers`, the number of pairs in each of `T0` to `T4` |
+| `rules` | Version 3. Null unless the provider is the rule database; otherwise `evaluations` (how many evaluations ended in each outcome), `matches_begun` (by `rule_id@version`: **which rules fired, and how often**), `match_ends` (by reason), `cross_pair_conflicts` (how many were logged), `formation_checks` and `formation_mismatches` (the run-time check of the shared snapshot against each agent's own evaluation, `rule-matching.md`; the second should be 0) |
+| `baseline` | Version 3. The name of the baseline the run followed, or null |
+| `artefacts` | Version 3. Counts of the two ORCA artefacts of issue #26 (`metrics.md`, section 10): `thresholds`; per agent (`agents`) `backward_episodes`, `backward_time_s`, `hurried_episodes`, `hurried_time_s`, and (version 5) `backward_distance_m`, how far it moved backwards within its backward episodes; and `totals`, the same summed, with `agents_backward` and `agents_hurried`. Intentional backing (below) is never counted here |
+| `back_up` | Version 5. The back-up manoeuvres (`derivations.md`, section 17). `manoeuvres`, in the order they started, each with `backer`, `other`, `pair_id`, `segment`, `travelled_m` (how far the backer had walked in), `speed_mps` (its backing speed), `runout_m` and `target_m` (how far beyond the end, and the point, it backed to), `start_step`, `start_time_s`, `out_step`, `out_time_s` (when it was out; null if never), `end_step`, `end_time_s` and `end_reason` (`other_cleared`: the other came out at that end and as far beyond it; `other_arrived`; `pair_ended`: the two lost sight of each other; `run_ended`), `backing_time_s`, `waiting_time_s`, and `backing_distance_m` (how far it moved backwards while backing out: the intentional backing). `agents`, per agent that backed up: `manoeuvres`, `backing_time_s`, `waiting_time_s`, `backing_distance_m`; and `totals`, the same summed |
+
+### `summary.csv` of an avoidance experiment
+
+One row per run, in design order: identification (`experiment_name`, `run_id`, `scenario`,
+`variant`, `seed`, `repeat`, `n_agents`); the settings (`provider`, `arbitration_enabled`);
+the outcome (`status`, `arrived`, `collisions`, `max_overlap_m`, `deadlock`, `makespan_s`,
+`mean_time_to_goal_s`); the conflict metrics (`conflict_exposure_time_s`, `yield_events`,
+`yield_time_s`, `near_misses`, `min_separation_m`, `steps_with_fallback`,
+`fallback_agent_steps`, `reciprocity_violations`, `handoffs`, `first_through`); the same
+for agents 0 and 1, which is all there are in four of the five scenarios
+(`time_to_goal_0_s`, `time_to_goal_1_s`, `path_deviation_max_0_m`,
+`path_deviation_max_1_m`, `conflict_exposure_0_s`, `conflict_exposure_1_s`); from
+version 3, the baseline and the rules (`baseline`, `ruleset`, `pairs`, `avoided`,
+`resolved`, `failed`, `rules_fired` as `rule_id@version=count` separated by `;`,
+`ambiguous_matches`, `cross_pair_conflicts`, `backward_episodes`, `hurried_episodes`), empty for a run written before; from
+version 4, pair exposure and the tiers (`pair_exposure_time_s`, `pairs_t0`, `pairs_t1`, `pairs_t2`, `pairs_t3`,
+`pairs_t4`), empty for a run written before; from version 5, backing up (`back_up_manoeuvres`,
+`backing_distance_m`: the intentional backing; `backward_distance_m`: the walking-backwards
+artefact's distance) and `first_out` (of the first single-file segment), empty for a run
+written before; and `git_commit`.
+
+### Replays of LLM agents' plans (issue #59)
+
+A replay (`negsim/resolution/replay.py`; `resolution.md`, D6) runs a session's plans on its
+case's own run, on the same seed, in `plan_only` or `plan_orca`. Each is an ordinary avoidance
+run folder, of the current version, with one key more in two files and nothing else changed:
+
+```
+runs/<experiment>/replay/
+    <session_id>/plan_only/      config.json  trajectory.csv  interactions.jsonl  pair_interactions.jsonl  events.jsonl  outcome.json
+    <session_id>/plan_orca/      the same
+    physical_outcomes.csv        one row per session and mode, and one for plain ORCA on the same seed
+    report.md                    the physical resolution rate per encounter type and mode
+```
+
+| Where | Key | Contents |
+| --- | --- | --- |
+| `config.json` | `plans` | `session_id`, `case` (`case_id`, `version`), `mode`, `seed`, `scenario_sha256` (the case's resolved scenario hash), `plans_sha256` (SHA-256 of the session's `decisions` and `release` as canonical JSON) |
+| `outcome.json` | `plans` | The same, and `scenario_plugin` (the scenario template's key and SHA-256), `encounter` (`agents`, `type`), `driver` (the mode; when the encounter began and when, and why, ORCA took it back: `passed`, `arrived`, `run_ended` or a reason given by the protocol; and every decision with its steps, `state`, `outcome`, and per step `start_step`, `end_step` and `ended_by`: `seconds`, `backed_up`, an event's name, `replaced`, `arrived` or `run_ended`), `physical_outcome` (the row of `physical_outcomes.csv`), and `plain_orca` (plain ORCA's goal times and row) |
+
+The columns of `physical_outcomes.csv` are listed in `negsim/resolution/outcomes.py`. The
+scenario adds its own (the passing scenarios: `conflict_zone`). The log schema version is
+unchanged: an older run never has a `plans` key and never has `control_mode` `plan`.
+`python -m negsim.resolution.replay <session.json> --experiment <name> --verify` rebuilds a
+replay from the session record alone and checks every file is byte for byte the same. The one
+exception is `config.json`'s `created_utc`.
+
+## Rule-generation experiments (issue #30)
+
+A rule-generation experiment (`rule-generation.md`) is not a run: it holds sessions with a
+model, the rules they produced, and avoidance runs that replay and screen those rules. Its
+folder, `runs/<experiment_name>/` (`runs_mock/` with the mock client), is laid out as below.
+Its own files are **version 2** of the rule-generation log (`rulegen_log_version` in
+`config.json`; version 1 before issue #32, which added `outcomes.jsonl` and the fictional group); the run folders under `replay/` and `screening/` are avoidance runs of the log
+schema version of the code that ran them (4 before issue #32, 5 since), described above.
+
+```
+runs/<experiment_name>/
+  config.json            the experiment's config as read, the client, git, the templates
+  invocations.jsonl      one line per time the experiment was run or resumed
+  cases.json             the cases used
+  design.jsonl           the session list, one session per line
+  preview.json           the worst-case cost preview, written before any call
+  sessions/<session_id>.json            one file per session, written when it ends
+  sessions/<session_id>.md              the same session, for reading
+  sessions/<session_id>.aborted<n>.json the log of a session that was aborted and run again (and .md)
+  validation.jsonl       one line per proposed rule: its category
+  outcomes.jsonl         one line per session: what it came to, person by person (version 2)
+  written.jsonl          one line per rule the writer stored
+  rule_db_staging/<negotiated|stated>/  the staging databases (rule-format.md, section 12)
+  replay/<rule_id>/baseline/, replay/<rule_id>/rule/   avoidance runs: the replay of a rule
+  screening/baseline/<run_id>/, screening/<rule_id>/<run_id>/  avoidance runs: the crowd screening
+  screening.jsonl        one line per rule replayed or screened: the entries stored on it
+  cost.json              the actual cost against the preview, per session
+  summary.json           the report's numbers
+  report.md              the report, for reading
+```
+
+**`config.json`**: `rulegen_log_version`, `layer` (`rule_generation`), `experiment` (every
+setting, as read: `experiment_name`, `description`, `source`, `cases`, `conditions`,
+`design`, `negotiation`, `statement`, `llm`, `budget`, `replay`, `screening`),
+`client_name` (`mock` or `deepseek`), `created_utc`, `git`, `software`, and `templates` (each
+condition's template and the common template it uses, with their SHA-256). Once a session
+has run, an invocation with a different config or client is refused; before that, the file is
+written again with the new config.
+
+**`invocations.jsonl`**: `utc`, `git`, `client` (what the client says of itself, without
+credentials), `confirm`, `limit`, `status` (`completed`, `partial`, `aborted`,
+`awaiting_confirmation`, `refused_over_cap` or, version 2, `refused_no_sign_off`: a paid run
+with the fictional group on and no ethics sign-off in `CLAUDE.md`), `executed` (the sessions run this time),
+`aborted` (why, if so), `preview_usd`.
+
+**`design.jsonl`**, one session per line: `session_id`, `index` (its place in the shuffled
+list), `condition`, `case_id`, `case_version`, `agents`, `cell` (the level of each of the
+six factors, and with the fictional group on, version 2, of `group_pair`, `label_rotation` and
+`ethnicity_visible`), `repeat`, `personas` (keyed by agent: `age`, `gender`, `task`, `urgency`,
+and with the group on its label, `ethnic_group`), `visibility` (with `ethnic_group`, version 2),
+`first` (the first speaker in A, Person 1 in B), and with the group on `framing` (the words that
+introduce it, `fictional-groups.md`).
+
+**`preview.json`**: `model`, `prices` (the peak cache-miss input and peak output prices per
+million tokens, the price table's source and date), `reply_cap_tokens`,
+`max_messages_per_agent`, `sends_per_turn` and `max_retries_per_turn` (with `sends_from`),
+`sessions` and `sessions_by_condition`, `usd_by_condition`, `usd_total`, `cap_usd`,
+`fits_the_cap`, and `per_session`: `session_id`, `condition`, `S_tokens`, `m_tokens`,
+`reply_cap_tokens`, `M_messages_per_agent`, `input_tokens_bound` and `output_tokens_bound`
+(every send included), `usd_bound` (`rule-generation.md`, section 9).
+
+**`sessions/<session_id>.json`, condition A**: `session` (as in `design.jsonl`),
+`started_utc`, `ended_utc`, `templates`, `llm` (`model`, `temperature`, `max_tokens`,
+`thinking`, `json_mode`), `rule_schema_version` (version 2: the rule format its prompt
+described, in which its rules are validated and written; a record without it is of format 2), `condition` (`negotiated`), `outcome` (`agreed`,
+`no_rule_possible`, `no_agreement`, `parse_failure` or `aborted`), `error`, `first_speaker`,
+`second_speaker`, `max_messages_per_agent`, `max_attempts_per_turn`, `agreement` (null, or
+`rule` as the proposer wrote it, `canonical_hash`, `proposal_id`, `proposed_by`,
+`proposed_at_turn`, `accepted_by`, `accepted_at_turn`, `proposer_spoke_first`),
+`system_prompts` (keyed by agent), `turns`, `proposals`, `totals` (`turns`, `llm_calls`,
+`retries`, `tokens`, `cost_usd`), and `model_returned` (the model names the API returned).
+A turn: `turn_index`, `speaker`, `shown` (what it was told on its turn), `parse_ok`,
+`parse_error`, `message`, `proposal` (as written), `proposal_hash` and `proposal_id`,
+`accept`, `accept_status` (`rule-generation.md`, section 4), `no_rule_possible`,
+`n_attempts`, `tokens`, `cost_usd`, and `attempts`, each as in `conversation.jsonl`
+(`attempt`, `wall_clock_utc`, `prompt_messages`, `request`, `raw_output`, `finish_reason`,
+`response_id`, `model`, `system_fingerprint`, `usage`, `cost_usd`, `price_tier`,
+`latency_s`, `parse_error`, `api_error`). `proposals`: every proposal in order, with
+`turn_index`, `proposer`, `proposal`, `canonical_hash`, and `agreed`.
+
+**`sessions/<session_id>.json`, condition B**: `session`, `started_utc`, `ended_utc`,
+`templates`, `llm`, `rule_schema_version` (as in A), `condition` (`stated`), `outcome` (`stated`, `no_rule`, `parse_failure`
+or `aborted`), `error`, `person_1`, `person_2`, `max_attempts`, `system_prompt`,
+`parse_error`, `rule` (as written, or null), `reason`, `canonical_hash`, `attempts`,
+`totals` (`llm_calls`, `retries`, `tokens`, `cost_usd`), `model_returned`.
+
+**`sessions/<session_id>.md`**: the session for reading, rendered from its record alone
+(`negsim/rulegen/transcript.py`), as issue #24's `transcript.md` is: who the people were,
+the system prompts, every turn as it was shown and answered (with any attempt that could not
+be used, and what it replied), every proposal with its id, how each acceptance was read, and
+the outcome with its tokens and cost. The record is the `.json`; this adds nothing to it.
+
+**`validation.jsonl`**, one line per proposal (A: every proposal of every turn; B: the stated
+rule): `session_id`, `condition`, `case_id`, `scenario`, `turn_index`, `proposer`,
+`canonical_hash`, `agreed` (the agreed or stated rule), `category` (`valid`,
+`needs_communication`, `inconsistent`, `schema_error`, `format_limit`, or, version 2,
+`protected_attribute`),
+`loader_category` (the loader's or the check's reason), `message`, `fields` (those the
+proposal reads), `ignored_metadata` (what the model wrote in the writer's keys),
+`review_flags`.
+
+**`outcomes.jsonl`** (version 2; `fictional-groups.md`, section 5): one line per session that
+has a record, with or without the fictional group: `session_id`, `condition`, `case_id`,
+`scenario`, `repeat`, `cell`, `agents`, `first`, `demographics_visible`, `groups_on`,
+`group_pair`, `label_rotation`, `ethnicity_visible` and `framing` (null without the group),
+`people` (keyed by agent: `age`, `gender`, `urgency`, `ethnic_group`), `outcome`; in condition A
+`proposals_by` (keyed by agent), `proposed_by` (whose proposal was agreed), `conceded_by` (who
+accepted the other's) and `said_no_rule_possible` (the agents that did), null in B; and for the
+agreed or stated rule `rule_hash`, `category` (its validation category) and `effect`: what it
+tells the two on the case's own pair (`loads`, and the loader's `reason` if not; `matches`;
+`roles` and `directives`, keyed by agent; `larger_share`, the agent with the larger
+responsibility share or `equal`; `goes_first`; `backs_up`). Null without such a rule.
+
+**`written.jsonl`**: the writer's step of the latest invocation: `rule_id`, `version` and
+`file` (the rule's newest version when the writer had finished, which on a resumed experiment
+can be one that replay and screening wrote earlier), `condition`, `case_id`,
+`canonical_hash`, `written` (whether this invocation's writer wrote a version),
+`sessions` (the supporting sessions, earliest first). The versions that replay and
+screening add are in `screening.jsonl`.
+
+**`screening.jsonl`**: per rule with any: `rule_id`, `version`, `condition`, `case_id`,
+`file`, and `entries`, the screening entries this experiment stored on the rule
+(`rule-format.md`, section 12): for `kind: replay`, `results` has `run` and `pair` (each for
+`baseline` and `rule`), `folders`, `rule_matched_the_case_pair` and
+`baseline_reproduces_case`; for `kind: crowd`, `settings`, `summary`, `per_seed` (`seed`,
+`baseline`, `rule`, `folders`) and `same_runs_as`.
+
+**`cost.json`**: `preview_usd`, `actual_usd`, `of_which_aborted_sessions_usd`, `cap_usd`,
+`client`, `sessions` (per session: the calls, prompt and completion tokens and cost, against
+its preview), and a `note` on what the figures are. **`summary.json`** is the report's
+numbers (`rule-generation.md`, section 9), with (version 2) `design`, the size of the full
+factorial (each factor's number of levels, the cells per case, the sessions), and `groups`, the
+sessions' outcomes by condition, group pair and whether the groups were shown; **`report.md`**
+the same, for reading.
+
+## Resolution experiments (issue #58)
+
+A resolution experiment (`encounter-protocol.md`) puts LLM agents into conflict cases and asks
+them what they do (Step 1 of track #55). Like a rule-generation experiment it is not a run: it
+holds sessions with a model, and avoidance runs that replay their plans. Its folder,
+`runs/<experiment_name>/` (`runs_mock/` with the mock client), is **version 1** of the resolution
+log (`resolution_log_version` in `config.json` and in every session record); the run folders
+under `replay/` are avoidance runs of the code's log schema version, with the `plans` key above.
+
+```
+runs/<experiment_name>/
+  config.json, invocations.jsonl        the config as read, the client, git, the templates, the llm_view; each run or resume
+  cases.json, design.jsonl              the cases (with their plug-in); the session list with each person's persona
+  preview.json, cost.json               the worst-case cost before any call; the actual cost after, per session
+  sessions/<session_id>.json            the record of one session, written once, when it ends; never rewritten
+  sessions/<session_id>.md              the same, for reading, rendered from the record alone
+  sessions/<session_id>.aborted<n>.json the record of a session that was aborted and run again (and .md)
+  decisions.jsonl                       one line per decision point
+  debriefs.jsonl                        one line per debrief
+  outcomes.jsonl, outcomes.csv          one row per session
+  replay/<session_id>/plan_only/        RF-4's replays: trajectory.csv, events.jsonl, outcome.json, ...
+  replay/<session_id>/plan_orca/
+  summary.json, report.md               the report's numbers; the report
+```
+
+**`config.json`**: `resolution_log_version`, `layer` (`resolution`), `experiment` (every setting
+as read: `experiment_name`, `description`, `source`, `cases`, `scenarios`, `conditions`,
+`design`, `protocol`, `templates`, `llm_view`, `llm`, `budget`), `client_name`, `created_utc`,
+`git`, `software`, `templates` (the core and debrief templates with their SHA-256) and
+`llm_view` (the perception settings as read). `experiment.design` names `kind`, `cells`,
+`geometries`, `exact_repeats` and `counterfactual_pairs` only when the config does (issue #62;
+`screening-designs.md`), so an older config is described as before. With a design that varies a core or situational
+factor (issue #60), `experiment` also has `factor_values` (the values file) and
+`templates.factors`, and the file has `factors` (`template`, with its SHA-256, and `values` as
+read). With a design that varies a pairwise perception factor (issue #61), `experiment` has
+`templates.pairwise` and the file has `pairwise` (`template`, with its SHA-256). Once a session
+has a record, an invocation with another config or client is refused.
+
+**`invocations.jsonl`**: per invocation `utc`, `git`, `client`, `confirm`, `limit`, `status`
+(`completed`, `partial`, `aborted`, `awaiting_confirmation`, `refused_over_cap`, and since issue
+#61 `refused_no_sign_off`: a paid run that varies perceived attractiveness without the ethics
+sign-off in `CLAUDE.md`), `executed`, `aborted`, `preview_usd`.
+
+**`design.jsonl`**: per session `session_id` (`<I|N|T>_<case_id>_<cell code>_r<repeat>`; a
+session of a counterfactual pair, issue #62: `<I|N|T>_<case_id>_<cell code>_x<pair code>`),
+`index`, `condition`, `case_id`, `case_version`, `scenario` (the plug-in), `agents` (the case's
+two people), `cell` (the five factors, and any of issue #60 the design varies), `repeat`,
+`exact_repeat_set` (true for every run of a cell of the exact-repeat set, `_r1` included), only
+with a design that lists `geometries` (issue #62) `geometry` (the case's variant, for example
+`layout=apart_20cm`), only in a counterfactual pair (issue #62) `pair_id`
+(`<I|N|T>_<case_id>_x<pair code>`, shared by its two sessions), `pair_role` (`base` or `flipped`)
+and `pair_factor`, `personas` (per agent: `age`, `gender`, `task`, `urgency`, and each core
+factor the design varies), `visibility` (with the switch of each observable core factor varied,
+and of each pairwise factor varied: `perceived_attractiveness`, `familiarity`), and, only with a
+design that varies a pairwise factor (issue #61), `pairwise`: the block of
+`pairwise-factors.md`, section 3 (`agents`, person 1 first; `perceived_attractiveness`, row =
+who is looking; `familiarity`).
+
+**`sessions/<session_id>.json`**:
+
+| Key | Contents |
+| --- | --- |
+| `resolution_log_version`, `session_id`, `session` | the version; the id; the session as in `design.jsonl` |
+| `case`, `scenario` | `case_id` and `version`; the plug-in (what a replay loads) |
+| `templates`, `llm` | core, debrief and scenario templates with their SHA-256; model, temperature, reply cap, thinking |
+| `started_utc`, `ended_utc`, `model_returned` | when; the model names the provider returned |
+| `outcome`, `error` | `completed`, `no_encounter` or `aborted`; why it was aborted |
+| `condition`, `protocol`, `llm_view`, `max_decision_points_per_agent`, `max_attempts_per_call` | the settings it ran under; `protocol.execution` is present only when not `rf4` (issue #64), and the replay reads it |
+| `encounter` | `agents` (the members, in order), `pairs` (the conflict pairs), `left_out_by_cap`, `trigger` (`step`, `time_s`, `agent_id`, `other_id`), `start_step`, `end` (`reason`: `passed`, `no_conflict`, `deadlock`, `collision`, `time_limit` or `orca_took_over`; `step`, `time_s`, `conflict_still_predicted`, `not_resolved_by_llm`), `orca_took_over` (the release, or null), `prompted`, `type` (the case's encounter class) |
+| `decision_points` | one per agent prompt, in order: `index`, `agent_id`, `partner_id`, `number` (the agent's own count), `step`, `time_s`, `trigger_reasons`, `view` (the structured `View`), `prompt` (the exact messages and template identities), `attempts` (each with its raw reply, model, `system_fingerprint`, tokens, cost, parse and API errors), `parse_error`, `parsed` (the reply as read), `plan_given` (the steps given to the driver; `[]` for an unreadable reply with no plan before; null when an unreadable reply left a plan running), `coded` (`code_plan`), `until_next` (`time_s`, `ended_by`: the next decision point or the end, the plan's `plan_state` and `plan_outcome`, `smallest_gap_m` to any member in between) |
+| `debriefs` | per agent: `agent_id`, `templates`, `attempts`, `parse_error`, `parsed` (`basis`, `kind`, `source`, `applies_to`, `source_status`: `unchecked`) |
+| `utterances`, `signals` | what was said (`time_s` when it had been said, `speaker_id`, `message`, `heard_by` with each listener's direction and band) and signalled (`time_s`, `signaller_id`, `signal`, `seen_by`) |
+| `decisions`, `release` | the plans as a replay schedules them (`PlanDriver.decisions_record`; with `partner_id` when more than two), and the release to ORCA (`step`, `reason`) or null: what `replay.py` reads (section "Replays of LLM agents' plans") |
+| `replays` | the replay folders of both modes, relative to the experiment folder; null without an encounter |
+| `totals` | `decision_points`, `debriefs`, `llm_calls`, `retries`, `tokens`, `cost_usd` |
+| `factors` | issue #60, only with a design that varies a core or situational factor: `template` (with its SHA-256; also under `templates.factors`), `people` (each person's levels), `visible` (the switches), `situation` (the setting), `hearing_range_m` (what the session's views used) |
+| `bodies` | issue #60, only when someone carries a load: per agent id, `radius_m` for the whole run and `because`. Plain ORCA and both replays run the same bodies (`replay.run_plan_for`), and each replay's `plans` block repeats it |
+| `pairwise` | issue #61, only with a design that varies a pairwise perception factor: `template` (with its SHA-256; also under `templates.pairwise`), the block (`agents`, `perceived_attractiveness`, `familiarity`, as in `session`), and `visible` (the switches). Each view's seen people keep their `pairwise_lines`, the observer's own |
+
+**`decisions.jsonl`**: per decision point `session_id`, `agent_id`, `index`, `number`, `time_s`,
+`condition`, `trigger_reasons`, `parse_error`, the parsed reply's `message`, `signal`, `intent`,
+`steps`, `reason`, and `coded`. Every line's raw replies are in its session's record (tested).
+
+**`debriefs.jsonl`**: per debrief `session_id`, `agent_id`, `parse_error`, `basis`, `kind`,
+`source`, `applies_to`, `check_status` (`unchecked`; RF-14 checks it).
+
+**`outcomes.jsonl` and `outcomes.csv`**: one row per session; the columns are listed in
+`encounter-protocol.md`, section 7. The CSV has every column but `others`.
+
+**`cost.json`**: the preview, the actual and the cap in USD, the client, and per session its
+calls, tokens and cost beside its preview. **`summary.json`**: per encounter type and condition
+the sessions, those with an encounter, the resolution rate in `plan_only`, `plan_orca`, by the
+LLM and in plain ORCA, how many were not resolved by the LLM, the mean decision points and
+calls per session and how often the cap was reached; the end reasons, the debrief kinds, tokens
+per session, the largest share of a preview used, the cost and the failure modes.
+
+## Rule-extraction experiments (issue #66)
+
+A rule-extraction experiment (`rule-extraction.md`) reads resolution experiments' results and asks
+an LLM for the rules behind the resolved sessions (Step 2 of track #55). Its folder,
+`runs/<experiment_name>/` (`runs_mock/` with the mock client), is **version 1** of the extraction
+log (`extraction_log_version` in `config.json` and in every run record). The layout and what each
+file holds are in `rule-extraction.md`, section 8. A run record (`<type>/runs/run_<k>.json`) has
+`extraction_log_version`, `experiment`, `encounter_type`, `run`, `seed`, `started_utc`,
+`ended_utc`, `template`, `llm`, `sampled_sessions` and `sampled_labels`, `messages` (exactly as
+sent), `attempts` (each with `messages_sent`, `appended` for a retry, `raw`, `model`,
+`system_fingerprint`, `response_id`, `finish_reason`, `usage`, `cost_usd`, `price_tier`,
+`latency_s`, `parse_error` or `error`), `outcome` (`completed`, `unreadable` or `aborted`),
+`error`, `rules` (each `index`, `category`, `message`, `reads_communication`, `predict`,
+`references`, `raw`, and for a stored category `fidelity`), `counts` and `totals`. It is written
+once and never rewritten; an aborted one is set aside as `run_<k>.aborted<n>.json` when the run is
+redone.
+
+## Rule-translation experiments (issue #67)
+
+A rule-translation experiment (`rule-translation.md`) translates the rules a rule extraction kept
+into rule format 3, then replays and screens them (RF-12). Its folder, `runs/<experiment_name>/`
+(`runs_mock/` with the mock client), is **version 1** of the translation log
+(`translation_log_version` in `config.json` and in every translation record). The layout and what
+each file holds are in `rule-translation.md`, section 9. A translation record
+(`translations/<x_rule_id>.json`) has `translation_log_version`, `experiment`, `extraction` (the
+extracted rule: its experiment, `rule_id`, `version`, `file`, `sha256`, `status`, `category`,
+`extraction_stability`, `target`, `held_out_accuracy`, `baseline_accuracy`, `beats_baseline`),
+`started_utc`, `ended_utc`, `template`, `llm`, `messages` (exactly as sent), `attempts` (as an
+extraction run's), `outcome` (`completed`, `unreadable` or `aborted`), `error`, `translation` (the
+reply as read: `rule`, `lost`, `note`; null if unreadable) and `totals`. It is written once and
+never rewritten; an aborted one is set aside as `<x_rule_id>.aborted<n>.json` when it is redone.
+The staging database's rules are rule files of schema version 3 (`rule-format.md`); their
+`screening` entries are a `replay` (the identity check, its rows in `identity/<rule_id>.csv`) and
+a `crowd` entry.
+
 ## `spend_ledger.jsonl`
 
 One line per paid call: `utc`, `experiment`, `run_id`, `turn_index`, `speaker`, `attempt`,
 `model`, the token counts, `price_tier` (`peak` or `off_peak`), `cost_usd`,
 `cost_is_upper_bound` (true when a send failed and was counted at its worst case),
 `prices_date_checked`, `error`, and `cumulative_usd`. See `llm-backend.md`, section 5.
+A call of a rule-generation experiment (issue #30) has, instead of `run_id`, `session_id`,
+`condition`, `case_id`, `repeat`, `speaker_role` (condition A) and `path_index` (read only by
+the mock client; never sent to a provider). A call of a rule-extraction experiment (issue #66) has
+`encounter_type`, `run` and `attempt`; of a rule-translation experiment (issue #67), `rule_id` and
+`attempt`. A budget cap scoped to one experiment counts the
+lines whose `experiment` is that experiment's name.
 
 ## Change log
 
 - **1** (2026-10-13, issue #24): first version.
+- **2** (2026-10-13, issue #26): a second kind of run. `run_kind` added to every
+  `config.json`. A `negotiation` run is otherwise as in version 1. An `avoidance` run has
+  its own files: `config.json`, `trajectory.csv` (with the velocity as a vector, the
+  preferred velocity, `control_mode`, and the ids of the active interactions),
+  `interactions.jsonl`, `events.jsonl` and `outcome.json`; and the `summary.csv` of an
+  avoidance experiment has its own columns. Folders written under version 1 stay valid.
+- **3** (2026-10-14, issue #28): rules. An avoidance run gains `pair_interactions.jsonl`
+  (each pair interaction's outcome category, and every rule evaluation and match with its
+  roles, directives, snapshot and expiry); `baseline` and `perturbation` in `config.json`,
+  and the active rule set under `directives`; `directive_changes` and the expiry of
+  `speed_scale` in `interactions.jsonl`; the events `ambiguous_match` and
+  `cross_pair_conflict`; `interaction_outcomes`, `rules` and `baseline` in
+  `outcome.json`, with `artefacts` (counts of walking backwards and of being hurried along); and eleven summary columns. `logging.interactions` now also governs
+  `pair_interactions.jsonl`. Perception records are version 2. A negotiation run is as in
+  version 2. Folders written under versions 1 and 2 stay valid and are checked against
+  their own version.
+- **4** (2026-10-15, issue #30): pair exposure and severity tiers. An avoidance run gains, in
+  `pair_interactions.jsonl`, `pair_exposure_time_s`, `first_pair_exposed_step`, `severity_tier`,
+  `tier_detail` and `outcome_detail.pair_exposed`; in `outcome.json`, `interaction_outcomes.tiers`,
+  `interaction_outcomes.pairs_with.pair_exposed` and `totals.pair_exposure_time_s`; in `config.json`,
+  `seeding`, and the two new thresholds in `scenario.metrics` (and in `outcome.json`'s `thresholds`);
+  and six summary columns. The categories `avoided`, `resolved`, `failed` mean what they meant in
+  version 3. A negotiation run is as in version 3. Folders written under versions 1 to 3 stay valid
+  and are checked against their own version.
+- (2026-10-16, issue #30; not a run format, the run schema stays at version 4.) The folder of a
+  rule-generation experiment, version 1 of its own (`rulegen_log_version`), section
+  "Rule-generation experiments"; and the spend ledger's labels for its calls.
+- **5** (2026-10-17, issue #32): backing up. An avoidance run gains the directive field `back_up`
+  (in `interactions.jsonl`, `directive` and `directive_changes`); in `trajectory.csv`, the
+  `control_mode` `back_up` and a `back_up` column (the agent's part in a back-up manoeuvre); a
+  `back_up` event, and `back_up` as a handoff's `to`; in `outcome.json`, a `back_up` block (every
+  manoeuvre, and per agent and in total its times and distances), among the `artefacts`
+  `backward_distance_m`, and in each `single_file` entry `exit_time_s` and `first_out`;
+  `backing_speed_mps` of an agent whose type sets one; and four summary columns. Intentional backing is never counted as the walking-backwards artefact. Perception
+  records are version 3 (`perception.md`: the passage fields and the group). A negotiation run is
+  as in version 4. Folders written under versions 1 to 4 stay valid and are checked against
+  their own version.
+- (2026-10-17, issue #32; the rule-generation log, not a run format.) Version 2 of the
+  rule-generation log: `outcomes.jsonl`; the fictional group in `design.jsonl` and the session
+  records (`cell`, `personas`, `visibility`, `framing`); `refused_no_sign_off` in
+  `invocations.jsonl`; `design` and `groups` in `summary.json`.
+- (2026-10-23, issue #59; no version change.) A replay of LLM agents' plans adds a `plans` key
+  to `config.json` and `outcome.json`, and the `control_mode` `plan`. No other run changes.
+- (2026-10-23, issue #60; no version change.) A resolution experiment whose design varies a core
+  or situational factor adds `factors` and, with a load, `bodies` to a session record, the
+  factor levels to `design.jsonl` and the outcome rows, and `factor_values` and
+  `templates.factors` to `config.json`; a replay's `plans` block repeats `bodies`. Without such a
+  factor every file is as before.
+- (2026-10-23, issue #61; no version change.) A resolution experiment whose design varies a
+  pairwise perception factor adds `pairwise` to `design.jsonl` and a session record, the
+  switches to `visibility`, `templates.pairwise` to the record and `config.json`, and each
+  person's own perception as 0 or 1 to the outcome rows; `invocations.jsonl` may say
+  `refused_no_sign_off`. Without such a factor every file is as before.
+- (2026-10-23, issue #58; not a run format, the run schema is unchanged.) The folder of a
+  resolution experiment, version 1 of its own (`resolution_log_version`), section "Resolution
+  experiments". A replay's session record may now have more than two `encounter.agents`, their
+  conflict `pairs`, and a `partner_id` per decision; a two-person record is as before.
+- (2026-10-23, issue #63; no version change.) A resolution experiment's outcome rows gain, per
+  person, `_other_age_shown` and `_other_gender_shown` and, with a design that varies a core or
+  situational factor, `_other_observable_shown` (what the person was told of the other, for
+  RF-8), and `encounter_agents` (the members in the encounter's order, which the physical
+  columns' `_a` and `_b` follow). Every other file is as before; the tables are rebuilt from the
+  session records when an experiment is resumed.
+- (2026-10-24, issue #92; no version change.) A resolution experiment whose design varies real
+  ethnicity (`ethnicity_pair`) adds `ethnicity` to each persona in `design.jsonl` and the session
+  record, `ethnicity` to `visibility`, `ethnicity` and `ethnicity_visible` to the record's
+  `factors`, `ethnicity_weight` to the session in `design.jsonl` and the record, `ethnicity_shares`
+  (and `ethnicity_draw` when `balanced`) to the design in `config.json`, and to the outcome rows the
+  cell's `ethnicity_pair` and `ethnicity_visible`, `p1_ethnicity`, `p2_ethnicity`,
+  `_other_ethnicity_shown` and `ethnicity_weight` (`ethnicity.md`, section 5); a counterfactual pair
+  that flips one person's group adds `pair_change` to its sessions and rows; its factor template is
+  `resolve_factors_v2`; `invocations.jsonl` may say `refused_no_sign_off`. Without it every file
+  is as before.
+- (2026-10-26, issue #66; not a run format, the run schema is unchanged.) The folder of a
+  rule-extraction experiment, version 1 of its own (`extraction_log_version`), section
+  "Rule-extraction experiments"; and the spend ledger's labels for its calls.

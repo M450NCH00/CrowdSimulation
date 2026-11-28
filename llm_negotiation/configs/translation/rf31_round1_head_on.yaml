@@ -1,0 +1,55 @@
+# Issue #108 (RF-31): translate round 1's extracted rules (head-on) into rule format 4, then replay
+# them on their Step 1 sessions and screen them in a crowd. RF-12 (#67) did the same into format 3
+# (configs/translation/round1_head_on.yaml), and this run is compared with it.
+#
+#   python run_experiment.py configs/translation/rf31_round1_head_on.yaml --plan
+#   python run_experiment.py configs/translation/rf31_mock_rehearsal.yaml           # mock rehearsal
+#
+# PAID RUN: approved by the user for issue #108 only, 2026-10-26, cap USD 0.05 (CLAUDE.md, pending
+# item 1). This config names the mock client; the paid run is
+#   python run_experiment.py configs/translation/rf31_round1_head_on.yaml --client deepseek --confirm
+# off-peak.
+schema_version: 1
+layer: rule_translation
+experiment_name: rf31_round1_head_on
+description: >-
+  RF-31, round 1 (head-on): RF-11's kept rules (candidate, found in 2 or 3 of 3 extraction runs),
+  each translated once into rule format 4, validated, written with its references unchecked, run
+  alone in ORCA (with its steps, if it has any) on the Step 1 sessions it was extracted from (the
+  identity check), and screened alone in the two-way flow, whose people are given canes,
+  suitcases, phones and assertiveness in turn.
+
+extraction: runs/rf11_round1_head_on
+statuses: [candidate]        # RF-11 passes no unstable rule on
+
+template: translate_v2
+
+llm:
+  client: mock
+  mock_policy: translate_rehearsal_v2
+  model: deepseek-flash      # the extractor's and RF-12's translator's model
+  temperature: 0.0           # [placeholder] one translation per rule: the model's most likely, not a random sample (as RF-12)
+  max_tokens: 2500           # [placeholder] a format 4 rule with steps is longer than a format 3 one (RF-12: 1,500)
+  thinking: disabled
+  transport_retries: 0       # one send per attempt; a transport failure aborts the translation, which a rerun redoes
+
+budget:
+  cap_usd: 0.05              # the cap CLAUDE.md records for #108 (approved by the user, 2026-10-26); the worst case is 0.043
+  ledger: spend_ledger.jsonl
+
+identity:
+  enabled: true              # task 9: on the Step 1 sessions each rule was extracted from
+
+screening:
+  enabled: true              # task 9: one rule at a time, as RF-12
+  scenario: configs/scenarios/bidirectional_flow.yaml
+  baseline: orca_perturbed_v1
+  seed: 30900
+  repeats: 2
+  ages: [25, 70]             # round 1's two ages (RF-10's design), as RF-12
+  genders: [female, male]
+  factors:                   # [design] so that a format 4 rule reading them can apply in the crowd
+    mobility_aid: [none, cane]
+    load: [none, large_suitcase]
+    distraction: [none, phone]
+    assertiveness: [gives_way, holds_ground]

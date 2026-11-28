@@ -1,0 +1,43 @@
+# Prompt template resolve_debrief, version 1.  FROZEN — do not edit.
+# The hash of this file is pinned in MANIFEST.json and checked every time it is loaded.
+# To change any wording, copy the file to resolve_debrief_v2.yaml, change it there, freeze it,
+# and record the reason in the work log.
+template_id: resolve_debrief
+version: 1
+kind: resolution_debrief
+description: >-
+  The debrief of docs/resolution.md, D8: after an encounter ends, each agent that was prompted
+  is asked once, outside its role, what its decision was based on, with "none" a perfectly
+  good answer. The message follows the agent's last decision point (its prompt and its reply),
+  so the agent knows what it is being asked about; it is asked after the encounter, never
+  during it, so that asking cannot steer the decision.
+provenance: >-
+  Written for issue #57 (RF-2). The question is D8's, word for word, with the agent's own
+  decisions put where D8 has "[intents and steps]". The kinds are D8's. Every source the agent
+  names is stored as unchecked (RF-14 checks them).
+
+text: |-
+  Stepping out of the role now. Earlier, as this person, you:
+  {decisions}
+  Was what you did based on anything: a law or official guidance, a published study, a local custom, a habit, or nothing in particular? If you know a specific source, name it. If there is none, say so. That is a perfectly good answer.
+
+  {reply_format}
+
+decision: '- decided: "{intent}"'
+steps: "  Your steps were: {steps}."
+no_steps: "none, you carried on as you were"
+said: '  You said: "{message}"'
+signal: "  Your signal was: {signal}."
+
+reply_format: |-
+  HOW TO REPLY
+  Reply with a single JSON object and nothing else, with these keys:
+  "basis": in your own words, what you did was based on.
+  "kind": one of "law_or_guidance", "published_study", "local_custom", "habit", "common_sense" or "none".
+  "source": a specific source you know of, as a citation, or "none".
+  "applies_to": which of your decisions this is about.
+  The format, with placeholders: {"basis": "<what it was based on>", "kind": "<one of the kinds>", "source": "<a citation, or none>", "applies_to": "<which decision>"}
+
+retry: >-
+  Your last reply could not be read. Reply again with only a JSON object of the form
+  {"basis": "<what it was based on>", "kind": "<one of the kinds>", "source": "<a citation, or none>", "applies_to": "<which decision>"}.

@@ -1,63 +1,436 @@
 # Project: Crowd Behaviour Modelling using LLM: Conflict Resolution
 
 ## Overview
-This is a Final Year Project (FYP). Crowd simulation models the movement/dynamics of many entities (agents). Simulations can stall when agents have conflicting actions — e.g. two people trying to cross the same bridge from opposite sides.
-
-**Current framing (as of the second supervisor meeting):** rather than using an LLM as a static "world model" to generate a behaviour dataset, the project now has LLMs **communicate with each other to resolve a conflict directly** (e.g. two agents needing to cross the same narrow hallway from opposite directions), then looks for a **reusable pattern** in how the conflict gets resolved — so future conflicting scenarios in the simulation can apply the pattern without re-running the full LLM-to-LLM exchange each time. Any pattern found needs validation against real human behavioural data if available, or against sociological research on real human conflict resolution if not.
+This is a Final Year Project (FYP). Crowd simulation models the movement/dynamics
+of many entities (agents). Simulations can stall when agents have conflicting
+actions — e.g. two people trying to cross the same bridge from opposite sides.
+This project models conflict-resolution behaviours by extracting them from an LLM,
+which is used as a "world model" for how agents should behave.
 
 ## Repo layout note
-This repository **is** the `CrowdSimulation` working folder (no `/CrowdSimulation` prefix needed on new paths — put work directly under the relevant existing folder (`dataset/`, `pipeline/`, `integration/`, `literature/`), or a new top-level folder here if it genuinely doesn't fit an existing one). See `README.md` for the directory layout and live status of each roadmap step.
+This repository **is** the `CrowdSimulation` working folder. It used to be a
+subfolder inside a larger FYP folder and has been split out on its own so it can
+be tracked in git / GitHub Desktop. Everything under this repo root IS the
+crowd-simulation work — see `README.md` for the directory layout and the live
+status of each roadmap step. There is no more need for a `/CrowdSimulation`
+prefix on new work; put it directly under the relevant existing folder
+(`dataset/`, `pipeline/`, `integration/`), or a new top-level folder here if it
+genuinely doesn't fit an existing one.
 
-Three reference documents live **outside this repo**, in the parent FYP folder (not moved here, not tracked in this git history):
+Three reference documents live **outside this repo**, in the parent FYP folder
+(not moved here, not tracked in this git history):
 - `ChooZhenMing_FYP_Project_Plan_Strategy.docx`
 - `Conflicting Agents Conflict Management in a Multi-agent Systems.pdf`
 - `CrowdGym A Crowd Simulation Environment for Reinforcement Learning.pdf`
-  — the senior's prior FYP (Goh Chen Wei, NTU AY2025/26), the baseline this project improves on.
+  — the senior's prior FYP (Goh Chen Wei, NTU AY2025/26), the baseline this
+  project improves on.
 
-Check `integration/crowdgym_mapping.md` and `dataset/schema/README.md` first, they already distil the parts of the CrowdGym report that matter here (AgentType params, `RL_take_action`, journeys, RiMEA test scenarios). Only ask the user for the PDF's current path if you need something beyond what's already distilled there; don't assume a relative path to it still resolves after the move.
+Check `integration/crowdgym_mapping.md` and `dataset/schema/README.md` first —
+they already distil the parts of the CrowdGym report that matter here (AgentType
+params, `RL_take_action`, journeys, RiMEA test scenarios). Only ask the user for
+the PDF's current path if you need something beyond what's already distilled
+there; don't assume a relative path to it still resolves after the move.
 
 ## Background — continuation of a senior's project
-This FYP continues a senior's prior FYP, **CrowdGym** (see above). Treat their existing method as the baseline to improve on, not something to redo from scratch.
+This FYP continues a senior's prior FYP, **CrowdGym** (see above). Treat their
+existing method as the baseline to improve on, not something to redo from scratch.
 
-Goal: improve on the senior's method and ultimately reach a crowd simulation capable of handling **10,000 agents** without becoming too slow.
+Goal: improve on the senior's method and ultimately reach a crowd simulation
+capable of handling **10,000 agents** without becoming too slow.
 
-## Current task (from second supervisor meeting — supersedes Phase 1 below)
-Supervisor's explicit instruction: **review literature before any further experimentation.** No new dataset generation, no simulation/experiment code, until the literature review is complete and discussed.
+## Current task: resolve first, then extract rules (track #55, since 2026-10-20)
+At the supervisor meeting of 2026-10-20 the method changed. Until then (issue
+#30) an LLM was asked to negotiate or state a conflict rule directly. The work
+now follows four steps, tracked in issue #55 and built in issues #56 to #81
+(RF-1 to RF-25; RF-16 to RF-25 were added on 2026-10-22, so the RF numbers no
+longer follow the order of work, which #55 gives):
 
-Direction:
-- Have 2+ LLM agents communicate to resolve a conflict (start small — e.g. 2 agents in a narrow hallway crossing from opposite directions — before attempting the general case).
-- Look for a **reusable pattern** in how the conflict resolves, so it can be applied to future conflicting scenarios without re-running the full LLM-to-LLM exchange.
-- Validate the pattern against real human behavioural data if available, or against sociological research on real human conflict resolution otherwise.
-- Supervisor-provided starting papers:
-  - Wang, Zhang, Shi, Yang & Hu, "Modeling and simulating for congestion pedestrian evacuation with panic," *Physica A*, 2015.
-  - Wu, Peng, Zheng, Liu, Han, Kwon, Onizuka, Tang & Xiao, "Shall We Team Up: Exploring Spontaneous Cooperation of Competing LLM Agents," EMNLP Findings 2024 (aclanthology.org/2024.findings-emnlp.297) — one of its three case studies is LLM agents negotiating room exits during an emergency evacuation; primary anchor for the conflict-resolution search.
-- Literature review tracked via two GitHub issues (find 5 papers on why LLM-generated behaviour data is valid, superseded in priority by: find 10+ papers on LLM-to-LLM conflict resolution + sociological grounding). **Deliverable path for the new review:** `literature/llm-conflict-resolution/` (not `/CrowdSimulation/literature/...` — that prefix is stale, see Repo layout note above; fix this path in the GitHub issue itself if it still shows the old prefix).
+1. **Step 1 — resolve.** Test whether LLM agents can resolve a conflict,
+   without asking them for a rule.
+2. **Step 2 — extract.** If they can, extract the hidden rule or pattern from
+   how they resolved it, and ask the LLM for the reference the rule comes from.
+3. **Step 3 — verify.** Verify the rule against real human behaviour.
+4. **Step 4 — factors.** Include as many factors as possible, find which ones
+   actually drive the decision, and build a mapping from factors to decision.
 
-## Phase 1 — dataset generation (superseded, on hold, not deleted)
-Original task from the **first** supervisor meeting: generate a dataset of typical human behaviours under different scenarios by prompting an LLM, to test whether LLMs understand human behaviour well enough to act as simulation agents. Superseded by the direction above, but the artifacts below are kept, they may be useful for later comparison/validation or if the supervisor revisits this approach.
+The step numbers are labels, not the order of work: factor screening (RF-10)
+comes before rule extraction (RF-11) and verification (RF-14). The rule format
+no longer matters much (see "Supervisor decisions"). The code is in
+`llm_negotiation/` (negsim); `README.md` has the roadmap and
+`llm_negotiation/README.md` the section "Direction since October 2026".
 
-- LLM used: **DeepSeek API** (~$2 credit budget; spend tracked in `pipeline/config.py` -> `ALREADY_SPENT_USD`).
-- Dataset covers everyday scenarios (crossing a road, taking a lift, queuing, ...) and conflict-causing ones (bottlenecks, crossflow, doorway deadlocks, ...) — see `dataset/scenarios.yaml`.
-- Scope confirmed 2026-09-04: dataset is Singapore-only, organised by age group and gender (`dataset/personas.yaml`). Design decisions (DD1-DD4, e.g. generating per persona rather than per persona-pair) are recorded in `README.md` with supervisor sign-off.
-- `run01` complete: 420 API calls, 140 aggregated records, actual cost $0.097. Automated validation passes format/coverage; a systematic "female personas yield more than male" pattern was flagged for supervisor discussion — see `dataset/generated/validation_report.md`. **This flag is still unresolved** and may be relevant background if a similar bias question comes up in the new LLM-to-LLM approach.
+Step 1 follows `llm_negotiation/docs/resolution.md` (decisions D1 to D17),
+decided by the user on 2026-10-22 on their own authority, with no supervisor
+sign-off needed. An agent's reply says what it physically does (`intent`, then
+`steps`), with no `priority` field: who went first is measured in the replay.
+Its description follows what a person would perceive (a 75° view to 10 m,
+detail within 5 m, hearing from any direction). There are three conditions
+(independent, non-verbal, talk), prompting is event-driven, and each agent is
+*Amended 2026-11-01 (issue #129, RF-40), the user's decisions:* from RF-40 on, the conditions are
+silent (no signal, no talk, but asked again), non-verbal and talk, silent replacing independent; and
+signals and talk can be a turn-taking exchange (`protocol.exchange: turn_taking`: the simulation
+pauses, one person is asked at a time, and what they signal or say is taken in at once, in full).
+Earlier runs keep independent and the real-time exchange, unchanged.
+debriefed afterwards for the reference behind its decision. The work goes one
+scenario at a time, in rounds (D15 to D17). Architecture section 8.7 holds the
+decision record.
+
+Constraints for every RF issue (from #55):
+- No paid call unless this file records the supervisor's approval of paid runs
+  and the cap for that phase or round (see "Pending sign-offs").
+- No reply format may ask an agent who goes first.
+- Perceived attractiveness and ethnicity stay off by default. No paid run with
+  either switched on until this file records that factor's own ethics sign-off.
+  (Since 2026-10-24 real ethnicity replaces the fictional group in this track;
+  see "Pending sign-offs", item 3.)
+- No rule may read a person's ethnicity (or group), in any version of the rule format.
+  *Amended 2026-10-26 (issue #108, RF-31), agreed by the supervisor (see "Supervisor
+  decisions"):* perceived attractiveness is readable from rule format 4 only, as a person's
+  own view of the other (`self.finds_other_attractive`, inside `own_when`). Rule formats 1 to 3
+  still refuse it, and so does format 4 anywhere else.
+- Prompt templates are frozen: a wording change means a new template version,
+  never an edit.
+- Every feature is built and tested on the mock client first.
+- Configs and templates from before this track must keep behaving exactly as
+  before.
+- *Added 2026-11-25 (issue #131, AS1), the user's decision:* the grid environment
+  (RF-50 to RF-52) is an add-on. It must not modify the current environment's code;
+  ask the user before changing any existing file for it.
+
+Budget:
+- LLM used for dataset generation: **DeepSeek API** (~$2 credit budget; current
+  spend tracked in `pipeline/config.py` -> `ALREADY_SPENT_USD`) — be mindful of
+  token usage when touching the prompting scripts.
+- The negotiation work's paid calls are logged separately, one line per call, in
+  `llm_negotiation/spend_ledger.jsonl`. The total spent is the two added
+  together; neither file alone gives it.
+- **Balance checked 2026-10-24: USD 1.49** (DeepSeek's balance endpoint; 1.48
+  topped up, 0.01 granted), before issue #64's pilot. The records above add up
+  to about USD 0.10 of a USD 2.00 credit, so about USD 0.41 is unaccounted for:
+  either the credit was not 2.00, or the key was used outside these records.
+  Plan caps against the balance, not against USD 2.00 (`WORK_LOG-64.md`).
+  After issue #64's pilot (USD 0.075 in the ledger): **USD 1.41**, checked
+  2026-10-24. After issue #65's screen (USD 0.290 in the ledger, cap 0.35):
+  **USD 1.13**, checked 2026-10-24. After issue #98's comparison (USD 0.050 in the
+  ledger, cap 0.08): **USD 1.08**, checked 2026-10-25.
+  After issue #100's run on deepseek-v4-pro (USD 0.176 in the ledger, cap
+  0.30): **USD 0.91**, checked 2026-10-25.
+  After issue #101's run (USD 0.049 in the ledger, cap 0.08): **USD 0.86**,
+  checked 2026-10-25.
+  After issue #104's run (USD 0.221 in the ledger, cap 0.30): **USD 0.65**,
+  checked 2026-10-25.
+  After issue #66's extraction (USD 0.023 in the ledger, cap 0.05): **USD 0.64**,
+  checked 2026-10-26.
+  After issue #67's translation (USD 0.0017 in the ledger, cap 0.03): **USD 0.62**,
+  checked 2026-10-26 (0.63 just before it).
+  After issue #108's translation and its retry (USD 0.0029 in the ledger, cap 0.05):
+  **USD 0.62**, checked 2026-10-26 (the endpoint shows two decimals; 0.62 just before it too).
+  After issue #110's run with its pilot (USD 0.0619 in the ledger, cap 0.15): **USD 0.56**,
+  checked 2026-10-28 (0.62 just before it).
+  After issue #115's run with its pilot (USD 0.1688 in the ledger, cap 0.20): **USD 0.39**,
+  checked 2026-10-28 (0.56 just before it).
+  After issue #117's run with its pilot (USD 0.0707 in the ledger, cap 0.10): **USD 0.32**,
+  checked 2026-10-28 (0.39 just before it).
+  After issue #119's run with its pilot (USD 0.1471 in the ledger, cap 0.15, stopped at the cap with 66
+  of 72 sessions): **USD 0.17**, checked 2026-10-29 (0.30 just before the rest of the run, 0.32 before
+  the pilot).
+  Topped up by the user before issue #127's run (the user: "I have topped up up to 5 us dollar"):
+  **USD 5.17**, checked 2026-11-01 (5.17 topped up, 0.00 granted).
+  After issue #127's run with its pilot (USD 0.9885 in the ledger, cap 1.60): **USD 4.18**,
+  checked 2026-11-01.
+  After issue #129's run with its pilot (USD 1.2261 in the ledger, cap 1.80): **USD 2.96**,
+  checked 2026-11-02.
+  Checked again before issue #141's approval: **USD 2.96**, 2026-11-26 (no paid call since #129).
+  After issue #141's run with its pilot (USD 0.3476 in the ledger, cap 0.80 over both frames): **USD 2.62**,
+  checked 2026-11-26.
+  Checked again before issue #138's approval: **USD 2.61**, 2026-11-27 (no paid call since #141; the
+  endpoint shows two decimals, and 2.96 less 0.3476 is 2.6124).
+  After issue #138's run with its pilot (USD 1.0239 in the ledger over its three experiments, cap 2.00):
+  **USD 1.59**, checked 2026-11-27.
+
+### Phase 1 (on hold): the behaviour dataset
+The task from the first supervisor meeting, on hold since the second meeting.
+The supervisor wanted a **dataset of typical human behaviours under different
+scenarios**, generated by prompting LLMs. The underlying research question:
+*do LLMs actually understand human behaviour well enough to be used as agents
+in the crowd simulation?*
+
+- Dataset covers everyday scenarios (crossing a road, taking a lift, queuing, ...)
+  as well as conflict-causing ones (bottlenecks, crossflow, doorway deadlocks,
+  ...) — see `dataset/scenarios.yaml`.
+- **Scope confirmed 2026-09-04**: dataset is Singapore-only, organised by age
+  group and gender (`dataset/personas.yaml`). The design decisions for how the
+  dataset is generated and mapped to CrowdGym (DD1-DD4, e.g. generating per
+  persona rather than per persona-pair) are recorded in `README.md` and have
+  supervisor sign-off.
+- First generation run (`run01`) is done: 420 API calls, 140 aggregated records,
+  actual cost $0.097. Automated validation passes format/coverage; a systematic
+  "female personas yield more than male" pattern was flagged for supervisor
+  discussion — see `dataset/generated/validation_report.md`.
 
 ## Roadmap
-See `README.md` for the live status of each step.
+See `README.md` for the live status of each step. The RF issues, in the order
+they are to be worked, are listed in track issue #55. Phase 1's steps (dataset
+schema, prompting pipeline, generation, validation, the bridge to CrowdGym) are
+in `README.md`, "Order of work (from the plan) and current status".
 
-1. **Literature review (current focus)** — `literature/llm-conflict-resolution/`. No experimentation until this is done.
-2. Design a small-scale conflict scenario (e.g. 2-agent narrow hallway).
-3. Implement the LLM-to-LLM communication exchange for that scenario.
-4. Analyze exchanges for a reusable resolution pattern.
-5. Validate the pattern against real data or sociological literature.
-6. Bridge the validated pattern into CrowdGym — `integration/crowdgym_mapping.md`.
-7. Iterate with supervisor feedback before the next meeting.
+## Supervisor decisions
+Ethics sign-off for the perceived-attractiveness factor (issue #61): approved by the supervisor on 2026-10-24
 
-(Phase 1 steps — schema/pipeline/generate/validate under `dataset/` and `pipeline/` — are on hold; see "Phase 1" section above.)
+Ethics sign-off for the real-ethnicity factor (issue #92): approved by the supervisor on 2026-10-24
+
+Rules may read perceived attractiveness (issue #108, RF-31): agreed by the supervisor, reported by
+the user on 2026-10-26, "since we want to research on whether it affects decision in real time".
+As `docs/pairwise-factors.md` section 7 required, this was the supervisor's decision. It applies
+from rule format 4, and only as a person's own view of the other (`self.finds_other_attractive`,
+in an own-only condition). Real ethnicity stays unreadable by every rule, in every version. The
+ethics-gate sentences for paid runs above are unchanged.
+
+### Meeting of Tuesday 2026-10-20
+The user's notes from the meeting, word for word:
+
+> Can prompt LLM to provide the reference where the rule came from
+>
+> First step is asking LLM to resolve the conflict, and only after that do the rule (and verify the rules with real human behaviour)
+>
+> The format of the rule is no longer important (Do not focus on this part too much), because we can ask AI to translate those mapping to different simulators.
+>
+> Our main goal is:
+>
+> Ask whether LLM can resolve the conflict
+>
+> If it is able to resolve the conflict, try to find the hidden rule/pattern that it resolves the conflict
+>
+> We can include as many factors as possible, and try to find which parameters are the one that actually contributes to the decision made by the LLM
+>
+> After that, verify the extracted rule with real human behaviour
+>
+> See the factors affecting the decision (See which factors contributes to the decision)
+>
+> The rule can be more specific (for example the keep left rule)
+>
+> Can also include more factors (e.g. attractiveness of the agent (represented in a matrix)...) - and there can be a mapping
+
+**Summary (not the supervisor's words; the notes above are the record):**
+- Resolve first: test whether LLM agents can resolve a conflict before asking
+  for any rule. Only then extract the rule or pattern behind how they resolved it.
+- Ask the LLM for the reference a rule comes from.
+- Verify extracted rules against real human behaviour. What counts as "real
+  human behaviour": published studies only (the user's decision, 2026-10-30;
+  see "Pending sign-offs", item 6).
+- Include many factors and find which ones actually drive the LLM's decision;
+  build a mapping from factors to decision. More factors may be added, for
+  example the agent's attractiveness represented as a matrix (an ethics
+  sign-off is pending, see below).
+- The rule format no longer matters much, since an LLM can translate a rule for
+  each simulator. Rules may be more specific, for example "keep left".
+
+### Meeting of November 2026 (after RF-40; exact date not recorded)
+The user presented round 1's results (`presentations/2026-11_supervisor_meeting_round1.pptx`).
+The user's notes from the meeting, word for word:
+
+> 1. Can try grid environment, because this will limit the action space of the agents, especially for decisions like turning left or right (as this will get rid of the angle stuff)
+> 2. Search online on left and right orientation, because deepseek keeps mistaking the other person's left and right as its own elft and right despite already telling it that they are opposite direction facing
+> 3. Can test with absolute positioning
+> 4. Can have LLM output qualitative (word) description instead of absolute action space
+> 5. Describe the action that the LLM can take and have it choose, instead of having it decide the angles and stuff
+> 6. Check whether the decisions it made are hallucinated choices (Assess the percentage on the hallucination responses)
+> 7. Can tell the agent you are supposed to behave like this person, but no need to speak like the person
+> 8. My professor said I can take a look at this and see how they model the agent's decisions: https://labs.ycombinator.com/projects/games/index.html#mindustry-bloopers
+
+**Summary (not the supervisor's words; the notes above are the record):**
+- These are suggestions ("can ..."), not instructions. They are numbered SV7 to SV14 in
+  `llm_negotiation/docs/architecture.md`, section 8.8, and are acted on in RF-42 to RF-52
+  (#131 to #141, track #55).
+- *Decided by the user on 2026-11-25, on their own authority* (AS1 to AS9, recorded in
+  `llm_negotiation/docs/action-space.md`):
+  - **AS1, the grid is an add-on:** it must not modify the current environment's code. It
+    lives only in new files with its own entry point, and if an existing file would have to
+    change, the user is asked first.
+  - **AS4, the menu in the existing corridor** extends the existing code behind a template
+    flag, and earlier templates and configs must behave exactly as before.
+  - The rest cover the conditions, the menu's amounts, the absolute frame (provisional until
+    RF-43), the grid's cells and clash rule, when RF-41 runs, and the order of work.
+
+## Pending sign-offs
+Items 1 and 5 are still pending (item 1 was approved for issues #64, #65, #98, #100, #101, #104, #66, #67, #108, #110, #115, #117, #119, #127, #129, #141 and #138 only).
+**Do not treat any of them as approved** until the user records the
+supervisor's answer in this file, with a date. Items 2 and 3, the ethics
+sign-offs for perceived attractiveness and real ethnicity, were recorded by the
+user as approved by the supervisor on 2026-10-24. Items 4, 7 and 8 were decided
+by the user on 2026-10-22, on their own authority, as part of the resolution
+design (`llm_negotiation/docs/resolution.md`); they need no supervisor sign-off.
+Item 6 was decided by the user on 2026-10-30, on their own authority, at the
+start of RF-14 (issue #69).
+
+**The code's ethics gates read one exact sentence each**, not the items below:
+a paid run that varies the factor is refused until this file holds the
+factor's sentence, word for word, with the date. Perceived attractiveness:
+`llm_negotiation/docs/pairwise-factors.md`, section 6 (issue #61). Real
+ethnicity: `llm_negotiation/docs/ethnicity.md`, section 6 (issue #92). The fictional group:
+`llm_negotiation/docs/fictional-groups.md`, section 6 (issue #32; no longer
+used in this track). Numbers in brackets are the decisions of track issue #55.
+
+1. **PENDING** — Paid runs, and their cap: a total of about USD 1.80, split per
+   phase (#55, 1). Until it is recorded, no paid call. The balance is now
+   USD 1.49 (see "Budget"), so the total needs revising.
+   - **Approved for issue #64 only, 2026-10-24:** the user confirmed approval of
+     paid runs for RF-9's pilot (#64), and only for it, with a cap of
+     **USD 0.20** on that experiment's own calls (`experiment_name: rf_pilot`).
+     Every other paid run still needs its own approval and cap recorded here.
+   - **Approved for issue #65 only, 2026-10-24:** the user approved paid runs for
+     RF-10's round 1 screen (#65), and only for it, with a cap of **USD 0.35** on
+     that experiment's own calls (`experiment_name: rf10_round1_head_on`; 288
+     sessions, about USD 0.25 off-peak, `WORK_LOG-65.md`).
+   - **Approved for issue #98 only, 2026-10-25:** the user approved paid runs for
+     RF-27's comparison of `resolve_v7` with `resolve_v6` (#98), and only for it,
+     with a cap of **USD 0.08** on that experiment's own calls
+     (`experiment_name: rf27_round1_head_on_v7`; 88 sessions estimated, 96
+     run, independent condition only, USD 0.050 off-peak, `WORK_LOG-98.md`).
+   - **Approved for issue #100 only, 2026-10-25:** the user approved paid runs for
+     RF-28's run of the same head-on sessions on `deepseek-v4-pro` (#100), and
+     only for it, with a cap of **USD 0.30** on its own calls (96 sessions,
+     independent condition only, about USD 0.19 off-peak, `WORK_LOG-100.md`). The
+     cap covers both of its experiments together: `rf28_round1_head_on_v4pro`
+     (6 sessions at a reply cap of 300, USD 0.0116) and, by the user's decision
+     the same day, `rf28_round1_head_on_v4pro_cap600` (the run of record, reply
+     cap 600, its own cap USD 0.28).
+   - **Approved for issue #101 only, 2026-10-25:** the user answered "Yes" to
+     recording paid-run approval for RF-29's run of the head-on sessions under
+     `resolve_v8` (the sidestep option) on `deepseek-flash` (#101), and only for
+     it, with a cap of **USD 0.08** on that experiment's own calls
+     (`experiment_name: rf29_round1_head_on_sidestep`; 96 sessions, independent
+     condition only, about USD 0.05 off-peak, `WORK_LOG-101.md`).
+   - **Approved for issue #104 only, 2026-10-25:** the user approved paid runs for
+     RF-30's rerun of head-on's non-verbal and talk conditions under
+     `protocol.execution: keep_line` (#104), and only for it, with a cap of
+     **USD 0.30** on that experiment's own calls (`experiment_name:
+     rf30_round1_head_on_keep_line`; RF-10's design, 192 sessions, about USD 0.24
+     off-peak, `WORK_LOG-104.md`).
+   - **Approved for issue #66 only, 2026-10-26:** the user answered "Yes I
+     approve" to paid runs for RF-11's rule extraction from round 1 (#66), and
+     only for it, with a cap of **USD 0.05** on that experiment's own calls
+     (`experiment_name: rf11_round1_head_on`; three extraction calls, about
+     USD 0.006 each off-peak, `WORK_LOG-66.md`). The user also decided the same
+     day that head-on goes on to extraction although its gate passed narrowly.
+   - **Approved for issue #67 only, 2026-10-26:** the user approved paid runs for
+     RF-12's translation of RF-11's four candidate rules into rule format 3 (#67), and
+     only for it, with a cap of **USD 0.03** on that experiment's own calls
+     (`experiment_name: rf12_round1_head_on`; four calls, worst case USD 0.028,
+     `WORK_LOG-67.md`).
+   - **Approved for issue #108 only, 2026-10-26:** the user approved paid runs for
+     RF-31's re-translation of round 1's four candidate rules into rule format 4 (#108),
+     and only for it, with a cap of **USD 0.05** on that experiment's own calls
+     (`experiment_name: rf31_round1_head_on`; four calls, worst case USD 0.043,
+     `WORK_LOG-108.md`). *The same day* the user answered "Yes" to retrying the one
+     unreadable translation (`x_head_on_6455ca5589`) as a further paid call, inside the
+     same cap: USD 0.05 for #108's calls together, of which USD 0.0025 was spent before
+     the retry (`experiment_name: rf31_round1_head_on_retry`, its own cap the rest).
+   - **Approved for issue #110 only, 2026-10-28:** the user approved paid runs for RF-32's
+     round 1 with three or four people (#110), and only for it, with a cap of **USD 0.15** on that
+     experiment's own calls (`experiment_name: rf32_round1_group_head_on`; 72 sessions, independent
+     condition only, about USD 0.07 off-peak from RF-10's measured cost per call, `WORK_LOG-110.md`).
+     The user also answered "Run as built" to the issue's design choices listed there.
+   - **Approved for issue #115 only, 2026-10-28:** the user approved paid runs for RF-34's
+     non-verbal run of RF-32's group sessions (#115), and only for it, with a cap of **USD 0.20** on
+     that experiment's own calls (`experiment_name: rf34_round1_group_head_on_non_verbal`; 72
+     sessions, non-verbal condition only, about USD 0.12 to 0.14 off-peak, up to about 0.20 at the
+     mock's call count, `WORK_LOG-115.md`).
+   - **Approved for issue #117 only, 2026-10-28:** the user approved paid runs for RF-35's
+     encounters sampled from crowds (#117), and only for it, with a cap of **USD 0.10** on that
+     experiment's own calls (`experiment_name: rf35_crowd_encounters`; 72 sessions, independent
+     condition only, about USD 0.07 off-peak from RF-32's measured cost per call, `WORK_LOG-117.md`).
+   - **Approved for issue #119 only, 2026-10-29:** the user answered "ok run as built, do with your
+     recommendation" to paid runs for RF-36's non-verbal run of RF-35's crowd encounters (#119), and only
+     for it, with the recommended cap of **USD 0.15** on that experiment's own calls (`experiment_name:
+     rf36_crowd_encounters_non_verbal`; 72 sessions, non-verbal condition only, about USD 0.11 to 0.12
+     off-peak from RF-35's measured cost per call, a pilot first, `WORK_LOG-119.md`). The same answer
+     keeps D5 as written (a bystander coming into view prompts again).
+   - **Approved for issue #127 only, 2026-11-01:** the user approved paid runs for RF-39's run of round 1's
+     head-on sessions with the sidestep (`resolve_v8`) in all three conditions, every cell 4 times, under
+     `protocol.execution: keep_line_replan` (#127), and only for it, with a cap of **USD 1.20** on that
+     experiment's own calls (`experiment_name: rf39_round1_head_on_sidestep_reprompt`; 816 sessions, about
+     USD 0.77 to 0.86 off-peak from RF-29's and RF-30's measured costs, a pilot first, `WORK_LOG-127.md`).
+     The user's words: "Approve cap of USD 1.20, but do not do the run first as I have not top up the
+     money": no paid call until the user says the balance has been topped up. *The same day* the user
+     raised the cap to **USD 1.60** (answering "Raise to USD 1.60"), after the limit of decision points
+     went from 3 to 6 and the debrief gained a question (`resolve_debrief_v2`): about USD 1.08 off-peak
+     on the mock's calls. *The top-up condition was met on 2026-11-01:* the user said "I have topped up
+     up to 5 us dollar in my deepseek api", and the balance endpoint showed USD 5.17. The cap stays
+     USD 1.60.
+   - **Approved for issue #129 only, 2026-11-02:** the user said "I approve the run" for RF-40's run of
+     round 1's head-on sessions in the silent, non-verbal and talk conditions under the turn-taking
+     exchange (#129), and only for it, and chose the recommended cap of **USD 1.80** on that experiment's
+     own calls (`experiment_name: rf40_round1_head_on_turn_taking`; 816 sessions, about USD 1.2 to 1.6
+     off-peak from RF-39's measured cost per call, a pilot first, `WORK_LOG-129.md`). The same day the
+     user decided that everyone in the encounter hears a message said in the pause, whatever the
+     distance (`protocol.always_heard`), that an answer reaches the first speaker only at its next
+     decision point, and accepted `resolve_v9`'s wording and RF-10's gate (0.50) as drafted.
+   - **Approved for issue #141 only, 2026-11-26:** the user approved paid runs for RF-52's run of round 1 on
+     the grid (#141), and only for it, choosing "RF-52 only, USD 0.80 (Recommended)": a cap of **USD 0.80**
+     on that issue's own calls, for both of its frames together (`resolve_grid_v1` and `resolve_grid_abs_v1`;
+     RF-51's configs `configs/grid/round1_grid.yaml` and `round1_grid_abs.yaml` with RF-52's own experiment
+     names; 272 silent sessions per frame, about USD 0.53 to 0.63 off-peak from RF-51's estimate calibrated
+     on RF-40's silent calls, `WORK_LOG-140.md`), run off-peak, a pilot first. The balance was USD 2.96. The
+     same day the user chose **RF-10's gate (0.50)** for the grid ("0.50, as before (Recommended)"): the
+     share of sessions the agents' own plans resolve, with the grid's measures standing for `plan_only`
+     and the ORCA baselines reported as not available. RF-49 (#138) is **not** approved: it needs its own
+     approval and cap.
+   - **Approved for issue #138 only, 2026-11-27:** the user approved paid runs for RF-49's run of round 1's
+     head-on sessions with the menu, in the agent's own frame and in an absolute frame (#138), and only for
+     it, choosing "Full run, cap USD 2.00 (Recommended)": a cap of **USD 2.00** on that issue's own calls,
+     one total over its three experiments together (`rf49_round1_head_on_menu`, `rf49_round1_head_on_menu_abs`
+     and `rf49_round1_head_on_menu_abs_swap`; each config's own cap set to what remains of the 2.00 when it
+     starts). 1,120 sessions, silent and talk, about USD 1.45 to 1.77 off-peak from the mock's call counts
+     at RF-40's measured cost per call (`WORK_LOG-138.md`), run off-peak, a pilot first. The balance was
+     USD 2.61. The same day the user accepted RF-47's and RF-48's choices as built and chose to
+     counterbalance which colour is at +y at the same size (`resolve_menu_abs_swap_v1`).
+2. **Approved by the supervisor, 2026-10-24** — Ethics sign-off for perceived
+   attractiveness as a factor (#55, 3). *The user decided on 2026-10-24* that
+   attractiveness (both directions) is **in** RF-10's design, because bias can
+   affect the decision a person makes. For the code's gate, see above.
+3. **Approved by the supervisor, 2026-10-24** — Ethics sign-off for **real
+   ethnicity** as a factor. *The user decided on 2026-10-24* that real
+   ethnicity replaces the fictional group in this track: Singapore's ethnic
+   groups at their resident shares (SingStat, *Population Trends 2026*,
+   end-June 2026: 73.9% Chinese, 13.5% Malay, 9.0% Indian, 3.6% Others), built
+   in RF-26 (issue #92), and included in RF-10. For the code's gate, see above.
+   The fictional group (issue #32) stays only in the rule-generation layer,
+   unchanged; its own sign-off is no longer needed for this track. *Earlier
+   wording:* whether the fictional group stays, and its ethics sign-off,
+   pending since issue #32.
+4. **Decided by the user, 2026-10-22** — Whether to add the silent condition
+   beside the talk condition (#55, 4): three conditions, namely independent,
+   non-verbal and talk (`resolution.md`, D3). (#55's "silent" was what became non-verbal. The
+   *silent* condition of issue #129, decided by the user on 2026-11-01, is another one: no signal
+   and no talk, asked again; it replaces independent from RF-40 on.)
+5. **PENDING** — How far the portable-rules track (#34) is paused: only the
+   build (#42 onward), or the remaining literature issues (#35 to #41) as well
+   (#55, 5).
+6. **Decided by the user, 2026-10-30** — What "verify with real human
+   behaviour" means (#55, 6): **published studies only**, RF-14 as written. The
+   user's words: "published studies only is what I decided". Observed data
+   (recorded pedestrian trajectories, video, field observation in Singapore) is
+   out of RF-14's scope, so its task 8 (an observed-data plan) is not done.
+   *Earlier wording:* published studies only, or observed data; pending since
+   issue #55.
+7. **Decided by the user, 2026-10-22** — Which LLM gives the reference for a
+   rule: the extractor model that writes the rule from the results, or the
+   agents themselves, asked afterwards in a debrief (#55, 7): both, the agents
+   in a debrief and the extractor in RF-11 (`resolution.md`, D8).
+8. **Lifted by the user, 2026-10-22** — Whether the "no new simulation code
+   until the literature review is discussed" instruction is lifted (#55, 2):
+   the design needs new simulation code (RF-4, RF-17), and the user is fine with
+   adding it. Recorded as unconfirmed in `README.md` from issue #24 until then.
 
 ## Notes for Claude Code
-- When asked to work on a GitHub issue, follow `github_issue_workflow.md`.
-- **Do not resume Phase 1 dataset-generation work or write new simulation/experiment code** until the literature review above is marked complete, this is a standing supervisor instruction, not just a suggestion, so don't proceed past it even if asked to "just get started" without an explicit note that the review is done.
-- Check `integration/crowdgym_mapping.md` and `dataset/schema/README.md` before proposing anything that touches CrowdGym — go back to the original PDF (outside this repo) only for details not already covered there.
-- Flag clearly when something is a design decision vs. an assumption you're making, since supervisor sign-off matters for this project.
-- When helping with dataset or pattern validation, prioritize methods that are explainable and defensible in a report, not just automated metrics.
-- `.env` holds the DeepSeek API key. Never print it, commit it, or include it in any output — `.gitignore` already excludes `.env` from version control.
+- When asked to work on a GitHub issue, follow `github_issue_workflow.md`
+- Check `integration/crowdgym_mapping.md` and `dataset/schema/README.md` before
+  proposing anything that touches CrowdGym — go back to the original PDF
+  (outside this repo) only for details not already covered there.
+- Flag clearly when something is a design decision vs. an assumption you're
+  making, since supervisor sign-off matters for this project.
+- When helping with dataset validation, prioritize methods that are explainable
+  and defensible in a report, not just automated metrics.
+- `.env` holds the DeepSeek API key. Never print it, commit it, or include it in
+  any output — `.gitignore` already excludes `.env` from version control.

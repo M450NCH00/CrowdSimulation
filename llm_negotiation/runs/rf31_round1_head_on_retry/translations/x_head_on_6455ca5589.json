@@ -1,0 +1,176 @@
+{
+  "translation_log_version": 1,
+  "experiment": "rf31_round1_head_on_retry",
+  "extraction": {
+    "experiment": "rf11_round1_head_on",
+    "rule_id": "x_head_on_6455ca5589",
+    "version": 1,
+    "file": "runs/rf11_round1_head_on/head_on/extracted_rules/rules/x_head_on_6455ca5589.v1.yaml",
+    "sha256": "8478ed8ebd8a5b26b167a7fd4996493e2cbe93aae7fbd544b6236452e6ae5118",
+    "status": "candidate",
+    "category": "valid",
+    "extraction_stability": "3/3",
+    "target": "first_slowed",
+    "held_out_accuracy": 0.7115,
+    "baseline_accuracy": 0.75,
+    "beats_baseline": false
+  },
+  "started_utc": "2026-10-26T14:10:40+00:00",
+  "template": {
+    "key": "translate_v2",
+    "sha256": "22cad48dca89f9871b992f38a1c66bfcf27a4f05603eea519225612d680f6b88",
+    "uses": {
+      "key": "rulegen_common_v3",
+      "sha256": "f7a320b009f440fff3841db96c40b5e76655dbf97ce38f76d7d7f738083d20ef"
+    }
+  },
+  "llm": {
+    "model": "deepseek-flash",
+    "temperature": 0.0,
+    "max_tokens": 2500,
+    "thinking": "disabled"
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "You translate rules about how people behave when they meet on foot into the rule format of a crowd simulator.\n\nThe rule you are given was found by studying recorded encounters. It describes what people did, in plain words, with the factors it depends on and a mechanical form of it over the columns of a table. The simulator moves each person towards where they are going and keeps them from walking into each other. A rule in its format changes only what each of two people does when they meet, as the directive fields below say, including a plan of steps. Its condition and roles read only what both people can see; an own-only condition reads one person's own private factors.\n\nYOUR TASK\n1. Write the one rule in the format below that comes closest to the rule you are given. Use only the keys, fields and values the format lists.\n2. Do not add anything the rule you are given does not say.\n3. Write what a person does over time (when they start, how fast they walk, how far they turn or step aside, until when) as steps, and what depends on a person's own private factors as an own-only condition.\n4. Where the format cannot say a part of the rule (a condition it has no field for, a signal or words), leave that part out or write the nearest thing the format can say, and list the part under \"lost\".\n5. If no part of the rule can be written in the format, give null as the rule, and list what was lost.\n6. No rule may read a person's ethnicity. Whether one person finds the other attractive may be read only as self.finds_other_attractive, in that person's own-only condition.\n\nTHE RULE FORMAT\nA rule is a JSON object. It says when it applies, gives each of the two people a role, and says what each role does. It may use only the fields listed below; nothing else can be written into a rule. Its condition and its roles may read only what both people can see; a person's own private factors may be read only in that person's own-only condition (below).\n\nKeys of a rule:\n- \"encounter\": the kind of meeting the rule is for, one of \"head_on\", \"crossing\", \"overtaking\", \"single_file_segment\" or \"any\".\n- \"when\": the condition under which the rule applies: a comparison, or {\"all\": [...]} (every item holds; an empty list always holds) or {\"any\": [...]} (at least one item holds), nested as needed.\n- \"roles\": either \"symmetric\" (both people get the same instructions, under the single role name \"both\"); or {\"by\": {...}}, which orders the two people by a number field and gives them two roles in turn; or {\"by_condition\": {...}}, which gives the first role to the person a condition holds for and the second to the other (below).\n- \"directive\": what each role does: one entry per role name, each with any of the directive fields below.\n- \"priority\": a whole number from 0 to 1000.\n- \"expiry\" (optional): \"passed\" or \"out_of_range\"; \"passed\" ends the rule's effect once the two have passed each other, \"out_of_range\" when they are out of sight of each other.\n- \"intent\" (optional): what the rule is meant to do, in one sentence of plain words.\n\nKinds of meeting (\"encounter\"):\n- head_on: approaching each other, directions of travel more than 120° apart\n- crossing: approaching each other, directions of travel 60° to 120° apart\n- overtaking: approaching each other, directions of travel less than 60° apart\n- single_file_segment: a stretch ahead of both, or that they are in, is too narrow for the two to pass in\n- any: every kind of meeting\n\nA comparison is {\"field\": <field>, \"op\": <operator>, \"value\": <a number, a name, or true or false; for \"in\" a list>, \"unit\": <unit>}. The operators are \"<\", \"<=\", \">\", \">=\", \"==\", \"!=\" or \"in\". Every comparison of a number gives its unit, which must be the field's: m, s, m/s, rad or years (an angle may be given in deg instead of rad). A comparison of a name, or of true or false, has no unit. A comparison of a value that is missing is false.\n\nFields are written with a prefix: \"pair.\" for a field of the two together; in a condition, \"either.\" (holds if it holds for at least one of the two) or \"both.\" (holds if it holds for each); in \"roles\", \"agent.\" (each person's own value); in an own-only condition, \"self.\" (that person's own private factors) and \"pair.\".\n\nFields of the two together (pair.):\n- pair.encounter_class (one of \"head_on\", \"crossing\", \"overtaking\", \"single_file_segment\" or \"none\")\n- pair.distance_m (m): distance between the two centres\n- pair.closing_speed_mps (m/s): how fast the distance is shrinking; negative if it is growing\n- pair.time_to_collision_s (s): time until the bodies touch at present velocities; null if they would not\n- pair.heading_difference_rad (rad): how far apart the two directions of travel are, 0 to pi\n- pair.min_corridor_width_m (m): narrowest free width of the passage along the line between the two\n- pair.age_difference_years (years): the difference between the two ages, never negative\n\nFields of each person that both can see (either., both., agent.):\n- age (years)\n- gender (one of \"female\", \"male\" or \"nonbinary\")\n- speed_mps (m/s): present speed\n- radius_m (m): body radius\n- time_to_segment_s (s): distance to the single-file segment over present speed; null outside that class\n- in_segment (true or false): whether this person is inside the single-file segment; null outside that class\n- segment_distance_travelled (m): how far this person has walked into the single-file segment; null unless inside it\n- segment_distance_ahead (m): distance to the end of the single-file segment in front of this person; null unless inside it\n- segment_distance_behind (m): distance to the end of the single-file segment behind this person; null unless inside it\n- mobility_aid (one of \"none\" or \"cane\"): whether this person walks with a cane\n- load (one of \"none\" or \"large_suitcase\"): whether this person pulls a large suitcase\n- distraction (one of \"none\" or \"phone\"): whether this person is looking at a phone\n\nA person's own private factors, which only that person knows (self., only in an own-only condition):\n- self.assertiveness (one of \"gives_way\" or \"holds_ground\"): whether this person tends to give way or hold their ground\n- self.urgency (one of \"routine\" or \"urgent\"): whether this person's errand is urgent\n- self.residence (one of \"local\" or \"visitor\"): whether this person lives here or is visiting\n- self.memory_note (one of \"none\" or \"bad_experience\"): whether this person remembers a bad experience in a meeting like this\n- self.knows_other (true or false): whether this person knows the other\n- self.finds_other_attractive (true or false): whether this person finds the other attractive (their own view, which only they know)\n\nGiving the two their roles:\n{\"by\": {\"field\": <an agent. field that is a number>, \"order\": \"ascending\" or \"descending\", \"assign\": [<first role name>, <second role name>], \"tie\": \"no_match\"}}. With \"ascending\" the person with the smaller value gets the first role. \"tie\": \"no_match\" is required: when the two values are equal the rule does not apply. Optionally \"tie_within\": <a number> and \"unit\": <its unit> make values that close a tie. Role names are lower-case words of your choosing, not \"both\".\n{\"by_condition\": {\"when\": <a condition on agent. fields, and pair. fields if needed>, \"assign\": [<role of the person it holds for>, <role of the other>], \"tie\": \"no_match\"}}. \"agent.\" reads each person's own value. \"tie\": \"no_match\" is required: when the condition holds for both people, or for neither, the rule does not apply.\n\nDirective fields (each optional; a field left out has its usual value):\n- side_preference (\"left\", \"right\" or \"none\"; usual: none): when the two would otherwise collide, the side this person passes the other on, as this person sees it facing the other; none takes whichever side is nearer.\n- responsibility_share (a number from 0 to 1; usual: 0.5): when the two would otherwise collide, the part of the change of course needed that this person makes. The two people's shares must add up to at least 1.\n- speed_scale (a number, 0 or more; usual: 1): multiplies this person's walking speed while the rule applies.\n- clearance_margin (metres, 0 or more; usual: 0): extra room this person keeps between the two bodies.\n- passage_order (\"leader\", \"follower\" or \"none\"; usual: none): at a stretch too narrow for the two to pass, whether this person goes through first (leader) or waits (follower). One role leader and the other follower, or neither.\n- back_up (true or false; usual: false): when the two meet inside a stretch too narrow for them to pass, whether this person backs out of it at their own backing speed, waits outside until the other has come through, and then goes on. The other goes first.\n- steps (a list of steps; usual: none): what this person does, step after step, once the rule applies to them: a plan, carried out once for this meeting (below). The simulator still keeps the two from walking into each other.\n- own_when (usual: none): an own-only condition: a change to this person's own movement that applies only when a condition on their own private factors holds (below).\n\nSteps (\"steps\": [<step>, ...]):\nEach step is an object with any of: \"start\": {\"at_distance_m\": <metres>} (wait until the other is that close before starting this step); \"speed_mps\": <metres per second> (walk at this speed; without it, the person's usual speed); \"turn\": {\"to\": \"left\" or \"right\", \"degrees\": <0 to 90>} (walk at this angle to the left or right of the direction they were going); \"sidestep\": {\"to\": \"left\" or \"right\", \"metres\": <more than 0, up to 3>} (move this far to that side, then walk on parallel to the line they were on); \"back_up_m\": <metres> (walk backwards this far); \"until\": \"other_passes\", {\"seconds\": <seconds>} or {\"at_distance_m\": <metres>} (when the step ends; \"other_passes\" is when the other has gone by). Every step that does not step aside or walk backwards needs an \"until\". After the last step the person keeps the line the steps took them to until the two have passed each other.\n\nOwn-only conditions (\"own_when\"):\n{\"when\": <a condition on self. fields, and pair. fields if needed>, \"then\": {<any of speed_scale, clearance_margin or steps>}}. While the condition holds for the person, the fields under \"then\" replace that role's own. An own-only condition may change only the person's own movement; it may never set side_preference, responsibility_share, passage_order or back_up, which both people must agree on and the other cannot know.\n\nThe two roles may not be told to pass on different sides. A rule that says who backs up gives back_up true to exactly one of the two roles, and not to a role that goes first.\n\nTHE FORMAT, WITH PLACEHOLDERS IN ANGLE BRACKETS (not a real rule):\n{\n  \"encounter\": \"<a kind of meeting>\",\n  \"when\": {\"all\": [{\"field\": \"<a field>\", \"op\": \"<an operator>\", \"value\": \"<a value>\", \"unit\": \"<its unit>\"}]},\n  \"roles\": {\"by_condition\": {\"when\": {\"field\": \"<an agent. field>\", \"op\": \"<an operator>\", \"value\": \"<a value>\"}, \"assign\": [\"<role a>\", \"<role b>\"], \"tie\": \"no_match\"}},\n  \"directive\": {\n    \"<role a>\": {\"<a directive field>\": \"<its value>\"},\n    \"<role b>\": {\"<a directive field>\": \"<its value>\",\n                 \"steps\": [{\"start\": {\"at_distance_m\": \"<metres>\"}, \"<a step key>\": \"<its value>\", \"until\": \"<when it ends>\"}],\n                 \"own_when\": {\"when\": {\"field\": \"<a self. field>\", \"op\": \"<an operator>\", \"value\": \"<a value>\"}, \"then\": {\"<a field of own movement>\": \"<its value>\"}}}\n  },\n  \"priority\": \"<a whole number>\",\n  \"intent\": \"<one sentence>\"\n}\nWith \"roles\": \"symmetric\", \"directive\" has the one entry \"both\"; with \"roles\": {\"by\": ...}, the two people are ordered by a number instead. \"steps\" and \"own_when\" are optional, like every directive field. Numbers are written as numbers, without quotes.\n\nHOW TO REPLY\nReply with a single JSON object and nothing else, with these keys:\n\"rule\": the rule in the format above, or null if no part of the rule you were given can be written in it.\n\"lost\": a list with one item for each part of the rule you were given that your rule leaves out or only approximates (an empty list if none). Each item is {\"part\": \"<the part, in the words of the rule you were given>\", \"kind\": \"<its kind>\", \"how\": \"<left_out or approximated>\"}. The kinds are: condition (something the rule depends on that the format cannot read), start (when the action starts: a distance or a time), turn (a turn by some angle, or a step aside), speed (a walking speed), duration (how long the action lasts, or until when), signal_or_talk (a signal or words), other.\n\"note\": how you translated it, in one or two sentences.\nThe format, with placeholders: {\"rule\": <a rule, or null>, \"lost\": [{\"part\": \"<text>\", \"kind\": \"<a kind>\", \"how\": \"<left_out or approximated>\"}], \"note\": \"<one or two sentences>\"}"
+    },
+    {
+      "role": "user",
+      "content": "THE ENCOUNTER\nTwo people walk towards each other along a corridor, on the same line or nearly so (the geometry: their walking lines aligned, or 20 cm apart). Each must get past the other.\n\nTHE RULE TO TRANSLATE\nRule: A gives_way person slows on the first plan when the other was described as elderly, using a cane, pulling a large suitcase, or looking at a phone.\nApplies when: own_assertiveness is gives_way and other_mobility_aid is cane or other_load is large_suitcase or other_distraction is phone or other_age is 70\nAction: speed drops from 1.3 to 0.8-1.1 m/s from about 9.8 m or from 2.0-3.0 m and is held until other_passes\nExceptions:\n- holds_ground people often do not slow on the first plan even for a loaded or elderly other (rows 27, 29, 31, 43, 75, 125)\n- urgent people keep 1.3 m/s or only slow at 2.0 m (row 39)\n- coin_flip rows 1-2, 9-10, 15-16, 39-40, 51-52, 55-56, 83-84, 131-132 and 149-150 are not certain\nNeeds communication (it held only when a signal or words were used): no\nFactors it uses (columns of the table it was found in):\n- own_assertiveness: gives_way or holds_ground (how this person usually behaves in a crowd).\n- other_mobility_aid: cane if this person was told the other has one, else not_seen.\n- other_load: large_suitcase if this person was told the other pulls one, else not_seen.\n- other_distraction: phone if this person was told the other looks at one, else not_seen.\n- other_age: the other person's age as this person was told it, or not_told.\n- own_urgency: routine or urgent (urgent means late for something important).\nIts mechanical form, over those columns (\"predict\": a target column, branches tried in order, each a \"when\" whose column values must all hold and a \"then\", and a \"default\"):\n{\"target\": \"first_slowed\", \"if\": [{\"when\": {\"own_assertiveness\": \"gives_way\", \"other_mobility_aid\": \"cane\"}, \"then\": \"yes\"}, {\"when\": {\"own_assertiveness\": \"gives_way\", \"other_load\": \"large_suitcase\"}, \"then\": \"yes\"}, {\"when\": {\"own_assertiveness\": \"gives_way\", \"other_distraction\": \"phone\"}, \"then\": \"yes\"}, {\"when\": {\"own_assertiveness\": \"gives_way\", \"other_age\": \"70\"}, \"then\": \"yes\"}], \"default\": \"no\"}\nThe column it predicts:\n- first_slowed: yes if this person's first plan slows down below their speed at the time."
+    }
+  ],
+  "attempts": [
+    {
+      "attempt": 1,
+      "messages_sent": 2,
+      "raw": "{\"rule\": {\"encounter\": \"head_on\", \"when\": {\"all\": [{\"field\": \"pair.heading_difference_rad\", \"op\": \">\", \"value\": 120, \"unit\": \"deg\"}]}, \"roles\": {\"by_condition\": {\"when\": {\"field\": \"agent.mobility_aid\", \"op\": \"==\", \"value\": \"cane\"}, \"assign\": [\"other\", \"giver\"], \"tie\": \"no_match\"}}, \"directive\": {\"giver\": {\"speed_scale\": 0.75, \"own_when\": {\"when\": {\"field\": \"self.assertiveness\", \"op\": \"==\", \"value\": \"gives_way\"}, \"then\": {\"speed_scale\": 0.75, \"steps\": [{\"start\": {\"at_distance_m\": 9.8}, \"speed_mps\": 0.95, \"until\": \"other_passes\"}]}}}, \"other\": {}}, \"priority\": 500, \"intent\": \"A person who tends to give way slows down when the other is elderly, uses a cane, pulls a large suitcase, or looks at a phone.\"}, \"lost\": [{\"part\": \"other_mobility_aid is cane or other_load is large_suitcase or other_distraction is phone or other_age is 70\", \"kind\": \"condition\", \"how\": \"approximated\"}, {\"part\": \"own_assertiveness is gives_way\", \"kind\": \"condition\", \"how\": \"approximated\"}, {\"part\": \"speed drops from 1.3 to 0.8-1.1 m/s\", \"kind\": \"speed\", \"how\": \"approximated\"}, {\"part\": \"from about 9.8 m or from 2.0-3.0 m\", \"kind\": \"start\", \"how\": \"approximated\"}, {\"part\": \"held until other_passes\", \"kind\": \"duration\", \"how\": \"approximated\"}, {\"part\": \"holds_ground people often do not slow on the first plan even for a loaded or elderly other\", \"kind\": \"condition\", \"how\": \"left_out\"}, {\"part\": \"urgent people keep 1.3 m/s or only slow at 2.0 m\", \"kind\": \"condition\", \"how\": \"left_out\"}, {\"part\": \"coin_flip rows are not certain\", \"kind\": \"other\", \"how\": \"left_out\"}], \"note\": \"The rule is written as a head-on rule in which the person who tends to give way slows to about 0.95 m/s from 9.8 m until the other has passed, but the format cannot read the other's cane, load, distraction or age, so the condition is approximated by the giver's own assertiveness and the other's cane.\"}",
+      "model": "deepseek-flash",
+      "system_fingerprint": "e72d3c7f663d3e1383b00b3884cb4501",
+      "response_id": "ed099c26-bda8-43de-90e2-adaac1d4e818",
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 3958,
+        "completion_tokens": 604,
+        "prompt_cache_hit_tokens": 3712,
+        "prompt_cache_miss_tokens": 246,
+        "reasoning_tokens": 0
+      },
+      "cost_usd": 0.00041043599999999997,
+      "price_tier": "off_peak",
+      "latency_s": 3.3297053000424057,
+      "started_utc": "2026-10-26T14:10:40.906+00:00",
+      "failed_sends": 0,
+      "parse_error": null
+    }
+  ],
+  "outcome": "completed",
+  "error": null,
+  "translation": {
+    "rule": {
+      "encounter": "head_on",
+      "when": {
+        "all": [
+          {
+            "field": "pair.heading_difference_rad",
+            "op": ">",
+            "value": 120,
+            "unit": "deg"
+          }
+        ]
+      },
+      "roles": {
+        "by_condition": {
+          "when": {
+            "field": "agent.mobility_aid",
+            "op": "==",
+            "value": "cane"
+          },
+          "assign": [
+            "other",
+            "giver"
+          ],
+          "tie": "no_match"
+        }
+      },
+      "directive": {
+        "giver": {
+          "speed_scale": 0.75,
+          "own_when": {
+            "when": {
+              "field": "self.assertiveness",
+              "op": "==",
+              "value": "gives_way"
+            },
+            "then": {
+              "speed_scale": 0.75,
+              "steps": [
+                {
+                  "start": {
+                    "at_distance_m": 9.8
+                  },
+                  "speed_mps": 0.95,
+                  "until": "other_passes"
+                }
+              ]
+            }
+          }
+        },
+        "other": {}
+      },
+      "priority": 500,
+      "intent": "A person who tends to give way slows down when the other is elderly, uses a cane, pulls a large suitcase, or looks at a phone."
+    },
+    "lost": [
+      {
+        "part": "other_mobility_aid is cane or other_load is large_suitcase or other_distraction is phone or other_age is 70",
+        "kind": "condition",
+        "how": "approximated"
+      },
+      {
+        "part": "own_assertiveness is gives_way",
+        "kind": "condition",
+        "how": "approximated"
+      },
+      {
+        "part": "speed drops from 1.3 to 0.8-1.1 m/s",
+        "kind": "speed",
+        "how": "approximated"
+      },
+      {
+        "part": "from about 9.8 m or from 2.0-3.0 m",
+        "kind": "start",
+        "how": "approximated"
+      },
+      {
+        "part": "held until other_passes",
+        "kind": "duration",
+        "how": "approximated"
+      },
+      {
+        "part": "holds_ground people often do not slow on the first plan even for a loaded or elderly other",
+        "kind": "condition",
+        "how": "left_out"
+      },
+      {
+        "part": "urgent people keep 1.3 m/s or only slow at 2.0 m",
+        "kind": "condition",
+        "how": "left_out"
+      },
+      {
+        "part": "coin_flip rows are not certain",
+        "kind": "other",
+        "how": "left_out"
+      }
+    ],
+    "note": "The rule is written as a head-on rule in which the person who tends to give way slows to about 0.95 m/s from 9.8 m until the other has passed, but the format cannot read the other's cane, load, distraction or age, so the condition is approximated by the giver's own assertiveness and the other's cane."
+  },
+  "totals": {
+    "calls": 1,
+    "cost_usd": 0.000410436,
+    "prompt_tokens": 3958,
+    "completion_tokens": 604,
+    "cache_hit_tokens": 3712
+  },
+  "ended_utc": "2026-10-26T14:10:44+00:00"
+}

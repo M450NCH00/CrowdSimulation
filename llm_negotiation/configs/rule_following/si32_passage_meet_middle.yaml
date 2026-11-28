@@ -1,0 +1,40 @@
+# Issue #32, behaviour checks: two people who meet inside a single-file passage, compared under
+# the arbiter's fallback, the seed rule passage_shorter_backs_out, and plain ORCA without the
+# arbiter. 20 seeds per condition, primary baseline. No model is called.
+#
+#   python run_experiment.py configs/rule_following/si32_passage_meet_middle.yaml
+#
+# The layouts: equal distances walked in (the seed rule ties, and the arbiter decides) and one
+# 2.0 m further in; each with the two at rest, face to face (the scenario's default), and
+# walking into each other (start_speed: preferred). The seed rule is switched on alone (no
+# ruleset), with the arbiter on as its fallback. docs/behaviour-checks.md, section 6, reports
+# the numbers.
+schema_version: 1
+layer: avoidance
+experiment_name: si32_passage_meet_middle
+description: Two people meeting inside a single-file passage. The arbiter's fallback, the seed rule and plain ORCA, at rest and walking.
+scenario: configs/scenarios/passage_meet_middle_v1.yaml
+baseline: orca_perturbed_v1
+
+logging:
+  trajectory_stride: 10
+
+design:
+  seed: 32300
+  seeding: paired
+  repeats: 20
+  factors:
+    travelled:
+      - name: symmetric
+      - name: asymmetric
+        scenario_overrides: {geometry: {travelled: [2.7, 0.7]}}
+    start:
+      - name: rest
+      - name: walking
+        scenario_overrides: {geometry: {start_speed: preferred}}
+    mode:
+      - name: arbiter          # the primary baseline as it is: plain ORCA, with the arbiter's fallback
+      - name: seed_rule        # the seed rule alone, the arbiter as its fallback
+        directives: {provider: rules, enable: {passage_shorter_backs_out: 1}}
+      - name: orca_only        # plain ORCA, the arbiter off
+        arbitration: {enabled: false}

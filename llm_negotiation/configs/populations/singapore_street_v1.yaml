@@ -1,0 +1,111 @@
+# A realistic crowd on a Singapore street (issue #112, RF-33; docs/population-profiles.md).
+# Read by negsim.populations for a rule-set evaluation scenario that names it as its population.
+# Frozen: a change of any share is a new file (singapore_street_v2.yaml), never an edit of this one.
+#
+# Every share names its source (below). A share with no source says `source: placeholder`; its
+# value is the user's decision of 2026-10-27 (docs/population-profiles.md, section 4).
+schema_version: 1
+name: singapore_street_v1
+purpose: realistic
+generator: quotas           # exact counts per seed (negsim.populations.quota_people)
+
+age:                        # Singapore residents at end-June 2026, aged 10 and over (the user's decision)
+  source: singstat_m810011_2026
+  bands:                    # [from, to, male, female]: the table's counts, word for word
+    - [10, 14, 107681, 102776]
+    - [15, 19, 106732, 103003]
+    - [20, 24, 107410, 104392]
+    - [25, 29, 132256, 130731]
+    - [30, 34, 154281, 162925]
+    - [35, 39, 158117, 174284]
+    - [40, 44, 146262, 164506]
+    - [45, 49, 144439, 160561]
+    - [50, 54, 148056, 158600]
+    - [55, 59, 139776, 148355]
+    - [60, 64, 146821, 150406]
+    - [65, 69, 135964, 141009]
+    - [70, 74, 108038, 116976]
+    - [75, 79, 76565, 89674]
+    - [80, 84, 32713, 43824]
+    - [85, 89, 19987, 32012]
+    - [90, 94, 9044, 19516]  # the table's "90 Years & Over"; [design] ages drawn from 90 to 94
+
+factors:                    # the share of people at `level`; everyone else is at the factor's other level
+  mobility_aid:
+    level: cane
+    by_age:
+      - {ages: [10, 64], share: 0.005, source: placeholder}
+      - {ages: [65, 69], share: 0.086, source: gell2015_nhats}
+      - {ages: [70, 74], share: 0.116, source: gell2015_nhats}
+      - {ages: [75, 79], share: 0.163, source: gell2015_nhats}
+      - {ages: [80, 84], share: 0.237, source: gell2015_nhats}
+      - {ages: [85, 89], share: 0.325, source: gell2015_nhats}
+      - {ages: [90, 94], share: 0.366, source: gell2015_nhats}
+  distraction:              # "smombie": looking at the screen (holding a phone is not counted)
+    level: phone
+    by_age:                 # [design] Elche's bands 10-18, 18-35, 35-65, over 65 laid on SingStat's: 10-19, 20-34, 35-64, 65+
+      - {ages: [10, 19], share: 0.146, source: fernandez2020_elche}
+      - {ages: [20, 34], share: 0.193, source: fernandez2020_elche}
+      - {ages: [35, 64], share: 0.064, source: fernandez2020_elche}
+      - {ages: [65, 94], share: 0.017, source: fernandez2020_elche}
+  load:
+    level: large_suitcase
+    by_age:
+      - {ages: [10, 94], share: 0.01, source: placeholder}
+  assertiveness:
+    level: holds_ground
+    by_age:
+      - {ages: [10, 94], share: 0.5, source: placeholder}
+
+sources:
+  singstat_m810011_2026:
+    cite: >-
+      Singapore Department of Statistics, Singapore Residents By Age Group, Ethnic Group And Sex, At
+      End June, Annual (table M810011), data last updated 2026-09-25.
+    measured: >-
+      A count of all residents (citizens and permanent residents) at end-June 2026, excluding those
+      overseas for 12 months or more.
+    url: https://tablebuilder.singstat.gov.sg/api/table/tabledata/M810011?timeFilter=2026
+    read: "2026-10-27"
+    cached: refs/rf33_singstat_M810011_2026.json
+  gell2015_nhats:
+    cite: >-
+      Gell NM, Wallace RB, LaCroix AZ, Mroz TM, Patel KV (2015). Mobility device use in older adults
+      and incidence of falls and worry about falling: findings from the 2011-2012 National Health
+      and Aging Trends Study. Journal of the American Geriatrics Society. doi:10.1111/jgs.13393.
+      Table 2, cane.
+    measured: >-
+      In-person interviews at home, a nationally representative sample of US Medicare beneficiaries
+      aged 65 and over living in the community (n = 7,609), 2011: used a cane in the last month.
+    url: https://doi.org/10.1111/jgs.13393
+    read: "2026-10-27"
+    cached: refs/rf33_gell2015_nhats_mobility_devices.xml
+  fernandez2020_elche:
+    cite: >-
+      Fernández C, Vicente MA, Carrillo I, Guilabert M, Mira JJ (2020). Factors Influencing the
+      Smartphone Usage Behavior of Pedestrians: Observational Study on "Spanish Smombies". Journal
+      of Medical Internet Research 22(8):e19350. doi:10.2196/19350. Table 3, smombie.
+    measured: >-
+      3,301 pedestrians walking on the street in Elche, Spain, each recorded once by an observer,
+      working-day rush hours, July to November 2019: looking at the screen ("smombie").
+    url: https://doi.org/10.2196/19350
+    read: "2026-10-27"
+    cached: refs/rf33_fernandez2020_elche_smombies.xml
+  placeholder:
+    cite: >-
+      [placeholder] No source was found. The value is the user's decision of 2026-10-27 (issue
+      #112): a cane under 65 0.5%, a large suitcase on a street 1%, assertiveness half each way.
+
+limits:
+  - >-
+    Residents only: 4.23 of 6.21 million people at end-June 2026. And who lives here is not who is
+    out walking: Elche's observers saw 15.9% aged over 65, this profile gives 21.3%.
+  - >-
+    A cane comes from the United States (2011) and a phone from Spain (2019): no Singapore figure
+    was found for either. A cane "in the last month" overstates one in hand at a given moment.
+  - >-
+    A large suitcase, a cane under 65 and assertiveness are placeholders. A suitcase depends most
+    on the place; 1% is for a street only.
+  - >-
+    The factors are given independently of each other within an age band: no source gives, say,
+    a cane and a phone together.

@@ -1,0 +1,30 @@
+# Issue #30, Part 2: the baseline runs that conflict cases are taken from. Head-on in a
+# corridor wide enough to pass, under the primary baseline (plain ORCA, perturbed). No model
+# is called.
+#
+#   python run_experiment.py configs/cases/source_head_on.yaml
+#
+# The layouts vary how far apart the two lines of walking are, so that the cases differ in
+# geometry: exactly head-on; 20, 40 and 52 cm apart (at 52 cm the intended velocities are
+# never on a collision course, but plain ORCA still passes the two within the near-miss
+# distance). Two repeats: the seed only breaks the symmetry, so repeats differ by little.
+schema_version: 1
+layer: avoidance
+experiment_name: si3_source_head_on
+description: Conflict-case source. Head-on in a wide corridor, four layouts, primary baseline, plain ORCA.
+scenario: configs/scenarios/wide_corridor_head_on.yaml
+baseline: orca_perturbed_v1
+
+design:
+  seed: 30100
+  seeding: paired
+  repeats: 2
+  factors:
+    layout:
+      - name: aligned
+      - name: apart_20cm
+        scenario_overrides: {geometry: {lateral_offsets: [0.1, -0.1]}}
+      - name: apart_40cm
+        scenario_overrides: {geometry: {lateral_offsets: [0.2, -0.2]}}
+      - name: apart_52cm
+        scenario_overrides: {geometry: {lateral_offsets: [0.26, -0.26]}}

@@ -1,0 +1,55 @@
+# Issue #136 (RF-47): the menu of described actions and the plan code makes of each option
+# (docs/action-space.md, section 6, AS3: the user's decision of 2026-11-25, "Accept as proposed").
+# Read by negsim.resolution.menu for a core template whose menu_table names this file
+# (resolve_menu_v1). The template lists the same options, in the same order, with the words the
+# agent reads; the agent never sees a number. Option names are written as they are matched (lower
+# case, single spaces).
+#
+# Every number carries one of the repo's tags (docs/parameters.md uses the same ones):
+#   [cited: ...]    read in a source
+#   [derived: ...]  worked out from cited values by the rule given
+#   [placeholder]   a round, plausible value with no source. Not to be reported as sourced.
+#   [design]        a choice about the scene or the numerics, not a physical quantity
+#
+# Plans (negsim.resolution.menu): carry_on is [] (keep the line, at the usual speed, as a free-step
+# reply's "carry on as you are"); slow is one step at speed_factor x the agent's usual speed until
+# the event; wait stands still for seconds (then D5 asks again if the meeting is still predicted);
+# sidestep moves metres aside at resolve_v8's 30 degrees [placeholder] and walks on parallel, never
+# further than the room to the wall less the body radius (AS3, "as far as the wall allows");
+# back_up walks backwards metres at the agent's backing speed (0.92 m/s, Nakahara et al. 2005,
+# parameters.md, backing_speed).
+schema_version: 1
+type: action_menu
+options:
+  carry on:
+    plan: carry_on
+  slow down a little:
+    plan: slow
+    speed_factor: 0.81    # instructed slow walking 1.15 m/s against normal 1.42 m/s, a ratio of walking speeds, not a measured slowing in an encounter   [cited: Huber et al. 2014, Results 1; refs/rf14_huber2014_speed_path.txt:452]
+    until: other_passes   # [design] the slower speed holds until the other has passed, or a later decision replaces it
+  slow down a lot:
+    plan: slow
+    speed_factor: 0.5     # [placeholder] (AS3)
+    until: other_passes   # [design]
+  stop and wait:
+    plan: wait
+    seconds: 1.0          # [placeholder] D5's "at least 1 s apart" (AS3)
+  step a little to your left:
+    plan: sidestep
+    to: left
+    metres: 0.47          # half of H1's 0.93 m between centres when two young adults pass, so two who each step a little pass at H1; about one shoulder width (49.8 cm, Yamamoto et al. 2019)   [derived: Rapos et al. 2021, abstract; RF-37's H1, configs/human_targets/head_on_v1.yaml]
+  step a little to your right:
+    plan: sidestep
+    to: right
+    metres: 0.47          # as above   [derived: Rapos et al. 2021, abstract; RF-37's H1]
+  step well to your left:
+    plan: sidestep
+    to: left
+    metres: 0.93          # H1: one person alone opens the human passing distance   [cited: Rapos et al. 2021, abstract; RF-37's H1]
+  step well to your right:
+    plan: sidestep
+    to: right
+    metres: 0.93          # as above   [cited: Rapos et al. 2021, abstract; RF-37's H1]
+  step back:
+    plan: back_up
+    metres: 0.5           # [placeholder] about one body width (AS3)

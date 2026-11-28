@@ -1,0 +1,219 @@
+{
+  "layer": "rule_set_evaluation",
+  "schema_version": 1,
+  "experiment": {
+    "experiment_name": "rf18_round1_realistic",
+    "description": "RF-18's round 1 (issue #74) again, with each scenario in a realistic crowd (sourced shares) and in RF-18's stress crowd: round 1's runnable staged rules alone and together, and rule_db's hand-written default set as a reference, against plain ORCA in the two-way flow, the opposing bottleneck and the narrow passage of round 2.\n",
+    "rules": {
+      "ext_head_on_0ecc2d1a6e": {
+        "from": "runs/rf31_round1_head_on/rule_db_staging/extracted",
+        "version": 2
+      },
+      "ext_head_on_6455ca5589": {
+        "from": "runs/rf31_round1_head_on_retry/rule_db_staging/extracted",
+        "version": 2,
+        "priority": 600,
+        "reason": "Both translations have priority 500 and both match a head-on in which one person has a cane, so the loader refuses them together (ambiguous). The user chose that the narrower rule wins where both match (the cane rule), so that set 2 can run; the left-turn rule applies to every other head-on."
+      }
+    },
+    "left_out": [
+      {
+        "rule": "ext_head_on_aacce0961b (RF-31, format 4)",
+        "reason": "refused by the loader since RF-31 (constant_roles); its roles hold for both people, so it never matched"
+      },
+      {
+        "rule": "ext_head_on_4eb7a97c8d (RF-11)",
+        "reason": "not expressible in either format (signalling and speaking); nobody signals in ORCA"
+      },
+      {
+        "rule": "RF-12's three format 3 translations (0ecc2d1a6e, 6455ca5589, aacce0961b)",
+        "reason": "replaced by RF-31's format 4 translations of the same rules (D-A); two act as plain ORCA"
+      }
+    ],
+    "arms": [
+      {
+        "name": "passed_screening",
+        "rules": [
+          "ext_head_on_0ecc2d1a6e"
+        ],
+        "database": null,
+        "ruleset": null,
+        "judged": true,
+        "description": "Set 1, the rules that passed crowd screening (one rule after round 1)."
+      },
+      {
+        "name": "cane_rule_alone",
+        "rules": [
+          "ext_head_on_6455ca5589"
+        ],
+        "database": null,
+        "ruleset": null,
+        "judged": true,
+        "description": "The retried cane rule alone, for its own verdict."
+      },
+      {
+        "name": "all_runnable",
+        "rules": [
+          "ext_head_on_0ecc2d1a6e",
+          "ext_head_on_6455ca5589"
+        ],
+        "database": null,
+        "ruleset": null,
+        "judged": true,
+        "description": "Set 2, every runnable staged rule, including those that failed screening."
+      },
+      {
+        "name": "reference_default",
+        "rules": [],
+        "database": "rule_db",
+        "ruleset": "default",
+        "judged": false,
+        "description": "rule_db's hand-written seed rules of issue"
+      }
+    ],
+    "scenarios": [
+      {
+        "name": "flow_realistic",
+        "scenario": "configs/scenarios/bidirectional_flow.yaml",
+        "rotate_people": false,
+        "note": "The two-way flow, 50 + 50, people at sourced shares, new people on every seed.",
+        "population": "configs/populations/singapore_street_v1.yaml",
+        "population_sha256": "dfd92225553c999a2b5de0400489d100daba6d5fc88900e59860171bfe8b8045",
+        "purpose": "realistic",
+        "seeds": 30
+      },
+      {
+        "name": "bottleneck_realistic",
+        "scenario": "configs/scenarios/corridor_to_bottleneck.yaml",
+        "rotate_people": false,
+        "note": "Two people from opposite ends of a single-file segment, drawn from a realistic crowd.",
+        "population": "configs/populations/singapore_street_v1.yaml",
+        "population_sha256": "dfd92225553c999a2b5de0400489d100daba6d5fc88900e59860171bfe8b8045",
+        "purpose": "realistic",
+        "pool": 100,
+        "seeds": 30
+      },
+      {
+        "name": "passage_realistic",
+        "scenario": "configs/scenarios/passage_meet_middle_v1.yaml",
+        "rotate_people": false,
+        "note": "Round 2's narrow passage (two people meet inside it), drawn from a realistic crowd.",
+        "population": "configs/populations/singapore_street_v1.yaml",
+        "population_sha256": "dfd92225553c999a2b5de0400489d100daba6d5fc88900e59860171bfe8b8045",
+        "purpose": "realistic",
+        "pool": 100,
+        "seeds": 30
+      },
+      {
+        "name": "flow_stress",
+        "scenario": "configs/scenarios/bidirectional_flow.yaml",
+        "rotate_people": false,
+        "note": "RF-18's flow, its people (48 of 100 with a cane, a suitcase, a phone).",
+        "population": "configs/populations/stress_all_factors_v1.yaml",
+        "population_sha256": "1537734fdec24340ff11a4ebf428f7f6d0425cc0a7fef63b2da5f2cf92cf814b",
+        "purpose": "stress"
+      },
+      {
+        "name": "bottleneck_stress",
+        "scenario": "configs/scenarios/corridor_to_bottleneck.yaml",
+        "rotate_people": true,
+        "note": "RF-18's bottleneck, its people.",
+        "population": "configs/populations/stress_all_factors_v1.yaml",
+        "population_sha256": "1537734fdec24340ff11a4ebf428f7f6d0425cc0a7fef63b2da5f2cf92cf814b",
+        "purpose": "stress"
+      },
+      {
+        "name": "passage_stress",
+        "scenario": "configs/scenarios/passage_meet_middle_v1.yaml",
+        "rotate_people": true,
+        "note": "RF-18's passage, its people.",
+        "population": "configs/populations/stress_all_factors_v1.yaml",
+        "population_sha256": "1537734fdec24340ff11a4ebf428f7f6d0425cc0a7fef63b2da5f2cf92cf814b",
+        "purpose": "stress"
+      }
+    ],
+    "baseline": "orca_perturbed_v1",
+    "seed": 30900,
+    "seeds": 10,
+    "people": {
+      "ages": [
+        25,
+        70
+      ],
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    "trajectory_stride": 10,
+    "alpha": 0.05,
+    "verdict_rule": 2
+  },
+  "software": {
+    "negsim": "0.1.0"
+  },
+  "created_utc": "2026-10-27T11:40:34+00:00",
+  "git": {
+    "commit": "99aeab8c9425b2f956519c23a7086bec54cc60b6",
+    "dirty": false
+  },
+  "judged_utc": "2026-10-27T13:29:00+00:00",
+  "judged_git": {
+    "commit": "84385390856d6926faa0da19bc65571a8486e6e1",
+    "dirty": false
+  },
+  "copied": [
+    {
+      "file": "rules/ext_head_on_0ecc2d1a6e.v1.yaml",
+      "from": "runs/rf31_round1_head_on/rule_db_staging/extracted/rules/ext_head_on_0ecc2d1a6e.v1.yaml",
+      "sha256": "272a712e24beeecd79731d8adfb16ff939779cb9c92970879a55af8a0e5c3307"
+    },
+    {
+      "file": "rules/ext_head_on_0ecc2d1a6e.v2.yaml",
+      "from": "runs/rf31_round1_head_on/rule_db_staging/extracted/rules/ext_head_on_0ecc2d1a6e.v2.yaml",
+      "sha256": "d396318d715f10382bdbb4d581e8194d8f9e79494c787cffeddbb2dec2e69bfa"
+    },
+    {
+      "file": "rules/ext_head_on_6455ca5589.v1.yaml",
+      "from": "runs/rf31_round1_head_on_retry/rule_db_staging/extracted/rules/ext_head_on_6455ca5589.v1.yaml",
+      "sha256": "ca40b644af4cb3e9e05d52691604ea2141ee93309f46afd789a47fc017e6f46d"
+    },
+    {
+      "file": "rules/ext_head_on_6455ca5589.v2.yaml",
+      "from": "runs/rf31_round1_head_on_retry/rule_db_staging/extracted/rules/ext_head_on_6455ca5589.v2.yaml",
+      "sha256": "6c674e09835485341e08e51341bdfdb390d10b260a29bc1229335f46e1623891"
+    },
+    {
+      "file": "rules/ext_head_on_6455ca5589.v3.yaml",
+      "from": null,
+      "sha256": "189853a6870ba40fe3b119a41ccbff03d4555518215f032c66bc6b8641b556c5",
+      "new_version_of": 2,
+      "priority": 600
+    }
+  ],
+  "seeds_changed": [
+    {
+      "utc": "2026-10-27T13:28:59+00:00",
+      "git": {
+        "commit": "84385390856d6926faa0da19bc65571a8486e6e1",
+        "dirty": false
+      },
+      "from": {
+        "flow_realistic": 10,
+        "bottleneck_realistic": 10,
+        "passage_realistic": 10,
+        "flow_stress": 10,
+        "bottleneck_stress": 10,
+        "passage_stress": 10
+      },
+      "to": {
+        "flow_realistic": 30,
+        "bottleneck_realistic": 30,
+        "passage_realistic": 30,
+        "flow_stress": 10,
+        "bottleneck_stress": 10,
+        "passage_stress": 10
+      }
+    }
+  ]
+}

@@ -1,0 +1,153 @@
+# Issue #127 (RF-39): round 1, head-on in a corridor: the sidestep with a second chance.
+#
+#   python run_experiment.py configs/resolution/round1_head_on_sidestep_reprompt.yaml --plan
+#   python run_experiment.py configs/resolution/round1_head_on_sidestep_reprompt.yaml --out runs_mock/rf39   # mock rehearsal
+#
+# PAID RUN: approved by the user for issue #127 only, 2026-11-01, cap USD 1.60 (CLAUDE.md, pending
+# item 1), not to start until the user has topped up the balance. This config names the mock
+# client; the paid run is
+#   python run_experiment.py configs/resolution/round1_head_on_sidestep_reprompt.yaml --client deepseek --confirm
+# off-peak, after a pilot with --limit. The cost: about USD 1.08 off-peak (WORK_LOG-127.md).
+#
+# RF-30's config (configs/resolution/round1_head_on_keep_line.yaml) with these changes:
+# - templates.core: resolve_v8 (RF-29's: resolve_v6 plus a sidestep by an amount in metres), so that
+#   the agents have the sidestep and, in non-verbal and talk, up to 3 decision points (D5) to try
+#   again after a pavement dance. Neither RF-29 (independent only) nor RF-30 (resolve_v6) had both.
+# - conditions: all three. Independent is the reference with one decision point; under resolve_v8
+#   and keep_line it has been run only once per cell (RF-29, re-executed).
+# - design.repeats: 4 in place of exact_repeats (8 cells x 3): every cell of every geometry and
+#   condition runs 4 times, for the noise floor and the factor effects (the user's aim, 2026-11-01:
+#   enough data to extract a good rule). The people are drawn by unit (case and cell, and each
+#   pair), so repeat 1 has RF-30's (and RF-29's) session ids and people; only the template differs.
+# - protocol.execution: keep_line_replan (issue #127): keep_line, and the line is also kept across a
+#   later decision (a waiting first step, or []), where keep_line gave back a sidestep.
+# - protocol.max_decision_points: 6 in place of D5's 3 (the user's decision of 2026-11-01): in RF-30,
+#   293 of 384 agents used all 3, and 71 of the 92 failed sessions ended with the agents out of
+#   decisions. The prompts give no number ("You may be asked again later"), so no wording changes.
+# - templates.debrief: resolve_debrief_v2, which also asks why that side and not the other (the
+#   user's point of 2026-11-01). Asked after the encounter, so the decisions cannot be steered by it.
+# Model deepseek-flash, temperature 1.0, thinking off, reply cap 300, the factors, fraction,
+# geometries, counterfactual pairs and gate are RF-10's, RF-29's and RF-30's.
+# Perceived attractiveness and real ethnicity are on, as in RF-10: both ethics sign-offs are
+# recorded in CLAUDE.md (2026-10-24). No rule may read either.
+schema_version: 1
+layer: resolution
+experiment_name: rf39_round1_head_on_sidestep_reprompt
+description: >-
+  RF-39, round 1 (head-on): RF-30's sessions with core template resolve_v8 (the sidestep in
+  metres) in all three conditions, so that in non-verbal and talk an agent can sidestep and be
+  prompted again after a pavement dance; every cell repeated 4 times; everything else RF-30's.
+
+conditions: [independent, non_verbal, talk]   # independent: one decision point, the reference
+
+design:
+  kind: fractional
+  cells: 32
+  seed: 65
+  base_age: 25
+  age_difference: 45
+  ethnicity_draw: balanced
+  geometries:
+    - head_on_de176842@2   # wide_corridor_head_on, walking lines aligned (0 cm apart)
+    - head_on_02dfbadb@2   # the same, walking lines 20 cm apart
+  repeats: 4              # every cell, geometry and condition 4 times (in place of exact_repeats: 8 cells x 3)
+  factors:
+    age_pair: [same, p1_older]
+    gender_pair: [p1_female, p1_male]
+    urgency: [neither, p1]
+    mobility_aid: [neither, p1]
+    load: [neither, p1]
+    distraction: [neither, p1]
+    assertiveness: [neither, p1]
+    residence: [neither, p1]
+    memory_note: [neither, p1]
+    attractiveness_0_sees_1: [unremarkable, attractive]   # how person 1 sees person 2
+    attractiveness_1_sees_0: [unremarkable, attractive]   # how person 2 sees person 1
+    familiarity: [strangers, acquaintances]
+    ethnicity_pair: [same, different]
+    surroundings: [quiet, busy]
+    time_of_day: [daytime, late_night]
+    mapping: [p1_lower, p1_higher]
+    demographics_visible: [true]
+    ethnicity_visible: [true]
+    attractiveness_visible: [true]
+  counterfactual_pairs:
+    # The same session but person 2's group differs (same to different), person 1's kept.
+    - base: &base
+        age_pair: same
+        gender_pair: p1_female
+        urgency: neither
+        mobility_aid: neither
+        load: neither
+        distraction: neither
+        assertiveness: neither
+        residence: neither
+        memory_note: neither
+        attractiveness_0_sees_1: unremarkable
+        attractiveness_1_sees_0: unremarkable
+        familiarity: strangers
+        ethnicity_pair: same
+        surroundings: quiet
+        time_of_day: daytime
+        mapping: p1_lower
+      factor: ethnicity_pair
+    # Behaviour towards someone the agent is told is Indian (RF-26): both groups fixed, only
+    # person 2's flips.
+    - base: *base
+      factor: p2_ethnicity
+      ethnicity: {p1: chinese, p2: chinese}
+      to: indian
+    - base:
+        <<: *base
+        ethnicity_pair: different
+      factor: p2_ethnicity
+      ethnicity: {p1: chinese, p2: malay}
+      to: indian
+    # Person 1 told that it finds person 2 attractive, against unremarkable.
+    - base: *base
+      factor: attractiveness_0_sees_1
+
+# Fixed before the run (task 3). Decided on the user's delegation of 2026-10-24 (WORK_LOG-65.md).
+resolution_gate:
+  plan_only_resolved_min: 0.50
+  reason: >-
+    Step 1 asks whether LLM agents can resolve the conflict on their own plans, so the gate is the
+    plan_only rate (ORCA does not steer the pair apart), pooled over the design's 192 sessions of
+    32 cells x 2 geometries x 3 conditions (exact repeats and counterfactual pairs left out, so
+    each cell counts once per geometry and condition). 0.50 means the plans resolve the meeting
+    more often than not; it is a judgement, not a sourced number. Head-on walkers in life almost
+    never collide, so 0.50 is lenient against people, and strict against plain ORCA here, which
+    passes within the near-miss distance and never counts as resolved (RF-9: 0 of 72). RF-9's
+    pilot resolved 0.24 before resolve_v6's fixes, so failing the gate is a possible Step 1 result.
+
+protocol:
+  max_decision_points: 6            # issue #127 (the user's decision of 2026-11-01): D5's 3 was a cost limit; 76% of RF-30's agents used all 3
+  min_gap_s: 1.0                    # D5
+  no_conflict_end_s: 1.0            # [placeholder] the encounter ends after this long with no conflict predicted
+  max_prompted: 4                   # D11, D12: the cap on prompted people per encounter (a cost limit)
+  speech_words_per_second: 2.5      # [placeholder] how fast a message is said
+  execution: keep_line_replan       # issue #127: keep_line, and the line is also kept across a later decision (a waiting first step, [])
+  no_conflict_waits_for_plans: true # issue #65: no_conflict does not end the encounter while a plan runs
+
+templates:
+  core: resolve_v8                  # issue #101: resolve_v6 with the sidestep option; turning stays
+  debrief: resolve_debrief_v2       # issue #127: also asks why that side (after the encounter)
+  factors: resolve_factors_v2       # the ethnicity lines (issue #92)
+  pairwise: resolve_pairwise_v1
+
+llm_view: configs/resolution/llm_view_v1.yaml
+factor_values: configs/resolution/factors_v1.yaml
+
+llm:
+  client: mock
+  mock_policy: resolution_rehearsal_v1
+  model: deepseek-flash   # what the preview prices; the mock answers
+  temperature: 1.0        # the experiment's one sampling setting, unchanged (llm-backend.md, section 2)
+  max_tokens: 300         # RF-9's recommended reply cap (largest reply 214 tokens)
+  thinking: disabled
+  transport_retries: 2
+
+budget:
+  cap_usd: 1.60           # the cap CLAUDE.md records for #127 (approved by the user, 2026-11-01; raised from 1.20 the same day)
+  ledger: spend_ledger.jsonl
+  over_cap: stop_at_cap

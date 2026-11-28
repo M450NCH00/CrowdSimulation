@@ -1,0 +1,192 @@
+# Prompt template resolve, version 1.  FROZEN — do not edit.
+# The hash of this file is pinned in MANIFEST.json and checked every time it is loaded.
+# To change any wording, copy the file to resolve_v2.yaml, change it there, freeze it, and
+# record the reason in the work log.
+template_id: resolve
+version: 1
+kind: resolution
+description: >-
+  Step 1 of track #55 (docs/resolution.md, D1 to D3): one agent, in the first person, says
+  what it physically does when it meets someone in its way. One section per condition
+  (independent, non_verbal, talk). The system message is the fixed text (the role, the
+  condition's instructions, its reply format and the step format, with the scenario's until
+  events); the user message is the description of D2 and then the decision-point wrapper.
+provenance: >-
+  Written for issue #57 (RF-2), from docs/resolution.md. The number formats and the direction,
+  heading and change phrases are those of rulegen_negotiate_v2 (issue #32), word for word.
+  Nothing here names a scenario, a side, a walking convention or an order of passing: there is
+  no "usually", nothing saying that someone has to go before the other, no persona_v1 scene
+  text, and no reply field about who goes before whom (who went ahead is measured in the
+  replay). Lines are included for every block of D2 that a later issue fills (notes, hearing,
+  signals seen, changes since the agent last looked, what it has done so far), so that RF-17
+  and RF-3 need no new version. Factor lines (RF-5, RF-6) are rendered by their own templates
+  and placed here verbatim.
+
+system: |-
+  {role}
+
+  {instructions}
+
+  {reply_format}
+
+  {step_format}
+
+role: |-
+  You are playing the part of the person described below, on foot. Decide as this person would.
+
+conditions:
+  independent:
+    instructions: |-
+      Below you are told what you can see and hear around you right now. Say what you do from now on: how you move.
+      Left and right always mean your own left and right.
+      Other people see how you move, if you are in their view. Nobody else knows your intent or your reason.
+    reply_format: |-
+      HOW TO REPLY
+      Reply with a single JSON object and nothing else, with these keys in this order:
+      "intent": what you are trying to do, in your own words.
+      "steps": what you do from now on, as a list of steps (see STEPS). Write [] if you carry on as you are.
+      "reason": why, in your own words. Nobody else sees it.
+      The format, with placeholders: {"intent": "<what you are trying to do>", "steps": [<step>, ...], "reason": "<why>"}
+    retry: >-
+      Your last reply could not be read. Reply again with only a JSON object of the form
+      {"intent": "<what you are trying to do>", "steps": [<step>, ...], "reason": "<why>"}.
+  non_verbal:
+    instructions: |-
+      Below you are told what you can see and hear around you right now. Say what you do from now on: how you move, and any signal you make.
+      Left and right always mean your own left and right.
+      Other people see how you move and any signal you make, if you are in their view. Nobody hears a signal. Nobody else knows your intent or your reason.
+      You may be asked again later, if something changes.
+    reply_format: |-
+      HOW TO REPLY
+      Reply with a single JSON object and nothing else, with these keys in this order:
+      "signal": a signal you make now with your eyes, head or hands: "none", "eye_contact", "nod", "wave_on", "hold_up_hand", "point" or "other".
+      "intent": what you are trying to do, in your own words.
+      "steps": what you do from now on, as a list of steps (see STEPS). Write [] if you carry on as you are.
+      "reason": why, in your own words. Nobody else sees it.
+      The format, with placeholders: {"signal": "<a signal, or none>", "intent": "<what you are trying to do>", "steps": [<step>, ...], "reason": "<why>"}
+    retry: >-
+      Your last reply could not be read. Reply again with only a JSON object of the form
+      {"signal": "<a signal, or none>", "intent": "<what you are trying to do>", "steps": [<step>, ...], "reason": "<why>"}.
+  talk:
+    instructions: |-
+      Below you are told what you can see and hear around you right now. Say what you do from now on: how you move, anything you say out loud, and any signal you make.
+      Left and right always mean your own left and right.
+      Everyone within hearing range of you hears what you say, whichever way they are facing. It takes as long to say as it would in life.
+      Other people see how you move and any signal you make, if you are in their view. Nobody hears a signal. Nobody else knows your intent or your reason.
+      You may be asked again later, if something changes.
+    reply_format: |-
+      HOW TO REPLY
+      Reply with a single JSON object and nothing else, with these keys in this order:
+      "message": what you say out loud now, as plain text, or "" if you say nothing.
+      "signal": a signal you make now with your eyes, head or hands: "none", "eye_contact", "nod", "wave_on", "hold_up_hand", "point" or "other".
+      "intent": what you are trying to do, in your own words.
+      "steps": what you do from now on, as a list of steps (see STEPS). Write [] if you carry on as you are.
+      "reason": why, in your own words. Nobody else sees it.
+      The format, with placeholders: {"message": "<what you say, or nothing>", "signal": "<a signal, or none>", "intent": "<what you are trying to do>", "steps": [<step>, ...], "reason": "<why>"}
+    retry: >-
+      Your last reply could not be read. Reply again with only a JSON object of the form
+      {"message": "<what you say, or nothing>", "signal": "<a signal, or none>", "intent": "<what you are trying to do>", "steps": [<step>, ...], "reason": "<why>"}.
+
+step_format: |-
+  STEPS
+  The steps are carried out in order, each beginning when the one before it ends. After the last step ends, you walk on towards where you are going. Each step is a JSON object with these keys; leave out the ones you do not need:
+  "start": in the opening step only, when it begins: "now", {"at_distance_m": <metres>} to begin when the person you would meet is that close to you, or {"after_seconds": <seconds>}. Without it, the opening step begins now.
+  "speed_mps": the speed you walk at during the step, in m/s, from 0 (standing still) up to the fastest you can walk.
+  "turn": {"to": "left" or "right", "degrees": <from 0 to 90>}: during the step, walk at this angle to your left or right of the direction you are going.
+  "back_up_m": walk backwards this many metres. The step ends when you have.
+  "until": when the step ends: {"seconds": <seconds>}, or one of {events}. Every step needs it, except a step that walks backwards.
+  The format of a step, with placeholders: {"start": "now", "speed_mps": <number>, "turn": {"to": "<left or right>", "degrees": <number>}, "until": {"seconds": <number>}}
+
+# How an until event is listed in the step format: its name and the scenario's words for it.
+event_item: '"{name}" ({words})'
+
+# The description of D2, block by block, in this order: ABOUT YOU, YOUR NOTES, WHERE YOU ARE
+# (its lines are the scenario's), the scenario's own blocks, WHO YOU CAN SEE, WHAT YOU CAN
+# HEAR, WHAT YOU HAVE DONE SO FAR, and the time to meet. An empty block is left out, except
+# WHO YOU CAN SEE, which says when nobody is in view.
+view:
+  self_header: "ABOUT YOU"
+  self_age: "- You are {age} years old."
+  self_gender: "- You are {gender}."
+  self_errand: "- You are on your way to {errand}."
+  self_motion: "- You are walking at {speed} m/s. Your usual walking speed is {preferred} m/s."
+  self_still: "- You are standing still. Your usual walking speed is {preferred} m/s."
+  self_fastest: "- The fastest you can walk is {fastest} m/s."
+  self_body: "- Your body is {width} m wide."
+  notes_header: "YOUR NOTES"
+  note: "- {note}"
+  place_header: "WHERE YOU ARE"
+  seen_header: "WHO YOU CAN SEE"
+  seen_nobody: "- You do not see anyone nearby."
+  seen_full: "- Person {n}, {distance} m away, {direction}."
+  seen_motion: "  They are walking at {speed} m/s, {heading}, {change}."
+  seen_still: "  They are standing still, facing {heading}."
+  seen_backing: "  They are walking backwards at {speed} m/s, {change}."
+  seen_body: "  Their body is {width} m wide."
+  seen_age: "  They look about {age} years old."
+  seen_gender: "  They look like {gender}."
+  seen_signal: "  {signal}"
+  seen_changes: "  Since you last looked, they have {changes}."
+  seen_extra: "  {line}"
+  seen_short: "- Person {n}, {distance} m away, {direction}: {motion}."
+  short_motion:
+    walking: "walking {heading}"
+    still: "standing still"
+    backing: "walking backwards"
+  heard_header: "WHAT YOU CAN HEAR"
+  heard_seen: '- Person {n} says: "{message}"'
+  heard_unseen: '- Someone behind you says: "{message}"'
+  history_header: "WHAT YOU HAVE DONE SO FAR"
+  history_intent: '- {ago} s ago you decided: "{intent}"'
+  history_said: '  You said: "{message}"'
+  history_signal: "  {signal}"
+  history_outcome:
+    completed: "  You have finished those steps."
+    ongoing: "  You are still carrying out those steps."
+  time_to_meet: "At your current speeds you would meet Person {n} in about {seconds} s."
+  genders: {female: a woman, male: a man, nonbinary: a non-binary person}
+  directions:
+    ahead: straight ahead of you
+    behind: straight behind you
+    side: "to your {side}"
+    ahead_side: "ahead of you and {angle}° to your {side}"
+    behind_side: "behind you and {angle}° to your {side}"
+  headings:
+    same: in the same direction as you
+    opposite: in the opposite direction to you
+    across: "across your direction of travel from your {from_side} to your {to_side}, at {angle}° to it"
+  changes:
+    shrinking: and the distance between you is shrinking
+    not_shrinking: and the distance between you is not shrinking
+  # What a person has done since the agent last looked (D5); joined with "and".
+  since_last_look:
+    slowed_down: slowed down
+    sped_up: sped up
+    stopped: stopped
+    started_walking: started walking again
+    backing_up: started walking backwards
+    moved_left: moved over to your left
+    moved_right: moved over to your right
+    turned: changed direction
+    came_into_view: just come into view
+  # A signal the agent sees a person make.
+  signals_seen:
+    eye_contact: They are making eye contact with you.
+    nod: They nod at you.
+    wave_on: They wave you on.
+    hold_up_hand: They hold up a hand.
+    point: They point.
+    other: They make a gesture.
+  # A signal the agent made itself, in WHAT YOU HAVE DONE SO FAR.
+  signals_made:
+    eye_contact: You made eye contact.
+    nod: You nodded.
+    wave_on: You waved them on.
+    hold_up_hand: You held up a hand.
+    point: You pointed.
+    other: You made a gesture.
+  and: and
+
+decision_point:
+  opening: "What do you do now? Reply with the JSON object only."
+  again: "Something has changed since you last decided. What do you do now? Your reply replaces whatever is left of your earlier steps. Reply with the JSON object only."

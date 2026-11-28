@@ -15,7 +15,7 @@ from datetime import date
 
 import yaml
 
-from .prompts import MANIFEST_PATH, TEMPLATE_DIR, PromptTemplate, template_sha256
+from .prompts import MANIFEST_PATH, TEMPLATE_DIR, check_template_data, template_sha256
 
 
 def freeze(key: str, note: str) -> str:
@@ -33,8 +33,12 @@ def freeze(key: str, note: str) -> str:
     if not path.is_file():
         raise SystemExit(f"no such template file: {path}")
     digest = template_sha256(path)
-    PromptTemplate(key, yaml.safe_load(path.read_text(encoding="utf-8")), digest)  # must be well-formed
-    manifest["templates"][key] = {"sha256": digest, "frozen_on": date.today().isoformat(), "note": note}
+    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    check_template_data(key, data)  # must be well-formed for its kind
+    entry = {"sha256": digest, "frozen_on": date.today().isoformat(), "note": note}
+    if isinstance(data, dict) and data.get("kind") is not None:
+        entry["kind"] = data["kind"]  # issue #30: a template that is not a negotiation template says so
+    manifest["templates"][key] = entry
     MANIFEST_PATH.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n")
     return digest
 

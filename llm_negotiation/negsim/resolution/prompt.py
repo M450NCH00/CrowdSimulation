@@ -1,0 +1,547 @@
+"""Rendering a view into the messages an agent is sent, and the debrief (``docs/resolution.md``,
+D2, D3 and D8).
+
+**The order (D2).** The system message is the fixed text: the role, the condition's
+instructions, its reply format, and the step format with the scenario's ``until`` events. It
+depends on the condition and the scenario and on nothing else, so it is byte for byte the same
+for every agent at every decision point, which is the prefix a provider's prompt cache reuses.
+The user message is the description of the view, then the decision-point wrapper.
+
+**Numbers** are those of ``negsim.rulegen.describe``: distances along the way to 0.1 m, widths
+to 0.01 m, speeds to 0.01 m/s, angles to the whole degree; times here to 0.1 s.
+
+**The debrief** (D8) follows the agent's last decision point: that prompt, the agent's reply to
+it, and then the debrief question with every decision the agent made.
+"""
+
+from __future__ import annotations
+
+import json
+import math
+from dataclasses import dataclass
+from typing import Any, Mapping, Optional, Sequence
+
+from ..configutil import ConfigError
+from ..negotiation.prompts import load_template_data
+from ..rulegen.describe import _direction, _heading, across, along, fill, speed
+from .menu import Menu, load_menu
+from .scenario import Scenario
+from .view import ALL_CONDITIONS, CONDITIONS, DETAIL_FULL, MOTION_BACKING, MOTION_STILL, WALL_A, WALLS, Frame, View, other_wall
+
+KIND_CORE = "resolution"
+KIND_DEBRIEF = "resolution_debrief"
+CORE_TEMPLATE = "resolve_v1"
+#: The core template for views built from the running simulation (RF-17, #73): ``resolve_v1``
+#: with the lines for an unseen speaker's direction, a signal on a short line and what came of
+#: an earlier decision. Lines a template does not have are not rendered, so ``resolve_v1`` still
+#: renders every view, as it did.
+SIMULATION_CORE_TEMPLATE = "resolve_v2"
+#: The core template for a session with factor lines (issue #61, the user's decision of
+#: 2026-10-23): ``resolve_v2`` with a person's factor lines (RF-5's observable ones, RF-6's
+#: pairwise ones) printed under a short line too, 5 to 10 m away. ``resolve_v2`` prints them only
+#: within 5 m, which in the head-on case is never the case at a decision point.
+FACTOR_CORE_TEMPLATE = "resolve_v3"
+DEBRIEF_TEMPLATE = "resolve_debrief_v1"
+
+
+def default_core(with_factor_lines: bool) -> str:
+    """The core template a session uses unless its config names one: ``resolve_v3`` when it has
+    factor lines (a design that varies an RF-5 or an RF-6 factor), else ``resolve_v2``, so that a
+    session without them renders, and records, exactly what it did before."""
+    return FACTOR_CORE_TEMPLATE if with_factor_lines else SIMULATION_CORE_TEMPLATE
+
+
+#: Up to this many degrees off the same or the opposite direction, a walking person's heading is a
+#: drift ("in the opposite direction to you, drifting to your left by 15°") rather than a
+#: crossing, under a template with wording for it (``resolve_v6``, issue #65).
+#: **[placeholder]**: the 45° that splits ahead
+#: from the side in the directions (``perceive``), not a sourced threshold. RF-9 (issue #64): 28 of
+#: 30 agents told that someone 10° to 30° off opposite was "walking across" reasoned about a crossing.
+DRIFT_MAX_DEG = 45.0
+
+
+def seconds(value: float) -> str:
+    return f"{value:.1f}"
+
+
+def _walking_heading(relative: float, headings: Mapping[str, str]) -> str:
+    """A walking person's heading: a drift off the same or the opposite direction when the template
+    has wording for it (``resolve_v6``), else ``negsim.rulegen.describe``'s, unchanged."""
+    angle = abs(math.degrees(relative))
+    if "opposite_drifting" in headings and 10.0 < angle < 170.0:
+        to_side = "left" if relative > 0 else "right"
+        if angle >= 180.0 - DRIFT_MAX_DEG:
+            return fill(headings["opposite_drifting"], to_side=to_side, angle=int(round(180.0 - angle)))
+        if angle <= DRIFT_MAX_DEG:
+            return fill(headings["same_drifting"], to_side=to_side, angle=int(round(angle)))
+    return _heading(relative, headings)
+
+
+def _direction_within(bearing: float, phrases: Mapping[str, str], ahead_deg: float) -> str:
+    """``negsim.rulegen.describe._direction`` with "straight ahead" only within ``ahead_deg``
+    rather than 5° (``resolve_v7``, issue #98); everything else as there."""
+    angle = abs(math.degrees(bearing))
+    side = "left" if bearing > 0 else "right"
+    if angle <= ahead_deg:
+        return phrases["ahead"]
+    if angle >= 180.0 - ahead_deg:
+        return phrases["behind"]
+    if 85.0 <= angle <= 95.0:
+        return fill(phrases["side"], side=side)
+    if angle < 85.0:
+        return fill(phrases["ahead_side"], angle=int(round(angle)), side=side)
+    return fill(phrases["behind_side"], angle=int(round(180.0 - angle)), side=side)
+
+
+#: Issue #137: in the corridor's own frame, someone more than this many degrees off where the agent
+#: faces, and less than 180 minus it, is level with the agent rather than ahead or behind
+#: (``_direction``'s "to your side" band, 85 to 95 degrees). [design]
+LEVEL_FROM_DEG = 85.0
+
+
+def _frame_direction(bearing: float, phrases: Mapping[str, str], **values: Any) -> str:
+    """Issue #137: where someone is, in the corridor's own frame: ahead of, level with or behind
+    the agent, with no side (their distance from wall a, in ``values``, says where across)."""
+    angle = abs(math.degrees(bearing))
+    key = "ahead" if angle < LEVEL_FROM_DEG else "behind" if angle > 180.0 - LEVEL_FROM_DEG else "level"
+    return fill(phrases[key], **values)
+
+
+def _frame_heading(relative: float, phrases: Mapping[str, str], frame: Frame, walls: Mapping[str, str], drift: bool) -> str:
+    """Issue #137: ``_walking_heading`` (``drift``) or ``describe._heading`` in the corridor's own
+    frame: a drift or a crossing goes towards a wall, not to the agent's left or right."""
+    angle = abs(math.degrees(relative))
+    if angle <= 10.0:
+        return phrases["same"]
+    if angle >= 170.0:
+        return phrases["opposite"]
+    to_wall = walls[frame.wall_on("left" if relative > 0 else "right")]
+    if drift and angle >= 180.0 - DRIFT_MAX_DEG:
+        return fill(phrases["opposite_drifting"], to_wall=to_wall, angle=int(round(180.0 - angle)))
+    if drift and angle <= DRIFT_MAX_DEG:
+        return fill(phrases["same_drifting"], to_wall=to_wall, angle=int(round(angle)))
+    return fill(phrases["across"], to_wall=to_wall, angle=int(round(angle)))
+
+
+def _check_condition(condition: str) -> None:
+    if condition not in ALL_CONDITIONS:
+        raise ConfigError(f"condition: one of {ALL_CONDITIONS}, got {condition!r}")
+
+
+@dataclass(frozen=True)
+class RenderedPrompt:
+    """What one decision point sends, and the templates it was rendered from."""
+
+    messages: tuple[Mapping[str, str], ...]
+    condition: str
+    decision_point: int
+    templates: Mapping[str, Mapping[str, str]]
+
+    @property
+    def system(self) -> str:
+        return self.messages[0]["content"]
+
+    @property
+    def user(self) -> str:
+        return self.messages[1]["content"]
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "messages": [dict(m) for m in self.messages],
+            "condition": self.condition,
+            "decision_point": self.decision_point,
+            "templates": {name: dict(entry) for name, entry in self.templates.items()},
+        }
+
+
+class CoreTemplate:
+    """``resolve_v<n>``: one section per condition, every block of D2, the wrapper."""
+
+    def __init__(self, key: str, data: Mapping[str, Any], sha256: str):
+        missing = [c for c in CONDITIONS if c not in data["conditions"]]
+        if missing:
+            raise ConfigError(f"prompt template {key!r} has no section for {missing}")
+        if "walls" in data:  # issue #137: the corridor's own frame
+            walls = data["walls"]
+            names = [walls.get(w) if isinstance(walls, Mapping) else None for w in WALLS]
+            if not isinstance(walls, Mapping) or set(walls) != set(WALLS) or not all(isinstance(n, str) and n for n in names) or names[0] == names[1]:
+                raise ConfigError(f"prompt template {key!r}: walls names wall a and wall b, two different names")
+            if not isinstance(data.get("frame_place"), Mapping):
+                raise ConfigError(f"prompt template {key!r}: a template with walls has frame_place, its WHERE YOU ARE lines")
+        self.key, self.data, self.sha256 = key, data, sha256
+
+    @classmethod
+    def load(cls, key: str = CORE_TEMPLATE) -> "CoreTemplate":
+        data, digest = load_template_data(key, KIND_CORE)
+        return cls(key, data, digest)
+
+    def identity(self) -> dict[str, str]:
+        return {"key": self.key, "sha256": self.sha256}
+
+    def prints_extra_lines(self, detail: str) -> bool:
+        """Whether a person's factor lines are printed at this detail level: always in full detail,
+        and on a short line only by a template that has wording for it (``resolve_v3``, issue #61)."""
+        return detail == DETAIL_FULL or "seen_short_extra" in self.data["view"]
+
+    @property
+    def later_step_start(self) -> bool:
+        """Whether a later step of a reply may have a ``start`` (``resolve_v5``, issue #64)."""
+        return bool(self.data.get("later_step_start", False))
+
+    @property
+    def until_at_distance(self) -> bool:
+        """Whether a step's ``until`` may be a distance (``resolve_v6``, issue #65)."""
+        return bool(self.data.get("until_at_distance", False))
+
+    @property
+    def until_event_as_object(self) -> bool:
+        """Whether an ``until`` event written as an object is read as the event (``resolve_v6``)."""
+        return bool(self.data.get("until_event_as_object", False))
+
+    @property
+    def sidestep(self) -> bool:
+        """Whether a step may sidestep by an amount in metres (``resolve_v8``, issue #101)."""
+        return bool(self.data.get("sidestep", False))
+
+    @property
+    def exchange(self) -> Optional[str]:
+        """The exchange the template's wording is written for (``resolve_v9``, issue #129:
+        ``turn_taking``), or None for the earlier templates, written for speech in real time."""
+        value = self.data.get("exchange")
+        return None if value is None else str(value)
+
+    @property
+    def heard_frame(self) -> bool:
+        """Whether a heard message from someone in view carries a note on which way they face
+        (``resolve_v9``, issue #129: "their left is on your right")."""
+        return bool(self.data.get("heard_frame", False))
+
+    @property
+    def walls(self) -> Optional[dict[str, str]]:
+        """Issue #137 (``resolve_menu_abs_v1``): the names of the corridor's two long walls, by
+        ``view.WALLS`` (wall a at +y), for a template written in the corridor's own frame; else None."""
+        walls = self.data.get("walls")
+        return None if walls is None else {w: str(walls[w]) for w in WALLS}
+
+    @property
+    def frame_place_lines(self) -> Optional[dict[str, str]]:
+        """Issue #137: the WHERE YOU ARE lines that replace the scenario's own in the corridor's own
+        frame (filled with ``wall_a``, ``wall_b``, ``from_a`` and ``from_b`` as well)."""
+        lines = self.data.get("frame_place")
+        return None if lines is None else {str(k): str(v) for k, v in lines.items()}
+
+    @property
+    def menu(self) -> Optional[Menu]:
+        """The menu a reply chooses from (``resolve_menu_v1``, issue #136), or None for the earlier
+        templates, whose replies give steps. The template lists the options' names and words; the
+        table they are turned into steps by (``menu_table``) must name the same options, in order."""
+        path = self.data.get("menu_table")
+        if path is None:
+            return None
+        menu = load_menu(str(path))
+        listed = tuple(str(name) for name in self.data.get("menu_options", {}))
+        if listed != menu.names:
+            raise ConfigError(f"prompt template {self.key!r} lists the options {listed}, its table {path} has {menu.names}")
+        # Issue #137: moves named by a wall need a template in the corridor's own frame, and a
+        # template in that frame names no move by the agent's own left or right.
+        if menu.by_wall and self.walls is None:
+            raise ConfigError(f"prompt template {self.key!r}: its table {path} names moves by the walls, but the template names no walls")
+        if menu.by_side and self.walls is not None:
+            raise ConfigError(f"prompt template {self.key!r} is in the corridor's own frame, but its table {path} names moves by left and right")
+        return menu
+
+    def actions_text(self) -> str:
+        """The menu's options as the ACTIONS block lists them, one a line (issue #136)."""
+        item = self.data["action_item"]
+        return "\n".join(fill(item, name=name, says=says) for name, says in self.data["menu_options"].items())
+
+    def offers(self, condition: str) -> bool:
+        """Whether the template has a section for ``condition`` (silent: ``resolve_v9`` on)."""
+        return condition in self.data["conditions"]
+
+    @property
+    def direction_ahead_deg(self) -> Optional[float]:
+        """Within how many degrees someone is "straight ahead" (``resolve_v7``, issue #98); None
+        for the earlier templates, which keep ``negsim.rulegen.describe``'s 5°."""
+        value = self.data.get("direction_ahead_deg")
+        return None if value is None else float(value)
+
+    def prints_demographics(self, detail: str) -> bool:
+        """Whether the other's age and gender are printed at this detail level (when visible):
+        always in full detail, and on a short line only by ``resolve_v4`` (issue #64)."""
+        return detail == DETAIL_FULL or "seen_short_age" in self.data["view"]
+
+    # --- the fixed text -------------------------------------------------------------------------
+
+    def events_text(self, scenario: Scenario) -> str:
+        items = [fill(self.data["event_item"], name=name, words=words) for name, words in scenario.events.items()]
+        return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " or " + items[-1]
+
+    def system(self, condition: str, scenario: Scenario) -> str:
+        """The fixed text of a condition in a scenario: the same for every agent and decision point."""
+        self._check_offers(condition)
+        section = self.data["conditions"][condition]
+        values = {"events": self.events_text(scenario)}
+        if "menu_options" in self.data:  # issue #136: the ACTIONS block in place of the step format
+            values["actions"] = self.actions_text()
+        return fill(
+            self.data["system"],
+            role=self.data["role"].strip(),
+            instructions=section["instructions"].strip(),
+            reply_format=section["reply_format"].strip(),
+            step_format=fill(self.data["step_format"].strip(), **values),
+        ).strip()
+
+    def retry(self, condition: str) -> str:
+        self._check_offers(condition)
+        return " ".join(self.data["conditions"][condition]["retry"].split())
+
+    def _check_offers(self, condition: str) -> None:
+        _check_condition(condition)
+        if not self.offers(condition):
+            raise ConfigError(f"prompt template {self.key!r} has no section for the {condition} condition")
+
+    # --- the description ------------------------------------------------------------------------
+
+    def description(self, view: View) -> str:
+        v = self.data["view"]
+        blocks = [self._me(view), self._notes(view), self._place(view)]
+        blocks += [[block.header, *block.lines] for block in view.extra_blocks]
+        blocks += [self._seen(view), self._heard(view), self._history(view)]
+        if view.time_to_meet is not None:
+            blocks.append([fill(v["time_to_meet"], n=view.time_to_meet.label, seconds=seconds(view.time_to_meet.seconds))])
+        return "\n\n".join("\n".join(block) for block in blocks if block)
+
+    def _me(self, view: View) -> list[str]:
+        v, me = self.data["view"], view.me
+        lines = [v["self_header"]]
+        if me.age is not None:
+            lines.append(fill(v["self_age"], age=me.age))
+        if me.gender is not None:
+            lines.append(fill(v["self_gender"], gender=v["genders"][me.gender]))
+        if me.errand:
+            lines.append(fill(v["self_errand"], errand=me.errand))
+        if round(me.speed_mps, 2) == 0.0:
+            lines.append(fill(v["self_still"], preferred=speed(me.preferred_speed_mps)))
+        else:
+            lines.append(fill(v["self_motion"], speed=speed(me.speed_mps), preferred=speed(me.preferred_speed_mps)))
+        lines.append(fill(v["self_fastest"], fastest=speed(me.max_speed_mps)))
+        lines.append(fill(v["self_body"], width=across(me.width_m)))
+        lines += list(me.factor_lines)
+        return lines
+
+    def _notes(self, view: View) -> list[str]:
+        v = self.data["view"]
+        return [v["notes_header"], *(fill(v["note"], note=note) for note in view.notes)] if view.notes else []
+
+    def _place(self, view: View) -> list[str]:
+        return [self.data["view"]["place_header"], *view.place]
+
+    def _seen(self, view: View) -> list[str]:
+        v = self.data["view"]
+        lines = [v["seen_header"]]
+        if not view.seen:
+            return lines + [v["seen_nobody"]]
+        ahead_deg = self.direction_ahead_deg
+        frame, walls = self._frame(view)
+        for person in view.seen:
+            if frame is not None:  # issue #137: ahead, level or behind, and the distance from wall a
+                if person.from_a_m is None:
+                    raise ConfigError(f"prompt template {self.key!r}: a person in view has no distance from wall a")
+                direction = _frame_direction(person.bearing_rad, v["directions"], from_a=across(person.from_a_m), wall_a=walls[WALL_A])
+                heading = _frame_heading(person.heading_relative_rad, v["headings"], frame, walls, drift=person.motion != MOTION_STILL)
+            else:
+                if ahead_deg is None:
+                    direction = _direction(person.bearing_rad, v["directions"])
+                else:
+                    direction = _direction_within(person.bearing_rad, v["directions"], ahead_deg)
+                # A drift is a way of walking, not of facing: someone standing still keeps the old words.
+                describe = _heading if person.motion == MOTION_STILL else _walking_heading
+                heading = describe(person.heading_relative_rad, v["headings"])
+            if person.detail != DETAIL_FULL:
+                motion = fill(v["short_motion"][person.motion], heading=heading)
+                lines.append(fill(v["seen_short"], n=person.label, distance=along(person.distance_m), direction=direction, motion=motion))
+                lines += self._line_offset(person)
+                if "seen_short_body" in v:  # resolve_v7 (issue #98): the other's width from 10 m
+                    lines.append(fill(v["seen_short_body"], width=across(person.width_m)))
+                if person.age is not None and "seen_short_age" in v:  # resolve_v4 (issue #64): age and gender on a short line too
+                    lines.append(fill(v["seen_short_age"], age=person.age))
+                if person.gender is not None and "seen_short_gender" in v:
+                    lines.append(fill(v["seen_short_gender"], gender=v["genders"][person.gender]))
+                if person.signal != "none" and "seen_short_signal" in v:
+                    lines.append(fill(v["seen_short_signal"], signal=v["signals_seen"][person.signal]))
+                if "seen_short_extra" in v:  # resolve_v3 (issue #61): the factor lines on a short line too
+                    lines += [fill(v["seen_short_extra"], line=line) for line in (*person.factor_lines, *person.pairwise_lines)]
+                continue
+            lines.append(fill(v["seen_full"], n=person.label, distance=along(person.distance_m), direction=direction))
+            if person.motion == MOTION_STILL:
+                lines.append(fill(v["seen_still"], heading=heading))
+            else:
+                change = v["changes"]["shrinking" if (person.closing_speed_mps or 0.0) > 0.0 else "not_shrinking"]
+                key = "seen_backing" if person.motion == MOTION_BACKING else "seen_motion"
+                lines.append(fill(v[key], speed=speed(person.speed_mps), heading=heading, change=change))
+            lines += self._line_offset(person)
+            lines.append(fill(v["seen_body"], width=across(person.width_m)))
+            if person.age is not None:
+                lines.append(fill(v["seen_age"], age=person.age))
+            if person.gender is not None:
+                lines.append(fill(v["seen_gender"], gender=v["genders"][person.gender]))
+            if person.signal != "none":
+                lines.append(fill(v["seen_signal"], signal=v["signals_seen"][person.signal]))
+            if person.changes:
+                words = [v["since_last_look"][change] for change in person.changes]
+                if frame is not None:  # issue #137: a move over is towards a wall
+                    words = [self._towards(word, change, frame, walls) for word, change in zip(words, person.changes)]
+                joined = words[0] if len(words) == 1 else ", ".join(words[:-1]) + f" {v['and']} " + words[-1]
+                lines.append(fill(v["seen_changes"], changes=joined))
+            lines += [fill(v["seen_extra"], line=line) for line in (*person.factor_lines, *person.pairwise_lines)]
+        return lines
+
+    def _frame(self, view: View) -> tuple[Optional[Frame], Optional[dict[str, str]]]:
+        """Issue #137: the view's frame and the template's wall names, under a template with walls;
+        (None, None) under any other template."""
+        walls = self.walls
+        if walls is None:
+            return None, None
+        if view.frame is None:
+            raise ConfigError(f"prompt template {self.key!r} is in the corridor's own frame, and the view has no frame")
+        return view.frame, walls
+
+    @staticmethod
+    def _towards(word: str, change: str, frame: Frame, walls: Mapping[str, str]) -> str:
+        """Issue #137: "moved over towards {wall}" for a move to the agent's left or right."""
+        side = {"moved_left": "left", "moved_right": "right"}.get(change)
+        return word if side is None else fill(word, wall=walls[frame.wall_on(side)])
+
+    def _line_offset(self, person: Any) -> list[str]:
+        """Where the centre of someone ahead is against the straight line ahead of the agent
+        (``resolve_v7``, issue #98): the distance times the sine of their bearing, positive to the
+        left, to 0.1 m. Nothing for someone level with or behind the agent, or under a template
+        without the lines."""
+        v = self.data["view"]
+        if "seen_line_offset" not in v or abs(person.bearing_rad) >= math.pi / 2:
+            return []
+        offset = person.distance_m * math.sin(person.bearing_rad)
+        if along(abs(offset)) == along(0.0):
+            return [v["seen_on_line"]]
+        return [fill(v["seen_line_offset"], offset=along(abs(offset)), side="left" if offset > 0 else "right")]
+
+    def _heard(self, view: View) -> list[str]:
+        v = self.data["view"]
+        if not view.heard:
+            return []
+        lines = [v["heard_header"]]
+        frame, walls = self._frame(view)
+        for heard in view.heard:
+            if heard.label is None and heard.direction is not None and "heard_unseen_from" in v:
+                direction, band = v["heard_directions"][heard.direction], v["heard_bands"][heard.band]
+                if frame is not None and heard.direction in ("left", "right"):  # issue #137: from a wall's side
+                    direction = fill(direction, wall=walls[frame.wall_on(heard.direction)])
+                lines.append(fill(v["heard_unseen_from"], direction=direction, band=band, message=heard.message))
+            elif heard.label is None:
+                lines.append(fill(v["heard_unseen"], message=heard.message))
+            elif heard.frame is not None:  # issue #129: the note on which way the speaker faces
+                lines.append(fill(v[f"heard_seen_{heard.frame}"], n=heard.label, message=heard.message))
+            else:
+                lines.append(fill(v["heard_seen"], n=heard.label, message=heard.message))
+        return lines
+
+    def _history(self, view: View) -> list[str]:
+        v = self.data["view"]
+        if not view.history:
+            return []
+        lines = [v["history_header"]]
+        frame, walls = self._frame(view)
+        for done in view.history:
+            lines.append(fill(v["history_intent"], ago=seconds(done.ago_s), intent=done.intent))
+            if done.message:
+                lines.append(fill(v["history_said"], message=done.message))
+            if done.signal != "none":
+                lines.append(fill(v["history_signal"], signal=v["signals_made"][done.signal]))
+            if done.sideways_m is not None and "history_sideways" in v:
+                if along(abs(done.sideways_m)) == along(0.0):
+                    lines.append(v["history_no_sideways"])
+                elif frame is not None:  # issue #137: towards the wall that was on that side then
+                    if done.left_wall is None:
+                        raise ConfigError(f"prompt template {self.key!r}: an earlier decision has no wall on its left")
+                    wall = done.left_wall if done.sideways_m > 0.0 else other_wall(done.left_wall)
+                    lines.append(fill(v["history_sideways"], distance=along(abs(done.sideways_m)), wall=walls[wall]))
+                else:
+                    side = "left" if done.sideways_m > 0.0 else "right"
+                    lines.append(fill(v["history_sideways"], distance=along(abs(done.sideways_m)), side=side))
+            if done.back_m is not None and "history_back" in v and done.back_m > 0.0 and along(done.back_m) != along(0.0):
+                lines.append(fill(v["history_back"], distance=along(done.back_m)))
+            if done.outcome not in v["history_outcome"]:
+                raise ConfigError(f"prompt template {self.key!r} has no wording for the outcome {done.outcome!r}")
+            lines.append(v["history_outcome"][done.outcome])
+        return lines
+
+    def wrapper(self, view: View) -> str:
+        return self.data["decision_point"]["opening" if view.decision_point == 1 else "again"]
+
+
+def render(view: View, condition: str, scenario: Scenario, core: Optional[CoreTemplate] = None) -> RenderedPrompt:
+    """The messages of one decision point: the fixed text, then the description and the wrapper."""
+    core = core or CoreTemplate.load()
+    templates = {"core": core.identity(), "scenario": scenario.identity()}
+    if {name: dict(entry) for name, entry in view.templates.items()} != templates:
+        raise ConfigError(f"the view was built for templates {dict(view.templates)}, not {templates}")
+    user = core.description(view) + "\n\n" + core.wrapper(view)
+    messages = ({"role": "system", "content": core.system(condition, scenario)}, {"role": "user", "content": user})
+    return RenderedPrompt(messages, condition, view.decision_point, templates)
+
+
+# --- the debrief (D8) ---------------------------------------------------------------------------
+
+
+class DebriefTemplate:
+    def __init__(self, key: str, data: Mapping[str, Any], sha256: str):
+        self.key, self.data, self.sha256 = key, data, sha256
+
+    @classmethod
+    def load(cls, key: str = DEBRIEF_TEMPLATE) -> "DebriefTemplate":
+        data, digest = load_template_data(key, KIND_DEBRIEF)
+        return cls(key, data, digest)
+
+    def identity(self) -> dict[str, str]:
+        return {"key": self.key, "sha256": self.sha256}
+
+    def retry(self) -> str:
+        return " ".join(self.data["retry"].split())
+
+    @property
+    def side_question(self) -> bool:
+        """Whether the debrief asks why that side (``resolve_debrief_v2``, issue #127)."""
+        return bool(self.data.get("side_question", False))
+
+    def text(self, decisions: Sequence[Any]) -> str:
+        """The debrief question, with each decision (a :class:`~negsim.resolution.reply.ParsedReply`)."""
+        if not decisions:
+            raise ValueError("a debrief is for an agent that made at least one decision")
+        d, lines = self.data, []
+        for decision in decisions:
+            lines.append(fill(d["decision"], intent=decision.intent))
+            if getattr(decision, "action", None) is not None and "action" in d:
+                # Issue #136 (resolve_debrief_v3): the option chosen, not the numbers it was turned into.
+                lines.append(fill(d["action"], action=decision.action))
+            else:
+                steps = json.dumps([step.as_dict() for step in decision.steps], ensure_ascii=False) if decision.steps else d["no_steps"]
+                lines.append(fill(d["steps"], steps=steps))
+            if decision.message:
+                lines.append(fill(d["said"], message=decision.message))
+            if decision.signal != "none":
+                lines.append(fill(d["signal"], signal=decision.signal))
+        # The agent's own words go in last, so that nothing it wrote is read as a placeholder.
+        return fill(d["text"], reply_format=d["reply_format"].strip(), decisions="\n".join(lines)).strip()
+
+
+def debrief_messages(
+    last: RenderedPrompt, last_raw_reply: str, decisions: Sequence[Any], template: Optional[DebriefTemplate] = None
+) -> tuple[list[dict[str, str]], dict[str, Mapping[str, str]]]:
+    """The debrief request of D8: the agent's last decision point, its reply, then the question.
+    Returns the messages and the templates they came from."""
+    template = template or DebriefTemplate.load()
+    messages = [dict(m) for m in last.messages]
+    messages.append({"role": "assistant", "content": last_raw_reply})
+    messages.append({"role": "user", "content": template.text(decisions)})
+    return messages, {**{name: dict(entry) for name, entry in last.templates.items()}, "debrief": template.identity()}

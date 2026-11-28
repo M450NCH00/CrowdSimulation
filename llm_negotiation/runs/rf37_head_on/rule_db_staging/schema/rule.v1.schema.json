@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rule.v1.schema.json",
+  "title": "A rule of the rule database, schema version 1",
+  "description": "The structure of one rule version (docs/rule-format.md). The structure only: which fields exist, which operators, which units, how the agents are given roles, and what each role is told. The loader then checks what a schema cannot say: that every field named is one both agents can see, that numbers are stated in units that fit their field, that the roles and the directives fit together, and the consistency rules (shares summing to at least 1, one leader and one follower, one side for the pair). A rule is data: nothing in it is ever run as code.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "rule_id", "version", "status", "provenance", "encounter", "when", "roles", "directive", "priority"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "rule_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]{2,63}$"},
+    "version": {"type": "integer", "minimum": 1},
+    "status": {"enum": ["test_seed", "candidate", "validated", "rejected", "retired"]},
+    "description": {"type": "string"},
+    "provenance": {"$ref": "#/$defs/provenance"},
+    "encounter": {"enum": ["head_on", "crossing", "overtaking", "single_file_segment", "any"]},
+    "when": {"$ref": "#/$defs/condition"},
+    "roles": {"oneOf": [{"const": "symmetric"}, {"$ref": "#/$defs/role_assignment"}]},
+    "directive": {
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 2,
+      "propertyNames": {"pattern": "^[a-z][a-z0-9_]{0,31}$"},
+      "additionalProperties": {"$ref": "#/$defs/directive"}
+    },
+    "priority": {"type": "integer", "minimum": 0, "maximum": 1000},
+    "expiry": {"enum": ["passed", "out_of_range"]}
+  },
+  "$defs": {
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_type", "source_ref", "created_at", "author", "notes", "validation_evidence"],
+      "properties": {
+        "source_type": {"enum": ["hand_written", "negotiated", "extracted"]},
+        "source_ref": {"type": "string", "minLength": 1},
+        "created_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+        "author": {"type": "string", "minLength": 1},
+        "notes": {"type": "string"},
+        "validation_evidence": {"type": "array", "items": {"type": "object"}}
+      }
+    },
+    "field_name": {"type": "string", "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"},
+    "unit": {"enum": ["m", "s", "m/s", "rad", "deg", "years"]},
+    "scalar": {"type": ["number", "string"]},
+    "condition": {
+      "oneOf": [
+        {"$ref": "#/$defs/comparison"},
+        {"$ref": "#/$defs/all"},
+        {"$ref": "#/$defs/any"}
+      ]
+    },
+    "all": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["all"],
+      "properties": {"all": {"type": "array", "items": {"$ref": "#/$defs/condition"}}}
+    },
+    "any": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["any"],
+      "properties": {"any": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/condition"}}}
+    },
+    "comparison": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "op", "value"],
+      "properties": {
+        "field": {"$ref": "#/$defs/field_name"},
+        "op": {"enum": ["<", "<=", ">", ">=", "==", "!=", "in"]},
+        "value": {
+          "anyOf": [
+            {"$ref": "#/$defs/scalar"},
+            {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/scalar"}}
+          ]
+        },
+        "unit": {"$ref": "#/$defs/unit"}
+      }
+    },
+    "role_assignment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["by"],
+      "properties": {
+        "by": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["field", "order", "assign", "tie"],
+          "properties": {
+            "field": {"$ref": "#/$defs/field_name"},
+            "order": {"enum": ["ascending", "descending"]},
+            "assign": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,31}$"}
+            },
+            "tie": {"enum": ["no_match"]},
+            "tie_within": {"type": "number", "minimum": 0},
+            "unit": {"$ref": "#/$defs/unit"}
+          }
+        }
+      }
+    },
+    "directive": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "side_preference": {"enum": ["left", "right", "none"]},
+        "responsibility_share": {"type": "number", "minimum": 0, "maximum": 1},
+        "speed_scale": {"type": "number", "minimum": 0},
+        "clearance_margin": {"type": "number", "minimum": 0},
+        "passage_order": {"enum": ["leader", "follower", "none"]}
+      }
+    }
+  }
+}

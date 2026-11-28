@@ -1,0 +1,30 @@
+# A seed rule of issue #28 (SI-2). It is here to exercise the rule machinery. It is not a
+# claim about how people behave; checking that is the validation sub-issue's (SI-6).
+schema_version: 1
+rule_id: overtaker_keeps_clear
+version: 1
+status: test_seed
+description: >
+  When one person comes up behind another, the one overtaking does all of the avoiding and
+  passes on its own left; the one being overtaken carries on as it is.
+provenance:
+  source_type: hand_written
+  source_ref: "issue #28 (SI-2), Part 6, seed rules"
+  created_at: 2026-10-14
+  author: "the user (specification in issue #28); written out by Claude Code (claude-opus-5-5)"
+  notes: >
+    Test fixture only. Not a claim about human behaviour. In an overtaking encounter the
+    two walk the same way and are closing, so the faster one is the one behind: roles go
+    by present speed. Speeds within 0.05 m/s of each other are a tie and the rule does not
+    apply. The side, left, is the one issue #26's static version of this directive used
+    (configs/avoidance/si1_overtaking.yaml); it is not chosen for any reason about people.
+  validation_evidence: []
+encounter: overtaking
+when:
+  all: []
+roles:
+  by: {field: agent.speed_mps, order: descending, assign: [overtaker, overtaken], tie: no_match, tie_within: 0.05, unit: m/s}
+directive:
+  overtaker: {responsibility_share: 1.0, side_preference: left}
+  overtaken: {responsibility_share: 0.0}
+priority: 10

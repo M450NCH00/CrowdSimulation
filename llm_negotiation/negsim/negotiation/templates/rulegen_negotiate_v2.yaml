@@ -1,0 +1,102 @@
+# Prompt template rulegen_negotiate, version 2.  FROZEN — do not edit.
+# The hash of this file is pinned in MANIFEST.json and checked every time it is loaded.
+# To change any wording, copy the file to rulegen_negotiate_v3.yaml, change it there, freeze
+# it, and record the reason in the work log.
+template_id: rulegen_negotiate
+version: 2
+kind: rule_generation_negotiate
+description: >-
+  Condition A of rule generation: two people, each told the situation as they see it and their
+  own private information, negotiate a rule for future meetings like theirs, in turns of
+  {message, proposal, accept, no_rule_possible}. Version 2 (issue #32): the rule format of
+  version 3, meetings inside a single-file passage, standing still, and a person's fictional
+  group when the session shows it.
+provenance: >-
+  Version 1 (issue #30), word for word, with four kinds of line added and nothing else changed:
+  a person who is standing still is said to be (self_still, other_still), not to be walking at
+  0.00 m/s; a person inside a single-file stretch is told how far they have walked into it and
+  how far each of its ends is (place_inside_passage), and is told how far the other has walked
+  in from the other end when the other is inside it too (other_inside), all of them values both
+  can perceive (docs/perception.md, "Passage fields"); and, only when the session shows groups,
+  each person's own group and the other's, by label and framing word and nothing else
+  (self_group, other_group; docs/fictional-groups.md). It uses rulegen_common_v2. As version 1,
+  it describes positions, speeds and directions, names no convention, and does not say how many
+  messages there are.
+uses: rulegen_common_v2
+
+system: |-
+  You are playing the part of the person described below, on foot. Speak and decide as this person would.
+
+  You and another person have just come within sight of each other. The two of you are going to agree on a rule: one that people in a meeting like this one could follow in future without needing to talk. You agree by taking turns. On your turn you may say something, propose a rule, accept the other person's latest proposal, or say that you think no rule is possible unless people can talk to each other first.
+
+  {situation}
+
+  {glossary}
+
+  {format_example}
+
+  {reply_format}
+
+reply_format: |-
+  HOW TO REPLY
+  Reply with a single JSON object and nothing else, with these keys:
+  "message": what you say to the other person, as plain text.
+  "proposal": a rule in the format above, or null if you are not proposing one on this turn.
+  "accept": the proposal id of the other person's latest proposal, if you accept that proposal exactly as it is; otherwise null.
+  "no_rule_possible": true if you think no rule is possible unless people can talk to each other first; otherwise false.
+  The other person sees your message, your proposal and its proposal id, and whether you accept. The two of you have agreed when one of you accepts the other's latest proposal by its id. A changed rule is a new proposal, with a new id, not an acceptance.
+  The format, with placeholders: {"message": "<what you say>", "proposal": <a rule, or null>, "accept": "<a proposal id, or null>", "no_rule_possible": <true or false>}
+
+turns:
+  first: "You speak first."
+  header: "The other person's turn:"
+  message: '- They say: "{message}"'
+  proposal: "- They propose this rule, proposal id {proposal_id}: {proposal}"
+  accept_other: "- They put {accept} under \"accept\", which is not the id of your latest proposal."
+  no_rule: "- They say they think no rule is possible unless people can talk to each other first."
+  your_turn: "Your turn."
+  retry: >-
+    Your last reply could not be read. Reply again with only a JSON object of the form
+    {"message": "<what you say>", "proposal": <a rule, or null>, "accept": "<a proposal id, or null>", "no_rule_possible": <true or false>}.
+
+situation:
+  self_header: "ABOUT YOU"
+  self_age: "- You are {age} years old."
+  self_gender: "- You are {gender}."
+  self_group: "- You belong to the {label} {framing}."
+  self_task: "- You are on your way to {task}."
+  self_motion: "- You are walking at {speed} m/s. Your usual walking speed is {preferred} m/s."
+  self_still: "- You are standing still. Your usual walking speed is {preferred} m/s."
+  self_body: "- Your body is {width} m wide."
+  place_header: "WHERE YOU ARE"
+  place_passage: "- You are in a passage {width} m wide. The wall on your left is {left} m from you, the wall on your right {right} m."
+  place_wall: "- The nearest wall is {distance} m from you."
+  place_open: "- There are no walls near you."
+  place_narrowing: "- {distance} m ahead of you, the passage narrows to {width} m for {length} m."
+  place_inside_narrowing: "- You are inside a stretch of the passage {width} m wide and {length} m long."
+  place_inside_passage: "- You have walked {travelled} m into this stretch. Its end ahead of you is {ahead} m away, and the end behind you {behind} m."
+  place_others: "- Other people are walking around you as well."
+  other_header: "THE OTHER PERSON"
+  other_where: "- They are {distance} m away, {direction}."
+  other_motion: "- They are walking at {speed} m/s, {heading}, {change}."
+  other_still: "- They are standing still, facing {heading}."
+  other_inside: "- They are inside the stretch too, and have walked {travelled} m into it from its other end."
+  other_body: "- Their body is {width} m wide."
+  other_age: "- They look about {age} years old."
+  other_gender: "- They look like {gender}."
+  other_group: "- They belong to the {label} {framing}."
+  other_task: "- You do not know where they are going, unless they tell you."
+  genders: {female: a woman, male: a man, nonbinary: a non-binary person}
+  directions:
+    ahead: straight ahead of you
+    behind: straight behind you
+    side: "to your {side}"
+    ahead_side: "ahead of you and {angle}° to your {side}"
+    behind_side: "behind you and {angle}° to your {side}"
+  headings:
+    same: in the same direction as you
+    opposite: in the opposite direction to you
+    across: "across your direction of travel from your {from_side} to your {to_side}, at {angle}° to it"
+  changes:
+    shrinking: and the distance between you is shrinking
+    not_shrinking: and the distance between you is not shrinking

@@ -1,0 +1,29 @@
+# Issue #32, Part 3: the baseline runs that conflict cases of a meeting inside a single-file
+# passage, between a person who backs up slowly and one who does not, are taken from. Under the
+# primary baseline (plain ORCA, perturbed, with the arbiter). No model is called.
+#
+#   python run_experiment.py configs/cases/source_passage_meet_with_speeds.yaml
+#
+# The layouts: the scenario's own distances (the slow backer has walked less far in, so the
+# distance-optimal and the time-optimal choice of who backs out differ) and equal distances,
+# each at rest (the default) and walking (start_speed: preferred).
+schema_version: 1
+layer: avoidance
+experiment_name: si32_source_passage_meet_with_speeds
+description: Conflict-case source. Two people of different backing speeds meeting inside a single-file passage, at rest and walking; primary baseline, plain ORCA.
+scenario: configs/scenarios/passage_meet_with_speeds_v1.yaml
+baseline: orca_perturbed_v1
+
+design:
+  seed: 32200
+  seeding: paired
+  repeats: 2
+  factors:
+    travelled:
+      - name: asymmetric
+      - name: symmetric
+        scenario_overrides: {geometry: {travelled: [1.7, 1.7]}}
+    start:
+      - name: rest
+      - name: walking
+        scenario_overrides: {geometry: {start_speed: preferred}}

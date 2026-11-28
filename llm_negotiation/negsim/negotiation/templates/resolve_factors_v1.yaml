@@ -1,0 +1,75 @@
+# Prompt template resolve_factors, version 1.  FROZEN — do not edit.
+# The hash of this file is pinned in MANIFEST.json and checked every time it is loaded.
+# To change any wording, copy the file to resolve_factors_v2.yaml, change it there, freeze it,
+# and record the reason in the work log.
+template_id: resolve_factors
+version: 1
+kind: resolution_factors
+description: >-
+  Track #55, issue #60 (RF-5): the lines of the core factors and of the situational factors
+  (docs/resolution.md, D2, D7 and D15). The core template (resolve_v2) places them verbatim in
+  its blocks: a person's own lines in ABOUT YOU, a memory note in YOUR NOTES, what someone else
+  can see of a person in WHO YOU CAN SEE (under that person, only when they are in view and the
+  factor's visibility switch is on), and the setting in WHERE YOU ARE, the same line for
+  everyone.
+provenance: >-
+  Issue #60's table, word for word, except where a line named a place: the pipeline never names
+  a scenario (D16), so "The corridor around you is quiet / busy with other people" became "It is
+  quiet around you / It is busy and noisy around you", and the memory note's "in a corridor like
+  this one" became "in a place like this one". "Noisy" says what the surroundings change outside
+  the prompt (the hearing range); the physical scene is not made busier, and a two-person case
+  shows nobody else in view. The time-of-day lines are the issue's. Nothing here names a walking
+  convention, a side or an order of passing; residence names only where the person lives or
+  comes from. A person's own lines carry their "- "; the core template indents what others see
+  and puts "- " before a note.
+
+# Each person attribute (negsim/personas/schema.py, ATTRIBUTES), one entry per level, with the
+# levels in the schema's order. A level with no lines renders nothing.
+#   self:  the person's own line, in ABOUT YOU
+#   other: what someone who can see them is told, under them in WHO YOU CAN SEE (observable
+#          attributes only)
+#   note:  a line of YOUR NOTES: a designed note, never a memory that accumulates (D7)
+attributes:
+  # Carried by the errand line of ABOUT YOU: the design picks the errand by its urgency.
+  urgency:
+    routine: {}
+    urgent: {}
+  mobility_aid:
+    none: {}
+    cane:
+      self: "- You are walking with a cane."
+      other: "They are walking with a cane."
+  load:
+    none: {}
+    large_suitcase:
+      self: "- You are pulling a large suitcase."
+      other: "They are pulling a large suitcase."
+  distraction:
+    none: {}
+    phone:
+      self: "- You are looking at your phone as you walk."
+      other: "They are looking at their phone as they walk."
+  assertiveness:
+    gives_way:
+      self: "- You are easy-going and tend to give way."
+    holds_ground:
+      self: "- You are determined and tend to hold your ground."
+  residence:
+    local:
+      self: "- You live in Singapore."
+    visitor:
+      self: "- You are visiting Singapore from the United States."
+  memory_note:
+    none: {}
+    bad_experience:
+      note: "Earlier today someone walked straight into you in a place like this one."
+
+# The situational factors (negsim/resolution/factors.py, SITUATIONS): the setting, the same level
+# and the same line for everyone in the session, after the scenario's lines in WHERE YOU ARE.
+situations:
+  surroundings:
+    quiet: "- It is quiet around you."
+    busy: "- It is busy and noisy around you."
+  time_of_day:
+    daytime: "- It is the middle of the day."
+    late_night: "- It is late at night."

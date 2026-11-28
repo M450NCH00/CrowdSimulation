@@ -1,0 +1,25 @@
+# Issue #110 (RF-32): the group head-on cases, one per layout, by the rules of si3_cases_v1.yaml.
+#
+#   python -m negsim.rulegen.cases extract configs/cases/rf32_group_cases_v1.yaml
+#
+# A case is one pair of a 3- or 4-person run, as a flow case is one pair of a 100-person run; the
+# scenario plug-in passing_group brings everyone else of the case into the encounter. Eligible:
+# the primary baseline, plain ORCA, both perceived each other when the pair formed, approaching
+# head-on. min_tier T3 (si3_cases_v1: T1) so that the case's pair is two people who came within the
+# near-miss distance under the baseline, as every round 1 head-on case did; in 2 v 2 the diagonal
+# pair that stays 0.66 m apart (T2) is not a case's pair. Companions (formed side by side, class
+# none) are not eligible, as in the flow. One case per layout, drawn over both repeats.
+schema_version: 1
+case_set: rf32_group_v1
+description: The group head-on cases of issue #110 (RF-32), 2 v 1 and 2 v 2 in round 1's corridor, in round 1's two geometries.
+sources:
+  - runs/rf32_source_group_head_on
+eligibility:
+  baseline: orca_perturbed_v1
+  min_tier: T3
+  formation_classes: [head_on]
+strata:
+  by: [variant]
+  per_stratum:
+    default: 1
+  seed: 32

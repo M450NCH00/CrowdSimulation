@@ -1,0 +1,25 @@
+# Issue #30, Part 2: the baseline runs that conflict cases are taken from. A faster walker
+# behind a slower one, under the primary baseline (plain ORCA, perturbed). No model is called.
+#
+#   python run_experiment.py configs/cases/source_overtaking.yaml
+#
+# The layouts vary how far to the side of the faster walker's line the slower one walks:
+# directly ahead, 30 cm and 45 cm aside.
+schema_version: 1
+layer: avoidance
+experiment_name: si3_source_overtaking
+description: Conflict-case source. Overtaking, three layouts, primary baseline, plain ORCA.
+scenario: configs/scenarios/overtaking.yaml
+baseline: orca_perturbed_v1
+
+design:
+  seed: 30300
+  seeding: paired
+  repeats: 2
+  factors:
+    layout:
+      - name: in_line
+      - name: aside_30cm
+        scenario_overrides: {geometry: {lateral_offsets: [0.0, 0.3]}}
+      - name: aside_45cm
+        scenario_overrides: {geometry: {lateral_offsets: [0.0, 0.45]}}

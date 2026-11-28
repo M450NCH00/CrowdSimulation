@@ -1,0 +1,73 @@
+# Prompt template rulegen_state, version 1.  FROZEN — do not edit.
+# The hash of this file is pinned in MANIFEST.json and checked every time it is loaded.
+# To change any wording, copy the file to rulegen_state_v2.yaml, change it there, freeze it,
+# and record the reason in the work log.
+template_id: rulegen_state
+version: 1
+kind: rule_generation_state
+description: >-
+  Condition B of rule generation (issue #30): one model, told the situation third-person with
+  both people's private information, states a rule for future meetings like this one, as
+  {rule, reason}.
+provenance: >-
+  Written for this project (issue #30). The situation is the same as condition A's, told from
+  outside: both people's observable state and both people's private information, as Person 1
+  and Person 2, in an order the design varies. The same rule format and field list as
+  condition A (rulegen_common_v1). Positions, speeds and directions only: no convention is
+  described or suggested.
+uses: rulegen_common_v1
+
+system: |-
+  Two people on foot have just come within sight of each other. The situation is described below, with what each of them knows.
+
+  State one rule that people in a meeting like this one could follow in future without needing to talk to each other.
+
+  {situation}
+
+  {glossary}
+
+  {format_example}
+
+  {reply_format}
+
+reply_format: |-
+  HOW TO REPLY
+  Reply with a single JSON object and nothing else, with these keys:
+  "rule": a rule in the format above, or null if you think no rule is possible unless people can talk to each other first.
+  "reason": why, in one or two sentences.
+  The format, with placeholders: {"rule": <a rule, or null>, "reason": "<one or two sentences>"}
+
+retry: >-
+  Your last reply could not be read. Reply again with only a JSON object of the form
+  {"rule": <a rule, or null>, "reason": "<one or two sentences>"}.
+
+situation:
+  person_header: "PERSON {n}"
+  person_age: "- Person {n} is {age} years old."
+  person_gender: "- Person {n} is {gender}."
+  person_task: "- Person {n} is on their way to {task}."
+  person_motion: "- Person {n} is walking at {speed} m/s. Their usual walking speed is {preferred} m/s."
+  person_body: "- Person {n}'s body is {width} m wide."
+  person_passage: "- Person {n} is in a passage {width} m wide. The wall on their left is {left} m from them, the wall on their right {right} m."
+  person_wall: "- The nearest wall is {distance} m from Person {n}."
+  person_open: "- There are no walls near Person {n}."
+  person_narrowing: "- {distance} m ahead of Person {n}, the passage narrows to {width} m for {length} m."
+  person_inside_narrowing: "- Person {n} is inside a stretch of the passage {width} m wide and {length} m long."
+  pair_header: "THE TWO OF THEM"
+  pair_where: "- They are {distance} m apart. Seen from Person 1, Person 2 is {direction}."
+  pair_motion: "- Person 2 is walking {heading}, {change}."
+  pair_others: "- Other people are walking around them as well."
+  genders: {female: a woman, male: a man, nonbinary: a non-binary person}
+  directions:
+    ahead: straight ahead of Person 1
+    behind: straight behind Person 1
+    side: "to Person 1's {side}"
+    ahead_side: "ahead of Person 1 and {angle}° to their {side}"
+    behind_side: "behind Person 1 and {angle}° to their {side}"
+  headings:
+    same: in the same direction as Person 1
+    opposite: in the opposite direction to Person 1
+    across: "across Person 1's direction of travel from their {from_side} to their {to_side}, at {angle}° to it"
+  changes:
+    shrinking: and the distance between them is shrinking
+    not_shrinking: and the distance between them is not shrinking

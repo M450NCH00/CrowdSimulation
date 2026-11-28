@@ -1,0 +1,928 @@
+{
+  "experiment": "rf31_round1_head_on",
+  "status": "completed",
+  "client": "deepseek",
+  "rule_schema_version": 4,
+  "extraction": {
+    "folder": "runs/rf11_round1_head_on",
+    "experiment": "rf11_round1_head_on",
+    "statuses": [
+      "candidate"
+    ]
+  },
+  "rules": [
+    {
+      "extracted_rule_id": "x_head_on_0ecc2d1a6e",
+      "encounter_type": "head_on",
+      "rule": "In the apart_20cm layout the pair keep to the side their final plan already takes and almost never stop or back up.",
+      "extracted_status": "candidate",
+      "extracted_category": "valid",
+      "extraction_stability": "2/3",
+      "target": "stopped",
+      "needs_communication": false,
+      "factor_losses": [
+        {
+          "column": "geometry",
+          "status": "no_field",
+          "field": "the layout (how far apart the two walking lines are): no format 3 field"
+        },
+        {
+          "column": "first_side",
+          "status": "behaviour",
+          "field": "what a person did or what happened"
+        },
+        {
+          "column": "final_side",
+          "status": "behaviour",
+          "field": "what a person did or what happened"
+        }
+      ],
+      "action_flags": [],
+      "outcome": "completed",
+      "category": "valid",
+      "message": "loads, and both people can see everything it reads",
+      "lost": [
+        {
+          "part": "geometry is apart_20cm",
+          "kind": "condition",
+          "how": "approximated"
+        },
+        {
+          "part": "passing side equal to final_side",
+          "kind": "other",
+          "how": "approximated"
+        },
+        {
+          "part": "turns of 5-15 degrees",
+          "kind": "turn",
+          "how": "approximated"
+        },
+        {
+          "part": "speeds 0.9-1.3 m/s",
+          "kind": "speed",
+          "how": "approximated"
+        },
+        {
+          "part": "no stop and no back-up",
+          "kind": "other",
+          "how": "approximated"
+        }
+      ],
+      "note": "The layout condition is approximated by a corridor-width test, and the side choice by a fixed left turn of 10 degrees starting at 9.8 m, with normal speed kept and no stopping or backing up.",
+      "review_flags": [],
+      "loader_category": null,
+      "fields": [
+        "pair.min_corridor_width_m"
+      ],
+      "ignored_metadata": {},
+      "extraction": {
+        "experiment": "rf11_round1_head_on",
+        "rule_id": "x_head_on_0ecc2d1a6e",
+        "version": 1,
+        "file": "runs/rf11_round1_head_on/head_on/extracted_rules/rules/x_head_on_0ecc2d1a6e.v1.yaml",
+        "sha256": "7056601e016ffc50727e8ef1d7c909b73402230dafef1fc71868f8d0b9638a3a",
+        "status": "candidate",
+        "category": "valid",
+        "extraction_stability": "2/3",
+        "target": "stopped",
+        "held_out_accuracy": 1.0,
+        "baseline_accuracy": 1.0,
+        "beats_baseline": false
+      },
+      "cost_usd": 0.000753,
+      "runnable_in_orca": true,
+      "staged_rule_id": "ext_head_on_0ecc2d1a6e",
+      "staged_file": "rule_db_staging/extracted/rules/ext_head_on_0ecc2d1a6e.v1.yaml",
+      "translated_rule": {
+        "encounter": "head_on",
+        "when": {
+          "field": "pair.min_corridor_width_m",
+          "op": ">=",
+          "value": 0.2,
+          "unit": "m"
+        },
+        "roles": "symmetric",
+        "directive": {
+          "both": {
+            "speed_scale": 1,
+            "steps": [
+              {
+                "start": {
+                  "at_distance_m": 9.8
+                },
+                "turn": {
+                  "to": "left",
+                  "degrees": 10
+                },
+                "until": "other_passes"
+              }
+            ]
+          }
+        },
+        "priority": 500,
+        "intent": "Keep to one side and keep walking past the other without stopping or backing up."
+      },
+      "screening_version": 2,
+      "screening": [
+        {
+          "kind": "replay",
+          "experiment": "rf31_round1_head_on",
+          "scenario": "step1_sessions:head_on",
+          "baseline": "plain_orca",
+          "case_id": null,
+          "seeds": [
+            30101,
+            30102
+          ],
+          "screened_utc": "2026-10-26T13:17:06+00:00",
+          "verdict": "recorded",
+          "reasons": [],
+          "results": {
+            "identity": {
+              "sessions": 76,
+              "plain_not_the_recorded_run": 0,
+              "trusted": 76,
+              "rule_matched": 76,
+              "all": {
+                "n": 76,
+                "rule_reproduces": 0.1974,
+                "rule_same_first": 0.5132,
+                "rule_same_sides": 0.3816,
+                "rule_resolved": 1.0,
+                "plain_reproduces": 0.3553,
+                "plain_same_first": 0.6711,
+                "plain_same_sides": 0.5526,
+                "plain_resolved": 0.0
+              },
+              "matched": {
+                "n": 76,
+                "rule_reproduces": 0.1974,
+                "rule_same_first": 0.5132,
+                "rule_same_sides": 0.3816,
+                "rule_resolved": 1.0,
+                "plain_reproduces": 0.3553,
+                "plain_same_first": 0.6711,
+                "plain_same_sides": 0.5526,
+                "plain_resolved": 0.0
+              }
+            },
+            "rows": "identity/ext_head_on_0ecc2d1a6e.csv",
+            "sessions_from": "x_head_on_0ecc2d1a6e"
+          }
+        },
+        {
+          "kind": "crowd",
+          "experiment": "rf31_round1_head_on",
+          "scenario": "bidirectional_flow",
+          "baseline": "orca_perturbed_v1",
+          "case_id": null,
+          "seeds": [
+            30901,
+            30902
+          ],
+          "screened_utc": "2026-10-26T13:19:30+00:00",
+          "verdict": "passed",
+          "reasons": [],
+          "results": {
+            "settings": {
+              "scenario": "configs/scenarios/bidirectional_flow.yaml",
+              "baseline": "orca_perturbed_v1",
+              "seed": 30900,
+              "repeats": 2,
+              "scenario_overrides": {}
+            },
+            "summary": {
+              "gridlocked_runs": 0,
+              "baseline_gridlocked_runs": 0,
+              "collision_episodes": [
+                82,
+                88
+              ],
+              "baseline_collision_episodes": [
+                86,
+                68
+              ],
+              "throughput_agents_per_min": [
+                78.125,
+                87.0827
+              ],
+              "baseline_throughput_agents_per_min": [
+                115.3846,
+                75.662
+              ],
+              "rule_fired": [
+                2455,
+                2472
+              ]
+            },
+            "per_seed": [
+              {
+                "seed": 30901,
+                "baseline": {
+                  "status": "completed",
+                  "gridlocked": false,
+                  "arrived": 100,
+                  "n_agents": 100,
+                  "sim_time_s": 52.0,
+                  "makespan_s": 52.0,
+                  "mean_time_to_goal_s": 35.029,
+                  "throughput_agents_per_min": 115.3846,
+                  "collision_episodes": 86,
+                  "max_overlap_m": 0.02397,
+                  "near_misses": 794,
+                  "yield_events": 19,
+                  "pair_exposure_time_s": 1544.8,
+                  "tiers": {
+                    "T0": 3043,
+                    "T1": 28,
+                    "T2": 997,
+                    "T3": 710,
+                    "T4": 81
+                  },
+                  "rule_fired": 0
+                },
+                "rule": {
+                  "status": "completed",
+                  "gridlocked": false,
+                  "arrived": 100,
+                  "n_agents": 100,
+                  "sim_time_s": 76.8,
+                  "makespan_s": 76.8,
+                  "mean_time_to_goal_s": 34.436,
+                  "throughput_agents_per_min": 78.125,
+                  "collision_episodes": 82,
+                  "max_overlap_m": 0.015147,
+                  "near_misses": 576,
+                  "yield_events": 3,
+                  "pair_exposure_time_s": 971.8,
+                  "tiers": {
+                    "T0": 3661,
+                    "T1": 407,
+                    "T2": 199,
+                    "T3": 495,
+                    "T4": 71
+                  },
+                  "rule_fired": 2455
+                },
+                "folders": {
+                  "baseline": "screening/baseline/001_base_r1",
+                  "rule": "screening/ext_head_on_0ecc2d1a6e/001_base_r1"
+                }
+              },
+              {
+                "seed": 30902,
+                "baseline": {
+                  "status": "completed",
+                  "gridlocked": false,
+                  "arrived": 100,
+                  "n_agents": 100,
+                  "sim_time_s": 79.3,
+                  "makespan_s": 79.3,
+                  "mean_time_to_goal_s": 34.745,
+                  "throughput_agents_per_min": 75.662,
+                  "collision_episodes": 68,
+                  "max_overlap_m": 0.011365,
+                  "near_misses": 719,
+                  "yield_events": 3,
+                  "pair_exposure_time_s": 1548.0,
+                  "tiers": {
+                    "T0": 3947,
+                    "T1": 57,
+                    "T2": 107,
+                    "T3": 655,
+                    "T4": 62
+                  },
+                  "rule_fired": 0
+                },
+                "rule": {
+                  "status": "completed",
+                  "gridlocked": false,
+                  "arrived": 100,
+                  "n_agents": 100,
+                  "sim_time_s": 68.9,
+                  "makespan_s": 68.9,
+                  "mean_time_to_goal_s": 34.279,
+                  "throughput_agents_per_min": 87.0827,
+                  "collision_episodes": 88,
+                  "max_overlap_m": 0.023799,
+                  "near_misses": 537,
+                  "yield_events": 4,
+                  "pair_exposure_time_s": 876.3,
+                  "tiers": {
+                    "T0": 3685,
+                    "T1": 412,
+                    "T2": 224,
+                    "T3": 467,
+                    "T4": 63
+                  },
+                  "rule_fired": 2472
+                },
+                "folders": {
+                  "baseline": "screening/baseline/002_base_r2",
+                  "rule": "screening/ext_head_on_0ecc2d1a6e/002_base_r2"
+                }
+              }
+            ],
+            "same_runs_as": null
+          }
+        }
+      ]
+    },
+    {
+      "extracted_rule_id": "x_head_on_4eb7a97c8d",
+      "encounter_type": "head_on",
+      "rule": "People signal with eye contact, a nod or a wave when the other drifts toward their side or the plan is failing, and speak mainly to warn about a load or greet a known other.",
+      "extracted_status": "candidate",
+      "extracted_category": "needs_communication",
+      "extraction_stability": "2/3",
+      "target": "signalled",
+      "needs_communication": true,
+      "factor_losses": [
+        {
+          "column": "condition",
+          "status": "communication",
+          "field": "whether the two could signal or talk"
+        },
+        {
+          "column": "decision_points",
+          "status": "no_field",
+          "field": "how many decisions a person made: no format 3 field"
+        },
+        {
+          "column": "first_side",
+          "status": "behaviour",
+          "field": "what a person did or what happened"
+        },
+        {
+          "column": "final_side",
+          "status": "behaviour",
+          "field": "what a person did or what happened"
+        },
+        {
+          "column": "own_load",
+          "status": "readable",
+          "field": "load (agent. in a role by a condition; either., both. in a condition)"
+        },
+        {
+          "column": "knows_other",
+          "status": "readable",
+          "field": "self.knows_other, in the person's own-only condition (their own view of the other)"
+        }
+      ],
+      "action_flags": [
+        "signal_or_talk"
+      ],
+      "outcome": "completed",
+      "category": "not_expressible",
+      "message": "the translator said no part of the rule can be written in format 4",
+      "lost": [
+        {
+          "part": "People signal with eye contact, a nod or a wave",
+          "kind": "signal_or_talk",
+          "how": "left_out"
+        },
+        {
+          "part": "speak mainly to warn about a load or greet a known other",
+          "kind": "signal_or_talk",
+          "how": "left_out"
+        },
+        {
+          "part": "Applies when condition is non_verbal or talk and decision_points is 2 or 3",
+          "kind": "condition",
+          "how": "left_out"
+        },
+        {
+          "part": "signal at the second or third decision from about 7.2 m or 4.8 m",
+          "kind": "start",
+          "how": "left_out"
+        },
+        {
+          "part": "speak a short warning or greeting at the first decision or when the plan fails",
+          "kind": "start",
+          "how": "left_out"
+        },
+        {
+          "part": "non_verbal rows 54, 60, 76, 93 and 94 do not signal at the first decision; signalling there begins only later",
+          "kind": "condition",
+          "how": "left_out"
+        },
+        {
+          "part": "talk rows 100, 111-112, 121-122, 125-130, 133-136 and 139-146 do not speak at all",
+          "kind": "condition",
+          "how": "left_out"
+        },
+        {
+          "part": "decision_points: how many times this person decided",
+          "kind": "condition",
+          "how": "left_out"
+        },
+        {
+          "part": "first_side / final_side: which way this person's first and last plan turns",
+          "kind": "condition",
+          "how": "left_out"
+        },
+        {
+          "part": "own_load: none or large_suitcase",
+          "kind": "condition",
+          "how": "left_out"
+        },
+        {
+          "part": "knows_other: yes, no or not_told",
+          "kind": "condition",
+          "how": "left_out"
+        },
+        {
+          "part": "Needs communication (it held only when a signal or words were used): yes",
+          "kind": "other",
+          "how": "left_out"
+        }
+      ],
+      "note": "The rule is entirely about signalling and speaking at decision points, which the format cannot express; it has no movement directive, condition field, or role structure that maps onto the format, so no part of it can be written as a rule.",
+      "review_flags": [],
+      "extraction": {
+        "experiment": "rf11_round1_head_on",
+        "rule_id": "x_head_on_4eb7a97c8d",
+        "version": 1,
+        "file": "runs/rf11_round1_head_on/head_on/extracted_rules/rules/x_head_on_4eb7a97c8d.v1.yaml",
+        "sha256": "8e02900367e8240604f488b535a4a3f453d60e617757fff8f78aba8653a7e352",
+        "status": "candidate",
+        "category": "needs_communication",
+        "extraction_stability": "2/3",
+        "target": "signalled",
+        "held_out_accuracy": 0.7692,
+        "baseline_accuracy": 0.3462,
+        "beats_baseline": true
+      },
+      "cost_usd": 0.00039585,
+      "runnable_in_orca": false
+    },
+    {
+      "extracted_rule_id": "x_head_on_6455ca5589",
+      "encounter_type": "head_on",
+      "rule": "A gives_way person slows on the first plan when the other was described as elderly, using a cane, pulling a large suitcase, or looking at a phone.",
+      "extracted_status": "candidate",
+      "extracted_category": "valid",
+      "extraction_stability": "3/3",
+      "target": "first_slowed",
+      "needs_communication": false,
+      "factor_losses": [
+        {
+          "column": "own_assertiveness",
+          "status": "readable",
+          "field": "self.assertiveness, in the person's own-only condition"
+        },
+        {
+          "column": "other_mobility_aid",
+          "status": "readable",
+          "field": "mobility_aid (agent. in a role by a condition; either., both. in a condition)"
+        },
+        {
+          "column": "other_load",
+          "status": "readable",
+          "field": "load (agent. in a role by a condition; either., both. in a condition)"
+        },
+        {
+          "column": "other_distraction",
+          "status": "readable",
+          "field": "distraction (agent. in a role by a condition; either., both. in a condition)"
+        },
+        {
+          "column": "other_age",
+          "status": "readable",
+          "field": "age (either., both., agent.; pair.age_difference_years)"
+        },
+        {
+          "column": "own_urgency",
+          "status": "readable",
+          "field": "self.urgency, in the person's own-only condition"
+        }
+      ],
+      "action_flags": [],
+      "outcome": "unreadable",
+      "category": null,
+      "message": null,
+      "lost": [],
+      "note": null,
+      "review_flags": [],
+      "extraction": {
+        "experiment": "rf11_round1_head_on",
+        "rule_id": "x_head_on_6455ca5589",
+        "version": 1,
+        "file": "runs/rf11_round1_head_on/head_on/extracted_rules/rules/x_head_on_6455ca5589.v1.yaml",
+        "sha256": "8478ed8ebd8a5b26b167a7fd4996493e2cbe93aae7fbd544b6236452e6ae5118",
+        "status": "candidate",
+        "category": "valid",
+        "extraction_stability": "3/3",
+        "target": "first_slowed",
+        "held_out_accuracy": 0.7115,
+        "baseline_accuracy": 0.75,
+        "beats_baseline": false
+      },
+      "cost_usd": 0.00086259,
+      "runnable_in_orca": false
+    },
+    {
+      "extracted_rule_id": "x_head_on_aacce0961b",
+      "encounter_type": "head_on",
+      "rule": "A holds_ground person keeps their line at full speed on the first decision and only steps aside or slows at close range.",
+      "extracted_status": "candidate",
+      "extracted_category": "valid",
+      "extraction_stability": "2/3",
+      "target": "first_slowed",
+      "needs_communication": false,
+      "factor_losses": [
+        {
+          "column": "own_assertiveness",
+          "status": "readable",
+          "field": "self.assertiveness, in the person's own-only condition"
+        },
+        {
+          "column": "first_decision_distance_m",
+          "status": "readable",
+          "field": "pair.distance_m, in a condition"
+        },
+        {
+          "column": "own_urgency",
+          "status": "readable",
+          "field": "self.urgency, in the person's own-only condition"
+        },
+        {
+          "column": "own_memory_note",
+          "status": "readable",
+          "field": "self.memory_note, in the person's own-only condition"
+        },
+        {
+          "column": "geometry",
+          "status": "no_field",
+          "field": "the layout (how far apart the two walking lines are): no format 3 field"
+        }
+      ],
+      "action_flags": [],
+      "outcome": "completed",
+      "category": "valid",
+      "message": "loads, and both people can see everything it reads",
+      "lost": [
+        {
+          "part": "Applies when own_assertiveness is holds_ground",
+          "kind": "condition",
+          "how": "left_out"
+        },
+        {
+          "part": "first_decision_distance_m is about 9.8 m",
+          "kind": "start",
+          "how": "left_out"
+        },
+        {
+          "part": "first plan has no turn or a late turn of 8-15 degrees starting at 2.0-3.0 m",
+          "kind": "turn",
+          "how": "approximated"
+        },
+        {
+          "part": "speed held at about 1.3 m/s until the other passes",
+          "kind": "speed",
+          "how": "approximated"
+        },
+        {
+          "part": "many holds_ground rows still show first_side right or both because they plan a late small step to their own right",
+          "kind": "other",
+          "how": "approximated"
+        },
+        {
+          "part": "row 133 gives way fully with first_side left when the other has a cane and a load",
+          "kind": "condition",
+          "how": "left_out"
+        },
+        {
+          "part": "failed talk/aligned sessions with left/right first sides collide, so holding ground against a giving-way other is not always enough",
+          "kind": "other",
+          "how": "left_out"
+        },
+        {
+          "part": "own_urgency, own_memory_note, geometry",
+          "kind": "condition",
+          "how": "left_out"
+        }
+      ],
+      "note": "The rule is written as a head-on rule where the person who holds their ground keeps full speed and makes a late small right turn at close range; the private assertiveness condition, the 9.8 m first-decision distance, and the cane-and-load exception cannot be expressed, so they are listed as lost.",
+      "review_flags": [],
+      "loader_category": null,
+      "fields": [
+        "pair.heading_difference_rad",
+        "agent.speed_mps"
+      ],
+      "ignored_metadata": {},
+      "extraction": {
+        "experiment": "rf11_round1_head_on",
+        "rule_id": "x_head_on_aacce0961b",
+        "version": 1,
+        "file": "runs/rf11_round1_head_on/head_on/extracted_rules/rules/x_head_on_aacce0961b.v1.yaml",
+        "sha256": "6952d166f015cd36ebc6555e1d7f79e3e8d0f8b021a4193c1b2b2da2a8d172fb",
+        "status": "candidate",
+        "category": "valid",
+        "extraction_stability": "2/3",
+        "target": "first_slowed",
+        "held_out_accuracy": 0.8269,
+        "baseline_accuracy": 0.75,
+        "beats_baseline": true
+      },
+      "cost_usd": 0.0004458,
+      "runnable_in_orca": true,
+      "staged_rule_id": "ext_head_on_aacce0961b",
+      "staged_file": "rule_db_staging/extracted/rules/ext_head_on_aacce0961b.v1.yaml",
+      "translated_rule": {
+        "encounter": "head_on",
+        "when": {
+          "all": [
+            {
+              "field": "pair.heading_difference_rad",
+              "op": ">=",
+              "value": 120,
+              "unit": "deg"
+            }
+          ]
+        },
+        "roles": {
+          "by_condition": {
+            "when": {
+              "field": "agent.speed_mps",
+              "op": ">=",
+              "value": 0,
+              "unit": "m/s"
+            },
+            "assign": [
+              "holder",
+              "other"
+            ],
+            "tie": "no_match"
+          }
+        },
+        "directive": {
+          "holder": {
+            "speed_scale": 1,
+            "steps": [
+              {
+                "start": {
+                  "at_distance_m": 3.0
+                },
+                "turn": {
+                  "to": "right",
+                  "degrees": 12
+                },
+                "until": "other_passes"
+              }
+            ]
+          },
+          "other": {}
+        },
+        "priority": 500,
+        "intent": "A person who holds their ground keeps their line at full speed and only makes a late small step to their right at close range."
+      },
+      "screening_version": 2,
+      "screening": [
+        {
+          "kind": "replay",
+          "experiment": "rf31_round1_head_on",
+          "scenario": "step1_sessions:head_on",
+          "baseline": "plain_orca",
+          "case_id": null,
+          "seeds": [
+            30101,
+            30102
+          ],
+          "screened_utc": "2026-10-26T13:20:20+00:00",
+          "verdict": "recorded",
+          "reasons": [],
+          "results": {
+            "identity": {
+              "sessions": 76,
+              "plain_not_the_recorded_run": 0,
+              "trusted": 76,
+              "rule_matched": 0,
+              "all": {
+                "n": 76,
+                "rule_reproduces": 0.3553,
+                "rule_same_first": 0.6711,
+                "rule_same_sides": 0.5526,
+                "rule_resolved": 0.0,
+                "plain_reproduces": 0.3553,
+                "plain_same_first": 0.6711,
+                "plain_same_sides": 0.5526,
+                "plain_resolved": 0.0
+              },
+              "matched": {
+                "n": 0,
+                "rule_reproduces": null,
+                "rule_same_first": null,
+                "rule_same_sides": null,
+                "rule_resolved": null,
+                "plain_reproduces": null,
+                "plain_same_first": null,
+                "plain_same_sides": null,
+                "plain_resolved": null
+              }
+            },
+            "rows": "identity/ext_head_on_aacce0961b.csv",
+            "sessions_from": "x_head_on_aacce0961b"
+          }
+        },
+        {
+          "kind": "crowd",
+          "experiment": "rf31_round1_head_on",
+          "scenario": "bidirectional_flow",
+          "baseline": "orca_perturbed_v1",
+          "case_id": null,
+          "seeds": [
+            30901,
+            30902
+          ],
+          "screened_utc": "2026-10-26T13:22:46+00:00",
+          "verdict": "passed",
+          "reasons": [],
+          "results": {
+            "settings": {
+              "scenario": "configs/scenarios/bidirectional_flow.yaml",
+              "baseline": "orca_perturbed_v1",
+              "seed": 30900,
+              "repeats": 2,
+              "scenario_overrides": {}
+            },
+            "summary": {
+              "gridlocked_runs": 0,
+              "baseline_gridlocked_runs": 0,
+              "collision_episodes": [
+                86,
+                68
+              ],
+              "baseline_collision_episodes": [
+                86,
+                68
+              ],
+              "throughput_agents_per_min": [
+                115.3846,
+                75.662
+              ],
+              "baseline_throughput_agents_per_min": [
+                115.3846,
+                75.662
+              ],
+              "rule_fired": [
+                0,
+                0
+              ]
+            },
+            "per_seed": [
+              {
+                "seed": 30901,
+                "baseline": {
+                  "status": "completed",
+                  "gridlocked": false,
+                  "arrived": 100,
+                  "n_agents": 100,
+                  "sim_time_s": 52.0,
+                  "makespan_s": 52.0,
+                  "mean_time_to_goal_s": 35.029,
+                  "throughput_agents_per_min": 115.3846,
+                  "collision_episodes": 86,
+                  "max_overlap_m": 0.02397,
+                  "near_misses": 794,
+                  "yield_events": 19,
+                  "pair_exposure_time_s": 1544.8,
+                  "tiers": {
+                    "T0": 3043,
+                    "T1": 28,
+                    "T2": 997,
+                    "T3": 710,
+                    "T4": 81
+                  },
+                  "rule_fired": 0
+                },
+                "rule": {
+                  "status": "completed",
+                  "gridlocked": false,
+                  "arrived": 100,
+                  "n_agents": 100,
+                  "sim_time_s": 52.0,
+                  "makespan_s": 52.0,
+                  "mean_time_to_goal_s": 35.029,
+                  "throughput_agents_per_min": 115.3846,
+                  "collision_episodes": 86,
+                  "max_overlap_m": 0.02397,
+                  "near_misses": 794,
+                  "yield_events": 19,
+                  "pair_exposure_time_s": 1544.8,
+                  "tiers": {
+                    "T0": 3043,
+                    "T1": 28,
+                    "T2": 997,
+                    "T3": 710,
+                    "T4": 81
+                  },
+                  "rule_fired": 0
+                },
+                "folders": {
+                  "baseline": "screening/baseline/001_base_r1",
+                  "rule": "screening/ext_head_on_aacce0961b/001_base_r1"
+                }
+              },
+              {
+                "seed": 30902,
+                "baseline": {
+                  "status": "completed",
+                  "gridlocked": false,
+                  "arrived": 100,
+                  "n_agents": 100,
+                  "sim_time_s": 79.3,
+                  "makespan_s": 79.3,
+                  "mean_time_to_goal_s": 34.745,
+                  "throughput_agents_per_min": 75.662,
+                  "collision_episodes": 68,
+                  "max_overlap_m": 0.011365,
+                  "near_misses": 719,
+                  "yield_events": 3,
+                  "pair_exposure_time_s": 1548.0,
+                  "tiers": {
+                    "T0": 3947,
+                    "T1": 57,
+                    "T2": 107,
+                    "T3": 655,
+                    "T4": 62
+                  },
+                  "rule_fired": 0
+                },
+                "rule": {
+                  "status": "completed",
+                  "gridlocked": false,
+                  "arrived": 100,
+                  "n_agents": 100,
+                  "sim_time_s": 79.3,
+                  "makespan_s": 79.3,
+                  "mean_time_to_goal_s": 34.745,
+                  "throughput_agents_per_min": 75.662,
+                  "collision_episodes": 68,
+                  "max_overlap_m": 0.011365,
+                  "near_misses": 719,
+                  "yield_events": 3,
+                  "pair_exposure_time_s": 1548.0,
+                  "tiers": {
+                    "T0": 3947,
+                    "T1": 57,
+                    "T2": 107,
+                    "T3": 655,
+                    "T4": 62
+                  },
+                  "rule_fired": 0
+                },
+                "folders": {
+                  "baseline": "screening/baseline/002_base_r2",
+                  "rule": "screening/ext_head_on_aacce0961b/002_base_r2"
+                }
+              }
+            ],
+            "same_runs_as": null
+          }
+        }
+      ]
+    }
+  ],
+  "counts": {
+    "rules": 4,
+    "translated": 4,
+    "outcomes": {
+      "completed": 3,
+      "unreadable": 1
+    },
+    "categories": {
+      "valid": 2,
+      "not_expressible": 1
+    },
+    "needs_communication_extracted": 1,
+    "needs_communication_written_not_runnable": 0,
+    "written": 2,
+    "runnable_in_orca": 2
+  },
+  "lost": {
+    "rules": 4,
+    "factor_status": {
+      "readable": 3,
+      "no_field": 3,
+      "communication": 1,
+      "behaviour": 2
+    },
+    "action_flags": {
+      "signal_or_talk": 1
+    },
+    "lost_kinds": {
+      "condition": 3,
+      "other": 3,
+      "signal_or_talk": 1,
+      "speed": 2,
+      "start": 2,
+      "turn": 2
+    }
+  },
+  "cost": {
+    "preview_usd": 0.0431328,
+    "actual_usd": 0.00245724,
+    "cap_usd": 0.05
+  }
+}

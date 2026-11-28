@@ -1,0 +1,59 @@
+# Issue #108 (RF-31): translate again the one rule whose translation was unreadable in
+# rf31_round1_head_on (x_head_on_6455ca5589: both replies left a nested own-only condition
+# unclosed), with the reader that repairs a reply one closing brace short where exactly one
+# placement loads (the user's decision of 2026-10-26). Everything else is rf31_round1_head_on's, so
+# the prompts are its word for word.
+#
+#   python run_experiment.py configs/translation/rf31_round1_head_on_retry.yaml --plan
+#
+# PAID RUN: the user answered "Yes" on 2026-10-26 to retrying it inside #108's cap (CLAUDE.md,
+# pending item 1): USD 0.05 for #108's calls together, USD 0.0025 spent before, so this experiment's
+# own cap is the rest. This config names the mock client; the paid run is
+#   python run_experiment.py configs/translation/rf31_round1_head_on_retry.yaml --client deepseek --confirm
+# off-peak.
+schema_version: 1
+layer: rule_translation
+experiment_name: rf31_round1_head_on_retry
+description: >-
+  RF-31, round 1 (head-on), the retry: RF-11's kept rule x_head_on_6455ca5589 translated once more
+  into rule format 4 with translate_v2, its reply read with the one-brace repair, then validated,
+  written, run on its Step 1 sessions and screened in the two-way flow, as rf31_round1_head_on.
+
+extraction: runs/rf11_round1_head_on
+statuses: [candidate]
+rules: [x_head_on_6455ca5589]
+
+template: translate_v2
+
+reader:
+  repair_one_brace: true     # the user's decision of 2026-10-26 (WORK_LOG-108.md)
+
+llm:
+  client: mock
+  mock_policy: translate_rehearsal_v2
+  model: deepseek-flash
+  temperature: 0.0
+  max_tokens: 2500
+  thinking: disabled
+  transport_retries: 0
+
+budget:
+  cap_usd: 0.0475            # #108's cap (0.05) less what rf31_round1_head_on spent (0.0025)
+  ledger: spend_ledger.jsonl
+
+identity:
+  enabled: true
+
+screening:
+  enabled: true
+  scenario: configs/scenarios/bidirectional_flow.yaml
+  baseline: orca_perturbed_v1
+  seed: 30900
+  repeats: 2
+  ages: [25, 70]
+  genders: [female, male]
+  factors:
+    mobility_aid: [none, cane]
+    load: [none, large_suitcase]
+    distraction: [none, phone]
+    assertiveness: [gives_way, holds_ground]

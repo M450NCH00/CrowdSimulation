@@ -1,0 +1,95 @@
+# Issue #62 (RF-7): a screening design of round 1's shape rehearsed end to end on the mock client.
+# No network and no cost; the output goes under runs_mock/, which git does not track.
+#
+#   python run_experiment.py configs/resolution/resolve_screening_mock_rehearsal.yaml --plan
+#   python run_experiment.py configs/resolution/resolve_screening_mock_rehearsal.yaml
+#
+# Round 1's depth (docs/resolution.md, D15): 32 cells of a resolution IV fraction, 2 geometries
+# (D14: head-on with the walking lines 0 and 20 cm apart), the exact-repeat set (8 cells, 3 times
+# each), all three conditions; plus one counterfactual pair. That is 32 x 2 x 3 = 192 sessions,
+# 8 x 2 x 3 = 48 exact repeats, and 2 x 2 x 3 = 12 sessions of the pair: 252 in all.
+#
+# THE FACTORS ARE NOT RF-10'S CHOICE. Choosing which factors to screen is RF-10 (#65); this list
+# only exercises the machinery with 12 two-level factors (mapping is one of them, so that it
+# stays counterbalanced). Perceived attractiveness is not varied (its ethics sign-off is pending),
+# and the fictional group is never a factor of this layer.
+#
+# The mock does not imitate a model (negsim/resolution/mock.py): its replies are scripted and do
+# not read the factor lines. Nothing here is a finding about a model.
+schema_version: 1
+layer: resolution
+experiment_name: resolve_screening_mock_rehearsal
+description: >-
+  Mock rehearsal of an RF-7 screening design of round 1's shape: a 2^(12-7) resolution IV
+  fraction, two head-on geometries, the exact-repeat set, all three conditions, and one
+  counterfactual pair.
+
+conditions: [independent, non_verbal, talk]
+
+design:
+  kind: fractional
+  cells: 32
+  seed: 62
+  base_age: 25
+  age_difference: 45
+  geometries:
+    - head_on_de176842@2   # wide_corridor_head_on, walking lines aligned (0 cm apart)
+    - head_on_02dfbadb@2   # the same, walking lines 20 cm apart
+  exact_repeats:
+    cells: 8
+    times: 3
+  factors:
+    age_pair: [same, p1_older]
+    gender_pair: [p1_female, p1_male]
+    urgency: [neither, p1]
+    mobility_aid: [neither, p1]
+    load: [neither, p1]
+    distraction: [neither, p1]
+    assertiveness: [neither, p1]
+    residence: [neither, p1]
+    memory_note: [neither, p1]
+    demographics_visible: [true]
+    surroundings: [quiet, busy]
+    time_of_day: [daytime, late_night]
+    mapping: [p1_lower, p1_higher]
+  counterfactual_pairs:
+    - base:
+        age_pair: same
+        gender_pair: p1_female
+        urgency: neither
+        mobility_aid: neither
+        load: neither
+        distraction: neither
+        assertiveness: neither
+        residence: neither
+        memory_note: neither
+        surroundings: quiet
+        time_of_day: daytime
+        mapping: p1_lower
+      factor: urgency      # to p1: person 1's errand is urgent, everything else the same
+
+protocol:
+  max_decision_points: 3         # D5
+  min_gap_s: 1.0                 # D5
+  no_conflict_end_s: 1.0         # [placeholder] the encounter ends after this long with no conflict predicted
+  max_prompted: 4                # D11, D12: the cap on prompted people per encounter (a cost limit)
+  speech_words_per_second: 2.5   # [placeholder] how fast a message is said
+
+templates:
+  debrief: resolve_debrief_v1    # the core template is resolve_v3, the default of a design with factors
+
+llm_view: configs/resolution/llm_view_v1.yaml
+factor_values: configs/resolution/factors_v1.yaml
+
+llm:
+  client: mock
+  mock_policy: resolution_rehearsal_v1
+  model: deepseek-flash   # what the preview prices; the mock answers
+  temperature: 1.0
+  max_tokens: 400         # [placeholder] the reply cap, as in #30's config
+  thinking: disabled
+  transport_retries: 2
+
+budget:
+  cap_usd: 0.05
+  ledger: spend_ledger.jsonl

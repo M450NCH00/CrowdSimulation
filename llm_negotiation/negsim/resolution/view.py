@@ -1,0 +1,268 @@
+"""The ``View``: everything one agent is told at one decision point (``docs/resolution.md``, D2).
+
+A view holds the description block by block, as data, in the order D2 gives:
+
+- ``me``: ABOUT YOU (age and gender when their switches show them, the errand, the speeds, the
+  body width, the person's own factor lines);
+- ``notes``: YOUR NOTES (RF-5's memory note, off by default, D7);
+- ``place`` and ``extra_blocks``: WHERE YOU ARE and any block of the scenario's own, already
+  rendered by the scenario plug-in (D16), whose template the view records;
+- ``seen``: WHO YOU CAN SEE, each person with a stable label ("Person 1") and a detail level;
+- ``heard``: WHAT YOU CAN HEAR;
+- ``history``: WHAT YOU HAVE DONE SO FAR, one entry per earlier decision point;
+- ``time_to_meet``: the closing line.
+
+Rendering is :mod:`negsim.resolution.prompt`'s. Nothing here holds anything the agent cannot
+perceive: no other person's errand, private factors or group. A view records the core and the
+scenario template it is meant for, with their SHA-256 (``templates``), and the prompt rendered
+from it records them again.
+"""
+
+from __future__ import annotations
+
+from dataclasses import asdict, dataclass, field
+from typing import Any, Mapping, Optional
+
+CONDITION_INDEPENDENT = "independent"
+CONDITION_NON_VERBAL = "non_verbal"
+CONDITION_TALK = "talk"
+#: Issue #129 (RF-40, the user's decision of 2026-11-01): no signal and no talk, as independent, but
+#: asked again under D5 like non-verbal and talk; it replaces independent from RF-40 on.
+CONDITION_SILENT = "silent"
+#: The conditions every core template has a section for (D3).
+CONDITIONS = (CONDITION_INDEPENDENT, CONDITION_NON_VERBAL, CONDITION_TALK)
+#: Every condition a session may run in: a template offers silent only from ``resolve_v9`` (issue
+#: #129), so the earlier templates load as before.
+ALL_CONDITIONS = (*CONDITIONS, CONDITION_SILENT)
+#: The conditions in which an agent may signal (and, in talk, speak).
+SIGNALLING_CONDITIONS = (CONDITION_NON_VERBAL, CONDITION_TALK)
+
+#: The signals of D1; ``none`` is no signal.
+SIGNALS = ("none", "eye_contact", "nod", "wave_on", "hold_up_hand", "point", "other")
+
+DETAIL_FULL = "full"  # within the detail range: every line
+DETAIL_SHORT = "short"  # beyond it, within the seeing range: one line
+DETAILS = (DETAIL_FULL, DETAIL_SHORT)
+
+MOTION_WALKING = "walking"
+MOTION_STILL = "still"
+MOTION_BACKING = "backing"
+MOTIONS = (MOTION_WALKING, MOTION_STILL, MOTION_BACKING)
+
+#: What a person did since the agent last looked (D5); RF-17 detects them.
+CHANGES = (
+    "slowed_down", "sped_up", "stopped", "started_walking", "backing_up",
+    "moved_left", "moved_right", "turned", "came_into_view",
+)
+
+OUTCOME_COMPLETED = "completed"
+OUTCOME_ONGOING = "ongoing"
+#: Steps that the agent's next decision replaced before they had all been carried out (RF-17).
+#: Only ``resolve_v2`` has wording for it.
+OUTCOME_REPLACED = "replaced"
+OUTCOMES = (OUTCOME_COMPLETED, OUTCOME_ONGOING, OUTCOME_REPLACED)
+
+#: Where the voice of a speaker the agent cannot see came from, roughly (RF-17), and how far.
+HEARD_DIRECTIONS = ("ahead", "behind", "left", "right")
+HEARD_BANDS = ("close", "far")
+#: Issue #129: which way a speaker in view faces the listener, for the note beside what they say.
+FRAME_FACING = "facing"  # walking towards the listener: their left is the listener's right
+FRAME_SAME_WAY = "same_way"  # walking the listener's way: their left is the listener's left
+HEARD_FRAMES = (FRAME_FACING, FRAME_SAME_WAY)
+
+#: Issue #137 (RF-48, AS5 as revised by the user on 2026-11-26): the corridor's own frame. Its two
+#: long walls are named by the core template (``walls``); wall a is the one at +y, wall b the one at -y.
+WALL_A, WALL_B = "a", "b"
+WALLS = (WALL_A, WALL_B)
+
+
+def other_wall(wall: str) -> str:
+    return WALL_B if wall == WALL_A else WALL_A
+
+
+@dataclass(frozen=True)
+class Frame:
+    """Issue #137: where the agent is in the corridor's own frame, for a core template with walls.
+
+    ``left_wall`` is the wall on the agent's own left as it faces now (``WALLS``); the view's left
+    and right (bearings, drifts, changes, an unseen voice) are turned into walls through it.
+    ``from_a_m`` and ``from_b_m`` are from the agent's centre to each wall, across its path."""
+
+    left_wall: str
+    from_a_m: float
+    from_b_m: float
+
+    def __post_init__(self) -> None:
+        if self.left_wall not in WALLS:
+            raise ValueError(f"left_wall: one of {WALLS}, got {self.left_wall!r}")
+
+    def wall_on(self, side: str) -> str:
+        """The wall on the agent's own ``side`` ("left" or "right") now."""
+        if side not in ("left", "right"):
+            raise ValueError(f"side: left or right, got {side!r}")
+        return self.left_wall if side == "left" else other_wall(self.left_wall)
+
+
+@dataclass(frozen=True)
+class Me:
+    """ABOUT YOU. ``age`` and ``gender`` are ``None`` when their switch hides them."""
+
+    speed_mps: float
+    preferred_speed_mps: float
+    max_speed_mps: float
+    width_m: float
+    age: Optional[int] = None
+    gender: Optional[str] = None
+    errand: Optional[str] = None
+    factor_lines: tuple[str, ...] = ()  # rendered by RF-5's factor template, placed verbatim
+
+
+@dataclass(frozen=True)
+class SeenPerson:
+    """One person in view. Left and right, and every angle, are the observer's own."""
+
+    label: int  # "Person {label}", stable for the encounter
+    detail: str
+    distance_m: float
+    bearing_rad: float  # where they are: 0 straight ahead, positive to the observer's left
+    speed_mps: float
+    heading_relative_rad: float  # their direction of travel against the observer's
+    closing_speed_mps: Optional[float]
+    width_m: float
+    motion: str = MOTION_WALKING
+    age: Optional[int] = None
+    gender: Optional[str] = None
+    signal: str = "none"
+    changes: tuple[str, ...] = ()
+    factor_lines: tuple[str, ...] = ()  # what the observer can see of their factors (RF-5)
+    pairwise_lines: tuple[str, ...] = ()  # for this observer only (RF-6)
+    #: Issue #137: their centre's distance from wall a, in a view with a ``Frame``; else None (and
+    #: left out of the record).
+    from_a_m: Optional[float] = None
+
+    def __post_init__(self) -> None:
+        if self.detail not in DETAILS:
+            raise ValueError(f"detail: one of {DETAILS}, got {self.detail!r}")
+        if self.motion not in MOTIONS:
+            raise ValueError(f"motion: one of {MOTIONS}, got {self.motion!r}")
+        if self.signal not in SIGNALS:
+            raise ValueError(f"signal: one of {SIGNALS}, got {self.signal!r}")
+        unknown = [change for change in self.changes if change not in CHANGES]
+        if unknown:
+            raise ValueError(f"changes: unknown {unknown}; known: {CHANGES}")
+
+
+@dataclass(frozen=True)
+class Heard:
+    """Something said within hearing range. ``label`` is ``None`` for a speaker not in view;
+    then ``direction`` and ``band`` say roughly where the voice came from (RF-17), or are
+    ``None`` when nobody worked it out (RF-2's views)."""
+
+    message: str
+    label: Optional[int] = None
+    direction: Optional[str] = None
+    band: Optional[str] = None
+    #: Issue #129: how the speaker, in view, faces the listener (``HEARD_FRAMES``), when the core
+    #: template prints a note on it (``resolve_v9``); left out of the record when ``None``.
+    frame: Optional[str] = None
+
+    def __post_init__(self) -> None:
+        if self.frame is not None and self.frame not in HEARD_FRAMES:
+            raise ValueError(f"frame: one of {HEARD_FRAMES}, got {self.frame!r}")
+        if self.direction is not None and self.direction not in HEARD_DIRECTIONS:
+            raise ValueError(f"direction: one of {HEARD_DIRECTIONS}, got {self.direction!r}")
+        if self.band is not None and self.band not in HEARD_BANDS:
+            raise ValueError(f"band: one of {HEARD_BANDS}, got {self.band!r}")
+
+
+@dataclass(frozen=True)
+class Done:
+    """One earlier decision point of this agent, for WHAT YOU HAVE DONE SO FAR."""
+
+    ago_s: float
+    intent: str
+    outcome: str
+    message: str = ""
+    signal: str = "none"
+    #: What came of it (RF-17): how far the agent has moved since, against the way it faced
+    #: then: to its left (positive) or right, and back (positive) from where it was.
+    sideways_m: Optional[float] = None
+    back_m: Optional[float] = None
+    #: Issue #137: the wall that was on the agent's own left as it faced then, in a view with a
+    #: ``Frame`` (so ``sideways_m`` can be told as towards a wall); else None (left out of the record).
+    left_wall: Optional[str] = None
+
+    def __post_init__(self) -> None:
+        if self.outcome not in OUTCOMES:
+            raise ValueError(f"outcome: one of {OUTCOMES}, got {self.outcome!r}")
+        if self.signal not in SIGNALS:
+            raise ValueError(f"signal: one of {SIGNALS}, got {self.signal!r}")
+        if self.left_wall is not None and self.left_wall not in WALLS:
+            raise ValueError(f"left_wall: one of {WALLS}, got {self.left_wall!r}")
+
+
+@dataclass(frozen=True)
+class Block:
+    """A block of the scenario's own, such as YOUR QUEUE: a header and its rendered lines."""
+
+    header: str
+    lines: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class TimeToMeet:
+    label: int
+    seconds: float
+
+
+@dataclass(frozen=True)
+class View:
+    agent_id: int
+    decision_point: int  # 1 for the opening one
+    me: Me
+    place: tuple[str, ...]
+    templates: Mapping[str, Mapping[str, str]]  # {"core": {key, sha256}, "scenario": {key, sha256}}
+    seen: tuple[SeenPerson, ...] = ()
+    heard: tuple[Heard, ...] = ()
+    history: tuple[Done, ...] = ()
+    notes: tuple[str, ...] = ()
+    extra_blocks: tuple[Block, ...] = ()
+    time_to_meet: Optional[TimeToMeet] = None
+    labels: Mapping[str, Any] = field(default_factory=dict)  # where the view came from; never rendered
+    #: Issue #137: the corridor's own frame, under a core template with walls; else None (left out
+    #: of the record, as are the frame's fields on each person and earlier decision).
+    frame: Optional[Frame] = None
+
+    def __post_init__(self) -> None:
+        if self.decision_point < 1:
+            raise ValueError("decision_point counts from 1")
+        if set(self.templates) != {"core", "scenario"}:
+            raise ValueError("a view records its core and its scenario template")
+        labels = [person.label for person in self.seen]
+        if len(set(labels)) != len(labels):
+            raise ValueError(f"two people in view share a label: {labels}")
+        if self.time_to_meet is not None and self.time_to_meet.label not in labels:
+            raise ValueError("the time to meet names a person who is not in view")
+
+    def meeting_distance_m(self) -> Optional[float]:
+        """How far away the person the agent would meet is: the person of the time-to-meet line,
+        else the nearest person in view, else ``None``. ``start.at_distance_m`` is read against it."""
+        if self.time_to_meet is not None:
+            return next(p.distance_m for p in self.seen if p.label == self.time_to_meet.label)
+        return min((p.distance_m for p in self.seen), default=None)
+
+    def as_dict(self) -> dict[str, Any]:
+        described = asdict(self)
+        for heard in described["heard"]:
+            if heard["frame"] is None:  # issue #129: named only when set, so earlier records read as before
+                del heard["frame"]
+        # Issue #137: the absolute frame's fields, likewise only when set.
+        if described["frame"] is None:
+            del described["frame"]
+        for person in described["seen"]:
+            if person["from_a_m"] is None:
+                del person["from_a_m"]
+        for done in described["history"]:
+            if done["left_wall"] is None:
+                del done["left_wall"]
+        return described

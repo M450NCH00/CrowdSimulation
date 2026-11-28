@@ -1,0 +1,26 @@
+# Issue #30, Part 2: the baseline runs that conflict cases are taken from. Two paths crossing
+# at a right angle in open ground, under the primary baseline (plain ORCA, perturbed). No
+# model is called.
+#
+#   python run_experiment.py configs/cases/source_open_crossing.yaml
+#
+# The layouts vary how much sooner one agent reaches the crossing: at the same instant, 0.5 m
+# sooner, 1 m sooner (at 1 m the two never conflict: tier T0, not eligible as a case).
+schema_version: 1
+layer: avoidance
+experiment_name: si3_source_open_crossing
+description: Conflict-case source. A right-angle crossing in open ground, three layouts, primary baseline, plain ORCA.
+scenario: configs/scenarios/open_crossing.yaml
+baseline: orca_perturbed_v1
+
+design:
+  seed: 30200
+  seeding: paired
+  repeats: 2
+  factors:
+    layout:
+      - name: together
+      - name: ahead_50cm
+        scenario_overrides: {geometry: {approach_distances: [8.0, 8.5]}}
+      - name: ahead_1m
+        scenario_overrides: {geometry: {approach_distances: [8.0, 9.0]}}

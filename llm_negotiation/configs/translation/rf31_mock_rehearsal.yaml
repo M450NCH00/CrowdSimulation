@@ -1,0 +1,50 @@
+# Issue #108 (RF-31): a mock rehearsal of the translation into rule format 4 on RF-11's real
+# extracted rules.
+#
+#   python run_experiment.py configs/translation/rf31_mock_rehearsal.yaml
+#
+# Mock only, no cost. It translates every rule RF-11 stored, the unstable ones too (a paid run
+# translates only candidates), so that the mock takes more of its paths. The identity check runs
+# on the real Step 1 sessions; the crowd is cut to 4 + 4 people so that screening takes seconds.
+# Nothing it produces is a finding.
+schema_version: 1
+layer: rule_translation
+experiment_name: rf31_mock_rehearsal
+description: >-
+  Mock rehearsal of RF-31 on RF-11's stored rules (candidate and unstable): translation into rule
+  format 4 by the mock, validation, what was lost, the writer, the identity check on Step 1's
+  sessions, and screening in a small crowd given canes, suitcases, phones and assertiveness.
+
+extraction: runs/rf11_round1_head_on
+statuses: [candidate, unstable]
+
+template: translate_v2
+
+llm:
+  client: mock
+  mock_policy: translate_rehearsal_v2
+  model: deepseek-flash
+  temperature: 0.0
+  max_tokens: 2500
+  thinking: disabled
+  transport_retries: 0
+
+budget:
+  cap_usd: 0.0
+  ledger: spend_ledger.jsonl
+
+identity:
+  enabled: true
+
+screening:
+  enabled: true
+  scenario: configs/scenarios/bidirectional_flow.yaml
+  baseline: orca_perturbed_v1
+  seed: 30900
+  repeats: 1
+  scenario_overrides: {geometry: {agents_per_direction: 4, length: 20.0}, max_time: 60.0}
+  ages: [25, 70]
+  genders: [female, male]
+  factors:
+    mobility_aid: [none, cane]
+    assertiveness: [gives_way, holds_ground]

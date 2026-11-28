@@ -1,0 +1,25 @@
+# Issue #117 (RF-35): the crowd-encounter cases, by the rules of si3_cases_v1.yaml.
+#
+#   python -m negsim.rulegen.cases extract configs/cases/rf35_crowd_cases_v1.yaml
+#
+# A case is one pair of a 50- or 100-person run of the two-way flow; the scenario plug-in
+# passing_crowd brings everyone within 10 m predicted to conflict with either of them into the
+# encounter (cap 4 prompted). Eligible: the primary baseline, plain ORCA, both perceived each other
+# when the pair formed, approaching head-on. min_tier T3: a near miss or worse under plain ORCA, as
+# every round 1 head-on case was; T2 (a close pass) left out [design, mine: the issue said T2 to T4,
+# but 4 cases per density do not split evenly over three tiers, and a T2 pass is no conflict to
+# resolve]. Two cases per density and tier (T3, T4): 8 cases, drawn over both repeats.
+schema_version: 1
+case_set: rf35_crowd_v1
+description: The crowd-encounter cases of issue #117 (RF-35), the two-way flow at 25 and 50 people per way, tiers T3 and T4.
+sources:
+  - runs/rf35_source_crowd_flow
+eligibility:
+  baseline: orca_perturbed_v1
+  min_tier: T3
+  formation_classes: [head_on]
+strata:
+  by: [variant, tier]
+  per_stratum:
+    default: 2
+  seed: 35

@@ -75,7 +75,8 @@ class AgentRuntime:
 
     ``speed`` is the linear velocity commanded on the most recent step. Before the first
     step it is ``spec.initial_speed``: the agents are taken to be already walking when they
-    first see each other.
+    first see each other. ``velocity`` is the same motion as a vector in the world frame;
+    it is what another agent can observe of this one.
     """
 
     spec: AgentSpec
@@ -83,6 +84,7 @@ class AgentRuntime:
     speed: float
     path_s: float = 0.0
     goal_time: Optional[float] = None
+    velocity: Vec = (0.0, 0.0)
 
     @property
     def agent_id(self) -> int:

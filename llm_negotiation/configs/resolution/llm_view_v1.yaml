@@ -1,0 +1,29 @@
+# What an LLM agent perceives (issue #73, RF-17; docs/resolution.md, D2, D5, D10 and D12),
+# version 1. A new file, never an edit: a change is llm_view_v2.yaml.
+#
+# These values shape ONLY what an LLM agent is told (D10). ORCA's neighbour search keeps the
+# scenario's sensing_radius and max_neighbours, and the perception record that rules read is
+# unchanged.
+#
+# Issue #73 first shipped six of these as placeholders; at the user's request (2026-10-23) they
+# were replaced by sourced values before the file was merged or read by any run.
+#
+# Tags: [cited] read in a source; [derived] worked out from cited values; [placeholder] no
+# source; [design] a choice about the prompts or the numerics. docs/parameters.md, section 8,
+# has the locators and lists every placeholder. Do not report a result that depends on a
+# placeholder as if it rested on data.
+schema_version: 1
+
+llm_view:
+  half_angle_deg: 75.0       # deg    how far to either side of straight ahead a person is seen (150 deg in all)   [cited: Moussaid et al. 2011, Fig. 2 caption (phi)]
+  range_m: 10.0              # m      how far away a person is seen, centre to centre   [cited: Moussaid et al. 2011, Fig. 2 caption (dmax)]
+  detail_range_m: 5.0        # m      within this a person is described in full; beyond it in one short line   [cited: Rio et al. 2018, abstract]
+  occlusion: true            #        someone behind a nearer person's body is not seen   [cited: Moussaid et al. 2011, Fig. 1 caption]
+  walls_block_sight: true    #        someone behind a wall is not seen (architecture DD8)   [design]
+  max_people: null           #        a cost cap on how many people are described; off: everyone in view is described   [cited: Wirth et al. 2023, abstract]
+  hearing_range_m: 3.2       # m      how far speech is understood, from any direction: a raised voice (64 dB at 1 m) falls to the 54 dB background of a public indoor place, 6 dB per doubling of distance, where 94% of sentences are still understood (0 dB speech-to-noise)   [derived: Pearsons et al. 1977, Tables I and II and conclusion 2(f); ISO 9921-1:1996, eq. (3)]
+  heard_close_m: 1.0         # m      an unseen speaker is "close by" within the distance people choose to talk at, "further away" beyond   [cited: Pearsons et al. 1977, conclusion 2(d)]
+  eye_contact_range_m: 10.0  # m      eye contact and a nod are seen anywhere in view: the direction of someone's gaze stays readable to beyond 10 m (about 12 m or more with neutral eyebrows, for glances of 0.1 s or longer), capped at range_m   [derived: Watt, Craven & Quinn 2007, Fig. 4]
+  change_thresholds:         #        D5: what counts as the other having changed noticeably since the agent last looked
+    speed_fraction: 0.07     #        faster or slower by this fraction of their earlier speed (Weber's law)   [cited: De Bruyn & Orban 1988, abstract]
+    direction_deg: 2.0       # deg    a change in their direction of travel, or a move off the line they were walking on   [cited: Gurnsey, Roddy & Troje 2010, abstract]

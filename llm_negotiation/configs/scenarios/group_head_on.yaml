@@ -1,0 +1,68 @@
+# Small groups meeting head-on in round 1's corridor (issue #110, RF-32): wide_corridor_head_on.yaml
+# word for word, but for the type, the description and the people. Instead of lateral_offsets (two
+# people), eastbound and westbound list each person's line of travel (y, m from the centre line;
+# an eastbound person's left is +y, a westbound person's -y). People walking one way start abreast.
+# The default is 2 v 1, aligned: a pair 0.63 m apart centre to centre, centred on the centre line,
+# meets one person on it. The source experiment (configs/cases/rf32_source_group_head_on.yaml) sets
+# each layout.
+#
+# Every number below carries one of four tags, and docs/parameters.md has the full locator
+# for each:
+#   [cited: ...]    read in a source
+#   [derived: ...]  worked out from cited values by the rule given
+#   [placeholder]   a round, plausible value with no source. Not to be reported as sourced.
+#   [design]        a choice about the scene or the numerics, not a physical quantity
+schema_version: 2
+type: group_head_on
+description: >
+  Small groups walk toward each other along round 1's corridor, people of one group side by side.
+
+dt: 0.1                      # s      time step                                   [design]
+max_time: 60.0               # s      the run is a timeout after this             [design]
+goal_tolerance: 0.2          # m      how close to the end of its path an agent has arrived   [design]
+dynamics: holonomic
+on_collision: stop
+
+geometry:
+  width: 1.75                # m      corridor width                              [cited: Moussaid et al. 2009, Sec 2(a)]
+  length: 20.0               # m      corridor length. The cited corridor was 7.88 m long; this one is longer so that the two start outside each other's sensing radius   [design]
+  start_distance: 8.0        # m      each agent starts this far from the middle  [design]
+  wall_thickness: 0.5        # m      how the walls are drawn; no effect on the motion   [design]
+  # m  each person's line of travel, from the centre line. A pair abreast is 0.63 m apart centre to centre:
+  # the abreast distance of 716 leisure dyads, 628 +/- 6.1 mm   [cited: Zanlungo et al. 2017, PLOS ONE 12(11): e0187253, Table 1]
+  eastbound: [0.315, -0.315]   # [design] a pair, centred on the centre line
+  westbound: [0.0]             # [design] one person, on the centre line
+
+agent_types:
+  pedestrian:
+    radius: 0.25             # m      body radius: half the effective shoulder width of 49.8 cm   [cited: Yamamoto et al. 2019, Sec 4.3]
+    preferred_speed: 1.3     # m/s    walking speed when nothing is in the way; measured 1.29 +/- 0.19   [cited: Moussaid et al. 2009, Sec 2(c) and 4(a)]
+    max_speed: 2.0           # m/s    the fastest an agent will go to get out of the way   [cited: Menge 4squareS.xml line 15; inside Bohannon 1997's range of maximum gait speeds]
+    time_horizon: 3.0        # s      how far ahead a collision with another agent matters (ORCA's tau)   [cited: Karamouzas et al. 2014, p. 3]
+    time_horizon_obst: 0.15  # s      the same for walls. A setting used in practice, not a measurement   [cited: Menge 4squareS.xml line 22]
+    max_neighbours: 10       #        how many neighbours an agent attends to. A setting used in practice   [cited: Menge 4squareS.xml line 15]
+    sensing_radius: 12.5     # m      R. time_horizon * (max_speed + max_speed) + the two radii   [derived: ORCA paper, Sec 5.1]
+
+agents:
+  default_type: pedestrian
+
+orca:
+  tie_break: brake           # an exact tie between the two passing sides is not broken (docs/orca.md, section 4)
+
+navigation:
+  lookahead: 2.0             # m      how far ahead on its path an agent aims     [design]
+
+neighbour_search:
+  cell_size: 2.0             # m      grid cell of the neighbour search; no effect on the result   [design]
+
+deadlock:
+  window_s: 3.0              # s      as in issue #24                             [design]
+  speed_eps: 0.01            # m/s    as in issue #24                             [design]
+
+metrics:
+  near_miss_distance: 0.1    # m      two bodies closer than this are a near miss   [design]
+  yield_speed_fraction: 0.5  #        below this fraction of preferred speed an agent is yielding   [design]
+  yield_min_duration: 1.0    # s      ... if it lasts at least this long          [design]
+  exposure_eps: 1.0e-6       # m/s    numerical tolerance of the exposure test    [design]
+  pair_exposure_eps: 1.0e-3  # m/s    how far inside the two bodies' velocity obstacle the intended velocities must be for pair exposure (issue #30)   [design]
+  collision_course_min_s: 0.0  # s    pair exposure above this makes a pair interaction tier T1 (issue #30)   [design]

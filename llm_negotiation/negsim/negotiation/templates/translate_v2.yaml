@@ -1,0 +1,79 @@
+# Prompt template translate, version 2.  FROZEN — do not edit.
+# The hash of this file is pinned in MANIFEST.json and checked every time it is loaded.
+# To change any wording, copy the file to translate_v3.yaml, change it there, freeze it,
+# and record the reason in the work log.
+template_id: translate
+version: 2
+kind: rule_translation
+description: >-
+  RF-31's translator (issue #108; docs/rule-translation.md, section 13): translate_v1 for rule
+  format 4. One call turns one rule that RF-11 extracted in plain words into one rule of rule
+  format 4, and lists what of it the format could not say. The format's description, field list
+  and format example are rulegen_common_v3's, word for word.
+provenance: >-
+  Written for issue #108 (RF-31), from translate_v1 (issue #67) with only what format 4 changes:
+  the format is rulegen_common_v3's; the task names the two new places a part of a rule can go (a
+  plan of steps for what a person does over time; an own-only condition for what depends on a
+  person's own private factors); the parts the format still cannot say are a condition it has no
+  field for, and a signal or words; and the line on protected attributes says where perceived
+  attractiveness may be read (the supervisor's decision, CLAUDE.md, 2026-10-26). The reply format,
+  its kinds of lost part, the user message and the retry are translate_v1's word for word, so that
+  the two runs can be compared part for part. It names no scenario (the encounter is the
+  extraction config's line, D16) and suggests no convention: the rule to translate is the only
+  content.
+uses: rulegen_common_v3
+
+system: |-
+  You translate rules about how people behave when they meet on foot into the rule format of a crowd simulator.
+
+  The rule you are given was found by studying recorded encounters. It describes what people did, in plain words, with the factors it depends on and a mechanical form of it over the columns of a table. The simulator moves each person towards where they are going and keeps them from walking into each other. A rule in its format changes only what each of two people does when they meet, as the directive fields below say, including a plan of steps. Its condition and roles read only what both people can see; an own-only condition reads one person's own private factors.
+
+  YOUR TASK
+  1. Write the one rule in the format below that comes closest to the rule you are given. Use only the keys, fields and values the format lists.
+  2. Do not add anything the rule you are given does not say.
+  3. Write what a person does over time (when they start, how fast they walk, how far they turn or step aside, until when) as steps, and what depends on a person's own private factors as an own-only condition.
+  4. Where the format cannot say a part of the rule (a condition it has no field for, a signal or words), leave that part out or write the nearest thing the format can say, and list the part under "lost".
+  5. If no part of the rule can be written in the format, give null as the rule, and list what was lost.
+  6. No rule may read a person's ethnicity. Whether one person finds the other attractive may be read only as self.finds_other_attractive, in that person's own-only condition.
+
+  {glossary}
+
+  {format_example}
+
+  {reply_format}
+
+reply_format: |-
+  HOW TO REPLY
+  Reply with a single JSON object and nothing else, with these keys:
+  "rule": the rule in the format above, or null if no part of the rule you were given can be written in it.
+  "lost": a list with one item for each part of the rule you were given that your rule leaves out or only approximates (an empty list if none). Each item is {"part": "<the part, in the words of the rule you were given>", "kind": "<its kind>", "how": "<left_out or approximated>"}. The kinds are: condition (something the rule depends on that the format cannot read), start (when the action starts: a distance or a time), turn (a turn by some angle, or a step aside), speed (a walking speed), duration (how long the action lasts, or until when), signal_or_talk (a signal or words), other.
+  "note": how you translated it, in one or two sentences.
+  The format, with placeholders: {"rule": <a rule, or null>, "lost": [{"part": "<text>", "kind": "<a kind>", "how": "<left_out or approximated>"}], "note": "<one or two sentences>"}
+
+user: |-
+  THE ENCOUNTER
+  {encounter_description}
+
+  THE RULE TO TRANSLATE
+  Rule: {rule}
+  Applies when: {applies_when}
+  Action: {action}
+  Exceptions:
+  {exceptions}
+  Needs communication (it held only when a signal or words were used): {needs_communication}
+  Factors it uses (columns of the table it was found in):
+  {factors}
+  Its mechanical form, over those columns ("predict": a target column, branches tried in order, each a "when" whose column values must all hold and a "then", and a "default"):
+  {predict}
+  The column it predicts:
+  {target}
+
+factor_line: "- {column}: {meaning}"
+exception_line: "- {exception}"
+no_exceptions: "- none given"
+answer_yes: "yes"
+answer_no: "no"
+
+retry: >-
+  Your last reply could not be read ({error}). Reply again with only a JSON object of the form
+  {"rule": <a rule, or null>, "lost": [{"part": "<text>", "kind": "<a kind>", "how": "<left_out or approximated>"}], "note": "<one or two sentences>"}.

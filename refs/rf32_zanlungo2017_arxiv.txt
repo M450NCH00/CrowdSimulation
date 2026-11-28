@@ -1,0 +1,2831 @@
+arXiv:1703.02672v1  [physics.soc-ph]  8 Mar 2017
+Intrinsic group behaviour: dependence of pedestrian dyad
+dynamics on principal social and personal features
+Francesco Zanlungo ∗1, Zeynep Y¨ ucel1,2, Draˇ zen Brˇ sˇ ci´ c1,3, Takayuki Kanda 1 and
+Norihiro Hagita 1
+1ATR International, Kyoto, Japan
+2Research fellow, JSPS, Tokyo, Japan
+3University of Rijeka, Croatia
+June 19, 2019
+1 Abstract
+In recent years, researchers in pedestrian behaviour and crowd modelling have become more and more
+interested in the behaviour of walking social groups, since these groups represent an important portion
+of pedestrian crowds, and present peculiar dynamical featu res. It is anyway clear that, being group
+dynamics determined by human social behaviour, it probably depends on properties such as the purpose
+of the pedestrians, their personal relation, their gender, age, and body size. We may call these the
+“intrinsic properties” of the group (opposed to extrinsic o nes such as crowd density or environmental
+features). In this work we quantitatively analyse the dynam ical properties of pedestrian dyads (distance,
+spatial formation and velocity) by analysing a large data se t of automatically tracked pedestrian tra-
+jectories in an unconstrained “ecological” setting (a shop ping mall), whose relational group properties
+have been analysed by three diﬀerent human coders. We observ ed that females walk slower and closer
+than males, that workers walk faster, at a larger distance an d more abreast than leisure oriented people,
+and that inter group relation has a strong eﬀect on group stru cture, with couples walking very close and
+abreast, colleagues walking at a larger distance, and frien ds walking more abreast than family members.
+Pedestrian height (obtained automatically through our tra cking system) inﬂuences velocity and abreast
+distance, both growing functions of the average group heigh t. Results regarding pedestrian age show as
+expected that elderly people walk slowly, while active age a dults walk at the maximum velocity. Groups
+with children have a strong tendency to walk in a non abreast f ormation, with a large distance (despite a
+low abreast distance). A cross-analysis of the interplay be tween these intrinsic features, taking in account
+also the eﬀect of extrinsic crowd density, conﬁrms these maj or eﬀects but reveals also a richer structure.
+An interesting and unexpected result, for example, is that t he velocity of groups with children increases
+with density, at least in the low-medium density range found under normal conditions in shopping malls.
+Children also appear to behave diﬀerently according to the g ender of the parent.
+∗ zanlungo@atr.jp
+1
+Contents
+1 Abstract 1
+2 Introduction 4
+3 Data set 5
+3.1 An ecological data set . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 5
+3.2 Group composition coding . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 6
+3.3 Coders’ agreement . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 6
+3.4 Trajectories . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 7
+3.4.1 Pedestrian Height . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 7
+3.5 Density . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 8
+4 Quantitative observables 8
+5 The eﬀect of purpose 9
+5.1 Overall statistical analysis . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 9
+5.2 Probability distribution functions . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 10
+5.3 Further analysis . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 12
+6 The eﬀect of relation 12
+6.1 Overall statistical analysis . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 12
+6.2 Probability distribution functions . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 13
+6.3 Further analysis . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 14
+7 The eﬀect of gender 16
+7.1 Overall statistical analysis . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 16
+7.2 Probability distribution functions . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 16
+7.3 Further analysis . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 16
+8 The eﬀect of age 17
+8.1 Overall statistical analysis . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 19
+8.2 Probability distribution functions . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 19
+8.3 Further analysis . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 21
+9 The eﬀect of height 23
+9.1 Overall statistical analysis . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 23
+9.2 Probability distribution functions . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 24
+9.3 Further analysis . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 28
+10 Discussion and conclusion 29
+10.1 Summary of our ﬁndings . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 29
+10.2 Future work . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 30
+10.3 Possible technological impact . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 31
+11 Acknowledgements 31
+A Statistical analysis of observables 32
+A.1 Average values, standard deviations and standard error s . . . . . . . . . . . . . . . . . . . 32
+A.2 Analysis of variance . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 33
+A.3 Coeﬃcient of determination . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 34
+A.4 Eﬀect size . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 35
+A.5 Multi-factor cross analysis . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 35
+2
+B Statistical analysis of overall probability distributio ns 37
+B.1 Purpose . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 37
+B.2 Relation . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 37
+B.3 Gender . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 37
+B.4 Age . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 37
+B.5 Height . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 38
+C Accounting for other eﬀects 39
+C.1 Secondary eﬀects and purpose . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 39
+C.1.1 Density . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 39
+C.1.2 Gender . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 40
+C.1.3 Age . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 40
+C.1.4 Height . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 41
+C.2 Secondary eﬀects and relation . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 44
+C.2.1 Density . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 44
+C.2.2 Gender . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 44
+C.2.3 Age . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 45
+C.2.4 Height . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 46
+C.3 Secondary eﬀects and gender . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 49
+C.3.1 Density . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 49
+C.3.2 Relation . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 50
+C.3.3 Age . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 51
+C.3.4 Height . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 53
+C.4 Secondary eﬀects and age . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 55
+C.4.1 Density . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 55
+C.4.2 Relation . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 56
+C.4.3 Gender . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 58
+C.4.4 Height . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 59
+C.5 Secondary eﬀects and height . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 61
+C.5.1 Density . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 61
+C.5.2 Relation . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 61
+C.5.3 Gender . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 63
+C.5.4 Age . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 63
+D Coder reliability 67
+D.1 Analysis of coder agreement . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 67
+D.1.1 Cohen’s κ . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 67
+D.1.2 Fleiss’ κ . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 67
+D.1.3 Krippendorﬀ’s α . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 68
+D.1.4 Discussion . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 69
+D.2 Quantitative comparison of results . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 69
+D.2.1 Purpose . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 69
+D.2.2 Relation . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 69
+D.2.3 Gender . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 70
+D.2.4 Age . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 71
+E Dependence on average and maximum age 74
+E.1 Average age . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 74
+E.2 Maximum age . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 75
+E.3 Discussion . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 75
+F Comparison between minimum, average and maximum height 76
+3
+2 Introduction
+Urban crowds are characterised by the presence of a large number of social groups.
+The ratio between individual pedestrians and pedestrians m oving in groups may change
+considerably between diﬀerent environments and at diﬀerent t imes of the day [1, 2, 3],
+but it is in general never negligible, with groups represent ing up to 85% of the walking
+population [4, 5]. Despite this empirical evidence about th e importance of groups,
+the standard approach in microscopic (agent-based) pedest rian modelling has been for
+long time to assume that the crowd is composed of individuals , moving without any
+preferential ties to other pedestrians. This is an extremel y strong simpliﬁcation of the
+system, although it was obviously understandable as a ﬁrst a pproach to the problem.
+Nevertheless, it is intuitive that groups behave in a speciﬁ c way (they move together
+and close) and their presence should clearly inﬂuence the dy namics of the crowd. Not
+taking in account the group component of crowds may have an im pact on the planning
+of buildings and emergency evacuation plans. For example, [ 6] reports that around 48%
+of people that evacuated by foot the city of Sendai (Miyagi, J apan) during the 2011
+Tohoku great earthquake and tsunami did it by moving in group s, with a probable eﬀect
+on evacuation times (for the smaller city of Kamaishi, in Iwa te prefecture, the ﬁgure
+was as high as 71%). Furthermore an understanding of pedestr ian behaviour is essential
+for robots and automatic navigation vehicles (such as wheel chairs or delivery carts) that
+will become arguably common in future pedestrian areas [7, 8 , 9].
+Indeed, in recent years, a few studies concerning empirical observations and math-
+ematical modelling of the groups’ characteristic conﬁgura tion and velocity have been
+introduced [1, 4, 5, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 2 1, 22, 23, 24]. In a recent
+series of papers [1, 2, 25], we focused on the development of a mathematical model to
+describe group interaction, and in speciﬁc the group spatia l structure and velocity. The
+model proposed in [1] introduced a non Newtonian [26] potent ial for group interaction
+on the basis of few and intuitive ideas about social interact ion in pedestrian groups, and
+its predictions for group size, structure and velocity are i n agreement with the observed
+natural behaviour of pedestrians. In [2] we studied a large d ata set of pedestrian tra-
+jectories to see how an extrinsic, i.e., environmental, property such as crowd density
+inﬂuences the dynamics of groups, and in [25] we introduced a mathematical model to
+explain such a crowd density eﬀect on groups 1.
+Nevertheless, we may expect that a social behaviour such as w alking in groups de-
+pends also on intrinsic properties of the groups. It is known by studies with subject s
+that age, gender and height aﬀect walking speed [28], but here we are interested on how
+group behaviour is aﬀected by the nature of the group itself: n ot only by the character-
+istics of the individuals that compose it, but also by the rel ation between them, which is
+expected to have a strong impact on group dynamics (see [10, 1 6, 29, 30, 31, 32, 33] and
+our preliminary study [34]). To study natural human behavio ur we use a large ecological
+(i.e. obtained by observing unconstrained pedestrians in t heir natural environment, see
+[10]) data set to describe how the group spatial structure, s ize and velocity of dyads (two
+1Density is probably only one of the environmental propertie s aﬀecting group dynamics, a second one
+being the environment architectural features such as corri dor width [27].
+4
+people groups) change based on the following intrinsic prop erties of groups:
+1. purpose of movement,
+2. relation between the members,
+3. gender of the members,
+4. age of the members,
+5. height of the members.
+Being the data set based on unconstrained trajectories of un known pedestrians, such
+features are necessarily (with the exclusion of pedestrian height, obtained automatically
+through our tracking system [35]) apparent, i.e. based on the judgement of human
+coders, and thus an analysis of their reliability is perform ed. Furthermore, being social
+behaviour cultural dependent, the results are probably inﬂ uenced by the place in which
+data were collected (a shopping mall in Osaka, western Japan ). Nevertheless, they
+provide a useful insight on how these intrinsic features aﬀec t in a quantitative way the
+behaviour of dyads.
+3 Data set
+The pedestrian group data base used for this work is based on the freely available set
+[36], introduced by [2]. This set is again based on a very larg e pedestrian trajectory
+set [3], collected in a ≈ 900 m 2 area of the Asia and Paciﬁc Trade Center (ATC), a
+multi-purpose building located in the Osaka (Japan) port ar ea. For the purpose of this
+work, in order to avoid taking in consideration the eﬀect of ar chitectural features of the
+environment [27], such as its width, we use data only from the corridor area as deﬁned
+in [2].
+The trajectories have been automatically tracked using 3D r ange sensors and the al-
+gorithm introduced in [35], which provides, along with the p edestrian position on the
+plane, the height of their head, for more than 800 hours durin g a one year time span.
+At the same time, we video recorded the tracking area using 16 diﬀerent cameras. A
+subset of the video recordings were used by a human coder to id entify the pedestrian
+social groups reported in data set [36].
+3.1 An ecological data set
+The data set concerns the natural behaviour of pedestrians,i.e. the pedestrians were be-
+having in an unconstrained way, and observed in their natura l environment2. Collecting
+data in the pedestrians’ natural environment obviously pre sents some technical prob-
+lems and an overall lower quality in tracking data (higher tr acking noise), but it is an
+approach with growing popularity [37, 38], that allows for r emoving possible inﬂuence
+2With the consent of local authorities and building managers . Posters explaining that an experiment
+concerning pedestrian tracking was being hold were present in the environment.
+5
+on pedestrian behaviour due to performing experiments in la boratories, i.e. artiﬁcial
+environments, using selected subjects following the exper imenters’ instructions. This is
+extremely important for this study, since we may hardly beli eve that social pedestrian
+group behaviour could be observed in such controlled labora tory experiments [10].
+The pedestrians in this data set are all socially interacting, i.e. they were, on the basis
+of conversation and gaze clues, coded as not only moving toge ther, but also performing
+some kind of social interaction [1, 2].
+3.2 Group composition coding
+In order to obtain the “ground truth” for the inter-group composition and social relation,
+we proceeded similarly to our previous works [1, 2], and aske d three diﬀerent human
+coders to observe the video recordings corresponding to the data set [36] and analyse
+the group composition, and in detail to code, when possible,
+1. the apparent purpose of the group’s visit to the area ( work or leisure),
+2. the apparent gender of their members,
+3. their apparent relation (colleagues, friends, family or couples3),
+4. their apparent age (in decades, such as 0-9, 10-19, etc.)
+While one coder examined data from ﬁve diﬀerent days (three wo rking days and two
+holidays), corresponding to 1168 diﬀerent socially interac ting dyads, the other two ex-
+amined only one day (283 dyads). The coders are not specialis ed in pedestrian studies,
+are not aware of our mathematical models of pedestrian behav iour4, and did not have
+access to our quantitative measurements of position and vel ocity. They thus relied only
+on visual features such as clothing, gestures, behaviour an d gazing [39, 40, 41] to identify
+the groups’ social roles and composition 5.
+3.3 Coders’ agreement
+The coding process is obviously strongly dependent on the subjective evaluation of the
+coder. Nevertheless, the 283 dyads examined by all coders ma y be used to examine their
+agreement, and provide thus some information about the reli ability of their coding.
+To this end, we use in appendix D two diﬀerent approaches. On on e hand, we use the
+standard approach used in social sciences of directly compa ring the results of the coding,
+through statistical indicators such as Cohen’s and Fleiss’ s kappa, or Krippendorf’s alpha
+3The Japanese term used, koibito, could be translated also as “lovers”, and suggests the idea of a
+relatively young, unmarried couple.
+4One of the coders that analysed data from a single day is a non- technical member of our lab, but
+she did not take part in the development of mathematical mode lling or quantitative data analysis.
+5Distance and velocity are obviously features of the pedestr ians’ behaviour, but the coders had access
+only to visual clues concerning these properties, and not to quantitative measurements. Furthermore,
+they were not given instructions such as “friends walk close r than colleagues” or similar. They were
+simply told to use the available visual clues to code the soci al roles and composition.
+6
+(appendix D.1). On the other hand, we also use an approach mor e rooted in the “hard”
+sciences, and treat the diﬀerent codings as independent expe riments, and quantitatively
+and quantitatively compare the ﬁndings (appendix D.2).
+3.4 Trajectories
+While our tracking system provides us with pedestrian positions and velocities at time
+intervals δt in the order of tens of milliseconds, we average pedestrian p ositions over
+time intervals ∆ t = 0 . 5 s, to reduce the eﬀect of measurement noise and the inﬂuence o f
+pedestrian gait. As a result, we obtain pedestrian position s at discrete times k, as
+x(k∆ t) = ( x(k∆ t), y (k∆ t), z (k∆ t)), (1)
+where z gives the height of the top of the pedestrian head, and deﬁne p edestrian velocities
+in 2D as
+v(k∆ t) = [( x(k∆ t) − x((k − 1)∆ t))/ ∆ t, (y(k∆ t) − y((k − 1)∆ t))/ ∆ t] . (2)
+Following [1, 2], only data points with both the average grou p velocity V (eq. 3) and all
+individual velocities vi larger 0.5 m/s, and with all pedestrian positions falling in side a
+square with side 2.5 m centred on the group centre, were used 6.
+3.4.1 Pedestrian Height
+Pedestrian height measurement is obviously subject to oscillations (see [35]). A major
+problem with height tracking is that there are situations in which the head is hidden
+or poorly tracked, and the pedestrian height is wrongly assi gned as the height of the
+shoulders. To avoid this problem, for each pedestrian we ﬁrs t compute the median height
+over the whole trajectory, and then deﬁne the pedestrian hei ght as the average
+z of all
+z measurements above the median 7.
+By being smaller and thus more easily occluded, the tracking of children is more
+diﬃcult than the tracking of adults 8. Since our statistical analysis identiﬁed a few
+interesting results related to children, we visually analy sed the video recordings to verify
+that this problem did not aﬀect signiﬁcantly our ﬁndings.
+6These thresholds were again based on our analysis of probabi lity distribution functions of group
+positions in [1, 2] and pedestrian velocities in [3].
+7As discussed in [35] and [3], tracking errors in which the tra cking ID is misassigned to a diﬀerent
+pedestrian, or, in the worst of cases, to an object, are possi ble, in particular in crowded environments.
+Such errors obviously aﬀect the measurement of the pedestri an height, but since our pedestrians move in
+group, the large majority of these errors may be identiﬁed by noticing that the pedestrians corresponding
+to the IDs in the group are not moving together anymore. For th is reason, when computing the median
+of z we use only data points for which the distance between pedest rians in the group was less than 4
+meters. This is a conservative threshold justiﬁed by our ﬁnd ings in [1, 2] suggesting that interacting
+groups have extremely low probability of having a distance l arger than 2 meters.
+8For example, a couple of children resulted to have a height in the 160-170 cm range, due to a
+confusion between the parent and children position.
+7
+3.5 Density
+As we report in [2], group velocity and spatial conﬁgurationdepend on crowd density.
+In this paper we follow again our main analysis of [2] and comp ute pedestrian density
+with a good spatial resolution (more than a good time resolut ion) as time averages over
+300 seconds in a L = 0 . 5 meters square area. More details, along with a discussion o f
+possible density deﬁnitions, may be found in [2] (refer also to [42] and [43] for possible
+alternative deﬁnitions of density).
+4 Quantitative observables
+Based on our analysis performed in works [1, 2, 25], we deﬁne the following quantitative
+observables for the dynamics of a pedestrian dyad (Fig 1):
+1. The group velocity V , deﬁned as
+V = |V| V = ( v1 + v2)/ 2, (3)
+vi being the velocities of the two pedestrians in an arbitrary r eference frame co-
+moving with the environment (i.e. in which the velocity of wa lls and other archi-
+tectural features is zero).
+2. The pedestrian distance or group size r, deﬁned as
+r = |r| r = r1 − r2, (4)
+ri being the positions of the two pedestrians in the above refer ence frame.
+3. The group abreast distance or abreast extension x, that may be deﬁned as follows.
+First we identify a unit vector in the direction of V
+ˆg = V/V. (5)
+For each pedestrian we compute the clockwise angle θi between ˆg and ri, and
+deﬁne the projection of each ri orthogonal to the velocity
+xi = ri sin θi. (6)
+If necessary, we rename the pedestrians so that x1 ≤ x2 and ﬁnally deﬁne
+x = x2 − x1 ≥ 0. (7)
+4. We can also deﬁne the group extension in the direction of mo tion,
+yi = ri cos θi, y = y2 − y1. (8)
+This is a signed quantity, a property that was particularly u seful in our previous
+works. Nevertheless, for the purpose of this paper, it resul ted more useful to
+analyse the group depth
+|y|. (9)
+8
+Figure 1: Group observables.
+As described in detail in appendix A, to which the reader shou ld refer for technical
+details, for each observable O and relation or composition category k we provide the
+number of groups Nk
+g , the category average < O > k, standard deviation σk and standard
+error εk, all based on the analysis of groups that contributed with at least 10 usable data
+points, and reported in tables as
+< O > k ±εk (σ). (10)
+Furthermore we provide an analysis of the overall observabl e probability distribution
+function, and some parameters to estimate the diﬀerences bet ween categories (ANOVA
+p values, eﬀect size δ, coeﬃcient of determination R2). The cross-analysis regarding the
+common eﬀect of diﬀerent “factors” (i.e., purpose, relation, gender, age and height) may
+be found in appendix C.
+5 The eﬀect of purpose
+5.1 Overall statistical analysis
+The results related to the purpose dependence of all observables concerning the 1088
+dyads whose purpose was coded (and that provided enough data to be analysed) are
+shown in table 1 (refer to appendix A for an explanation of all terms). We have thus
+a very strong and signiﬁcant evidence that pedestrians that visited the environment for
+working walk at an higher velocity and with a larger abreast d istance, as shown by the
+comparison of averages and standard errors, and by the corre sponding high F and δ and
+low p values (see appendix A for deﬁnitions and meaning of these qu antities). We have
+also a diﬀerence in distance and “group depth”, although its s igniﬁcance is less strong.
+9
+Table 1: Observable dependence on purpose for dyads. Length s in millimetres, times in
+seconds.
+Purpose Nk
+g V r x |y|
+Leisure 716 1118 ± 7.3 (σ =195) 815 ± 9.5 (σ =253) 628 ± 6.1 (σ =162) 383 ± 12 (σ =334)
+Work 372 1271 ± 8.2 (σ =158) 845 ± 12 (σ =228) 713 ± 8 (σ =154) 332 ± 15 (σ =289)
+F1,1086 169 3.75 69.4 6.25
+p < 10− 8 0.053 < 10− 8 0.0126
+R2 0.135 0.00344 0.0601 0.00572
+δ 0.832 0.124 0.533 0.16
+5.2 Probability distribution functions
+We can get further insight about the diﬀerences in behaviour between workers and
+leisure oriented people by studying explicitly the probabi lity distribution functions for
+the observables V , r, x and |y|, which are shown respectively in ﬁgures 2, 3, 4 and 5,
+and whose statistical analysis is reported in appendix B.1 ( refer again to appendix A
+for the diﬀerence between the analysis reported in the main te xt an the one of appendix
+B.1).
+500 1000 1500 2000
+V (mm/s)
+0
+0.0005
+0.001
+0.0015p(V)
+Figure 2: Pdf of the V observable in leisure (blue, centre of bin identiﬁed by circ les) and
+work (red, squares) oriented dyads. All pdfs in this work are shown after having been
+smoothed with a moving average ﬁlter.
+These pdfs provide an easy interpretation of the data. The x and V peaks and tails
+are displaced to higher values for workers. The r peak is also displaced to an higher
+value, but leisure distribution has a fatter tail. Correspo ndingly, the |y| distribution
+is slightly more spread in leisure oriented pedestrians. Fu rthermore, the x distribution
+presents a considerably higher value for low x values in the “leisure” case. These latter
+10
+0 500 1000 1500
+r(mm)
+0
+0.001
+0.002p(r)
+Figure 3: Pdf of the r observable in leisure (blue, circles) and work (red, square s) oriented
+dyads.
+0 500 1000 1500
+x(mm)
+0
+0.001
+0.002p(x)
+Figure 4: Pdf of the x observable in leisure (blue, circles) and work (red, square s)
+oriented dyads.
+consideration show that while “workers” walk strongly abreast, the “leisure” dyads are
+less ordered.
+11
+0 500 1000
+|y|(mm)
+0
+0.001
+0.002p(|y|)
+Figure 5: Pdf of the |y| observable in leisure (blue, circles) and work (red, square s)
+oriented dyads.
+5.3 Further analysis
+In appendix C.1 we further analyse these results, to understand the eﬀect on them of age,
+gender, density and height, while in appendix D.2.1 we verif y that the major ﬁndings are
+conﬁrmed by all coders. We may see that in general, even when a ge, gender, density and
+height are kept ﬁxed, the results exposed above are conﬁrmed by this further analysis.
+6 The eﬀect of relation
+Groups may also be analysed according to the relation between their members (col-
+leagues, couples, friends, family). There is obviously a st rong overlap between the “col-
+leagues” category and the “work” one analysed above (and obv iously between “leisure”
+and the three categories couples, friends and families), bu t since they are are conceptu-
+ally diﬀerent (colleagues could visit the shopping mall for l unch, or for shopping outside
+of working time), we will provide an independent analysis 9.
+6.1 Overall statistical analysis
+The results related to the relation dependence for all observables concerning the 1018
+dyads whose purpose was coded (and that provided enough data to be analysed) are
+shown in table 2.
+9Although in the cross-analysis of appendix C we usually drop the analysis of purpose and focus on
+relation.
+12
+Table 2: Observable dependence on purpose for dyads. Length s in millimetres, times in
+seconds.
+Relation Nk
+g V r x |y|
+Colleagues 358 1274 ± 8.3 (σ =157) 851 ± 12 (σ =231) 718 ± 8.3 (σ =157) 334 ± 15 (σ =292)
+Couples 96 1099 ± 17 (σ =169) 714 ± 22 (σ =219) 600 ± 15 (σ =150) 291 ± 24 (σ =231)
+Families 246 1094 ± 13 (σ =197) 863 ± 19 (σ =302) 583 ± 11 (σ =171) 498 ± 25 (σ =391)
+Friends 318 1138 ± 11 (σ =200) 792 ± 11 (σ =199) 662 ± 7.5 (σ =134) 314 ± 15 (σ =268)
+F3,1014 60.7 12.2 42.3 21.4
+p < 10− 8 7.39·10− 8 < 10− 8 < 10− 8
+R2 0.152 0.0349 0.111 0.0595
+δ 1.03 0.529 0.828 0.587
+We may see that, as expected from the previous analysis, ther e is a considerable
+diﬀerence between the velocity of colleagues and the velocit y of the other groups. Friends
+appear to be faster than couples or families, although the di ﬀerence is limited to 2-3
+standard errors. We may also see that couples walk at the clos est distance, followed by
+friends, colleagues and then families. On the other hand, fa milies walk at the shortest
+abreast distance, although at a value basically equivalent to that of couples. The abreast
+distance of friends is signiﬁcantly larger, and the one of co lleagues assumes the greatest
+value. The “depth” |y| assumes the smallest value in couples, followed by friends a nd
+workers, and the, by a large margin, highest value in familie s.
+6.2 Probability distribution functions
+These results may be completely understood only by analysing the probability distribu-
+tion functions, which are shown in ﬁgures 6, 7, 8 and 9 for, res pectively, V , r, x and |y|
+(the statistical analysis of these distributions is report ed in section B.2).
+The pdfs provide again an easy interpretation of the data. Th e V distributions for
+friends, families and couples are quite similar, while the o ne for colleagues is clearly
+diﬀerent (displaced to higher values). This suggests that “r elation” inﬂuences velocity
+in a limited way, with respect to “purpose”. The peaks of both r and x distributions
+assume the minimum value for couples, followed by families, friends and colleagues. The
+distributions for families present the following peculiar properties: the r distribution has
+a fat tail (causing the high average value), the x distribution assumes large values for
+small x, and the |y| distribution is more spread (on the other hand, |y| distributions are
+very similar in the other categories).
+We may thus conclude that “relation” has an inﬂuence on dista nce, with couples
+walking at the closest distance, followed by families, frie nds and colleagues. At the same
+time, families walk in a less ordered formation (less abreas t). This behaviour is probably
+mainly due to children (see also section 8), and inﬂuences th e results of the previous
+section (“leisure” oriented dyads walking less abreast).
+13
+500 1000 1500 2000
+V(mm/s)
+0
+0.001
+0.002p(V)
+Figure 6: Pdf of the V observable in dyads with colleague (blue, squares), couple (red,
+circles), family (orange, triangles) and friend (green, st ars) relation.
+0 500 1000
+r(mm)
+0
+0.001
+0.002
+0.003
+0.004p(r)
+Figure 7: Pdf of the r observable in dyads with colleague (blue, squares), couple (red,
+circles), family (orange, triangles) and friend (green, st ars) relation.
+6.3 Further analysis
+In appendix C.2 we further analyse these results, to understand the eﬀect on them of
+age, gender, density and height, while in appendix D.2.2 we v erify if the major ﬁndings
+are conﬁrmed by all coders. The major trends exposed above ar e all conﬁrmed by this
+further analysis. In particular, the tendency of families t o have a wider |y| distribution
+14
+0 500 1000
+x(mm)
+0
+0.001
+0.002
+0.003p(x)
+Figure 8: Pdf of the x observable in dyads with colleague (blue, squares), couple (red,
+circles), family (orange, triangles) and friend (green, st ars) relation.
+0 500 1000
+|y|(mm)
+0
+0.001
+0.002p(|y|)
+Figure 9: Pdf of the |y| observable in dyads with colleague (blue, squares), couple (red,
+circles), family (orange, triangles) and friend (green, st ars) relation.
+may be diminished but does not disappear when we keep ﬁxed gen der, age or height,
+showing that it is probably not only due to children.
+15
+7 The eﬀect of gender
+7.1 Overall statistical analysis
+The results related to the relation dependence for all observables concerning the 1089
+dyads whose gender was coded (and that provided enough data t o be analysed) are
+shown in table 3.
+Table 3: Observable dependence on gender for dyads. Lengthsin millimetres, times in
+seconds.
+Gender Nk
+g V r x |y|
+Two females 252 1102 ± 12 (σ =193) 790 ± 14 (σ =227) 647 ± 7.8 (σ =123) 321 ± 20 (σ =311)
+Mixed 371 1111 ± 9.5 (σ =183) 824 ± 14 (σ =273) 613 ± 9 (σ =174) 416 ± 18 (σ =350)
+Two males 466 1254 ± 8.3 (σ =178) 846 ± 11 (σ =228) 699 ± 7.7 (σ =166) 349 ± 14 (σ =293)
+F2,1086 84.6 4.37 30.7 7.69
+p < 10− 8 0.0129 < 10− 8 0.000484
+R2 0.135 0.00798 0.0535 0.014
+δ 0.825 0.248 0.51 0.282
+7.2 Probability distribution functions
+Although we may easily see that the diﬀerences between the distributions are statistically
+signiﬁcant (with stronger diﬀerences in the V and x distributions), it is again useful,
+in order to understand these results, to analyse the probabi lity distribution functions,
+which are shown in ﬁgures 10, 11, 12 and 13 for, respectively, the V , r, x and |y|
+observables (the statistical analysis of these distributi ons is reported in section B.3)
+The diﬀerence between the females and males distributions is very clear, with both
+peaks and tails in the velocity and (abreast or absolute) dis tance distributions displaced
+to higher results. Regarding the |y| distribution, we may see that the male distribution
+is more spread than the female one, and thus females have a str onger tendency to walk
+abreast. The mixed dyads absolute and abreast distance dist ribution are characterised
+by low values for the peaks and fat tails, in particular for th e absolute value distribution.
+The x distribution presents relatively high values at low x, and correspondingly the |y|
+distribution is very spread (tendency not to walk abreast). The mixed dyads velocity
+distribution is interestingly very similar to the female on e.
+7.3 Further analysis
+The peculiarity of the mixed distributions may be better understood by taking in con-
+sideration the other eﬀects, in particular those related to r elation, as shown in appendix
+C.3. Coder reliability is analysed in appendix D.2.3.
+16
+500 1000 1500 2000
+V(mm/s)
+0
+0.0005
+0.001
+0.0015p(V)
+Figure 10: Pdf of the V observable in dyads with two females (red, circles), mixed
+(orange, triangles) and two males (blue, squares).
+0 500 1000
+r(mm)
+0
+0.001
+0.002p(r)
+Figure 11: Pdf of the r observable in dyads with two females (red, circles), mixed ( orange,
+triangles) and two males (blue, squares).
+8 The eﬀect of age
+To study the dependence of ther, x, |y| and V observable on age, we used three diﬀerent
+approaches, namely to study how these observable change dep ending on average, max-
+imum and minimum group age. The latter analysis appears to be the most interes ting
+one, since it allows us to spot the presence of children, and w e limit ourselves to it in
+17
+0 500 10000
+0.001
+0.002p(x)
+Figure 12: Pdf of the x observable in dyads with two females (red, circles), mixed
+(orange, triangles) and two males (blue, squares).
+0 500 1000
+|y|(mm)
+0
+0.001
+0.002
+0.003p(|y|)
+Figure 13: Pdf of the |y| observable in dyads with two females (red, circles), mixed
+(orange, triangles) and two males (blue, squares).
+the main text. Results corresponding to the dependence on average and maximum age
+are found in appendix E.
+18
+8.1 Overall statistical analysis
+Table 4 and ﬁgures 14, 15 show the minimum age dependence of all observables (based on
+the analysis of 1089 dyads). Although diﬀerences between dis tributions are statistically
+signiﬁcant, both velocity and distance observables are mos tly constant for groups whose
+minimum age is in the 20-60 years range. We nevertheless ﬁnd t hat the group depth
+|y| (the observable characterising thus the tendency of pedest rians not to walk abreast)
+assumes a very high value in groups with children, a minimum i n the 20-29 years range,
+and then grows with age. On the other hand, abreast distance x is relatively low for
+groups with children (as we will see below, x grows with body size 10). Velocity is mostly
+constant below 60 years, but drops for elderly groups.
+Table 4: Observable dependence on minimum age for dyads. Lengths in millimetres,
+times in seconds.
+Minimum age Nk
+g V r x |y|
+0-9 years 31 1143 ± 42 (σ =235) 995 ± 69 (σ =383) 529 ± 34 (σ =189) 701 ± 87 (σ =485)
+10-19 years 63 1158 ± 33 (σ =259) 791 ± 33 (σ =259) 624 ± 19 (σ =148) 359 ± 40 (σ =320)
+20-29 years 364 1181 ± 9.1 (σ =173) 793 ± 11 (σ =218) 668 ± 8.1 (σ =154) 307 ± 14 (σ =264)
+30-39 years 292 1204 ± 12 (σ =202) 836 ± 14 (σ =238) 673 ± 10 (σ =176) 364 ± 18 (σ =307)
+40-49 years 149 1181 ± 14 (σ =176) 841 ± 18 (σ =224) 664 ± 13 (σ =158) 384 ± 26 (σ =311)
+50-59 years 111 1164 ± 18 (σ =193) 825 ± 21 (σ =219) 649 ± 15 (σ =160) 378 ± 30 (σ =318)
+60-69 years 67 1028 ± 21 (σ =170) 881 ± 41 (σ =335) 638 ± 20 (σ =164) 468 ± 52 (σ =422)
+≥ 70 years 12 886 ± 29 (σ =99.8) 786 ± 79 (σ =275) 588 ± 19 (σ =66.6) 385 ± 100 (σ =363)
+F7,1081 10.7 3.96 4.23 8.02
+p < 10− 8 0.000282 0.000128 < 10− 8
+R2 0.065 0.025 0.0267 0.0494
+δ 1.6 0.583 0.808 1.37
+8.2 Probability distribution functions
+The probability functions for diﬀerent observables in diﬀerent age ranges are shown in
+ﬁgures 17, 18, 19 and 16 respectively for observables V , r, x and |y|, and their statistical
+analysis is presented in section B.4. We may easily see from t he large tail of the r
+distribution, the high values for the x distribution, the spread of the |y| distribution,
+that the presence of a child causes the group not to walk very a breast. The abreast
+distance peak is higher in “working age people”with respect to young and elderly dyads.
+Elderly people have a very narrow peak in the |y| distribution, but also a fat tail.
+Velocity in the 0-19 age range assumes lower peaks than in the 20-59 range, but has a
+large spread, while in elderly people it assumes clearly low er values 11
+10Body size could also inﬂuence the x distance in elderly people, due to the shorter height of elde rly
+people in the Japanese population [44].
+11As stated in section 3.4, the tracking of short people (and th us of children) is more diﬃcult, and thus
+the tracked position could be aﬀected by higher sensor noise , although our time ﬁlter (see again section
+3.4) should remove this problem. We thus examined a portion o f the videos corresponding to group
+with children, and noticed that children have indeed an erra tic behaviour that leads them to sudden
+19
+0 20 40 60 80
+Age (years)
+800
+1000
+1200V(mm/s)
+Figure 14: V dependence on minimum age. Dashed lines provide standard er ror conﬁ-
+dence intervals. The point at 75 years corresponds to the “70 years or more” slot.
+0 20 40 60 80
+Age (years)
+0
+500
+1000r,x,|y| (mm)
+Figure 15: r, x and |y| dependence on minimum age. Black circles: r; red squares: x;
+blue triangles: |y|. Dashed lines provide standard error conﬁdence intervals. The point
+at 75 years corresponds to the “70 years or more” slot.
+accelerations and non-abreast formations. We thus believe that the large spread of observables for dyads
+with children is due to actual pedestrian behaviour.
+20
+500 1000 1500
+V(mm/s)
+0
+0.001
+0.002p(V)
+Figure 16: Probability distribution function for V . (Minimum) age in the 0-9 years
+range: green and circles; in the 10-19 range: red and diamond s, in the 30-39 range:
+orange and squares; in the 50-59 range: blue, and triangles; in the over 70 range: black
+and stars.
+0 500 1000 1500
+r(mm)
+0
+0.001
+0.002
+0.003p(r)
+Figure 17: Probability distribution function for r. (Minimum) age in the 0-9 years range:
+green and circles; in the 10-19 range: red and diamonds, in th e 30-39 range: orange and
+squares; in the 50-59 range: blue, and triangles; in the over 70 range: black and stars.
+8.3 Further analysis
+In appendix C.4 we analyse possible eﬀects due to density, relation, gender and age.
+Interesting results reported in the appendix suggest a tend ency of families not to walk
+21
+0 500 1000
+x(mm)
+0
+0.001
+0.002
+0.003p(x)
+Figure 18: Probability distribution function for x. (Minimum) age in the 0-9 years range:
+green and circles; in the 10-19 range: red and diamonds, in th e 30-39 range: orange and
+squares; in the 50-59 range: blue, and triangles; in the over 70 range: black and stars.
+0 500 1000
+|y|(mm)
+0
+0.001
+0.002
+0.003p(|y|)
+Figure 19: Probability distribution function for |y|. (Minimum) age in the 0-9 years
+range: green and circles; in the 10-19 range: red and diamond s, in the 30-39 range:
+orange and squares; in the 50-59 range: blue, and triangles; in the over 70 range: black
+and stars.
+abreast even when formed only by adults12, and diﬀerences in groups with children based
+12This could be related to a visual bias of coders, that code mix ed dyads as families when not walking
+abreast, and couples when walking abreast.
+22
+on gender (probably aﬀected by the gender of the parent). Code r reliability is analysed
+in appendix D.2.4.
+A further interesting result is that, as shown in ﬁgure 20 (ba sed on the analysis of
+appendix C), dyads with children walk faster at higher density , in contrast with the
+usual pedestrian behaviour.
+0 20 40 60 80
+Age (years)
+800
+1000
+1200V(mm/s)
+Figure 20: Dependence of V on minimum age at diﬀerent densities. Blue
+squares: 0 ≤ ρ ≤ 0. 05 ped/m 2 range; red circles: 0 . 15 ≤ ρ ≤ 0. 2 ped/m 2 range. The
+point at 75 years corresponds to the “70 years or more” slot. D ashed lines show standard
+error conﬁdence intervals.
+9 The eﬀect of height
+Height is the only pedestrian feature that is not the result of coding, since it is auto-
+matically tracked by our system [35]. We again considered (s ee appendix F) average,
+minimum and maximum height. The three indicators give simil ar results, and in the
+following we use minimum height to better identify the prese nce of children.
+9.1 Overall statistical analysis
+The dependence of all observables on minimum height (based on 1089 dyads) is shown
+in table 5. We have signiﬁcant statistical diﬀerence for all o bservables, but the inter-
+pretation of the results is not straightforward, due to the p eculiar behaviour of dyads
+including short people (most probably children). As shown i n Figure 21 velocity grows
+(as expected, see for example [28] and [3]), with height, but dyads with a very short
+individual represent an exception (children move fast desp ite the short height). In ﬁgure
+22 we may see that distance is mostly independent of height ab ove 150 cm, but assumes
+23
+a very high value for dyads including short pedestrians. Fig ure 23 shows the height de-
+pendence of |y|, which results to be a decreasing function, although a compa rison with
+a linear ﬁt shows that dyads including people under 140 cm wal k with a particularly
+spread (non abreast) |y| distribution, while above 150 cm the group depth is almost
+constant. The x observable, on the other hand, appears to grow mostly in a lin ear way
+(ﬁgure 24). This could lead us to think that abreast distance depends only on body size.
+Nevertheless, while there is probably a strong dependence o f abreast distance on height,
+this linear dependence is also due to the balance between the non-linear male and female
+behaviour, as shown in ﬁgure 25, based on the analysis of appe ndix C. Furthermore, as
+we will see below when studying the distribution probabilit y functions of the x observ-
+able, the growth in x with height is a combination of a increase of peak position an d
+decrease of people walking in non abreast formation (ﬁgure 2 8).
+Table 5: Observable dependence on minimum height for dyads. Lengths in millimetres,
+times in seconds.
+Minimum height Nk
+g V r x |y|
+< 140 cm 39 1130 ± 34 (σ =211) 1004 ± 65 (σ =404) 573 ± 34 (σ =210) 672 ± 80 (σ =501)
+140-150 cm 39 1106 ± 50 (σ =311) 875 ± 46 (σ =289) 619 ± 25 (σ =156) 469 ± 64 (σ =403)
+150-160 cm 234 1104 ± 13 (σ =197) 797 ± 16 (σ =246) 631 ± 8.9 (σ =136) 360 ± 21 (σ =328)
+160-170 cm 498 1169 ± 8.1 (σ =182) 821 ± 11 (σ =243) 657 ± 7.7 (σ =172) 362 ± 14 (σ =311)
+170-180 cm 262 1242 ± 11 (σ =173) 827 ± 12 (σ =197) 699 ± 9.6 (σ =155) 321 ± 16 (σ =251)
+> 180 cm 17 1232 ± 51 (σ =211) 793 ± 48 (σ =198) 689 ± 33 (σ =135) 270 ± 53 (σ =217)
+F5,1083 14.5 5.25 7.45 9.69
+p < 10− 8 9.03·10− 5 6.9·10− 7 < 10− 8
+R2 0.0626 0.0237 0.0333 0.0428
+δ 0.744 0.591 0.773 0.922
+9.2 Probability distribution functions
+The probability functions for diﬀerent observables in diﬀerent minimum height ranges
+are shown in ﬁgures 26 27, 28 and 29, respectively for the V , r, x and |y| observables,
+and their statistical analysis is shown in section B.5.
+We see that the abreast distance distributions are displace d to the right with growing
+height, with a corresponding decrease in the values assumed around zero (particularly
+high in the 0-140 cm distribution, probably due to children b ehaviour). Similarly, the
+|y| distribution becomes narrower with growing height, and pre sents a very diﬀerent
+behaviour in the shortest height slot. The absolute distanc e distributions are displaced
+to the right with growing height, but the very fat tail for the 0-140 cm distribution
+causes the average value to have a more complex dependence on height. The V distri-
+bution shows a clear displacement to the right with growing h eight, both in peaks and
+tails, although the 0-140 cm distribution has again a peculi ar behaviour due to its very
+pronounced width.
+24
+130 140 150 160 170 180 190
+Height (cm)
+1100
+1150
+1200
+1250V(mm/s)
+Figure 21: V dependence on minimum height. Data points shown by red circl es. Con-
+tinuous black line: linear best ﬁt with V = α + βh, α =715 mm/s, β=2.81 s − 1. Dashed
+lines provide standard error conﬁdence intervals, the poin t at 135 cm corresponds to the
+“less than 140 cm” slot, the one at 185 cm to the “more than 180 c m” slot.
+130 140 150 160 170 180 190
+Height  (cm)
+800
+900
+1000r(mm)
+Figure 22: r dependence on minimum height. Data points shown by red circl es. Con-
+tinuous black line: linear best ﬁt with r = α + βh, α =1390 mm, β=-3.35. Dashed lines
+provide standard error conﬁdence intervals, the point at 13 5 cm corresponds to the “less
+than 140 cm” slot, the one at 185 cm to the “more than 180 cm” slo t.
+25
+130 140 150 160 170 180 190
+Height (cm)
+300
+400
+500
+600
+700|y|(mm)
+Figure 23: |y| dependence on minimum height. Data points shown by red circl es. Con-
+tinuous black line: linear best ﬁt with |y| = α + βh, α =1530 mm, β=-7.01. Dashed lines
+provide standard error conﬁdence intervals, the point at 13 5 cm corresponds to the “less
+than 140 cm” slot, the one at 185 cm to the “more than 180 cm” slo t.
+130 140 150 160 170 180 190
+Height (cm)
+600
+700x(mm)
+Figure 24: x dependence on minimum height. Data points shown by red circl es. Con-
+tinuous black line: linear best ﬁt with x = α + βh, α =258 mm, β=2.42. Dashed lines
+provide standard error conﬁdence intervals, the point at 13 5 cm corresponds to the “less
+than 140 cm” slot, the one at 185 cm to the “more than 180 cm” slo t.
+26
+130 140 150 160 170 180 190
+Height (cm)
+500
+600
+700x(mm)
+Figure 25: x dependence on minimum height for diﬀerent genders. Red circl es: two
+females; blue squares: two males (continuous lines: linear ﬁts x = α + βh, α female=154
+mm, βfemale=2.98; α male=211 mm, βmale=2.79). The points at 135 and 185 cm represent
+the “less than 140” and “more than 180” cm slots). Dashed line s show conﬁdence
+intervals.
+500 1000 1500
+V(mm/s)
+0
+0.001p(V)
+Figure 26: Probability distribution function for V . (Minimum) height in the 0-140 cm
+range: green circles; in the 140-150 range: red diamonds; in the 150-160 range: orange
+squares; in the 160-170 range: blue triangles; in the 170-18 0 range: black stars.
+27
+500 1000 1500
+r(mm)
+0
+0.001
+0.002p(r)
+Figure 27: Probability distribution function for r. (Minimum) height in the 0-140 cm
+range: green circles; in the 140-150 range: red diamonds; in the 150-160 range: orange
+squares; in the 160-170 range: blue triangles; in the 170-18 0 range: black stars.
+0 500 1000
+x(mm)
+0
+0.001
+0.002p(x)
+Figure 28: Probability distribution function for x. (Minimum) height in the 0-140 cm
+range: green circles; in the 140-150 range: red diamonds; in the 150-160 range: orange
+squares; in the 160-170 range: blue triangles; in the 170-18 0 range: black stars.
+9.3 Further analysis
+In appendix C.5 we analyse the validity of these results on height dependence when we
+consider other eﬀects such as age, relation, gender and densi ty, and verify that, although
+28
+0 500 1000
+y(mm)
+0
+0.001
+0.002p(|y|)
+Figure 29: Probability distribution function for |y|. (Minimum) height in the 0-140 cm
+range: green circles; in the 140-150 range: red diamonds; in the 150-160 range: orange
+squares; in the 160-170 range: blue triangles; in the 170-18 0 range: black stars.
+sometimes diminished, height related results are present a lso when analysing groups with
+ﬁxed age, relation and gender.
+10 Discussion and conclusion
+10.1 Summary of our ﬁndings
+By analysing how pedestrian dyad behaviour depends on the group’s “intrinsic prop-
+erties”, namely the characteristics of its members and the r elation between them, we
+observed that females dyads are slower and walk closer than m ales, that workers walk
+faster, at a larger distance and more abreast than leisure or iented people, and that inter-
+group relation has a strong eﬀect on group structure, with cou ples walking very close and
+abreast, colleagues walking at a larger distance, and frien ds walking more abreast than
+family members. Pedestrian height inﬂuences velocity and a breast distance, observables
+that grow with the average or minimum group height. We also fo und that elderly people
+walk slowly, while active age adults walk at the maximum velo city. Dyads with children
+have a strong tendency to walk in a non abreast formation, wit h a large distance but a
+shorter abreast distance.
+In the supplementary materials appendices, we analysed how these features aﬀect
+each other, and we veriﬁed that the eﬀects of the diﬀerent featu res are present, even
+though sometimes diminished, even when the other features a re kept ﬁxed (e.g., when
+we compare colleagues of diﬀerent gender, and the like). The c ross-analysis of the
+interplay between these features revealed also a richer str ucture. Interesting results are,
+29
+for example, that the velocity of dyads with children appear s to increase with density
+(at least in the low-medium density range), and that childre n behaviour appears to be
+inﬂuenced by the gender of the parent.
+In this work we focused on “group features” more than “indivi dual features”, i.e.
+we did not explicitly address questions such as the age or hei ght diﬀerence, and similar.
+We may nevertheless infer from our results some information about how group members
+with diﬀerent height, age and gender “compromise” on group dy namics. We may see,
+for example, in appendix F that average age gives, for the V and x observables that
+are growing function of height, a result in between those obt ained for minimum and
+maximum height. Height is a physical and not social feature, and it appears that,
+after averaging over all social features, the chosen veloci ty and abreast distance are the
+averages of those preferred by the individuals. Gender and a ge appear, on the other
+hand, to have a deeper impact on social interactions. In mixe d groups, males appear
+to adapt to female velocity when we average over relations, b ut when we analyse for
+secondary eﬀects in appendix C, we see that this is true for cou ples and families, but it
+does not apply to friends or colleagues. Similarly, while co uples walk closer than male or
+female same sex dyads, mixed colleague groups walk farther t han same sex dyads of both
+genders. In a similar way, due also to the peculiar behaviour of children, it is impossible
+to ﬁnd a simple “compromise” rule for age related behaviour. More information could
+be inferred by an analysis taking in explicit account age diﬀe rences, that we reserve for
+a future work.
+The exact ﬁgures found in this work may depend strongly on the environment in
+which they have been recorded, and vary not only with density , but also with other
+macroscopic crowd dynamics features (uni-directional ﬂow , bi-directional ﬂow, multi-
+directional ﬂow, presence or not of standing pedestrians, e tc.) as well as architectural
+features of the environment (open space or large corridor or narrow corridor, etc.). For
+this reason, attempts to verify our ﬁndings in diﬀerent envir onments should be directed
+not at speciﬁc quantitative ﬁgures (e.g. male dyads walk at 1 .25 m/s and females at 1.1
+meters per second) but at qualitative patterns (e.g. males w alk faster than females in
+a statistically signiﬁcant way, with a diﬀerence in velocity comparable to the standard
+deviation in distributions). It would be in particular very interesting to compare our
+ﬁndings with diﬀerent cultural settings, since it may be expe cted that social group
+behaviour is strongly dependent on culture, so that at least some of the patterns could
+change when similar data collection experiments are perfor med outside of (western)
+Japan.
+10.2 Future work
+A possible extension of this work regard the analysis of three people group behaviour.
+Furthermore, as stated above, in this work we limited oursel ves to group properties and
+not individual properties (e.g., we veriﬁed if a group was mi xed, but we did not study
+the speciﬁc position of the male or female). After a revision of the coding procedure, we
+could analyse if, according to gender, age or height diﬀerenc es, roles such as “leader”
+or “follower” emerge. Finally, a mathematical modelling fo llowing [1] and [25] could be
+30
+performed.
+10.3 Possible technological impact
+Besides the obvious applications to pedestrian simulations, with possible inﬂuence in
+building and events planning, disaster prevention, and eve n in entertainment industries
+such as movies and video games, we are particularly interest ed in applications in the
+ﬁeld of robotics and more in general slow vehicles with autom atic navigation capabilities
+deployed in pedestrian facilities, such as delivery vehicl es or automatic wheelchairs and
+carts. Such vehicles will arguably become more common in the future, and in order to
+navigate safely inside human crowds, and to move together wi th other humans “as in a
+group”, they will need and understanding of pedestrian and g roup behaviour.
+More speciﬁcally, a “companion” robot or an automatic wheel chair will need
+1. to be able to recognise pedestrian groups, using an automa tic recognition algorithm
+[45, 46]
+2. to be able to predict their behaviour, both in order to be ab le to safely avoid them
+and to perform a socially acceptable behaviour [8]
+3. to be able to move together with other humans, and behave as a member of a
+group [9]
+For all these applications it is extremely important to unde rstand deeply how pedestrians
+actually behave and we plan to use these ﬁndings to improve ou r previous algorithms
+and systems as part of the development of a platform for auton omous personal mobility
+systems.
+11 Acknowledgements
+This research is partly supported by the Ministry of Internal Aﬀairs and Communica-
+tions (MIC), Japan, research and development project on autonomous personal mo bility
+including robots, by CREST, JST and JSPS KAKENHI Grand Number 16J40223.
+31
+A Statistical analysis of observables
+In this work we are interested in describing how pedestrian group behaviour is inﬂuenced
+by some intrinsic features, such as purpose, relation, gender, age or height. Each feat ure
+(or factor) may be divided in k categories (e.g., in the case of relation k = 4 and the
+categories are colleagues, couples, family and friends). E ach group is coded as belonging
+to a speciﬁc category, so that each category has Nk
+g groups. As described in section
+3.4, for each group i ∈ Nk
+g we can measure the value of observable o every 500 ms. We
+may call these measurements ok
+i,j with j = 1 , . . . , n k
+i (i.e. we have nk
+i measurements, or
+events, corresponding to group i in category k).
+We believe that the largest amount of quantitative informat ion regarding the de-
+pendence of group behaviour on intrinsic features is includ ed in the overall probability
+distributions functions concerning all Nk = ∑
+i∈ Nkg
+nk
+i measurements of a given observ-
+able, as shown for example in ﬁgure 2, since from the analysis of these ﬁgures we can
+understand what is the probability of having a given value fo r each observable in each
+category.
+It is nevertheless useful to extract some quantitative info rmation, such as average
+values and standard deviations, from these distributions. Furthermore, although the
+purpose of this paper is not to provide a “ p value statistical independence label” to
+each feature, to compare such average values it is customary and useful to compute,
+along with other statistical indicators such as eﬀect size an d determination coeﬃcient,
+the standard error of each distribution and to perform the re lated analysis of variance
+(ANOVA). The computation of these latter statistical quant ities is nevertheless based
+on an assumption of statistical independence of the data, an assumption that clearly
+does not hold for all our Nk observations13.
+A.1 Average values, standard deviations and standard error s
+We thus proceed in the following way, justiﬁed by having a sim ilar number of observation
+for each group 14. For each observable o we compute the average over group i
+Ok
+i =
+
+
+nk
+i∑
+j=1
+ok
+i,j
+
+/n k
+i, (11)
+13As an extreme case, we can imagine that for a given k we were following a single group ( Nk
+g = 1) for
+one hour ( nk
+1= 7200). We will have then, if we ignore measurement noise, a p erfect information regarding
+the behaviour of that group in that hour and, under the strong assumption of time independence in the
+group behaviour, a good statistics about the behaviour of that particular group. We still do not have any
+information about how group behaviour changes between grou ps in the category, since that information
+depends on the number of groups analysed, Nk
+g . Furthermore, since in general we track a given group
+only for the few seconds it needs to cross the corridor, the ob servations oi,j at ﬁxed i are also strongly
+time correlated.
+14An average of 49 observations with a standard deviation of 22 over 1168 groups. We nevertheless
+exclude from the following analysis groups that provided le ss than 10 observation points.
+32
+and then provide its average value in the category k as
+< O > k ±εk, (12)
+where < O > and the standard error ε are given by
+< O > k=
+
+
+Nk
+g∑
+i=1
+Ok
+i
+
+/N k
+g , (13)
+εk = σk/
+√
+Nkg , (14)
+and the standard deviation is
+σk =
+
+
+
+
+√
+
+
+Nkg∑
+i=1
+(Ok
+i )2
+
+/N kg − < O > 2
+k. (15)
+As a rule of thumb, we may say that o assumes a diﬀerent value between categories
+k and j if
+| < O > k − < O > j | ≫ 2 max(εk, ε k). (16)
+A.2 Analysis of variance
+This rule of thumb is obviously related to the ANOVA analysisreported in the text.
+The ANOVA analysis proceeds as follows. We deﬁne nc as the number of categories for
+a given feature,
+N =
+nc
+∑
+k=1
+Nk
+g , (17)
+as the total number of groups, and the overall average of the o bservable as
+< O > =
+( nc
+∑
+k=1
+< O > k Nk
+g
+)
+/N. (18)
+We then deﬁne the distance between < O > and < O > k as
+dk =< O > − < O > k, (19)
+and the degrees of freedom
+γ1 = nc − 1, γ 2 = N − nc. (20)
+The F factor is then deﬁned as
+F =
+(
+γ2
+nc
+∑
+k=1
+d2
+kNk
+g
+)
+/
+(
+γ1
+nc
+∑
+k=1
+σ2
+kNk
+g
+)
+. (21)
+33
+This result is reported in our tables as Fγ1,γ 2 , along with the celebrated p value, that pro-
+vides the probability, under the hypothesis of independenc e of data, that the diﬀerence
+between the distributions is due to chance [47]
+p = 1 −
+∫ F
+0
+fγ1,γ 1 (x)dx. (22)
+The f distribution has to be computed numerically [48], but a valu e F ≫ 1 assures a
+small p value.
+Let us see how this relates to the rule of thumb for standard er rors. Let us assume
+we have two categories with the same number of groups for cate gory
+N1
+g = N2
+g = Ng. (23)
+We clearly have
+< O > = ( < O > 1 + < O > 2) / 2, (24)
+|d1| = |d2| = | < O > 1 − < O > 2 |/ 2, (25)
+and
+F = ( Ng − 1)| < O > 1 − < O > 2 |2/
+(
+σ2
+1 + σ2
+2
+)
+. (26)
+Using15
+σ2
+i / (Ng − 1) ≈ ε2
+i, (27)
+we get the expression
+F ≈ | < O > 1 − < O > 2 |2/
+(
+ε2
+1+ ε2
+2
+)
+> | < O > 1 − < O > 2 |2/ (2 max(ε1, ε 2))2 , (28)
+so that the rule of thumb eq. 16 corresponds to have an high F value and thus a low p
+value.
+A.3 Coeﬃcient of determination
+Eq 21 says that theF factor is high if the σk are smaller than the dk, i.e. if the variation
+inside the categories are smaller than outside the category , and if the total number of
+observation is high. Due to the large number of data points, t he F values in appendix
+B (where we use all the observable measurement instead of gro up averages) are always
+very high, and the corresponding p values very low, but the hypothesis of statistical
+independence of data underlying the usual interpretation o f p is obviously not valid.
+There are nevertheless some statistical estimators that do not depend dramatically on
+the number of observations, and that will thus have a similar value either if performed
+using all the data points or if performed using only group ave rages.
+15The actual deﬁnition of the standard error uses
+√
+Ng − 1 but the numbers shown in the tables use
+the approximate deﬁnition
+√
+Ng. For Ng ≈ 100 or more, as it is usually the case in this work, the
+diﬀerence is at most 5%.
+34
+One such estimator is the coeﬃcient of determination
+R2 = 1 −
+
+∑
+i,k
+(ok
+i− < O > k)2
+
+/
+
+∑
+i,k
+(ok
+i− < O > )2
+
+, (29)
+which can also be computed as from the F factor as
+R2 = ( F γ1) / (F γ1 + γ2) , (30)
+and provides an estimate of how much of the variance in the dat a is “explained” by the
+category averages.
+A.4 Eﬀect size
+TheR2 coeﬃcient may attain low values if two or more category distr ibution functions
+are very similar, as it usually the case in our work. To point o ut the presence of at
+least one distribution that is clearly diﬀerent from the othe rs we may use the following
+deﬁnition of the eﬀect size δ. We ﬁrst deﬁne [49]
+δk,l = ( < O > k − < O > l)/
+σ, σ =
+√ (
+(˜nk − 1)σ2
+k + (˜nl − 1)σ2
+l
+)
+/ (˜nk + ˜nl − 2),
+(31)
+where ˜nk, ˜nl are the number of points used for computing the averages and s tandard
+deviations16, and then we consider the maximum pairwise eﬀect size
+δ = max
+k,l
+|δk,l |. (32)
+While a p value tells us about the signiﬁcance of the statistical diﬀer ence between two
+distributions, the diﬀerence may be often so small that if can be veriﬁed only if a large
+amount of data are collected. But if we have also δ ≈ 1, then the two distributions are
+diﬀerent enough to be distinguished also using a relatively r educed amount of data.
+A.5 Multi-factor cross analysis
+We refrain from applying the machinery of two way orn way ANOVA to our data, since
+our ecological data set is extremely unbalanced, and it is un balanced for the very reason
+that our “factors” are not independent variables 17.
+It is nevertheless useful to analyse the interplay between t he diﬀerent features, and
+we do that in section C by performing a statistical analysis s imilar to the one described
+above of a given feature A while keeping ﬁxed the value of another feature B to a
+16I.e., ˜nk = Nk
+g if we are using group averages, ˜ nk = Nk if we are using overall distributions.
+17For example, since the average height of females is two stand ard deviations lower than the male
+one [44], the high range height groups will be entirely compo sed of males, not to mention more extreme
+cases, such as the conditional probability of having a child ren in a group of colleagues, which is arguably
+zero.
+35
+category k.18 Sometimes this analysis is performed on a reduced number of g roups, and
+thus the corresponding p value may be high. This does not imply that the analysis is
+valueless, at least in our opinion, since it provides new inf ormation. The F and p values
+are, in this situation, useful to compare diﬀerent observabl es on the given condition. As
+an example, table 30 tells us that x has a stronger variation between relation categories
+for ﬁxed gender than r, and so on. Furthermore, in these situations, an analysis of
+statistical indicators that do not depend critically on the number of observations, such
+as the eﬀect size, is particularly valuable.
+18For the ﬁxed category feature B, we use also the external feature of pedestrian crowd densit y. Since
+the same group may contribute to diﬀerent densities, when op erating at a ﬁxed density we use for group
+averages all groups that contribute with at least 5 data poin ts (instead of the usual 10) to the observable
+distribution for that density value.
+36
+B Statistical analysis of overall probability distributio ns
+B.1 Purpose
+Table 6 provides a statistical analysis of the overall probability distributions for the
+purpose categories.
+Table 6: Statistical analysis of the overall probability distributions for the purpose
+categories. Lengths in millimetres, times in seconds.
+Purpose Nk V r x |y|
+Leisure 38501 1096 ± 1.3 (σ =251) 799 ± 1.6 (σ =309) 630 ± 1.2 (σ =236) 360 ± 2 (σ =388)
+Work 18936 1257 ± 1.7 (σ =235) 834 ± 2.1 (σ =287) 714 ± 1.6 (σ =227) 315 ± 2.5 (σ =341)
+F1,57435 5400 169 1640 184
+p < 10− 8 < 10− 8 < 10− 8 < 10− 8
+R2 0.0859 0.00293 0.0278 0.00319
+δ 0.652 0.115 0.36 0.12
+B.2 Relation
+Table 7 provides a statistical analysis of the overall probability distributions for the
+relation categories.
+Table 7: Statistical analysis of the overall probability distributions for the relation cat-
+egories. Lengths in millimetres, times in seconds.
+Relation Nk V r x |y|
+Colleagues 18172 1262 ± 1.7 (σ =234) 840 ± 2.2 (σ =290) 720 ± 1.7 (σ =229) 317 ± 2.6 (σ =344)
+Couples 5273 1085 ± 3.2 (σ =231) 699 ± 3.7 (σ =271) 584 ± 2.6 (σ =188) 290 ± 4.4 (σ =318)
+Families 12596 1072 ± 2.2 (σ =246) 834 ± 3.2 (σ =357) 592 ± 2.3 (σ =260) 452 ± 4 (σ =447)
+Friends 17634 1113 ± 2 (σ =260) 788 ± 2 (σ =265) 659 ± 1.6 (σ =214) 312 ± 2.5 (σ =338)
+F3,53671 1940 362 975 485
+p < 10− 8 < 10− 8 < 10− 8 < 10− 8
+R2 0.0978 0.0198 0.0517 0.0264
+δ 0.795 0.493 0.614 0.392
+B.3 Gender
+Table 8 provides a statistical analysis of the overall probability distributions for the
+relation categories.
+B.4 Age
+Table 9 provides a statistical analysis of the overall probability distributions for the
+minimum age ranges.
+37
+Table 8: Statistical analysis of the overall probability di stributions for the gender cate-
+gories. Lengths in millimetres, times in seconds.
+Gender Nk V r x |y|
+Two females 14688 1075 ± 2.1 (σ =251) 773 ± 2.2 (σ =268) 647 ± 1.7 (σ =202) 302 ± 2.9 (σ =346)
+Mixed 19311 1098 ± 1.7 (σ =239) 803 ± 2.4 (σ =334) 614 ± 1.8 (σ =248) 388 ± 3 (σ =411)
+Two males 23516 1237 ± 1.6 (σ =249) 839 ± 1.9 (σ =292) 702 ± 1.6 (σ =239) 337 ± 2.3 (σ =355)
+F2,57512 2570 225 791 232
+p < 10− 8 < 10− 8 < 10− 8 < 10− 8
+R2 0.0822 0.00778 0.0268 0.008
+δ 0.647 0.233 0.365 0.224
+Table 9: Statistical analysis of the overall probability di stributions for the minimum age
+ranges. Lengths in millimetres, times in seconds.
+Minimum age Nk V r x |y|
+0-9 years 1041 1127 ± 8.4 (σ =272) 983 ± 15 (σ =480) 573 ± 9.5 (σ =306) 663 ± 18 (σ =580)
+10-19 years 3443 1110 ± 5.2 (σ =303) 767 ± 5.1 (σ =298) 626 ± 3.8 (σ =222) 322 ± 6.2 (σ =364)
+20-29 years 18679 1167 ± 1.8 (σ =240) 788 ± 2.1 (σ =289) 665 ± 1.6 (σ =223) 301 ± 2.6 (σ =349)
+30-39 years 15552 1179 ± 2.1 (σ =264) 816 ± 2.4 (σ =294) 667 ± 2 (σ =248) 343 ± 2.9 (σ =357)
+40-49 years 7974 1167 ± 2.7 (σ =242) 838 ± 3.3 (σ =296) 668 ± 2.7 (σ =243) 374 ± 4.2 (σ =378)
+50-59 years 6025 1153 ± 3.3 (σ =253) 812 ± 3.7 (σ =284) 653 ± 2.9 (σ =223) 358 ± 4.7 (σ =367)
+60-69 years 3969 1001 ± 3.5 (σ =219) 836 ± 5.4 (σ =340) 643 ± 3.8 (σ =242) 409 ± 6.7 (σ =419)
+≥ 70 years 832 877 ± 6 (σ =172) 793 ± 13 (σ =363) 599 ± 7.8 (σ =224) 383 ± 16 (σ =453)
+F7,57507 400 89.1 46.7 175
+p < 10− 8 < 10− 8 < 10− 8 < 10− 8
+R2 0.0464 0.0107 0.00566 0.0208
+δ 1.16 0.619 0.382 0.991
+B.5 Height
+Table 10 provides a statistical analysis of the overall probability distributions for the
+minimum height ranges.
+Table 10: Statistical analysis of the overall probability distributions for the minimum
+height ranges. Lengths in millimetres, times in seconds.
+Minimum height Nk V r x |y|
+< 140 cm 1579 1127 ± 6.9 (σ =274) 942 ± 11 (σ =457) 605 ± 7.6 (σ =300) 578 ± 14 (σ =553)
+140-150 cm 2206 1032 ± 6.7 (σ =315) 855 ± 8 (σ =374) 644 ± 5.3 (σ =248) 420 ± 10 (σ =468)
+150-160 cm 13064 1076 ± 2.2 (σ =251) 779 ± 2.5 (σ =281) 628 ± 1.8 (σ =209) 337 ± 3.2 (σ =365)
+160-170 cm 26345 1151 ± 1.5 (σ =245) 810 ± 1.9 (σ =306) 655 ± 1.5 (σ =243) 348 ± 2.3 (σ =374)
+170-180 cm 13497 1234 ± 2.1 (σ =243) 819 ± 2.3 (σ =269) 700 ± 2 (σ =232) 309 ± 2.8 (σ =323)
+> 180 cm 824 1224 ± 9.3 (σ =268) 823 ± 11 (σ =325) 686 ± 8.1 (σ =234) 309 ± 14 (σ =404)
+F5,57509 648 102 149 171
+p < 10− 8 < 10− 8 < 10− 8 < 10− 8
+R2 0.0533 0.00875 0.0128 0.0146
+δ 0.796 0.534 0.398 0.532
+38
+C Accounting for other eﬀects
+C.1 Secondary eﬀects and purpose
+C.1.1 Density
+Work-oriented dyads are more frequently found during working days, in which the envi-
+ronment presents a lower density (and thus higher velocity a nd inter-group pedestrian
+distance, [2]). It is thus important to analyse the results o f section 5 when they are
+divided for density ranges, for example by comparing result s in the 0 ≤ ρ < 0. 05 pedes-
+trian per square meter range with those in the 0 . 15 ≤ ρ < 0. 2 range 19. The results are
+reported in table 11 and 12, showing that the diﬀerences in V and x remain signiﬁcant
+regardless of density. The diﬀerence in |y| becomes signiﬁcant at high density, while at
+very low density is not signiﬁcant (while the opposite happe ns to r).
+Table 11: Observable dependence on purpose for dyads in the 0 ≤ ρ ≤ 0. 05 pedestrian
+per square meter density range. Lengths in millimetres, tim es in seconds.
+Purpose Nk
+g V r x |y|
+Leisure 426 1113 ± 10 (σ =215) 851 ± 15 (σ =303) 658 ± 9 (σ =186) 400 ± 18 (σ =373)
+Work 209 1274 ± 12 (σ =169) 924 ± 20 (σ =296) 741 ± 14 (σ =203) 409 ± 26 (σ =373)
+F1,633 89.6 8.17 25.7 0.0807
+p < 10− 8 0.0044 5.36·10− 7 0.776
+R2 0.124 0.0127 0.039 0.000128
+δ 0.8 0.242 0.428 0.024
+Table 12: Observable dependence on purpose for dyads in the 0 . 15 ≤ ρ ≤ 0. 2 pedestrian
+per square meter density range. Lengths in millimetres, tim es in seconds.
+Purpose Nk
+g V r x |y|
+Leisure 145 1084 ± 14 (σ =170) 764 ± 17 (σ =209) 560 ± 13 (σ =158) 390 ± 26 (σ =308)
+Work 22 1229 ± 27 (σ =125) 754 ± 26 (σ =123) 673 ± 25 (σ =117) 237 ± 40 (σ =186)
+F1,165 14.7 0.0513 10.2 5.05
+p 0.000182 0.821 0.00167 0.026
+R2 0.0817 0.000311 0.0583 0.0297
+δ 0.881 0.0521 0.735 0.516
+In table 13 and 14 we report, respectively, p and δ values for purpose corresponding
+to each observable and density range, showing that the V , x and |y| distributions are
+diﬀerent in a statistically signiﬁcant way at diﬀerent densit y ranges, although the eﬀect
+on |y| grows with density. Diﬀerences in r are signiﬁcant only at the lowest density
+range.
+19Groups may contribute to diﬀerent density ranges, see [2] fo r details.
+39
+Table 13: p values for purpose corresponding to velocity and distance o bservables at
+diﬀerent density ranges.
+Density V r x |y|
+0-0.05 ped/m2 < 10− 8 0.0044 5.36·10− 7 0.776
+0.05-0.1 ped/m2 < 10− 8 0.682 < 10− 8 0.000517
+0.1-0.15 ped/m2 < 10− 8 0.221 < 10− 8 1.32·10− 6
+0.15-0.2 ped/m2 0.000182 0.821 0.00167 0.026
+Table 14: δ values for purpose corresponding to velocity and distance o bservables at
+diﬀerent density ranges.
+Density V r x |y|
+0-0.05 ped/m2 0.8 0.242 0.428 0.024
+0.05-0.1 ped/m2 0.914 0.0292 0.515 0.248
+0.1-0.15 ped/m2 0.812 0.117 0.627 0.467
+0.15-0.2 ped/m2 0.881 0.0521 0.735 0.516
+C.1.2 Gender
+The work and leisure populations are strongly biased regarding gender. In tables 15,
+16 and 17 we show the results for the work and leisure observab les when limited to,
+respectively, female, mixed and male dyads. While velocity is still signiﬁcantly diﬀerent
+also when gender is ﬁxed, absolute distance in men, and all di stance observables in
+females are not signiﬁcantly diﬀerent. We may thus conclude t hat diﬀerences between
+workers and leisure oriented people are present regardless of gender, but are magniﬁed
+by the gender diﬀerence in the two populations.
+Table 15: Observable dependence on purpose for 2 female dyads. Lengths in millimetres,
+times in seconds.
+Purpose Nk
+g V r x |y|
+Leisure 222 1092 ± 13 (σ =194) 794 ± 16 (σ =235) 644 ± 8.4 (σ =125) 328 ± 22 (σ =322)
+Work 29 1184 ± 30 (σ =162) 755 ± 28 (σ =150) 663 ± 19 (σ =101) 274 ± 38 (σ =204)
+F1,249 5.97 0.733 0.615 0.777
+p 0.0153 0.393 0.433 0.379
+R2 0.0234 0.00293 0.00247 0.00311
+δ 0.484 0.17 0.155 0.175
+C.1.3 Age
+In tables (18) and (19) we show the results for the work and leisure observables when
+limited to groups of a given average age. The results suggest that diﬀerences may be
+40
+Table 16: Observable dependence on purpose for mixed gender dyads. Lengths in mil-
+limetres, times in seconds.
+Purpose Nk
+g V r x |y|
+Leisure 330 1097 ± 9.9 (σ =180) 814 ± 15 (σ =267) 602 ± 9.6 (σ =174) 415 ± 19 (σ =341)
+Work 41 1226 ± 26 (σ =167) 902 ± 48 (σ =308) 698 ± 24 (σ =152) 420 ± 65 (σ =419)
+F1,369 18.9 3.79 11.3 0.00662
+p 1.77·10− 5 0.0524 0.000849 0.935
+R2 0.0488 0.0102 0.0298 1.79·10− 5
+δ 0.722 0.323 0.558 0.0135
+Table 17: Observable dependence on purpose for 2 male dyads. Lengths in millimetres,
+times in seconds.
+Purpose Nk
+g V r x |y|
+Leisure 164 1196 ± 16 (σ =207) 846 ± 19 (σ =246) 660 ± 14 (σ =173) 392 ± 25 (σ =325)
+Work 302 1285 ± 8.7 (σ =152) 846 ± 13 (σ =218) 720 ± 9 (σ =157) 325 ± 16 (σ =271)
+F1,464 28.1 0.000251 14.4 5.5
+p 1.83·10− 7 0.987 0.000165 0.0195
+R2 0.057 5.42·10− 7 0.0301 0.0117
+δ 0.515 0.00154 0.369 0.228
+present at any age (in particular concerning V ), but are deﬁnitely more strong for more
+mature walkers.
+Table 18: Observable dependence on purpose for dyads with average age in the 20-29
+years range. Lengths in millimetres, times in seconds.
+Purpose Nk
+g V r x |y|
+Leisure 292 1164 ± 10 (σ =177) 798 ± 14 (σ =242) 656 ± 9.7 (σ =165) 326 ± 17 (σ =290)
+Work 78 1242 ± 19 (σ =166) 775 ± 17 (σ =152) 684 ± 12 (σ =108) 266 ± 22 (σ =197)
+F1,368 12.2 0.608 1.91 2.93
+p 0.000536 0.436 0.168 0.088
+R2 0.0321 0.00165 0.00515 0.00789
+δ 0.446 0.0996 0.176 0.219
+In table 20 and 21 we report, respectively, p and δ values for purpose corresponding
+to each observable and average age range, showing again that diﬀerences have a tendency
+to grow with age.
+C.1.4 Height
+In tables (22) and (23) we show the results for the work and leisure observables when
+limited to groups of a given average height, and in tables 24 a nd 25 we report, respec-
+tively, p and δ values for purpose corresponding to each observable and ave rage height
+41
+Table 19: Observable dependence on purpose for dyads with av erage age in the 50-59
+years range. Lengths in millimetres, times in seconds.
+Purpose Nk
+g V r x |y|
+Leisure 61 1053 ± 21 (σ =164) 808 ± 32 (σ =247) 601 ± 20 (σ =155) 404 ± 46 (σ =356)
+Work 53 1276 ± 21 (σ =153) 845 ± 24 (σ =173) 706 ± 20 (σ =144) 345 ± 36 (σ =261)
+F1,112 54.8 0.808 13.7 0.966
+p < 10− 8 0.371 0.000328 0.328
+R2 0.329 0.00716 0.109 0.00855
+δ 1.4 0.17 0.702 0.186
+Table 20: p values for purpose corresponding to velocity and distance o bservables at
+diﬀerent average age ranges.
+Average age V r x |y|
+20-29 years 0.000536 0.436 0.168 0.088
+30-39 years < 10− 8 0.0689 6.34·10− 8 0.144
+40-49 years < 10− 8 0.12 4.78·10− 6 0.264
+50-59 years < 10− 8 0.371 0.000328 0.328
+60-69 years 0.0233 0.221 0.48 0.463
+Table 21: δ values for purpose corresponding to velocity and distance o bservables at
+diﬀerent average age ranges.
+Average age V r x |y|
+20-29 years 0.446 0.0996 0.176 0.219
+30-39 years 0.994 0.224 0.682 0.18
+40-49 years 0.97 0.226 0.68 0.162
+50-59 years 1.4 0.17 0.702 0.186
+60-69 years 1.21 0.649 0.373 0.389
+range. Diﬀerences appear to grow with height, probably aﬀecte d also by the gender
+distributions.
+Table 22: Observable dependence on purpose for dyads with average height in the 150-
+160 cm range. Lengths in millimetres, times in seconds.
+Purpose Nk
+g V r x |y|
+Leisure 108 1107 ± 25 (σ =260) 821 ± 26 (σ =268) 629 ± 15 (σ =153) 389 ± 34 (σ =352)
+Work 10 1152 ± 51 (σ =160) 709 ± 27 (σ =86) 631 ± 28 (σ =88.5) 264 ± 32 (σ =101)
+F1,116 0.283 1.71 0.00249 1.24
+p 0.596 0.194 0.96 0.268
+R2 0.00243 0.0145 2.15·10− 5 0.0106
+δ 0.177 0.434 0.0166 0.37
+42
+Table 23: Observable dependence on purpose for dyads with av erage age in the 170-180
+cm range. Lengths in millimetres, times in seconds.
+Purpose Nk
+g V r x |y|
+Leisure 188 1138 ± 12 (σ =168) 801 ± 15 (σ =212) 628 ± 12 (σ =159) 366 ± 21 (σ =291)
+Work 233 1291 ± 10 (σ =157) 850 ± 15 (σ =230) 730 ± 10 (σ =153) 322 ± 18 (σ =273)
+F1,419 92.2 5.22 44 2.53
+p < 10− 8 0.0228 < 10− 8 0.113
+R2 0.18 0.0123 0.0951 0.006
+δ 0.944 0.225 0.652 0.156
+Table 24: p values for purpose corresponding to velocity and distance o bservables at
+diﬀerent average age ranges.
+Average height V r x |y|
+150-160 cm 0.596 0.194 0.96 0.268
+160-170 cm < 10− 8 0.0557 0.00126 0.953
+170-180 cm < 10− 8 0.0228 < 10− 8 0.113
+> 180 cm 0.773 0.959 0.289 0.522
+Table 25: δ values for purpose corresponding to velocity and distance o bservables at
+diﬀerent average age ranges.
+Average height V r x |y|
+150-160 cm 0.177 0.434 0.0166 0.37
+160-170 cm 0.696 0.217 0.368 0.00667
+170-180 cm 0.944 0.225 0.652 0.156
+> 180 cm 0.0998 0.0177 0.368 0.22
+43
+C.2 Secondary eﬀects and relation
+C.2.1 Density
+As discussed above, work-oriented (and thus colleagues) dyads are more present during
+working days, in which the environment presents a lower dens ity. Tables 26 and 27
+show the observables dependence for ﬁxed density ranges (0 ≤ ρ < 0. 05 ped/m 2 and
+0. 15 ≤ ρ < 0. 2 ped/m 2, respectively). The major trends exposed in the main text ar e
+present at any density, as conﬁrmed also by tables 28 and 29, r eporting p and δ values,
+respectively, for all density ranges.
+Table 26: Observable dependence on relation for dyads in the0 ≤ ρ < 0. 05 ped/m 2
+range. Lengths in millimetres, times in seconds.
+Relation Nk
+g V r x |y|
+Colleagues 202 1276 ± 12 (σ =169) 934 ± 21 (σ =298) 751 ± 15 (σ =207) 409 ± 26 (σ =376)
+Couples 62 1103 ± 25 (σ =193) 760 ± 38 (σ =297) 600 ± 22 (σ =177) 359 ± 40 (σ =314)
+Families 125 1084 ± 19 (σ =208) 894 ± 30 (σ =331) 617 ± 16 (σ =175) 512 ± 37 (σ =413)
+Friends 193 1130 ± 17 (σ =230) 830 ± 19 (σ =258) 685 ± 12 (σ =162) 338 ± 23 (σ =326)
+F3,578 30.5 7.59 19 6.17
+p < 10− 8 5.52·10− 5 < 10− 8 0.000396
+R2 0.137 0.0379 0.0896 0.031
+δ 1.03 0.585 0.754 0.482
+Table 27: Observable dependence on relation for dyads in the 0. 15 ≤ ρ < 0. 2 ped/m 2
+range. Lengths in millimetres, times in seconds.
+Relation Nk
+g V r x |y|
+Colleagues 22 1229 ± 27 (σ =125) 754 ± 26 (σ =123) 673 ± 25 (σ =117) 237 ± 40 (σ =186)
+Couples 19 1064 ± 28 (σ =124) 663 ± 31 (σ =135) 542 ± 22 (σ =97.1) 290 ± 36 (σ =159)
+Families 68 1068 ± 22 (σ =180) 802 ± 30 (σ =247) 532 ± 21 (σ =170) 465 ± 44 (σ =362)
+Friends 57 1107 ± 22 (σ =168) 753 ± 22 (σ =164) 603 ± 20 (σ =149) 332 ± 33 (σ =251)
+F3,162 5.54 2.59 5.87 4.77
+p 0.0012 0.055 0.000794 0.00327
+R2 0.0931 0.0457 0.098 0.0811
+δ 1.32 0.613 0.888 0.694
+C.2.2 Gender
+We now compare the results regarding relation for groups of given gender (two females,
+mixed and two males) in tables 30, 31 and 32. Diﬀerences in the d istributions (and the
+corresponding trends) are still signiﬁcant in ﬁxed gender g roups, with the exception of
+the r female and male distributions, although, as shown by the rel atively high δ values,
+this may be due due by the low amount of data in some categories . The patterns analysed
+in the main text are mostly respected, although we may notice some diﬀerences such
+44
+Table 28: p values for relation corresponding to velocity and distance observables at
+diﬀerent density ranges.
+Density V r x |y|
+0-0.05 ped/m2 < 10− 8 5.52·10− 5 < 10− 8 0.000396
+0.05-0.1 ped/m2 < 10− 8 0.000158 < 10− 8 < 10− 8
+0.1-0.15 ped/m2 < 10− 8 2.22·10− 5 < 10− 8 < 10− 8
+0.15-0.2 ped/m2 0.0012 0.055 0.000794 0.00327
+0.2-0.25 ped/m2 0.378 0.327 0.144 0.664
+Table 29: δ values for relation corresponding to velocity and distance observables at
+diﬀerent density ranges.
+Density V r x |y|
+0-0.05 ped/m2 1.03 0.585 0.754 0.482
+0.05-0.1 ped/m2 1.07 0.476 0.732 0.538
+0.1-0.15 ped/m2 1.16 0.666 0.857 0.761
+0.15-0.2 ped/m2 1.32 0.613 0.888 0.694
+0.2-0.25 ped/m2 0.675 0.798 0.983 0.974
+as female friends walking at an higher distance than colleag ues, and two male families
+walking at a very high speed.
+Table 30: Observable dependence on relation for 2 females dyads. Lengths in millimetres,
+times in seconds.
+Relation Nk
+g V r x |y|
+Colleagues 24 1167 ± 30 (σ =145) 735 ± 26 (σ =128) 664 ± 20 (σ =95.9) 238 ± 34 (σ =168)
+Families 28 1023 ± 32 (σ =171) 847 ± 58 (σ =305) 565 ± 27 (σ =140) 488 ± 77 (σ =405)
+Friends 184 1105 ± 15 (σ =197) 777 ± 15 (σ =205) 658 ± 8.5 (σ =115) 293 ± 20 (σ =274)
+F2,233 3.85 1.9 7.85 6.48
+p 0.0227 0.153 0.000503 0.00182
+R2 0.032 0.016 0.0631 0.0527
+δ 0.902 0.465 0.817 0.783
+C.2.3 Age
+Tables 33 and 34 show the observables dependence for ﬁxed minimum age ranges (20-29
+and 50-59 years, respectively). The major trends exposed in the main text are present
+even when the age is kept ﬁxed. We may notice that |y| assumes a very high value in
+families even when children are not present 20. p and δ values for the relation feature at
+diﬀerent minimum age ranges are shown in, respectively, tabl es 35 and 36.
+20This may be related to a selection bias in coders, that may hav e labelled mixed gender dyads as
+“couples” or “families” depending on their proximity and “a breastness”.
+45
+Table 31: Observable dependence on relation for mixed gende r dyads. Lengths in mil-
+limetres, times in seconds.
+Relation Nk
+g V r x |y|
+Colleagues 35 1228 ± 30 (σ =175) 923 ± 55 (σ =327) 702 ± 27 (σ =158) 440 ± 75 (σ =445)
+Couples 96 1099 ± 17 (σ =169) 714 ± 22 (σ =219) 600 ± 15 (σ =150) 291 ± 24 (σ =231)
+Families 183 1078 ± 13 (σ =182) 860 ± 21 (σ =285) 588 ± 13 (σ =173) 493 ± 28 (σ =372)
+Friends 20 1153 ± 41 (σ =183) 820 ± 43 (σ =192) 616 ± 43 (σ =192) 391 ± 70 (σ =311)
+F3,330 7.47 7.99 4.63 7.26
+p 7.49·10− 5 3.72·10− 5 0.00345 9.96·10− 5
+R2 0.0636 0.0677 0.0404 0.0619
+δ 0.832 0.83 0.67 0.61
+Table 32: Observable dependence on relation for 2 males dyad s. Lengths in millimetres,
+times in seconds.
+Relation Nk
+g V r x |y|
+Colleagues 299 1287 ± 8.8 (σ =152) 852 ± 13 (σ =220) 724 ± 9.3 (σ =160) 329 ± 16 (σ =273)
+Families 35 1234 ± 39 (σ =229) 891 ± 63 (σ =375) 571 ± 31 (σ =182) 537 ± 79 (σ =467)
+Friends 114 1187 ± 19 (σ =198) 811 ± 17 (σ =186) 676 ± 14 (σ =147) 335 ± 23 (σ =246)
+F2,445 14.5 2.1 16.1 8.35
+p 8.13·10− 7 0.124 1.76·10− 7 0.000276
+R2 0.0611 0.00933 0.0675 0.0362
+δ 0.607 0.329 0.94 0.698
+Table 33: Observable dependence on relation for dyads with m inimum age in the 20-29
+years range. Lengths in millimetres, times in seconds.
+Relation Nk
+g V r x |y|
+Colleagues 86 1255 ± 18 (σ =165) 813 ± 20 (σ =185) 706 ± 16 (σ =144) 291 ± 24 (σ =219)
+Couples 74 1115 ± 19 (σ =165) 711 ± 27 (σ =229) 600 ± 18 (σ =154) 281 ± 28 (σ =243)
+Families 23 1109 ± 39 (σ =187) 877 ± 58 (σ =277) 581 ± 37 (σ =177) 527 ± 78 (σ =373)
+Friends 164 1186 ± 13 (σ =164) 801 ± 16 (σ =208) 683 ± 10 (σ =128) 298 ± 21 (σ =265)
+F3,343 10.9 5.05 11.1 5.9
+p 7.21·10− 7 0.00195 5.89·10− 7 0.00062
+R2 0.0872 0.0423 0.0883 0.0491
+δ 0.861 0.684 0.825 0.882
+C.2.4 Height
+Tables 37 and 38 show the observables dependence for ﬁxed average height ranges (160-
+170 and 170-180 cm, respectively), showing that the distrib utions are still diﬀerent in
+a signiﬁcant way, and that the major patterns exposed in the m ain text are conﬁrmed.
+Tables 39 and 40 show respectively the p and δ values for all height ranges. δ values are
+always high showing that some reduced p values are due to the low number of groups in
+some ranges.
+46
+Table 34: Observable dependence on relation for dyads with m inimum age in the 50-59
+years range. Lengths in millimetres, times in seconds.
+Relation Nk
+g V r x |y|
+Colleagues 52 1274 ± 22 (σ =159) 844 ± 24 (σ =172) 700 ± 20 (σ =142) 350 ± 36 (σ =263)
+Families 28 1048 ± 32 (σ =169) 846 ± 55 (σ =289) 562 ± 34 (σ =182) 492 ± 78 (σ =410)
+Friends 22 1051 ± 36 (σ =167) 759 ± 44 (σ =208) 637 ± 24 (σ =115) 308 ± 59 (σ =276)
+F2,99 23.4 1.29 7.63 2.55
+p < 10− 8 0.28 0.000825 0.0835
+R2 0.321 0.0254 0.134 0.0489
+δ 1.39 0.339 0.878 0.514
+Table 35: p values for relation in diﬀerent minimum age ranges.
+Minimum age V r x |y|
+10-19 years 0.558 0.049 0.615 0.0313
+20-29 years 7.21·10− 7 0.00195 5.89·10− 7 0.00062
+30-39 years < 10− 8 0.0128 < 10− 8 0.0513
+40-49 years 1.02·10− 5 0.39 0.000266 0.537
+50-59 years < 10− 8 0.28 0.000825 0.0835
+60-69 years 0.0525 0.248 0.745 0.388
+≥ 70 years 0.385 0.251 0.198 0.237
+Table 36: δ values for relation in diﬀerent minimum age ranges.
+Minimum age V r x |y|
+10-19 years 0.888 3.23 0.609 2.49
+20-29 years 0.861 0.684 0.825 0.882
+30-39 years 1.48 0.77 1.05 0.636
+40-49 years 1.2 0.529 0.848 0.557
+50-59 years 1.39 0.339 0.878 0.514
+60-69 years 1.21 1.12 0.386 0.669
+≥ 70 years 0.612 0.844 0.937 0.865
+Table 37: Observable dependence on relation for dyads with a verage height in the 160-
+170 cm range. Lengths in millimetres, times in seconds.
+Relation Nk
+g V r x |y|
+Colleagues 89 1240 ± 16 (σ =149) 862 ± 26 (σ =249) 686 ± 18 (σ =167) 380 ± 37 (σ =350)
+Couples 47 1106 ± 28 (σ =191) 731 ± 33 (σ =226) 622 ± 28 (σ =189) 287 ± 30 (σ =204)
+Families 121 1090 ± 18 (σ =196) 854 ± 27 (σ =295) 593 ± 15 (σ =169) 487 ± 34 (σ =371)
+Friends 172 1135 ± 13 (σ =169) 798 ± 17 (σ =221) 659 ± 10 (σ =131) 321 ± 23 (σ =302)
+F3,425 13.3 3.96 7.08 7.42
+p 2.47·10− 8 0.0084 0.000119 7.42·10− 5
+R2 0.086 0.0272 0.0476 0.0498
+δ 0.843 0.542 0.551 0.599
+47
+Table 38: Observable dependence on relation for dyads with a verage age in the 170-180
+cm range. Lengths in millimetres, times in seconds.
+Relation Nk
+g V r x |y|
+Colleagues 231 1293 ± 10 (σ =157) 859 ± 15 (σ =232) 738 ± 10 (σ =157) 325 ± 18 (σ =274)
+Couples 45 1089 ± 22 (σ =145) 700 ± 33 (σ =219) 576 ± 14 (σ =95.4) 300 ± 39 (σ =264)
+Families 56 1107 ± 22 (σ =166) 818 ± 31 (σ =234) 557 ± 20 (σ =148) 462 ± 48 (σ =361)
+Friends 71 1162 ± 20 (σ =166) 811 ± 19 (σ =156) 679 ± 17 (σ =145) 328 ± 26 (σ =215)
+F3,399 38.9 6.77 31.5 4.13
+p < 10− 8 0.000183 < 10− 8 0.00672
+R2 0.226 0.0485 0.192 0.0301
+δ 1.32 0.692 1.16 0.503
+Table 39: p values for relation at diﬀerent average height ranges.
+Average height V r x |y|
+< 140 cm 0.362 0.108 0.61 0.0849
+140-150 cm 0.12 0.181 0.785 0.299
+150-160 cm 0.842 0.133 0.803 0.0402
+160-170 cm 2.47·10− 8 0.0084 0.000119 7.42·10− 5
+170-180 cm < 10− 8 0.000183 < 10− 8 0.00672
+> 180 cm 0.00432 0.551 0.126 0.951
+Table 40: δ values for relation at diﬀerent average height ranges.
+Average height V r x |y|
+< 140 cm 0.767 1.41 0.423 1.53
+140-150 cm 0.977 0.798 0.159 0.612
+150-160 cm 0.405 0.658 0.521 0.594
+160-170 cm 0.843 0.542 0.551 0.599
+170-180 cm 1.32 0.692 1.16 0.503
+> 180 cm 2.78 0.972 1.41 0.331
+48
+C.3 Secondary eﬀects and gender
+C.3.1 Density
+Tables 41 and 42 show the dependence on gender of observablesat ﬁxed density ranges
+(0 ≤ ρ < 0. 05 ped/m 2 and 0 . 15 ≤ ρ < 0. 2 ped/m 2, respectively). We may see that only
+the r observable loses the statistically signiﬁcant gender depe ndence at high density (but
+still shows it at lower density, when pedestrians may move mo re freely; furthermore, the
+eﬀect size is almost not aﬀected by density), while the other ob servables preserve it at
+any density. Tables 43 and 44 show the dependence of, respect ively, the gender p and δ
+values at diﬀerent density values.
+Table 41: Observable dependence on gender in the 0≤ ρ < 0. 05 ped/m 2 density range.
+Lengths in millimetres, times in seconds.
+Gender Nk
+g V r x |y|
+Two females 160 1095 ± 17 (σ =219) 818 ± 21 (σ =267) 669 ± 11 (σ =138) 337 ± 27 (σ =346)
+Mixed 217 1112 ± 13 (σ =196) 870 ± 23 (σ =340) 642 ± 13 (σ =194) 448 ± 28 (σ =409)
+Two males 259 1254 ± 12 (σ =196) 914 ± 18 (σ =283) 733 ± 13 (σ =217) 404 ± 22 (σ =351)
+F2,633 41.5 5.06 14.1 4.11
+p < 10− 8 0.00658 1.04·10− 6 0.0169
+R2 0.116 0.0157 0.0426 0.0128
+δ 0.771 0.346 0.441 0.289
+Table 42: Observable dependence on gender in the 0 . 15 ≤ ρ < 0. 2 ped/m 2 density range.
+Lengths in millimetres, times in seconds.
+Gender Nk
+g V r x |y|
+Two females 35 1073 ± 28 (σ =164) 714 ± 26 (σ =152) 572 ± 18 (σ =107) 318 ± 39 (σ =230)
+Mixed 73 1062 ± 18 (σ =152) 782 ± 29 (σ =247) 521 ± 20 (σ =172) 448 ± 42 (σ =361)
+Two males 59 1171 ± 23 (σ =178) 767 ± 19 (σ =147) 644 ± 18 (σ =136) 304 ± 28 (σ =218)
+F2,164 7.81 1.4 11.2 4.6
+p 0.000578 0.249 2.88·10− 5 0.0114
+R2 0.0869 0.0168 0.12 0.0531
+δ 0.665 0.308 0.786 0.471
+Table 43: p values for gender in diﬀerent density ranges.
+Density V r x |y|
+0-0.05 ped/m2 < 10− 8 0.00658 1.04·10− 6 0.0169
+0.05-0.1 ped/m2 < 10− 8 0.0448 < 10− 8 0.00164
+0.1-0.15 ped/m2 < 10− 8 0.897 9.41·10− 8 0.00478
+0.15-0.2 ped/m2 0.000578 0.249 2.88·10− 5 0.0114
+0.2-0.25 ped/m2 0.0304 0.0628 0.31 0.43
+49
+Table 44: δ values for gender in diﬀerent density ranges.
+Density V r x |y|
+0-0.05 ped/m2 0.771 0.346 0.441 0.289
+0.05-0.1 ped/m2 0.771 0.235 0.537 0.291
+0.1-0.15 ped/m2 0.737 0.0554 0.582 0.35
+0.15-0.2 ped/m2 0.665 0.308 0.786 0.471
+0.2-0.25 ped/m2 1.31 1.56 0.942 0.751
+C.3.2 Relation
+Tables 45, 46 and 47 show the gender dependence of observables in, respectively, col-
+leagues, families and friends (couples are not shown being e xclusively of mixed gender).
+Table 45: Observable dependence on gender for colleagues. L engths in millimetres, times
+in seconds.
+Gender Nk
+g V r x |y|
+Two females 24 1167 ± 30 (σ =145) 735 ± 26 (σ =128) 664 ± 20 (σ =95.9) 238 ± 34 (σ =168)
+Mixed 35 1228 ± 30 (σ =175) 923 ± 55 (σ =327) 702 ± 27 (σ =158) 440 ± 75 (σ =445)
+Two males 299 1287 ± 8.8 (σ =152) 852 ± 13 (σ =220) 724 ± 9.3 (σ =160) 329 ± 16 (σ =273)
+F2,355 8.49 4.82 1.78 3.7
+p 0.00025 0.00862 0.17 0.0256
+R2 0.0457 0.0264 0.00995 0.0204
+δ 0.798 0.709 0.38 0.561
+Table 46: Observable dependence on gender for families. Len gths in millimetres, times
+in seconds.
+Gender Nk
+g V r x |y|
+Two females 28 1023 ± 32 (σ =171) 847 ± 58 (σ =305) 565 ± 27 (σ =140) 488 ± 77 (σ =405)
+Mixed 183 1078 ± 13 (σ =182) 860 ± 21 (σ =285) 588 ± 13 (σ =173) 493 ± 28 (σ =372)
+Two males 35 1234 ± 39 (σ =229) 891 ± 63 (σ =375) 571 ± 31 (σ =182) 537 ± 79 (σ =467)
+F2,243 12.3 0.197 0.308 0.198
+p 8.41·10− 6 0.821 0.735 0.821
+R2 0.0917 0.00162 0.00253 0.00163
+δ 1.03 0.128 0.135 0.112
+We may see that males dyads are farther and faster than female ones regardless
+of relation (although the diﬀerences in r, x and |y| are quite reduced in families and
+friends). Mixed dyad behaviour, on the other hand, depends s trongly on relation. Mixed
+dyads are the only ones including couples, and this aﬀects str ongly their behaviour, and
+represent also the largest part of families. They are very li ttle represented in friends
+(interestingly, mixed dyads of friends walk much closer, in abreast distance, than same
+sex dyads, although their absolute distance is higher than i n females). The “colleagues”
+50
+Table 47: Observable dependence on gender for friends. Leng ths in millimetres, times
+in seconds.
+Gender Nk
+g V r x |y|
+Two females 184 1105 ± 15 (σ =197) 777 ± 15 (σ =205) 658 ± 8.5 (σ =115) 293 ± 20 (σ =274)
+Mixed 20 1153 ± 41 (σ =183) 820 ± 43 (σ =192) 616 ± 43 (σ =192) 391 ± 70 (σ =311)
+Two males 114 1187 ± 19 (σ =198) 811 ± 17 (σ =186) 676 ± 14 (σ =147) 335 ± 23 (σ =246)
+F2,315 6.02 1.27 1.91 1.76
+p 0.00272 0.283 0.15 0.173
+R2 0.0368 0.00798 0.012 0.0111
+δ 0.412 0.213 0.388 0.354
+category could represent a fair ﬁeld for comparing the eﬀect o f gender, and in it the
+mixed behaviour is somehow in between the two sexes (althoug h the absolute distance
+r and group depth |y| are very large, suggesting not abreast formations) but in ou r set
+colleagues are extremely biased towards males, and thus the analysis in hindered by low
+female and mixed dyads numbers. Finally we may notice that in families and friends,
+the eﬀect of gender on distance ( r, x and |y|) is very reduced, but the one on velocity
+is persistent. The velocity eﬀect size in families is neverth eless more than two times the
+one for friends.
+C.3.3 Age
+Tables 48 and 49 show the dependence on gender of observablesat ﬁxed average age
+ranges (20-29 years and 50-59 years, respectively). Intere stingly, the diﬀerences between
+young two females and two males dyads are reduced (and almost absent regarding the
+distance observables r, x and |y|), while they are very strong in elder groups. Young
+mixed dyad behaviour is strongly inﬂuenced by the presence o f couples.
+Table 48: Observable dependence on gender in the 20-29 years average age range.
+Lengths in millimetres, times in seconds.
+Gender Nk
+g V r x |y|
+Two females 111 1166 ± 16 (σ =170) 791 ± 21 (σ =220) 686 ± 10 (σ =110) 275 ± 26 (σ =271)
+Mixed 125 1122 ± 16 (σ =175) 784 ± 23 (σ =255) 612 ± 16 (σ =182) 360 ± 27 (σ =307)
+Two males 134 1247 ± 14 (σ =164) 803 ± 17 (σ =201) 689 ± 13 (σ =148) 301 ± 20 (σ =235)
+F2,367 18 0.235 10.5 3.03
+p 3.37·10− 8 0.791 3.77·10− 5 0.0496
+R2 0.0895 0.00128 0.054 0.0162
+δ 0.739 0.0832 0.47 0.291
+Tables 50 and 51 show the p and δ values for gender in diﬀerent average age ranges.
+Minimum ages ranges are shown in tables 52 and 53.
+51
+Table 49: Observable dependence on gender in the 50-59 years average age range.
+Lengths in millimetres, times in seconds.
+Gender Nk
+g V r x |y|
+Two females 20 1010 ± 30 (σ =136) 708 ± 21 (σ =95.5) 613 ± 27 (σ =121) 254 ± 34 (σ =151)
+Mixed 34 1071 ± 29 (σ =170) 856 ± 48 (σ =278) 608 ± 32 (σ =189) 462 ± 66 (σ =388)
+Two males 60 1255 ± 22 (σ =168) 847 ± 25 (σ =192) 686 ± 18 (σ =141) 369 ± 38 (σ =298)
+F2,111 22.8 3.69 3.37 2.81
+p < 10− 8 0.0281 0.0379 0.0643
+R2 0.291 0.0623 0.0573 0.0482
+δ 1.52 0.646 0.486 0.646
+Table 50: p values for gender in diﬀerent average age ranges.
+Average age V r x |y|
+10-19 years 0.0301 0.685 0.573 0.903
+20-29 years 3.37·10− 8 0.791 3.77·10− 5 0.0496
+30-39 years < 10− 8 0.0477 7.66·10− 8 0.0433
+40-49 years < 10− 8 0.106 0.000167 0.856
+50-59 years < 10− 8 0.0281 0.0379 0.0643
+60-69 years 0.00145 0.495 0.17 0.655
+≥ 70 years 0.245 0.564 0.543 0.598
+Table 51: δ values for gender in diﬀerent average age ranges.
+Average age V r x |y|
+10-19 years 0.769 0.241 0.309 0.14
+20-29 years 0.739 0.0832 0.47 0.291
+30-39 years 0.87 0.48 0.732 0.322
+40-49 years 1.3 0.329 0.619 0.0946
+50-59 years 1.52 0.646 0.486 0.646
+60-69 years 1.49 0.457 0.666 0.27
+≥ 70 years 1.56 0.802 0.915 0.788
+Table 52: p values for gender in diﬀerent minimum age ranges.
+Minimum age V r x |y|
+0-9 years 0.0872 0.17 0.577 0.198
+10-19 years 0.00563 0.497 0.981 0.484
+20-29 years 1.67·10− 7 0.665 8.91·10− 5 0.0654
+30-39 years < 10− 8 0.0904 1.99·10− 8 0.027
+40-49 years 3.02·10− 8 0.193 0.000602 0.778
+50-59 years 3.78·10− 8 0.0458 0.0555 0.0743
+60-69 years 0.00245 0.446 0.105 0.651
+≥ 70 years 0.245 0.564 0.543 0.598
+52
+Table 53: δ values for gender in diﬀerent minimum age ranges.
+Minimum age V r x |y|
+0-9 years 1.11 1.21 0.449 1.17
+10-19 years 0.949 0.473 0.0487 0.421
+20-29 years 0.715 0.111 0.475 0.271
+30-39 years 0.907 0.396 0.749 0.306
+40-49 years 1.62 0.343 0.65 0.113
+50-59 years 1.47 0.616 0.487 0.659
+60-69 years 1.45 0.541 0.79 0.275
+≥ 70 years 1.56 0.802 0.915 0.788
+C.3.4 Height
+Tables 54 and 55 show the dependence on gender of observablesat ﬁxed average height
+ranges (150-160 and 170-180 cm, respectively). The results (in particular for the shorter
+height range the eﬀect size, that helps in dealing with the red uced number of groups)
+show that diﬀerences between the sexes are still present when we consider individuals of
+similar height.
+Table 54: Observable dependence on gender in the 150-160 cm average height range.
+Lengths in millimetres, times in seconds.
+Gender Nk
+g V r x |y|
+Two females 75 1094 ± 27 (σ =232) 791 ± 26 (σ =225) 627 ± 15 (σ =131) 352 ± 36 (σ =316)
+Mixed 25 1045 ± 35 (σ =176) 796 ± 43 (σ =217) 603 ± 33 (σ =167) 376 ± 60 (σ =300)
+Two males 18 1272 ± 82 (σ =346) 921 ± 92 (σ =390) 674 ± 42 (σ =180) 493 ± 110 (σ =447)
+F2,115 4.95 1.89 1.22 1.24
+p 0.00869 0.156 0.3 0.294
+R2 0.0792 0.0318 0.0207 0.0211
+δ 0.873 0.493 0.415 0.408
+Table 55: Observable dependence on gender in the 170-180 cm a verage height range.
+Lengths in millimetres, times in seconds.
+Gender Nk
+g V r x |y|
+Two females 16 1091 ± 48 (σ =191) 741 ± 30 (σ =119) 662 ± 22 (σ =88.5) 238 ± 32 (σ =128)
+Mixed 121 1127 ± 16 (σ =171) 797 ± 23 (σ =250) 598 ± 14 (σ =149) 396 ± 31 (σ =338)
+Two males 284 1270 ± 9.6 (σ =161) 846 ± 13 (σ =213) 723 ± 9.4 (σ =159) 324 ± 15 (σ =258)
+F2,418 36.7 3.4 27.8 3.89
+p < 10− 8 0.0344 < 10− 8 0.0212
+R2 0.149 0.016 0.117 0.0183
+δ 1.1 0.502 0.799 0.492
+Tables 56 and 57 show, respectively, the gender p and δ values for diﬀerent average
+height ranges.
+53
+Table 56: Gender p values for diﬀerent average height ranges. Lengths in millim etres,
+times in seconds.
+Average height V r x |y|
+< 140 cm 0.614 0.0596 0.958 0.148
+140-150 cm 0.000737 0.372 0.0226 0.306
+150-160 cm 0.00869 0.156 0.3 0.294
+160-170 cm 1.0 ·10− 5 0.0653 0.0212 0.000455
+170-180 cm < 10− 8 0.0344 < 10− 8 0.0212
+> 180 cm 0.0241 0.191 0.137 0.647
+Table 57: Gender δ values for diﬀerent average height ranges. Lengths in millim etres,
+times in seconds.
+Average height V r x |y|
+< 140 cm 0.774 1.89 0.183 1.39
+140-150 cm 2.06 0.693 1.47 0.868
+150-160 cm 0.873 0.493 0.415 0.408
+160-170 cm 0.523 0.279 0.235 0.416
+170-180 cm 1.1 0.502 0.799 0.492
+> 180 cm 1.28 0.708 0.811 0.246
+54
+C.4 Secondary eﬀects and age
+C.4.1 Density
+Tables 58 and 59 show the age dependence of observables in, respectively, the 0 ≤ ρ ≤
+0. 05 ped/m 2 and 0 . 15 ≤ ρ ≤ 0. 2 ped/m 2 density ranges. Results mostly reﬂect those of
+the main text, with high or relatively high δ values suggesting that some not very good
+p values may be due to the scarcity of data in the children and el derly categories (i.e.
+the categories with the most diﬀerent behaviour). A remarkab le feature, presented with
+the caveats related to sensor noise in the tracking of childr en, is that while in general
+velocity decreases with density, this is not true for dyads w ith children, as shown in
+ﬁgure 20 in the main text.
+Table 58: Observable dependence on minimum age in the 0≤ ρ ≤ 0. 05 ped/m 2 density
+range. Lengths in millimetres, times in seconds.
+Minimum age Nk
+g V r x |y|
+0-9 years 9 1075 ± 68 (σ =205) 1078 ± 97 (σ =291) 663 ± 62 (σ =186) 704 ± 140 (σ =414)
+10-19 years 44 1175 ± 43 (σ =288) 802 ± 40 (σ =262) 661 ± 25 (σ =167) 337 ± 44 (σ =294)
+20-29 years 184 1198 ± 14 (σ =196) 853 ± 23 (σ =313) 694 ± 14 (σ =193) 357 ± 27 (σ =372)
+30-39 years 185 1196 ± 16 (σ =217) 894 ± 22 (σ =306) 696 ± 16 (σ =223) 418 ± 27 (σ =368)
+40-49 years 87 1150 ± 20 (σ =191) 909 ± 32 (σ =297) 683 ± 22 (σ =202) 440 ± 42 (σ =395)
+50-59 years 71 1157 ± 23 (σ =198) 844 ± 27 (σ =228) 678 ± 18 (σ =149) 381 ± 38 (σ =320)
+60-69 years 47 1022 ± 25 (σ =174) 912 ± 51 (σ =348) 670 ± 27 (σ =182) 481 ± 62 (σ =424)
+≥ 70 years 9 891 ± 31 (σ =92.6) 815 ± 100 (σ =307) 605 ± 19 (σ =55.8) 411 ± 130 (σ =394)
+F7,628 6.98 1.61 0.527 1.94
+p 4.97·10− 8 0.129 0.815 0.0613
+R2 0.0722 0.0176 0.00584 0.0211
+δ 1.59 1.03 0.419 1.16
+Table 59: Observable dependence on minimum age in the 0 . 15 ≤ ρ ≤ 0. 2 ped/m 2 density
+range. Lengths in millimetres, times in seconds.
+Minimum age Nk
+g V r x |y|
+0-9 years 6 1284 ± 110 (σ =258) 693 ± 51 (σ =126) 485 ± 47 (σ =116) 401 ± 92 (σ =225)
+10-19 years 14 1146 ± 47 (σ =176) 806 ± 65 (σ =244) 571 ± 39 (σ =147) 426 ± 91 (σ =341)
+20-29 years 72 1099 ± 16 (σ =133) 745 ± 20 (σ =167) 598 ± 17 (σ =145) 322 ± 30 (σ =255)
+30-39 years 39 1102 ± 31 (σ =192) 766 ± 33 (σ =208) 575 ± 24 (σ =149) 372 ± 50 (σ =313)
+40-49 years 17 1121 ± 32 (σ =131) 763 ± 37 (σ =152) 547 ± 42 (σ =172) 403 ± 68 (σ =279)
+50-59 years 10 1057 ± 53 (σ =167) 739 ± 60 (σ =190) 485 ± 58 (σ =184) 416 ± 110 (σ =343)
+60-69 years 7 1021 ± 75 (σ =199) 967 ± 130 (σ =354) 616 ± 84 (σ =222) 618 ± 160 (σ =423)
+≥ 70 years 2 760 ± 18 (σ =25.4) 644 ± 22 (σ =31) 585 ± 8.9 (σ =12.5) 185 ± 52 (σ =73.5)
+F7,159 2.76 1.46 1.11 1.21
+p 0.00993 0.184 0.359 0.299
+R2 0.108 0.0606 0.0466 0.0506
+δ 2.22 0.987 0.652 1.1
+Tables 60 and 61 show, respectively, the minimum age p and δ values in diﬀerent
+density ranges
+55
+Table 60: Minimum age p values in diﬀerent density ranges. Lengths in millimetres,
+times in seconds.
+Density V r x |y|
+0-0.05 ped/m2 4.97·10− 8 0.129 0.815 0.0613
+0.05-0.1 ped/m2 < 10− 8 0.00286 0.0232 1.26·10− 6
+0.1-0.15 ped/m2 8.51·10− 8 0.0207 0.00346 7.22·10− 6
+0.15-0.2 ped/m2 0.00993 0.184 0.359 0.299
+0.2-0.25 ped/m2 0.651 0.504 0.118 0.328
+Table 61: Minimum age p values in diﬀerent density ranges. Lengths in millimetres,
+times in seconds.
+Density V r x |y|
+0-0.05 ped/m2 1.59 1.03 0.419 1.16
+0.05-0.1 ped/m2 1.6 0.941 0.605 1.36
+0.1-0.15 ped/m2 2.25 0.689 0.93 0.924
+0.15-0.2 ped/m2 2.22 0.987 0.652 1.1
+0.2-0.25 ped/m2 0.513 2.14 1.15 1.14
+C.4.2 Relation
+Tables 62, 63, 64 and 65 show the age dependence of observables in, respectively, col-
+leagues, couples, families and friends. Observable values almost have no age dependence
+in the 20-59 years age (with the exclusion of friend velocity ). It is interesting to note that
+the |y| distribution assumes a larger value for families even when o nly adults are involved.
+Another interesting, although expectable, result is that w hile dyads with teenagers are
+very abreast in the friends category, they are not abreast in the family one (the |y| values
+is almost doubled in families).
+Table 62: Observable dependence on minimum age for colleagues. Lengths in millime-
+tres, times in seconds.
+Minimum age Nk
+g V r x |y|
+20-29 years 86 1255 ± 18 (σ =165) 813 ± 20 (σ =185) 706 ± 16 (σ =144) 291 ± 24 (σ =219)
+30-39 years 145 1293 ± 14 (σ =167) 861 ± 21 (σ =257) 734 ± 14 (σ =165) 331 ± 25 (σ =301)
+40-49 years 71 1258 ± 14 (σ =119) 870 ± 28 (σ =236) 714 ± 19 (σ =161) 363 ± 38 (σ =324)
+50-59 years 52 1274 ± 22 (σ =159) 844 ± 24 (σ =172) 700 ± 20 (σ =142) 350 ± 36 (σ =263)
+60-69 years 4 1217 ± 36 (σ =72) 1075 ± 220 (σ =433) 692 ± 100 (σ =208) 617 ± 320 (σ =632)
+F4,353 1.17 1.72 0.702 1.62
+p 0.326 0.146 0.591 0.168
+R2 0.013 0.0191 0.00789 0.018
+δ 0.461 1.32 0.252 1.33
+56
+Table 63: Observable dependence on minimum age for couples. Lengths in millimetres,
+times in seconds.
+Minimum age Nk
+g V r x |y|
+10-19 years 2 958 ± 180 (σ =253) 919 ± 53 (σ =74.7) 725 ± 58 (σ =81.7) 480 ± 180 (σ =257)
+20-29 years 74 1115 ± 19 (σ =165) 711 ± 27 (σ =229) 600 ± 18 (σ =154) 281 ± 28 (σ =243)
+30-39 years 17 1049 ± 37 (σ =151) 670 ± 35 (σ =143) 572 ± 32 (σ =130) 274 ± 30 (σ =124)
+40-49 years 3 1091 ± 110 (σ =187) 897 ± 110 (σ =198) 684 ± 66 (σ =115) 501 ± 130 (σ =223)
+F3,92 1.2 1.53 0.966 1.36
+p 0.315 0.211 0.412 0.261
+R2 0.0376 0.0476 0.0306 0.0424
+δ 0.946 1.78 1.19 1.65
+Table 64: Observable dependence on minimum age for families . Lengths in millimetres,
+times in seconds.
+Minimum age Nk
+g V r x |y|
+0-9 years 31 1143 ± 42 (σ =235) 995 ± 69 (σ =383) 529 ± 34 (σ =189) 701 ± 87 (σ =485)
+10-19 years 36 1163 ± 38 (σ =230) 831 ± 49 (σ =296) 617 ± 30 (σ =179) 415 ± 58 (σ =347)
+20-29 years 23 1109 ± 39 (σ =187) 877 ± 58 (σ =277) 581 ± 37 (σ =177) 527 ± 78 (σ =373)
+30-39 years 46 1078 ± 23 (σ =159) 814 ± 33 (σ =225) 561 ± 24 (σ =163) 458 ± 49 (σ =330)
+40-49 years 41 1116 ± 31 (σ =199) 801 ± 28 (σ =181) 582 ± 23 (σ =149) 431 ± 40 (σ =256)
+50-59 years 28 1048 ± 32 (σ =169) 846 ± 55 (σ =289) 562 ± 34 (σ =182) 492 ± 78 (σ =410)
+60-69 years 37 1030 ± 24 (σ =145) 911 ± 63 (σ =382) 642 ± 25 (σ =154) 512 ± 75 (σ =456)
+≥ 70 years 4 847 ± 52 (σ =104) 926 ± 190 (σ =384) 550 ± 38 (σ =75.6) 575 ± 240 (σ =477)
+F7,238 2.83 1.52 1.46 1.74
+p 0.00758 0.162 0.182 0.101
+R2 0.0767 0.0427 0.0412 0.0486
+δ 1.42 0.679 0.659 0.686
+Table 65: Observable dependence on minimum age for friends. Lengths in millimetres,
+times in seconds.
+Minimum age Nk
+g V r x |y|
+10-19 years 23 1143 ± 61 (σ =292) 681 ± 15 (σ =73.9) 621 ± 16 (σ =78.5) 217 ± 19 (σ =93.2)
+20-29 years 164 1186 ± 13 (σ =164) 801 ± 16 (σ =208) 683 ± 10 (σ =128) 298 ± 21 (σ =265)
+30-39 years 56 1143 ± 28 (σ =206) 817 ± 24 (σ =178) 644 ± 22 (σ =162) 366 ± 38 (σ =286)
+40-49 years 19 1089 ± 47 (σ =206) 819 ± 49 (σ =213) 682 ± 21 (σ =92.3) 341 ± 68 (σ =295)
+50-59 years 22 1051 ± 36 (σ =167) 759 ± 44 (σ =208) 637 ± 24 (σ =115) 308 ± 59 (σ =276)
+60-69 years 26 996 ± 38 (σ =192) 808 ± 40 (σ =202) 625 ± 33 (σ =169) 383 ± 59 (σ =299)
+≥ 70 years 8 906 ± 32 (σ =91.4) 716 ± 56 (σ =159) 606 ± 18 (σ =52.2) 290 ± 85 (σ =239)
+F6,311 7.17 1.82 1.98 1.29
+p 3.58·10− 7 0.0947 0.0678 0.262
+R2 0.121 0.0339 0.0368 0.0242
+δ 1.73 0.904 0.608 0.731
+57
+C.4.3 Gender
+Tables 66, 67 and 68 show the age dependence of observables in, respectively, dyads with
+two females, mixed dyads and two males. The results are simil ar to those shown in the
+main text. Although based on an extremely reduced number of d ata, it is interesting
+to note the large diﬀerence in velocity between two males and t wo females dyads with
+children (mixed dyads show a value in between, probably due t o the fact that they
+include male and female parents), and the very large |y| (non-abreast formation) value
+assumed in two females dyads (mixed dyads on the opposite are more abreast). This
+values are based on very few groups, but diﬀerences are nevert heless larger than standard
+errors, and could reﬂect diﬀerences in the relation that chil dren have with fathers and
+mothers (at least in the observed cultural environment).
+Table 66: Observable dependence on minimum age for two females dyads. Lengths in
+millimetres, times in seconds.
+Minimum age Nk
+g V r x |y|
+0-9 years 6 985 ± 88 (σ =215) 1252 ± 150 (σ =378) 525 ± 78 (σ =192) 993 ± 220 (σ =535)
+10-19 years 20 1075 ± 58 (σ =258) 738 ± 48 (σ =216) 621 ± 23 (σ =103) 291 ± 64 (σ =288)
+20-29 years 110 1169 ± 16 (σ =167) 789 ± 21 (σ =221) 684 ± 10 (σ =107) 273 ± 26 (σ =277)
+30-39 years 55 1108 ± 25 (σ =188) 777 ± 23 (σ =171) 639 ± 16 (σ =118) 330 ± 33 (σ =246)
+40-49 years 24 1040 ± 33 (σ =163) 827 ± 54 (σ =266) 622 ± 25 (σ =123) 404 ± 77 (σ =379)
+50-59 years 17 1015 ± 35 (σ =143) 704 ± 24 (σ =97.3) 623 ± 29 (σ =120) 240 ± 32 (σ =133)
+60-69 years 17 923 ± 31 (σ =130) 791 ± 52 (σ =213) 580 ± 36 (σ =149) 390 ± 85 (σ =349)
+≥ 70 years 3 958 ± 14 (σ =23.6) 629 ± 31 (σ =53.5) 587 ± 40 (σ =69) 186 ± 22 (σ =37.4)
+F7,244 6.27 4.83 3.74 5.64
+p 8.87·10− 7 4.06·10− 5 0.000721 4.77·10− 6
+R2 0.153 0.122 0.0969 0.139
+δ 1.51 1.94 1.42 1.78
+Table 67: Observable dependence on minimum age for mixed dya ds. Lengths in mil-
+limetres, times in seconds.
+Minimum age Nk
+g V r x |y|
+0-9 years 12 1119 ± 56 (σ =193) 888 ± 75 (σ =259) 573 ± 61 (σ =212) 547 ± 83 (σ =287)
+10-19 years 16 1060 ± 45 (σ =181) 840 ± 54 (σ =214) 620 ± 36 (σ =145) 417 ± 78 (σ =313)
+20-29 years 120 1123 ± 16 (σ =175) 782 ± 23 (σ =251) 619 ± 17 (σ =182) 352 ± 27 (σ =301)
+30-39 years 93 1143 ± 19 (σ =180) 834 ± 30 (σ =286) 601 ± 19 (σ =179) 435 ± 40 (σ =386)
+40-49 years 53 1141 ± 26 (σ =191) 802 ± 25 (σ =178) 614 ± 21 (σ =150) 400 ± 34 (σ =245)
+50-59 years 34 1078 ± 29 (σ =168) 848 ± 47 (σ =277) 604 ± 32 (σ =188) 455 ± 66 (σ =387)
+60-69 years 38 1042 ± 26 (σ =160) 905 ± 61 (σ =378) 642 ± 25 (σ =152) 506 ± 73 (σ =451)
+≥ 70 years 5 831 ± 44 (σ =99) 868 ± 160 (σ =363) 563 ± 33 (σ =72.8) 484 ± 210 (σ =463)
+F7,363 3.64 1.11 0.387 1.32
+p 0.000822 0.358 0.91 0.24
+R2 0.0656 0.0209 0.0074 0.0248
+δ 1.76 0.431 0.536 0.652
+58
+Table 68: Observable dependence on minimum age for two males dyads. Lengths in
+millimetres, times in seconds.
+Minimum age Nk
+g V r x |y|
+0-9 years 13 1237 ± 65 (σ =233) 975 ± 120 (σ =425) 491 ± 42 (σ =153) 709 ± 150 (σ =540)
+10-19 years 27 1277 ± 48 (σ =252) 803 ± 58 (σ =303) 628 ± 34 (σ =175) 376 ± 65 (σ =337)
+20-29 years 134 1241 ± 14 (σ =156) 806 ± 16 (σ =180) 697 ± 13 (σ =148) 296 ± 18 (σ =208)
+30-39 years 144 1280 ± 16 (σ =190) 860 ± 18 (σ =222) 732 ± 14 (σ =173) 331 ± 22 (σ =259)
+40-49 years 72 1257 ± 14 (σ =122) 875 ± 27 (σ =233) 715 ± 19 (σ =159) 365 ± 39 (σ =328)
+50-59 years 60 1254 ± 22 (σ =168) 846 ± 25 (σ =193) 683 ± 19 (σ =144) 373 ± 38 (σ =297)
+60-69 years 12 1134 ± 48 (σ =167) 930 ± 89 (σ =307) 711 ± 54 (σ =189) 462 ± 120 (σ =406)
+≥ 70 years 4 902 ± 48 (σ =95.7) 802 ± 92 (σ =183) 619 ± 19 (σ =37.6) 410 ± 140 (σ =289)
+F7,458 3.77 1.82 5.09 4.07
+p 0.000553 0.081 1.39·10− 5 0.000239
+R2 0.0544 0.0271 0.0722 0.0586
+δ 2.01 0.445 1.41 1.64
+C.4.4 Height
+Tables 69 and 70 show the age dependence of observables in, respectively, the 150-160
+cm and 170-180 cm minimum height ranges. These data, which re spect the patterns
+highlighted in the main text, present a suﬃcient number of gr oups in each category and
+are thus reliable. In some situation, a noisy tracking of a ch ild may cause to have a
+category with very poor and not reliable representation (e. g. groups with children but
+with a tall minimum height) causing some irregular behaviou r in the p and δ values of
+tables 71 and 72.
+Table 69: Observable dependence on minimum age in the 150-160 cm minimum height
+range. Lengths in millimetres, times in seconds.
+Minimum age Nk
+g V r x |y|
+10-19 years 21 1124 ± 54 (σ =246) 783 ± 47 (σ =215) 606 ± 31 (σ =143) 352 ± 73 (σ =333)
+20-29 years 75 1157 ± 21 (σ =184) 800 ± 27 (σ =232) 668 ± 14 (σ =122) 311 ± 35 (σ =307)
+30-39 years 48 1109 ± 24 (σ =168) 804 ± 32 (σ =223) 624 ± 20 (σ =139) 392 ± 44 (σ =305)
+40-49 years 32 1108 ± 39 (σ =218) 828 ± 37 (σ =211) 589 ± 27 (σ =151) 452 ± 58 (σ =328)
+50-59 years 19 1067 ± 39 (σ =171) 757 ± 34 (σ =146) 611 ± 36 (σ =156) 334 ± 52 (σ =228)
+60-69 years 33 1008 ± 28 (σ =163) 808 ± 65 (σ =375) 641 ± 20 (σ =112) 365 ± 75 (σ =429)
+≥ 70 years 5 883 ± 52 (σ =117) 666 ± 48 (σ =108) 538 ± 30 (σ =67.2) 272 ± 88 (σ =197)
+F6,226 3.65 0.427 2.13 0.849
+p 0.00177 0.86 0.0506 0.533
+R2 0.0883 0.0112 0.0536 0.022
+δ 1.52 0.802 1.09 0.569
+59
+Table 70: Observable dependence on minimum age in the 170-18 0 cm minimum height
+range. Lengths in millimetres, times in seconds.
+Minimum age Nk
+g V r x |y|
+20-29 years 95 1209 ± 16 (σ =152) 808 ± 18 (σ =173) 688 ± 16 (σ =156) 309 ± 22 (σ =219)
+30-39 years 90 1269 ± 21 (σ =203) 838 ± 24 (σ =225) 729 ± 16 (σ =155) 300 ± 26 (σ =246)
+40-49 years 45 1265 ± 18 (σ =120) 820 ± 20 (σ =137) 720 ± 20 (σ =131) 298 ± 26 (σ =176)
+50-59 years 30 1241 ± 33 (σ =182) 862 ± 44 (σ =238) 635 ± 27 (σ =148) 436 ± 68 (σ =371)
+F3,256 2.21 0.709 3.36 2.61
+p 0.0873 0.548 0.0194 0.0517
+R2 0.0253 0.00823 0.0379 0.0297
+δ 0.339 0.282 0.613 0.51
+Table 71: Minimum age p values in diﬀerent minimum height ranges. Lengths in mil-
+limetres, times in seconds.
+Minimum height V r x |y|
+< 140 cm 0.0333 0.137 0.0326 0.0184
+140-150 cm 0.0129 0.65 0.858 0.615
+150-160 cm 0.00177 0.86 0.0506 0.533
+160-170 cm 0.000643 0.00561 0.807 0.00456
+170-180 cm 0.0873 0.548 0.0194 0.0517
+> 180 cm 0.98 0.292 0.56 0.0386
+Table 72: Minimum age δ values in diﬀerent minimum height ranges. Lengths in mil-
+limetres, times in seconds.
+Minimum height V r x |y|
+< 140 cm 0.829 0.566 0.83 0.919
+140-150 cm 7.42 1.27 0.946 1.69
+150-160 cm 1.52 0.802 1.09 0.569
+160-170 cm 1.83 1.09 0.926 0.818
+170-180 cm 0.339 0.282 0.613 0.51
+> 180 cm 0.181 1.2 1.53 1.26
+60
+C.5 Secondary eﬀects and height
+C.5.1 Density
+Tables 73 and 74 show the dependence of observables on minimum height in the 0 ≤
+ρ ≤ 0. 05 and 0 . 15 ≤ ρ ≤ 0. 2 ped/m 2 ranges, respectively. The trends discussed in the
+main text are still present. We notice again a tendency of sho rt people (most probably
+children) to walk faster at higher density. p and δ values for minimum height at diﬀerent
+densities are shown in tables 75 and 76
+Table 73: Observable dependence on minimum height for dyadsin the 0 ≤ ρ ≤ 0. 05
+ped/m2 range. Lengths in millimetres, times in seconds.
+Minimum height Nk
+g V r x |y|
+< 140 cm 21 1138 ± 63 (σ =288) 1034 ± 80 (σ =368) 693 ± 44 (σ =201) 616 ± 92 (σ =421)
+140-150 cm 29 1067 ± 57 (σ =304) 876 ± 51 (σ =275) 671 ± 40 (σ =218) 420 ± 64 (σ =346)
+150-160 cm 148 1104 ± 18 (σ =224) 837 ± 25 (σ =304) 648 ± 11 (σ =128) 395 ± 32 (σ =390)
+160-170 cm 290 1162 ± 11 (σ =187) 880 ± 19 (σ =318) 688 ± 13 (σ =217) 409 ± 22 (σ =379)
+170-180 cm 141 1259 ± 16 (σ =188) 878 ± 21 (σ =253) 718 ± 17 (σ =198) 364 ± 28 (σ =331)
+> 180 cm 7 1242 ± 69 (σ =182) 929 ± 73 (σ =194) 793 ± 45 (σ =120) 316 ± 100 (σ =270)
+F5,630 9.97 1.72 2.32 1.8
+p < 10− 8 0.128 0.0422 0.11
+R2 0.0733 0.0135 0.0181 0.0141
+δ 0.906 0.634 1.13 0.767
+Table 74: Observable dependence on minimum height for dyads in the 0 . 15 ≤ ρ ≤ 0. 2
+ped/m2 range. Lengths in millimetres, times in seconds.
+Minimum height Nk
+g V r x |y|
+< 140 cm 8 1185 ± 57 (σ =162) 872 ± 150 (σ =416) 512 ± 68 (σ =193) 555 ± 190 (σ =543)
+140-150 cm 6 1166 ± 130 (σ =315) 965 ± 170 (σ =409) 604 ± 73 (σ =179) 590 ± 190 (σ =457)
+150-160 cm 39 1068 ± 23 (σ =146) 754 ± 28 (σ =177) 518 ± 27 (σ =169) 408 ± 52 (σ =327)
+160-170 cm 72 1093 ± 20 (σ =170) 722 ± 16 (σ =136) 586 ± 14 (σ =121) 321 ± 24 (σ =203)
+170-180 cm 42 1127 ± 24 (σ =158) 792 ± 26 (σ =170) 618 ± 26 (σ =171) 352 ± 44 (σ =284)
+F4,162 1.34 3.29 2.62 2.31
+p 0.259 0.0127 0.0368 0.0597
+R2 0.0319 0.0751 0.0608 0.054
+δ 0.787 1.44 0.606 1.18
+C.5.2 Relation
+Tables 77, 78, 79 and 80 show the dependence of observables onminimum height for
+colleagues, couples, families and friends, respectively. The dependence of observables on
+height appears to be attenuated when analysed for groups wit h a ﬁxed relation (and in
+particular for couples), as shown by the higher p values, and, to a lesser extent, lower δ
+values.
+61
+Table 75: p values for minimum height in diﬀerent density ranges.
+Density V r x |y|
+0-0.05 ped/m2 < 10− 8 0.128 0.0422 0.11
+0.05-0.1 ped/m2 < 10− 8 0.000607 0.000112 4.09·10− 6
+0.1-0.15 ped/m2 1.84·10− 5 < 10− 8 3.34·10− 5 < 10− 8
+0.15-0.2 ped/m2 0.259 0.0127 0.0368 0.0597
+0.2-0.25 ped/m2 0.303 0.602 0.603 0.765
+Table 76: δ values for minimum height in diﬀerent density ranges.
+Density V r x |y|
+0-0.05 ped/m2 0.906 0.634 1.13 0.767
+0.05-0.1 ped/m2 1.17 0.664 0.63 0.973
+0.1-0.15 ped/m2 0.856 1.32 1.12 1.29
+0.15-0.2 ped/m2 0.787 1.44 0.606 1.18
+0.2-0.25 ped/m2 0.886 0.578 0.54 0.422
+Table 77: Observable dependence on minimum height for colle ague dyads. Lengths in
+millimetres, times in seconds.
+Minimum height Nk
+g V r x |y|
+150-160 cm 15 1135 ± 36 (σ =141) 732 ± 25 (σ =98.2) 652 ± 22 (σ =85.9) 265 ± 31 (σ =120)
+160-170 cm 159 1276 ± 12 (σ =157) 874 ± 21 (σ =265) 712 ± 13 (σ =168) 369 ± 28 (σ =351)
+170-180 cm 170 1288 ± 12 (σ =155) 846 ± 15 (σ =202) 731 ± 12 (σ =153) 312 ± 18 (σ =236)
+> 180 cm 13 1220 ± 36 (σ =128) 789 ± 59 (σ =214) 689 ± 33 (σ =120) 263 ± 67 (σ =241)
+F3,353 5.03 2.2 1.49 1.63
+p 0.002 0.0881 0.217 0.182
+R2 0.041 0.0183 0.0125 0.0137
+δ 0.996 0.556 0.53 0.307
+Table 78: Observable dependence on minimum height for coupl es. Lengths in millime-
+tres, times in seconds.
+Minimum height Nk
+g V r x |y|
+150-160 cm 20 1060 ± 43 (σ =193) 736 ± 32 (σ =143) 631 ± 25 (σ =111) 288 ± 39 (σ =175)
+160-170 cm 60 1114 ± 21 (σ =160) 716 ± 33 (σ =254) 591 ± 22 (σ =171) 305 ± 34 (σ =261)
+170-180 cm 15 1092 ± 42 (σ =162) 678 ± 35 (σ =137) 592 ± 24 (σ =93.1) 245 ± 39 (σ =151)
+F2,92 0.773 0.296 0.528 0.408
+p 0.464 0.745 0.591 0.666
+R2 0.0165 0.00639 0.0114 0.00878
+δ 0.321 0.414 0.249 0.249
+62
+Table 79: Observable dependence on minimum height for famil ies. Lengths in millime-
+tres, times in seconds.
+Minimum height Nk
+g V r x |y|
+< 140 cm 33 1117 ± 38 (σ =216) 1062 ± 72 (σ =411) 570 ± 39 (σ =222) 746 ± 89 (σ =509)
+140-150 cm 19 1122 ± 62 (σ =270) 832 ± 60 (σ =262) 636 ± 32 (σ =139) 410 ± 65 (σ =285)
+150-160 cm 77 1107 ± 23 (σ =204) 835 ± 34 (σ =302) 583 ± 19 (σ =163) 466 ± 44 (σ =387)
+160-170 cm 99 1080 ± 17 (σ =170) 831 ± 24 (σ =241) 580 ± 17 (σ =166) 467 ± 33 (σ =332)
+170-180 cm 17 1053 ± 36 (σ =149) 833 ± 65 (σ =268) 566 ± 37 (σ =153) 458 ± 98 (σ =403)
+F4,240 0.602 4.3 0.542 4.04
+p 0.661 0.00224 0.705 0.00344
+R2 0.00993 0.0668 0.00896 0.0631
+δ 0.312 0.788 0.478 0.76
+Table 80: Observable dependence on minimum height for frien ds. Lengths in millimetres,
+times in seconds.
+Minimum height Nk
+g V r x |y|
+< 140 cm 4 1129 ± 55 (σ =109) 611 ± 20 (σ =39.7) 518 ± 31 (σ =61.8) 246 ± 68 (σ =136)
+140-150 cm 16 1115 ± 88 (σ =354) 816 ± 44 (σ =175) 628 ± 43 (σ =172) 382 ± 80 (σ =319)
+150-160 cm 101 1100 ± 20 (σ =202) 770 ± 21 (σ =209) 659 ± 10 (σ =104) 287 ± 27 (σ =269)
+160-170 cm 142 1138 ± 15 (σ =174) 802 ± 18 (σ =211) 665 ± 12 (σ =146) 324 ± 23 (σ =276)
+170-180 cm 53 1199 ± 23 (σ =168) 806 ± 19 (σ =138) 673 ± 18 (σ =132) 323 ± 32 (σ =233)
+> 180 cm 2 1606 ± 23 (σ =32.1) 928 ± 61 (σ =86.6) 805 ± 120 (σ =171) 329 ± 72 (σ =102)
+F5,312 4.13 1.27 1.68 0.515
+p 0.0012 0.276 0.138 0.765
+R2 0.0621 0.02 0.0263 0.00819
+δ 2.52 5.74 2.83 0.461
+C.5.3 Gender
+Tables 81, 82 and 83 show the dependence of observables on minimum height for two
+females, mixed and two males dyads, respectively. As discus sed in the main text and
+shown in ﬁgure 25 in the main text, there is a loss of linearity in x, but the patterns
+described in the main text are still present, although parti ally attenuated, when gender
+is kept ﬁxed.
+C.5.4 Age
+Tables 84 and 85 show the dependence on minimum height of all observables for dyads
+with minimum age in the 20-29 and 50-59 year ranges, respecti vely, showing the eﬀect of
+removing children from the population. Finally, tables 86 a nd 87 show the dependence
+of, respectively, minimum height p and δ values on minimum age ranges.
+63
+Table 81: Observable dependence on minimum height for 2 fema le dyads. Lengths in
+millimetres, times in seconds.
+Minimum height Nk
+g V r x |y|
+< 140 cm 7 956 ± 74 (σ =195) 1186 ± 150 (σ =385) 529 ± 68 (σ =180) 935 ± 190 (σ =509)
+140-150 cm 21 1022 ± 57 (σ =262) 841 ± 66 (σ =300) 591 ± 36 (σ =166) 439 ± 96 (σ =442)
+150-160 cm 114 1098 ± 18 (σ =197) 780 ± 20 (σ =214) 656 ± 11 (σ =112) 306 ± 26 (σ =279)
+160-170 cm 104 1131 ± 16 (σ =159) 768 ± 18 (σ =185) 658 ± 11 (σ =115) 278 ± 24 (σ =245)
+170-180 cm 6 1123 ± 77 (σ =188) 706 ± 34 (σ =83.3) 644 ± 26 (σ =64.8) 213 ± 59 (σ =144)
+F4,247 2.58 6.59 3.11 9.37
+p 0.0381 4.66·10− 5 0.0159 4.55·10− 7
+R2 0.0401 0.0965 0.048 0.132
+δ 1.08 1.66 1.08 1.86
+Table 82: Observable dependence on minimum height for mixed gender dyads. Lengths
+in millimetres, times in seconds.
+Minimum height Nk
+g V r x |y|
+< 140 cm 14 1100 ± 42 (σ =159) 947 ± 82 (σ =307) 590 ± 53 (σ =199) 593 ± 100 (σ =373)
+140-150 cm 9 1107 ± 66 (σ =199) 967 ± 91 (σ =273) 664 ± 42 (σ =127) 552 ± 120 (σ =346)
+150-160 cm 99 1092 ± 20 (σ =195) 829 ± 29 (σ =286) 609 ± 16 (σ =160) 429 ± 38 (σ =376)
+160-170 cm 210 1128 ± 12 (σ =176) 811 ± 18 (σ =262) 618 ± 13 (σ =184) 395 ± 23 (σ =328)
+170-180 cm 37 1083 ± 28 (σ =172) 806 ± 44 (σ =267) 589 ± 24 (σ =143) 404 ± 61 (σ =372)
+> 180 cm 2 937 ± 140 (σ =204) 687 ± 3.2 (σ =4.56) 573 ± 48 (σ =67.8) 253 ± 55 (σ =77.2)
+F5,365 1.14 1.3 0.418 1.27
+p 0.34 0.262 0.836 0.277
+R2 0.0153 0.0175 0.00569 0.0171
+δ 1.08 1.09 0.751 0.945
+Table 83: Observable dependence on minimum height for male d yads. Lengths in mil-
+limetres, times in seconds.
+Minimum height Nk
+g V r x |y|
+< 140 cm 18 1221 ± 48 (σ =203) 977 ± 110 (σ =455) 577 ± 53 (σ =226) 631 ± 130 (σ =549)
+140-150 cm 9 1301 ± 140 (σ =405) 861 ± 85 (σ =255) 640 ± 47 (σ =142) 456 ± 110 (σ =343)
+150-160 cm 21 1196 ± 39 (σ =180) 739 ± 36 (σ =164) 600 ± 22 (σ =103) 320 ± 57 (σ =261)
+160-170 cm 184 1238 ± 13 (σ =179) 863 ± 18 (σ =241) 700 ± 13 (σ =174) 372 ± 23 (σ =315)
+170-180 cm 219 1272 ± 11 (σ =156) 834 ± 12 (σ =184) 719 ± 10 (σ =151) 310 ± 15 (σ =224)
+> 180 cm 15 1271 ± 46 (σ =178) 808 ± 53 (σ =207) 705 ± 35 (σ =134) 272 ± 59 (σ =229)
+F5,460 1.46 2.56 4.51 5.03
+p 0.202 0.0267 0.000499 0.00017
+R2 0.0156 0.0271 0.0468 0.0518
+δ 0.394 0.721 0.903 0.826
+64
+Table 84: Observable dependence on minimum height for dyads with minimum age in
+the 20-29 year range. Lengths in millimetres, times in secon ds.
+Minimum height Nk
+g V r x |y|
+140-150 cm 2 1161 ± 180 (σ =254) 748 ± 62 (σ =87.2) 613 ± 41 (σ =58.5) 398 ± 54 (σ =75.7)
+150-160 cm 75 1157 ± 21 (σ =184) 800 ± 27 (σ =232) 668 ± 14 (σ =122) 311 ± 35 (σ =307)
+160-170 cm 188 1175 ± 13 (σ =176) 781 ± 17 (σ =231) 658 ± 12 (σ =165) 300 ± 19 (σ =265)
+170-180 cm 95 1209 ± 16 (σ =152) 808 ± 18 (σ =173) 688 ± 16 (σ =156) 309 ± 22 (σ =219)
+> 180 cm 3 1262 ± 130 (σ =223) 974 ± 170 (σ =300) 625 ± 9.5 (σ =16.4) 556 ± 220 (σ =373)
+F4,358 1.19 0.818 0.684 0.756
+p 0.315 0.514 0.603 0.554
+R2 0.0131 0.00906 0.00759 0.00838
+δ 0.567 0.906 0.482 0.962
+Table 85: Observable dependence on minimum height for dyads with average age in the
+50-59 year range. Lengths in millimetres, times in seconds.
+Minimum height Nk
+g V r x |y|
+140-150 cm 3 1043 ± 41 (σ =70.2) 784 ± 56 (σ =97) 746 ± 63 (σ =109) 190 ± 16 (σ =28)
+150-160 cm 19 1067 ± 39 (σ =171) 757 ± 34 (σ =146) 611 ± 36 (σ =156) 334 ± 52 (σ =228)
+160-170 cm 59 1162 ± 25 (σ =191) 830 ± 29 (σ =226) 664 ± 22 (σ =165) 371 ± 41 (σ =315)
+170-180 cm 30 1241 ± 33 (σ =182) 862 ± 44 (σ =238) 635 ± 27 (σ =148) 436 ± 68 (σ =371)
+F3,107 3.84 0.928 0.974 0.806
+p 0.0118 0.43 0.408 0.493
+R2 0.0972 0.0254 0.0266 0.0221
+δ 1.12 0.502 0.886 0.687
+Table 86: Minimum height p values in diﬀerent minimum age ranges. Lengths in mil-
+limetres, times in seconds.
+Minimum age V r x |y|
+0-9 years 0.000332 0.143 0.662 0.127
+10-19 years 0.311 0.822 0.478 0.926
+20-29 years 0.315 0.514 0.603 0.554
+30-39 years 5·10− 7 0.595 0.00388 0.0423
+40-49 years 0.000142 0.489 0.00545 0.0649
+50-59 years 0.0118 0.43 0.408 0.493
+60-69 years 0.091 0.23 0.24 0.182
+≥ 70 years 0.627 0.0424 0.0506 0.107
+65
+Table 87: Minimum height δ values in diﬀerent minimum age ranges. Lengths in mil-
+limetres, times in seconds.
+Minimum age V r x |y|
+0-9 years 3.42 1.11 2 1.04
+10-19 years 0.883 0.346 0.519 0.275
+20-29 years 0.567 0.906 0.482 0.962
+30-39 years 2.32 0.943 0.702 1.28
+40-49 years 2.48 0.671 0.993 0.944
+50-59 years 1.12 0.502 0.886 0.687
+60-69 years 0.89 0.436 0.645 0.597
+≥ 70 years 1.08 2.05 2.01 1.7
+66
+D Coder reliability
+D.1 Analysis of coder agreement
+We consider a few possible statistical indicators of agreement between coders.
+D.1.1 Cohen’s κ
+Cohen’sκ [50] is a very popular indicator to compare the agreement bet ween two coders,
+based on the equation
+κ = ( p − pr)/ (1 − pr), (33)
+where p stands for the agreement rate between coders and pr for the probability of
+random agreement. The agreement between pairs of coders acc ording to this statistics
+is shown in table 88.
+Table 88: Agreement between pairs of coders according to Cohen’sκ statistics. Ci − Cj
+stands for agreement between coder i and j.
+Pair Purpose Gender Relation Min Age Avg Age Max Age
+C1 − C2 0.815 0.961 0.636 0.476 0.582 0.555
+C1 − C3 0.923 0.978 0.728 0.808 0.839 0.866
+C2 − C3 0.810 0.944 0.647 0.449 0.508 0.526
+These results show that in general the agreement is higher fo r gender, followed by
+purpose and relation. The agreement between coders 1 and 3 is similar also concerning
+age, while the agreement with coder 2 is quite poor in these ca tegories. Although there
+is no real sound mathematical way to evaluate the absolute va lue of these numbers,
+according to popular benchmarks, an agreement between 0.8 a nd 1 is considered as
+“almost perfect”, an agreement between 0.6 and 0.8 as “subst antial”, while an agreement
+between 0.4 and 0.6 is only “moderate” [51]
+D.1.2 Fleiss’κ
+It generalises eq. 33 to deal with multiple coders and catego ries [52]. The corresponding
+values are shown in table 89
+Table 89: Agreement between coders according to Fleiss’ κ statistics.
+Purpose Gender Relation Min Age Avg Age Max Age
+0.849 0.961 0.669 0.289 0.332 0.300
+We see that, in relative terms, agreement is higher for gende r, followed by purpose
+and relation, and lowest for age. In absolute terms, accordi ng to the benchmarks, we
+have almost perfect agreement in gender and purpose, substa ntial in relation and “fair”
+67
+(i.e., worst than “moderate”) for age indicators, due to the eﬀect of the diﬀerent coding
+by coder 2.
+Anyway, if we try to plot the age diﬀerence between coders, as i n ﬁgure 30, we see
+that although disagreement with coder 2 is substantial, it i s almost completely limited to
+a tendency of coder 2 to put pedestrians in a slightly younger category, i.e. the diﬀerence
+in age between the codings is limited. Nevertheless the Flei ss indicator does not take in
+account the magnitude of diﬀerence, and is thus not completel y adequate to deal with
+ordered data.
+Figure 30: Histograms of age diﬀerences between coders.
+D.1.3 Krippendorﬀ’s α
+The Krippendorﬀ α statistics [53], that allows for consideration of quantita tive diﬀer-
+ences between coding results, gives the results shown in tab le 90.
+Table 90: Agreement between coders according to Krippendor ﬀ’s α statistics. Pur-
+pose, gender and relation are “nominal” data, age is on an “in terval”, according to the
+deﬁnition of α statistics.
+Purpose Gender Relation Min Age Avg Age Max Age
+0.849 0.961 0.669 0.709 0.730 0.729
+Krippendorﬀ does not provide any “magic number” but suggest s to use data with at
+least α > 0. 667 (satisﬁed by all our categories) and require α > 0. 8, satisﬁed by purpose
+and gender, for reliable results ( α between 0.667 and 0.8 could be used for “tentative
+conclusions”).
+68
+D.1.4 Discussion
+Using popular indicators of coder reliability, we have found that, in relative terms, the
+most reliable coding regards gender, followed by purpose. I n absolute terms, according
+to the Krippendorﬀ α statistics that can better cope with the nature of our data, w e
+may see that the purpose and gender codings may be considered as enough reliable
+to provide sound ﬁndings, while the relation and age codings are reliable enough for
+reporting tentative ﬁndings.
+The analysis based on these indicators provides an estimate on the reliability of
+coding of pedestrians in diﬀerent categories. We may neverth eless use another approach
+to test the reliability of our ﬁndings when based on diﬀerent c oding processes. Since for
+each category we analyse the values of the observables V , r, x and |y|, we may compare
+these quantitative results between diﬀerent coders.
+This comparison, which has also the advantage of being based on more mathemat-
+ically sound statistical indicators (standard errors, ANO VA analysis) is performed in
+section D.2, and shows again that for purpose and gender we ha ve an almost perfect
+quantitative agreement, while for relation and age, althou gh the agreement is less good,
+the major patterns of behaviour are qualitatively observed regardless of coders.
+D.2 Quantitative comparison of results
+D.2.1 Purpose
+The results (on the common subset of data) for the purpose dependence of all observables
+between the main coder (coder 1) and the secondary coders are compared in tables 91,
+92 and 93.
+Table 91: Observable dependence on purpose for dyads according to coder 1 (common
+data set only). Lengths in millimetres, times in seconds.
+Purpose Nk
+g V r x |y|
+Leisure 136 1085 ± 19 (σ =220) 796 ± 21 (σ =248) 636 ± 13 (σ =151) 351 ± 28 (σ =327)
+Work 132 1257 ± 14 (σ =157) 829 ± 17 (σ =196) 723 ± 12 (σ =143) 303 ± 21 (σ =241)
+F1,266 53.1 1.41 23.5 1.88
+p < 10− 8 0.236 2.14·10− 6 0.171
+R2 0.166 0.00529 0.0811 0.00703
+δ 0.893 0.146 0.594 0.168
+The diﬀerences between coders are thus always of one standard error or smaller, and
+the extremely signiﬁcant statistical diﬀerences in the x and V distribution (along with
+the less signiﬁcant |y| and r ones) are reported by all coders.
+D.2.2 Relation
+The results (on the common subset of data) for the relation dependence of all observables
+between the main coder (coder 1) and the secondary coders are compared in tables 94, 95
+69
+Table 92: Observable dependence on purpose for dyads accord ing to coder 2 (common
+data set only). Lengths in millimetres, times in seconds.
+Purpose Nk
+g V r x |y|
+Leisure 151 1093 ± 17 (σ =212) 793 ± 20 (σ =243) 641 ± 12 (σ =147) 344 ± 26 (σ =318)
+Work 117 1269 ± 15 (σ =159) 837 ± 18 (σ =196) 728 ± 13 (σ =146) 306 ± 22 (σ =243)
+F1,266 56.2 2.56 23.4 1.13
+p < 10− 8 0.111 2.18·10− 6 0.289
+R2 0.175 0.00954 0.081 0.00422
+δ 0.927 0.198 0.599 0.131
+Table 93: Observable dependence on purpose for dyads accord ing to coder 3 (common
+data set only). Lengths in millimetres, times in seconds.
+Purpose Nk
+g V r x |y|
+Leisure 133 1077 ± 19 (σ =217) 789 ± 22 (σ =250) 626 ± 13 (σ =145) 354 ± 29 (σ =330)
+Work 133 1262 ± 14 (σ =156) 836 ± 17 (σ =195) 732 ± 12 (σ =144) 302 ± 21 (σ =239)
+F1,264 63.6 2.93 35.6 2.13
+p < 10− 8 0.0881 < 10− 8 0.145
+R2 0.194 0.011 0.119 0.00802
+δ 0.982 0.211 0.734 0.18
+and 96. While all the major trends exposed in the main text are conﬁrmed, quantitative
+results between coders may sometimes be diﬀerent (we refer in particular to the |y|
+distribution for couples, extremely narrow according to co der 3).
+Table 94: Observable dependence on relation for dyads accor ding to coder 1 (common
+data set only). Lengths in millimetres, times in seconds.
+Relation Nk
+g V r x |y|
+Colleagues 125 1256 ± 14 (σ =154) 829 ± 18 (σ =196) 725 ± 13 (σ =142) 301 ± 21 (σ =239)
+Couples 28 1087 ± 37 (σ =194) 690 ± 33 (σ =174) 611 ± 21 (σ =112) 248 ± 37 (σ =198)
+Families 40 1051 ± 24 (σ =153) 864 ± 54 (σ =341) 594 ± 21 (σ =134) 492 ± 69 (σ =438)
+Friends 56 1121 ± 36 (σ =271) 777 ± 24 (σ =182) 669 ± 19 (σ =145) 286 ± 32 (σ =243)
+F3,245 16.4 4.19 11.8 6.12
+p < 10− 8 0.00651 3.06·10− 7 0.0005
+R2 0.167 0.0488 0.126 0.0697
+δ 1.33 0.612 0.934 0.678
+D.2.3 Gender
+The results (on the common subset of data) for the gender dependence of all observables
+between the main coder (coder 1) and the secondary coders are compared in tables 97,
+98 and 99, showing that there is basically no diﬀerence in the c oding of gender.
+70
+Table 95: Observable dependence on relation for dyads accor ding to coder 2 (common
+data set only). Lengths in millimetres, times in seconds.
+Relation Nk
+g V r x |y|
+Colleagues 116 1267 ± 14 (σ =156) 839 ± 18 (σ =197) 729 ± 14 (σ =147) 308 ± 23 (σ =244)
+Couples 44 1082 ± 28 (σ =184) 703 ± 21 (σ =140) 582 ± 19 (σ =125) 296 ± 33 (σ =221)
+Families 42 1054 ± 25 (σ =164) 894 ± 53 (σ =341) 651 ± 25 (σ =163) 451 ± 70 (σ =457)
+Friends 66 1131 ± 31 (σ =254) 786 ± 23 (σ =188) 673 ± 17 (σ =136) 304 ± 29 (σ =238)
+F3,264 19 6.55 11.9 3.13
+p < 10− 8 0.000276 2.54·10− 7 0.0262
+R2 0.178 0.0692 0.119 0.0344
+δ 1.35 0.74 1.04 0.437
+Table 96: Observable dependence on relation for dyads accor ding to coder 3 (common
+data set only) Lengths in millimetres, times in seconds..
+Relation Nk
+g V r x |y|
+Colleagues 136 1259 ± 14 (σ =158) 834 ± 17 (σ =194) 727 ± 13 (σ =147) 304 ± 21 (σ =242)
+Couples 23 1070 ± 42 (σ =204) 624 ± 20 (σ =96.4) 578 ± 20 (σ =95.1) 182 ± 17 (σ =81.2)
+Families 50 1053 ± 24 (σ =172) 867 ± 44 (σ =312) 612 ± 20 (σ =140) 478 ± 59 (σ =416)
+Friends 54 1084 ± 32 (σ =235) 780 ± 27 (σ =196) 663 ± 22 (σ =159) 298 ± 33 (σ =245)
+F3,259 23.4 7.57 12.4 7.52
+p < 10− 8 7.11·10− 5 1.36·10− 7 7.61·10− 5
+R2 0.213 0.0807 0.125 0.0801
+δ 1.27 0.915 1.06 0.849
+Table 97: Observable dependence on gender for dyads accordi ng to coder 1 (common
+data set only). Lengths in millimetres, times in seconds.
+Gender Nk
+g V r x |y|
+Two females 55 1076 ± 32 (σ =240) 745 ± 21 (σ =155) 629 ± 15 (σ =112) 290 ± 33 (σ =242)
+Mixed 86 1095 ± 19 (σ =173) 820 ± 31 (σ =287) 641 ± 17 (σ =159) 384 ± 39 (σ =360)
+Two males 127 1261 ± 16 (σ =178) 836 ± 17 (σ =195) 727 ± 13 (σ =150) 305 ± 22 (σ =243)
+F2,265 27.2 3.25 12.8 2.48
+p < 10− 8 0.0404 5.09·10− 6 0.0855
+R2 0.171 0.0239 0.0879 0.0184
+δ 0.93 0.494 0.699 0.292
+D.2.4 Age
+The results (on the common subset of data) for the minimum agedependence of all
+observables between the main coder (coder 1) and the seconda ry coders are compared in
+tables 100, 101 and 102. Sadly, almost no groups with childre n are present in the common
+set. The drop in velocity with age is, on the other hand, conﬁr med in a statistically
+signiﬁcant way by all coders.
+71
+Table 98: Observable dependence on gender for dyads accordi ng to coder 2 (common
+data set only). Lengths in millimetres, times in seconds.
+Gender Nk
+g V r x |y|
+Two females 53 1078 ± 33 (σ =241) 747 ± 22 (σ =158) 637 ± 15 (σ =106) 286 ± 32 (σ =233)
+Mixed 89 1093 ± 18 (σ =173) 814 ± 30 (σ =283) 635 ± 17 (σ =159) 382 ± 38 (σ =360)
+Two males 126 1263 ± 16 (σ =177) 838 ± 17 (σ =194) 728 ± 13 (σ =150) 306 ± 22 (σ =244)
+F2,265 28.2 3.12 13.3 2.48
+p < 10− 8 0.0459 3.22·10− 6 0.0853
+R2 0.176 0.023 0.091 0.0184
+δ 0.935 0.494 0.604 0.3
+Table 99: Observable dependence on gender for dyads accordi ng to coder 3 (common
+data set only). Lengths in millimetres, times in seconds.
+Gender Nk
+g V r x |y|
+Two females 55 1074 ± 32 (σ =239) 742 ± 21 (σ =153) 636 ± 14 (σ =103) 281 ± 31 (σ =230)
+Mixed 89 1093 ± 19 (σ =175) 824 ± 31 (σ =288) 634 ± 17 (σ =161) 397 ± 39 (σ =368)
+Two males 124 1267 ± 16 (σ =173) 834 ± 17 (σ =190) 730 ± 13 (σ =150) 298 ± 21 (σ =232)
+F2,265 30.4 3.44 14.2 3.99
+p < 10− 8 0.0336 1.36·10− 6 0.0196
+R2 0.187 0.0253 0.0969 0.0293
+δ 0.987 0.511 0.622 0.359
+Table 100: Observable dependence on minimum age for dyads ac cording to coder 1
+(common data set only). Lengths in millimetres, times in sec onds.
+Minimum age Nk
+g V r x |y|
+10-19 years 16 1157 ± 86 (σ =343) 715 ± 31 (σ =123) 653 ± 23 (σ =92.3) 223 ± 38 (σ =151)
+20-29 years 58 1183 ± 28 (σ =215) 765 ± 28 (σ =211) 666 ± 20 (σ =149) 268 ± 33 (σ =252)
+30-39 years 96 1186 ± 21 (σ =203) 817 ± 21 (σ =211) 689 ± 17 (σ =166) 327 ± 27 (σ =262)
+40-49 years 41 1193 ± 25 (σ =161) 811 ± 27 (σ =173) 684 ± 22 (σ =143) 327 ± 38 (σ =245)
+50-59 years 31 1210 ± 29 (σ =160) 880 ± 46 (σ =254) 696 ± 29 (σ =160) 407 ± 65 (σ =360)
+60-69 years 21 1017 ± 35 (σ =160) 869 ± 66 (σ =304) 671 ± 34 (σ =156) 401 ± 85 (σ =388)
+≥ 70 years 5 949 ± 15 (σ =34.2) 913 ± 170 (σ =379) 608 ± 28 (σ =61.7) 551 ± 210 (σ =470)
+F6,261 3.35 1.81 0.462 1.91
+p 0.00337 0.0974 0.836 0.0789
+R2 0.0715 0.0399 0.0105 0.0421
+δ 1.73 0.964 0.578 1.29
+72
+Table 101: Observable dependence on minimum age for dyads ac cording to coder 2
+(common data set only). Lengths in millimetres, times in sec onds.
+Minimum age Nk
+g V r x |y|
+0-9 years 2 1190 ± 220 (σ =312) 749 ± 110 (σ =152) 700 ± 87 (σ =123) 202 ± 55 (σ =77.8)
+10-19 years 16 1169 ± 84 (σ =334) 682 ± 20 (σ =80.1) 646 ± 20 (σ =78.4) 172 ± 18 (σ =73.3)
+20-29 years 107 1163 ± 19 (σ =196) 765 ± 16 (σ =165) 655 ± 13 (σ =138) 288 ± 22 (σ =231)
+30-39 years 78 1217 ± 24 (σ =209) 869 ± 28 (σ =244) 727 ± 21 (σ =185) 362 ± 33 (σ =290)
+40-49 years 32 1181 ± 31 (σ =176) 855 ± 44 (σ =249) 645 ± 22 (σ =124) 418 ± 66 (σ =373)
+50-59 years 24 1074 ± 32 (σ =158) 853 ± 60 (σ =293) 706 ± 29 (σ =143) 343 ± 74 (σ =363)
+60-69 years 9 1047 ± 42 (σ =127) 861 ± 100 (σ =311) 655 ± 45 (σ =135) 432 ± 120 (σ =375)
+F6,261 2.1 3.09 2.3 2.13
+p 0.0533 0.0061 0.0349 0.0505
+R2 0.0461 0.0663 0.0503 0.0467
+δ 0.842 0.833 0.482 1.14
+Table 102: Observable dependence on minimum age for dyads ac cording to coder 3
+(common data set only). Lengths in millimetres, times in sec onds.
+Minimum age Nk
+g V r x |y|
+10-19 years 14 1163 ± 98 (σ =367) 701 ± 31 (σ =117) 623 ± 35 (σ =130) 218 ± 48 (σ =181)
+20-29 years 64 1157 ± 29 (σ =236) 758 ± 24 (σ =194) 658 ± 20 (σ =158) 274 ± 27 (σ =220)
+30-39 years 50 1197 ± 27 (σ =193) 830 ± 32 (σ =227) 685 ± 23 (σ =162) 349 ± 43 (σ =302)
+40-49 years 77 1205 ± 19 (σ =163) 832 ± 23 (σ =205) 684 ± 16 (σ =141) 351 ± 33 (σ =293)
+50-59 years 36 1205 ± 25 (σ =152) 820 ± 35 (σ =207) 722 ± 28 (σ =168) 300 ± 39 (σ =233)
+60-69 years 20 1025 ± 40 (σ =179) 903 ± 74 (σ =332) 699 ± 29 (σ =129) 418 ± 97 (σ =436)
+≥ 70 years 7 956 ± 26 (σ =69.1) 881 ± 120 (σ =326) 605 ± 36 (σ =96.4) 503 ± 140 (σ =382)
+F6,261 3.69 2.04 1.33 1.67
+p 0.00153 0.0604 0.245 0.129
+R2 0.0783 0.0449 0.0296 0.0369
+δ 1.74 0.755 0.732 1.09
+73
+E Dependence on average and maximum age
+E.1 Average age
+Table 103 shows the average age dependence of all observables, and the age dependence
+of variables r, x, |y| is also graphically shown in ﬁgure 31, while that of V is shown in
+ﬁgure 32 (left panels).
+Table 103: Observable dependence on average age for dyads. Lengths in millimetres,
+times in seconds.
+Average age Nk
+g V r x |y|
+10-19 years 60 1147 ± 34 (σ =264) 865 ± 43 (σ =332) 575 ± 20 (σ =158) 496 ± 57 (σ =445)
+20-29 years 370 1181 ± 9.2 (σ =178) 793 ± 12 (σ =226) 662 ± 8.1 (σ =155) 313 ± 14 (σ =274)
+30-39 years 269 1213 ± 12 (σ =199) 831 ± 14 (σ =234) 670 ± 11 (σ =174) 360 ± 18 (σ =302)
+40-49 years 195 1172 ± 13 (σ =183) 852 ± 17 (σ =232) 674 ± 12 (σ =167) 387 ± 23 (σ =316)
+50-59 years 114 1157 ± 18 (σ =194) 825 ± 20 (σ =217) 650 ± 15 (σ =159) 376 ± 30 (σ =317)
+60-69 years 69 1032 ± 20 (σ =168) 875 ± 40 (σ =332) 635 ± 20 (σ =163) 467 ± 50 (σ =416)
+≥ 70 years 12 886 ± 29 (σ =99.8) 786 ± 79 (σ =275) 588 ± 19 (σ =66.6) 385 ± 100 (σ =363)
+F6,1082 13.2 2.26 3.79 4.75
+p < 10− 8 0.036 0.000955 8.72·10− 5
+R2 0.0681 0.0124 0.0206 0.0257
+δ 1.67 0.275 0.598 0.603
+20 40 60 80
+Average age (years)
+0
+200
+400
+600
+800r, x, |y| (mm)
+20 40 60 80
+Maximum age (years)
+0
+200
+400
+600
+800r, x, |y| (mm)
+Figure 31: r (black and circles), x (red and squares) and |y| (blue and triangles) depen-
+dence on average (left) and maximum (right) age. Dashed line s provide standard error
+conﬁdence bars. The point at 75 years corresponds to the “70 y ears or more” slot.
+74
+20 40 60 80
+Average age (years)
+800
+1000
+1200V(mm/s)
+20 40 60 80
+Maximum age (years)
+800
+1000
+1200V(mm/s)
+Figure 32: V dependence on average (left) and maximum (right) age. Dashe d lines
+provide standard error conﬁdence bars. The point at 75 years corresponds to the “70
+years or more” slot.
+E.2 Maximum age
+Table 104 shows the average age dependence of all observables, and the age dependence
+of variables r, x, |y| is also graphically shown in ﬁgure 31, while that of V is shown in
+ﬁgure 32 (right panels).
+Table 104: Observable dependence on maximum age for dyads. Lengths in millimetres,
+times in seconds.
+Maximum age Nk
+g V r x |y|
+10-19 years 28 1141 ± 55 (σ =292) 733 ± 35 (σ =186) 628 ± 17 (σ =92.5) 283 ± 49 (σ =258)
+20-29 years 327 1177 ± 9.6 (σ =174) 789 ± 12 (σ =225) 660 ± 8.2 (σ =149) 309 ± 15 (σ =278)
+30-39 years 292 1203 ± 12 (σ =204) 831 ± 14 (σ =238) 648 ± 10 (σ =172) 384 ± 19 (σ =321)
+40-49 years 143 1201 ± 15 (σ =181) 849 ± 23 (σ =275) 680 ± 15 (σ =176) 377 ± 28 (σ =336)
+50-59 years 179 1178 ± 14 (σ =193) 854 ± 16 (σ =217) 674 ± 13 (σ =178) 388 ± 23 (σ =306)
+60-69 years 105 1043 ± 17 (σ =174) 872 ± 30 (σ =310) 638 ± 16 (σ =162) 452 ± 40 (σ =407)
+≥ 70 years 15 927 ± 33 (σ =128) 760 ± 65 (σ =254) 575 ± 18 (σ =67.9) 374 ± 85 (σ =330)
+F6,1082 14.2 3.37 1.97 3.7
+p < 10− 8 0.0027 0.0668 0.00122
+R2 0.0731 0.0183 0.0108 0.0201
+δ 1.38 0.484 0.619 0.443
+E.3 Discussion
+It may be seen that the results concerning minimum (section 8), maximum and average
+age are quite similar above 20 years. Nevertheless, using mi nimum age allows us to spot
+the presence of children below 10 years of age and verify thei r peculiar behaviour.
+75
+F Comparison between minimum, average and maximum
+height
+Tables 105 and 106 show the dependence on, respectively, ave rage and maximum height
+of all observables. Figure Figures 33 and 34 provide, on the o ther hand, a graphical com-
+parison for the V and x observables. We show these two ﬁgures since these observabl es
+are mostly growing with height, and so their analysis is easi er. As the ﬁgures show,
+the “average” curves are somehow in between the other two cur ves, with the “mini-
+mum” curve on the top and the maximum on the bottom, as expecte d for an observable
+that grows with height 21. This suggests that dyads have, at least regarding height, a
+behaviour that is an average of the individual ones, and all t hree indicators should be
+basically equivalent. In the main text we choose to use the “m inimum” height indicator
+for two reasons: it allows to better identify dyads with chil dren, and it has a suﬃcient
+number of events in all occupied height slots.
+Table 105: Observable dependence on average height for dyads. Lengths in millimetres,
+times in seconds.
+Average height Nk
+g V r x |y|
+< 140 cm 14 1044 ± 52 (σ =195) 983 ± 98 (σ =365) 527 ± 39 (σ =145) 672 ± 130 (σ =492)
+140-150 cm 22 1011 ± 36 (σ =168) 910 ± 81 (σ =382) 562 ± 39 (σ =183) 570 ± 100 (σ =476)
+150-160 cm 118 1110 ± 23 (σ =253) 812 ± 24 (σ =260) 629 ± 14 (σ =149) 379 ± 31 (σ =340)
+160-170 cm 472 1140 ± 8.3 (σ =181) 821 ± 12 (σ =250) 646 ± 7.6 (σ =165) 372 ± 15 (σ =329)
+170-180 cm 421 1222 ± 8.7 (σ =179) 828 ± 11 (σ =224) 685 ± 8 (σ =164) 342 ± 14 (σ =282)
+> 180 cm 42 1275 ± 27 (σ =174) 793 ± 26 (σ =171) 693 ± 19 (σ =122) 274 ± 34 (σ =220)
+F5,1083 17.9 1.95 7.31 5.74
+p < 10− 8 0.0829 9.42·10− 7 3.1·10− 5
+R2 0.0764 0.00894 0.0327 0.0258
+δ 1.54 0.816 1.3 1.29
+21A group whose tallest person is in, e.g, the 160-170 cm range i s expected to have a shorter average
+height than a group whose shortest person is in the same range .
+76
+Table 106: Observable dependence on maximum height for dyad s. Lengths in millime-
+tres, times in seconds.
+Maximum height Nk
+g V r x |y|
+< 140 cm 3 1172 ± 12 (σ =21.4) 650 ± 49 (σ =84.4) 597 ± 23 (σ =39.1) 189 ± 60 (σ =104)
+140-150 cm 3 1051 ± 79 (σ =136) 611 ± 11 (σ =19.6) 518 ± 39 (σ =67.5) 242 ± 33 (σ =57.2)
+150-160 cm 49 988 ± 25 (σ =178) 782 ± 34 (σ =240) 594 ± 20 (σ =138) 366 ± 49 (σ =346)
+160-170 cm 336 1129 ± 10 (σ =191) 820 ± 14 (σ =256) 637 ± 8.3 (σ =151) 378 ± 19 (σ =343)
+170-180 cm 556 1191 ± 8.1 (σ =191) 830 ± 10 (σ =237) 671 ± 7.1 (σ =167) 359 ± 13 (σ =306)
+> 180 cm 142 1250 ± 15 (σ =183) 843 ± 21 (σ =252) 677 ± 15 (σ =182) 365 ± 26 (σ =313)
+F5,1083 18.8 1.31 4.21 0.427
+p < 10− 8 0.257 0.000849 0.83
+R2 0.08 0.00601 0.0191 0.00197
+δ 1.44 0.929 0.881 0.555
+130 140 150 160 170 180 190
+Height (cm)
+1000
+1100
+1200
+1300V(mm/s)
+Figure 33: V dependence on average (black and circles), minimum (red and squares) and
+maximum (blue and triangles) height. Dashed lines provide s tandard error conﬁdence
+bars. The points at 135 and 185 cm correspond to the “less than 140” and “more than
+180” cm slots.
+77
+130 140 150 160 170 180 190
+Height (cm)
+500
+600
+700x(mm)
+Figure 34: x dependence on average (black and circles), minimum (red and squares) and
+maximum (blue and triangles) height. Dashed lines provide s tandard error conﬁdence
+bars. The points at 135 and 185 cm correspond to the “less than 140” and “more than
+180” cm slots.
+78
+References
+[1] F. Zanlungo, T. Ikeda, T. Kanda, Potential for the dynamics of pedestrians in a
+socially interacting group , Phys. Rev. E, 89, 1 , 021811, (2014)
+[2] F. Zanlungo, D. Brˇ sˇ ci´ c and T. Kanda,Spatial-size scaling of pedestrian groups under
+growing density conditions Physical Review E 91 (6), 062810 (2015)
+[3] Brˇ sˇ ci´ c, Draˇ zen and Zanlungo, Francesco and Kanda, Takayuki, Density and velocity
+patterns during one year of pedestrian tracking , Transportation Research Procedia,
+2, 77–86, 2014
+[4] M. Schultz, L. R¨ oßger, F. Hartmut and B. Schlag, Group dynamic behavior and
+psychometric proﬁles as substantial driver for pedestrian dynamics, in Pedestrian
+and Evacuation Dynamics 2012 , U. Weidmann, U. Kirsh and M. Schreckenberg,
+Vol II, pp. 1097-1111 (2014)
+[5] M. Moussa¨ ıd, N. Perozo, S. Garnier, D. Helbing and G. The raulaz, The walking
+behaviour of pedestrian social groups and its impact on crow d dynamics , PLoS One,
+5, 4, e10047, (2010)
+[6] K. Kumagai, I. Ehiro, K. Ono, Numerical Simulation Model of Group Walking for
+Tsunami Evacuees , Proceedings of the 2016 Pedestrian and Evacuation Dynamic s
+Conference
+[7] T. Kanda, M. Shiomi, Z. Miyashita, H. Ishiguro, N. Hagita , An aﬀective guide
+robot in a shopping mall , ACM/IEEE International Conference on Human-Robot
+Interaction (HRI), 173-180 (2009)
+[8] M. Shiomi, F. Zanlungo, K. Hayashi, T. Kanda, Towards a socially acceptable col-
+lision avoidance for a mobile robot navigating among pedest rians using a pedestrian
+model, International Journal of Social Robotics, 6, 3, 443–455, 2 014
+[9] R. Murakami, S. Morales, S, Satake, T. Kanda, Destination unknown: walking side-
+by-side without knowing the goal , Proceedings of the 2014 ACM/IEEE international
+conference on Human-robot interaction, 471–478, 2014
+[10] M. Costa, Interpersonal distances in group walking , Journal of Nonverbal Behavior,
+34, 1, 15-26 (2010)
+[11] F. Zanlungo and T. Kanda, Do walking pedestrians stabily interact inside a large
+group? Analysis of group and sub-group spatial structure , COGSCI13, (2013)
+[12] A. Gorrini, G. Vizzari, S. Bandini, Granulometric Distribution and Crowds of
+Groups: Focusing On Dyads , 11th Conference International Traﬃc and Granular
+Flow, Delft (NL), 2015
+79
+[13] S. Bandini, L. Crociani, A. Gorrini, G. Vizzari, An agent-based model of pedestrian
+dynamics considering groups: A real world case study , Intelligent Transportation
+Systems (ITSC), 2014 IEEE 17th International Conference on , 572–577
+[14] G. K¨ oster, M. Seitz, F. Treml, D. Hartmann and W. Klein, On modeling the in-
+ﬂuence of group formation in a crowd , Contemporary Social Science, 6, 3, 397-414,
+(2011)
+[15] G. K¨ oster, F. Treml, M. Seitz, and W. Klein, Validation of crowd models including
+social groups. In Ulrich Weidmann, Uwe Kirsch, and Michael Schreckenberg , editors,
+Pedestrian and Evacuation Dynamics 2012, pages 1051-1063. Springer International
+Publishing, 2014
+[16] X. Wei, X. Lv, W. Song, X. Li, Survey study and experimental investigation on the
+local behavior of pedestrian groups , Complexity, Volume 20, Issue 6 July/August
+2015 Pages 8797
+[17] I. Karamouzas, and M. Overmars, Simulating the local behaviour of small pedestrian
+groups, Proceedings of the 17th ACM Symposium on Virtual Reality So ftware and
+Technology, 183-190, (2010)
+[18] Y. Zhang, J. Pettr´ e, X. Qin, S. Donikian and Q. Peng, A Local Behavior Model
+for Small Pedestrian Groups , Computer-Aided Design and Computer Graphics
+(CAD/Graphics), 2011 12th International Conference on, 27 5-281 (2011)
+[19] N. Bode, S. Holl, W. Mehner, A. Seyfried, Disentangling the Impact of Social
+Groups on Response Times and Movement Dynamics in Evacuation s, PLOSONE
+http://dx.doi.org/10.1371/journal.pone.0121227
+[20] A. Gorrini, L. Crociani, C. Feliciani, P. Zhao, K. Nishi nari, S. Baldini, Social groups
+and pedestrian crowds: experiment on dyads in a counter ﬂow s cenario, Proceedings
+of the 2016 Pedestrian and Evacuation Dynamics Conference
+[21] P. Zhao, L. Sun, L. Cui, W. Luo, Y. Ding, The walking behaviours of pedestrian
+social group in the corridor of subway station , Proceedings of the 2016 Pedestrian
+and Evacuation Dynamics Conference
+[22] C. von K¨ urchten, Frank M¨ uller, Anton Svachiy, Oliver Wohak, Andreas Schad-
+schneider, Empirical study of the inﬂuence of social groups in evacuati on scenarios
+Traﬃc and Granular Flow ’15 (Springer, 2016)
+[23] W. Wang, S. Lo, S. Liu, J. Ma, A simulation of pedestrian side-by-side walking
+behaviour and its impact on crowd dynamics , Proceedings of the 2016 Pedestrian
+and Evacuation Dynamics Conference
+[24] J. Huang, X. Zou, X. Qu, J. Ma, R. Xu, A structure analysis method for complex
+social pedestrian groups with symbol expression and relati onship matrix , Proceedings
+of the 2016 Pedestrian and Evacuation Dynamics Conference
+80
+[25] F. Zanlungo and T. Kanda, A mesoscopic model for the eﬀect of density on pedes-
+trian group dynamics Europhysics Letters, 111, 38007 (2015)
+[26] G. Turchetti, F. Zanlungo, B. Giorgini, Dynamics and thermodynamics of a gas of
+automata EPL (Europhysics Letters) 78 (5), 58003
+[27] F. Zanlungo, D. Brˇ sˇ ci´ c, T. Kanda,Pedestrian group behaviour analysis under dif-
+ferent density conditions , Transportation Research Procedia, 2, 149–158, 2014
+[28] R. Bohannon, Comfortable and maximum walking speed of adults aged 20-79 ye ars:
+reference values and determinants , Age and ageing, 26, 15-19, 1997
+[29] N. Bode, The Eﬀect of Social Groups and Gender on Pedestrian Behaviour Imme-
+diately in Front of Bottlenecks , Proceedings of the 2016 Pedestrian and Evacuation
+Dynamics Conference
+[30] L. Henderson, D. Lyons, it Sexual Diﬀerences in Human Cro wd Motion, Nature
+240, 353 - 355 (08 December 1972);
+[31] I. von Sivers, F. K¨ unzner, G. K¨ oster, Pedestrian evacuation simulation with sepa-
+rated families , Proceedings of the 2016 Pedestrian and Evacuation Dynamic s Con-
+ference
+[32] Y. Feng, D. Li, ‘ An empirical study and conceptual model on heterogenity of p edes-
+trian social groups for friend -group and family-group , Proceedings of the 2016
+Pedestrian and Evacuation Dynamics Conference
+[33] F. M¨ uller, A. Schadschneider, Evacuation dynamics of asymmetrically coupled
+pedestrian pairs, Traﬃc and Granular Flow ’15 (Springer, 2016)
+[34] F. Zanlungo, Z. Y¨ ucel, T. Kanda, The eﬀect of social roles on group behaviour ,
+Proceedings of the 2016 Pedestrian and Evacuation Dynamics Conference
+[35] D. Brˇ sˇ ci´ c, T. Kanda, T. Ikeda, T. MiyashitaPerson Tracking in large public spaces
+using 3-D range sensors , IEEE Transactions on Human Machine Systems, vol 43,
+no 6, pp 522-534, (2013)
+[36] http://www.irc.atr.jp/sets/groups/
+[37] S. Seer, N. Br¨ andle, C. Ratti,Kinects and Human Kinetics: A New Approach for
+Studying Crowd Behavior , Transportation Research Part C: Emerging Technologies,
+48(0):212-228, 2014
+[38] A. Corbetta, L. Bruno, A. Muntean, F. Toschi, High statistics measurements of
+pedestrian dynamics, Transportation Research Procedia, 2, 96-104
+[39] M. Knapp, Nonverbal communication in human interaction , Cengage Learning
+(2012)
+81
+[40] C. Kleinke, Gaze and eye contact: a research review. , Psychological bulletin, 100,
+1, 78, 1986
+[41] M. Argyle, J. Dean, Sociometry, 289-304, 1965
+[42] J. Zhang, W. Klingsch, A. Schadschneider, A. Seyfried, Transitions in pedestrian
+fundamental diagrams of straight corridors and T-junctions , Journal of Statistical
+Mechanics: Theory and Experiment, 2011, 06, P06004, 2011
+[43] A. Corbetta, M. Jasper, C. Lee, F. Toschi, Continuous measurements of real-life
+bidirectional pedestrian ﬂows on a wide walkway , Proceedings of the 2016 Pedestrian
+and Evacuation Dynamics Conference
+[44] http://www.mext.go.jp/b menu/toukei/001/022/2004/002.pdf (in Japanese)
+[45] Z. Y¨ ucel, F. Zanlungo, T. Ikeda, T. Miyashita, and N. Ha gita Deciphering the
+Crowd: Modeling and Identiﬁcation of Pedestrian Group Motion , Sensors, vol. 13,
+pp. 875-897, 2013
+[46] D. Brˇ sˇ ci´ c, F. Zanlungo, T. Kanda,Modelling of pedestrian groups and application
+to group recognition , submitted to MIPRO 2016, Opatja, Croatia
+[47] R. Ash, Statistical Inference, a Concise Course , Dover 2011
+[48] W. Press, S. Teukolsky, W. Vetterling, B. Flannery, Numerical Recipes in C , Second
+edition, Cambridge University Press, 1992. We use the gamma function routine of
+page 214, the incomplete beta function routine of page 228, a nd the F test routine
+of page 619, adapted by us to a single tail test.
+[49] J. Cohen, Statistical power analysis for the behavioural sciences , Second edition,
+Routledge, 1988
+[50] Cohen, Jacob A coeﬃcient of agreement for nominal scales . Educational and Psy-
+chological Measurement 20 (1): 3746 (1960).
+[51] Landis, J.R.; Koch, G.G. (1977). The measurement of observer agreement for cat-
+egorical data Biometrics. 33 (1): 159174.
+[52] Fleiss, J. L. (1971) Measuring nominal scale agreement among many raters , Psy-
+chological Bulletin, Vol. 76, No. 5 pp. 378382
+[53] Krippendorﬀ, Klaus. Reliability in content analysis , Human communication research
+30.3 (2004): 411-433.
+82

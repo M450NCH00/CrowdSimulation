@@ -1,0 +1,1071 @@
+{
+  "extraction_log_version": 1,
+  "experiment": "rf11_round1_head_on",
+  "encounter_type": "head_on",
+  "run": 2,
+  "seed": 1102,
+  "started_utc": "2026-10-26T04:03:22+00:00",
+  "template": {
+    "key": "extract_v1",
+    "id": "extract",
+    "version": 1,
+    "sha256": "5e4b251b92c4f21f148eaff4a4c3ba902fbb27c84ee4cd1f66778cece67d7495"
+  },
+  "llm": {
+    "model": "deepseek-flash",
+    "temperature": 1.0,
+    "max_tokens": 4000,
+    "thinking": "disabled"
+  },
+  "sampled_sessions": [
+    "I_head_on_02dfbadb_b6a40c60_r1",
+    "I_head_on_02dfbadb_e57e5fb0_r1",
+    "I_head_on_de176842_51dfba80_r1",
+    "I_head_on_de176842_6ab9c72e_r1",
+    "I_head_on_de176842_b59c2831_r1",
+    "N_head_on_02dfbadb_55c9ae40_r1",
+    "N_head_on_02dfbadb_8ea28db3_r1",
+    "N_head_on_de176842_2ec958bb_r1",
+    "N_head_on_de176842_81bae7c3_r1",
+    "T_head_on_02dfbadb_74cb78c1_r1",
+    "T_head_on_02dfbadb_800a3b04_r1",
+    "T_head_on_de176842_2ec958bb_r1",
+    "T_head_on_de176842_55c9ae40_r1",
+    "T_head_on_de176842_7eed7b59_r1",
+    "T_head_on_de176842_c36d5d49_r1"
+  ],
+  "sampled_labels": [
+    "S023",
+    "S030",
+    "S041",
+    "S045",
+    "S054",
+    "S074",
+    "S082",
+    "S102",
+    "S113",
+    "S142",
+    "S144",
+    "S166",
+    "S170",
+    "S175",
+    "S186"
+  ],
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are analysing the results of an experiment on how people resolve a conflict while walking.\n\nIn each session two people met, each played by a language model. Each was told only what a person in that place would perceive: who they could see within about 10 m in front of them, what they could hear, and what had changed since they last looked. Each said what they would physically do: their intent, then steps (a speed, a turn to their own left or right by some degrees, stopping, or backing up, with when each step starts and until when). In the independent condition each decided once, alone. In the non-verbal condition they could also signal (eye contact, a nod, waving the other on, holding up a hand, pointing), and in the talk condition also speak; there each could decide up to three times. Their plans were then carried out in a simulator and what happened was measured. Afterwards each was asked, outside the role, what its decision was based on.\n\nYOUR TASK\nFind the hidden rules or patterns behind how the people resolved the conflict, from the sessions in which they did. You are asked what these people did, not what people should do.\n1. Write one rule per distinct behaviour.\n2. Name a concrete condition and a concrete action, including when it starts (the distance) and how much (the speed, the angle), where the data show it.\n3. Give the exceptions, including where the failed sessions show that the rule does not hold.\n4. List the factors the rule uses, as column names of the table.\n5. Say whether the rule needs communication: whether it held only when a signal or a message was used.\n6. Give references for the rule: a law or official guidance, a published study or a local custom you know of, with where in it the rule is stated. If you know of none, write \"no known source\". Do not invent a source. Say which people's debrief answers agree with the rule.\n7. A person's ethnicity (own_ethnicity, other_ethnicity) and whether they find the other attractive (finds_other_attractive) are in the table because the experiment measured them. No rule may use them, name them or depend on them.\n8. Rows whose cell_stability is coin_flip come from cells where the same prompts, repeated, gave different behaviour. Do not claim certainty there.\n9. For each rule, write a predict list that a program can apply to the rows of the table, so that the rule can be tested on sessions you have not seen.\n\nTHE PREDICT LIST\ntarget is the column the rule predicts, one of: first_side, first_slowed, first_stopped, first_backed_up, final_side, signalled, spoke, passed_first, passing_side, stopped, backed_up.\nif is a list of branches, tried in order. Each has a when (column: value pairs, all of which must hold) and a then (the target's value). The first branch whose when holds gives the prediction; if none does, default gives it. A when may read only these columns: condition, geometry, person, own_age, own_gender, own_urgency, own_mobility_aid, own_load, own_distraction, own_assertiveness, own_residence, own_memory_note, own_ethnicity, other_age, other_gender, other_mobility_aid, other_load, other_distraction, other_ethnicity, surroundings, time_of_day, finds_other_attractive, knows_other, decision_points, first_decision_distance_m, signalled, spoke, and never the target itself. A value is matched as written in the table; a list of values means any one of them; {\">=\": 5} (or \"<\", \"<=\", \">\", \"==\", \"!=\") compares a number column.\n\nHOW TO REPLY\nReply with a single YAML block, in a ```yaml fence, and nothing else, of this form:\n```yaml\nrules:\n  - rule: <the rule, in one sentence>\n    applies_when: <the concrete condition>\n    action: <the concrete action: when it starts, how much>\n    exceptions:\n      - <where the rule does not hold>\n    factors_used: [<column names>]\n    needs_communication: <true or false>\n    references:\n      - citation: <the source, or \"no known source\">\n        locator: <where in it: a section, an article, a page; or \"none\">\n        kind: <law_or_guidance, published_study, local_custom, habit, common_sense or none>\n        claim: <what the source says that supports the rule>\n    debrief_support:\n      share: <the share of the rule's sessions whose debriefs give the same basis, 0 to 1>\n      note: <which debrief answers agree, and how>\n    coverage: <which rows the rule describes, and how many>\n    predict:\n      target: <one target column>\n      if:\n        - when: {<column>: <value>}\n          then: <a value of the target>\n      default: <a value of the target>\n```"
+    },
+    {
+      "role": "user",
+      "content": "THE ENCOUNTER\nTwo people walk towards each other along a corridor, on the same line or nearly so (the geometry: their walking lines aligned, or 20 cm apart). Each must get past the other.\n\nTHE COLUMNS\n- row: the row's number.\n- session: the session's name; the two rows of a session are its two people.\n- condition: independent, non_verbal or talk.\n- geometry: the layout of the place in this session.\n- person: p1 or p2, the person this row is about.\n- own_age: this person's age (not_told when the experiment hid it).\n- own_gender: this person's gender (not_told when the experiment hid it).\n- own_urgency: routine or urgent (urgent means late for something important).\n- own_mobility_aid: none, or cane.\n- own_load: none, or large_suitcase (pulling a large suitcase).\n- own_distraction: none, or phone (looking at their phone).\n- own_assertiveness: gives_way or holds_ground (how this person usually behaves in a crowd).\n- own_residence: local, or visitor (new to the place).\n- own_memory_note: none, or bad_experience (earlier today someone walked straight into them in a place like this).\n- own_ethnicity: this person's ethnicity. No rule may read it.\n- other_age: the other person's age as this person was told it, or not_told.\n- other_gender: the other person's gender as this person was told it, or not_told.\n- other_mobility_aid: cane if this person was told the other has one, else not_seen.\n- other_load: large_suitcase if this person was told the other pulls one, else not_seen.\n- other_distraction: phone if this person was told the other looks at one, else not_seen.\n- other_ethnicity: the other person's ethnicity as this person was told it, or not_told. No rule may read it.\n- surroundings: quiet or busy.\n- time_of_day: daytime or late_night.\n- finds_other_attractive: yes or no, as this person was told it of their own view, or not_told. No rule may read it.\n- knows_other: yes (they know each other) or no, or not_told.\n- decision_points: how many times this person decided.\n- first_decision_distance_m: how far away the other was when this person first decided, in metres.\n- first_side: which way this person's first plan turns: left, right, both (one way then the other) or none. Left and right are always the person's own.\n- first_slowed: yes if this person's first plan slows down below their speed at the time.\n- first_stopped: yes if this person's first plan stops.\n- first_backed_up: yes if this person's first plan backs up.\n- first_start_distance_m: the distance at which this person's first plan starts, when it starts at a distance.\n- final_side: which way this person's last plan turns (as first_side).\n- signalled: yes if this person signalled at least once; n/a in the independent condition.\n- spoke: yes if this person spoke at least once; n/a outside the talk condition.\n- debrief_kind: what this person said afterwards their decision was based on: law_or_guidance, published_study, local_custom, habit, common_sense or none.\n- passed_first: measured: yes if this person left the place where they met first, no if the other did, together if both left at the same time.\n- passing_side: measured: on which of their own sides this person passed the other, left or right.\n- stopped: measured: yes if this person came to a stop.\n- backed_up: measured: yes if this person moved backwards.\n- cell_stability: coin_flip when this row's session belongs to a cell where repeating the same prompts gave different behaviour; stable when repeating gave the same behaviour; untested when it was not repeated.\n\nRESOLVED SESSIONS, ONE ROW PER PERSON (152 rows, 76 sessions)\n```csv\nrow,session,condition,geometry,person,own_age,own_gender,own_urgency,own_mobility_aid,own_load,own_distraction,own_assertiveness,own_residence,own_memory_note,own_ethnicity,other_age,other_gender,other_mobility_aid,other_load,other_distraction,other_ethnicity,surroundings,time_of_day,finds_other_attractive,knows_other,decision_points,first_decision_distance_m,first_side,first_slowed,first_stopped,first_backed_up,first_start_distance_m,final_side,signalled,spoke,debrief_kind,passed_first,passing_side,stopped,backed_up,cell_stability\n1,S001,independent,apart_20cm,p1,25,female,routine,none,large_suitcase,none,gives_way,visitor,none,indian,25,male,not_seen,not_seen,not_seen,malay,busy,daytime,yes,yes,1,9.8,right,yes,no,no,,right,n/a,n/a,common_sense,together,right,no,no,coin_flip\n2,S001,independent,apart_20cm,p2,25,male,routine,none,none,none,gives_way,local,none,malay,25,female,not_seen,large_suitcase,not_seen,indian,busy,daytime,yes,yes,1,9.8,right,yes,no,no,,right,n/a,n/a,local_custom,together,right,no,no,coin_flip\n3,S002,independent,apart_20cm,p1,25,male,routine,none,large_suitcase,phone,holds_ground,local,none,malay,25,female,not_seen,not_seen,not_seen,others,busy,late_night,no,yes,1,9.8,,,,,,,n/a,n/a,,together,left,no,no,untested\n4,S002,independent,apart_20cm,p2,25,female,routine,none,none,none,gives_way,local,none,others,25,male,not_seen,large_suitcase,phone,malay,busy,late_night,no,yes,1,9.8,left,yes,no,no,,left,n/a,n/a,common_sense,together,left,no,no,untested\n5,S005,independent,apart_20cm,p1,70,male,urgent,none,none,phone,gives_way,local,none,chinese,25,female,not_seen,not_seen,not_seen,chinese,busy,daytime,no,yes,1,9.8,right,yes,no,no,,right,n/a,n/a,common_sense,together,right,no,no,untested\n6,S005,independent,apart_20cm,p2,25,female,routine,none,none,none,gives_way,local,none,chinese,70,male,not_seen,not_seen,phone,chinese,busy,daytime,yes,yes,1,9.8,both,no,no,no,,both,n/a,n/a,common_sense,together,right,no,no,untested\n7,S009,independent,apart_20cm,p1,70,female,routine,none,large_suitcase,phone,holds_ground,local,bad_experience,others,25,male,not_seen,not_seen,not_seen,others,quiet,daytime,yes,yes,1,9.8,right,yes,no,no,,right,n/a,n/a,habit,together,right,no,no,untested\n8,S009,independent,apart_20cm,p2,25,male,routine,none,none,none,gives_way,local,none,others,70,female,not_seen,large_suitcase,phone,others,quiet,daytime,yes,yes,1,9.8,right,yes,no,no,,right,n/a,n/a,common_sense,together,right,no,no,untested\n9,S010,independent,apart_20cm,p1,70,male,urgent,cane,none,phone,holds_ground,local,bad_experience,malay,25,female,not_seen,not_seen,not_seen,malay,quiet,late_night,no,no,1,9.8,right,yes,no,no,,right,n/a,n/a,common_sense,together,right,no,no,coin_flip\n10,S010,independent,apart_20cm,p2,25,female,routine,none,none,none,gives_way,local,none,malay,70,male,cane,not_seen,phone,malay,quiet,late_night,no,no,1,9.8,right,yes,no,no,,right,n/a,n/a,common_sense,together,right,no,no,coin_flip\n11,S011,independent,apart_20cm,p1,25,female,urgent,none,large_suitcase,phone,gives_way,visitor,bad_experience,chinese,25,male,not_seen,not_seen,not_seen,chinese,busy,late_night,no,no,1,9.8,both,yes,no,no,,both,n/a,n/a,habit,together,right,no,no,untested\n12,S011,independent,apart_20cm,p2,25,male,routine,none,none,none,gives_way,local,none,chinese,25,female,not_seen,large_suitcase,phone,chinese,busy,late_night,yes,no,1,9.8,right,yes,no,no,,right,n/a,n/a,common_sense,together,right,no,no,untested\n13,S014,independent,apart_20cm,p1,25,female,routine,none,none,none,gives_way,local,none,others,25,male,not_seen,not_seen,not_seen,others,quiet,daytime,no,no,1,9.8,left,no,no,no,,left,n/a,n/a,common_sense,together,left,no,no,untested\n14,S014,independent,apart_20cm,p2,25,male,routine,none,none,none,gives_way,local,none,others,25,female,not_seen,not_seen,not_seen,others,quiet,daytime,no,no,1,9.8,left,no,no,no,,left,n/a,n/a,common_sense,together,left,no,no,untested\n15,S018,independent,apart_20cm,p1,25,male,routine,cane,none,phone,gives_way,visitor,bad_experience,others,25,female,not_seen,not_seen,not_seen,others,busy,daytime,yes,yes,1,9.8,right,yes,no,no,,right,n/a,n/a,common_sense,yes,right,no,no,coin_flip\n16,S018,independent,apart_20cm,p2,25,female,routine,none,none,none,gives_way,local,none,others,25,male,cane,not_seen,phone,others,busy,daytime,no,yes,1,9.8,right,yes,no,no,,right,n/a,n/a,common_sense,no,right,no,no,coin_flip\n17,S020,independent,apart_20cm,p1,70,female,urgent,none,large_suitcase,none,holds_ground,local,none,others,25,male,not_seen,not_seen,not_seen,chinese,quiet,late_night,no,no,1,9.8,both,no,no,no,,both,n/a,n/a,common_sense,together,left,no,no,untested\n18,S020,independent,apart_20cm,p2,25,male,routine,none,none,none,gives_way,local,none,chinese,70,female,not_seen,large_suitcase,not_seen,others,quiet,late_night,yes,no,1,9.8,both,yes,no,no,,both,n/a,n/a,local_custom,together,left,no,no,untested\n19,S023,independent,apart_20cm,p1,25,female,urgent,cane,none,phone,holds_ground,local,none,indian,25,male,not_seen,not_seen,not_seen,others,busy,daytime,yes,no,1,9.8,right,no,no,no,,right,n/a,n/a,none,yes,left,no,no,untested\n20,S023,independent,apart_20cm,p2,25,male,routine,none,none,none,gives_way,local,none,others,25,female,cane,not_seen,phone,indian,busy,daytime,yes,no,1,9.8,both,yes,no,no,,both,n/a,n/a,common_sense,no,left,no,no,untested\n21,S030,independent,apart_20cm,p1,70,male,routine,none,large_suitcase,none,gives_way,visitor,bad_experience,chinese,25,female,not_seen,not_seen,not_seen,chinese,quiet,late_night,no,yes,1,9.8,right,yes,no,no,,right,n/a,n/a,habit,together,right,no,no,untested\n22,S030,independent,apart_20cm,p2,25,female,routine,none,none,none,gives_way,local,none,chinese,70,male,not_seen,large_suitcase,not_seen,chinese,quiet,late_night,no,yes,1,9.8,right,yes,no,no,,right,n/a,n/a,common_sense,together,right,no,no,untested\n23,S036,independent,aligned,p1,25,male,routine,cane,large_suitcase,phone,gives_way,local,bad_experience,others,25,female,not_seen,not_seen,not_seen,indian,quiet,daytime,no,no,1,9.8,both,no,no,no,,both,n/a,n/a,common_sense,together,left,no,no,untested\n24,S036,independent,aligned,p2,25,female,routine,none,none,none,gives_way,local,none,indian,25,male,cane,large_suitcase,phone,others,quiet,daytime,yes,no,1,9.8,both,yes,no,no,,both,n/a,n/a,common_sense,together,left,no,no,untested\n25,S037,independent,aligned,p1,70,male,urgent,none,none,phone,gives_way,local,none,malay,25,female,not_seen,not_seen,not_seen,malay,busy,daytime,no,yes,1,9.8,both,yes,no,no,,both,n/a,n/a,local_custom,together,right,no,no,untested\n26,S037,independent,aligned,p2,25,female,routine,none,none,none,gives_way,local,none,malay,70,male,not_seen,not_seen,phone,malay,busy,daytime,yes,yes,1,9.8,right,yes,no,no,,right,n/a,n/a,local_custom,together,right,no,no,untested\n27,S038,independent,aligned,p1,70,female,routine,none,none,phone,holds_ground,visitor,bad_experience,malay,25,male,not_seen,not_seen,not_seen,others,busy,daytime,no,no,1,9.8,right,no,no,no,,right,n/a,n/a,habit,together,right,no,no,untested\n28,S038,independent,aligned,p2,25,male,routine,none,none,none,gives_way,local,none,others,70,female,not_seen,not_seen,phone,malay,busy,daytime,no,no,1,9.8,right,yes,no,no,,right,n/a,n/a,habit,together,right,no,no,untested\n29,S041,independent,aligned,p1,70,female,routine,none,large_suitcase,phone,holds_ground,local,bad_experience,indian,25,male,not_seen,not_seen,not_seen,indian,quiet,daytime,yes,yes,1,9.8,right,yes,no,no,,right,n/a,n/a,habit,together,right,no,no,untested\n30,S041,independent,aligned,p2,25,male,routine,none,none,none,gives_way,local,none,indian,70,female,not_seen,large_suitcase,phone,indian,quiet,daytime,yes,yes,1,9.8,right,yes,no,no,,right,n/a,n/a,common_sense,together,right,no,no,untested\n31,S044,independent,aligned,p1,70,male,routine,cane,large_suitcase,none,holds_ground,visitor,none,others,25,female,not_seen,not_seen,not_seen,others,busy,daytime,no,no,1,9.8,right,no,no,no,,right,n/a,n/a,habit,together,right,no,no,untested\n32,S044,independent,aligned,p2,25,female,routine,none,none,none,gives_way,local,none,others,70,male,cane,large_suitcase,not_seen,others,busy,daytime,yes,no,1,9.8,right,yes,no,no,,right,n/a,n/a,habit,together,right,no,no,untested\n33,S045,independent,aligned,p1,25,male,urgent,cane,large_suitcase,none,gives_way,local,none,malay,25,female,not_seen,not_seen,not_seen,malay,quiet,late_night,yes,yes,1,9.8,both,yes,no,no,,both,n/a,n/a,habit,no,right,no,no,untested\n34,S045,independent,aligned,p2,25,female,routine,none,none,none,gives_way,local,none,malay,25,male,cane,large_suitcase,not_seen,malay,quiet,late_night,yes,yes,1,9.8,right,yes,no,no,,right,n/a,n/a,common_sense,yes,right,no,no,untested\n35,S047,independent,aligned,p1,70,female,routine,cane,large_suitcase,phone,gives_way,local,none,malay,25,male,not_seen,not_seen,not_seen,malay,busy,late_night,yes,no,1,9.8,both,yes,no,no,,both,n/a,n/a,common_sense,no,right,no,no,untested\n36,S047,independent,aligned,p2,25,male,routine,none,none,none,gives_way,local,none,malay,70,female,cane,large_suitcase,phone,malay,busy,late_night,no,no,1,9.8,both,yes,no,no,,both,n/a,n/a,common_sense,yes,right,no,no,untested\n37,S049,independent,aligned,p1,70,female,routine,cane,none,phone,gives_way,visitor,none,others,25,male,not_seen,not_seen,not_seen,chinese,quiet,late_night,no,yes,1,9.8,both,yes,no,no,,both,n/a,n/a,habit,together,right,no,no,untested\n38,S049,independent,aligned,p2,25,male,routine,none,none,none,gives_way,local,none,chinese,70,female,cane,not_seen,phone,others,quiet,late_night,yes,yes,1,9.8,both,yes,no,no,,both,n/a,n/a,common_sense,together,right,no,no,untested\n39,S052,independent,aligned,p1,70,female,urgent,none,large_suitcase,none,holds_ground,local,none,indian,25,male,not_seen,not_seen,not_seen,chinese,quiet,late_night,no,no,1,9.8,left,no,no,no,,left,n/a,n/a,common_sense,yes,left,no,no,coin_flip\n40,S052,independent,aligned,p2,25,male,routine,none,none,none,gives_way,local,none,chinese,70,female,not_seen,large_suitcase,not_seen,indian,quiet,late_night,yes,no,1,9.8,both,yes,no,no,,both,n/a,n/a,common_sense,no,left,no,no,coin_flip\n41,S054,independent,aligned,p1,25,female,urgent,none,none,phone,gives_way,local,bad_experience,malay,25,male,not_seen,not_seen,not_seen,indian,quiet,late_night,yes,yes,1,9.8,both,no,no,no,,both,n/a,n/a,local_custom,together,right,no,no,untested\n42,S054,independent,aligned,p2,25,male,routine,none,none,none,gives_way,local,none,indian,25,female,not_seen,not_seen,phone,malay,quiet,late_night,no,yes,1,9.8,both,no,no,no,,both,n/a,n/a,habit,together,right,no,no,untested\n43,S056,independent,aligned,p1,25,male,urgent,none,none,none,holds_ground,visitor,bad_experience,others,25,female,not_seen,not_seen,not_seen,indian,quiet,daytime,no,yes,1,9.8,right,yes,no,no,,right,n/a,n/a,habit,together,right,no,no,untested\n44,S056,independent,aligned,p2,25,female,routine,none,none,none,gives_way,local,none,indian,25,male,not_seen,not_seen,not_seen,others,quiet,daytime,yes,yes,1,9.8,right,yes,no,no,,right,n/a,n/a,habit,together,right,no,no,untested\n45,S063,independent,aligned,p1,25,male,urgent,cane,none,none,gives_way,visitor,none,malay,25,female,not_seen,not_seen,not_seen,chinese,busy,late_night,no,no,1,9.8,both,no,no,no,,both,n/a,n/a,habit,together,right,no,no,untested\n46,S063,independent,aligned,p2,25,female,routine,none,none,none,gives_way,local,none,chinese,25,male,cane,not_seen,not_seen,malay,busy,late_night,no,no,1,9.8,both,yes,no,no,,both,n/a,n/a,common_sense,together,right,no,no,untested\n47,S064,independent,aligned,p1,70,male,routine,cane,none,none,holds_ground,local,none,chinese,25,female,not_seen,not_seen,not_seen,indian,quiet,daytime,yes,yes,1,9.8,none,no,no,no,,none,n/a,n/a,habit,yes,right,no,no,untested\n48,S064,independent,aligned,p2,25,female,routine,none,none,none,gives_way,local,none,indian,70,male,cane,not_seen,not_seen,chinese,quiet,daytime,no,yes,1,9.8,both,no,no,no,,both,n/a,n/a,common_sense,no,right,no,no,untested\n49,S066,non_verbal,apart_20cm,p1,25,male,routine,none,large_suitcase,phone,holds_ground,local,none,malay,25,female,not_seen,not_seen,not_seen,others,busy,late_night,no,yes,2,9.8,right,no,no,no,,none,yes,n/a,habit,together,left,no,no,untested\n50,S066,non_verbal,apart_20cm,p2,25,female,routine,none,none,none,gives_way,local,none,others,25,male,not_seen,large_suitcase,phone,malay,busy,late_night,no,yes,2,9.8,both,yes,no,no,,left,yes,n/a,common_sense,together,left,no,no,untested\n51,S068,non_verbal,apart_20cm,p1,25,male,routine,cane,large_suitcase,phone,gives_way,local,bad_experience,chinese,25,female,not_seen,not_seen,not_seen,malay,quiet,daytime,no,no,3,9.8,right,yes,no,no,,right,yes,n/a,habit,together,right,no,no,coin_flip\n52,S068,non_verbal,apart_20cm,p2,25,female,routine,none,none,none,gives_way,local,none,malay,25,male,cane,large_suitcase,phone,chinese,quiet,daytime,yes,no,3,9.8,both,yes,no,no,,right,yes,n/a,common_sense,together,right,no,no,coin_flip\n53,S071,non_verbal,apart_20cm,p1,25,male,routine,none,none,phone,holds_ground,visitor,none,chinese,25,female,not_seen,not_seen,not_seen,chinese,quiet,late_night,yes,no,3,9.8,right,yes,no,no,,none,yes,n/a,none,yes,left,no,no,untested\n54,S071,non_verbal,apart_20cm,p2,25,female,routine,none,none,none,gives_way,local,none,chinese,25,male,not_seen,not_seen,phone,chinese,quiet,late_night,yes,no,1,9.8,both,no,no,no,,both,no,n/a,common_sense,no,left,no,no,untested\n55,S074,non_verbal,apart_20cm,p1,70,male,urgent,cane,none,phone,holds_ground,local,bad_experience,malay,25,female,not_seen,not_seen,not_seen,malay,quiet,late_night,no,no,1,9.8,left,no,no,no,,left,no,n/a,common_sense,together,left,no,no,coin_flip\n56,S074,non_verbal,apart_20cm,p2,25,female,routine,none,none,none,gives_way,local,none,malay,70,male,cane,not_seen,phone,malay,quiet,late_night,no,no,1,9.8,left,yes,no,no,,left,yes,n/a,common_sense,together,left,no,no,coin_flip\n57,S077,non_verbal,apart_20cm,p1,25,male,urgent,cane,large_suitcase,none,gives_way,local,none,chinese,25,female,not_seen,not_seen,not_seen,chinese,quiet,late_night,yes,yes,2,9.8,right,yes,no,no,,left,yes,n/a,local_custom,together,left,no,no,untested\n58,S077,non_verbal,apart_20cm,p2,25,female,routine,none,none,none,gives_way,local,none,chinese,25,male,cane,large_suitcase,not_seen,chinese,quiet,late_night,yes,yes,2,9.8,left,no,no,no,,left,yes,n/a,common_sense,together,left,no,no,untested\n59,S080,non_verbal,apart_20cm,p1,70,male,urgent,none,large_suitcase,phone,gives_way,visitor,none,indian,25,female,not_seen,not_seen,not_seen,others,quiet,daytime,yes,no,3,9.8,right,yes,no,no,,right,yes,n/a,common_sense,together,right,no,no,untested\n60,S080,non_verbal,apart_20cm,p2,25,female,routine,none,none,none,gives_way,local,none,others,70,male,not_seen,large_suitcase,phone,indian,quiet,daytime,no,no,3,9.8,right,yes,no,no,,right,no,n/a,common_sense,together,right,no,no,untested\n61,S082,non_verbal,apart_20cm,p1,25,male,routine,cane,none,phone,gives_way,visitor,bad_experience,others,25,female,not_seen,not_seen,not_seen,others,busy,daytime,yes,yes,3,9.8,both,yes,no,no,,both,yes,n/a,habit,together,right,no,no,stable\n62,S082,non_verbal,apart_20cm,p2,25,female,routine,none,none,none,gives_way,local,none,others,25,male,cane,not_seen,phone,others,busy,daytime,no,yes,3,9.8,right,yes,no,no,,right,yes,n/a,common_sense,together,right,no,no,stable\n63,S085,non_verbal,apart_20cm,p1,70,male,routine,none,none,none,gives_way,local,bad_experience,chinese,25,female,not_seen,not_seen,not_seen,indian,busy,late_night,yes,no,3,9.8,both,yes,no,no,,left,no,n/a,local_custom,no,left,no,no,untested\n64,S085,non_verbal,apart_20cm,p2,25,female,routine,none,none,none,gives_way,local,none,indian,70,male,not_seen,not_seen,not_seen,chinese,busy,late_night,yes,no,3,9.8,left,no,no,no,,left,no,n/a,common_sense,yes,left,no,no,untested\n65,S086,non_verbal,apart_20cm,p1,25,female,urgent,none,none,phone,gives_way,local,bad_experience,others,25,male,not_seen,not_seen,not_seen,malay,quiet,late_night,yes,yes,3,9.8,right,yes,no,no,,both,yes,n/a,habit,no,right,no,no,untested\n66,S086,non_verbal,apart_20cm,p2,25,male,routine,none,none,none,gives_way,local,none,malay,25,female,not_seen,not_seen,phone,others,quiet,late_night,no,yes,3,9.8,both,yes,no,no,,right,yes,n/a,common_sense,yes,right,no,no,untested\n67,S088,non_verbal,apart_20cm,p1,25,male,urgent,none,none,none,holds_ground,visitor,bad_experience,chinese,25,female,not_seen,not_seen,not_seen,malay,quiet,daytime,no,yes,2,9.8,both,no,no,no,,left,yes,n/a,common_sense,together,left,no,no,untested\n68,S088,non_verbal,apart_20cm,p2,25,female,routine,none,none,none,gives_way,local,none,malay,25,male,not_seen,not_seen,not_seen,chinese,quiet,daytime,yes,yes,2,9.8,left,yes,no,no,,left,yes,n/a,habit,together,left,no,no,untested\n69,S089,non_verbal,apart_20cm,p1,25,female,routine,cane,large_suitcase,none,holds_ground,visitor,bad_experience,chinese,25,male,not_seen,not_seen,not_seen,others,quiet,late_night,yes,no,3,9.8,left,yes,no,no,,right,yes,n/a,habit,together,right,no,no,untested\n70,S089,non_verbal,apart_20cm,p2,25,male,routine,none,none,none,gives_way,local,none,others,25,female,cane,large_suitcase,not_seen,chinese,quiet,late_night,no,no,2,9.8,right,yes,no,no,,right,no,n/a,habit,together,right,no,no,untested\n71,S094,non_verbal,apart_20cm,p1,70,male,routine,none,large_suitcase,none,gives_way,visitor,bad_experience,chinese,25,female,not_seen,not_seen,not_seen,chinese,quiet,late_night,no,yes,3,9.8,both,yes,no,no,,both,yes,n/a,habit,together,right,no,no,untested\n72,S094,non_verbal,apart_20cm,p2,25,female,routine,none,none,none,gives_way,local,none,chinese,70,male,not_seen,large_suitcase,not_seen,chinese,quiet,late_night,no,yes,3,9.8,right,yes,no,no,,right,yes,n/a,common_sense,together,right,no,no,untested\n73,S096,non_verbal,apart_20cm,p1,70,male,routine,cane,none,none,holds_ground,local,none,chinese,25,female,not_seen,not_seen,not_seen,malay,quiet,daytime,yes,yes,3,9.8,right,yes,no,no,,right,yes,n/a,common_sense,together,right,no,no,untested\n74,S096,non_verbal,apart_20cm,p2,25,female,routine,none,none,none,gives_way,local,none,malay,70,male,cane,not_seen,not_seen,chinese,quiet,daytime,no,yes,3,9.8,right,yes,no,no,,right,yes,n/a,common_sense,together,right,no,no,untested\n75,S102,non_verbal,aligned,p1,70,female,routine,none,none,phone,holds_ground,visitor,bad_experience,malay,25,male,not_seen,not_seen,not_seen,others,busy,daytime,no,no,3,9.8,right,no,no,no,,none,yes,n/a,habit,yes,right,no,no,untested\n76,S102,non_verbal,aligned,p2,25,male,routine,none,none,none,gives_way,local,none,others,70,female,not_seen,not_seen,phone,malay,busy,daytime,no,no,2,9.8,both,no,no,no,,right,no,n/a,common_sense,no,right,no,no,untested\n77,S103,non_verbal,aligned,p1,25,male,routine,none,none,phone,holds_ground,visitor,none,others,25,female,not_seen,not_seen,not_seen,others,quiet,late_night,yes,no,3,9.8,none,no,no,no,3,none,yes,n/a,habit,together,left,no,no,untested\n78,S103,non_verbal,aligned,p2,25,female,routine,none,none,none,gives_way,local,none,others,25,male,not_seen,not_seen,phone,others,quiet,late_night,yes,no,3,9.8,left,no,no,no,,left,yes,n/a,common_sense,together,left,no,no,untested\n79,S105,non_verbal,aligned,p1,70,female,routine,none,large_suitcase,phone,holds_ground,local,bad_experience,indian,25,male,not_seen,not_seen,not_seen,indian,quiet,daytime,yes,yes,2,9.8,right,yes,no,no,,right,yes,n/a,habit,together,right,no,no,untested\n80,S105,non_verbal,aligned,p2,25,male,routine,none,none,none,gives_way,local,none,indian,70,female,not_seen,large_suitcase,phone,indian,quiet,daytime,yes,yes,2,9.8,both,yes,no,no,,right,yes,n/a,habit,together,right,no,no,untested\n81,S111,non_verbal,aligned,p1,70,female,routine,cane,large_suitcase,phone,gives_way,local,none,malay,25,male,not_seen,not_seen,not_seen,malay,busy,late_night,yes,no,3,9.8,left,yes,no,no,,left,yes,n/a,habit,together,left,no,no,untested\n82,S111,non_verbal,aligned,p2,25,male,routine,none,none,none,gives_way,local,none,malay,70,female,cane,large_suitcase,phone,malay,busy,late_night,no,no,3,9.8,left,yes,no,no,,left,yes,n/a,common_sense,together,left,no,no,untested\n83,S112,non_verbal,aligned,p1,70,male,urgent,none,large_suitcase,phone,gives_way,visitor,none,others,25,female,not_seen,not_seen,not_seen,malay,quiet,daytime,yes,no,3,9.8,right,yes,no,no,,right,no,n/a,habit,together,right,no,no,coin_flip\n84,S112,non_verbal,aligned,p2,25,female,routine,none,none,none,gives_way,local,none,malay,70,male,not_seen,large_suitcase,phone,others,quiet,daytime,no,no,3,9.8,right,yes,no,no,,right,no,n/a,common_sense,together,right,no,no,coin_flip\n85,S113,non_verbal,aligned,p1,70,female,routine,cane,none,phone,gives_way,visitor,none,others,25,male,not_seen,not_seen,not_seen,chinese,quiet,late_night,no,yes,3,9.8,right,yes,no,no,,right,yes,n/a,habit,yes,right,no,no,untested\n86,S113,non_verbal,aligned,p2,25,male,routine,none,none,none,gives_way,local,none,chinese,70,female,cane,not_seen,phone,others,quiet,late_night,yes,yes,3,9.8,right,yes,no,no,,right,yes,n/a,common_sense,no,right,no,no,untested\n87,S119,non_verbal,aligned,p1,25,female,urgent,cane,none,phone,holds_ground,local,none,indian,25,male,not_seen,not_seen,not_seen,others,busy,daytime,yes,no,3,9.8,right,no,no,no,,right,yes,n/a,local_custom,yes,right,no,no,untested\n88,S119,non_verbal,aligned,p2,25,male,routine,none,none,none,gives_way,local,none,others,25,female,cane,not_seen,phone,indian,busy,daytime,yes,no,3,9.8,right,yes,yes,no,,right,yes,n/a,common_sense,no,right,no,no,untested\n89,S124,non_verbal,aligned,p1,70,female,urgent,cane,large_suitcase,none,gives_way,local,bad_experience,indian,25,male,not_seen,not_seen,not_seen,malay,busy,daytime,no,yes,2,9.8,right,yes,no,no,,right,yes,n/a,common_sense,together,right,no,no,untested\n90,S124,non_verbal,aligned,p2,25,male,routine,none,none,none,gives_way,local,none,malay,70,female,cane,large_suitcase,not_seen,indian,busy,daytime,no,yes,2,9.8,right,yes,no,no,,right,yes,n/a,habit,together,right,no,no,untested\n91,S126,non_verbal,aligned,p1,70,male,routine,none,large_suitcase,none,gives_way,visitor,bad_experience,chinese,25,female,not_seen,not_seen,not_seen,chinese,quiet,late_night,no,yes,1,9.8,right,yes,no,no,,right,yes,n/a,common_sense,together,right,no,no,untested\n92,S126,non_verbal,aligned,p2,25,female,routine,none,none,none,gives_way,local,none,chinese,70,male,not_seen,large_suitcase,not_seen,chinese,quiet,late_night,no,yes,1,9.8,both,yes,no,no,,both,yes,n/a,common_sense,together,right,no,no,untested\n93,S127,non_verbal,aligned,p1,25,male,urgent,cane,none,none,gives_way,visitor,none,malay,25,female,not_seen,not_seen,not_seen,chinese,busy,late_night,no,no,1,9.8,both,yes,no,no,,both,no,n/a,common_sense,no,left,no,no,untested\n94,S127,non_verbal,aligned,p2,25,female,routine,none,none,none,gives_way,local,none,chinese,25,male,cane,not_seen,not_seen,malay,busy,late_night,no,no,2,9.8,left,no,no,no,2.5,left,no,n/a,common_sense,yes,left,no,no,untested\n95,S131,talk,apart_20cm,p1,25,male,urgent,none,large_suitcase,none,holds_ground,local,bad_experience,malay,25,female,not_seen,not_seen,not_seen,malay,busy,daytime,yes,no,3,9.8,none,no,no,no,,both,yes,yes,local_custom,no,left,no,no,untested\n96,S131,talk,apart_20cm,p2,25,female,routine,none,none,none,gives_way,local,none,malay,25,male,not_seen,large_suitcase,not_seen,malay,busy,daytime,no,no,3,9.8,left,yes,no,no,,left,yes,no,habit,yes,left,no,no,untested\n97,S133,talk,apart_20cm,p1,70,male,urgent,none,none,phone,gives_way,local,none,chinese,25,female,not_seen,not_seen,not_seen,chinese,busy,daytime,no,yes,2,9.8,right,no,no,no,,both,yes,yes,habit,together,right,no,no,untested\n98,S133,talk,apart_20cm,p2,25,female,routine,none,none,none,gives_way,local,none,chinese,70,male,not_seen,not_seen,phone,chinese,busy,daytime,yes,yes,2,9.8,right,yes,no,no,,right,yes,yes,common_sense,together,right,no,no,untested\n99,S134,talk,apart_20cm,p1,70,female,routine,none,none,phone,holds_ground,visitor,bad_experience,others,25,male,not_seen,not_seen,not_seen,chinese,busy,daytime,no,no,3,9.8,right,yes,no,no,,right,yes,no,habit,yes,right,no,no,untested\n100,S134,talk,apart_20cm,p2,25,male,routine,none,none,none,gives_way,local,none,chinese,70,female,not_seen,not_seen,phone,others,busy,daytime,no,no,3,9.8,right,yes,no,no,,both,yes,no,common_sense,no,right,no,no,untested\n101,S135,talk,apart_20cm,p1,25,male,routine,none,none,phone,holds_ground,visitor,none,chinese,25,female,not_seen,not_seen,not_seen,chinese,quiet,late_night,yes,no,3,9.8,none,no,no,no,,right,yes,no,common_sense,together,left,no,no,untested\n102,S135,talk,apart_20cm,p2,25,female,routine,none,none,none,gives_way,local,none,chinese,25,male,not_seen,not_seen,phone,chinese,quiet,late_night,yes,no,3,9.8,both,yes,no,no,,left,yes,yes,habit,together,left,no,no,untested\n103,S136,talk,apart_20cm,p1,25,female,routine,cane,none,none,holds_ground,local,bad_experience,indian,25,male,not_seen,not_seen,not_seen,indian,busy,late_night,no,yes,3,9.8,right,no,no,no,,none,yes,yes,habit,together,left,no,no,untested\n104,S136,talk,apart_20cm,p2,25,male,routine,none,none,none,gives_way,local,none,indian,25,female,cane,not_seen,not_seen,indian,busy,late_night,yes,yes,3,9.8,left,yes,no,no,,left,yes,yes,common_sense,together,left,no,no,untested\n105,S137,talk,apart_20cm,p1,70,female,routine,none,large_suitcase,phone,holds_ground,local,bad_experience,others,25,male,not_seen,not_seen,not_seen,others,quiet,daytime,yes,yes,3,9.8,both,yes,no,no,,right,yes,yes,common_sense,no,right,no,no,untested\n106,S137,talk,apart_20cm,p2,25,male,routine,none,none,none,gives_way,local,none,others,70,female,not_seen,large_suitcase,phone,others,quiet,daytime,yes,yes,3,9.8,right,yes,no,no,,right,yes,yes,habit,yes,right,no,no,untested\n107,S142,talk,apart_20cm,p1,25,female,routine,none,none,none,gives_way,local,none,others,25,male,not_seen,not_seen,not_seen,others,quiet,daytime,no,no,1,9.8,left,yes,no,no,,left,no,no,habit,together,left,no,no,untested\n108,S142,talk,apart_20cm,p2,25,male,routine,none,none,none,gives_way,local,none,others,25,female,not_seen,not_seen,not_seen,others,quiet,daytime,no,no,1,9.8,left,no,no,no,,left,no,no,habit,together,left,no,no,untested\n109,S143,talk,apart_20cm,p1,70,female,routine,cane,large_suitcase,phone,gives_way,local,none,indian,25,male,not_seen,not_seen,not_seen,indian,busy,late_night,yes,no,2,9.8,right,yes,no,no,,right,yes,no,habit,yes,right,no,no,untested\n110,S143,talk,apart_20cm,p2,25,male,routine,none,none,none,gives_way,local,none,indian,70,female,cane,large_suitcase,phone,indian,busy,late_night,no,no,2,9.8,both,yes,no,no,,right,yes,no,common_sense,no,right,no,no,untested\n111,S144,talk,apart_20cm,p1,70,male,urgent,none,large_suitcase,phone,gives_way,visitor,none,indian,25,female,not_seen,not_seen,not_seen,others,quiet,daytime,yes,no,3,9.8,right,yes,no,no,,right,no,no,habit,together,right,no,no,untested\n112,S144,talk,apart_20cm,p2,25,female,routine,none,none,none,gives_way,local,none,others,70,male,not_seen,large_suitcase,phone,indian,quiet,daytime,no,no,3,9.8,both,yes,no,no,,right,no,no,habit,together,right,no,no,untested\n113,S149,talk,apart_20cm,p1,70,male,routine,none,none,none,gives_way,local,bad_experience,chinese,25,female,not_seen,not_seen,not_seen,indian,busy,late_night,yes,no,3,9.8,both,yes,no,no,,both,yes,no,habit,together,right,no,no,untested\n114,S149,talk,apart_20cm,p2,25,female,routine,none,none,none,gives_way,local,none,indian,70,male,not_seen,not_seen,not_seen,chinese,busy,late_night,yes,no,3,9.8,right,yes,no,no,,right,yes,yes,local_custom,together,right,no,no,untested\n115,S150,talk,apart_20cm,p1,25,female,urgent,none,none,phone,gives_way,local,bad_experience,others,25,male,not_seen,not_seen,not_seen,malay,quiet,late_night,yes,yes,2,9.8,left,yes,no,no,,left,yes,yes,common_sense,together,left,no,no,untested\n116,S150,talk,apart_20cm,p2,25,male,routine,none,none,none,gives_way,local,none,malay,25,female,not_seen,not_seen,phone,others,quiet,late_night,no,yes,2,9.8,left,yes,no,no,,left,yes,no,habit,together,left,no,no,untested\n117,S155,talk,apart_20cm,p1,70,female,urgent,cane,none,none,gives_way,visitor,bad_experience,indian,25,male,not_seen,not_seen,not_seen,indian,quiet,daytime,yes,no,3,9.8,right,yes,no,no,,both,yes,no,habit,together,right,no,no,untested\n118,S155,talk,apart_20cm,p2,25,male,routine,none,none,none,gives_way,local,none,indian,70,female,cane,not_seen,not_seen,indian,quiet,daytime,yes,no,3,9.8,left,yes,no,no,,right,yes,yes,common_sense,together,right,no,no,untested\n119,S157,talk,apart_20cm,p1,70,male,urgent,cane,large_suitcase,phone,holds_ground,visitor,bad_experience,others,25,female,not_seen,not_seen,not_seen,malay,busy,late_night,yes,yes,2,9.8,left,yes,no,no,,both,yes,yes,none,no,left,no,no,untested\n120,S157,talk,apart_20cm,p2,25,female,routine,none,none,none,gives_way,local,none,malay,70,male,cane,large_suitcase,phone,others,busy,late_night,yes,yes,2,9.8,left,yes,no,no,,left,yes,yes,local_custom,yes,left,no,no,untested\n121,S161,talk,aligned,p1,25,female,routine,none,large_suitcase,none,gives_way,visitor,none,chinese,25,male,not_seen,not_seen,not_seen,indian,busy,daytime,yes,yes,2,9.8,right,yes,no,no,,none,yes,yes,common_sense,yes,right,no,no,untested\n122,S161,talk,aligned,p2,25,male,routine,none,none,none,gives_way,local,none,indian,25,female,not_seen,large_suitcase,not_seen,chinese,busy,daytime,yes,yes,2,9.8,right,yes,no,no,,both,yes,yes,local_custom,no,right,no,no,untested\n123,S162,talk,aligned,p1,25,male,routine,none,large_suitcase,phone,holds_ground,local,none,malay,25,female,not_seen,not_seen,not_seen,others,busy,late_night,no,yes,3,9.8,none,no,no,no,,both,yes,yes,common_sense,together,right,no,no,untested\n124,S162,talk,aligned,p2,25,female,routine,none,none,none,gives_way,local,none,others,25,male,not_seen,large_suitcase,phone,malay,busy,late_night,no,yes,3,9.8,right,yes,no,no,,right,yes,yes,habit,together,right,no,no,untested\n125,S164,talk,aligned,p1,25,male,routine,cane,large_suitcase,phone,gives_way,local,bad_experience,others,25,female,not_seen,not_seen,not_seen,indian,quiet,daytime,no,no,3,9.8,left,yes,no,no,,left,no,no,habit,no,left,no,no,untested\n126,S164,talk,aligned,p2,25,female,routine,none,none,none,gives_way,local,none,indian,25,male,cane,large_suitcase,phone,others,quiet,daytime,yes,no,3,9.8,right,yes,no,no,,left,no,no,common_sense,yes,left,no,no,untested\n127,S165,talk,aligned,p1,70,male,urgent,none,none,phone,gives_way,local,none,malay,25,female,not_seen,not_seen,not_seen,malay,busy,daytime,no,yes,3,9.8,both,no,no,no,,right,yes,yes,local_custom,yes,right,no,no,untested\n128,S165,talk,aligned,p2,25,female,routine,none,none,none,gives_way,local,none,malay,70,male,not_seen,not_seen,phone,malay,busy,daytime,yes,yes,3,9.8,right,yes,no,no,,right,yes,yes,local_custom,no,right,no,no,untested\n129,S166,talk,aligned,p1,70,female,routine,none,none,phone,holds_ground,visitor,bad_experience,malay,25,male,not_seen,not_seen,not_seen,others,busy,daytime,no,no,2,9.8,none,no,no,no,,left,yes,no,common_sense,together,left,no,no,untested\n130,S166,talk,aligned,p2,25,male,routine,none,none,none,gives_way,local,none,others,70,female,not_seen,not_seen,phone,malay,busy,daytime,no,no,2,9.8,left,yes,no,no,,both,no,no,common_sense,together,left,no,no,untested\n131,S168,talk,aligned,p1,25,female,routine,cane,none,none,holds_ground,local,bad_experience,indian,25,male,not_seen,not_seen,not_seen,indian,busy,late_night,no,yes,3,9.8,left,no,no,no,,right,yes,yes,habit,yes,right,no,no,coin_flip\n132,S168,talk,aligned,p2,25,male,routine,none,none,none,gives_way,local,none,indian,25,female,cane,not_seen,not_seen,indian,busy,late_night,yes,yes,3,9.8,right,yes,no,no,,right,yes,yes,habit,no,right,no,no,coin_flip\n133,S170,talk,aligned,p1,70,male,urgent,cane,none,phone,holds_ground,local,bad_experience,others,25,female,not_seen,not_seen,not_seen,others,quiet,late_night,no,no,3,9.8,left,yes,no,no,,right,yes,yes,habit,together,left,no,no,untested\n134,S170,talk,aligned,p2,25,female,routine,none,none,none,gives_way,local,none,others,70,male,cane,not_seen,phone,others,quiet,late_night,no,no,3,9.8,left,yes,no,no,,left,yes,no,common_sense,together,left,no,no,untested\n135,S171,talk,aligned,p1,25,female,urgent,none,large_suitcase,phone,gives_way,visitor,bad_experience,chinese,25,male,not_seen,not_seen,not_seen,chinese,busy,late_night,no,no,3,9.8,right,yes,no,no,,left,yes,no,common_sense,together,left,no,no,untested\n136,S171,talk,aligned,p2,25,male,routine,none,none,none,gives_way,local,none,chinese,25,female,not_seen,large_suitcase,phone,chinese,busy,late_night,yes,no,3,9.8,both,yes,no,no,,left,no,no,habit,together,left,no,no,untested\n137,S173,talk,aligned,p1,25,male,urgent,cane,large_suitcase,none,gives_way,local,none,malay,25,female,not_seen,not_seen,not_seen,malay,quiet,late_night,yes,yes,2,9.8,right,yes,no,no,,right,yes,yes,common_sense,together,right,no,no,untested\n138,S173,talk,aligned,p2,25,female,routine,none,none,none,gives_way,local,none,malay,25,male,cane,large_suitcase,not_seen,malay,quiet,late_night,yes,yes,2,9.8,both,yes,no,no,,none,yes,yes,common_sense,together,right,no,no,untested\n139,S175,talk,aligned,p1,70,female,routine,cane,large_suitcase,phone,gives_way,local,none,malay,25,male,not_seen,not_seen,not_seen,malay,busy,late_night,yes,no,3,9.8,left,yes,no,no,,left,no,no,habit,together,left,no,no,untested\n140,S175,talk,aligned,p2,25,male,routine,none,none,none,gives_way,local,none,malay,70,female,cane,large_suitcase,phone,malay,busy,late_night,no,no,3,9.8,left,yes,no,no,,left,no,no,common_sense,together,left,no,no,untested\n141,S178,talk,aligned,p1,25,male,routine,cane,none,phone,gives_way,visitor,bad_experience,chinese,25,female,not_seen,not_seen,not_seen,chinese,busy,daytime,yes,yes,2,9.8,both,yes,no,no,,right,yes,yes,habit,yes,right,no,no,untested\n142,S178,talk,aligned,p2,25,female,routine,none,none,none,gives_way,local,none,chinese,25,male,cane,not_seen,phone,chinese,busy,daytime,no,yes,2,9.8,left,yes,no,no,,both,yes,yes,habit,no,right,no,no,untested\n143,S181,talk,aligned,p1,70,male,routine,none,none,none,gives_way,local,bad_experience,indian,25,female,not_seen,not_seen,not_seen,chinese,busy,late_night,yes,no,1,9.8,left,yes,no,no,,left,no,no,habit,together,left,no,no,untested\n144,S181,talk,aligned,p2,25,female,routine,none,none,none,gives_way,local,none,chinese,70,male,not_seen,not_seen,not_seen,indian,busy,late_night,yes,no,1,9.8,both,yes,no,no,,both,no,no,common_sense,together,left,no,no,untested\n145,S183,talk,aligned,p1,25,female,urgent,cane,none,phone,holds_ground,local,none,indian,25,male,not_seen,not_seen,not_seen,others,busy,daytime,yes,no,3,9.8,left,no,no,no,,left,yes,no,common_sense,yes,left,no,no,untested\n146,S183,talk,aligned,p2,25,male,routine,none,none,none,gives_way,local,none,others,25,female,cane,not_seen,phone,indian,busy,daytime,yes,no,2,9.8,both,yes,no,no,,none,no,no,common_sense,no,left,no,no,untested\n147,S184,talk,aligned,p1,25,male,urgent,none,none,none,holds_ground,visitor,bad_experience,others,25,female,not_seen,not_seen,not_seen,indian,quiet,daytime,no,yes,3,9.8,right,no,no,no,,left,yes,yes,common_sense,yes,left,no,no,untested\n148,S184,talk,aligned,p2,25,female,routine,none,none,none,gives_way,local,none,indian,25,male,not_seen,not_seen,not_seen,others,quiet,daytime,yes,yes,3,9.8,both,yes,no,no,,left,yes,yes,common_sense,no,left,no,no,untested\n149,S186,talk,aligned,p1,70,female,urgent,none,none,none,holds_ground,visitor,none,indian,25,male,not_seen,not_seen,not_seen,indian,busy,late_night,yes,yes,3,9.8,none,no,no,no,,right,yes,yes,common_sense,together,right,no,no,coin_flip\n150,S186,talk,aligned,p2,25,male,routine,none,none,none,gives_way,local,none,indian,70,female,not_seen,not_seen,not_seen,indian,busy,late_night,no,yes,3,9.8,both,yes,no,no,,right,yes,yes,local_custom,together,right,no,no,coin_flip\n151,S190,talk,aligned,p1,70,male,routine,none,large_suitcase,none,gives_way,visitor,bad_experience,chinese,25,female,not_seen,not_seen,not_seen,chinese,quiet,late_night,no,yes,3,9.8,both,yes,no,no,,right,yes,yes,common_sense,together,right,no,no,untested\n152,S190,talk,aligned,p2,25,female,routine,none,none,none,gives_way,local,none,chinese,70,male,not_seen,large_suitcase,not_seen,chinese,quiet,late_night,no,yes,3,9.8,right,yes,no,no,,right,yes,yes,local_custom,together,right,no,no,untested\n```\n\nFAILED SESSIONS (90 sessions), counted by condition, geometry, the first sides of the two people's plans (each their own left or right) and what went wrong\n```csv\ncondition,geometry,first_sides_of_the_two,failure,sessions\nindependent,apart_20cm,left/right,collision,7\nindependent,aligned,both/right,collision,6\nnon_verbal,apart_20cm,left/right,collision,5\ntalk,aligned,left/right,collision,5\nnon_verbal,aligned,both/right,collision,4\ntalk,apart_20cm,left/right,collision,4\nindependent,aligned,both/both,collision,3\nnon_verbal,apart_20cm,both/left,collision,3\ntalk,apart_20cm,both/left,collision,3\ntalk,apart_20cm,both/right,collision,3\nindependent,apart_20cm,-/both,collision,2\nindependent,apart_20cm,both/none,collision,2\nnon_verbal,aligned,both/right,near_miss,2\nnon_verbal,apart_20cm,both/both,collision,2\nnon_verbal,apart_20cm,both/right,collision,2\nnon_verbal,apart_20cm,right/right,near_miss,2\ntalk,aligned,both/left,collision,2\nindependent,aligned,-/both,collision,1\nindependent,aligned,-/right,collision,1\nindependent,aligned,both/none,collision,1\nindependent,aligned,left/right,collision,1\nindependent,apart_20cm,both/left,collision,1\nindependent,apart_20cm,both/right,collision,1\nindependent,apart_20cm,both/right,near_miss,1\nindependent,apart_20cm,left/right,near_miss,1\nindependent,apart_20cm,none/right,collision,1\nnon_verbal,aligned,both/left,collision,1\nnon_verbal,aligned,left/left,collision,1\nnon_verbal,aligned,left/none,collision,1\nnon_verbal,aligned,left/right,collision,1\nnon_verbal,aligned,right/right,collision,1\nnon_verbal,aligned,right/right,near_miss,1\nnon_verbal,apart_20cm,right/right,collision,1\ntalk,aligned,both/both,near_miss,1\ntalk,aligned,both/left,near_miss,1\ntalk,aligned,both/right,collision,1\ntalk,aligned,both/right,near_miss,1\ntalk,aligned,left/none,near_miss,1\ntalk,aligned,left/right,near_miss,1\ntalk,aligned,none/right,collision,1\ntalk,aligned,none/right,near_miss,1\ntalk,aligned,right/right,collision,1\ntalk,apart_20cm,both/both,collision,1\ntalk,apart_20cm,both/none,collision,1\ntalk,apart_20cm,both/none,near_miss,1\ntalk,apart_20cm,both/right,near_miss,1\ntalk,apart_20cm,left/left,collision,1\ntalk,apart_20cm,left/none,collision,1\ntalk,apart_20cm,none/right,collision,1\ntalk,apart_20cm,right/right,collision,1\n```\n\nRESOLVED AND FAILED SESSIONS PER LEVEL OF EACH FACTOR OF THE DESIGN (p1: person 1 has it; neither: nobody has it)\n```csv\nfactor,level,resolved,failed\nage_pair,p1_older,40,41\nage_pair,same,36,49\ngender_pair,p1_female,34,48\ngender_pair,p1_male,42,42\nurgency,neither,43,40\nurgency,p1,33,50\nmobility_aid,neither,44,43\nmobility_aid,p1,32,47\nload,neither,41,40\nload,p1,35,50\ndistraction,neither,31,49\ndistraction,p1,45,41\nassertiveness,neither,42,42\nassertiveness,p1,34,48\nresidence,neither,43,39\nresidence,p1,33,51\nmemory_note,neither,37,48\nmemory_note,p1,39,42\nethnicity_pair,different,38,47\nethnicity_pair,same,38,43\nattractiveness_0_sees_1,attractive,38,46\nattractiveness_0_sees_1,unremarkable,38,44\nattractiveness_1_sees_0,attractive,39,43\nattractiveness_1_sees_0,unremarkable,37,47\nfamiliarity,acquaintances,38,45\nfamiliarity,strangers,38,45\nsurroundings,busy,37,46\nsurroundings,quiet,39,44\ntime_of_day,daytime,37,45\ntime_of_day,late_night,39,45\n```\n\nCELLS WHERE BEHAVIOUR IS NOT STABLE\n23 of the 24 repeated cells are coin flips: the rows with cell_stability coin_flip (18 rows here).\n\nSOME RESOLVED SESSIONS IN FULL (15 sessions). In their own words a person may call the other \"Person 1\": that is the label their own view gave the other.\nSession S023 (independent, geometry apart_20cm): resolved. Person 1 passed on their left, person 2 on their left; who left first: person 1.\n- Person 1 (row 19):\n  Decision 1, 9.8 m away (trigger, perceives): intent \"Keep walking to the emergency room without slowing down, holding my line past the person ahead.\"; steps [{\"start\": \"now\", \"speed_mps\": 1.3, \"until\": {\"at_distance_m\": 1.0}}, {\"start\": {\"at_distance_m\": 1.0}, \"speed_mps\": 1.3, \"turn\": {\"to\": \"right\", \"degrees\": 15.0}, \"until\": \"other_passes\"}].\n  Private reason: \"I'm in a hurry and on my phone, and I have as much right to the passage as anyone; I'll edge slightly right at the last moment to avoid a collision without breaking stride.\"\n  Afterwards, based on: none; \"Just my own read of the situation: I was in a hurry, keeping my line, and planned to edge slightly right at the last moment to avoid bumping into the person. No specific rule or study informed it.\"; source: none.\n- Person 2 (row 20):\n  Decision 1, 9.8 m away (trigger, perceives): intent \"Keep walking to the supermarket and give the woman with the cane room to pass.\"; steps [{\"start\": \"now\", \"speed_mps\": 1.3, \"turn\": {\"to\": \"left\", \"degrees\": 15.0}, \"until\": {\"at_distance_m\": 2.0}}, {\"speed_mps\": 1.1, \"until\": \"other_passes\"}, {\"speed_mps\": 1.3, \"turn\": {\"to\": \"right\", \"degrees\": 15.0}, \"until\": {\"seconds\": 2.0}}].\n  Private reason: \"She is looking at her phone and using a cane, so she may not see me well. I will shift toward the left wall to leave her plenty of space, slow down a little while she passes, then drift back toward the middle and carry on.\"\n  Afterwards, based on: common_sense; \"Nothing formal, just normal courtesy in a busy Singapore walkway: giving a wider berth and slowing a bit for someone using a cane and looking at her phone, so I don't crowd or startle her.\"; source: none.\n\nSession S030 (independent, geometry apart_20cm): resolved. Person 1 passed on their right, person 2 on their right; who left first: together.\n- Person 1 (row 21):\n  Decision 1, 9.8 m away (trigger, perceives): intent \"Keep heading to the supermarket while shifting slightly right so Person 1 and I can pass safely in the narrow passage.\"; steps [{\"start\": \"now\", \"speed_mps\": 1.2, \"turn\": {\"to\": \"right\", \"degrees\": 10.0}, \"until\": {\"at_distance_m\": 2.0}}, {\"start\": {\"at_distance_m\": 2.0}, \"speed_mps\": 1.0, \"turn\": {\"to\": \"right\", \"degrees\": 5.0}, \"until\": \"other_passes\"}, {\"speed_mps\": 1.3, \"until\": {\"seconds\": 4.0}}].\n  Private reason: \"Someone walked into me earlier today, so I want to be careful. Easing to the right and slowing a little gives the young woman coming toward me room to pass.\"\n  Afterwards, based on: habit; \"Being easy-going and giving way, plus the memory of being bumped into earlier today, so I moved to the right and slowed a little to leave room in the narrow passage.\"; source: none.\n- Person 2 (row 22):\n  Decision 1, 9.8 m away (trigger, perceives): intent \"Give way to the elderly man with the suitcase and greet him as we pass\"; steps [{\"start\": \"now\", \"speed_mps\": 1.1, \"turn\": {\"to\": \"right\", \"degrees\": 15.0}, \"until\": {\"at_distance_m\": 2.0}}, {\"speed_mps\": 0.8, \"until\": \"other_passes\"}, {\"speed_mps\": 1.3, \"until\": {\"seconds\": 1.0}}].\n  Private reason: \"He is elderly, pulling a large suitcase in a narrow passage, and I know him from class, so I ease over to my right, slow down and let him pass while staying polite.\"\n  Afterwards, based on: common_sense; \"Not a formal rule, just ordinary courtesy: an elderly person pulling a bulky suitcase in a narrow passage gets extra room, and slowing and giving way is the common, easy-going thing to do here, plus a friendly greeting to someone I know.\"; source: none.\n\nSession S041 (independent, geometry aligned): resolved. Person 1 passed on their right, person 2 on their right; who left first: together.\n- Person 1 (row 29):\n  Decision 1, 9.8 m away (trigger, perceives): intent \"Keep walking toward the supermarket while glancing at my phone, but look up and hold my line so I don't bump into Person 1 again like earlier.\"; steps [{\"start\": \"now\", \"speed_mps\": 1.3, \"until\": {\"at_distance_m\": 2.5}}, {\"start\": {\"at_distance_m\": 2.5}, \"speed_mps\": 1.0, \"turn\": {\"to\": \"right\", \"degrees\": 12.0}, \"until\": \"other_passes\"}].\n  Private reason: \"I'm determined and won't be pushed aside, but I was knocked into earlier today, so I'll ease slightly to the right at the last moment to pass safely while keeping my ground.\"\n  Afterwards, based on: habit; \"Nothing formal: just my own caution after being walked into earlier today, plus the habit of glancing at my phone while walking in Singapore. It was common sense and personal habit, not a law, study or documented custom.\"; source: none.\n- Person 2 (row 30):\n  Decision 1, 9.8 m away (trigger, perceives): intent \"Give the elderly woman with the suitcase plenty of room and greet her as we pass.\"; steps [{\"start\": \"now\", \"speed_mps\": 1.3, \"turn\": {\"to\": \"right\", \"degrees\": 12.0}, \"until\": {\"at_distance_m\": 2.5}}, {\"start\": {\"at_distance_m\": 2.5}, \"speed_mps\": 1.1, \"until\": \"other_passes\"}, {\"start\": {\"after_seconds\": 0.5}, \"speed_mps\": 1.3, \"until\": {\"seconds\": 3.0}}].\n  Private reason: \"She's elderly, distracted by her phone and hauling a suitcase, and the passage is narrow, so I'll edge toward my right side to leave her space and slow a little, then carry on to the supermarket.\"\n  Afterwards, based on: common_sense; \"Everyday courtesy and common sense: giving an elderly, distracted person carrying a suitcase extra room in a narrow passage, and slowing slightly rather than forcing a squeeze past.\"; source: none.\n\nSession S045 (independent, geometry aligned): resolved. Person 1 passed on their right, person 2 on their right; who left first: person 2.\n- Person 1 (row 33):\n  Decision 1, 9.8 m away (trigger, perceives): intent \"Keep heading to the emergency room, but shift aside and slow a little so we can pass comfortably; maybe say hello.\"; steps [{\"start\": \"now\", \"speed_mps\": 1.1, \"turn\": {\"to\": \"right\", \"degrees\": 12.0}, \"until\": {\"at_distance_m\": 2.0}}, {\"speed_mps\": 0.9, \"until\": \"other_passes\"}, {\"speed_mps\": 1.3, \"turn\": {\"to\": \"left\", \"degrees\": 12.0}, \"until\": {\"seconds\": 3.0}}].\n  Private reason: \"I'm easy-going and pulling a suitcase with a cane, so I'll give her room on the narrow path and greet her as we pass, then get back on my way.\"\n  Afterwards, based on: habit; \"Just common courtesy and habit: giving way and leaving room on a narrow passage, and greeting an acquaintance, especially being easy-going and managing a cane and suitcase.\"; source: none.\n- Person 2 (row 34):\n  Decision 1, 9.8 m away (trigger, perceives): intent \"Say hi to my classmate and give him room to pass with his cane and suitcase.\"; steps [{\"start\": \"now\", \"speed_mps\": 1.3, \"turn\": {\"to\": \"right\", \"degrees\": 15.0}, \"until\": {\"at_distance_m\": 2.5}}, {\"start\": {\"after_seconds\": 0.1}, \"speed_mps\": 0.6, \"until\": \"other_passes\"}].\n  Private reason: \"It's a narrow passage and he's coming toward me with a cane and a big suitcase, so I'll shift to my right and slow down to let him through, and greet him since we know each other.\"\n  Afterwards, based on: common_sense; \"Just everyday courtesy in a narrow shared passage: giving way and slowing down for someone using a cane and pulling a suitcase, plus a bit of friendly habit from knowing each other. No rule or study was behind it.\"; source: none.\n\nSession S054 (independent, geometry aligned): resolved. Person 1 passed on their right, person 2 on their right; who left first: together.\n- Person 1 (row 41):\n  Decision 1, 9.8 m away (trigger, perceives): intent \"Get to the emergency room quickly, but avoid bumping into the classmate I know coming toward me, since someone already collided with me today.\"; steps [{\"start\": \"now\", \"speed_mps\": 1.3, \"turn\": {\"to\": \"right\", \"degrees\": 15.0}, \"until\": {\"at_distance_m\": 3.0}}, {\"start\": {\"at_distance_m\": 3.0}, \"speed_mps\": 1.5, \"turn\": {\"to\": \"left\", \"degrees\": 10.0}, \"until\": \"other_passes\"}, {\"speed_mps\": 1.8, \"until\": {\"seconds\": 4.0}}].\n  Private reason: \"I glance up from my phone, shift slightly to my right to leave room, and once we're close I move past him and then speed up a bit toward the hospital. I'm easy-going so I'd rather give way than collide.\"\n  Afterwards, based on: local_custom; \"Just everyday courtesy and a habit of giving way — keeping to one side in a narrow passage and stepping aside so someone can pass, then getting on my way. Nothing formal.\"; source: none.\n- Person 2 (row 42):\n  Decision 1, 9.8 m away (trigger, perceives): intent \"Keep walking toward the supermarket, easing slightly to one side to pass the classmate I know, so we don't bump in the narrow passage.\"; steps [{\"start\": \"now\", \"speed_mps\": 1.3, \"turn\": {\"to\": \"right\", \"degrees\": 10.0}, \"until\": {\"at_distance_m\": 1.2}}, {\"start\": {\"at_distance_m\": 1.2}, \"speed_mps\": 1.3, \"turn\": {\"to\": \"left\", \"degrees\": 10.0}, \"until\": \"other_passes\"}].\n  Private reason: \"She's looking at her phone and probably won't notice me until we're close. The passage is narrow, so I'll shift a little to my right to leave room, then straighten up and carry on past her.\"\n  Afterwards, based on: habit; \"Nothing formal, just everyday courtesy in a narrow passage: giving a bit of room to someone walking toward me who's distracted by their phone, and in Singapore people generally keep left when passing on foot. It was also partly habit from how I normally walk around crowded walkways.\"; source: none.\n\nSession S074 (non_verbal, geometry apart_20cm): resolved. Person 1 passed on their left, person 2 on their left; who left first: together.\n- Person 1 (row 55):\n  Decision 1, 9.8 m away (trigger, perceives): intent \"Keep heading to the emergency room without slowing, while shifting slightly to my left to pass her on my right side.\"; steps [{\"start\": \"now\", \"speed_mps\": 1.3, \"turn\": {\"to\": \"left\", \"degrees\": 10.0}, \"until\": {\"at_distance_m\": 1.2}}, {\"start\": {\"at_distance_m\": 1.2}, \"speed_mps\": 1.3, \"until\": \"other_passes\"}].\n  Private reason: \"I'm determined and hold my ground, especially after being bumped into earlier today. A small shift left keeps me out of her direct line while I keep my pace; I stay alert with my phone down a little so I don't get walked into again.\"\n  Afterwards, based on: common_sense; \"Nothing formal—just my own habit of holding my line and a bit of common sense about giving a little room to pass on a narrow path, plus the memory of being bumped into earlier.\"; source: none.\n- Person 2 (row 56):\n  Decision 1, 9.8 m away (trigger, perceives): intent \"Let the elderly man know I'm yielding and give him room\"; steps [{\"start\": \"now\", \"speed_mps\": 1.0, \"turn\": {\"to\": \"left\", \"degrees\": 15.0}, \"until\": {\"at_distance_m\": 2.5}}, {\"start\": {\"at_distance_m\": 2.5}, \"speed_mps\": 0.4, \"until\": \"other_passes\"}].\n  Signal: hold_up_hand.\n  Private reason: \"He is elderly, using a cane, and distracted by his phone, so I'll slow down, move toward the wall on my left to give him space, and let him pass safely.\"\n  Afterwards, based on: common_sense; \"Yielding space to an elderly person with a cane who is distracted is just everyday courtesy and common sense in Singapore's shared walkways; giving way to elders is also a general social norm here. Not a specific law or study.\"; source: none.\n\nSession S082 (non_verbal, geometry apart_20cm): resolved. Person 1 passed on their right, person 2 on their right; who left first: together.\n- Person 1 (row 61):\n  Decision 1, 9.8 m away (trigger, perceives): intent \"Greet my classmate warmly and keep the path clear for both of us.\"; steps [{\"start\": \"now\", \"speed_mps\": 1.2, \"turn\": {\"to\": \"right\", \"degrees\": 15.0}, \"until\": {\"at_distance_m\": 3.0}}, {\"start\": {\"at_distance_m\": 3.0}, \"speed_mps\": 1.1, \"turn\": {\"to\": \"left\", \"degrees\": 10.0}, \"until\": \"other_passes\"}, {\"speed_mps\": 1.3, \"until\": {\"seconds\": 1.0}}].\n  Signal: eye_contact.\n  Private reason: \"I know her from classes and want to say hello, but I'm still a bit wary after someone walked into me earlier, so I'll shift toward the right side to keep clear room and then ease back as we pass.\"\n  Decision 2, 7.1 m away (signalled): intent \"Greet my classmate warmly and keep the path clear for both of us\"; steps [{\"start\": \"now\", \"speed_mps\": 1.0, \"turn\": {\"to\": \"right\", \"degrees\": 10.0}, \"until\": {\"at_distance_m\": 2.0}}, {\"speed_mps\": 0.9, \"until\": \"other_passes\"}].\n  Signal: wave_on.\n  Private reason: \"I already had eye contact and shifted right; she's drifting toward my right, so I'll hold to the right edge, slow down and let her pass while waving hello.\"\n  Decision 3, 4.8 m away (other_slowed_down, other_turned, signalled): intent \"Keep clear of my classmate, give her plenty of room, and stay on course for the supermarket\"; steps [{\"start\": \"now\", \"speed_mps\": 1.2, \"turn\": {\"to\": \"right\", \"degrees\": 10.0}, \"until\": {\"at_distance_m\": 1.2}}, {\"speed_mps\": 1.3, \"turn\": {\"to\": \"left\", \"degrees\": 5.0}, \"until\": {\"seconds\": 2.0}}].\n  Signal: eye_contact.\n  Private reason: \"She has slowed and shifted toward me, and someone walked into me earlier today, so I'll ease toward the right wall's side to open a gap while still acknowledging her with a look.\"\n  Afterwards, based on: habit; \"Personal habits from being an easy-going visitor who gives way, plus leftover caution from being bumped into earlier today — no specific rule, custom or study consulted.\"; source: none.\n- Person 2 (row 62):\n  Decision 1, 9.8 m away (trigger, perceives): intent \"Keep walking and give a friendly nod when we get close, then step aside to let my classmate pass.\"; steps [{\"start\": \"now\", \"speed_mps\": 1.3, \"until\": {\"at_distance_m\": 3.0}}, {\"start\": {\"at_distance_m\": 3.0}, \"speed_mps\": 1.0, \"turn\": {\"to\": \"right\", \"degrees\": 15.0}, \"until\": \"other_passes\"}, {\"start\": \"now\", \"speed_mps\": 1.3, \"until\": {\"seconds\": 0.1}}].\n  Private reason: \"He's using a cane and looking at his phone, so I'll be easy-going and shift a bit to my side to give him room, with a friendly nod since we know each other from class.\"\n  Decision 2, 7.3 m away (other_slowed_down, other_moved_left, other_turned, signalled): intent \"Keep walking, greet my classmate with a friendly nod, and step aside to let him pass since he's using a cane and looking at his phone.\"; steps [{\"start\": \"now\", \"speed_mps\": 1.3, \"until\": {\"at_distance_m\": 2.5}}, {\"speed_mps\": 1.1, \"turn\": {\"to\": \"right\", \"degrees\": 20.0}, \"until\": {\"at_distance_m\": 1.0}}, {\"speed_mps\": 0.9, \"until\": \"other_passes\"}].\n  Signal: nod.\n  Private reason: \"He has a cane and is distracted by his phone, so I'll make room for him on my right and let him pass on the left side of the passage.\"\n  Decision 3, 5.0 m away (other_slowed_down, other_moved_right, other_turned, signalled): intent \"Acknowledge my classmate and give him plenty of room to pass on my left, since he's using a cane and looking at his phone\"; steps [{\"start\": \"now\", \"speed_mps\": 1.15, \"turn\": {\"to\": \"right\", \"degrees\": 15.0}, \"until\": {\"at_distance_m\": 2.0}}, {\"start\": {\"at_distance_m\": 2.0}, \"speed_mps\": 1.0, \"turn\": {\"to\": \"right\", \"degrees\": 10.0}, \"until\": \"other_passes\"}].\n  Signal: nod.\n  Private reason: \"He waved me on and is drifting to my left, so I'll move to the right side of the passage to give him a clear path and keep going toward the supermarket.\"\n  Afterwards, based on: common_sense; \"Giving way to someone using a cane and distracted by their phone, and to a wave-on, is ordinary courtesy and common sense in a busy passage — keep left-ish and let the more constrained person through without fuss.\"; source: none.\n\nSession S102 (non_verbal, geometry aligned): resolved. Person 1 passed on their right, person 2 on their right; who left first: person 1.\n- Person 1 (row 75):\n  Decision 1, 9.8 m away (trigger, perceives): intent \"Keep to my line at my usual pace and watch briefly for the oncoming man, since someone barged into me earlier today.\"; steps [{\"start\": \"now\", \"speed_mps\": 1.3, \"until\": {\"at_distance_m\": 3.0}}, {\"start\": {\"at_distance_m\": 3.0}, \"speed_mps\": 1.3, \"turn\": {\"to\": \"right\", \"degrees\": 15.0}, \"until\": \"other_passes\"}].\n  Private reason: \"I hold my ground but a slight step to the right keeps the centre of the passage clear and avoids another collision; I will glance up from my phone so I see him coming.\"\n  Decision 2, 7.2 m away (other_moved_left, other_turned): intent \"Keep my line at my usual pace and keep a brief eye on the oncoming man\"; steps [{\"start\": \"now\", \"speed_mps\": 1.3, \"until\": {\"at_distance_m\": 3.0}}, {\"start\": {\"at_distance_m\": 3.0}, \"speed_mps\": 1.3, \"turn\": {\"to\": \"right\", \"degrees\": 10.0}, \"until\": \"other_passes\"}].\n  Private reason: \"I hold my ground, but someone walked into me earlier today, so I will keep watching this man and give a small step aside only if he keeps drifting into my line at close range.\"\n  Decision 3, 2.2 m away (other_moved_right, other_turned, plan_failing): intent \"Hold my line and keep an eye on the oncoming man, ready to hold my ground if he crowds me\"; steps [{\"start\": \"now\", \"speed_mps\": 1.3, \"until\": {\"at_distance_m\": 0.9}}, {\"start\": {\"at_distance_m\": 0.9}, \"speed_mps\": 1.0, \"until\": \"other_passes\"}].\n  Signal: eye_contact.\n  Private reason: \"Someone walked into me earlier today, and this man has already drifted and changed direction. I'll keep my usual pace but glance at him, then slow slightly and stay my ground so we pass without a collision.\"\n  Afterwards, based on: habit; \"Nothing formal. I was keeping my usual line at my normal pace out of habit and a bit of stubbornness, with a glance at the oncoming man because someone had already bumped into me today. Slowing slightly when he got close was just everyday common sense to avoid a collision, not a rule or custom I could cite.\"; source: none.\n- Person 2 (row 76):\n  Decision 1, 9.8 m away (trigger, perceives): intent \"keep walking, and shift slightly to my right to leave room for the older woman\"; steps [{\"start\": \"now\", \"speed_mps\": 1.3, \"turn\": {\"to\": \"right\", \"degrees\": 15.0}, \"until\": {\"at_distance_m\": 2.5}}, {\"speed_mps\": 1.3, \"turn\": {\"to\": \"left\", \"degrees\": 15.0}, \"until\": \"other_passes\"}].\n  Private reason: \"She is elderly and distracted by her phone, so I'll ease to the right to give her a wide berth and avoid a collision.\"\n  Decision 2, 2.2 m away (other_turned, plan_failing): intent \"keep clear of the older woman and stay to the right so she can pass\"; steps [{\"start\": \"now\", \"speed_mps\": 1.0, \"turn\": {\"to\": \"right\", \"degrees\": 10.0}, \"until\": {\"at_distance_m\": 1.0}}, {\"start\": {\"at_distance_m\": 1.0}, \"speed_mps\": 0.8, \"turn\": {\"to\": \"right\", \"degrees\": 5.0}, \"until\": \"other_passes\"}].\n  Private reason: \"She is looking at her phone and drifting toward my left, so I will slow and edge further right to give her room and avoid a collision.\"\n  Afterwards, based on: common_sense; \"Just everyday courtesy and situational awareness: giving extra room to an elderly person absorbed in her phone, keeping to my right as there was more space and she was drifting toward my left. No rule or study behind it, just common sense and a habit of yielding.\"; source: none.\n\nSession S113 (non_verbal, geometry aligned): resolved. Person 1 passed on their right, person 2 on their right; who left first: person 1.\n- Person 1 (row 85):\n  Decision 1, 9.8 m away (trigger, perceives): intent \"Keep walking to the supermarket, keeping to my side of the passage so Person 1 can pass.\"; steps [{\"start\": \"now\", \"speed_mps\": 1.3, \"turn\": {\"to\": \"right\", \"degrees\": 10.0}, \"until\": {\"at_distance_m\": 2.0}}, {\"speed_mps\": 1.1, \"until\": \"other_passes\"}].\n  Private reason: \"It's a narrow passage and someone I know from class is coming the other way. I'm easy-going, so I'll drift a little to my right to give him room and slow down a touch as we pass.\"\n  Decision 2, 7.5 m away (other_slowed_down, other_moved_left, other_turned): intent \"Keep to my side of the passage and let Person 1 pass, glancing up from my phone to be courteous\"; steps [{\"start\": \"now\", \"speed_mps\": 1.3, \"until\": {\"at_distance_m\": 2.5}}, {\"start\": {\"at_distance_m\": 2.5}, \"speed_mps\": 1.0, \"until\": \"other_passes\"}].\n  Private reason: \"We are in a narrow passage and it is late; I am easy-going and will stay right so the young man can get by, slowing a little as we pass since I am using a cane and was looking at my phone.\"\n  Decision 3, 5.4 m away (other_slowed_down, other_moved_right, other_turned, signalled): intent \"Acknowledge Person 1 with a nod and keep to my side so they can pass.\"; steps [{\"start\": \"now\", \"speed_mps\": 1.3, \"until\": {\"seconds\": 2.5}}, {\"start\": {\"at_distance_m\": 1.0}, \"speed_mps\": 1.0, \"turn\": {\"to\": \"right\", \"degrees\": 15.0}, \"until\": \"other_passes\"}].\n  Signal: nod.\n  Private reason: \"He nodded at me and we know each other from classes, so I'll nod back. I'm easy-going and prefer to give way, so I'll stay to my right and slow slightly to let him pass without fuss.\"\n  Afterwards, based on: habit; \"Just ordinary courtesy and a habit of giving way in a narrow space, plus returning a nod from someone I know; no formal rule or study behind it.\"; source: none.\n- Person 2 (row 86):\n  Decision 1, 9.8 m away (trigger, perceives): intent \"Keep to my side of the passage and slow a little so the elderly woman with the cane can pass comfortably, since she's looking at her phone.\"; steps [{\"start\": \"now\", \"speed_mps\": 1.0, \"turn\": {\"to\": \"right\", \"degrees\": 10.0}, \"until\": {\"at_distance_m\": 3.0}}, {\"start\": {\"at_distance_m\": 3.0}, \"speed_mps\": 0.8, \"turn\": {\"to\": \"right\", \"degrees\": 10.0}, \"until\": \"other_passes\"}].\n  Private reason: \"She's elderly, using a cane, and distracted by her phone, so I'll give her plenty of room and slow down to avoid surprising her.\"\n  Decision 2, 7.5 m away (other_moved_left, other_turned): intent \"Keep well to my right and slow down so the elderly woman with the cane can pass safely while she's on her phone\"; steps [{\"start\": \"now\", \"speed_mps\": 0.85, \"until\": {\"at_distance_m\": 3.0}}, {\"start\": {\"at_distance_m\": 3.0}, \"speed_mps\": 0.6, \"turn\": {\"to\": \"right\", \"degrees\": 8.0}, \"until\": \"other_passes\"}].\n  Signal: nod.\n  Private reason: \"She's elderly, using a cane and distracted by her phone, so I'll give her plenty of room on my left and pass slowly and quietly.\"\n  Decision 3, 5.4 m away (other_moved_right, other_turned): intent \"Give the elderly woman plenty of room and slow right down so she can pass comfortably while she's on her phone\"; steps [{\"start\": \"now\", \"speed_mps\": 0.5, \"turn\": {\"to\": \"right\", \"degrees\": 10.0}, \"until\": \"other_passes\"}, {\"start\": \"now\", \"speed_mps\": 0.85, \"until\": {\"seconds\": 1.0}}].\n  Signal: eye_contact.\n  Private reason: \"She's elderly, using a cane and distracted by her phone, so I'll keep well to my right, ease off, and let her pass without crowding her; a friendly glance acknowledges her as we near.\"\n  Afterwards, based on: common_sense; \"Just everyday courtesy and common sense — giving an elderly person with a cane extra room and slowing down when she's distracted by her phone, which is a fairly common habit in Singapore's shared walkways.\"; source: none.\n\nSession S142 (talk, geometry apart_20cm): resolved. Person 1 passed on their left, person 2 on their left; who left first: together.\n- Person 1 (row 107):\n  Decision 1, 9.8 m away (trigger, perceives): intent \"Keep walking to the supermarket, easing to my left a little to give the oncoming man room to pass\"; steps [{\"start\": \"now\", \"speed_mps\": 1.3, \"turn\": {\"to\": \"left\", \"degrees\": 10.0}, \"until\": {\"at_distance_m\": 2.0}}, {\"start\": {\"at_distance_m\": 2.0}, \"speed_mps\": 1.2, \"until\": \"other_passes\"}].\n  Private reason: \"The passage is narrow and someone is coming the other way; giving way slightly is easy and polite.\"\n  Afterwards, based on: habit; \"Just everyday courtesy and habit when passing someone in a narrow corridor — give a bit of room and let them by. Not from any law, study or formal guidance.\"; source: none.\n- Person 2 (row 108):\n  Decision 1, 9.8 m away (trigger, perceives): intent \"Keep walking to the supermarket, easing slightly to my left so we can pass each other comfortably\"; steps [{\"start\": \"now\", \"speed_mps\": 1.3, \"turn\": {\"to\": \"left\", \"degrees\": 10.0}, \"until\": {\"at_distance_m\": 2.0}}, {\"speed_mps\": 1.3, \"until\": \"other_passes\"}].\n  Private reason: \"The passage is narrow but there is room for both of us; a small shift toward the wall on my left gives the oncoming woman space to pass without either of us having to stop.\"\n  Afterwards, based on: habit; \"Just ordinary give-and-take in a narrow passage: drifting a little to my own left so two people can pass without bumping. It's a habit and common courtesy in Singapore, not something I could cite a rule for.\"; source: none.\n\nSession S144 (talk, geometry apart_20cm): resolved. Person 1 passed on their right, person 2 on their right; who left first: together.\n- Person 1 (row 111):\n  Decision 1, 9.8 m away (trigger, perceives): intent \"Keep heading to the emergency room while making room for the woman coming toward me\"; steps [{\"start\": \"now\", \"speed_mps\": 1.2, \"turn\": {\"to\": \"right\", \"degrees\": 15.0}, \"until\": {\"at_distance_m\": 3.0}}, {\"start\": {\"at_distance_m\": 3.0}, \"speed_mps\": 1.0, \"turn\": {\"to\": \"right\", \"degrees\": 10.0}, \"until\": \"other_passes\"}, {\"speed_mps\": 1.3, \"until\": {\"seconds\": 3.0}}].\n  Private reason: \"I'm old and pulling a big suitcase, so I'll drift toward the right side of the passage to give the young woman plenty of room to pass, then carry on my way to the hospital.\"\n  Decision 2, 7.3 m away (other_moved_left, other_turned): intent \"Keep making room on the right for the woman coming toward me and stay on my way to the emergency room\"; steps [{\"start\": \"now\", \"speed_mps\": 1.2, \"turn\": {\"to\": \"right\", \"degrees\": 10.0}, \"until\": {\"at_distance_m\": 2.0}}, {\"start\": {\"at_distance_m\": 2.0}, \"speed_mps\": 1.0, \"turn\": {\"to\": \"left\", \"degrees\": 5.0}, \"until\": \"other_passes\"}].\n  Private reason: \"I've already shifted right to give her space; easing a little further right and slowing slightly lets her pass comfortably without bumping, while I keep moving toward the hospital.\"\n  Decision 3, 4.9 m away (other_moved_right, other_turned): intent \"Keep heading to the emergency room, easing to my right to let the woman pass on my left\"; steps [{\"start\": \"now\", \"speed_mps\": 1.2, \"turn\": {\"to\": \"right\", \"degrees\": 8.0}, \"until\": {\"at_distance_m\": 2.0}}, {\"start\": {\"at_distance_m\": 2.0}, \"speed_mps\": 1.2, \"until\": \"other_passes\"}].\n  Private reason: \"She's drifting toward my right and I'm easy-going, so I'll shift a little right to give her room while still moving toward the hospital; I don't want to collide while distracted by my phone.\"\n  Afterwards, based on: habit; \"Just everyday politeness and habit — giving way to someone coming the other way and keeping to my own path, no formal rule in mind.\"; source: none.\n- Person 2 (row 112):\n  Decision 1, 9.8 m away (trigger, perceives): intent \"Keep walking to the supermarket and move aside a little to give the older man with the suitcase room to pass\"; steps [{\"start\": \"now\", \"speed_mps\": 1.3, \"turn\": {\"to\": \"right\", \"degrees\": 10.0}, \"until\": {\"at_distance_m\": 4.0}}, {\"speed_mps\": 1.15, \"turn\": {\"to\": \"left\", \"degrees\": 10.0}, \"until\": \"other_passes\"}, {\"speed_mps\": 1.3, \"until\": {\"seconds\": 2.0}}].\n  Private reason: \"He is elderly, pulling a heavy suitcase and distracted by his phone, so I will ease to my right to leave him space and avoid a collision.\"\n  Decision 2, 7.3 m away (other_slowed_down, other_moved_left, other_turned): intent \"Keep to my right side and give the older man with the suitcase plenty of room to pass\"; steps [{\"start\": \"now\", \"speed_mps\": 1.3, \"until\": \"other_passes\"}].\n  Private reason: \"He's elderly, looking at his phone, and pulling a big suitcase, so I'll stay well to my right and let him have the space without fuss.\"\n  Decision 3, 4.9 m away (other_moved_right, other_turned): intent \"Keep to my right and give the older man with the suitcase plenty of room to pass, slowing a little if needed\"; steps [{\"start\": \"now\", \"speed_mps\": 1.2, \"turn\": {\"to\": \"right\", \"degrees\": 8.0}, \"until\": {\"at_distance_m\": 1.6}}, {\"speed_mps\": 1.1, \"until\": \"other_passes\"}, {\"speed_mps\": 1.3, \"until\": {\"seconds\": 3.0}}].\n  Private reason: \"He's an elderly man looking at his phone and pulling a big suitcase, so he may not notice me; I'll shift right and ease my pace so he can pass comfortably.\"\n  Afterwards, based on: habit; \"Just everyday courtesy — giving an elderly person pulling a suitcase, and distracted by his phone, extra room to pass. It's a common habit of mine to yield and keep to my right, not something I got from any law, study, or formal guidance.\"; source: none.\n\nSession S166 (talk, geometry aligned): resolved. Person 1 passed on their left, person 2 on their left; who left first: together.\n- Person 1 (row 129):\n  Decision 1, 9.8 m away (trigger, perceives): intent \"Keep my line and my pace to the supermarket, keeping half an eye on the person ahead since the passage is narrow.\"; steps [{\"start\": \"now\", \"speed_mps\": 1.3, \"until\": {\"at_distance_m\": 2.0}}, {\"speed_mps\": 1.3, \"until\": \"other_passes\"}].\n  Private reason: \"The passage is narrow but I have as much right to my side as anyone. After being bumped earlier today I am keeping my ground and watching the oncoming person so I do not get walked into again.\"\n  Decision 2, 7.3 m away (other_moved_right, other_turned): intent \"Hold my line and pace toward the supermarket, keeping an eye on the young man drifting toward my right.\"; steps [{\"start\": \"now\", \"speed_mps\": 1.3, \"until\": {\"at_distance_m\": 3.0}}, {\"start\": {\"at_distance_m\": 3.0}, \"speed_mps\": 1.3, \"turn\": {\"to\": \"left\", \"degrees\": 15.0}, \"until\": \"other_passes\"}, {\"start\": \"now\", \"speed_mps\": 1.3, \"until\": {\"seconds\": 2.0}}].\n  Signal: eye_contact.\n  Private reason: \"The passage is narrow and he is drifting to my right, so a slight shift left keeps us apart without me giving up my line. I stay alert since someone bumped into me earlier today.\"\n  Afterwards, based on: common_sense; \"No formal rule or source; just ordinary walking sense in a busy narrow passage, keeping my line and adjusting slightly to avoid a collision, sharpened by having been bumped into earlier.\"; source: none.\n- Person 2 (row 130):\n  Decision 1, 9.8 m away (trigger, perceives): intent \"keep walking to the supermarket and give the elderly woman plenty of room\"; steps [{\"start\": \"now\", \"speed_mps\": 1.3, \"turn\": {\"to\": \"left\", \"degrees\": 20.0}, \"until\": {\"at_distance_m\": 3.0}}, {\"start\": {\"at_distance_m\": 3.0}, \"speed_mps\": 1.0, \"until\": \"other_passes\"}].\n  Private reason: \"She's elderly and looking at her phone, so she may not notice me; I'll drift slightly to my left early to leave her space, then slow a bit as we pass so I don't crowd her.\"\n  Decision 2, 7.0 m away (signalled): intent \"keep walking to the supermarket while steering well clear of the elderly woman who is looking at her phone\"; steps [{\"start\": \"now\", \"speed_mps\": 1.3, \"turn\": {\"to\": \"left\", \"degrees\": 10.0}, \"until\": {\"at_distance_m\": 3.0}}, {\"start\": {\"at_distance_m\": 3.0}, \"speed_mps\": 1.3, \"turn\": {\"to\": \"right\", \"degrees\": 5.0}, \"until\": \"other_passes\"}].\n  Private reason: \"She's drifting to my left while glued to her phone, so I keep to my left early on to leave her a wide berth, then straighten once I'm past the tightest part.\"\n  Afterwards, based on: common_sense; \"Just everyday courtesy and caution: giving an older woman distracted by her phone a wide berth so we don't bump into each other, and keeping my path predictable for her.\"; source: none.\n\nSession S170 (talk, geometry aligned): resolved. Person 1 passed on their left, person 2 on their left; who left first: together.\n- Person 1 (row 133):\n  Decision 1, 9.8 m away (trigger, perceives): intent \"Keep walking steadily to the emergency room, holding my line down the middle of the passage; I'm not going to be knocked aside again\"; steps [{\"start\": \"now\", \"speed_mps\": 1.3, \"until\": {\"at_distance_m\": 2.5}}, {\"start\": {\"at_distance_m\": 2.5}, \"speed_mps\": 1.0, \"turn\": {\"to\": \"left\", \"degrees\": 10.0}, \"until\": \"other_passes\"}].\n  Private reason: \"I need to get to the emergency room and I walk slowly with a cane; someone barged into me earlier today, so this time I keep my line but ease slightly to my left and let them pass on their side rather than stop dead.\"\n  Decision 2, 7.2 m away (other_moved_right, other_turned): intent \"Keep my line down the middle of the passage and make sure she sees me coming so we don't collide\"; steps [{\"start\": \"now\", \"speed_mps\": 1.3, \"until\": {\"at_distance_m\": 3.0}}, {\"start\": {\"at_distance_m\": 3.0}, \"speed_mps\": 1.3, \"until\": \"other_passes\"}].\n  Signal: eye_contact.\n  Private reason: \"I'm in a hurry to the emergency room and someone walked straight into me earlier today. I'll hold my ground down the middle, look at her so she knows I'm there, and keep a steady pace rather than dodging aside again.\"\n  Decision 3, 4.7 m away (other_slowed_down, other_turned): intent \"Keep my line down the middle and make sure she notices me so we don't collide again\"; steps [{\"start\": \"now\", \"speed_mps\": 1.3, \"until\": {\"seconds\": 1.5}}, {\"start\": \"now\", \"speed_mps\": 1.1, \"turn\": {\"to\": \"right\", \"degrees\": 15.0}, \"until\": {\"at_distance_m\": 1.5}}, {\"speed_mps\": 1.3, \"until\": {\"seconds\": 1.0}}].\n  Signal: hold_up_hand.\n  Said: \"Excuse me, coming through.\"\n  Private reason: \"I'm heading to the emergency room and I've been walked into once already tonight. She's slowed and shifted, so I'll hold my middle line, give a hand signal and a word so she knows I'm here, then edge slightly right only enough to pass safely, and keep going.\"\n  Afterwards, based on: habit; \"Nothing formal, just ordinary courtesy, personal habit and how I usually handle myself on Singapore walkways. I said 'excuse me' and held up a hand to make sure she knew I was there, and I gave a little room to pass, but I also stuck to my line because I was in a hurry to the emergency room and had already been walked into once tonight.\"; source: none.\n- Person 2 (row 134):\n  Decision 1, 9.8 m away (trigger, perceives): intent \"Give the elderly man plenty of room and avoid startling him as we pass in the narrow passage.\"; steps [{\"start\": \"now\", \"speed_mps\": 1.3, \"turn\": {\"to\": \"left\", \"degrees\": 10.0}, \"until\": {\"at_distance_m\": 2.5}}, {\"speed_mps\": 1.1, \"turn\": {\"to\": \"left\", \"degrees\": 5.0}, \"until\": \"other_passes\"}, {\"speed_mps\": 1.3, \"until\": {\"seconds\": 1.0}}].\n  Private reason: \"He is elderly, using a cane and distracted by his phone, so I'll drift to my left to leave him space and slow slightly so the pass isn't sudden.\"\n  Decision 2, 6.9 m away (signalled): intent \"Give the elderly man with the cane plenty of room and pass quietly so as not to startle him\"; steps [{\"start\": \"now\", \"speed_mps\": 1.15, \"turn\": {\"to\": \"left\", \"degrees\": 8.0}, \"until\": {\"at_distance_m\": 2.5}}, {\"start\": \"now\", \"speed_mps\": 1.0, \"until\": \"other_passes\"}, {\"speed_mps\": 1.3, \"until\": {\"seconds\": 2.0}}].\n  Private reason: \"He is elderly, using a cane and distracted by his phone, so I keep well to my left, slow down and pass quietly to avoid startling him or crowding him in the narrow passage.\"\n  Decision 3, 4.5 m away (signalled): intent \"Keep well to my left, slow down a little, and slip past the elderly man quietly so I don't startle him\"; steps [{\"start\": \"now\", \"speed_mps\": 1.0, \"turn\": {\"to\": \"left\", \"degrees\": 10.0}, \"until\": {\"at_distance_m\": 1.2}}, {\"start\": \"now\", \"speed_mps\": 1.0, \"until\": \"other_passes\"}].\n  Signal: nod.\n  Private reason: \"He's looking at his phone and using a cane, so he may not see me well; giving him the wider berth on my left and slowing down keeps the pass calm and safe.\"\n  Afterwards, based on: common_sense; \"Just ordinary courtesy and common sense — giving an elderly person with a cane extra space and not startling them in a narrow passage, especially late at night.\"; source: none.\n\nSession S175 (talk, geometry aligned): resolved. Person 1 passed on their left, person 2 on their left; who left first: together.\n- Person 1 (row 139):\n  Decision 1, 9.8 m away (trigger, perceives): intent \"Keep walking to the supermarket, giving way if needed\"; steps [{\"start\": \"now\", \"speed_mps\": 1.3, \"until\": {\"at_distance_m\": 2.0}}, {\"speed_mps\": 1.0, \"turn\": {\"to\": \"left\", \"degrees\": 15.0}, \"until\": \"other_passes\"}].\n  Private reason: \"I'm easy-going and it's late, so I'll keep to my side and slow down to let the young man pass without fuss.\"\n  Decision 2, 7.4 m away (other_slowed_down, other_moved_right, other_turned): intent \"Keep walking to the supermarket, edging slightly left to give the young man room to pass\"; steps [{\"start\": \"now\", \"speed_mps\": 1.3, \"turn\": {\"to\": \"left\", \"degrees\": 10.0}, \"until\": {\"at_distance_m\": 1.5}}, {\"speed_mps\": 1.1, \"until\": \"other_passes\"}, {\"speed_mps\": 1.3, \"until\": {\"seconds\": 3.0}}].\n  Private reason: \"He is drifting to my right, so I ease a little to my left to leave him space, and slow as he draws close so we pass safely in this busy, narrow passage.\"\n  Decision 3, 5.1 m away (other_moved_left, other_turned): intent \"Keep to the left to give the young man plenty of room to pass, without disturbing him\"; steps [{\"start\": \"now\", \"speed_mps\": 1.2, \"turn\": {\"to\": \"left\", \"degrees\": 10.0}, \"until\": {\"at_distance_m\": 1.2}}, {\"start\": \"now\", \"speed_mps\": 1.0, \"until\": \"other_passes\"}].\n  Private reason: \"I am easy-going and give way; keeping left leaves him the wider side, and slowing a little while distracted by my phone is safer in this narrow, busy passage.\"\n  Afterwards, based on: habit; \"Mostly habit and common sense: in Singapore it's the norm to keep left and give way in narrow passages, and as an older person with a cane and suitcase I naturally edge aside for younger, faster walkers rather than hold my line. No specific law, study or official rule was in mind.\"; source: none.\n- Person 2 (row 140):\n  Decision 1, 9.8 m away (trigger, perceives): intent \"Keep walking toward the supermarket, easing to the side to give the elderly lady room to pass.\"; steps [{\"start\": \"now\", \"speed_mps\": 1.1, \"turn\": {\"to\": \"left\", \"degrees\": 15.0}, \"until\": {\"at_distance_m\": 2.5}}, {\"start\": {\"at_distance_m\": 2.5}, \"speed_mps\": 1.0, \"until\": \"other_passes\"}].\n  Private reason: \"She is elderly, distracted by her phone, and has a cane and a big suitcase in a narrow passage, so I will slow a little and shift toward the left wall to leave her space to pass safely.\"\n  Decision 2, 7.2 m away (other_turned): intent \"Give the elderly lady with the cane and suitcase plenty of room to pass while I continue to the supermarket\"; steps [{\"start\": \"now\", \"speed_mps\": 1.1, \"turn\": {\"to\": \"left\", \"degrees\": 5.0}, \"until\": {\"at_distance_m\": 2.5}}, {\"start\": {\"at_distance_m\": 2.5}, \"speed_mps\": 1.0, \"until\": \"other_passes\"}, {\"speed_mps\": 1.3, \"until\": {\"seconds\": 3.0}}].\n  Private reason: \"She is elderly, using a cane, pulling a suitcase, and distracted by her phone, so I ease further left to give her a wide berth and slow a bit as she passes.\"\n  Decision 3, 4.8 m away (other_slowed_down): intent \"Give the elderly lady with the cane and suitcase plenty of room to pass, then continue to the supermarket\"; steps [{\"start\": \"now\", \"speed_mps\": 0.9, \"turn\": {\"to\": \"left\", \"degrees\": 12.0}, \"until\": {\"at_distance_m\": 2.0}}, {\"start\": {\"at_distance_m\": 2.0}, \"speed_mps\": 1.1, \"until\": \"other_passes\"}, {\"start\": {\"after_seconds\": 0.5}, \"speed_mps\": 1.3, \"until\": {\"seconds\": 3.0}}].\n  Private reason: \"She is elderly, using a cane, pulling a suitcase and distracted by her phone, so I will ease to my left to leave her a wide berth, slow a little, then carry on to the supermarket once she has passed.\"\n  Afterwards, based on: common_sense; \"Giving way and leaving space for an elderly person with a cane and a suitcase is ordinary courtesy and common sense, not something I was following from a written rule.\"; source: none.\n\nSession S186 (talk, geometry aligned): resolved. Person 1 passed on their right, person 2 on their right; who left first: together.\n- Person 1 (row 149):\n  Decision 1, 9.8 m away (trigger, perceives): intent \"Keep moving quickly toward the emergency room, holding my line in the passage.\"; steps [{\"start\": \"now\", \"speed_mps\": 1.3, \"until\": {\"at_distance_m\": 2.0}}].\n  Private reason: \"I am in a hurry to reach the emergency room, and I have no reason to give way; I know Person 1 from my classes and will keep my steady pace until we are close.\"\n  Decision 2, 7.3 m away (other_slowed_down, other_moved_left, other_turned, signalled): intent \"Acknowledge him briefly and keep my pace straight toward the emergency room\"; steps [{\"start\": \"now\", \"speed_mps\": 1.3, \"until\": \"other_passes\"}].\n  Signal: nod.\n  Private reason: \"I need to get to the emergency room quickly, so I hold my line and just greet him with a nod as we pass.\"\n  Decision 3, 4.9 m away (other_moved_right, other_turned, signalled): intent \"Acknowledge him again and keep my pace toward the emergency room, edging slightly right to pass him.\"; steps [{\"start\": \"now\", \"speed_mps\": 1.4, \"turn\": {\"to\": \"right\", \"degrees\": 5.0}, \"until\": {\"at_distance_m\": 0.9}}, {\"speed_mps\": 1.3, \"until\": \"other_passes\"}].\n  Signal: nod.\n  Said: \"Thank you, beta — I'm in a hurry, let me through please.\"\n  Private reason: \"He waved me on and moved to my right, so a small shift right keeps us from colliding while I hold my line and speed to the ER.\"\n  Afterwards, based on: common_sense; \"Nothing formal — just keeping to the side of the passage and holding my line, giving a nod of thanks, and easing over to pass a person who waved me on, all out of common courtesy and the need to get to the ER quickly.\"; source: none.\n- Person 2 (row 150):\n  Decision 1, 9.8 m away (trigger, perceives): intent \"Give way a little and greet her warmly as we pass, since we know each other from classes\"; steps [{\"start\": \"now\", \"speed_mps\": 1.2, \"turn\": {\"to\": \"right\", \"degrees\": 15.0}, \"until\": {\"at_distance_m\": 1.2}}, {\"start\": {\"at_distance_m\": 1.2}, \"speed_mps\": 1.1, \"turn\": {\"to\": \"left\", \"degrees\": 15.0}, \"until\": \"other_passes\"}].\n  Signal: eye_contact.\n  Private reason: \"She's elderly and the passage is narrow, so I ease over to my right to leave her room, then straighten up and greet her as we pass.\"\n  Decision 2, 7.1 m away (signalled): intent \"Greet her warmly and keep well to my right so we pass easily in the narrow passage\"; steps [{\"start\": \"now\", \"speed_mps\": 1.2, \"turn\": {\"to\": \"right\", \"degrees\": 10.0}, \"until\": {\"at_distance_m\": 2.0}}, {\"speed_mps\": 1.1, \"turn\": {\"to\": \"right\", \"degrees\": 5.0}, \"until\": \"other_passes\"}].\n  Signal: wave_on.\n  Said: \"Hello Auntie, good evening!\"\n  Private reason: \"She's elderly and drifting toward my right, so I'll hold my side, flag my greeting with a wave since it's noisy, and slow a touch so we pass comfortably.\"\n  Decision 3, 4.6 m away (other_sped_up, other_turned, signalled): intent \"Keep well to my right so we can pass each other easily in the narrow passage\"; steps [{\"start\": \"now\", \"speed_mps\": 1.2, \"turn\": {\"to\": \"right\", \"degrees\": 8.0}, \"until\": \"other_passes\"}, {\"speed_mps\": 1.3, \"until\": {\"seconds\": 2.0}}].\n  Signal: wave_on.\n  Said: \"Auntie, sorry, coming through on your right!\"\n  Private reason: \"She's speeding up and shifting, so I'll hold my right side and let her pass, then carry on to the supermarket.\"\n  Afterwards, based on: local_custom; \"General courtesy and local habit in Singapore: keeping to the left/right when passing and giving way, and greeting an older family friend warmly with 'Auntie'. No specific law or study in mind, just everyday politeness and reading the other person's movement.\"; source: none."
+    }
+  ],
+  "attempts": [
+    {
+      "attempt": 1,
+      "messages_sent": 2,
+      "raw": "```yaml\nrules:\n  - rule: People default to steering to their OWN right to pass, easing off a hold-or-give decision onto a right-hand gap, at a modest short-lived angle early on.\n    applies_when: Two people approach on nearly the same line and both are unconstrained (no cane, no suitcase, no phone, no urgency) or at least one holds ground; independent or non-verbal condition where no message is needed.\n    action: At the first decision (typically 9.8 m), start a turn to the person's own right of about 10-15 degrees (median 10-15), lasting until other_passes or until about 2.0-2.5 m, often followed by a small counter-turn of 5-10 degrees to straighten up.\n    exceptions:\n      - When the other person is visibly constrained (cane, suitcase, phone, elderly) and this person is the giving-way type, they turn to their own LEFT (15 degrees) instead, e.g. rows 13-14, 76, 108.\n      - When the other's first plan is 'both' (a dither), the right turn is not matched and collision or near-miss results (independent,aligned both/right: 6 collisions; both/both: 3 collisions).\n      - Coin-flip cells (rows 1-2, 9-10, 15-16, 39-40, 51-52, 55-56, 83-84, 131-132, 149-150): repeated prompts gave different first sides, so the rule is not reliable there.\n    factors_used: [condition, geometry, own_assertiveness, own_mobility_aid, own_load, own_distraction, other_mobility_aid, other_load, other_distraction, other_age, first_decision_distance_m]\n    needs_communication: false\n    references:\n      - citation: \"Singapore pedestrian keep-left convention as reported by participants\"\n        locator: \"participant debriefs, S042 p2, S186 p2\"\n        kind: local_custom\n        claim: \"People say they keep left when passing on foot, but resolve by easing to their own right when facing oncoming walkers.\"\n      - citation: \"no known source\"\n        locator: \"none\"\n        kind: none\n        claim: \"No law or study in the data was cited for a right-hand passing rule.\"\n    debrief_support:\n      share: 0.55\n      note: \"Most common_sense and habit debriefs cite 'giving room / edging to my right'; a minority (local_custom) say keep left.\"\n    coverage: \"About 100 of 152 rows; first_side is right for ~72 rows, both for ~28, left for ~15, none for ~7.\"\n    predict:\n      target: first_side\n      if:\n        - when: {own_mobility_aid: cane, own_assertiveness: gives_way}\n          then: left\n        - when: {own_mobility_aid: none, own_load: none, own_distraction: none, own_assertiveness: gives_way}\n          then: right\n        - when: {own_assertiveness: holds_ground}\n          then: right\n        - when: {condition: independent}\n          then: right\n      default: both\n\n  - rule: A slower, gentler speed and a small left turn are used by a giving-way person to make room for a constrained or elderly other (the 'give way to cane/suitcase/elder' behaviour).\n    applies_when: The other is elderly (own_age of the other ≥ 70) or has a cane, suitcase, or phone, and this person is gives_way.\n    action: At 9.8 m, turn 10-15 degrees to own left and immediately reduce speed from ~1.3 to ~1.0-1.1 m/s, holding until other_passes; sometimes a small right counter-turn of 5-10 degrees after.\n    exceptions:\n      - When both people are gives_way and both decline to hold ground, both turn left and still collide (talk,apart_20cm left/left: 1 collision; talk,aligned left/left: not listed but left/none near-miss).\n      - If the other is already holding ground and turning right, this left turn produces a head-on mismatch (independent,apart_20cm left/right: 7 collisions).\n    factors_used: [own_assertiveness, other_age, other_mobility_aid, other_load, other_distraction, own_urgency]\n    needs_communication: false\n    references:\n      - citation: \"Everyday courtesy to elders as reported by participants\"\n        locator: \"participant debriefs, S030 p2, S041 p2, S175 p2\"\n        kind: local_custom\n        claim: \"Participants say giving an elderly person or one with a cane/suitcase extra room is ordinary courtesy in Singapore walkways.\"\n      - citation: \"no known source\"\n        locator: \"none\"\n        kind: none\n        claim: \"No statute or study was cited.\"\n    debrief_support:\n      share: 0.85\n      note: \"Debriefs on both sides of these sessions call it 'everyday courtesy' or 'common sense' to yield to an elderly person with a cane or suitcase.\"\n    coverage: \"About 60 rows where one person has a cane/load/phone/elder and the other is gives_way.\"\n    predict:\n      target: first_slowed\n      if:\n        - when: {own_assertiveness: gives_way, other_age: {\">=\": 70}}\n          then: \"yes\"\n        - when: {own_assertiveness: gives_way, other_mobility_aid: cane}\n          then: \"yes\"\n        - when: {own_assertiveness: gives_way, other_load: large_suitcase}\n          then: \"yes\"\n      default: \"no\"\n\n  - rule: A person who holds ground keeps their line and pace until the other is close (2-3 m), then eases a small turn of 10-15 degrees; they rarely slow, and almost never stop or back up.\n    applies_when: own_assertiveness is holds_ground, and the other is not obviously more constrained (no cane/suitcase on the other that the person was told of).\n    action: First plan turns 10-15 degrees to own right at the first decision (9.8 m) or at about 2.5-3.0 m, keeps speed near 1.3 m/s; slowing only in the final 0.9-1.5 m if plan_failing.\n    exceptions:\n      - If the other also holds ground and mirrors, both stay near the centre and near-miss or collision results (non_verbal,aligned right/right near-miss: 2; talk,aligned right/right collision: 1).\n      - Coin-flip cells (rows 55, 75, 83, 149) show holds_ground people sometimes never turn at all.\n    factors_used: [own_assertiveness, other_mobility_aid, other_load, first_decision_distance_m]\n    needs_communication: false\n    references:\n      - citation: \"no known source\"\n        locator: \"none\"\n        kind: habit\n        claim: \"Participants describe 'holding my line' as personal habit or stubbornness, not a documented rule.\"\n    debrief_support:\n      share: 0.6\n      note: \"Holds-ground people's debriefs say 'habit', 'stubbornness', or 'as much right to my side'.\"\n    coverage: \"About 45 rows with own_assertiveness = holds_ground.\"\n    predict:\n      target: first_slowed\n      if:\n        - when: {own_assertiveness: holds_ground}\n          then: \"no\"\n      default: \"yes\"\n\n  - rule: Stopping or backing up essentially never happens at the first decision; the conflict is resolved by lateral turning and modest slowing, not by halting.\n    applies_when: Any first decision in any condition (only 1 of 152 first plans stops; 0 back up).\n    action: At 9.8 m the plan turns and/or slows; stopping, if at all, only appears at a later decision when plan_failing, and even then most people just slow.\n    exceptions:\n      - Row 88 (S119 p2) first_stopped = yes, a single exception; the rest of the table shows no first-stop.\n      - Failed sessions are overwhelmingly collisions (near-misses) rather than stops, showing that people do not use stopping to resolve — they use it rarely and too late.\n    factors_used: [condition, geometry, first_decision_distance_m]\n    needs_communication: false\n    references:\n      - citation: \"no known source\"\n        locator: \"none\"\n        kind: common_sense\n        claim: \"Participants' debriefs treat a slight turn plus a small slow-down, not stopping, as the way to pass.\"\n    debrief_support:\n      share: 0.9\n      note: \"Debriefs describe 'easing aside', 'slowing a little', 'carrying on'; almost none describe stopping.\"\n    coverage: \"All 152 rows; measured stopped = no for 151, backed_up = no for all.\"\n    predict:\n      target: stopped\n      if:\n        - when: {condition: independent}\n          then: \"no\"\n      default: \"no\"\n\n  - rule: People synchronise the passing side to their own right when the other is elderly or constrained and they are giving way; the pair then passes right/right.\n    applies_when: Both are gives_way and at least one has a visible constraint (cane, suitcase, phone) or is elderly.\n    action: Both turn right by 10-15 degrees at 9.8 m (or the constrained person turns left and the other turns right, producing a left/left pass in their own terms); passing_side = right in the majority of resolved cases.\n    exceptions:\n      - When one turns left and the other turns right simultaneously (asymmetric), the pair collides — independent,apart_20cm left/right: 7 collisions; non_verbal,apart_20cm left/right: 5; talk,aligned left/right: 5.\n      - When one plan is 'both' and the other 'none' or 'right', the pair collides (independent,apart_20cm both/none: 2; both/none: 2).\n    factors_used: [own_assertiveness, other_assertiveness (via gives_way/holds_ground pairing), other_age, other_mobility_aid, other_load, other_distraction, geometry]\n    needs_communication: false\n    references:\n      - citation: \"Everyday courtesy and keep-side custom reported by participants\"\n        locator: \"participant debriefs, S030 p2, S144 p2\"\n        kind: local_custom\n        claim: \"Participants say the ordinary thing is to keep to a side and let the more constrained person through.\"\n    debrief_support:\n      share: 0.7\n      note: \"Debriefs very often say 'ease to my right and let him/her pass'.\"\n    coverage: \"About 90 resolved rows where passing_side is known; passing_side = right for the majority.\"\n    predict:\n      target: passing_side\n      if:\n        - when: {own_assertiveness: gives_way, other_age: {\">=\": 70}}\n          then: right\n        - when: {own_assertiveness: gives_way, other_mobility_aid: cane}\n          then: right\n        - when: {own_assertiveness: gives_way, other_load: large_suitcase}\n          then: right\n      default: right\n\n  - rule: Signalling (eye contact, nod, hold-up-hand, wave-on) is used opportunistically, more in the non-verbal and talk conditions, and is concentrated among those who hold ground or know the other.\n    applies_when: Condition is non_verbal or talk; the person holds ground, or knows the other, or their plan is failing at the second/third decision point.\n    action: Signal at the first decision (~9.8 m) or at decision 2 (~7 m) or decision 3 (~5 m); signalling accompanies, not replaces, the turn — a right turn plus eye_contact or nod is typical.\n    exceptions:\n      - Some non-verbal rows have signalled = no (rows 54, 60, 70, 76, 93, 94, 112, 116); these tend to be people who also do not hold ground.\n      - Signalling does not prevent collision: many failed non_verbal and talk sessions include signalling (e.g. non_verbal,aligned both/right collision: 4).\n    factors_used: [condition, own_assertiveness, knows_other, decision_points]\n    needs_communication: true\n    references:\n      - citation: \"no known source\"\n        locator: \"none\"\n        kind: habit\n        claim: \"Participants describe nodding, waving on, or making eye contact as ordinary acknowledgement, not a rule.\"\n    debrief_support:\n      share: 0.5\n      note: \"Debriefs mention 'nod', 'wave on', 'eye contact' as courtesies; roughly half the non-verbal and talk rows signal.\"\n    coverage: \"Independent rows: signalled = n/a; non-verbal and talk rows: signalled = yes in about 35 of 76.\"\n    predict:\n      target: signalled\n      if:\n        - when: {condition: independent}\n          then: \"n/a\"\n        - when: {own_assertiveness: holds_ground, condition: [non_verbal, talk]}\n          then: \"yes\"\n        - when: {knows_other: \"yes\", condition: [non_verbal, talk]}\n          then: \"yes\"\n        - when: {decision_points: 3, condition: [non_verbal, talk]}\n          then: \"yes\"\n      default: \"no\"\n\n  - rule: Speaking in the talk condition is rare and often withheld; where it is used it is a short verbal excuse (\"excuse me\", \"coming through\") that accompanies a modest turn rather than a negotiation.\n    applies_when: condition is talk and either the person holds ground or the plan is failing at decision 3.\n    action: At decision 3 (~4.5-4.9 m) say a short phrase while turning 5-15 degrees to own right and/or holding line.\n    exceptions:\n      - Most talk rows have spoke = no (only rows 95, 97, 98, 102, 103, 104, 114, 131?, 149, 150 show some speaking) — the majority of talk rows do not speak.\n      - Speaking does not guarantee resolution: talk,aligned still fails 40 times.\n    factors_used: [condition, own_assertiveness, decision_points]\n    needs_communication: true\n    references:\n      - citation: \"no known source\"\n        locator: \"none\"\n        kind: habit\n        claim: \"Participants describe short courtesy phrases; no law or study cited.\"\n    debrief_support:\n      share: 0.2\n      note: \"Only a minority of talk debriefs mention what they said.\"\n    coverage: \"76 talk rows; spoke = yes in fewer than 20.\"\n    predict:\n      target: spoke\n      if:\n        - when: {condition: independent}\n          then: \"n/a\"\n        - when: {condition: non_verbal}\n          then: \"n/a\"\n        - when: {own_assertiveness: holds_ground, condition: talk, decision_points: 3}\n          then: \"yes\"\n      default: \"no\"\n\n  - rule: Neither person keeps a signal-free first turn when the other's first plan is 'both' (a left-then-right weave); such pairs collide regardless of condition.\n    applies_when: One person's first plan is 'both' (usually a dithering gives_way person) and the other's is right or left.\n    action: The 'both' person turns 10-15 degrees right then 10-15 degrees left (or reverses), which crosses the other's line; the outcome is a collision or near-miss even though neither stopped.\n    exceptions:\n      - Nothing in this data reverses the pattern; the failed-session counts show 'both/right' and 'both/left' as the biggest collision families.\n    factors_used: [condition, geometry, other first side proxy: own_assertiveness, own_mobility_aid, own_load, own_distraction]\n    needs_communication: false\n    references:\n      - citation: \"no known source\"\n        locator: \"none\"\n        kind: none\n        claim: \"Not a documented rule; an observed pattern of failure.\"\n    debrief_support:\n      share: 0.0\n      note: \"Debriefs do not mention the 'both' weave; it appears in the plan data and failed-session counts only.\"\n    coverage: \"All ~30 rows with first_side = both; ~20 of these are in failed sessions.\"\n    predict:\n      target: passed_first\n      if:\n        - when: {geometry: aligned, own_assertiveness: gives_way, own_load: large_suitcase}\n          then: together\n        - when: {own_assertiveness: gives_way, own_mobility_aid: cane}\n          then: together\n        - when: {first_decision_distance_m: {\">\": 9.7}, own_assertiveness: holds_ground}\n          then: \"yes\"\n      default: together\n```",
+      "model": "deepseek-flash",
+      "system_fingerprint": "e72d3c7f663d3e1383b00b3884cb4501",
+      "response_id": "469b19cd-49bd-4849-a39e-730a5d428baa",
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 31422,
+        "completion_tokens": 3852,
+        "prompt_cache_hit_tokens": 18560,
+        "prompt_cache_miss_tokens": 12862,
+        "reasoning_tokens": 0
+      },
+      "cost_usd": 0.00429618,
+      "price_tier": "off_peak",
+      "latency_s": 21.532681399956346,
+      "started_utc": "2026-10-26T04:03:22.876+00:00",
+      "failed_sends": 0,
+      "parse_error": "the reply is not YAML: mapping values are not allowed here"
+    },
+    {
+      "attempt": 2,
+      "messages_sent": 4,
+      "appended": [
+        {
+          "role": "assistant",
+          "content": "```yaml\nrules:\n  - rule: People default to steering to their OWN right to pass, easing off a hold-or-give decision onto a right-hand gap, at a modest short-lived angle early on.\n    applies_when: Two people approach on nearly the same line and both are unconstrained (no cane, no suitcase, no phone, no urgency) or at least one holds ground; independent or non-verbal condition where no message is needed.\n    action: At the first decision (typically 9.8 m), start a turn to the person's own right of about 10-15 degrees (median 10-15), lasting until other_passes or until about 2.0-2.5 m, often followed by a small counter-turn of 5-10 degrees to straighten up.\n    exceptions:\n      - When the other person is visibly constrained (cane, suitcase, phone, elderly) and this person is the giving-way type, they turn to their own LEFT (15 degrees) instead, e.g. rows 13-14, 76, 108.\n      - When the other's first plan is 'both' (a dither), the right turn is not matched and collision or near-miss results (independent,aligned both/right: 6 collisions; both/both: 3 collisions).\n      - Coin-flip cells (rows 1-2, 9-10, 15-16, 39-40, 51-52, 55-56, 83-84, 131-132, 149-150): repeated prompts gave different first sides, so the rule is not reliable there.\n    factors_used: [condition, geometry, own_assertiveness, own_mobility_aid, own_load, own_distraction, other_mobility_aid, other_load, other_distraction, other_age, first_decision_distance_m]\n    needs_communication: false\n    references:\n      - citation: \"Singapore pedestrian keep-left convention as reported by participants\"\n        locator: \"participant debriefs, S042 p2, S186 p2\"\n        kind: local_custom\n        claim: \"People say they keep left when passing on foot, but resolve by easing to their own right when facing oncoming walkers.\"\n      - citation: \"no known source\"\n        locator: \"none\"\n        kind: none\n        claim: \"No law or study in the data was cited for a right-hand passing rule.\"\n    debrief_support:\n      share: 0.55\n      note: \"Most common_sense and habit debriefs cite 'giving room / edging to my right'; a minority (local_custom) say keep left.\"\n    coverage: \"About 100 of 152 rows; first_side is right for ~72 rows, both for ~28, left for ~15, none for ~7.\"\n    predict:\n      target: first_side\n      if:\n        - when: {own_mobility_aid: cane, own_assertiveness: gives_way}\n          then: left\n        - when: {own_mobility_aid: none, own_load: none, own_distraction: none, own_assertiveness: gives_way}\n          then: right\n        - when: {own_assertiveness: holds_ground}\n          then: right\n        - when: {condition: independent}\n          then: right\n      default: both\n\n  - rule: A slower, gentler speed and a small left turn are used by a giving-way person to make room for a constrained or elderly other (the 'give way to cane/suitcase/elder' behaviour).\n    applies_when: The other is elderly (own_age of the other ≥ 70) or has a cane, suitcase, or phone, and this person is gives_way.\n    action: At 9.8 m, turn 10-15 degrees to own left and immediately reduce speed from ~1.3 to ~1.0-1.1 m/s, holding until other_passes; sometimes a small right counter-turn of 5-10 degrees after.\n    exceptions:\n      - When both people are gives_way and both decline to hold ground, both turn left and still collide (talk,apart_20cm left/left: 1 collision; talk,aligned left/left: not listed but left/none near-miss).\n      - If the other is already holding ground and turning right, this left turn produces a head-on mismatch (independent,apart_20cm left/right: 7 collisions).\n    factors_used: [own_assertiveness, other_age, other_mobility_aid, other_load, other_distraction, own_urgency]\n    needs_communication: false\n    references:\n      - citation: \"Everyday courtesy to elders as reported by participants\"\n        locator: \"participant debriefs, S030 p2, S041 p2, S175 p2\"\n        kind: local_custom\n        claim: \"Participants say giving an elderly person or one with a cane/suitcase extra room is ordinary courtesy in Singapore walkways.\"\n      - citation: \"no known source\"\n        locator: \"none\"\n        kind: none\n        claim: \"No statute or study was cited.\"\n    debrief_support:\n      share: 0.85\n      note: \"Debriefs on both sides of these sessions call it 'everyday courtesy' or 'common sense' to yield to an elderly person with a cane or suitcase.\"\n    coverage: \"About 60 rows where one person has a cane/load/phone/elder and the other is gives_way.\"\n    predict:\n      target: first_slowed\n      if:\n        - when: {own_assertiveness: gives_way, other_age: {\">=\": 70}}\n          then: \"yes\"\n        - when: {own_assertiveness: gives_way, other_mobility_aid: cane}\n          then: \"yes\"\n        - when: {own_assertiveness: gives_way, other_load: large_suitcase}\n          then: \"yes\"\n      default: \"no\"\n\n  - rule: A person who holds ground keeps their line and pace until the other is close (2-3 m), then eases a small turn of 10-15 degrees; they rarely slow, and almost never stop or back up.\n    applies_when: own_assertiveness is holds_ground, and the other is not obviously more constrained (no cane/suitcase on the other that the person was told of).\n    action: First plan turns 10-15 degrees to own right at the first decision (9.8 m) or at about 2.5-3.0 m, keeps speed near 1.3 m/s; slowing only in the final 0.9-1.5 m if plan_failing.\n    exceptions:\n      - If the other also holds ground and mirrors, both stay near the centre and near-miss or collision results (non_verbal,aligned right/right near-miss: 2; talk,aligned right/right collision: 1).\n      - Coin-flip cells (rows 55, 75, 83, 149) show holds_ground people sometimes never turn at all.\n    factors_used: [own_assertiveness, other_mobility_aid, other_load, first_decision_distance_m]\n    needs_communication: false\n    references:\n      - citation: \"no known source\"\n        locator: \"none\"\n        kind: habit\n        claim: \"Participants describe 'holding my line' as personal habit or stubbornness, not a documented rule.\"\n    debrief_support:\n      share: 0.6\n      note: \"Holds-ground people's debriefs say 'habit', 'stubbornness', or 'as much right to my side'.\"\n    coverage: \"About 45 rows with own_assertiveness = holds_ground.\"\n    predict:\n      target: first_slowed\n      if:\n        - when: {own_assertiveness: holds_ground}\n          then: \"no\"\n      default: \"yes\"\n\n  - rule: Stopping or backing up essentially never happens at the first decision; the conflict is resolved by lateral turning and modest slowing, not by halting.\n    applies_when: Any first decision in any condition (only 1 of 152 first plans stops; 0 back up).\n    action: At 9.8 m the plan turns and/or slows; stopping, if at all, only appears at a later decision when plan_failing, and even then most people just slow.\n    exceptions:\n      - Row 88 (S119 p2) first_stopped = yes, a single exception; the rest of the table shows no first-stop.\n      - Failed sessions are overwhelmingly collisions (near-misses) rather than stops, showing that people do not use stopping to resolve — they use it rarely and too late.\n    factors_used: [condition, geometry, first_decision_distance_m]\n    needs_communication: false\n    references:\n      - citation: \"no known source\"\n        locator: \"none\"\n        kind: common_sense\n        claim: \"Participants' debriefs treat a slight turn plus a small slow-down, not stopping, as the way to pass.\"\n    debrief_support:\n      share: 0.9\n      note: \"Debriefs describe 'easing aside', 'slowing a little', 'carrying on'; almost none describe stopping.\"\n    coverage: \"All 152 rows; measured stopped = no for 151, backed_up = no for all.\"\n    predict:\n      target: stopped\n      if:\n        - when: {condition: independent}\n          then: \"no\"\n      default: \"no\"\n\n  - rule: People synchronise the passing side to their own right when the other is elderly or constrained and they are giving way; the pair then passes right/right.\n    applies_when: Both are gives_way and at least one has a visible constraint (cane, suitcase, phone) or is elderly.\n    action: Both turn right by 10-15 degrees at 9.8 m (or the constrained person turns left and the other turns right, producing a left/left pass in their own terms); passing_side = right in the majority of resolved cases.\n    exceptions:\n      - When one turns left and the other turns right simultaneously (asymmetric), the pair collides — independent,apart_20cm left/right: 7 collisions; non_verbal,apart_20cm left/right: 5; talk,aligned left/right: 5.\n      - When one plan is 'both' and the other 'none' or 'right', the pair collides (independent,apart_20cm both/none: 2; both/none: 2).\n    factors_used: [own_assertiveness, other_assertiveness (via gives_way/holds_ground pairing), other_age, other_mobility_aid, other_load, other_distraction, geometry]\n    needs_communication: false\n    references:\n      - citation: \"Everyday courtesy and keep-side custom reported by participants\"\n        locator: \"participant debriefs, S030 p2, S144 p2\"\n        kind: local_custom\n        claim: \"Participants say the ordinary thing is to keep to a side and let the more constrained person through.\"\n    debrief_support:\n      share: 0.7\n      note: \"Debriefs very often say 'ease to my right and let him/her pass'.\"\n    coverage: \"About 90 resolved rows where passing_side is known; passing_side = right for the majority.\"\n    predict:\n      target: passing_side\n      if:\n        - when: {own_assertiveness: gives_way, other_age: {\">=\": 70}}\n          then: right\n        - when: {own_assertiveness: gives_way, other_mobility_aid: cane}\n          then: right\n        - when: {own_assertiveness: gives_way, other_load: large_suitcase}\n          then: right\n      default: right\n\n  - rule: Signalling (eye contact, nod, hold-up-hand, wave-on) is used opportunistically, more in the non-verbal and talk conditions, and is concentrated among those who hold ground or know the other.\n    applies_when: Condition is non_verbal or talk; the person holds ground, or knows the other, or their plan is failing at the second/third decision point.\n    action: Signal at the first decision (~9.8 m) or at decision 2 (~7 m) or decision 3 (~5 m); signalling accompanies, not replaces, the turn — a right turn plus eye_contact or nod is typical.\n    exceptions:\n      - Some non-verbal rows have signalled = no (rows 54, 60, 70, 76, 93, 94, 112, 116); these tend to be people who also do not hold ground.\n      - Signalling does not prevent collision: many failed non_verbal and talk sessions include signalling (e.g. non_verbal,aligned both/right collision: 4).\n    factors_used: [condition, own_assertiveness, knows_other, decision_points]\n    needs_communication: true\n    references:\n      - citation: \"no known source\"\n        locator: \"none\"\n        kind: habit\n        claim: \"Participants describe nodding, waving on, or making eye contact as ordinary acknowledgement, not a rule.\"\n    debrief_support:\n      share: 0.5\n      note: \"Debriefs mention 'nod', 'wave on', 'eye contact' as courtesies; roughly half the non-verbal and talk rows signal.\"\n    coverage: \"Independent rows: signalled = n/a; non-verbal and talk rows: signalled = yes in about 35 of 76.\"\n    predict:\n      target: signalled\n      if:\n        - when: {condition: independent}\n          then: \"n/a\"\n        - when: {own_assertiveness: holds_ground, condition: [non_verbal, talk]}\n          then: \"yes\"\n        - when: {knows_other: \"yes\", condition: [non_verbal, talk]}\n          then: \"yes\"\n        - when: {decision_points: 3, condition: [non_verbal, talk]}\n          then: \"yes\"\n      default: \"no\"\n\n  - rule: Speaking in the talk condition is rare and often withheld; where it is used it is a short verbal excuse (\"excuse me\", \"coming through\") that accompanies a modest turn rather than a negotiation.\n    applies_when: condition is talk and either the person holds ground or the plan is failing at decision 3.\n    action: At decision 3 (~4.5-4.9 m) say a short phrase while turning 5-15 degrees to own right and/or holding line.\n    exceptions:\n      - Most talk rows have spoke = no (only rows 95, 97, 98, 102, 103, 104, 114, 131?, 149, 150 show some speaking) — the majority of talk rows do not speak.\n      - Speaking does not guarantee resolution: talk,aligned still fails 40 times.\n    factors_used: [condition, own_assertiveness, decision_points]\n    needs_communication: true\n    references:\n      - citation: \"no known source\"\n        locator: \"none\"\n        kind: habit\n        claim: \"Participants describe short courtesy phrases; no law or study cited.\"\n    debrief_support:\n      share: 0.2\n      note: \"Only a minority of talk debriefs mention what they said.\"\n    coverage: \"76 talk rows; spoke = yes in fewer than 20.\"\n    predict:\n      target: spoke\n      if:\n        - when: {condition: independent}\n          then: \"n/a\"\n        - when: {condition: non_verbal}\n          then: \"n/a\"\n        - when: {own_assertiveness: holds_ground, condition: talk, decision_points: 3}\n          then: \"yes\"\n      default: \"no\"\n\n  - rule: Neither person keeps a signal-free first turn when the other's first plan is 'both' (a left-then-right weave); such pairs collide regardless of condition.\n    applies_when: One person's first plan is 'both' (usually a dithering gives_way person) and the other's is right or left.\n    action: The 'both' person turns 10-15 degrees right then 10-15 degrees left (or reverses), which crosses the other's line; the outcome is a collision or near-miss even though neither stopped.\n    exceptions:\n      - Nothing in this data reverses the pattern; the failed-session counts show 'both/right' and 'both/left' as the biggest collision families.\n    factors_used: [condition, geometry, other first side proxy: own_assertiveness, own_mobility_aid, own_load, own_distraction]\n    needs_communication: false\n    references:\n      - citation: \"no known source\"\n        locator: \"none\"\n        kind: none\n        claim: \"Not a documented rule; an observed pattern of failure.\"\n    debrief_support:\n      share: 0.0\n      note: \"Debriefs do not mention the 'both' weave; it appears in the plan data and failed-session counts only.\"\n    coverage: \"All ~30 rows with first_side = both; ~20 of these are in failed sessions.\"\n    predict:\n      target: passed_first\n      if:\n        - when: {geometry: aligned, own_assertiveness: gives_way, own_load: large_suitcase}\n          then: together\n        - when: {own_assertiveness: gives_way, own_mobility_aid: cane}\n          then: together\n        - when: {first_decision_distance_m: {\">\": 9.7}, own_assertiveness: holds_ground}\n          then: \"yes\"\n      default: together\n```"
+        },
+        {
+          "role": "user",
+          "content": "Your last reply could not be read (the reply is not YAML: mapping values are not allowed here). Reply again with only the YAML block, in a ```yaml fence, in the form given under HOW TO REPLY."
+        }
+      ],
+      "raw": "```yaml\nrules:\n  - rule: People default to steering to their own right when they meet someone coming the other way, turning a modest angle early.\n    applies_when: Two people approach nearly head-on and both are unconstrained (no cane, no suitcase, no phone, not elderly ahead); any condition.\n    action: At the first decision (typically 9.8 m away) start a turn of about 10 to 15 degrees to the person's own right, lasting until the other passes or until about 2.0 to 2.5 m, then a small 5 to 10 degree counter-turn to straighten up.\n    exceptions:\n      - When the other person is visibly constrained (cane, large suitcase, phone, elderly) and this person is gives_way, they turn to their own left 15 degrees instead (rows 76, 108, 130).\n      - When the other's first plan is both (a weave), the right turn is not matched and collision or near-miss follows (failed independent aligned both/right 6 collisions).\n      - Coin-flip rows (1-2, 9-10, 15-16, 39-40, 51-52, 55-56, 83-84, 131-132, 149-150) are not certain.\n    factors_used: [condition, geometry, own_assertiveness, own_mobility_aid, own_load, own_distraction, other_mobility_aid, other_load, other_distraction, other_age, first_decision_distance_m]\n    needs_communication: false\n    references:\n      - citation: Singapore pedestrian keep-left convention as reported by participants\n        locator: participant debriefs, S042 p2, S186 p2\n        kind: local_custom\n        claim: People say they keep left when passing on foot, yet in practice they ease to their own right when facing oncoming walkers.\n      - citation: no known source\n        locator: none\n        kind: none\n        claim: No law or study was cited for a right-hand passing rule.\n    debrief_support:\n      share: 0.55\n      note: Most common_sense and habit debriefs say to give room and edge to my right; a minority who cite local_custom say keep left.\n    coverage: About 100 of 152 rows; first_side is right for about 72 rows, both for about 28, left for about 15, none for about 7.\n    predict:\n      target: first_side\n      if:\n        - when: {own_mobility_aid: cane, own_assertiveness: gives_way}\n          then: left\n        - when: {own_mobility_aid: none, own_load: none, own_distraction: none, own_assertiveness: gives_way}\n          then: right\n        - when: {own_assertiveness: holds_ground}\n          then: right\n        - when: {condition: independent}\n          then: right\n      default: both\n\n  - rule: A giving-way person slows and turns a little to their own left to make room for an elderly or constrained other.\n    applies_when: The other is 70 or older, or has a cane, large suitcase or phone, and this person is gives_way.\n    action: At 9.8 m turn 10 to 15 degrees to own left and slow from about 1.3 to about 1.0 or 1.1 m/s, holding until the other passes; sometimes a 5 to 10 degree right counter-turn after.\n    exceptions:\n      - When both are gives_way and both turn left, they still collide (talk apart_20cm left/left, 1 collision).\n      - If the other holds ground and turns right, the left turn makes a head-on mismatch (independent apart_20cm left/right, 7 collisions).\n    factors_used: [own_assertiveness, other_age, other_mobility_aid, other_load, other_distraction, own_urgency]\n    needs_communication: false\n    references:\n      - citation: Everyday courtesy to elders as reported by participants\n        locator: participant debriefs, S030 p2, S041 p2, S175 p2\n        kind: local_custom\n        claim: Participants say giving an elderly person or one with a cane or suitcase extra room is ordinary courtesy on Singapore walkways.\n      - citation: no known source\n        locator: none\n        kind: none\n        claim: No statute or study was cited.\n    debrief_support:\n      share: 0.85\n      note: Debriefs on both sides call it everyday courtesy or common sense to yield to an elderly person with a cane or a suitcase.\n    coverage: About 60 rows where one person has a cane, load, phone or is elderly and the other is gives_way.\n    predict:\n      target: first_slowed\n      if:\n        - when: {own_assertiveness: gives_way, other_age: {\">=\": 70}}\n          then: \"yes\"\n        - when: {own_assertiveness: gives_way, other_mobility_aid: cane}\n          then: \"yes\"\n        - when: {own_assertiveness: gives_way, other_load: large_suitcase}\n          then: \"yes\"\n      default: \"no\"\n\n  - rule: A person who holds ground keeps line and pace, then eases a small turn of 10 to 15 degrees only when close.\n    applies_when: own_assertiveness is holds_ground and the other is not obviously more constrained.\n    action: First plan turns 10 to 15 degrees to own right either at the first decision (9.8 m) or at about 2.5 to 3.0 m, speed stays near 1.3 m/s; slowing only within 0.9 to 1.5 m if the plan is failing.\n    exceptions:\n      - If the other also holds ground and mirrors, both stay central and near-miss or collide (non_verbal aligned right/right near-miss 2, talk aligned right/right collision 1).\n      - Coin-flip rows 55, 75, 83, 149 show holds_ground people sometimes never turn.\n    factors_used: [own_assertiveness, other_mobility_aid, other_load, first_decision_distance_m]\n    needs_communication: false\n    references:\n      - citation: no known source\n        locator: none\n        kind: habit\n        claim: Participants describe holding my line as personal habit or stubbornness, not a documented rule.\n    debrief_support:\n      share: 0.6\n      note: Holds-ground people say habit, stubbornness, or as much right to my side.\n    coverage: About 45 rows with own_assertiveness holds_ground.\n    predict:\n      target: first_slowed\n      if:\n        - when: {own_assertiveness: holds_ground}\n          then: \"no\"\n      default: \"yes\"\n\n  - rule: People almost never stop or back up; conflicts are resolved by turning and mild slowing.\n    applies_when: Any first decision in any condition.\n    action: At 9.8 m the plan turns and or slows; stopping appears at most later and rarely; backing up does not appear.\n    exceptions:\n      - Row 88 (S119 p2) first_stopped yes is the single first-stop.\n      - Failed sessions are mostly collisions and near-misses, not stops, and measured backed_up is no throughout.\n    factors_used: [condition, geometry, first_decision_distance_m]\n    needs_communication: false\n    references:\n      - citation: no known source\n        locator: none\n        kind: common_sense\n        claim: Debriefs treat a slight turn plus a small slow-down, not stopping, as the way to pass.\n    debrief_support:\n      share: 0.9\n      note: Debriefs say ease aside, slow a little, carry on; almost none say stop.\n    coverage: All 152 rows; measured stopped is no for 151 and backed_up is no for all.\n    predict:\n      target: stopped\n      if:\n        - when: {condition: independent}\n          then: \"no\"\n      default: \"no\"\n\n  - rule: In a giving-way pair with one constrained or elderly person, the pair settles on passing to their own right.\n    applies_when: Both are gives_way and at least one has a cane, suitcase, phone or is elderly.\n    action: Both turn right 10 to 15 degrees at 9.8 m, or the constrained one turns left and the other turns right and they pass on their right; passing side right in most resolved cases.\n    exceptions:\n      - When one turns left and the other turns right at once, they collide (independent apart_20cm left/right 7, non_verbal apart_20cm left/right 5, talk aligned left/right 5).\n      - When one plan is both and the other none or right, they collide (independent apart_20cm both/none 2).\n    factors_used: [own_assertiveness, other_age, other_mobility_aid, other_load, other_distraction, geometry]\n    needs_communication: false\n    references:\n      - citation: Everyday courtesy and keep-side custom reported by participants\n        locator: participant debriefs, S030 p2, S144 p2\n        kind: local_custom\n        claim: Participants say the ordinary thing is to keep to a side and let the more constrained person through.\n    debrief_support:\n      share: 0.7\n      note: Debriefs often say ease to my right and let him or her pass.\n    coverage: About 90 resolved rows where passing_side is known; right is the majority.\n    predict:\n      target: passing_side\n      if:\n        - when: {own_assertiveness: gives_way, other_age: {\">=\": 70}}\n          then: right\n        - when: {own_assertiveness: gives_way, other_mobility_aid: cane}\n          then: right\n        - when: {own_assertiveness: gives_way, other_load: large_suitcase}\n          then: right\n      default: right\n\n  - rule: Signalling is used opportunistically by holders of ground and by people who know each other, accompanying a turn rather than replacing it.\n    applies_when: Condition is non_verbal or talk, and the person holds ground, or knows the other, or has three decision points.\n    action: At 9.8 m or at the second or third decision (about 7 m or 5 m) give eye contact, a nod, a held-up hand or a wave-on, usually alongside a right turn of 10 to 15 degrees.\n    exceptions:\n      - Some non-verbal rows do not signal (54, 60, 70, 76, 93, 94, 112, 116), mostly gives_way people.\n      - Signalling does not prevent collision; many failed non-verbal and talk sessions include a signal.\n    factors_used: [condition, own_assertiveness, knows_other, decision_points]\n    needs_communication: true\n    references:\n      - citation: no known source\n        locator: none\n        kind: habit\n        claim: Participants describe nodding, waving on or eye contact as ordinary acknowledgement, not a rule.\n    debrief_support:\n      share: 0.5\n      note: Debriefs mention nod, wave on and eye contact as courtesies; about half of non-verbal and talk rows signal.\n    coverage: Independent rows are not applicable; about 35 of 76 non-verbal and talk rows signal.\n    predict:\n      target: signalled\n      if:\n        - when: {condition: independent}\n          then: \"n/a\"\n        - when: {own_assertiveness: holds_ground, condition: [non_verbal, talk]}\n          then: \"yes\"\n        - when: {knows_other: \"yes\", condition: [non_verbal, talk]}\n          then: \"yes\"\n        - when: {decision_points: 3, condition: [non_verbal, talk]}\n          then: \"yes\"\n      default: \"no\"\n\n  - rule: Speaking in the talk condition is rare and short, an excuse-me phrase alongside a modest turn, not a negotiation.\n    applies_when: Condition is talk and the person holds ground, or the plan is failing at the third decision point.\n    action: At about 4.5 to 4.9 m say a short phrase such as excuse me or coming through while turning 5 to 15 degrees to own right or holding line.\n    exceptions:\n      - Most talk rows do not speak; only a handful do (rows 95, 97, 98, 102, 103, 104, 114, 149, 150).\n      - Speaking does not guarantee resolution; talk aligned still fails 40 times.\n    factors_used: [condition, own_assertiveness, decision_points]\n    needs_communication: true\n    references:\n      - citation: no known source\n        locator: none\n        kind: habit\n        claim: Participants describe short courtesy phrases; no law or study cited.\n    debrief_support:\n      share: 0.2\n      note: Only a minority of talk debriefs mention what was said.\n    coverage: 76 talk rows; spoke is yes in fewer than 20.\n    predict:\n      target: spoke\n      if:\n        - when: {condition: independent}\n          then: \"n/a\"\n        - when: {condition: non_verbal}\n          then: \"n/a\"\n        - when: {own_assertiveness: holds_ground, condition: talk, decision_points: 3}\n          then: \"yes\"\n      default: \"no\"\n\n  - rule: A first plan that weaves both ways crosses the other's line and the pair collides or near-misses, the weave coming from dithering gives_way people.\n    applies_when: One person's first plan is both (usually a gives_way person) and the other's is right or left.\n    action: The both person turns 10 to 15 degrees right then 10 to 15 degrees left, crossing the other's line; the outcome is collision or near-miss even though neither stopped.\n    exceptions:\n      - Nothing in this data reverses the pattern; the failed-session counts show both/right and both/left as the largest collision families.\n    factors_used: [condition, geometry, own_assertiveness, own_mobility_aid, own_load, own_distraction]\n    needs_communication: false\n    references:\n      - citation: no known source\n        locator: none\n        kind: none\n        claim: Not a documented rule; an observed pattern of failure.\n    debrief_support:\n      share: 0\n      note: Debriefs do not mention the both weave; it appears in the plan data and failed-session counts only.\n    coverage: About 30 rows have first_side both; about 20 of these are in failed sessions.\n    predict:\n      target: passed_first\n      if:\n        - when: {geometry: aligned, own_assertiveness: gives_way, own_load: large_suitcase}\n          then: together\n        - when: {own_assertiveness: gives_way, own_mobility_aid: cane}\n          then: together\n        - when: {first_decision_distance_m: {\">\": 9.7}, own_assertiveness: holds_ground}\n          then: \"yes\"\n      default: together\n```",
+      "model": "deepseek-flash",
+      "system_fingerprint": "e72d3c7f663d3e1383b00b3884cb4501",
+      "response_id": "e59fc3b2-0408-45e7-9cef-e0b4c9f679a6",
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 35325,
+        "completion_tokens": 3367,
+        "prompt_cache_hit_tokens": 35072,
+        "prompt_cache_miss_tokens": 253,
+        "reasoning_tokens": 0
+      },
+      "cost_usd": 0.002163366,
+      "price_tier": "off_peak",
+      "latency_s": 13.758400499937125,
+      "started_utc": "2026-10-26T04:03:44.590+00:00",
+      "failed_sends": 0,
+      "parse_error": null
+    }
+  ],
+  "outcome": "completed",
+  "error": null,
+  "rules": [
+    {
+      "index": 1,
+      "category": "valid",
+      "message": "ok",
+      "reads_communication": false,
+      "predict": {
+        "target": "first_side",
+        "if": [
+          {
+            "when": {
+              "own_mobility_aid": "cane",
+              "own_assertiveness": "gives_way"
+            },
+            "then": "left"
+          },
+          {
+            "when": {
+              "own_mobility_aid": "none",
+              "own_load": "none",
+              "own_distraction": "none",
+              "own_assertiveness": "gives_way"
+            },
+            "then": "right"
+          },
+          {
+            "when": {
+              "own_assertiveness": "holds_ground"
+            },
+            "then": "right"
+          },
+          {
+            "when": {
+              "condition": "independent"
+            },
+            "then": "right"
+          }
+        ],
+        "default": "both"
+      },
+      "references": [
+        {
+          "citation": "Singapore pedestrian keep-left convention as reported by participants",
+          "locator": "participant debriefs, S042 p2, S186 p2",
+          "kind": "local_custom",
+          "claim": "People say they keep left when passing on foot, yet in practice they ease to their own right when facing oncoming walkers."
+        },
+        {
+          "citation": "no known source",
+          "locator": "none",
+          "kind": "none",
+          "claim": "No law or study was cited for a right-hand passing rule."
+        }
+      ],
+      "raw": {
+        "rule": "People default to steering to their own right when they meet someone coming the other way, turning a modest angle early.",
+        "applies_when": "Two people approach nearly head-on and both are unconstrained (no cane, no suitcase, no phone, not elderly ahead); any condition.",
+        "action": "At the first decision (typically 9.8 m away) start a turn of about 10 to 15 degrees to the person's own right, lasting until the other passes or until about 2.0 to 2.5 m, then a small 5 to 10 degree counter-turn to straighten up.",
+        "exceptions": [
+          "When the other person is visibly constrained (cane, large suitcase, phone, elderly) and this person is gives_way, they turn to their own left 15 degrees instead (rows 76, 108, 130).",
+          "When the other's first plan is both (a weave), the right turn is not matched and collision or near-miss follows (failed independent aligned both/right 6 collisions).",
+          "Coin-flip rows (1-2, 9-10, 15-16, 39-40, 51-52, 55-56, 83-84, 131-132, 149-150) are not certain."
+        ],
+        "factors_used": [
+          "condition",
+          "geometry",
+          "own_assertiveness",
+          "own_mobility_aid",
+          "own_load",
+          "own_distraction",
+          "other_mobility_aid",
+          "other_load",
+          "other_distraction",
+          "other_age",
+          "first_decision_distance_m"
+        ],
+        "needs_communication": false,
+        "references": [
+          {
+            "citation": "Singapore pedestrian keep-left convention as reported by participants",
+            "locator": "participant debriefs, S042 p2, S186 p2",
+            "kind": "local_custom",
+            "claim": "People say they keep left when passing on foot, yet in practice they ease to their own right when facing oncoming walkers."
+          },
+          {
+            "citation": "no known source",
+            "locator": "none",
+            "kind": "none",
+            "claim": "No law or study was cited for a right-hand passing rule."
+          }
+        ],
+        "debrief_support": {
+          "share": 0.55,
+          "note": "Most common_sense and habit debriefs say to give room and edge to my right; a minority who cite local_custom say keep left."
+        },
+        "coverage": "About 100 of 152 rows; first_side is right for about 72 rows, both for about 28, left for about 15, none for about 7.",
+        "predict": {
+          "target": "first_side",
+          "if": [
+            {
+              "when": {
+                "own_mobility_aid": "cane",
+                "own_assertiveness": "gives_way"
+              },
+              "then": "left"
+            },
+            {
+              "when": {
+                "own_mobility_aid": "none",
+                "own_load": "none",
+                "own_distraction": "none",
+                "own_assertiveness": "gives_way"
+              },
+              "then": "right"
+            },
+            {
+              "when": {
+                "own_assertiveness": "holds_ground"
+              },
+              "then": "right"
+            },
+            {
+              "when": {
+                "condition": "independent"
+              },
+              "then": "right"
+            }
+          ],
+          "default": "both"
+        }
+      },
+      "fidelity": {
+        "target": "first_side",
+        "held_out": {
+          "rows": 52,
+          "correct": 23,
+          "accuracy": 0.4423
+        },
+        "baseline_value": "right",
+        "baseline_accuracy": 0.4615,
+        "beats_baseline": false,
+        "main": {
+          "rows": 151,
+          "correct": 56,
+          "accuracy": 0.3709
+        }
+      }
+    },
+    {
+      "index": 2,
+      "category": "valid",
+      "message": "ok",
+      "reads_communication": false,
+      "predict": {
+        "target": "first_slowed",
+        "if": [
+          {
+            "when": {
+              "own_assertiveness": "gives_way",
+              "other_age": {
+                ">=": 70
+              }
+            },
+            "then": "yes"
+          },
+          {
+            "when": {
+              "own_assertiveness": "gives_way",
+              "other_mobility_aid": "cane"
+            },
+            "then": "yes"
+          },
+          {
+            "when": {
+              "own_assertiveness": "gives_way",
+              "other_load": "large_suitcase"
+            },
+            "then": "yes"
+          }
+        ],
+        "default": "no"
+      },
+      "references": [
+        {
+          "citation": "Everyday courtesy to elders as reported by participants",
+          "locator": "participant debriefs, S030 p2, S041 p2, S175 p2",
+          "kind": "local_custom",
+          "claim": "Participants say giving an elderly person or one with a cane or suitcase extra room is ordinary courtesy on Singapore walkways."
+        },
+        {
+          "citation": "no known source",
+          "locator": "none",
+          "kind": "none",
+          "claim": "No statute or study was cited."
+        }
+      ],
+      "raw": {
+        "rule": "A giving-way person slows and turns a little to their own left to make room for an elderly or constrained other.",
+        "applies_when": "The other is 70 or older, or has a cane, large suitcase or phone, and this person is gives_way.",
+        "action": "At 9.8 m turn 10 to 15 degrees to own left and slow from about 1.3 to about 1.0 or 1.1 m/s, holding until the other passes; sometimes a 5 to 10 degree right counter-turn after.",
+        "exceptions": [
+          "When both are gives_way and both turn left, they still collide (talk apart_20cm left/left, 1 collision).",
+          "If the other holds ground and turns right, the left turn makes a head-on mismatch (independent apart_20cm left/right, 7 collisions)."
+        ],
+        "factors_used": [
+          "own_assertiveness",
+          "other_age",
+          "other_mobility_aid",
+          "other_load",
+          "other_distraction",
+          "own_urgency"
+        ],
+        "needs_communication": false,
+        "references": [
+          {
+            "citation": "Everyday courtesy to elders as reported by participants",
+            "locator": "participant debriefs, S030 p2, S041 p2, S175 p2",
+            "kind": "local_custom",
+            "claim": "Participants say giving an elderly person or one with a cane or suitcase extra room is ordinary courtesy on Singapore walkways."
+          },
+          {
+            "citation": "no known source",
+            "locator": "none",
+            "kind": "none",
+            "claim": "No statute or study was cited."
+          }
+        ],
+        "debrief_support": {
+          "share": 0.85,
+          "note": "Debriefs on both sides call it everyday courtesy or common sense to yield to an elderly person with a cane or a suitcase."
+        },
+        "coverage": "About 60 rows where one person has a cane, load, phone or is elderly and the other is gives_way.",
+        "predict": {
+          "target": "first_slowed",
+          "if": [
+            {
+              "when": {
+                "own_assertiveness": "gives_way",
+                "other_age": {
+                  ">=": 70
+                }
+              },
+              "then": "yes"
+            },
+            {
+              "when": {
+                "own_assertiveness": "gives_way",
+                "other_mobility_aid": "cane"
+              },
+              "then": "yes"
+            },
+            {
+              "when": {
+                "own_assertiveness": "gives_way",
+                "other_load": "large_suitcase"
+              },
+              "then": "yes"
+            }
+          ],
+          "default": "no"
+        }
+      },
+      "fidelity": {
+        "target": "first_slowed",
+        "held_out": {
+          "rows": 52,
+          "correct": 36,
+          "accuracy": 0.6923
+        },
+        "baseline_value": "yes",
+        "baseline_accuracy": 0.75,
+        "beats_baseline": false,
+        "main": {
+          "rows": 151,
+          "correct": 91,
+          "accuracy": 0.6026
+        }
+      }
+    },
+    {
+      "index": 3,
+      "category": "valid",
+      "message": "ok",
+      "reads_communication": false,
+      "predict": {
+        "target": "first_slowed",
+        "if": [
+          {
+            "when": {
+              "own_assertiveness": "holds_ground"
+            },
+            "then": "no"
+          }
+        ],
+        "default": "yes"
+      },
+      "references": [
+        {
+          "citation": "no known source",
+          "locator": "none",
+          "kind": "habit",
+          "claim": "Participants describe holding my line as personal habit or stubbornness, not a documented rule."
+        }
+      ],
+      "raw": {
+        "rule": "A person who holds ground keeps line and pace, then eases a small turn of 10 to 15 degrees only when close.",
+        "applies_when": "own_assertiveness is holds_ground and the other is not obviously more constrained.",
+        "action": "First plan turns 10 to 15 degrees to own right either at the first decision (9.8 m) or at about 2.5 to 3.0 m, speed stays near 1.3 m/s; slowing only within 0.9 to 1.5 m if the plan is failing.",
+        "exceptions": [
+          "If the other also holds ground and mirrors, both stay central and near-miss or collide (non_verbal aligned right/right near-miss 2, talk aligned right/right collision 1).",
+          "Coin-flip rows 55, 75, 83, 149 show holds_ground people sometimes never turn."
+        ],
+        "factors_used": [
+          "own_assertiveness",
+          "other_mobility_aid",
+          "other_load",
+          "first_decision_distance_m"
+        ],
+        "needs_communication": false,
+        "references": [
+          {
+            "citation": "no known source",
+            "locator": "none",
+            "kind": "habit",
+            "claim": "Participants describe holding my line as personal habit or stubbornness, not a documented rule."
+          }
+        ],
+        "debrief_support": {
+          "share": 0.6,
+          "note": "Holds-ground people say habit, stubbornness, or as much right to my side."
+        },
+        "coverage": "About 45 rows with own_assertiveness holds_ground.",
+        "predict": {
+          "target": "first_slowed",
+          "if": [
+            {
+              "when": {
+                "own_assertiveness": "holds_ground"
+              },
+              "then": "no"
+            }
+          ],
+          "default": "yes"
+        }
+      },
+      "fidelity": {
+        "target": "first_slowed",
+        "held_out": {
+          "rows": 52,
+          "correct": 43,
+          "accuracy": 0.8269
+        },
+        "baseline_value": "yes",
+        "baseline_accuracy": 0.75,
+        "beats_baseline": true,
+        "main": {
+          "rows": 151,
+          "correct": 122,
+          "accuracy": 0.8079
+        }
+      }
+    },
+    {
+      "index": 4,
+      "category": "valid",
+      "message": "ok",
+      "reads_communication": false,
+      "predict": {
+        "target": "stopped",
+        "if": [
+          {
+            "when": {
+              "condition": "independent"
+            },
+            "then": "no"
+          }
+        ],
+        "default": "no"
+      },
+      "references": [
+        {
+          "citation": "no known source",
+          "locator": "none",
+          "kind": "common_sense",
+          "claim": "Debriefs treat a slight turn plus a small slow-down, not stopping, as the way to pass."
+        }
+      ],
+      "raw": {
+        "rule": "People almost never stop or back up; conflicts are resolved by turning and mild slowing.",
+        "applies_when": "Any first decision in any condition.",
+        "action": "At 9.8 m the plan turns and or slows; stopping appears at most later and rarely; backing up does not appear.",
+        "exceptions": [
+          "Row 88 (S119 p2) first_stopped yes is the single first-stop.",
+          "Failed sessions are mostly collisions and near-misses, not stops, and measured backed_up is no throughout."
+        ],
+        "factors_used": [
+          "condition",
+          "geometry",
+          "first_decision_distance_m"
+        ],
+        "needs_communication": false,
+        "references": [
+          {
+            "citation": "no known source",
+            "locator": "none",
+            "kind": "common_sense",
+            "claim": "Debriefs treat a slight turn plus a small slow-down, not stopping, as the way to pass."
+          }
+        ],
+        "debrief_support": {
+          "share": 0.9,
+          "note": "Debriefs say ease aside, slow a little, carry on; almost none say stop."
+        },
+        "coverage": "All 152 rows; measured stopped is no for 151 and backed_up is no for all.",
+        "predict": {
+          "target": "stopped",
+          "if": [
+            {
+              "when": {
+                "condition": "independent"
+              },
+              "then": "no"
+            }
+          ],
+          "default": "no"
+        }
+      },
+      "fidelity": {
+        "target": "stopped",
+        "held_out": {
+          "rows": 52,
+          "correct": 52,
+          "accuracy": 1.0
+        },
+        "baseline_value": "no",
+        "baseline_accuracy": 1.0,
+        "beats_baseline": false,
+        "main": {
+          "rows": 152,
+          "correct": 152,
+          "accuracy": 1.0
+        }
+      }
+    },
+    {
+      "index": 5,
+      "category": "valid",
+      "message": "ok",
+      "reads_communication": false,
+      "predict": {
+        "target": "passing_side",
+        "if": [
+          {
+            "when": {
+              "own_assertiveness": "gives_way",
+              "other_age": {
+                ">=": 70
+              }
+            },
+            "then": "right"
+          },
+          {
+            "when": {
+              "own_assertiveness": "gives_way",
+              "other_mobility_aid": "cane"
+            },
+            "then": "right"
+          },
+          {
+            "when": {
+              "own_assertiveness": "gives_way",
+              "other_load": "large_suitcase"
+            },
+            "then": "right"
+          }
+        ],
+        "default": "right"
+      },
+      "references": [
+        {
+          "citation": "Everyday courtesy and keep-side custom reported by participants",
+          "locator": "participant debriefs, S030 p2, S144 p2",
+          "kind": "local_custom",
+          "claim": "Participants say the ordinary thing is to keep to a side and let the more constrained person through."
+        }
+      ],
+      "raw": {
+        "rule": "In a giving-way pair with one constrained or elderly person, the pair settles on passing to their own right.",
+        "applies_when": "Both are gives_way and at least one has a cane, suitcase, phone or is elderly.",
+        "action": "Both turn right 10 to 15 degrees at 9.8 m, or the constrained one turns left and the other turns right and they pass on their right; passing side right in most resolved cases.",
+        "exceptions": [
+          "When one turns left and the other turns right at once, they collide (independent apart_20cm left/right 7, non_verbal apart_20cm left/right 5, talk aligned left/right 5).",
+          "When one plan is both and the other none or right, they collide (independent apart_20cm both/none 2)."
+        ],
+        "factors_used": [
+          "own_assertiveness",
+          "other_age",
+          "other_mobility_aid",
+          "other_load",
+          "other_distraction",
+          "geometry"
+        ],
+        "needs_communication": false,
+        "references": [
+          {
+            "citation": "Everyday courtesy and keep-side custom reported by participants",
+            "locator": "participant debriefs, S030 p2, S144 p2",
+            "kind": "local_custom",
+            "claim": "Participants say the ordinary thing is to keep to a side and let the more constrained person through."
+          }
+        ],
+        "debrief_support": {
+          "share": 0.7,
+          "note": "Debriefs often say ease to my right and let him or her pass."
+        },
+        "coverage": "About 90 resolved rows where passing_side is known; right is the majority.",
+        "predict": {
+          "target": "passing_side",
+          "if": [
+            {
+              "when": {
+                "own_assertiveness": "gives_way",
+                "other_age": {
+                  ">=": 70
+                }
+              },
+              "then": "right"
+            },
+            {
+              "when": {
+                "own_assertiveness": "gives_way",
+                "other_mobility_aid": "cane"
+              },
+              "then": "right"
+            },
+            {
+              "when": {
+                "own_assertiveness": "gives_way",
+                "other_load": "large_suitcase"
+              },
+              "then": "right"
+            }
+          ],
+          "default": "right"
+        }
+      },
+      "fidelity": {
+        "target": "passing_side",
+        "held_out": {
+          "rows": 52,
+          "correct": 38,
+          "accuracy": 0.7308
+        },
+        "baseline_value": "right",
+        "baseline_accuracy": 0.7308,
+        "beats_baseline": false,
+        "main": {
+          "rows": 152,
+          "correct": 94,
+          "accuracy": 0.6184
+        }
+      }
+    },
+    {
+      "index": 6,
+      "category": "needs_communication",
+      "message": "it says it needs communication",
+      "reads_communication": false,
+      "predict": {
+        "target": "signalled",
+        "if": [
+          {
+            "when": {
+              "condition": "independent"
+            },
+            "then": "n/a"
+          },
+          {
+            "when": {
+              "own_assertiveness": "holds_ground",
+              "condition": [
+                "non_verbal",
+                "talk"
+              ]
+            },
+            "then": "yes"
+          },
+          {
+            "when": {
+              "knows_other": "yes",
+              "condition": [
+                "non_verbal",
+                "talk"
+              ]
+            },
+            "then": "yes"
+          },
+          {
+            "when": {
+              "decision_points": "3",
+              "condition": [
+                "non_verbal",
+                "talk"
+              ]
+            },
+            "then": "yes"
+          }
+        ],
+        "default": "no"
+      },
+      "references": [
+        {
+          "citation": "no known source",
+          "locator": "none",
+          "kind": "habit",
+          "claim": "Participants describe nodding, waving on or eye contact as ordinary acknowledgement, not a rule."
+        }
+      ],
+      "raw": {
+        "rule": "Signalling is used opportunistically by holders of ground and by people who know each other, accompanying a turn rather than replacing it.",
+        "applies_when": "Condition is non_verbal or talk, and the person holds ground, or knows the other, or has three decision points.",
+        "action": "At 9.8 m or at the second or third decision (about 7 m or 5 m) give eye contact, a nod, a held-up hand or a wave-on, usually alongside a right turn of 10 to 15 degrees.",
+        "exceptions": [
+          "Some non-verbal rows do not signal (54, 60, 70, 76, 93, 94, 112, 116), mostly gives_way people.",
+          "Signalling does not prevent collision; many failed non-verbal and talk sessions include a signal."
+        ],
+        "factors_used": [
+          "condition",
+          "own_assertiveness",
+          "knows_other",
+          "decision_points"
+        ],
+        "needs_communication": true,
+        "references": [
+          {
+            "citation": "no known source",
+            "locator": "none",
+            "kind": "habit",
+            "claim": "Participants describe nodding, waving on or eye contact as ordinary acknowledgement, not a rule."
+          }
+        ],
+        "debrief_support": {
+          "share": 0.5,
+          "note": "Debriefs mention nod, wave on and eye contact as courtesies; about half of non-verbal and talk rows signal."
+        },
+        "coverage": "Independent rows are not applicable; about 35 of 76 non-verbal and talk rows signal.",
+        "predict": {
+          "target": "signalled",
+          "if": [
+            {
+              "when": {
+                "condition": "independent"
+              },
+              "then": "n/a"
+            },
+            {
+              "when": {
+                "own_assertiveness": "holds_ground",
+                "condition": [
+                  "non_verbal",
+                  "talk"
+                ]
+              },
+              "then": "yes"
+            },
+            {
+              "when": {
+                "knows_other": "yes",
+                "condition": [
+                  "non_verbal",
+                  "talk"
+                ]
+              },
+              "then": "yes"
+            },
+            {
+              "when": {
+                "decision_points": 3,
+                "condition": [
+                  "non_verbal",
+                  "talk"
+                ]
+              },
+              "then": "yes"
+            }
+          ],
+          "default": "no"
+        }
+      },
+      "fidelity": {
+        "target": "signalled",
+        "held_out": {
+          "rows": 52,
+          "correct": 46,
+          "accuracy": 0.8846
+        },
+        "baseline_value": "yes",
+        "baseline_accuracy": 0.3462,
+        "beats_baseline": true,
+        "main": {
+          "rows": 152,
+          "correct": 136,
+          "accuracy": 0.8947
+        }
+      }
+    },
+    {
+      "index": 7,
+      "category": "needs_communication",
+      "message": "it says it needs communication",
+      "reads_communication": false,
+      "predict": {
+        "target": "spoke",
+        "if": [
+          {
+            "when": {
+              "condition": "independent"
+            },
+            "then": "n/a"
+          },
+          {
+            "when": {
+              "condition": "non_verbal"
+            },
+            "then": "n/a"
+          },
+          {
+            "when": {
+              "own_assertiveness": "holds_ground",
+              "condition": "talk",
+              "decision_points": "3"
+            },
+            "then": "yes"
+          }
+        ],
+        "default": "no"
+      },
+      "references": [
+        {
+          "citation": "no known source",
+          "locator": "none",
+          "kind": "habit",
+          "claim": "Participants describe short courtesy phrases; no law or study cited."
+        }
+      ],
+      "raw": {
+        "rule": "Speaking in the talk condition is rare and short, an excuse-me phrase alongside a modest turn, not a negotiation.",
+        "applies_when": "Condition is talk and the person holds ground, or the plan is failing at the third decision point.",
+        "action": "At about 4.5 to 4.9 m say a short phrase such as excuse me or coming through while turning 5 to 15 degrees to own right or holding line.",
+        "exceptions": [
+          "Most talk rows do not speak; only a handful do (rows 95, 97, 98, 102, 103, 104, 114, 149, 150).",
+          "Speaking does not guarantee resolution; talk aligned still fails 40 times."
+        ],
+        "factors_used": [
+          "condition",
+          "own_assertiveness",
+          "decision_points"
+        ],
+        "needs_communication": true,
+        "references": [
+          {
+            "citation": "no known source",
+            "locator": "none",
+            "kind": "habit",
+            "claim": "Participants describe short courtesy phrases; no law or study cited."
+          }
+        ],
+        "debrief_support": {
+          "share": 0.2,
+          "note": "Only a minority of talk debriefs mention what was said."
+        },
+        "coverage": "76 talk rows; spoke is yes in fewer than 20.",
+        "predict": {
+          "target": "spoke",
+          "if": [
+            {
+              "when": {
+                "condition": "independent"
+              },
+              "then": "n/a"
+            },
+            {
+              "when": {
+                "condition": "non_verbal"
+              },
+              "then": "n/a"
+            },
+            {
+              "when": {
+                "own_assertiveness": "holds_ground",
+                "condition": "talk",
+                "decision_points": 3
+              },
+              "then": "yes"
+            }
+          ],
+          "default": "no"
+        }
+      },
+      "fidelity": {
+        "target": "spoke",
+        "held_out": {
+          "rows": 52,
+          "correct": 51,
+          "accuracy": 0.9808
+        },
+        "baseline_value": "n/a",
+        "baseline_accuracy": 0.9615,
+        "beats_baseline": true,
+        "main": {
+          "rows": 152,
+          "correct": 125,
+          "accuracy": 0.8224
+        }
+      }
+    },
+    {
+      "index": 8,
+      "category": "valid",
+      "message": "ok",
+      "reads_communication": false,
+      "predict": {
+        "target": "passed_first",
+        "if": [
+          {
+            "when": {
+              "geometry": "aligned",
+              "own_assertiveness": "gives_way",
+              "own_load": "large_suitcase"
+            },
+            "then": "together"
+          },
+          {
+            "when": {
+              "own_assertiveness": "gives_way",
+              "own_mobility_aid": "cane"
+            },
+            "then": "together"
+          },
+          {
+            "when": {
+              "first_decision_distance_m": {
+                ">": 9.7
+              },
+              "own_assertiveness": "holds_ground"
+            },
+            "then": "yes"
+          }
+        ],
+        "default": "together"
+      },
+      "references": [
+        {
+          "citation": "no known source",
+          "locator": "none",
+          "kind": "none",
+          "claim": "Not a documented rule; an observed pattern of failure."
+        }
+      ],
+      "raw": {
+        "rule": "A first plan that weaves both ways crosses the other's line and the pair collides or near-misses, the weave coming from dithering gives_way people.",
+        "applies_when": "One person's first plan is both (usually a gives_way person) and the other's is right or left.",
+        "action": "The both person turns 10 to 15 degrees right then 10 to 15 degrees left, crossing the other's line; the outcome is collision or near-miss even though neither stopped.",
+        "exceptions": [
+          "Nothing in this data reverses the pattern; the failed-session counts show both/right and both/left as the largest collision families."
+        ],
+        "factors_used": [
+          "condition",
+          "geometry",
+          "own_assertiveness",
+          "own_mobility_aid",
+          "own_load",
+          "own_distraction"
+        ],
+        "needs_communication": false,
+        "references": [
+          {
+            "citation": "no known source",
+            "locator": "none",
+            "kind": "none",
+            "claim": "Not a documented rule; an observed pattern of failure."
+          }
+        ],
+        "debrief_support": {
+          "share": 0,
+          "note": "Debriefs do not mention the both weave; it appears in the plan data and failed-session counts only."
+        },
+        "coverage": "About 30 rows have first_side both; about 20 of these are in failed sessions.",
+        "predict": {
+          "target": "passed_first",
+          "if": [
+            {
+              "when": {
+                "geometry": "aligned",
+                "own_assertiveness": "gives_way",
+                "own_load": "large_suitcase"
+              },
+              "then": "together"
+            },
+            {
+              "when": {
+                "own_assertiveness": "gives_way",
+                "own_mobility_aid": "cane"
+              },
+              "then": "together"
+            },
+            {
+              "when": {
+                "first_decision_distance_m": {
+                  ">": 9.7
+                },
+                "own_assertiveness": "holds_ground"
+              },
+              "then": "yes"
+            }
+          ],
+          "default": "together"
+        }
+      },
+      "fidelity": {
+        "target": "passed_first",
+        "held_out": {
+          "rows": 52,
+          "correct": 29,
+          "accuracy": 0.5577
+        },
+        "baseline_value": "together",
+        "baseline_accuracy": 0.5769,
+        "beats_baseline": false,
+        "main": {
+          "rows": 152,
+          "correct": 91,
+          "accuracy": 0.5987
+        }
+      }
+    }
+  ],
+  "counts": {
+    "valid": 6,
+    "needs_communication": 2
+  },
+  "totals": {
+    "calls": 2,
+    "cost_usd": 0.006459546,
+    "prompt_tokens": 66747,
+    "completion_tokens": 7219,
+    "cache_hit_tokens": 53632
+  },
+  "ended_utc": "2026-10-26T04:03:58+00:00"
+}

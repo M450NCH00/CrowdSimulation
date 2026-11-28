@@ -1,0 +1,53 @@
+{
+  "codebook": "intent",
+  "version": 1,
+  "status": "draft, written before any model reply (issue #63). RF-9's pilot (#64) reads its intents and writes intent_v2.json; this file is never edited once a result rests on it.",
+  "description": "Codes the free-text `intent` of a reply (docs/resolution.md, D1) into strategy categories by keywords, with no LLM. Patterns are Python regular expressions, matched case-insensitively. An intent may take several categories. `carry_on` is kept only when no other category matched ('move left and walk on' is keep_to_side). An intent that matches nothing is `other`, never forced into a category.",
+  "categories": {
+    "keep_to_side": [
+      "\\bleft\\b",
+      "(?<!all )\\bright\\b(?!\\s+(away|now|here|there|after|before))",
+      "\\baside\\b",
+      "\\bto (one|the) side\\b",
+      "\\bsideways\\b",
+      "\\bmake (some )?room\\b"
+    ],
+    "slow_down": [
+      "\\bslow(ing|s|ed)?( down| up)?\\b",
+      "\\bslower\\b",
+      "\\breduc(e|ing) (my )?(speed|pace)\\b",
+      "\\bdecelerat",
+      "\\bease (off|up)\\b"
+    ],
+    "stop_and_wait": [
+      "\\bstop(s|ping|ped)?\\b",
+      "\\bwait(s|ing)?\\b",
+      "\\bpause\\b",
+      "\\bstand still\\b",
+      "\\bhold (back|still|position)\\b"
+    ],
+    "back_up": [
+      "\\bback(ing)? (up|away|off)\\b",
+      "\\bstep(ping)? back",
+      "\\bbackwards?\\b",
+      "\\breverse\\b",
+      "\\bretreat"
+    ],
+    "carry_on": [
+      "\\bcarry(ing)? on\\b",
+      "\\bkeep (on )?(going|walking)\\b",
+      "\\bcontinue\\b",
+      "\\bwalk on\\b",
+      "\\bstraight (ahead|on)\\b",
+      "\\b(same|steady) (pace|speed)\\b",
+      "\\bas i am\\b",
+      "\\bmaintain\\b"
+    ]
+  },
+  "side": {
+    "description": "The side the agent says it will move to. Only phrases about the agent's own movement count; a side said of the other person ('let them pass on my right') makes the side unknown, and a sentence naming both sides too.",
+    "left": ["\\b(move|step|shift|veer|drift|edge|keep|stay|swerve|bear|turn|go|head|walk)\\b\\s+([\\w']+\\s+){0,4}?(to\\s+)?(my|the)\\s+left\\b", "\\b(keep|stay|bear|veer) left\\b"],
+    "right": ["\\b(move|step|shift|veer|drift|edge|keep|stay|swerve|bear|turn|go|head|walk)\\b\\s+([\\w']+\\s+){0,4}?(to\\s+)?(my|the)\\s+right\\b", "\\b(keep|stay|bear|veer) right\\b"],
+    "unknown_when": ["\\b(they|them|him|her|the other( person)?|person \\d+)\\b[^.]*\\b(left|right)\\b"]
+  }
+}

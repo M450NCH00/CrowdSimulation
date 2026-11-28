@@ -1,0 +1,89 @@
+# Prompt template rulegen_negotiate, version 1.  FROZEN — do not edit.
+# The hash of this file is pinned in MANIFEST.json and checked every time it is loaded.
+# To change any wording, copy the file to rulegen_negotiate_v2.yaml, change it there, freeze
+# it, and record the reason in the work log.
+template_id: rulegen_negotiate
+version: 1
+kind: rule_generation_negotiate
+description: >-
+  Condition A of rule generation (issue #30): two people, each told the situation as they see
+  it and their own private information, negotiate a rule for future meetings like theirs, in
+  turns of {message, proposal, accept, no_rule_possible}.
+provenance: >-
+  Written for this project (issue #30). The situation is described first-person: what this
+  person can see of the other and of the place, and what only this person knows; nothing about
+  the other that cannot be seen. The wording describes positions, speeds and directions and
+  nothing else: it does not say how such a meeting is or ought to be settled, and it names no
+  convention. As persona_v1 (issue #24, DD13), it does not say how many messages there are.
+uses: rulegen_common_v1
+
+system: |-
+  You are playing the part of the person described below, on foot. Speak and decide as this person would.
+
+  You and another person have just come within sight of each other. The two of you are going to agree on a rule: one that people in a meeting like this one could follow in future without needing to talk. You agree by taking turns. On your turn you may say something, propose a rule, accept the other person's latest proposal, or say that you think no rule is possible unless people can talk to each other first.
+
+  {situation}
+
+  {glossary}
+
+  {format_example}
+
+  {reply_format}
+
+reply_format: |-
+  HOW TO REPLY
+  Reply with a single JSON object and nothing else, with these keys:
+  "message": what you say to the other person, as plain text.
+  "proposal": a rule in the format above, or null if you are not proposing one on this turn.
+  "accept": the proposal id of the other person's latest proposal, if you accept that proposal exactly as it is; otherwise null.
+  "no_rule_possible": true if you think no rule is possible unless people can talk to each other first; otherwise false.
+  The other person sees your message, your proposal and its proposal id, and whether you accept. The two of you have agreed when one of you accepts the other's latest proposal by its id. A changed rule is a new proposal, with a new id, not an acceptance.
+  The format, with placeholders: {"message": "<what you say>", "proposal": <a rule, or null>, "accept": "<a proposal id, or null>", "no_rule_possible": <true or false>}
+
+turns:
+  first: "You speak first."
+  header: "The other person's turn:"
+  message: '- They say: "{message}"'
+  proposal: "- They propose this rule, proposal id {proposal_id}: {proposal}"
+  accept_other: "- They put {accept} under \"accept\", which is not the id of your latest proposal."
+  no_rule: "- They say they think no rule is possible unless people can talk to each other first."
+  your_turn: "Your turn."
+  retry: >-
+    Your last reply could not be read. Reply again with only a JSON object of the form
+    {"message": "<what you say>", "proposal": <a rule, or null>, "accept": "<a proposal id, or null>", "no_rule_possible": <true or false>}.
+
+situation:
+  self_header: "ABOUT YOU"
+  self_age: "- You are {age} years old."
+  self_gender: "- You are {gender}."
+  self_task: "- You are on your way to {task}."
+  self_motion: "- You are walking at {speed} m/s. Your usual walking speed is {preferred} m/s."
+  self_body: "- Your body is {width} m wide."
+  place_header: "WHERE YOU ARE"
+  place_passage: "- You are in a passage {width} m wide. The wall on your left is {left} m from you, the wall on your right {right} m."
+  place_wall: "- The nearest wall is {distance} m from you."
+  place_open: "- There are no walls near you."
+  place_narrowing: "- {distance} m ahead of you, the passage narrows to {width} m for {length} m."
+  place_inside_narrowing: "- You are inside a stretch of the passage {width} m wide and {length} m long."
+  place_others: "- Other people are walking around you as well."
+  other_header: "THE OTHER PERSON"
+  other_where: "- They are {distance} m away, {direction}."
+  other_motion: "- They are walking at {speed} m/s, {heading}, {change}."
+  other_body: "- Their body is {width} m wide."
+  other_age: "- They look about {age} years old."
+  other_gender: "- They look like {gender}."
+  other_task: "- You do not know where they are going, unless they tell you."
+  genders: {female: a woman, male: a man, nonbinary: a non-binary person}
+  directions:
+    ahead: straight ahead of you
+    behind: straight behind you
+    side: "to your {side}"
+    ahead_side: "ahead of you and {angle}° to your {side}"
+    behind_side: "behind you and {angle}° to your {side}"
+  headings:
+    same: in the same direction as you
+    opposite: in the opposite direction to you
+    across: "across your direction of travel from your {from_side} to your {to_side}, at {angle}° to it"
+  changes:
+    shrinking: and the distance between you is shrinking
+    not_shrinking: and the distance between you is not shrinking

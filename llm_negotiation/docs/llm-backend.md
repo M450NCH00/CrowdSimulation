@@ -119,6 +119,20 @@ every file written for the key and for the words `Authorization` and `Bearer`
   the last few cents of a budget are not spendable.
 - **Failed sends.** A send that times out may still have been billed. It is recorded at its
   worst-case cost and flagged `cost_is_upper_bound`.
+- **A cap on one experiment's own calls** (issue #30). A guard may be scoped to an
+  experiment's name: its cap then counts only the ledger lines of that experiment, so that a
+  pilot can have a cap of its own beside what earlier experiments spent. It records a call
+  with no experiment label under its scope, and refuses one labelled for another experiment.
+  Rule-generation experiments use it (`rule-generation.md`, section 9); the experiments of
+  issue #24 do not.
+- **A preview over the cap** (issue #64). A resolution experiment refuses a paid run whose
+  worst-case preview exceeds its cap, unless its config says `budget.over_cap: stop_at_cap`;
+  then the run starts and this guard stops it at the cap (`encounter-protocol.md`, section 6).
+- **No guard covers the whole budget.** A scoped cap counts one experiment's calls; nothing
+  checks the sum of the caps, the ledger's total, Phase 1's spend (`pipeline/config.py`) or the
+  account balance. On 2026-10-24 the balance was USD 1.49, about USD 0.41 less than these
+  records account for (`WORK_LOG-64.md`). The caps recorded in `CLAUDE.md` are what keeps the
+  total in hand.
 - **The mock client is never charged and never writes to the ledger.** Its runs go to
   `runs_mock/`, which git ignores.
 

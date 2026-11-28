@@ -1,0 +1,38 @@
+# A seed rule of issue #32 (SI-3a.2). It is here to exercise the rule machinery for a meeting
+# inside a single-file passage. It is not a claim about how people behave; checking that is the
+# validation sub-issue's (SI-6).
+schema_version: 3
+rule_id: passage_shorter_backs_out
+version: 1
+status: test_seed
+description: >
+  When two people meet inside a stretch only one of them can use at a time, the one who has
+  walked less far into it backs out, waits for the other to come through, and goes on. If the
+  two have walked in about as far as each other, the rule does not say, and the arbiter's own
+  rule decides.
+provenance:
+  source_type: hand_written
+  source_ref: "issue #32 (SI-3a.2), Part 2.5, the seed rule"
+  created_at: 2026-10-16
+  author: "the user (specification in issue #32); written out by Claude Code (claude-opus-5-5)"
+  notes: >
+    Test fixture only. Not a claim about human behaviour. It applies the distance criterion
+    of docs/derivations.md, section 18: backing out the one who has walked less far in adds
+    the least walking, whatever the two can do backwards. Distances walked in within 0.1 m of
+    each other are a tie (no_match). Priority 30, above single_file_first_arrival (10), which
+    never matches two people both inside (their times to the segment tie at 0). It keeps
+    issue #26's expiry, out_of_range: a back-up manoeuvre, once begun, runs to its end whatever
+    its directive does, and 'passed' is measured between the two bodies, which separate while
+    one backs out (docs/derivations.md, section 17).
+  validation_evidence: []
+encounter: single_file_segment
+when:
+  all:
+    - {field: both.in_segment, op: "==", value: true}
+roles:
+  by: {field: agent.segment_distance_travelled, order: ascending, assign: [backs_out, goes_on], tie: no_match, tie_within: 0.1, unit: m}
+directive:
+  backs_out: {back_up: true}
+  goes_on: {}
+priority: 30
+expiry: out_of_range

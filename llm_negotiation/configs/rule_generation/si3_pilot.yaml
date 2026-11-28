@@ -1,0 +1,101 @@
+# Issue #30, Part 11: the paid pilot, as the issue specifies it. NOT RUN: held until the
+# supervisor's approval of simulation work is recorded in CLAUDE.md (WORK_LOG-30.md, P1), and
+# until the pricing page has been checked against configs/llm/deepseek_pricing.yaml
+# (docs/pricing-check.md).
+#
+#   python run_experiment.py configs/rule_generation/si3_pilot.yaml --plan
+#   python run_experiment.py configs/rule_generation/si3_pilot.yaml                              (the mock: free, runs_mock/)
+#   python run_experiment.py configs/rule_generation/si3_pilot.yaml --client deepseek            (writes the preview; sends nothing)
+#   python run_experiment.py configs/rule_generation/si3_pilot.yaml --client deepseek --confirm  (paid)
+#
+# As every shipped config, it names the mock client: paying is always an explicit
+# --client deepseek, and here --confirm as well.
+#
+# The design: two cases, one wide_corridor_head_on and one overtaking; condition A with both
+# speaking orders; condition B with both description orders, K = 2; demographics shown in the
+# head-on case and hidden in the overtaking one. One persona pair (the older person a woman,
+# the younger a man, the woman's errand urgent) so that the private-information and
+# demographics paths can be taken by the model. 4 negotiations and 8 statements.
+#
+# Issue #32 changed what a model is shown, and the pilot must run on that (otherwise its data
+# would match no later run): it now uses prompt version 2 (rulegen_negotiate_v2,
+# rulegen_state_v2), the same two cases at their re-stepped version 2 (case set si3_v2), and
+# the mock policy of prompt version 2. Nothing else changed: not the design, not the cap
+# (WORK_LOG-32.md, DD117).
+#
+# THE WORST-CASE PREVIEW DOES NOT FIT THE CAP: USD 0.648 against USD 0.05 with prompt version 2
+# (USD 0.619 with version 1), so the code refuses to send anything with this config as it
+# stands. Condition A dominates (USD 0.55): its bound grows with the square of the messages,
+# and one negotiation alone can cost up to USD 0.14. The options for #30's open question Q5, each with
+# its worst case, re-previewed for prompt version 2, are in docs/rule-generation.md, section
+# 10.1. Issue #30's previews, for prompt version 1:
+#
+#   transport_retries 0                                      12 sessions   USD 0.206
+#   transport_retries 0, max_tokens 400                      12 sessions   USD 0.169
+#   transport_retries 0, max_tokens 400, 2 messages/agent    12 sessions   USD 0.086
+#   transport_retries 0, max_tokens 400, 2 messages/agent,
+#     one speaking/description order per case                 6 sessions   USD 0.043  (fits)
+#
+# Which cut to make, or whether to raise the pilot's cap instead, or to run under a hard spend
+# cap in a stated order, is open question Q5 (WORK_LOG-30.md; re-previewed in WORK_LOG-32.md).
+schema_version: 1
+layer: rule_generation
+experiment_name: si3_pilot
+description: >-
+  Paid pilot of rule generation (issue #30, Part 11): two cases, both conditions, both
+  orders, K = 2, demographics shown in one case and hidden in the other.
+
+cases:
+  store: cases
+  set: si3_v2                   # issue #32: the same two cases, re-stepped (version 2)
+  ids:
+    - head_on_de176842      # wide_corridor_head_on, aligned
+    - overtaking_2d08db11   # overtaking, in line
+
+conditions: [negotiated, stated]
+
+design:
+  seed: 31
+  base_age: 25
+  age_difference: 45
+  factors:
+    age_pair: [p1_older]
+    gender_pair: [p1_female]
+    task: [p1_urgent]
+    demographics_visible: [true, false]
+    mapping: [p1_lower]
+    order: [lower_first, higher_first]
+  per_case:
+    head_on_de176842: {demographics_visible: [true]}
+    overtaking_2d08db11: {demographics_visible: [false]}
+
+negotiation:
+  template: rulegen_negotiate_v2 # issue #32: prompt version 2
+  max_messages_per_agent: 4      # the issue's default
+
+statement:
+  template: rulegen_state_v2     # issue #32: prompt version 2
+  repeats: 2                     # K = 2, as the issue's pilot says
+
+llm:
+  client: mock                   # the paid run is --client deepseek --confirm
+  mock_policy: rulegen_paths_v2  # issue #32: the mock of prompt version 2 (a mock run only)
+  model: deepseek-flash
+  temperature: 1.0
+  max_tokens: 600
+  thinking: disabled
+  transport_retries: 2
+
+budget:
+  cap_usd: 0.05                  # the issue's pilot cap, on this experiment's own calls
+  ledger: spend_ledger.jsonl
+
+replay:
+  enabled: true
+
+screening:
+  enabled: true
+  scenario: configs/scenarios/bidirectional_flow.yaml
+  baseline: orca_perturbed_v1
+  seed: 30900
+  repeats: 2

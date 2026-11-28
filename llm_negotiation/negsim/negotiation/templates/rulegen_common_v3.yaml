@@ -1,0 +1,146 @@
+# Prompt template rulegen_common, version 3.  FROZEN — do not edit.
+# The hash of this file is pinned in MANIFEST.json and checked every time it is loaded.
+# To change any wording, copy the file to rulegen_common_v4.yaml, change it there, freeze it
+# (python -m negsim.negotiation.freeze rulegen_common_v4 "<why>"), and record the reason in
+# the work log.
+template_id: rulegen_common
+version: 3
+kind: rule_generation_common
+rule_schema_version: 4
+description: >-
+  The description of the rule format, the list of fields a rule may read, and a format example,
+  for version 4 of the rule format (issue #108, RF-31). Used by translate_v2; rule generation's
+  conditions A and B still use version 2 of this template.
+provenance: >-
+  Version 2 (issue #32) with what issue #108 added to the rule format and nothing else: the three
+  agent-level fields of what one person can see of the other (mobility_aid, load, distraction,
+  generated from the field catalogue, negsim/rules/fields.py); roles by a condition; a person's
+  own private factors, read with the prefix self. and only in an own-only condition (own_when),
+  which may switch on nothing but that person's own movement; and the directive field steps, in
+  Step 1's step vocabulary, whose limits (the largest turn and sidestep, the events) are generated
+  from rule_db/schema/rule.v4.schema.json. The list of fields and the directive fields are
+  generated from the catalogue and the schema, and the SHA-256 of the result is pinned below.
+  Real ethnicity is never in the list: no rule may read it. Perceived attractiveness is listed
+  only as self.finds_other_attractive, a person's own view of the other (the supervisor's
+  decision, CLAUDE.md, 2026-10-26). Nothing here describes, ranks or hints at any convention: the
+  format example uses no real field or value, and the directive fields and steps are defined
+  without saying which way anyone should go, who should give way, or how far.
+
+# SHA-256 of the generated text, with demographic fields and without them
+# (negsim.rulegen.describe.glossary_text). Checked on every use.
+glossary_sha256:
+  with_demographics: 0f9761598b9b6a5bd90142f0f4607649b6ed1a83d09454059372a99e5ec10b9e
+  without_demographics: 8a8097af7e7e6c2ad46d14ef1b753dd510b3643c210d54d491efc21e35558e98
+
+glossary:
+  header: "THE RULE FORMAT"
+  intro: >-
+    A rule is a JSON object. It says when it applies, gives each of the two people a role, and
+    says what each role does. It may use only the fields listed below; nothing else can be written
+    into a rule. Its condition and its roles may read only what both people can see; a person's
+    own private factors may be read only in that person's own-only condition (below).
+  keys_header: "Keys of a rule:"
+  keys:
+    encounter: "\"encounter\": the kind of meeting the rule is for, one of {values}."
+    when: >-
+      "when": the condition under which the rule applies: a comparison, or {"all": [...]} (every
+      item holds; an empty list always holds) or {"any": [...]} (at least one item holds), nested
+      as needed.
+    roles: >-
+      "roles": either "symmetric" (both people get the same instructions, under the single role
+      name "both"); or {"by": {...}}, which orders the two people by a number field and gives them
+      two roles in turn; or {"by_condition": {...}}, which gives the first role to the person a
+      condition holds for and the second to the other (below).
+    directive: "\"directive\": what each role does: one entry per role name, each with any of the directive fields below."
+    priority: "\"priority\": a whole number from {minimum} to {maximum}."
+    expiry: "\"expiry\" (optional): {values}; \"passed\" ends the rule's effect once the two have passed each other, \"out_of_range\" when they are out of sight of each other."
+    intent: "\"intent\" (optional): what the rule is meant to do, in one sentence of plain words."
+  encounters_header: "Kinds of meeting (\"encounter\"):"
+  encounters:
+    head_on: "head_on: approaching each other, directions of travel more than 120° apart"
+    crossing: "crossing: approaching each other, directions of travel 60° to 120° apart"
+    overtaking: "overtaking: approaching each other, directions of travel less than 60° apart"
+    single_file_segment: "single_file_segment: a stretch ahead of both, or that they are in, is too narrow for the two to pass in"
+    any: "any: every kind of meeting"
+  comparison: >-
+    A comparison is {"field": <field>, "op": <operator>, "value": <a number, a name, or true or
+    false; for "in" a list>, "unit": <unit>}. The operators are {operators}. Every comparison of a
+    number gives its unit, which must be the field's: {units} (an angle may be given in deg
+    instead of rad). A comparison of a name, or of true or false, has no unit. A comparison of a
+    value that is missing is false.
+  prefixes: >-
+    Fields are written with a prefix: "pair." for a field of the two together; in a condition,
+    "either." (holds if it holds for at least one of the two) or "both." (holds if it holds for
+    each); in "roles", "agent." (each person's own value); in an own-only condition, "self." (that
+    person's own private factors) and "pair.".
+  pair_fields_header: "Fields of the two together (pair.):"
+  agent_fields_header: "Fields of each person that both can see (either., both., agent.):"
+  self_fields_header: "A person's own private factors, which only that person knows (self., only in an own-only condition):"
+  field_line: "{name} ({unit}): {meaning}"
+  category_line: "{name} (one of {values}): {meaning}"
+  boolean_line: "{name} (true or false): {meaning}"
+  roles_header: "Giving the two their roles:"
+  roles: >-
+    {"by": {"field": <an agent. field that is a number>, "order": {orders}, "assign": [<first role
+    name>, <second role name>], "tie": "no_match"}}. With "ascending" the person with the smaller
+    value gets the first role. "tie": "no_match" is required: when the two values are equal the
+    rule does not apply. Optionally "tie_within": <a number> and "unit": <its unit> make values
+    that close a tie. Role names are lower-case words of your choosing, not "both".
+  roles_condition: >-
+    {"by_condition": {"when": <a condition on agent. fields, and pair. fields if needed>, "assign":
+    [<role of the person it holds for>, <role of the other>], "tie": "no_match"}}. "agent." reads
+    each person's own value. "tie": "no_match" is required: when the condition holds for both
+    people, or for neither, the rule does not apply.
+  directive_header: "Directive fields (each optional; a field left out has its usual value):"
+  directive_fields:
+    side_preference: "side_preference ({values}; usual: none): when the two would otherwise collide, the side this person passes the other on, as this person sees it facing the other; none takes whichever side is nearer."
+    responsibility_share: "responsibility_share (a number from {minimum} to {maximum}; usual: 0.5): when the two would otherwise collide, the part of the change of course needed that this person makes. The two people's shares must add up to at least 1."
+    speed_scale: "speed_scale (a number, {minimum} or more; usual: 1): multiplies this person's walking speed while the rule applies."
+    clearance_margin: "clearance_margin (metres, {minimum} or more; usual: 0): extra room this person keeps between the two bodies."
+    passage_order: "passage_order ({values}; usual: none): at a stretch too narrow for the two to pass, whether this person goes through first (leader) or waits (follower). One role leader and the other follower, or neither."
+    back_up: "back_up (true or false; usual: false): when the two meet inside a stretch too narrow for them to pass, whether this person backs out of it at their own backing speed, waits outside until the other has come through, and then goes on. The other goes first."
+    steps: "steps (a list of steps; usual: none): what this person does, step after step, once the rule applies to them: a plan, carried out once for this meeting (below). The simulator still keeps the two from walking into each other."
+    own_when: "own_when (usual: none): an own-only condition: a change to this person's own movement that applies only when a condition on their own private factors holds (below)."
+  steps_header: "Steps (\"steps\": [<step>, ...]):"
+  steps: >-
+    Each step is an object with any of: "start": {"at_distance_m": <metres>} (wait until the other
+    is that close before starting this step); "speed_mps": <metres per second> (walk at this speed;
+    without it, the person's usual speed); "turn": {"to": "left" or "right", "degrees": <0 to
+    {max_degrees}>} (walk at this angle to the left or right of the direction they were going);
+    "sidestep": {"to": "left" or "right", "metres": <more than 0, up to {max_sidestep}>} (move this far
+    to that side, then walk on parallel to the line they were on); "back_up_m": <metres> (walk
+    backwards this far); "until": {events}, {"seconds": <seconds>} or {"at_distance_m": <metres>}
+    (when the step ends; "other_passes" is when the other has gone by). Every step that does not
+    step aside or walk backwards needs an "until". After the last step the person keeps the line
+    the steps took them to until the two have passed each other.
+  own_when_header: "Own-only conditions (\"own_when\"):"
+  own_when: >-
+    {"when": <a condition on self. fields, and pair. fields if needed>, "then": {<any of {fields}>}}.
+    While the condition holds for the person, the fields under "then" replace that role's own. An
+    own-only condition may change only the person's own movement; it may never set
+    side_preference, responsibility_share, passage_order or back_up, which both people must agree
+    on and the other cannot know.
+  consistency: >-
+    The two roles may not be told to pass on different sides. A rule that says who backs up
+    gives back_up true to exactly one of the two roles, and not to a role that goes first.
+
+format_example:
+  header: "THE FORMAT, WITH PLACEHOLDERS IN ANGLE BRACKETS (not a real rule):"
+  text: |-
+    {
+      "encounter": "<a kind of meeting>",
+      "when": {"all": [{"field": "<a field>", "op": "<an operator>", "value": "<a value>", "unit": "<its unit>"}]},
+      "roles": {"by_condition": {"when": {"field": "<an agent. field>", "op": "<an operator>", "value": "<a value>"}, "assign": ["<role a>", "<role b>"], "tie": "no_match"}},
+      "directive": {
+        "<role a>": {"<a directive field>": "<its value>"},
+        "<role b>": {"<a directive field>": "<its value>",
+                     "steps": [{"start": {"at_distance_m": "<metres>"}, "<a step key>": "<its value>", "until": "<when it ends>"}],
+                     "own_when": {"when": {"field": "<a self. field>", "op": "<an operator>", "value": "<a value>"}, "then": {"<a field of own movement>": "<its value>"}}}
+      },
+      "priority": "<a whole number>",
+      "intent": "<one sentence>"
+    }
+  note: >-
+    With "roles": "symmetric", "directive" has the one entry "both"; with "roles": {"by": ...}, the
+    two people are ordered by a number instead. "steps" and "own_when" are optional, like every
+    directive field. Numbers are written as numbers, without quotes.

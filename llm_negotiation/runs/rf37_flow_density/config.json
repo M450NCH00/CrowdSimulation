@@ -1,0 +1,161 @@
+{
+  "layer": "rule_set_evaluation",
+  "schema_version": 1,
+  "experiment": {
+    "experiment_name": "rf37_flow_density",
+    "description": "Round 1's runnable staged rules alone and together, rule_db's default set as a reference, and plain ORCA, in the two-way flow of round 1 with 15 and with 75 people each way, people from a realistic Singapore crowd. With RF-33's 50 each way, the crowd targets of issue #122 are judged over three sizes.\n",
+    "rules": {
+      "ext_head_on_0ecc2d1a6e": {
+        "from": "runs/rf31_round1_head_on/rule_db_staging/extracted",
+        "version": 2
+      },
+      "ext_head_on_6455ca5589": {
+        "from": "runs/rf31_round1_head_on_retry/rule_db_staging/extracted",
+        "version": 2,
+        "priority": 600,
+        "reason": "Both translations have priority 500 and both match a head-on in which one person has a cane, so the loader refuses them together (ambiguous). The user chose that the narrower rule wins where both match (the cane rule), so that set 2 can run; the left-turn rule applies to every other head-on."
+      }
+    },
+    "left_out": [
+      {
+        "rule": "ext_head_on_aacce0961b (RF-31, format 4)",
+        "reason": "refused by the loader since RF-31 (constant_roles); its roles hold for both people, so it never matched"
+      },
+      {
+        "rule": "ext_head_on_4eb7a97c8d (RF-11)",
+        "reason": "not expressible in either format (signalling and speaking); nobody signals in ORCA"
+      }
+    ],
+    "arms": [
+      {
+        "name": "passed_screening",
+        "rules": [
+          "ext_head_on_0ecc2d1a6e"
+        ],
+        "database": null,
+        "ruleset": null,
+        "judged": true,
+        "description": "Set 1, the rules that passed crowd screening (the left-turn rule)."
+      },
+      {
+        "name": "cane_rule_alone",
+        "rules": [
+          "ext_head_on_6455ca5589"
+        ],
+        "database": null,
+        "ruleset": null,
+        "judged": true,
+        "description": "The retried cane rule alone."
+      },
+      {
+        "name": "all_runnable",
+        "rules": [
+          "ext_head_on_0ecc2d1a6e",
+          "ext_head_on_6455ca5589"
+        ],
+        "database": null,
+        "ruleset": null,
+        "judged": true,
+        "description": "Set 2, every runnable staged rule."
+      },
+      {
+        "name": "reference_default",
+        "rules": [],
+        "database": "rule_db",
+        "ruleset": "default",
+        "judged": false,
+        "description": "rule_db's hand-written seed rules of issue"
+      }
+    ],
+    "scenarios": [
+      {
+        "name": "flow_15",
+        "scenario": "configs/scenarios/bidirectional_flow.yaml",
+        "rotate_people": false,
+        "note": "The two-way flow, 15 + 15, people at sourced shares.",
+        "scenario_overrides": {
+          "geometry": {
+            "agents_per_direction": 15
+          }
+        },
+        "population": "configs/populations/singapore_street_v1.yaml",
+        "population_sha256": "dfd92225553c999a2b5de0400489d100daba6d5fc88900e59860171bfe8b8045",
+        "purpose": "realistic",
+        "seeds": 10
+      },
+      {
+        "name": "flow_75",
+        "scenario": "configs/scenarios/bidirectional_flow.yaml",
+        "rotate_people": false,
+        "note": "The two-way flow, 75 + 75, people at sourced shares.",
+        "scenario_overrides": {
+          "geometry": {
+            "agents_per_direction": 75
+          }
+        },
+        "population": "configs/populations/singapore_street_v1.yaml",
+        "population_sha256": "dfd92225553c999a2b5de0400489d100daba6d5fc88900e59860171bfe8b8045",
+        "purpose": "realistic",
+        "seeds": 10
+      }
+    ],
+    "baseline": "orca_perturbed_v1",
+    "seed": 30900,
+    "seeds": 10,
+    "people": {
+      "ages": [
+        25,
+        70
+      ],
+      "genders": [
+        "female",
+        "male"
+      ]
+    },
+    "trajectory_stride": 10,
+    "alpha": 0.05,
+    "verdict_rule": 2
+  },
+  "software": {
+    "negsim": "0.1.0"
+  },
+  "created_utc": "2026-10-30T15:33:44+00:00",
+  "git": {
+    "commit": "c685afe7e71a9f26586740f9287fea657bca9fba",
+    "dirty": true
+  },
+  "judged_utc": "2026-10-30T15:33:45+00:00",
+  "judged_git": {
+    "commit": "c685afe7e71a9f26586740f9287fea657bca9fba",
+    "dirty": true
+  },
+  "copied": [
+    {
+      "file": "rules/ext_head_on_0ecc2d1a6e.v1.yaml",
+      "from": "runs/rf31_round1_head_on/rule_db_staging/extracted/rules/ext_head_on_0ecc2d1a6e.v1.yaml",
+      "sha256": "272a712e24beeecd79731d8adfb16ff939779cb9c92970879a55af8a0e5c3307"
+    },
+    {
+      "file": "rules/ext_head_on_0ecc2d1a6e.v2.yaml",
+      "from": "runs/rf31_round1_head_on/rule_db_staging/extracted/rules/ext_head_on_0ecc2d1a6e.v2.yaml",
+      "sha256": "d396318d715f10382bdbb4d581e8194d8f9e79494c787cffeddbb2dec2e69bfa"
+    },
+    {
+      "file": "rules/ext_head_on_6455ca5589.v1.yaml",
+      "from": "runs/rf31_round1_head_on_retry/rule_db_staging/extracted/rules/ext_head_on_6455ca5589.v1.yaml",
+      "sha256": "ca40b644af4cb3e9e05d52691604ea2141ee93309f46afd789a47fc017e6f46d"
+    },
+    {
+      "file": "rules/ext_head_on_6455ca5589.v2.yaml",
+      "from": "runs/rf31_round1_head_on_retry/rule_db_staging/extracted/rules/ext_head_on_6455ca5589.v2.yaml",
+      "sha256": "6c674e09835485341e08e51341bdfdb390d10b260a29bc1229335f46e1623891"
+    },
+    {
+      "file": "rules/ext_head_on_6455ca5589.v3.yaml",
+      "from": null,
+      "sha256": "189853a6870ba40fe3b119a41ccbff03d4555518215f032c66bc6b8641b556c5",
+      "new_version_of": 2,
+      "priority": 600
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+# Issue #140 (RF-51): round 1 on the grid, LLM agents in their own frame (variant D,
+# docs/action-space.md section 2). MOCK ONLY: RF-52 (#141) runs it, with its own approval and cap
+# recorded in CLAUDE.md first.
+#
+#   python -m negsim.grid.experiment configs/grid/round1_grid.yaml --plan
+#   python -m negsim.grid.experiment configs/grid/round1_grid.yaml --out runs_mock/rf51_grid
+#
+# The sessions are RF-40's silent cells and people (design_from), on RF-50's grid (AS2: silent only).
+schema_version: 1
+type: grid_experiment
+experiment_name: rf51_round1_grid
+description: >-
+  RF-51, round 1 (head-on) on the grid: RF-40's silent sessions, the agents told where they and the
+  other are in cells and lanes, in their own left and right, choosing from RF-47's menu done in cells.
+
+design_from: configs/resolution/round1_head_on_turn_taking.yaml   # RF-40: its design, people, factors and first_asked
+conditions: [silent]                                               # AS2 (the user, 2026-11-25)
+grid: configs/grid/corridor_v1.yaml                                # RF-50's corridor (AS6, AS7)
+geometries:
+  head_on_de176842: aligned          # aligned in round 1, aligned on the grid
+  head_on_02dfbadb: one_lane_apart   # 20 cm apart in round 1 rounds to aligned on the grid; one lane apart instead (RF-50)
+counterbalance_off_centre: true      # the user, 2026-11-26: repeats 1-2 person 2 off centre, 3-4 person 1
+
+templates:
+  core: resolve_grid_v1              # negsim/grid/templates (frozen)
+  debrief: resolve_debrief_v3        # RF-47's: a decision listed by the option chosen
+
+protocol:
+  max_decision_points: 6             # issue #127, as RF-40
+  min_gap_s: 1.0                     # D5, as RF-40 (4 ticks)
+
+llm_view: configs/resolution/llm_view_v1.yaml   # D2's limits, as RF-40, between cell centres
+
+llm:
+  client: mock
+  mock_policy: resolution_menu_rehearsal_v1     # RF-47's: replies with every option of the menu
+  model: deepseek-flash
+  temperature: 1.0
+  max_tokens: 300
+  thinking: disabled
+  transport_retries: 2
+
+budget:
+  cap_usd: 0.00                      # mock only (RF-52 sets its own)
+  ledger: spend_ledger.jsonl

@@ -1,0 +1,38 @@
+# Issue #141 (RF-52): round 1 on the grid, paid, in the agent's own frame (variant D,
+# docs/action-space.md section 2). The sessions, grid, templates and protocol are RF-51's
+# (base_config), unchanged; this file sets only the run's name, the model and the budget.
+#
+#   python -m negsim.grid.paid configs/grid/rf52_round1_grid.yaml --plan
+#   python -m negsim.grid.paid configs/grid/rf52_round1_grid.yaml --client deepseek --confirm --limit 6   # the pilot
+#   python -m negsim.grid.paid configs/grid/rf52_round1_grid.yaml --client deepseek --confirm             # the rest
+#
+# Approved by the user for #141 only, 2026-11-26 (CLAUDE.md, pending sign-offs item 1): a cap of
+# USD 0.80 on #141's own calls, both frames together, off-peak, a pilot first.
+schema_version: 1
+type: grid_paid_experiment
+issue: 141
+base_config: configs/grid/round1_grid.yaml      # RF-51 (#140): resolve_grid_v1, RF-40's 272 silent sessions
+experiment_name: rf52_round1_grid
+description: >-
+  RF-52, round 1 (head-on) on the grid, paid: RF-40's silent sessions, the agents told where they and
+  the other are in cells and lanes, in their own left and right, choosing from RF-47's menu done in cells.
+
+llm:
+  client: mock                  # pass --client deepseek for the paid run (as RF-40's configs)
+  model: deepseek-flash         # RF-40's model, settings and reply cap (docs/action-space.md section 3)
+  temperature: 1.0
+  max_tokens: 300
+  thinking: disabled
+  transport_retries: 2
+
+budget:
+  cap_usd: 0.80                 # the user's cap for #141, 2026-11-26
+  shared_with: [rf52_round1_grid, rf52_round1_grid_abs]   # one cap over both frames' calls together
+  ledger: spend_ledger.jsonl
+  over_cap: stop_at_cap         # the guard stops the run before any call that could pass the cap
+
+expected_fingerprint: bc19ba97cbe016479903222bb1578db6   # RF-40's deepseek-flash (checked at the pilot)
+
+gate:                           # the user's decision of 2026-11-26: RF-10's gate on the agents' own plans
+  measure: resolved_plan_only   # the grid's measures stand for plan_only; ORCA baselines not available
+  threshold: 0.50

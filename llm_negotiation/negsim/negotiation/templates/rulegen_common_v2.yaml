@@ -1,0 +1,108 @@
+# Prompt template rulegen_common, version 2.  FROZEN — do not edit.
+# The hash of this file is pinned in MANIFEST.json and checked every time it is loaded.
+# To change any wording, copy the file to rulegen_common_v3.yaml, change it there, freeze it
+# (python -m negsim.negotiation.freeze rulegen_common_v3 "<why>"), and record the reason in
+# the work log.
+template_id: rulegen_common
+version: 2
+kind: rule_generation_common
+rule_schema_version: 3
+description: >-
+  What conditions A and B of rule generation share word for word: the description of the rule
+  format, the list of fields a rule may read, and a format example, for version 3 of the rule
+  format (issue #32). Both conditions get exactly this text, so that they differ only in how
+  the situation is told.
+provenance: >-
+  Version 1 (issue #30) with what issue #32 added to the rule format and nothing else: the
+  fields of rule schema version 3 (the four passage fields, generated from the field catalogue,
+  negsim/rules/fields.py, as before, with docs/rule-format.md section 14), true or false as the
+  value of a comparison (a line for a field that is true or false, and one word in the
+  description of a comparison), and the directive field back_up, with the one thing a rule
+  that uses it must say. The list of fields and the directive fields are generated from the
+  catalogue and from rule_db/schema/rule.v3.schema.json, and the SHA-256 of the result is pinned
+  below. A person's group is never in the list: no rule may read it. Nothing here describes,
+  ranks or hints at any convention: the format example uses no real field or value, and the
+  directive fields are defined without saying which way anyone should go or who should back up.
+
+# SHA-256 of the generated text, with demographic fields and without them
+# (negsim.rulegen.describe.glossary_text). Checked on every use.
+glossary_sha256:
+  with_demographics: 0296a56be2b3ed0b469fb5b5852f7947192eefb782d27f535fc148f893818c8a
+  without_demographics: 779cdd14b08b97235f93366195463837f927557e8f2320257c0509f065e970f9
+
+glossary:
+  header: "THE RULE FORMAT"
+  intro: >-
+    A rule is a JSON object. It says when it applies, gives each of the two people a role, and
+    says what each role does. It may use only the fields listed below, which both people can
+    see; nothing else can be written into a rule.
+  keys_header: "Keys of a rule:"
+  keys:
+    encounter: "\"encounter\": the kind of meeting the rule is for, one of {values}."
+    when: >-
+      "when": the condition under which the rule applies: a comparison, or {"all": [...]} (every
+      item holds; an empty list always holds) or {"any": [...]} (at least one item holds), nested
+      as needed.
+    roles: >-
+      "roles": either "symmetric" (both people get the same instructions, under the single role
+      name "both"), or {"by": {...}}, which orders the two people by a number field and gives them
+      two roles in turn (below).
+    directive: "\"directive\": what each role does: one entry per role name, each with any of the directive fields below."
+    priority: "\"priority\": a whole number from {minimum} to {maximum}."
+    expiry: "\"expiry\" (optional): {values}; \"passed\" ends the rule's effect once the two have passed each other, \"out_of_range\" when they are out of sight of each other."
+    intent: "\"intent\" (optional): what the rule is meant to do, in one sentence of plain words."
+  encounters_header: "Kinds of meeting (\"encounter\"):"
+  encounters:
+    head_on: "head_on: approaching each other, directions of travel more than 120° apart"
+    crossing: "crossing: approaching each other, directions of travel 60° to 120° apart"
+    overtaking: "overtaking: approaching each other, directions of travel less than 60° apart"
+    single_file_segment: "single_file_segment: a stretch ahead of both, or that they are in, is too narrow for the two to pass in"
+    any: "any: every kind of meeting"
+  comparison: >-
+    A comparison is {"field": <field>, "op": <operator>, "value": <a number, a name, or true or
+    false; for "in" a list>, "unit": <unit>}. The operators are {operators}. Every comparison of a
+    number gives its unit, which must be the field's: {units} (an angle may be given in deg
+    instead of rad). A comparison of a name, or of true or false, has no unit. A comparison of a
+    value that is missing is false.
+  prefixes: >-
+    Fields are written with a prefix: "pair." for a field of the two together; in a condition,
+    "either." (holds if it holds for at least one of the two) or "both." (holds if it holds for
+    each); in "roles", "agent." (the two people's values are compared with each other).
+  pair_fields_header: "Fields of the two together (pair.):"
+  agent_fields_header: "Fields of each person (either., both., agent.):"
+  field_line: "{name} ({unit}): {meaning}"
+  category_line: "{name} (one of {values}): {meaning}"
+  boolean_line: "{name} (true or false): {meaning}"
+  roles_header: "Ordering the two (\"roles\": {\"by\": ...}):"
+  roles: >-
+    {"by": {"field": <an agent. field that is a number>, "order": {orders}, "assign": [<first role
+    name>, <second role name>], "tie": "no_match"}}. With "ascending" the person with the smaller
+    value gets the first role. "tie": "no_match" is required: when the two values are equal the
+    rule does not apply. Optionally "tie_within": <a number> and "unit": <its unit> make values
+    that close a tie. Role names are lower-case words of your choosing, not "both".
+  directive_header: "Directive fields (each optional; a field left out has its usual value):"
+  directive_fields:
+    side_preference: "side_preference ({values}; usual: none): when the two would otherwise collide, the side this person passes the other on, as this person sees it facing the other; none takes whichever side is nearer."
+    responsibility_share: "responsibility_share (a number from {minimum} to {maximum}; usual: 0.5): when the two would otherwise collide, the part of the change of course needed that this person makes. The two people's shares must add up to at least 1."
+    speed_scale: "speed_scale (a number, {minimum} or more; usual: 1): multiplies this person's walking speed while the rule applies."
+    clearance_margin: "clearance_margin (metres, {minimum} or more; usual: 0): extra room this person keeps between the two bodies."
+    passage_order: "passage_order ({values}; usual: none): at a stretch too narrow for the two to pass, whether this person goes through first (leader) or waits (follower). One role leader and the other follower, or neither."
+    back_up: "back_up (true or false; usual: false): when the two meet inside a stretch too narrow for them to pass, whether this person backs out of it at their own backing speed, waits outside until the other has come through, and then goes on. The other goes first."
+  consistency: >-
+    The two roles may not be told to pass on different sides. A rule that says who backs up
+    gives back_up true to exactly one of the two roles, and not to a role that goes first.
+
+format_example:
+  header: "THE FORMAT, WITH PLACEHOLDERS IN ANGLE BRACKETS (not a real rule):"
+  text: |-
+    {
+      "encounter": "<a kind of meeting>",
+      "when": {"all": [{"field": "<a field>", "op": "<an operator>", "value": "<a value>", "unit": "<its unit>"}]},
+      "roles": {"by": {"field": "<an agent. field>", "order": "<ascending or descending>", "assign": ["<role a>", "<role b>"], "tie": "no_match"}},
+      "directive": {"<role a>": {"<a directive field>": "<its value>"}, "<role b>": {"<a directive field>": "<its value>"}},
+      "priority": "<a whole number>",
+      "intent": "<one sentence>"
+    }
+  note: >-
+    With "roles": "symmetric", "directive" has the one entry "both". Numbers are written as
+    numbers, without quotes.

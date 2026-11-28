@@ -1,0 +1,34 @@
+# Issue #60 (RF-5): the baseline runs that the passage cases with room for a wider body are taken
+# from. As si32_source_passage_meet_middle.yaml (issue #32), with one change: each person has
+# walked 0.1 m less far into the passage, so that the two start 0.3 m apart (body to body) instead
+# of 0.1 m. A person pulling a large suitcase is 0.2 m wider (configs/resolution/factors_v1.yaml,
+# [placeholder]), so a pair with one loaded person starts 0.2 m apart, outside the near-miss
+# distance (0.1 m). Issue #32's cases start the pair 0.1 m apart and cannot take that body (the
+# user's choice, 2026-10-23: new cases rather than a smaller width; WORK_LOG-60.md). No model is
+# called.
+#
+#   python run_experiment.py configs/cases/rf5_source_passage_meet_middle.yaml
+#
+# The layouts, as issue #32's, 0.1 m less far in each: equal distances, [1.6, 1.6], and agent 0
+# 2.0 m further in, [2.6, 0.6]; each at rest and walking into each other.
+schema_version: 1
+layer: avoidance
+experiment_name: rf5_source_passage_meet_middle
+description: Conflict-case source. Two people meeting inside a single-file passage, 0.3 m apart, equal and unequal distances in, at rest and walking; primary baseline, plain ORCA.
+scenario: configs/scenarios/passage_meet_middle_v1.yaml
+baseline: orca_perturbed_v1
+
+design:
+  seed: 60100
+  seeding: paired
+  repeats: 2
+  factors:
+    travelled:
+      - name: symmetric_30cm
+        scenario_overrides: {geometry: {travelled: [1.6, 1.6]}}
+      - name: asymmetric_30cm
+        scenario_overrides: {geometry: {travelled: [2.6, 0.6]}}
+    start:
+      - name: rest
+      - name: walking
+        scenario_overrides: {geometry: {start_speed: preferred}}

@@ -1,0 +1,148 @@
+HuNavSim 2.0: A Enhanced Human Navigation Simulator for Human-Aware Robot Navigation
+Miguel Escudero-Jime´nez, Noe´ Pe´rez-Higueras, Andre´s Mart´ınez-Silva, Fernando Caballero, Luis Merino Service Robotics Lab
+University Pablo de Olavide. Seville, Spain {mescjim, noeperez, amarsil1, fcaballero, lmercab}@upo.es
+
+arXiv:2507.17317v2 [cs.RO] 25 Jul 2025
+
+Abstract—This work presents a new iteration of the Human Navigation Simulator (HuNavSim) [1], a novel open-source tool for the simulation of different human-agent navigation behaviors in scenarios with mobile robots. The tool, programmed under the ROS 2 framework, can be used together with different wellknown robotics simulators such as Gazebo or NVidia Isaac Sim. The main goal is to facilitate the development and evaluation of human-aware robot navigation systems in simulation. In this new version, several features have been improved and new ones added, such as the extended set of actions and conditions that can be combined in Behavior Trees to compound complex and realistic human behaviors.
+
+I. INTRODUCTION
+
+Fig. 1: Capture of HuNav agents in the NVidia Isaac Sim
+
+Today, mobile robots are moving from factories to domestic environments shared with humans. In such scenarios, humanaware navigation and interaction is becoming a relevant topic in robotics.
+The development of mobile social robots presents two primary challenges. First, conducting experiments involving real human participants is both costly and difficult to execute or replicate, except under highly controlled and limited conditions. Consequently, simulating realistic human navigation behavior becomes essential for the advancement of robot navigation techniques. Secondly, performance evaluation in a human-aware navigation context is another pending task in many simulation approaches. The evaluation must go beyond traditional performance metrics such as navigation efficiency, encompassing also the safety, legibility, and comfort of human co-inhabitants. However, some of these characteristics are inherently subjective and difficult to quantify mathematically, leading to a lack of consensus within the research community on the appropriate metrics for human-aware navigation [2], [3].
+Most state-of-the-art simulation approaches employ crowd movement models to control the navigation of simulated human agents. Although such models are effective in reproducing global crowd behaviors, they often lack fidelity at the individual level. Specifically, these models typically assign uniform behavior patterns to all agents, leading to identical
+This work was partially supported by the Technology Exchange Programme of the EuROBIN project (GA 101070596) funded by the European Union, and the projects PICRAH4.0 (PLEC2023-010353) and NORDIC (TED2021132476B-I00), funded by the Spanish Research Agency and the Ministry of Science (MCIN /AEI/10.13039/501100011033) and the European Union NextGenerationEU/PRTR
+
+responses in similar scenarios regardless of environmental or contextual variations. As a result, the simulations fail to capture the diversity and unpredictability of real human navigation, particularly in the presence of robots. Moreover, human behavior is limited to navigation from one point to another in most cases. This lack of behavioral variability limits the utility of these simulations for developing and evaluating socially-aware robot navigation systems. In HuNavSim 2.0, we employ noisy local navigation models to add variability and behavior trees to global and complex control of human actions.
+Furthermore, most current benchmarking tools introduce their own distinct set of evaluation criteria. Although the development of socially-relevant metrics remains an open research area, the lack of standardized metrics makes it difficult to perform fair comparisons between different social navigation approaches. In HuNavSim we decided to collect the most relevant metrics found in the literature, as well as a flexible system to easily add new metrics.
+HuNavSim 2.0 contributes to alleviate these issues by continuing the work initiated with HuNavSim 1.0 [1]. The contributions of this new version are as follows.
+i) A rich set of navigation actions and conditions to compound complex and realistic human navigation behaviors through Behavior Trees [4].
+ii) An enriched human local navigation by adding controlled noise to the parameters of the navigation model, leading to variable and more realistic human navigation.
+iii) A set of different wrappers to use the tool along with well-known robotics simulator like Gazebo, Webots or NVidia Isaac Sim (see Fig. 1).
+
+iv) A new system to easily deploy the system and create new scenarios.
+
+II. RELATED WORK
+Several simulators and benchmarking tools have been developed to address human-aware navigation problems. This work is based on the previous tool HuNavSim [1], which has been improved and extended. In this section, we briefly review existing approaches and differences with HuNavSim 2.0.
+The Social Force Model (SFM) [5] is a well-known model of human navigation through force-based interactions. Approaches like PedSimROS1 or MengeROS2 [6] integrate SFM into the ROS ecosystem to simulate human navigation (unfortunately, deprecated versions of ROS). MengeROS also offers different collision avoidance approaches such as ORCA [7] aor Pedestrian Velocity Obstacle (PedVO) [8]. In addition, it includes global path-planning algorithms. These approaches do not include an evaluation system or other features and are no longer maintained. ImHuS (Intelligent Human Simulator) [9], [10] offers an alternative approach to simulating human behavior. It provides a limited set of individualized behaviors, but relies on ROS 1 and a social robot navigation system (HATEB2 [11]) to simulate human navigation, which can reduce realism compared to crowd-based models. In contrast, HuNavSim uses modular and customizable Behavior Trees to model human behaviors.
+More ambitious and complete frameworks, such as CrowdBot3 [12] and SEAN (Social Environment for Autonomous Navigation) 4 [13], [14], are built on the Unity game engine and ROS 1. These tools aimed to establish standard benchmarks for robot navigation in populated environments. In contrast, HuNavSim 2.0 provides greater flexibility, allowing integration with multiple simulation platforms and supporting a broader range of realistic human navigation behaviors. Unlike the fixed metric sets in CrowdBot3 and SEAN, HuNavSim 2.0 offers an extensive, configurable, and easily extendable set of evaluation metrics.
+More recent approaches, like SocialGym 2.0 [15], [16] or Arena-ROSnav [17] allows the training of human-aware navigation approaches based on (Deep) Reinforcement Learning. It uses the Pedsim library to guide the movements of pedestrians. The version 4.0 of Arena [18] runs on ROS 2 and integrates HuNavSim (v1.0) to control the navigation of human agents. It uses large language models (LLMs) for the generation of scenarios (static environment) and a small and fixed set of metrics for evaluation. Previously, the work [19] also used HuNavSim for human behavior and VLMs for scenario generation. SocialGym 2.0 also uses the Pedsim library to model pedestrian movement. However, it lacks support for individualized human behaviors and does not provide a dedicated set of metrics for evaluating humanaware navigation. Another approach that uses LLMs is Conav
+1https://github.com/srl-freiburg/pedsim ros 2https://github.com/ml-lab-cuny/menge ros 3http://crowdbot.eu/CrowdBot-challenge/ 4https://sean.interactive-machines.com/
+
+Fig. 2: Scheme of HuNavSim with Robotics simulators
+[20]. It is more focused on benchmarking collaborative tasks between human and robot than on human-aware navigation.
+Lastly, benchmarking tools such as BARN (Benchmark for Autonomous Robot Navigation)5 [21] and Bench-MR6 [22] target general navigation in cluttered environments. Although effective in evaluating obstacle avoidance and planning, they do not consider the social dynamics of shared human-robot spaces. For social navigation, SocNavBench7 [23] is a benchmark that uses replayed real-world pedestrian data from open datasets, allowing evaluation in realistic environments but lacking interactivity, since pedestrian trajectories remain unaffected by robot actions.
+In summary, none of the previous tools offers the flexibility to create complex and realistic human navigation behaviors such as HuNavSim 2.0. Furthermore, it is integrated into a wider variety of robotics simulators. Finally, neither of them includes the complete set of HuNavSim metrics for the evaluation of social navigation. These features of HuNavSim 2.0 will be described in the following sections.
+III. HUNAVSIM OVERVIEW
+The basic functioning of the HuNavSim tool is as follows. It has been devised to control the pose and behavior of human agents spawned within a base robotics simulator, such as Gazebo, Isaac Sim, or Webots, which also simulates the robot and the environment. Then, a communication wrapper is required to interface HuNavSim with the chosen simulator.
+In each simulation step, the wrapper sends the current state of the agents to the HuNavSim manager, which computes their next state based on the behavior trees and updates it in the base simulator (see Fig. 2).
+Another module is the evaluator, which logs experiment data and computes evaluation metrics at the end of the simulation. The results are saved as output files that contain the simulation data and the metric values.
+A more detailed description of the core system can be found in our previous work [1]. In version 2.0 of the tool, we have enhanced the capabilities to control and generate complex human navigation behaviors. We also have expanded the set of robotics simulators that can be used with HuNavSim among other functionalities. These new features are explained in Sections IV and V.
+The complete documentation and code of the HuNavSim 2.0 is available at https://github.com/robotics-upo/hunav sim
+5https://www.cs.utexas.edu/∼attruong/metrics dataset.html 6https://github.com/robot-motion/bench-mr 7https://github.com/CMU-TBD/SocNavBench
+
+Fig. 3: Example Behavior Tree of the Worker 2
+
+IV. ENHANCED SOCIAL HUMAN BEHAVIOR
+A. Human local navigation model
+HuNavSim employs the Social Force Model [5] and its extension to groups [24], [25], as the underlying model to lead the movement of human agents. This model, and many others, generally apply the same behavior patterns to all agents, resulting in uniform responses across similar scenarios. Consequently, they fail to capture the variability inherent in real human navigation.
+In HuNavSim 2.0 we add behavior variability by introducing noise into the force factor parameters of the SFM. We performed a parameter sensitivity analysis to identify feasible ranges that produce small yet realistic variations in human agents’ navigation trajectories. Users can select from three configuration modes: (i) use default parameter values for consistent, repeatable behaviors; (ii) specify custom values tailored to specific applications; or (iii) enable stochastic behavior by sampling parameter values from normal distributions defined within the identified ranges, thereby introducing controlled variability into the simulation.
+B. Behavior Trees for human navigation behavior
+One powerful feature of HuNavSim is the use of Behavior Trees to orchestrate the navigation behavior of human agents. In HuNavSim 1.0, beyond navigation to indicated goals, human behavior was restricted to six possible reactions to the presence of a robot (regular, impassive, surprised, curious, scared, and threatening).
+Therefore, human agents can interact with the robot, but the interaction with each other is limited to walking together
+
+or avoiding other humans while walking. However, Behavior Trees are powerful tools for composing different tasks. We intend to exploit that fact with the aim of improving the overall interaction between humans and humans and between humans and robots.
+To achieve this goal, in HuNavSim 2.0 we implemented a set of different actions and conditions far beyond the navigation from one point to another and the previous reactions. These actions and conditions are programmed as Behavior Tree nodes and can be combined in a Behavior Tree to construct complex and realistic behaviors for human agents. The new set of conditions enables triggering actions according to the events that might occur. Thus, human agents can be aware of different social conditions that can vary or affect their behavior. The complete list of nodes and their characteristics can be consulted in the HuNavSim 2.0 Github repository previously indicated.
+Next, we present the BT functionality with an example of two workers in a warehouse environment (scenario shown in Fig. 1). The simulation video can also be watched on this link. The goal is to set a realistic scenario far beyond the previous version of unrealistic behavior navigation from one point to another in a loop.
+In the example, the behavior of Worker 1 (white vest and red helmet) is the following: he is checking some material in the warehouse. After that, he continues the round of checking material at different points in the scenario. This involves navigation to a waypoint (“GoTo” node), looking at some point (“LookingAtPoint”), and waiting some time (“StopAndWaitTimer”). In his final location, the worker is checking
+
+Fig. 4: Examples of simulators and some scenarios provided. From left to right and up to botton: Warehoure and home in Gazebo Classic, Cafe in Gazebo Fortress, Hospital and office hall in Isaac Sim, Industrial hall and office in Webots
+
+whether Worker 2 is around (“isAtPosition”). Once he has detected Worker 2, he looks at him (“LookAtAgent”), and both move to form a conversation group initiated by Worker 2 (“ConversationFormation”). The conversation is finished by Worker 2 who tells Worker 1 to follow him. Worker 1 executes “FollowAgent” action when “isSpeaking” condition is triggered. Worker 1 follows Worker 2 outside the scenario.
+In parallel, Worker 2 (yellow vest and yellow helmet) starts his action, Fig. 3 shows his BT. He begins checking the material at some location (“GoTo” and “LookingAtPoint”). Then, he notices the presence of the robot which captures his attention “LookingAtRobot”. He moves close to the robot and looks at it for some time, simulating interest or assessment “ApproachRobot”. Then, he moves toward a specific intermediate target and waits a bit. He repeats that behavior for the second and third targets, stopping at the location and looking to a specific direction. After that, he detected the presence of Worker 1 and looked at him “LookingAtAgent”. Worker 2 checks whether Worker 1 is also looking at him (“IsLookingAtMe” condition) and starts a conversation when the condition is fulfilled (“ConversationFormation” action). After some time of conversation, Worker 2 says “follow me” (using the “SaySomething” action) and walks to a final target position, followed by Worker 1.
+V. INTEGRATION WITH ROBOT SIMULATORS
+In contrast to HuNavSim 1.0, which can be used only with Gazebo Classic simulator, HuNavSim 2.0 has considerably extended the set of integrated robotics simulators. Therefore, it can now be used to control the human agents spawned in four simulators.
+Table I shows the simulators available, as well as the examples of scenarios and robots provided for testing. Furthermore, the user can select from a different set of human skins for each base simulator. In case of the Gazebo Fortress simulator, we are working to extend the set of scenarios and provide a simulated robot. In any case, the user can use one of the
+
+provided examples or use his own base simulation. Captures of some of the provided scenarios can be seen in Fig. 4.
+TABLE I: Robotics simulators available for HuNavSim
+
+Simulator Gazebo Classic Gazebo Fortress Nvidia Isaac Sim
+Webots
+
+Example scenarios Cafe, Warehouse, House
+Cafe
+Warehouse, Hospital, Office hall
+Factory, Office, Industrial hall
+
+Example Robots PAL PMB2 (ROS Nav2)
+Work in Progress
+Jetbot, Create3, Carter (only this latter
+with ROS Nav2)
+PAL TIAGo (ROS Nav2)
+
+HuNavSim 2.0 is also distributed using Docker containers and a simple CLI to guide the user through an easy installation process of the chosen system and then to run the examples or add new simulations or scenarios.
+A. Generation of new scenarios
+HuNavSim 2.0 introduces an enhanced what-you-see-iswhat-you-simulate workflow, allowing complete scenario creation directly within RViz 2. Central to this are two dedicated Qt-based panels for agent configuration and metric selection (Fig. 5), which, together with the simulation wrappers (Sec. V), enable rapid progression from map setup to behaviour-tree synthesis.
+a) Launch and initial set-up: From the CLI the user can launch the creation of a new scenario. RViz 2 will be open with all HuNav panels. The Simulator & Map section lets the user select the target back-end—Gazebo Classic, Gazebo Fortress, Isaac Sim, or Webots—and load any 2-D occupancy map supported by nav2_map_server.
+b) Interactive agent creation: Agents are configured sequentially through a dialog that combines parameter input with in-scene placement (Fig. 6). For each agent, the user sets
+
+(a) HuNavPanel: agent configura- (b) HuNavMetricsPanel:
+
+tion.
+
+metrics selection.
+
+Fig. 6: Sequential agent dialog
+
+Fig. 5: HuNav RViz 2 panel suite providing agent-configuration and metrics-selection functionality.
+core motion limits, selects a behavior profile (e.g., regular, impassive), and adjusts Social-Force parameters—either keeping defaults, sampling, or fine-tuning them. A simulator-specific appearance catalogue ensures visual diversity. Clicking Set Initial Pose on Map launches a click-and-drag tool to place and orient the agent marker. The panel then advances to the next agent until the population is complete.
+c) Goal definition and assignment: After placing all agents, the user can activate the Goal-picking mode, which allows them to select target locations by clicking on the map. Each selected point is represented as a coloured marker and added to a goal list. Once the desired goals are defined, the Assign Goals to Agents dialog provides a dual-list interface to associate specific goals with individual agents. As goals are assigned, the corresponding navigation path is immediately visualized in the environment.
+d) File export and BT synthesis: Saving writes the full scenario to [map]_agents_<...>.yaml and auto-generates one XML behaviour tree per agent (<yaml-basename>__agent_<id>_bt.xml). Both files are saved to the wrapper’s share directory. A shortcut opens Groot 2 for graphical inspection or refinement of the generated trees.
+e) Re-editing existing scenarios: Opening an existing YAML repopulates RViz 2 with every agent, goal, and path, ready for point-and-click editing. Agents can be cycled and parameters and goals tweaked just as during creation, enabling rapid iteration and focused ablation tests.
+
+In short, the HuNav RViz 2 panel turns scenario creation into an interactive, visual task while preserving YAML/BT flexibility and real-time feedback. Further details and examples are available in the hunav_rviz2_panel repository.
+B. Evaluation and metrics
+The appropriate evaluation of human-aware navigation systems is still an open question in the navigation field. There is no common agreement in the community about specific benchmark scenarios and a suitable set of metrics [2], [3]. For these reasons, we keep HuNavSim as an open system in which the user can modify/add scenarios and metrics in addition to the provided ones.
+Considering the scenarios, we provide examples in which common situations of crossing, overtaking, or passing in different directions are present. Furthermore, HuNavSim includes a set of 28 metrics, which constitutes, to the best of our knowledge, the most comprehensive collection of metrics for humanaware navigation to date. The complete list is presented in our previous work [1]. Detailed descriptions and corresponding mathematical formulations for each metric are available in the HuNavEvaluator section of the GitHub repository. The user can easily select which of these metrics they want to compute, and can add new ones easily.
+In HuNavSim 2.0, we maintain the same system, just improving the way metrics can be calculated and adding two new interesting metrics. We have extended the evaluation system so that the user can decide when to start calculating metrics and when to stop it by calling ROS services.
+The new four metrics, called “danger and surprise metrics”, are obtained from the work of Singamaneni et al. [26]. That
+
+gives a total of 32 metrics that can be obtained.
+VI. CONCLUSIONS AND FUTURE WORK
+In this work, we have presented the new version of HuNavSim (2.0), an open-source software library designed to simulate human navigation behaviors in environments shared with robots. Developed in the ROS 2 framework, HuNavSim can control human agents across multiple general-purpose robotic simulators with a dedicated wrapper provided.
+One of the key innovations of HuNavSim 2.0 is its implementation of human behaviors using Behavior Trees. We have programmed a complete set of actions and events that can be used to compound rich human behaviors. Behavior Trees which offer a modular and easily extensible structure to build complex and more realistic human navigation behaviors. In addition, the tool includes a comprehensive and flexible set of evaluation metrics for human-aware robot navigation compiled from the existing literature.
+We also have improved the realism of the local navigation model by integrating controlled noise into the parameters of the Social Force Model. This gives us a variability in the navigation trajectories closer to real human navigation.
+Future work will focus on facilitating the creation of scenarios and behavior trees for human behaviors. The use of LLM or VLM will be explored. We will also try to improve the underlying navigation model by adding other models in addition to classical SFM. Finally, we will closely follow the advances in human-aware navigation benchmarking to adapt the tool to the community needs.
+REFERENCES
+[1] N. Pe´rez-Higueras, R. Otero, F. Caballero, and L. Merino, “Hunavsim: A ros 2 human navigation simulator for benchmarking human-aware robot navigation,” IEEE Robotics and Automation Letters, vol. 8, no. 11, pp. 7130–7137, 2023.
+[2] A. Francis, C. Pe´rez-D’Arpino, C. Li, F. Xia, A. Alahi, R. Alami, A. Bera, A. Biswas, J. Biswas, R. Chandra, H.-T. L. Chiang, M. Everett, S. Ha, J. Hart, J. P. How, H. Karnan, T.-W. E. Lee, L. J. Manso, R. Mirsky, S. Pirk, P. T. Singamaneni, P. Stone, A. V. Taylor, P. Trautman, N. Tsoi, M. Va´zquez, X. Xiao, P. Xu, N. Yokoyama, A. Toshev, and R. Mart´ın-Mart´ın, “Principles and guidelines for evaluating social robot navigation algorithms,” J. Hum.-Robot Interact., vol. 14, no. 2, Feb. 2025. [Online]. Available: https://doi.org/10.1145/3700599
+[3] P. T. Singamaneni, P. Bachiller-Burgos, L. J. Manso, A. Garrell, A. Sanfeliu, A. Spalanzani, and R. Alami, “A survey on socially aware robot navigation: Taxonomy and future challenges,” The International Journal of Robotics Research, vol. 43, no. 10, pp. 1533–1572, 2024. [Online]. Available: https://doi.org/10.1177/02783649241230562
+[4] M. Colledanchise and P. O¨ gren, Behavior Trees in Robotics and AI: An Introduction, ser. Chapman & Hall/CRC Artificial Intelligence and Robotics Series. Boca Raton, US: CRC Press, 2018.
+[5] Helbing and Molna´r, “Social force model for pedestrian dynamics.” Physical review. E, Statistical physics, plasmas, fluids, and related interdisciplinary topics, vol. 51 5, pp. 4282–4286, 1995.
+[6] A. Aroor, S. L. Epstein, and R. Korpan, “Mengeros: a crowd simulation tool for autonomous robot navigation,” in AAAI 2017 Fall Symposium on Artificial Intelligence for Human-Robot Interaction, 2017, pp. 123–125.
+[7] J. van den Berg, S. J. Guy, M. Lin, and D. Manocha, “Reciprocal n-body collision avoidance,” in Robotics Research, C. Pradalier, R. Siegwart, and G. Hirzinger, Eds. Berlin, Heidelberg: Springer Berlin Heidelberg, 2011, pp. 3–19.
+[8] S. Curtis and D. Manocha, “Pedestrian simulation using geometric reasoning in velocity space,” in Pedestrian and Evacuation Dynamics 2012, U. Weidmann, U. Kirsch, and M. Schreckenberg, Eds. Cham: Springer International Publishing, 2012, pp. 875–890.
+
+[9] A. Favier, P.-T. Singamaneni, and R. Alami, “Simulating intelligent human agents for intricate social robot navigation,” in RSS 2021 Workshop on Social Robot Navigation, Washington, United States, Jul 2021.
+[10] O. Hauterville, C. Ferna´ndez, P.-T. Singamaneni, A. Favier, V. Matella´n, and R. Alami, “Imhus: Intelligent multi-human simulator,” in IEEE/RSJ IROS2022 Workshop: Artificial Intelligence for Social Robots Interacting with Humans in the Real World, Kyoto, Japan, Oct 2022. [Online]. Available: https://hal.laas.fr/hal-03865622
+[11] P. Teja S. and R. Alami, “Hateb-2: Reactive planning and decision making in human-robot co-navigation,” in 2020 29th IEEE International Conference on Robot and Human Interactive Communication (ROMAN), 2020, pp. 179–186.
+[12] F. Grzeskowiak, D. Gonon, D. Dugas, D. Paez-Granados, J. J. Chung, J. Nieto, R. Siegwart, A. Billard, M. Babel, and J. Pettre´, “Crowd against the machine: A simulation-based benchmark tool to evaluate and compare robot capabilities to navigate a human crowd,” in 2021 IEEE International Conference on Robotics and Automation (ICRA), 2021, pp. 3879–3885.
+[13] N. Tsoi, A. Xiang, P. Yu, S. S. Sohn, G. Schwartz, S. Ramesh, M. Hussein, A. W. Gupta, M. Kapadia, and M. Va´zquez, “Sean 2.0: Formalizing and generating social situations for robot navigation,” IEEE Robotics and Automation Letters, vol. 7, no. 4, pp. 11 047–11 054, 2022.
+[14] N. Tsoi, M. Hussein, J. Espinoza, X. Ruiz, and M. Va´zquez, “Sean: Social environment for autonomous navigation,” in the 8th International Conference on Human-Agent Interaction (HAI ’20), 11 2020, pp. 281– 283.
+[15] J. Holtz and J. Biswas, “Socialgym: A framework for benchmarking social robot navigation,” in 2022 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS). IEEE, 2022, pp. 11 246–11 252.
+[16] Z. Sprague, R. Chandra, J. Holtz, and J. Biswas, “Socialgym 2.0: Simulator for multi-agent social robot navigation in shared human spaces,” 2023. [Online]. Available: https://arxiv.org/abs/2303.05584
+[17] L. Ka¨stner, V. Shcherbyna, H. Zeng, T. A. Le, M. H.-K. Schreff, H. Osmaev, N. T. Tran, D. Diaz, J. Golebiowski, H. Soh, and J. Lambrecht, “Demonstrating Arena 3.0: Advancing Social Navigation in Collaborative and Highly Dynamic Environments,” in Proceedings of Robotics: Science and Systems, Delft, Netherlands, July 2024.
+[18] V. Shcherbyna1, L. Ka¨stner, D. Diaz, H. G. Nguyen, M. H.-K. Schreff, T. Lenz, J. Kreutz, A. Martban, H. Zeng, and H. Soh, “Arena 4.0: A comprehensive ros2 development and benchmarking platform for human-centric navigation using generative-model-based environment generation,” 2024. [Online]. Available: https://arxiv.org/abs/2409.12471
+[19] S. R. Marpally, P. Goyal, and H. Soh, “Socrates: Towards automated scenario-based testing of social navigation algorithms,” 2024. [Online]. Available: https://arxiv.org/abs/2412.19595
+[20] C. Li, X. Sun, P. Chen, J. Fan, Z. Wang, Y. Liu, J. Zhu, C. Gan, and M. Tan, “Conav: A benchmark for human-centered collaborative navigation,” 2024. [Online]. Available: https://arxiv.org/abs/2406.02425
+[21] D. Perille, A. Truong, X. Xiao, and P. Stone, “Benchmarking metric ground navigation,” in 2020 IEEE International Symposium on Safety, Security, and Rescue Robotics (SSRR), Abu Dhabi, UAE, 2020, pp. 116– 121.
+[22] E. Heiden, L. Palmieri, L. Bruns, K. O. Arras, G. S. Sukhatme, and S. Koenig, “Bench-mr: A motion planning benchmark for wheeled mobile robots,” IEEE Robotics and Automation Letters, vol. 6, no. 3, pp. 4536–4543, 2021. [Online]. Available: https: //ieeexplore.ieee.org/document/9387068
+[23] A. Biswas, A. Wang, G. Silvera, A. Steinfeld, and H. Admoni, “Socnavbench: A grounded simulation testing framework for evaluating social navigation,” ACM Transactions on Human-Robot Interaction, jul 2022. [Online]. Available: https://doi.org/10.1145/3476413
+[24] M. Moussa¨ıd, D. Helbing, S. Garnier, A. Johansson, M. Combe, and G. Theraulaz, “Experimental study of the behavioural mechanisms underlying self-organization in human crowds,” Proceedings. Biological sciences, vol. 276, no. 1668, p. 2755—2762, August 2009.
+[25] M. Moussa¨ıd, N. Perozo, S. Garnier, D. Helbing, and G. Theraulaz, “The walking behaviour of pedestrian social groups and its impact on crowd dynamics,” PLoS One, vol. 5, no. 4, 2010.
+[26] P. T. Singamaneni, A. Favier, and R. Alami, “Towards benchmarking human-aware social robot navigation: A new perspective and metrics,” in 2023 32nd IEEE International Conference on Robot and Human Interactive Communication (RO-MAN), 2023, pp. 914–921.
+
+

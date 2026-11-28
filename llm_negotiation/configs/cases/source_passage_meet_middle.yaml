@@ -1,0 +1,30 @@
+# Issue #32, Part 3: the baseline runs that conflict cases of a meeting inside a single-file
+# passage are taken from. Two people start inside the passage where they meet, under the
+# primary baseline (plain ORCA, perturbed, with the arbiter). No model is called.
+#
+#   python run_experiment.py configs/cases/source_passage_meet_middle.yaml
+#
+# The layouts: equal distances walked in (symmetric) and one 2.0 m further in (asymmetric),
+# each with the two at rest, face to face (the scenario's default), and walking into each
+# other (start_speed: preferred). From rest the arbiter's way stalls (docs/derivations.md,
+# section 17.1).
+schema_version: 1
+layer: avoidance
+experiment_name: si32_source_passage_meet_middle
+description: Conflict-case source. Two people meeting inside a single-file passage, equal and unequal distances in, at rest and walking; primary baseline, plain ORCA.
+scenario: configs/scenarios/passage_meet_middle_v1.yaml
+baseline: orca_perturbed_v1
+
+design:
+  seed: 32100
+  seeding: paired
+  repeats: 2
+  factors:
+    travelled:
+      - name: symmetric
+      - name: asymmetric
+        scenario_overrides: {geometry: {travelled: [2.7, 0.7]}}
+    start:
+      - name: rest
+      - name: walking
+        scenario_overrides: {geometry: {start_speed: preferred}}

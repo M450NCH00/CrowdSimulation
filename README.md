@@ -16,6 +16,30 @@ See `integration/crowdgym_mapping.md` for exactly how records feed CrowdGym.
 
 ## Current focus (second supervisor meeting onward)
 
+> **Since the supervisor meeting of 2026-10-20: resolve first, then extract rules (track #55).**
+> First test whether LLM agents can resolve a conflict at all, without asking for a rule; then
+> extract the hidden rule, with the LLM's reference for it; find which factors drive the decision;
+> and verify against real human behaviour. The rule format no longer matters much, so asking a
+> model to negotiate or state a rule (#30, roadmap step 3c) is no longer how rules are made, and
+> step 4 is superseded. `CLAUDE.md` holds the meeting notes word for word and the decisions still
+> pending; the roadmap table below has the RF rows.
+>
+> **Since 2026-10-22, Step 1 follows `llm_negotiation/docs/resolution.md`** (the user's design,
+> decisions D1 to D17): an agent says what it physically does, with no "who goes first" field,
+> is told what a person would perceive, and is prompted only when something new happens. The
+> work then goes one scenario at a time, in rounds.
+>
+> **Since the supervisor meeting of November 2026 (after RF-40): the action space** (RF-42 to
+> RF-52). The supervisor suggested:
+> - a grid;
+> - an absolute frame instead of the agent's own left and right;
+> - a menu of described actions with amounts in words, instead of angles and metres;
+> - a count of hallucinated decisions;
+> - agents that behave like their person without speaking like them.
+>
+> `llm_negotiation/docs/action-space.md` holds the user's decisions on how to test them. The grid
+> is an add-on that modifies no existing code.
+
 The dataset work below is **Phase 1**. It was put on hold after the second supervisor
 meeting ("on hold, not abandoned"); issue #24 (2026-10-13) describes it as retired, and
 nothing in `llm_negotiation/` uses it.
@@ -30,18 +54,97 @@ experiment code until the literature review is complete and discussed.**
 > simulator in `llm_negotiation/` and made it conditional on `CLAUDE.md`, which on this
 > branch does not carry the instruction, so the work went ahead. Nothing in the
 > repository records the supervisor lifting it. See `WORK_LOG-24.md`, open question Q1.
+> Issue #26 (2026-10-13) went ahead on the same footing: `WORK_LOG-26.md`, assumption A2.
+> Issue #28 (2026-10-14) made a recorded approval a prerequisite; none is recorded, and the
+> user chose to proceed and leave the question open: `WORK_LOG-28.md`, P1 and Q1.
+> Issue #30 (2026-10-15) made it a hard stop for anything that spends money; none is
+> recorded, so the user chose to build everything on the free mock client and hold the paid
+> pilot: `WORK_LOG-30.md`, P1.
+> Issue #32 (2026-10-16) makes no paid call. It adds a fictional-group factor that no paid run
+> may switch on until the supervisor's **ethics sign-off** is recorded in `CLAUDE.md`; that
+> sign-off is pending: `WORK_LOG-32.md`, Q1.
+>
+> **Lifted by the user on 2026-10-22** (track #55, former decision 2; recorded in `CLAUDE.md`,
+> "Pending sign-offs", item 8): the resolution design needs new simulation code (RF-4, RF-17),
+> and the user is fine with adding it. Paid calls are a separate matter and still wait for the
+> supervisor's approval.
 
 | # | Roadmap step | Status |
 |---|---|---|
 | 1 | Literature review — `literature/llm-conflict-resolution/` | **delivered** (issue #8); awaiting supervisor discussion |
 | 2 | Design a small-scale conflict scenario (2-agent hallway) | **built** (issue #24) — `llm_negotiation/configs/scenarios/hallway.yaml`; its sizes and speeds are unsourced placeholders |
 | 3 | Implement the LLM-to-LLM exchange | **built and smoke-tested** (issue #24) — `llm_negotiation/`; 12 paid smoke runs, no experiment yet |
-| 4 | Analyse exchanges for a reusable pattern | not started |
+| 3a | Avoidance layer, so that a rule can prescribe avoidance and not only priority (sub-issue 1 of 6) | **built** (issue #26) — `llm_negotiation/negsim/avoidance/`; 46 free runs, no rule and no LLM call yet |
+| 3b | Rule format, rule database and rule-following mode (sub-issue 2 of 6) | **built** (issue #28) — `llm_negotiation/negsim/rules/`, `llm_negotiation/rule_db/`; five hand-written test rules, 1,600 free runs, no LLM call |
+| 3c | Conflict cases, rule generation by two LLMs negotiating or one stating, the rule writer (sub-issue 3 of 6, first half) | **built and rehearsed on the mock** (issue #30) — `llm_negotiation/negsim/rulegen/`, `llm_negotiation/cases/`; 18 conflict cases; the paid pilot is **held** (no recorded approval; its worst case exceeds its cap, `WORK_LOG-30.md` Q5) |
+| 3c.2 | A fictional group no rule may read, and two people meeting inside a single-file passage (`back_up`, rule format 3, prompt version 2) | **built and rehearsed on the mock** (issue #32) — the group is **off by default**, and no paid run may switch it on until the supervisor's ethics sign-off is recorded (pending); 576 free behaviour-check runs; 26 new case versions; the pilot moved to prompt version 2 and still **held** (issue #30's Q5 re-previewed, `llm_negotiation/docs/rule-generation.md` section 10.1) |
+| 4 | Analyse exchanges for a reusable pattern | **superseded by RF** (supervisor meeting of 2026-10-20); never started |
+| RF | Resolve first, then extract rules (track #55). The rows below are in #55's order of work: Part 1, the pipeline, built once (all mock, no paid call); then Part 2, one round per scenario. RF numbers are not the order (RF-16 to RF-25 were added on 2026-10-22) | **direction recorded** (issue #56); **resolution design recorded** (issue #72) in `llm_negotiation/docs/resolution.md`. Still pending from the supervisor: paid runs and their caps, the ethics sign-offs, how far track #34 is paused, what "real human behaviour" means (`CLAUDE.md`) |
+| RF-1 | Part 1. Record the resolve-first direction | **delivered** (issue #56, PR #71, merged into the stacked branch, not yet into `main`) |
+| RF-16 | Part 1. Record the 2026-10-22 resolution design, `docs/resolution.md` | **delivered** (issue #72) — `llm_negotiation/docs/resolution.md`, architecture section 8.7, `parameters.md` section 8 |
+| RF-2 | Part 1. Step 1 templates (three conditions and a debrief), the `View` structure, the scenario interface, the reply parser | **built on the mock** (issue #57) — `llm_negotiation/negsim/resolution/`; frozen templates `resolve_v1`, `resolve_debrief_v1`, `scenario_passing_v1`; no paid call |
+| RF-17 | Part 1. What an LLM agent perceives: view cone, occlusion, hearing, changes since it last looked | **built on the mock** (issue #73) — `llm_negotiation/negsim/resolution/perceive.py`; config `configs/resolution/llm_view_v1.yaml` (every value sourced; `docs/parameters.md`, section 8.4); frozen template `resolve_v2`; no paid call |
+| RF-4 | Part 1. Carry out plans in the simulator, `plan_only` and `plan_orca`, with physical outcomes | **built on the mock** (issue #59) — `llm_negotiation/negsim/resolution/execute.py`, `outcomes.py`, `replay.py`; replays rebuild byte for byte from the session record; definitions in `docs/parameters.md`, section 8.5 (all design values); no paid call |
+| RF-3 | Part 1. The encounter protocol: trigger, event-driven decision points, conditions, debrief, storage, one outcome row per session | **built on the mock** (issue #58) — `llm_negotiation/negsim/resolution/protocol.py`, `experiment.py` (layer `resolution`), `configs/resolution/resolve_mock_rehearsal.yaml`; `docs/encounter-protocol.md`; no paid call |
+| RF-5 | Part 1. The core factors (seven, with a memory note) and up to four situational factors | **built on the mock** (issue #60) — `llm_negotiation/negsim/resolution/factors.py`; frozen template `resolve_factors_v1`; values `configs/resolution/factors_v1.yaml` (three placeholders, `docs/parameters.md`, section 8.7); situational factors chosen: `surroundings`, `time_of_day`; case set `rf5_passage_v1` (round 2's passage layouts with room for a wider body); no paid call |
+| RF-6 | Part 1. Pairwise perception factors (perceived attractiveness, familiarity), shown only to the observer | **built on the mock** (issue #61) — `llm_negotiation/negsim/resolution/pairwise.py`; frozen templates `resolve_pairwise_v1` and `resolve_v3` (the factor lines from 10 m, the user's decision of 2026-10-23); `llm_negotiation/docs/pairwise-factors.md`; attractiveness off by default, a paid run with it refused until `CLAUDE.md` records the ethics sign-off (recorded 2026-10-24); no paid call |
+| RF-7 | Part 1. Screening designs, geometries, the exact-repeat set, counterfactual pairs | **built on the mock** (issue #62) — `llm_negotiation/negsim/resolution/screening.py`, `design.py`; `design.kind` full, fractional (a regular resolution IV fraction of 16 or 32 cells, generators from NIST's Table 3.17 and Chen & Cheng 2006) or sample; `llm_negotiation/docs/screening-designs.md`; a round-1-shaped rehearsal config; no paid call |
+| RF-8 | Part 1. Analysis: factor effects, decision tree, the mapping, noise floor, stability, stated against measured, intent against plan | **built and tested on synthetic and mock data** (issue #63) — `analysis/` (its own pinned requirements: pandas, statsmodels, scikit-learn, matplotlib), `python -m analysis <outcomes.csv>`; Holm's correction over the whole report by default; keyword codebooks `intent_v1` and `reasons_v1` are drafts for RF-9's pilot; negsim's outcome rows gain what each agent was told of the other and the encounter's order; no LLM call |
+| RF-9 | Part 2, round 1 (head-on in a corridor, full depth). Paid pilot | **done, paid** (issue #64; approved for this issue only, cap USD 0.20, spent USD 0.075) — `llm_negotiation/runs/rf_pilot_v2/pilot_report.md`; 72 sessions, USD 0.00086 a session off-peak, resolved in `plan_only` 17 of 72, identical prompts flip the behaviour in 77% of pairs; the first batch (`runs/rf_pilot/`, 12 sessions) was paused when the executor turned out not to do what the prompt says a plan does. New: core templates `resolve_v4` (age and gender from 10 m) and `resolve_v5` (a start on any step), `protocol.execution: as_prompted`, `budget.over_cap: stop_at_cap`, intent codebook `intent_v2`; the recommendation for RF-10 is in `WORK_LOG-64.md` |
+| RF-26 | Round 1. Real ethnicity as a factor (Singapore's ethnic groups at their resident shares), replacing the fictional group | **built on the mock** (issue #92) — `llm_negotiation/negsim/resolution/ethnicity.py`; frozen template `resolve_factors_v2`; `configs/resolution/ethnicity_sg_2026.yaml` (SingStat, *Population Trends 2026*, residents only); `ethnicity_pair` and `ethnicity_visible`; `llm_negotiation/docs/ethnicity.md`; a paid run that varies it needs its sign-off sentence in `CLAUDE.md` (recorded 2026-10-24); no rule may read it; no paid call |
+| RF-10 | Round 1. Phase A screening of up to 16 factors | **done, paid** (issue #65; approved for this issue only, cap USD 0.35, spent USD 0.290) — `llm_negotiation/runs/rf10_round1_head_on/screen_report.md`; 288 sessions (16 factors in a 32-cell resolution IV fraction, 2 geometries, 3 conditions, exact repeats, 4 counterfactual pairs). **Head-on fails the resolution gate**: 59 of 192 resolved in `plan_only` (0.31, CI 0.25 to 0.38, gate 0.50); most collisions come from both stepping towards the same wall (49 of 116) or not stepping aside (40), fewer from making room too narrowly (27); signalling and talk do not help. Phase B shortlist: assertiveness, familiarity, residence, the other's age, perceived attractiveness. New: core template `resolve_v6` and `protocol.no_conflict_waits_for_plans` (RF-9's fixes), `resolution_gate`, `python -m analysis.gate` and `analysis.lateral`; advice for later rounds in `WORK_LOG-65.md` |
+| RF-27 | Round 1. `resolve_v7`: tell the agents where the other is against their line, the other's width from 10 m, straight ahead within 1°; RF-10's independent sessions again | **done, paid** (issue #98; approved for this issue only, cap USD 0.08, spent USD 0.050) — `llm_negotiation/runs/rf27_round1_head_on_v7/comparison_report.md`; the same 96 sessions as RF-10's independent ones, only the template changed. **It did not help:** 17 of 64 resolved in `plan_only` against 22 under `resolve_v6` (McNemar p = 0.44); head-on still fails the gate. The agents used the new lines (in the 20 cm layout, half stepped away from the other, half kept right) but did not coordinate, and planned smaller turns. So the failures are the model's judgement, not the description. New: core template `resolve_v7`, `python -m analysis.compare` |
+| RF-28 | Round 1. The same head-on sessions on `deepseek-v4-pro`: is it the model? | **done, paid** (issue #100; approved for this issue only, cap USD 0.30, spent USD 0.176) — `llm_negotiation/runs/rf28_round1_head_on_v4pro_cap600/comparison_report.md`; RF-10's 96 independent sessions with the same prompts word for word, reply cap 600 (v4-pro pretty-prints its JSON). **The stronger model does not resolve it more often:** 18 of 64 against flash's 22 (McNemar p = 0.57; readable only, p = 0.68); head-on fails the gate on every setup tried. But v4-pro fails differently: one person holds the line and the other steps aside, so the pavement dance almost disappears (2 same-wall collisions against 18) and contact is rarer (42 of 64 without, against 27; exploratory, p = 0.014), yet the lone sidestep leaves near misses. The common failure is sidestep size. New: `analysis.compare --readable-only` |
+| RF-29 | Round 1. `resolve_v8`: a sidestep in metres alongside turning by degrees; and the `keep_line` execution | **done, paid** (issue #101; approved for this issue only, cap USD 0.08, spent USD 0.049) — `llm_negotiation/runs/rf29_round1_head_on_sidestep/comparison_report.md`. As run, the option made things worse (4 of 64 against 22), because **the executor undid sidesteps**: under `as_prompted` a step with no turn steered back to the starting line. With that fixed (`protocol.execution: keep_line`, the user's decision) and RF-10, 27, 28 and 29's independent sessions carried out again from their plans with no LLM call (`python -m negsim.resolution.reexecute`): RF-10's plans resolve **35 of 64 (0.55)**, `resolve_v7` 27, the sidestep 27, v4-pro 21 (worse, p = 0.024). What remains is mostly the pavement dance (coordination), not sidestep size. Addenda in RF-10, RF-27 and RF-28's reports |
+| RF-30 | Round 1. Non-verbal and talk again under `keep_line`; the gate over three conditions | **done, paid** (issue #104; approved for this issue only, cap USD 0.30, spent USD 0.221) — `llm_negotiation/runs/rf30_round1_head_on_keep_line/comparison_report.md`; RF-10's 192 non-verbal and talk sessions, prompts word for word RF-10's. **Head-on passes the gate, narrowly:** 102 of 192 (0.53, CI 0.46 to 0.60), pooled with RF-10's independent sessions re-executed under `keep_line`. Independent 0.55, non-verbal 0.58, talk 0.47: signalling and talking do not help (paired p = 0.86, 0.49, 0.30), because they do not carry the side (nods, eye contact, wave on; 4 of 92 messages name a side). What fails is the pavement dance. New: `analysis.gate --with` |
+| RF-11 | Round 1. Step 2: rule extractor, three runs, references, held-out fidelity | **done, paid** (issue #66; approved for this issue only, cap USD 0.05, spent USD 0.023) — `llm_negotiation/runs/rf11_round1_head_on/extraction_report.md`; `negsim/extraction/`, template `extract_v1`, `docs/rule-extraction.md`. From 76 resolved head-on sessions (26 held out), 25 rules over three runs, none reading ethnicity or attractiveness; 4 kept (found in 2 or 3 runs). **The one kept rule that beats its baseline: a person who holds their ground does not slow at the first decision** (held out 0.83 against 0.75). Keep right is in every run's words but in no run's numbers: 62% of resolved pairs passed on their right, and no rule predicts the first plan's side better than always right. No rule names a law or a study; 66 debriefs say "keep left", and those agents passed left and right equally |
+| RF-12 | Round 1. Translate to rule format 3, replay and crowd-screen (low priority) | **done, paid** (issue #67; approved for this issue only, cap USD 0.03, spent USD 0.0017) — `llm_negotiation/runs/rf12_round1_head_on/translation_report.md`; `negsim/translation/`, template `translate_v1`, `docs/rule-translation.md`. RF-11's 4 kept rules: 3 valid, 1 not expressible (signalling). **Format 3 could keep almost nothing**: it has no field for who gives way, a cane, a suitcase, a phone or the layout, and no directive for a turn angle, a start distance or a duration. Two valid translations are plain ORCA; the third (both slow to 0.73 in every head-on) **gridlocks the crowd** on both seeds. Identity check: no translation changes the Step 1 outcome (0.36 reproduced, the same as plain ORCA) |
+| RF-31 | Round 1. Rule format 4: what one person sees of the other, roles by a condition, own-only conditions, actions as steps; re-translate round 1 | **done, paid** (issue #108; approved for this issue only, cap USD 0.05, spent USD 0.0029 with the retry) — `llm_negotiation/runs/rf31_round1_head_on/translation_report.md`; schema version 4 (`rule_db/schema/rule.v4.schema.json`), `negsim/rules/plans.py`, templates `rulegen_common_v3` and `translate_v2`, `docs/rule-format.md` section 15. Versions 1 to 3 load, match and are followed as before. Perceived attractiveness is readable only as `self.finds_other_attractive` in an own-only condition (the supervisor's agreement, `CLAUDE.md`); ethnicity never. Of RF-11's 4 kept rules: 2 valid, 1 not expressible (signalling), 1 unreadable twice (a missing brace in a nested own-only condition). **One translation changes ORCA's outcome for the first time: both turn 10° left from 9.8 m, and all 76 Step 1 sessions pass with no collision or near miss** (plain ORCA: 0), but it reproduces the agents less (0.20 against plain ORCA's 0.36), because it sends every pair left where the agents mostly passed right (47 of 76). The other valid one never matches (roles by a condition that holds for both); the loader now refuses such a condition (`constant_roles`, the user's decision). Both pass crowd screening. The unreadable one, retried (USD 0.0004; a one-brace repair built first, not needed by the new reply), gridlocks the crowd like RF-12's slow-down. The steps driver's own code is ~0.7% of a crowd run |
+| RF-18 | Round 1. All rules so far + ORCA on crowds and an unseen scenario, against plain ORCA; rerun after every round | **done, no model calls** (issue #74) — `llm_negotiation/runs/rf18_round1/evaluation_report.md`; new layer `rule_set_evaluation` (`negsim/ruleset_eval/`, `docs/rule-set-evaluation.md`). **Before RF-32 and RF-14** (the user, 2026-10-27): an extracted rule is first run in the simulation (does it help?), then checked against human evidence (RF-14); a verdict here does not remove a rule from RF-14. "Helps" was fixed with the user before any run (fewer severe conflicts by an exact sign test over 10 paired seeds, without worse throughput or delay). Round 1's two rules clash at one priority; the user chose that the cane rule wins where both match. **The left-turn rule helps in the two-way flow** (severe conflicts fewer on 10 of 10 seeds, the crowd through faster on 9 of 10, 61% keep left); **the cane rule harms** (gridlock on 2 of 10 seeds), in a crowd where half carry a cane; **together they harm** once collisions count separately (the user's decision after the run, rule 2; by rule 1 a trade-off). The user also decided that scenarios should be realistic wherever possible (sourced shares of canes and the rest), with exaggerated ones only to test rare rules: RF-33 (#112). In the bottleneck no change, and in round 2's narrow passage no rule applies (single-file meetings). What no rule covers: overtaking, then single-file meetings, which are rounds 2 and 3. Cost: ×1.5 to ×1.6 per step at 1,000 agents, about a third of it matching |
+| RF-33 | Round 1. Realistic scenarios: sourced population shares, crowds with exact shares, realistic and stress scenarios; round 1 re-evaluated in a realistic crowd | **done, no model calls** (issue #112) — `llm_negotiation/runs/rf18_round1_realistic/evaluation_report.md`; `docs/population-profiles.md`, `negsim/populations.py`, `configs/populations/`. Sources: SingStat residents at end-June 2026 by age and sex (from age 10, the user's choice), a cane by age from NHATS 2011 (US), looking at a phone by age from Elche 2019 (Spain); a suitcase, a cane under 65 and assertiveness are marked placeholders (the user's values). A realistic crowd of 100 has 20 aged 65+, 3 with a cane, 9 on a phone, against RF-18's 48 to 50 of each. A scenario now says its `purpose`: a rule's verdict of record comes from its realistic scenarios, stress ones are reported beside it (the user, 2026-10-27). After the first run the user decided on 30 seeds for the realistic scenarios, and a flag (`harms_where_common`) for a rule that harms only where its factor is common. **In a realistic crowd over 30 seeds the left-turn rule still helps** (and cuts collided pairs, 21 of 30 seeds); **the cane rule still harms** (it gridlocks 1 seed of 30, where on the first 10 seeds it looked like no change); **both together go from harms to helps**. The stress runs reproduce RF-18's 150 runs exactly |
+| RF-32 | Round 1. Three or four people meet head-on (2 v 1, 2 v 2): do the agents resolve it as pairs did, and do round 1's rules still describe them? | **done, paid USD 0.062** (issue #110) — `llm_negotiation/runs/rf32_round1_group_head_on_orca_groups/group_report.md`; amends D11 for that issue only (the user, 2026-10-27). New: scenario type `group_head_on`, case set `rf32_group_v1` (2 v 1 and 2 v 2 in round 1's corridor and geometries, friends 0.63 m apart, Zanlungo et al. 2017), plug-in `passing_group` (WHO YOU ARE WITH; every opposite pair counts), `design.others`, `protocol.orca_within_groups` (the user's decision after the pilot: ORCA keeps friends apart in `plan_only`), `python -m negsim.resolution.groups`. **Groups mostly fail**: 4 of 64 design sessions resolved in `plan_only` (0.06) against round 1's independent pairs' 35 of 64 (0.55), 2 v 2 none; every collision with an oncoming person; friends split or fall in behind; sides split evenly. **Under ORCA the left-turn rule resolves all 64 group meetings** (plain ORCA 0), the cane rule none; per conflict pair no rule reproduces the agents much better than plain ORCA. The holds-ground rule holds |
+| RF-34 | Round 1. RF-32's group sessions again in the non-verbal condition: do groups resolve a head-on when they can see each other move and signal? | **done, paid USD 0.169** (issue #115) — `llm_negotiation/runs/rf34_round1_group_head_on_non_verbal_partner/group_report.md`; the user's follow-up to RF-32 (2026-10-28). New: `protocol.distance_to_partner` (the user's decision after the pilot: a reply's distances are checked against the partner, not a friend just ahead), `groups --pairs-condition`, `--against` (paired by cell and case) and the later decision points. **A little better, still far from pairs**: 9 of 64 resolved in `plan_only` (0.14) against RF-32's 4 of 64 (paired: 9 v 4, none in both, p = 0.27) and RF-30's non-verbal pairs' 37 of 64 (0.58); every collision with an oncoming person. Groups now pass right to right (20 of 24 abreast resolved pairs); falling into single file works (11 of 14). Signals are nods and raised hands, no side; decision points run out by 4.4 s. Round 1's rules: as in RF-32 |
+| RF-35 | Step 1 in crowds: encounters sampled from a two-way flow at 25 and 50 people per way, up to 4 people per encounter prompted, everyone else ORCA. Do LLM agents resolve a conflict inside a crowd? | **done, paid USD 0.071** (issue #117) — `llm_negotiation/runs/rf35_crowd_encounters/crowd_report.md`; the user's question of 2026-10-28 (rules from pairs judged in crowds; prompting whole crowds too costly). New: `design.others.population` (bystanders from a population profile at exact shares), crowd cases `rf35_crowd_v1`, and a measure against plain ORCA on the same seed (the user's decision after the pilot: the pair measure fails every crowd pair, plain ORCA included). **Not better than ORCA**: 14 of 64 resolved (0.22; no more collisions, none deeper, none stuck), worse than plain ORCA in 50, better in 6; the plans add collisions in 30 sessions and remove them in 2. Mostly millimetres (34 of 64 at a 1 cm tolerance, an open question); the deep contacts are between the encounter's own prompted people. Plans sensible (keep right, slow when giving way, room for a cane); debriefs name no source |
+| RF-36 | Step 1 in crowds, **non-verbal**: RF-35's 72 sessions with only the condition changed, paired with RF-35 by the measure against plain ORCA | **done, paid USD 0.147** (issue #119; approved for this issue only, cap USD 0.15) — `llm_negotiation/runs/rf36_crowd_encounters_non_verbal/crowd_report.md`; the user's decision of 2026-10-29 after RF-35. Stopped at the cap: 66 of 72 sessions, 60 of the 64 design sessions paired. New: no prompt after the driver has released the encounter (a same-way conflict pair kept it open and crashed the first mock session), `groups --against` for crowds (`paired_crowd`: paired by the measure against plain ORCA, and plans compared directly), `resolved_within`. **No better, somewhat worse**: 9 of 60 resolved against RF-35's 13 on the same 60 (paired 1 against 5, p = 0.22); plans worse than RF-35's in 30, better in 8 (p < 0.001); 487 collisions against RF-35's 373 and plain ORCA's 321, the increase mostly sub-millimetre grazes with bystanders walking the same way; the deep contact between the prompted people unchanged (72 against 70). 181 of 310 later decision points fired only because a bystander came into view (D5 as written, kept by the user) |
+| RF-14 | Round 1. Step 3: verify rules, debrief sources and factor effects against human evidence | done — #69; promotion by RF-37's table (adopted 2026-10-31): none promoted; published studies only (the user, 2026-10-30); `literature/rule-verification/`: all four kept rules Partly supported, no checkable reference |
+| RF-37 | Round 1. Human targets: numbers from published studies, each with its source and a tolerance; round 1's rules, plain ORCA and Step 1's agents measured against them | **done, no model calls** (issue #122) — `llm_negotiation/runs/rf37_human_targets/report.md`; `negsim/human_targets/`, `configs/human_targets/head_on_v1.yaml` (frozen), `docs/human-targets.md`. Tolerances fixed with the user before any measuring (within 1 SD; direction only with no spread; studies that disagree get no verdict). 10 targets from Rapos 2021, Huber 2014, Moussaid 2009, Olivier 2013, Knorr 2016 and Zhang 2012; a low-density finding of Moussaid's dropped as a model result. **Pass distance: Step 1's agents are within the human range** (0.93 to 0.97 m between centres against 0.93 ± 0.17), **plain ORCA too close (0.51), the left-turn rule too wide (1.25)**. Plain ORCA turns earlier at higher speed as people do; the left-turn rule at a fixed ~5 m. Plain ORCA's flows form no lanes; the hand-written keep-left rules do and level off near Zhang's 1.5 /(m·s), while the left-turn rule's crowd flows at 2.8. The agents' roles follow assertiveness in the non-verbal condition (against Knorr 2016). #55's promotion table replaced by the one in `docs/human-targets.md`, section 6 (adopted by the user, 2026-10-31): a rule is promoted if it does not harm, is supported, and is not outside or opposite on any target that applies; no round 1 rule is promoted |
+| RF-38 | Round 1. Rare factors on purpose: head-on pairs with exactly one cane user, drawn from a realistic crowd, against RF-37's human targets | **done, no model calls** (issue #124) — `llm_negotiation/runs/rf38_human_targets/findings.md`; `one_with` in `negsim/populations.py` and rule-set evaluation scenarios (any factor level; only the cane run, the user's decision of 2026-10-31), a crowd of 1,000 so that cane users have the profile's ages, `configs/rule_set_evaluation/rf38_cane_head_on.yaml`, `report --study rf38`. **The cane rule applied in all 30 pairs** (RF-37: about 6%) and the other person gave way in every one, as Step 1's agents also do (14 to 3, 21 to 2, 12 to 4); **but the pairs pass at 0.50 m**, bodies touching as under plain ORCA, outside H2 (0.61 to 0.97); H7 opposite because the cane user, usually older, goes first; with the cane held fixed (a description beside H7, not its verdict) it agrees, but age cannot be told apart from the cane in these pairs (the user's decision of 2026-10-31: H7 as recorded stands for RF-38; from the next run H7 is not comparable in pairs a factor outside its study separates, not built yet). Under the adopted promotion table the cane rule is dropped (RF-33's harms; nothing removed) |
+| RF-39 | Round 1. The sidestep (`resolve_v8`) with a second chance: all three conditions, every cell 4 times, up to 6 decision points, `keep_line_replan`, and the debrief asks why that side (`resolve_debrief_v2`) | **done, paid** (issue #127; approved for this issue only, cap USD 1.60, spent USD 0.988) — `llm_negotiation/runs/rf39_round1_head_on_sidestep_reprompt/comparison_report.md`; new `analysis.sidestep_reprompt`. **A second chance ends about a third of pavement dances**: of sessions whose first plans went towards the same wall, 47 of 120 resolved in non-verbal and 41 of 124 in talk, 0 of 90 in independent (one decision); over all repeats 0.59, 0.59 against 0.36. A dance ends when one agent changes side and the other holds (74 of 88); when nobody changes, it does not. Words do not settle the side. **The side is a weak preference that follows the person**: the same side in all 4 identical repeats 0.30 against a coin's 0.13 (non-verbal); visitors from the US go right (0.68 to 0.79), assertive and hurried people right, older people left; no factor predicts whether the pair resolves. Stated reasons do not match: "more room" (39%) does not predict the side; visitors name a custom in 1%. Gate (first runs): 92 of 192 (0.48), fails narrowly. Against RF-30 and RF-29, paired: no difference (p = 0.86, 0.25, 0.26); **the model's fingerprint changed from RF-32 on** (`bc19ba97…`, was `e72d3c7f…`) |
+| RF-40 | Round 1. Talk and signals as a turn-taking exchange (the simulation pauses; one person asked at a time); the silent condition replaces independent; `resolve_v9` | **done, paid** (issue #129; approved for this issue only, cap USD 1.80, spent USD 1.226; PR not opened yet) — `llm_negotiation/runs/rf40_round1_head_on_turn_taking/comparison_report.md`. Being asked again is what resolves (silent 0.64, against RF-39's independent 0.36); the gate passes at 0.64; talk does not coordinate a side, and "on your right" is said the wrong way round in 16 of 27 |
+| RF-41 | Round 1. A decision-point mapping: from who an agent is, where it is and what it perceives, to what it does | **dropped** (#130 closed as not planned, 2026-11-25, before any work): the user moved the grid ahead instead; AS8 withdrawn and AS9 amended in `llm_negotiation/docs/action-space.md` section 10 |
+| RF-42 | Record the supervisor meeting of November 2026 (SV7 to SV14), and fix the shared design of the action-space experiments | **done, no model calls** (issue #131) — `llm_negotiation/docs/action-space.md` (the user's decisions AS1 to AS9), `CLAUDE.md`, architecture section 8.8 |
+| RF-43 | Literature: left and right across facing people; frames of reference in LLMs and people (SV8) | **done, no model calls** (issue #132, PR #143) — `literature/frames-of-reference/README.md`. Converting another person's left and right is a known LLM weakness (FoREST: at most 55.5%); the fix with the most support takes the conversion away from the model: an absolute frame, with code converting (AS5) |
+| RF-44 | How the YC Labs "Agents in Games" study models its agents' decisions (SV14) | **done, no model calls** (issue #133, PR #145) — `literature/paper-summaries/yc-agents-in-games.md`. The agents choose from a fixed menu of named tools described by their physical effect, and name targets in absolute coordinates that a pathfinder walks to: no angles, no left or right. Borrowed for RF-47, RF-48 and RF-50/51 |
+| RF-45 | The share of hallucinated decisions in RF-39 and RF-40 (SV12) | **done, no model calls** (issue #134, PR #146) — `llm_negotiation/runs/rf45_hallucination/report.md`; `analysis/hallucination.py`. About 1 decision in 11 is hallucinated (9.3%, CI 5.6 to 15.1), mostly the other's sideways move or a heard message put on the wrong side (RF-43's frame problem); 3.3% are unreadable. The keyword coder is a screen: later runs report a hand-checked random sample |
+| RF-46 | Behave like the person, with no need to speak like them: `resolve_v10` in RF-40's talk sessions (SV13) | not started — #135; paid (small) |
+| RF-47 | A menu of described actions, with amounts in words: `resolve_menu_v1` (SV10, SV11) | **done, mock only** (issue #136) — `llm_negotiation/negsim/resolution/menu.py`, `configs/resolution/menu_table_v1.yaml`, templates `resolve_menu_v1` and `resolve_debrief_v3`, config `round1_head_on_menu.yaml`, `docs/action-space.md` section 6.1. The agent names one of AS3's nine options in words; code turns it into the existing step format, so the executor, replay and analyses are reused. An option not on the menu is unreadable; a sidestep goes no further than the wall allows (0.57 m from an aligned start). Earlier templates and configs unchanged (tested). Mock rehearsal of RF-40's 544 silent and talk sessions completes; RF-49 estimate about USD 0.7 to 0.8 off-peak per frame |
+| RF-48 | Absolute positions in the corridor: `resolve_menu_abs_v1` (SV9) | **done, mock only** (issue #137) — template `resolve_menu_abs_v1`, `configs/resolution/menu_table_abs_v1.yaml`, config `round1_head_on_menu_abs.yaml`, `docs/action-space.md` section 7.1. RF-47's menu in the corridor's own frame: the two walls are "the blue wall" and "the yellow wall" (neutral landmark names, AS5 as revised); people are placed by their distance from the blue wall; moves aside go "towards" a wall, and code turns the wall into the agent's own side. No facing note; the heading is not told. For each heading, a move towards a wall goes to that wall (tested). Earlier templates, configs and records unchanged (tested). RF-49 estimate about USD 0.7 to 0.8 off-peak for this frame |
+| RF-49 | Round 1 with the menu, in the agent's own frame and in an absolute frame, silent and talk, against RF-40 | **done** (issue #138; paid, USD 1.024 of a USD 2.00 cap) — `llm_negotiation/runs/rf49_analysis/report.md`. RF-40's silent and talk sessions on `deepseek-flash` (RF-40's fingerprint): own frame 544, absolute frame 576 (the colours counterbalanced, `resolve_menu_abs_swap_v1`). **Gate failed in every config:** own 0.49, absolute 0.31 and 0.30 (RF-40 0.64). All four repeats, paired with RF-40: silent 0.53 (own) and 0.31 (absolute) against 0.64; talk 0.34 and 0.26 against 0.59. Own frame: a third of first plans are "carry on" (RF-40: 6%), and one 0.47 m step alone does not clear two 0.5 m bodies. Absolute frame: first moves lean to the -y wall whatever its colour (575 to 156; colour swap, Fisher p = 0.28 by place), so both pick the same wall. The grid's gains over RF-40 come from the grid, not the menu (task 3). Hallucinated (RF-45's method, 75 per frame): own 0.01, absolute 0.11. New module `analysis/menu.py` |
+| RF-50 | A grid corridor (0.4 m cells, 5 lanes), an add-on with no change to existing code, tested with scripted walkers (SV7) | **done, no model calls** (issue #139, PR #147 into `feat/129-...`) — `llm_negotiation/negsim/grid/` (`python -m negsim.grid`), `configs/grid/corridor_v1.yaml`, `docs/action-space.md` section 8. Moves in the walker's own frame, Burstedde et al.'s parallel update and clash rule, crossing paths blocked, round 1's measures and cases on the grid. Scripted walkers behave as expected (keeping right, left or one stepping 2 lanes aside resolve at 0.8 m; the dance deadlocks). Deadlock window 3.0 s, round 1's (the user, 2026-11-26). No existing code changed |
+| RF-51 | What an agent is told and can choose on the grid, in its own frame and in an absolute frame: `resolve_grid_v1` | **done, mock only** (issue #140) — new files only (AS1): `llm_negotiation/negsim/grid/` (`menu.py`, `prompt.py`, `agents.py`, `experiment.py`; `python -m negsim.grid.experiment`), the grid's own frozen templates `resolve_grid_v1` and `resolve_grid_abs_v1` with their own manifest, `configs/grid/round1_grid.yaml` and `round1_grid_abs.yaml`, `docs/action-space.md` section 8.3. RF-40's 272 silent sessions on the grid; the view in cells and lanes (lanes numbered from the blue wall in the absolute frame); RF-47's and RF-48's menus done in cells; who starts off the centre lane counterbalanced. Mock rehearsal completes in both frames (272 + 272 sessions). RF-52 estimate, calibrated on RF-40's silent calls: about USD 0.26 to 0.32 off-peak per frame, 0.53 to 0.63 for both |
+| RF-52 | Round 1 on the grid, in the agent's own frame and in an absolute frame, silent | **done** (issue #141; paid, USD 0.348 of a USD 0.80 cap) — `llm_negotiation/runs/rf52_grid_analysis/report.md`. RF-40's 272 silent sessions per frame on `deepseek-flash` (RF-40's fingerprint). **Gate passed in both frames:** own 237/272 (0.87), absolute 231/272 (0.85); RF-40's free steps 175/272 (0.64), paired p < 0.001, but world and action space change together (RF-49: the menu alone does worse than free steps, so the gain is the grid's); any fixed convention resolves all 272, random walkers 0.46. Absolute frame: no wrong-way steps one lane apart (2/272 against 50/272), but both agents lean to "the yellow wall" when aligned (63/136 same-wall dances; 100/136 resolved against 118). Left/right (SV8): in the own frame every claim of the other's move in *their* sides is wrong (43/43), every claim in the agent's own sides right (50/50). Hallucinated (RF-45's method, 75 per frame): own 0.07, absolute 0.01. New files only (AS1): `negsim/grid/paid.py`, `baseline.py`, `configs/grid/rf52_*.yaml`, `analysis/grid.py`. Task 3 (grid to continuous): the user chose the grid as a test bench, with RF-49 as the test |
+| RF-15 | Round 1. Results summary for the interim report (25 January 2027) | **done for round 1, no model calls** (issue #70; to be updated when later rounds finish) — `llm_negotiation/docs/round1-results.md` (every number with its source file), draft text `llm_negotiation/docs/interim-report-draft.md`, talking points `literature/paper-summaries/supervisor-meeting-talking-points-rf15-round1.md`. RF-8's analysis rerun under `keep_line`, the execution of record (`runs/rf15_round1_keep_line_analysis/`): **nothing predicts whether the meeting resolves or who passes first**; assertiveness, familiarity and attractiveness change slowing and signalling; the full mapping is 402 combinations, 330 seen once, so a compact mapping uses the four factors with an effect. Round 1 cost USD 1.34 |
+| RF-19 | Round 2 (meeting in a narrow passage, lean). Screening | not started — #75; paid |
+| RF-13 | Round 2 (moved from round 1, the user, 2026-10-27). Phase B: interactions and counterfactual pairs (optional), after RF-19's screen | not started — #68; paid. Gender by attractiveness cannot be tested in head-on (gender within 5 m only), RF-10 found no factor beyond the noise floor there, and the credit is needed for rounds 2 and 3 |
+| RF-20 | Round 2. Extract, test with earlier rules, verify | not started — #76; paid (small) |
+| RF-21 | Round 3 ("excuse me" from behind, lean). Scenario setup, pilot and screening | not started — #77; paid |
+| RF-22 | Round 3. Extract, test with earlier rules, verify | not started — #78; paid (small) |
+| RF-23 | Round 4 build: boarding a train while people get off (more than two people prompted) | not started — #79; mock only |
+| RF-24 | Round 5 build: the escalator (a moving floor) | not started — #80; mock only |
+| RF-25 | Round 6 build: someone cuts into your queue (a queue model) | not started — #81; mock only |
 | 5 | Validate the pattern against real data or sociology | **coding scheme drafted** (issue #12) — `literature/human-conflict-resolution/` |
 | 5a | Demographic personas: realism vs LLM bias | **delivered** (issue #16) — `literature/demographic-personas/` |
 | 5b | Game theory: communication-free conflict rules | **delivered** (issue #20) — `literature/game-theory/` |
 | 5c | Implemented rules in simulators, games, robots, traffic | **delivered** (issue #22) — `literature/simulation-rules/` |
 | 5d | LLMs resolving spatial conflict without conversation | **draft** (no issue; search of 2026-10-05) — `literature/llm-behavioural-conflict/` |
+| 5e | Portable rules (track #34), PT-1: can a rule be written once and carried out by several simulators? | **delivered** (issue #35) — `literature/portable-rules/`; verdict *feasible with changes*. #34's idea itself is a proposal awaiting the supervisor's sign-off |
+| 5f | Portable rules (track #34), PT-2: how to test rules on unseen scenarios, and how to write those scenarios down for several simulators | **delivered** (issue #36) — `literature/unseen-scenarios/`; a draft test protocol and scenario-card fields, both proposals awaiting the supervisor's sign-off |
+| 5g | Portable rules (track #34), PT-3: human evidence for the unseen scenarios (queue cutting, boarding, lifts, escalators), Singapore first | **delivered** (issue #37) — `literature/unseen-scenario-evidence/`; graded reference behaviours (grading scale a proposal awaiting the supervisor's sign-off); no Singapore observation found |
+| 5h | Portable rules (track #34), PT-4: models trained on extracted rules (distillation, learned deciders, rule-guided learning) | **delivered** (issue #38) — `literature/trained-deciders/`; options table, evaluation plan with the counterfactual bias test, and a one-page verdict, all proposals awaiting the supervisor's sign-off |
+| 5i | Portable rules (track #34), PT-5: simulators, part 1, a desk survey of crowd simulators and how they work | **delivered** (issue #39) — `integration/simulator-survey/`; one section per simulator, a sourced comparison matrix, and a shortlist (JuPedSim, Mesa, SUMO conditional) for the hands-on trial in #40; nothing installed or run. CrowdGym's engine left open |
+| 5j | Portable rules (track #34), PT-6: simulators, part 2, a hands-on trial of the shortlist and the use-or-build decision | **delivered, decision a proposal** (issue #40) — `integration/simulator-survey/hands-on.md`, `decision.md`, `spikes/`; JuPedSim 1.4.2 and Mesa 3.5.1 run from pinned wheels in a separate venv (user allowed trial code; supervisor status of the standing instruction still unconfirmed). Proposed: hybrid, JuPedSim for motion and boarding with our own queue-order layer, Mesa as the discrete testbed; SUMO not needed. Weights need sign-off |
+| 5k | Portable rules (track #34), PT-7: synthesis — a verdict on each part of the idea, the idea restated, novelty, a supervisor brief and an implementation sequence | **delivered, all proposals** (issue #41) — `portable_rules/docs/`; every part *feasible with changes*, five sub-claims not supported (identical behaviour across simulators; tests proving conformance; today's rules as an unchanged ORCA binding; human fidelity for bus boarding and escalators; RL deciders). No LLM-elicited rule exists yet. The brief lists ten decisions for the supervisor; PT-8 (#42) waits on them |
+| 5l | Describing environments to LLMs: how studies (crowd simulators first) turn a scene with several people into LLM input, and how well each method works | **delivered, recommendation a proposal** (issue #52, not part of track #34) — `literature/environment-description/`; five entries, a method table, the research gap, offline token counts. No format comparison for pedestrian conflicts was found; proposed for testing: a perceivability rule, the three nearest in full plus a one-line summary |
 | 6 | Bridge into CrowdGym — `integration/crowdgym_mapping.md` | not started |
 
 From building the negotiation simulator (issue #24) — see `llm_negotiation/README.md` for
@@ -63,6 +166,266 @@ how to run it and for the results, and `WORK_LOG-24.md` for what needs sign-off:
   speed formula, applied literally to disc-shaped agents, lets them overlap at a
   right-angle crossing, so the conflict "point" had to become a zone
   (`llm_negotiation/docs/derivations.md`).
+
+From building the avoidance layer (issue #26, the first of six sub-issues) — see
+`llm_negotiation/README.md`, "The avoidance layer", for how to run it and for the results,
+and `WORK_LOG-26.md` for what needs sign-off. Each result is one deterministic run of an
+algorithm with stated parameters; none is evidence about how people walk:
+
+- **The layer exists, runs, and cost nothing.** ORCA collision avoidance for any number of
+  agents, with walls; a sensing radius and a versioned record of what an agent perceives
+  of a neighbour (age and gender if visible, never the task); an avoidance directive with
+  five fields (side, share of the avoiding, speed, clearance, passage order); a handoff to
+  the arbiter of issue #24 where only one agent fits; five scenarios whose physical
+  parameters are each cited or tagged as a placeholder; conflict metrics; a second kind of
+  run log. 777 tests, of which the 432 of issue #24 are unchanged, and its 54 no-LLM runs
+  come out identical. No model was called.
+- **Plain ORCA deadlocks when a meeting is exactly symmetric, and a shared side fixes it
+  for free.** Head-on in a corridor wide enough to pass, two agents brake to a stop 2 cm
+  apart; the same happens at a right-angle crossing. If both keep left (or both right)
+  they pass with no delay at all. So does a 10 cm offset with no directive, so the
+  deadlock is a property of exact symmetry. Opposite sides are logged as a violation and
+  ignored.
+- **The share decides who steps aside, and by how much.** With shares (0.5, 0.5) each
+  agent moves 0.25 m; with (1.0, 0.0) one moves 0.50 m and the other walks its line
+  untouched. The condition issue #26 gives for the shares (they must sum to at least 1)
+  turned out to cover only a pair already on a collision course; what was done about the
+  other case is a design decision that needs sign-off (`WORK_LOG-26.md`, Q2).
+- **Two things an ORCA agent does that are the algorithm's and are not offered as
+  behaviour.** Asked to do all the avoiding with no side to take, an agent walks backwards
+  down the corridor in front of the other. And a slower walker is hurried along by a
+  faster one exactly behind it, because ORCA shares the avoiding with the agent in front.
+  Both bear on the later validation against human behaviour.
+- **In a dense two-way flow bodies overlap, and 10,000 agents are slow.** Fifty agents
+  each way all arrive, but with the ten neighbours used in practice two discs overlap 512
+  times, by up to 8 cm; with forty neighbours 87 times, by up to 2.3 cm. Every overlap was
+  traced to the case ORCA's own paper says carries no guarantee. In pure Python a step for
+  10,000 agents takes about 1.5 s, some fifteen times slower than real time, so this layer
+  does not yet meet the project's 10,000-agent target for speed.
+
+From building the rule layer (issue #28, the second of six sub-issues) — see
+`llm_negotiation/README.md`, "The rule layer", and `llm_negotiation/docs/behaviour-checks.md`
+for the results, and `WORK_LOG-28.md` for what needs sign-off. The five rules are hand-written
+test fixtures; none of this is evidence about how people walk:
+
+- **Rules are stored data that a future LLM can write.** A rule is a condition on what two
+  agents can both see, a role for each, and a directive per role, in a versioned format with
+  a JSON Schema; it cannot run code, and a rule that reads what only one agent knows (its
+  task, say) is refused on loading. Rules live in a database where a version is never
+  edited and every rule records where it came from. Matching, priorities, ties and expiry
+  are fixed and logged. No model was called.
+- **"Plain ORCA" is now fixed before any comparison**, in two frozen versions: one with the
+  reference library's tiny random perturbation (the primary), one without.
+- **The rules do what they say, and the comparisons show where that matters.** A shared side
+  removes the symmetric head-on deadlock; against the perturbed baseline, which never
+  deadlocks, it only makes the side predictable. An overtaking rule stops a slower walker
+  being pushed along. A rule giving one person all the avoiding but no side makes her step
+  aside or walk backwards, depending on a perturbation of 0.1 mm/s: such a rule is
+  underspecified. A first-come-first-served rule at a narrow passage never changes who goes
+  first, because the existing arbiter already does exactly that.
+- **In a dense two-way flow the rules help and hurt.** With them, fifty agents each way
+  clear in about 47 s instead of 83 s, with half as many overlaps of two bodies; but the
+  worst overlap in a run is about six times deeper (20 cm against 3 cm). Leaving one rule out
+  at a time shows why: the keep-left rule alone clears the crowd as fast with shallow
+  overlaps, while the overtaking rule, which gives one walker all the avoiding, gridlocks the
+  flow when used alone. A rule that is safe for two people can fail in a crowd. Following the
+  rules also makes each step 2.3 to 3.0 times as slow (100 to 1,000 agents), which matters
+  for the 10,000-agent goal.
+
+From building rule generation (issue #30, the first half of the third sub-issue) — see
+`llm_negotiation/README.md`, "Rule generation", and `llm_negotiation/docs/rule-generation.md`;
+`WORK_LOG-30.md` for what needs sign-off. **No model was called**: everything ran on the free
+mock client, which stands in for a model and imitates none, so none of this is evidence
+about LLMs or about people:
+
+- **A conflict now has a severity**, from "only in range" (T0) through "on a collision
+  course" (T1), a yield (T2) and a near miss (T3) to a collision or deadlock (T4), measured in
+  a way no rule's sharing of the avoiding can change. Plain ORCA passes two people a few
+  millimetres apart, so its ordinary two-person pass is already a near miss; milder and worse
+  conflicts come from the crowd (Q3). 18 conflict cases are frozen from 26 baseline runs.
+- **A conflict can now become a candidate rule in two ways**: two model agents negotiate,
+  proposing rules and accepting one by its hash, so that a changed rule is never mistaken for
+  an acceptance; or one model, seeing both sides, states a rule. Every proposal is kept and
+  categorised (valid; needs talking first, because it reads someone's errand; inconsistent;
+  malformed; or beyond what the format can say). Generated rules go to a staging database,
+  never the main one, and reach it only by a person promoting one with a reason.
+- **Each generated rule is tested alone**, on its own conflict and in a crowd of 100. The
+  crowd check already earns its place: the mock's rules that only ask both people for 15 or
+  30 cm more room fail it in the two-way flow (by the two-minute limit 98 and 23 of 100 have
+  arrived, against all 100 in 52 s without them).
+- **The paid pilot is held, and as specified it cannot run**: its worst case is USD 0.62
+  against its USD 0.05 cap. Whether to cut the negotiation, the design, or raise the cap is
+  open (Q5).
+
+From issue #32 (the third sub-issue's second step, SI-3a.2) — see `llm_negotiation/README.md`,
+"Fictional groups and meetings inside a passage", and `WORK_LOG-32.md` for what needs sign-off.
+**No model was called**; nothing here is evidence about LLMs or about people:
+
+- **A person can now belong to a fictional group** (an invented label, searched so that it
+  means nothing, with no description), which agents may see and **no rule may read**: a rule
+  that tries is kept and counted as `protected_attribute`, since a model trying to is a
+  finding. The group is a design factor (the same group or different, which label goes to
+  whom, shown or hidden), off unless a config switches it on, and every session's outcome is
+  logged so that who conceded, whose rule was accepted and who got the larger share can be
+  stratified by it. Fictional groups can test in-group against out-group, not how a model
+  treats real ethnicities. **The supervisor's ethics sign-off is pending.**
+- **Two people who meet inside a single-file passage can now be told who backs out.** A
+  directive `back_up` (back out at one's own backing speed, wait, go on) and rule format 3,
+  which can say "the one who has walked less far in backs out". In 560 runs (20 seeds per
+  condition), the arbiter's fallback gets neither person through when they meet standing
+  still (80 of 80 runs stall), and when they meet walking it gets them through only by pushing
+  one backwards at about 1 m/s, the walking-backwards artefact; the seed rule gets them
+  through in all 160 of its runs at the cited backing speeds. With a slow backer, choosing by
+  distance walked backs 0.64 m less but takes about 3 s more than choosing by time
+  (`llm_negotiation/docs/behaviour-checks.md`, section 6).
+- **The prompts are a new frozen version** that describes both, and the pilot now uses it:
+  its worst case is USD 0.65 against the same USD 0.05 cap, and no cut of the reply cap, the
+  messages or the retries alone fits; a hard spend cap with the sessions in a stated priority
+  order would (issue #30's Q5, options re-previewed).
+
+Three findings from the environment-description review (issue #52), all drafts needing supervisor
+sign-off. See `literature/environment-description/`; `verdict.md` is one page. The review read five
+sources in full (two LLM crowd simulators, Generative Agents, an LLM pathfinding study, a grid-world
+format study) and screened about fifteen more:
+
+- **No study compares ways of describing a scene for pedestrian or crowd conflicts.** The two
+  measured comparisons are spatial puzzles: a text map beat a coordinate list and an image for
+  multi-agent pathfinding (on very few runs), and coordinates beat grid drawings and prose for grid
+  navigation, most for mid-sized models. See `findings.md` §2, §5.
+- **The one LLM crowd simulator with an explicit perception rule describes at most three people in
+  full** (8 m, 200° field of view, occlusion; the rest as counts), so its prompt stops growing with
+  the crowd. Without a cap, request counts grew roughly linearly with crowd size (2,000 at 50 agents,
+  over 6,000 at 250). See `findings.md` §3.
+- **Proposed for negsim, to be tested before any template is frozen:** keep the egocentric prose
+  lines, add a perceivability rule, describe the three nearest in full with a one-line summary of
+  the rest, and state capacities explicitly. Situation block: about 220 tokens today, 448 with the
+  proposal at 5 or 10 people, 940 for ten people all in full (DeepSeek-V3 tokenizer, offline). See
+  `verdict.md`, `token-estimates.md`.
+
+Three findings from the synthesis (issue #41, PT-7 of track #34). All are proposals needing
+supervisor sign-off. See `portable_rules/docs/`; `supervisor-brief.md` is the two-page read and
+`feasibility.md` the evidence:
+
+- **Every part of the idea is feasible with changes, under a narrower claim:** the same *decision*
+  in the same kind of conflict, with behaviour across simulators *measured*, not promised. Five
+  sub-claims are dropped or narrowed, among them "today's rules become the ORCA binding unchanged"
+  (their when-conditions are negsim measurements) and human fidelity for bus boarding and escalators
+  (no evidence). The restated idea marks ten changes from #34 (`idea.md`).
+- **No LLM-elicited rule exists yet.** The six rules in `llm_negotiation/rule_db/` are hand-written
+  test seeds and the paid pilot is held, so the proposed sequence builds and checks everything free
+  on the seeds first, and runs the pilot only after the vocabulary, bindings and pass criteria are
+  frozen (`implementation-plan.md`).
+- **The best held-out evidence needs vocabulary the draft lacks.** Most queue-cutting evidence is
+  about bystanders objecting and about asking with a reason; the train-door evidence needs roles by
+  category. What the unseen tests can check against people therefore depends on #34's decisions 3
+  and 4 and on PT-8 adding breach handling.
+
+Three findings from the hands-on simulator trial (issue #40, PT-6 of track #34). The
+recommendation and its weights are a proposal needing supervisor sign-off, and nothing here is
+evidence about people (default parameters, one scene each). See `integration/simulator-survey/`;
+`decision.md` is the short read:
+
+- **JuPedSim's built-in queue cannot admit anyone part-way.** Agents stay listed after they switch
+  journey or are removed, so "admit" cannot be built on it. Keeping the queue order in our own list
+  and steering each queuer to its slot works (47 lines). Its door, waiting set and two-way flow work
+  with no deadlock. Setting `agent.target` outside a direct-steering journey is silently ignored.
+- **Both simulators are deterministic and both adapter hooks work.** At 10,000 agents JuPedSim ran a
+  two-way flow at 0.21 simulated s per computing s, 2.9–3.4× negsim's figure on a similar scene; a
+  full Python perception pass costs as much as an iteration, so perception should sample every 0.1 s.
+- **The proposed split is a hybrid:** JuPedSim for motion and boarding, with our own queue-order
+  layer; Mesa for the discrete queue model. It leads under every weighting tried but one: if each
+  unseen conflict type need not run in two testbeds, using both simulators as shipped is as good.
+
+Three findings from the simulator desk survey (issue #39, PT-5 of track #34). They are
+descriptions plus a shortlist, not a decision (that is #40), and the idea they serve still needs
+supervisor sign-off. See `integration/simulator-survey/`; `shortlist.md` is the short read.
+Nothing was installed or run:
+
+- **Each candidate differs from negsim along a different axis.** JuPedSim: other motion models, a
+  0.01 s step, journeys with queues and waiting sets. Vadere: event-driven steps and a
+  perception → cognition → behaviour layer. Mesa: discrete space and event scheduling. Only SUMO
+  has vehicles, stops and boarding built in, and there boarding is a time per person. See
+  `comparison.md`.
+- **No open-source candidate gives a per-step callback.** Both adapters attach in a loop this
+  project writes around `iterate()` / `simulationStep` / `nextStep`. JuPedSim exposes no current
+  velocity for its collision-free speed models, and its direct target setting works only in a
+  direct-steering journey. See `survey.md` §3.
+- **Whether CrowdGym is built on JuPedSim is still open.** Its "journeys" and "CFS" point to it.
+  Its `Tau` / `Mass` / side and front radii, its RL action interface, and the 0.8 m/s "JuPedSim
+  default" (in JuPedSim 1.4.x the CFS default is 1.2 m/s) do not fit. CrowdGym's dependency list
+  would settle it. See `survey.md` §2.
+
+Three findings from the trained-deciders review (issue #38, PT-4 of track #34), all drafts needing
+supervisor sign-off. See `literature/trained-deciders/`; `verdict.md` is one page. The review read
+13 sources in full or by keyword-led passes (all open arXiv copies) and cross-referenced 3 already
+in the repository:
+
+- **The cheapest trained decider that reached large populations is a lookup table filled by
+  repeated LLM calls** (8.4 million agents with 400 queries, AAMAS 2025), not a trained model. No
+  source measured a distilled crowd decider's agreement with its teacher on unseen situations
+  except Zhang et al. (2026). Small decision trees on Situation features, with that table as
+  baseline, are recommended as the first thing to train. See `verdict.md`, `options.md`.
+- **The "no `ethnic_group` input" rule is fairness through unawareness, which is not enough on its
+  own.** The simulator lets a stronger check be made by construction (no Situation feature caused
+  by the group), and an LLM teacher's labels need their own counterfactual test. That test, for
+  `ethnic_group`, waits for the ethics sign-off on fictional groups. See `evaluation.md` §3.
+- **No source compares a learned interpretable model with hand-written rules, or tests a trained
+  decider across simulators.** RL policies with rule rewards are not recommended now (one per
+  simulator; a reward-given norm followed about 85% of the time); the shield pattern (the rule
+  engine blocks what a trained decider proposes against a hard rule) is. See `entries.md` Q2, Q3.
+
+Three findings from the human-evidence review (issue #37, PT-3 of track #34), all drafts needing
+supervisor sign-off. See `literature/unseen-scenario-evidence/`; `verdict.md` is one page. The
+review read 10 research sources and 8 official documents, and stubbed 14 sources that could not be opened:
+
+- **Queue cutting is the best-evidenced unseen scenario, but the evidence is old, Western, and
+  partly second-hand.** Objection to a cutter comes mostly from the person directly behind (36%,
+  falling to 0% three places back; New York, 1978), roughly doubles with two cutters, and drops for
+  a cutter who seems to join a friend. Milgram et al.'s "1978 or 1986" is resolved: run in 1978,
+  published in 1986. See `queue-cutting.md`.
+- **No Singapore study observes any of the five target behaviours.** Singapore supplies the norms
+  it promotes (give way to alighting passengers; priority queues; hold the handrail) but no
+  compliance rates, so every Singapore test must borrow its reference from London, New York or
+  Taipei. No source supports the "stand on both sides" escalator campaign mentioned in
+  `scenarios.yaml`. See `singapore.md`.
+- **Where priority is observed, it is given less than half the time.** At Taipei MRT lifts (2018),
+  wheelchair, pram and walking-frame users were fully let in first in 24% of the trips that called
+  for it, and not at all in 49%. How often MRT boarders push in before alighting ends has no number:
+  the two studies that measure it could not be opened. See `reference-behaviours.md`.
+
+Three findings from the unseen-scenarios review (issue #36, PT-2 of track #34), all drafts
+needing supervisor sign-off. See `literature/unseen-scenarios/`; `verdict.md` is one page. The
+review read 20 sources (7 scenario formats, 13 studies) and stubbed 2 (ISO 20414, one spillover
+paper):
+
+- **No field read holds out a whole type of situation when testing a behaviour rule.** Melting Pot
+  holds out co-players, never worlds; pedestrian modelling has one small cross-geometry study. The
+  protocol's whole-conflict-type hold-out is the FYP's own design. See `methods.md` Q1.
+- **Humans do carry a convention to a differently structured game, but within one class of games,
+  in one direction more than the other, and not always for the better.** This qualifies the
+  game-theory review's "no evidence" and backs #34's "same kind of conflict" claim. See
+  `methods.md` Q2.
+- **No existing scenario format says who should go first in a contested resource, or lets someone
+  join a queue part-way.** The scenario card has to be assembled from RiMEA, IMO, TN 1822,
+  OpenSCENARIO, JuPedSim, SteerBench and ODD. See `scenario-standards.md` and
+  `test-protocol-draft.md` §6.
+
+Three findings from the portable-rules review (issue #35, PT-1 of track #34), all drafts needing
+supervisor sign-off. See `literature/portable-rules/`; `verdict.md` is one page. The review read
+19 entries and 4 novelty sources, with 4 sources unobtained, so read these as findings about what
+was read:
+
+- **No study in the fields that matter has carried one behaviour rule across two simulators and
+  compared the behaviour.** The only direct precedents are social-simulation "docking" studies.
+  Every one found behaviour changing on details outside the rule's text: update order,
+  tie-breaking, ≤ against <, run length. See `feasibility.md` §4.
+- **The one standard that achieves "write once, run in many tools", FMI, ships execution, not a
+  description.** #34's standalone engine has that shape. Its adapters are where the evidence says
+  implementations drift: 5 of 10 FMI importers failed reference tests. See `feasibility.md` §3.2
+  and §6.
+- **arXiv:2409.00993 (issue #20's risk R4) shares the FYP's method only.** It writes no rule down
+  and runs in one game. The new part is the combination, an LLM-elicited conflict rule checked in
+  more than one simulator. See `novelty-check.md`.
 
 Three findings from the simulation-rules review (issue #22), all drafts needing supervisor
 sign-off — see `literature/simulation-rules/`. The review is seed-led (27 sources, 5 papers
@@ -174,6 +537,48 @@ CrowdSimulation/
       missing-papers.md                  5 papers + 1 doc that could not be obtained
       search-log.md                      searches run, mistakes caught, open risks
       refs-simulation-rules.bib          records for every source, with the copy read
+    portable-rules/                 issue #35 (PT-1 of track #34): simulator-independent rules
+      verdict.md                         *** one page: feasible with changes; representation; risks ***
+      feasibility.md                     the idea restated and flagged; Q1-Q6, every claim sourced
+      representations.md                 19 entries + 4 stubs, in six groups
+      novelty-check.md                   arXiv:2409.00993 read in full; what is and is not new
+      missing-papers.md                  4 sources not obtained; 2 read only as preprints
+      search-log.md                      searches run, how sources were read, open risks
+      refs-portable-rules.bib            records for every source, with the copy read
+    unseen-scenarios/               issue #36 (PT-2 of track #34): testing rules on unseen scenarios
+      verdict.md                         *** one page: what the literature supplies, protocol changes, risks ***
+      test-protocol-draft.md             Q5: levels L0-L4, hold-out, freezing, baselines, metrics, card fields
+      scenario-standards.md              Q3: 8 scenario formats (RiMEA, IMO, ISO, OpenSCENARIO, ODD, ...) + table
+      methods.md                         Q1 generalisation, Q2 the six spillover leads, Q4 leakage
+      missing-papers.md                  2 sources not obtained; 8 read in an earlier version
+      search-log.md                      searches run, what went wrong, leads not followed
+      refs-unseen-scenarios.bib          records for every source, with the copy read
+    unseen-scenario-evidence/       issue #37 (PT-3 of track #34): human evidence for the unseen scenarios
+      verdict.md                         *** one page: which scenarios have evidence to test against ***
+      reference-behaviours.md            Q6: 23 graded, testable statements; Q5 age and gender; grading scale (proposal)
+      queue-cutting.md                   Q1: Milgram (1978/1986), Schmitt, Langer, Folkes, Allon & Hanany; 6 stubs
+      boarding-alighting.md              Q2: London field and lab studies; 6 stubs
+      lifts-escalators.md                Q3 (short pass): Taipei lifts, TfL Holborn escalator pilot
+      singapore.md                       Q4: what exists (and does not) for Singapore, with the searches run
+      missing-papers.md                  14 sources not obtained; 4 read in an earlier or partial version
+      search-log.md                      searches run, how sources were fetched, what went wrong
+      refs-unseen-evidence.bib           records for every source, with the copy read
+    trained-deciders/               issue #38 (PT-4 of track #34): models trained on extracted rules
+      verdict.md                         *** one page: which deciders to train, with which teachers, evaluated how ***
+      entries.md                         13 entries for Q1-Q5 (distillation, interpretable models, rule-guided RL, bias, teachers)
+      options.md                         Q1-Q5 answers; one table of model options, every cell citing entries
+      evaluation.md                      checks E1-E10 and bias checks B1-B7, incl. the counterfactual test (proposal)
+      missing-papers.md                  0 sources not obtained; versions not read
+      search-log.md                      searches run, how sources were fetched, unread leads
+      refs-trained-deciders.bib          records for every source, with the copy read
+    environment-description/        issue #52: describing multi-person scenes to LLMs, and how well each method works
+      verdict.md                         *** one page: proposed description method for negsim, tests, token cost ***
+      entries.md                         5 full entries (two crowd simulators, Generative Agents, MAPF, grid formats)
+      findings.md                        Q1-Q5: method table, measured results, many agents, attributes, research gap
+      token-estimates.md                 offline token counts for 2, 5, 10 people in four formats, with the script
+      missing-papers.md                  0 papers not obtained; a supplement and published versions not read
+      search-log.md                      every search, every paper screened, unread leads
+      refs-environment-description.bib   records for the five, with the copy read
     (see also demographic-personas/, human-conflict-resolution/,
      llm-conflict-resolution/, paper-summaries/ from issues #8/#12/#14/#16/#18)
   pipeline/
@@ -191,16 +596,53 @@ CrowdSimulation/
     requirements.txt
   integration/
     crowdgym_mapping.md             record -> CrowdGym AgentType / journey / action handler
-  llm_negotiation/                  issue #24: two-agent LLM negotiation simulator (has its own README)
-    run_experiment.py               run an experiment config; --client mock (free) or deepseek (paid)
-    configs/                        scenarios, personas, experiment designs C0-C4, task strings, API prices
+    simulator-survey/               issue #39 (PT-5 of track #34): desk survey of crowd simulators
+      shortlist.md                       *** the candidates for #40's hands-on trial, and what each must test ***
+      survey.md                          one section per simulator (negsim, CrowdGym, JuPedSim, SUMO, Vadere, Menge, Mesa, ...)
+      comparison.md                      the matrix: a row per simulator, a column per template field, every cell sourced
+      search-log.md                      what was fetched, what could not be, leads not followed
+      hands-on.md                        issue #40: each trial (queue, door, adapters, scale) on JuPedSim and Mesa
+      decision.md                        *** issue #40: use / refer-and-build / hybrid, matrix, recommendation (a proposal) ***
+      spikes/                            issue #40: throwaway trial code + pinned requirements.txt; nothing imports it
+  portable_rules/                   track #34 (portable conflict rules)
+    docs/                           issue #41 (PT-7): the synthesis; all proposals awaiting sign-off
+      feasibility.md                     a verdict per part of the idea, with evidence and risk; what is new
+      idea.md                            the idea restated, ten changes from #34 marked
+      supervisor-brief.md                *** two pages, no jargon: ten decisions with options and recommendations ***
+      implementation-plan.md             proposed future issues, one paragraph each (none created)
+  llm_negotiation/                  issue #24: two-agent LLM negotiation simulator; issue #26: the
+                                    avoidance layer (ORCA, perception, directives); issue #28: rules;
+                                    issue #30: rule generation; issue #32: fictional groups and
+                                    meetings inside a passage. Has its own README
+    run_experiment.py               run an experiment config; --client mock (free) or deepseek (paid);
+                                    an avoidance config needs no client and costs nothing; a
+                                    rule-generation config with deepseek sends nothing without --confirm
+    configs/                        scenarios, personas, experiment designs C0-C4, task strings, API prices;
+                                    avoidance/ (issue #26), rule_following/ (#28, #32), cases/ and
+                                    rule_generation/ (#30, #32)
     negsim/                         the package: core, scenarios, conflict, control, llm,
-                                    negotiation, personas, runlog, metrics, viz, experiment
-    tests/                          432 tests, all on the mock client, no network, no spend
-    docs/                           architecture, gamechat-notes, derivations, llm-backend, log-schema
-    runs/                           committed run logs: C0 (no LLM) and the paid smoke runs
+                                    negotiation, personas, runlog, metrics, viz, experiment,
+                                    avoidance, rules, rulegen
+    cases/                          the frozen conflict cases of issues #30 and #32, with their manifest
+    rule_db/                        the rule database (issue #28); generated rules never go here
+    tests/                          1,381 tests; none calls a model or the network, none spends
+    docs/                           architecture, gamechat-notes, derivations, llm-backend, log-schema;
+                                    orca, perception, parameters, metrics (issue #26); rule-format,
+                                    rule-matching, baseline, behaviour-checks (#28); cases,
+                                    rule-generation, pricing-check (#30); fictional-groups (#32)
+    runs/                           committed run logs: C0 (no LLM), the paid smoke runs,
+                                    si1_* (#26), si2_* (#28), si3_source_* (#30), si32_* (#32)
+    views/                          the animated viewer's pages (git-ignored); see "Watch a run"
+                                    in llm_negotiation/README.md
     spend_ledger.jsonl              one line per paid API call for this work (Phase 1 spend is
                                     tracked separately in pipeline/config.py)
+  analysis/                         issue #63 (RF-8): `python -m analysis <outcomes.csv>`, factor
+                                    effects, a decision tree, the mapping, noise floor, stability,
+                                    stated against measured, intent against plan. Its own
+                                    requirements.txt (pandas, statsmodels, scikit-learn), so negsim
+                                    stays standard-library only. Has its own README
+    codebooks/                      versioned keyword codebooks for intents and reasons (no LLM)
+    tests/                          synthetic-data tests
   refs/                             cached copies of every cited source (re-checkable)
 ```
 

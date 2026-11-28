@@ -59,9 +59,10 @@ def default_visibility() -> dict[str, bool]:
     """What one agent can see of the other unless the experiment says otherwise.
 
     Persona attributes take their default from the schema (age and gender are visible,
-    task and backstory are not). ``speed`` and ``size`` are physical and visible.
+    task and backstory are not). ``speed`` and ``size`` are physical and visible. The core
+    factors of track #55 (issue #60) are not here: this layer's prompts have no line for them.
     """
-    visibility = {name: spec.observable for name, spec in ATTRIBUTES.items()}
+    visibility = {name: spec.observable for name, spec in ATTRIBUTES.items() if not spec.levels}
     visibility.update({"speed": True, "size": True})
     return visibility
 
@@ -204,12 +205,57 @@ class PromptTemplate:
         return self._data["turns"]["retry"]
 
 
+#: Templates of a kind other than the negotiation templates above (issue #30): the keys each
+#: must have. They are frozen in the same manifest, by the same tool, and loaded with
+#: :func:`load_template_data`; ``negsim.rulegen.describe`` renders them.
+TEMPLATE_KINDS: dict[str, tuple[str, ...]] = {
+    "rule_generation_common": ("template_id", "version", "kind", "description", "glossary", "format_example", "glossary_sha256"),
+    "rule_generation_negotiate": ("template_id", "version", "kind", "description", "uses", "system", "reply_format", "turns", "situation"),
+    "rule_generation_state": ("template_id", "version", "kind", "description", "uses", "system", "reply_format", "retry", "situation"),
+    # Track #55, Step 1 (issue #57): rendered by ``negsim.resolution``.
+    "resolution": ("template_id", "version", "kind", "description", "system", "role", "conditions", "step_format", "event_item", "view", "decision_point"),
+    "resolution_debrief": ("template_id", "version", "kind", "description", "text", "decision", "steps", "no_steps", "said", "signal", "reply_format", "retry"),
+    "resolution_scenario": ("template_id", "version", "kind", "description", "place", "events", "extra_blocks", "factor_lines"),
+    # Issue #60 (RF-5): the lines of the core and situational factors, placed in the core template's blocks.
+    "resolution_factors": ("template_id", "version", "kind", "description", "attributes", "situations"),
+    # Issue #61 (RF-6): the lines of the pairwise perception factors, for one observer's view only.
+    "resolution_pairwise": ("template_id", "version", "kind", "description", "lines"),
+    # Issue #66 (RF-11): the rule extractor of Step 2, rendered by ``negsim.extraction``.
+    "rule_extraction": (
+        "template_id", "version", "kind", "description", "system", "columns", "user", "coin_flips", "no_coin_flips", "session",
+        "outcome", "person", "decision", "said", "signal", "reason", "unreadable", "debrief", "no_debrief", "reply_format", "retry",
+    ),
+    # Issue #67 (RF-12): the translator of an extracted rule into rule format 3, rendered by ``negsim.translation``.
+    "rule_translation": (
+        "template_id", "version", "kind", "description", "uses", "system", "reply_format", "user", "factor_line",
+        "exception_line", "no_exceptions", "answer_yes", "answer_no", "retry",
+    ),
+}
+
+
+def check_template_data(key: str, data: Any) -> None:
+    """Refuse template data that is not well formed for its kind (no kind: a negotiation template)."""
+    if not isinstance(data, Mapping):
+        raise ConfigError(f"prompt template {key!r}: expected a mapping")
+    kind = data.get("kind")
+    if kind is None:
+        PromptTemplate(key, data, "")
+        return
+    if kind not in TEMPLATE_KINDS:
+        raise ConfigError(f"prompt template {key!r}: unknown kind {kind!r}; known: {sorted(TEMPLATE_KINDS)}")
+    missing = [name for name in TEMPLATE_KINDS[kind] if name not in data]
+    if missing:
+        raise ConfigError(f"prompt template {key!r}: missing key(s) {missing}")
+    if f"{data['template_id']}_v{data['version']}" != key:
+        raise ConfigError(f"prompt template file {key}.yaml declares {data['template_id']!r} version {data['version']!r}")
+
+
 def available_templates() -> list[str]:
-    return sorted(load_manifest())
+    """The negotiation templates (those without a ``kind``)."""
+    return sorted(key for key, entry in load_manifest().items() if entry.get("kind") is None)
 
 
-def load_template(key: str) -> PromptTemplate:
-    """Load a template by key (e.g. ``persona_v1``) and check it against the manifest."""
+def _frozen(key: str) -> tuple[Path, str]:
     manifest = load_manifest()
     path = TEMPLATE_DIR / f"{key}.yaml"
     if key not in manifest or not path.is_file():
@@ -222,5 +268,21 @@ def load_template(key: str) -> PromptTemplate:
             "file, or save the new wording as the next version, add it to the manifest, and "
             "record the reason in the work log."
         )
+    return path, digest
+
+
+def load_template(key: str) -> PromptTemplate:
+    """Load a template by key (e.g. ``persona_v1``) and check it against the manifest."""
+    path, digest = _frozen(key)
     data = yaml.safe_load(path.read_text(encoding="utf-8"))
     return PromptTemplate(key, data, digest)
+
+
+def load_template_data(key: str, kind: str) -> tuple[dict[str, Any], str]:
+    """A frozen template of another kind, checked against the manifest: its data and its SHA-256."""
+    path, digest = _frozen(key)
+    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    check_template_data(key, data)
+    if data.get("kind") != kind:
+        raise ConfigError(f"prompt template {key!r} is of kind {data.get('kind')!r}, not {kind!r}")
+    return data, digest

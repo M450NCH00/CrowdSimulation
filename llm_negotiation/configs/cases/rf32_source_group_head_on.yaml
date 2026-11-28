@@ -1,0 +1,31 @@
+# Issue #110 (RF-32): the baseline runs that the group head-on cases are taken from, made the way
+# round 1's head-on cases were (configs/cases/source_head_on.yaml): round 1's corridor, the primary
+# baseline (plain ORCA, perturbed), paired seeds, two repeats. No model is called.
+#
+#   python run_experiment.py configs/cases/rf32_source_group_head_on.yaml
+#
+# Four layouts: 2 v 1 (a pair side by side meets one person) and 2 v 2 (two pairs meet), each in
+# round 1's two geometries. A pair is 0.63 m apart centre to centre (configs/scenarios/
+# group_head_on.yaml). "aligned": each group centred on the centre line. "apart_20cm": each group
+# shifted 10 cm to its own left, as round 1's apart_20cm shifts each person ([0.1, -0.1]).
+schema_version: 1
+layer: avoidance
+experiment_name: rf32_source_group_head_on
+description: Conflict-case source (issue #110). Small groups head-on in round 1's corridor, four layouts, primary baseline, plain ORCA.
+scenario: configs/scenarios/group_head_on.yaml
+baseline: orca_perturbed_v1
+
+design:
+  seed: 32100
+  seeding: paired
+  repeats: 2
+  factors:
+    layout:
+      - name: 2v1_aligned
+        scenario_overrides: {geometry: {eastbound: [0.315, -0.315], westbound: [0.0]}}
+      - name: 2v1_apart_20cm
+        scenario_overrides: {geometry: {eastbound: [0.415, -0.215], westbound: [-0.1]}}
+      - name: 2v2_aligned
+        scenario_overrides: {geometry: {eastbound: [0.315, -0.315], westbound: [0.315, -0.315]}}
+      - name: 2v2_apart_20cm
+        scenario_overrides: {geometry: {eastbound: [0.415, -0.215], westbound: [0.215, -0.415]}}

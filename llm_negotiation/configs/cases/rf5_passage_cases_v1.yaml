@@ -1,0 +1,24 @@
+# Issue #60 (RF-5): which conflict cases to take from the in-passage case-source runs that start
+# the pair 0.3 m apart, with room for a person pulling a large suitcase (the user's choice,
+# 2026-10-23, WORK_LOG-60.md). Issue #32's passage cases start the pair 0.1 m apart and cannot
+# take that body; they are kept, unchanged, for designs that do not vary load.
+#
+#   python -m negsim.rulegen.cases extract configs/cases/rf5_passage_cases_v1.yaml
+#
+# The rules are si32_passage_cases_v1.yaml's, word for word: pair interactions of the primary
+# baseline, plain ORCA, at tier T1 or above, whose two agents perceived each other when the pair
+# formed, approaching each other; one case per source experiment and layout.
+schema_version: 1
+case_set: rf5_passage_v1
+description: "The in-passage cases of issue #60: as issue #32's, the pair 0.3 m apart; one per layout of the two passage scenarios, from the primary baseline."   # quoted: unquoted, YAML reads ' #60' on as a comment
+sources:
+  - runs/rf5_source_passage_meet_middle
+  - runs/rf5_source_passage_meet_with_speeds
+eligibility:
+  baseline: orca_perturbed_v1
+  min_tier: T1
+  formation_classes: [head_on, crossing, overtaking, single_file_segment]
+strata:
+  by: [experiment, variant]
+  per_stratum: 1
+  seed: 60
