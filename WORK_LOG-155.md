@@ -55,6 +55,66 @@ Decided by the user on 2026-11-28:
   after the corrections, so it does not contradict this.
 - Next step: ask the user which target `resolve_v11` should have (asked; "Recovery cue").
 
+### 2026-11-28 08:51 UTC — resolve_v11, the gap measure, tests, config, the start-walls analysis
+- What I did:
+  - `negsim/resolution/view.py`: a `Sideways` record (gap then and now, each one's move across, metres,
+    + to the agent's left) and `SeenPerson.sideways`, None by default and left out of the record when
+    None (as `from_a_m`).
+  - `negsim/resolution/perceive.py`: `Body.path_rad` (optional, last field, so the grid's positional
+    `Body(...)` is unchanged; None falls back on facing); `_Look.me` keeps the agent's own body at each
+    look; `sideways_since()` works it out, only under a core template with `sideways_gap`.
+  - `negsim/resolution/prompt.py`: `CoreTemplate.sideways_gap` and `_gap()`, on full and short lines.
+  - `resolve_v11.yaml`, frozen in MANIFEST (sha256 `c6d2694f…`): `resolve_v9` word for word plus the
+    flag and four view keys.
+  - `configs/resolution/rf54_round1_head_on_sideways_gap.yaml`: RF-40's with silent only, the core
+    template and a placeholder cap (USD 0.01) until the approval. `--plan`: 272 silent sessions.
+  - `analysis/start_walls.py` (with tests): the start-and-recovery table, to replace the scratch scripts.
+- Decisions of mine (to check):
+  - **Across the path, not the direction of travel.** Mid-sidestep the travel direction is turned by
+    up to 30°, and the metres along the corridor would read as sideways.
+  - **Both sides named.** The first wording ("has grown from 0.2 m to 0.6 m, and their centre is now
+    0.6 m to your left") hid a crossing: in the 20 cm geometry, both stepping to their own right takes
+    each across the other's line. Now: "their centre was 0.2 m to your right of yours and is now 0.6 m
+    to your left of yours, so the gap between your centres has grown." Changed before freezing.
+  - **Printed only once one of the two has moved across** (to 0.1 m), so decision 1 is resolve_v9's.
+- Found on the way: under resolve_v9, someone 5 to 10 m away gets one short line with no
+  "they have moved over" (that is full detail only). At decision 2 the two are about 7.8 m apart, so
+  RF-40's agents were not told that the other had moved at all; only their own move. resolve_v11's
+  line is printed on short lines too, so it also adds the other's move there. That is part of what
+  RF-54 tests, and the report must say so.
+- **Correction:** the first entry's "6 of those 10" dances rounded decision times to whole seconds.
+  `analysis/start_walls.py` counts two changes of wall less than D5's 1.0 s apart (turn-taking may ask
+  the second person 0.1 s after the first): **7 of the pilot's 10** failed same-wall sessions, and
+  2 of RF-40's 256 sessions in all. Issue #155's body corrected the same day.
+
+  | | RF-40 (256) | Pilot (64) |
+  | --- | --- | --- |
+  | same wall: sessions, resolved, dances (failed) | 111, 44, 0 (0) | 18, 8, 10 (7) |
+  | opposite walls | 136, 115, 2 (1) | 40, 37, 4 (3) |
+  | one never sidesteps | 9, 4, 0 | 6, 1, 0 |
+- Result: `tests/test_rf54_sideways_gap.py`, 15 passed, including a scripted sidestep followed by a
+  plain step (same wall and opposite walls), whose numbers match the 0.4 m sidesteps and the 20 cm
+  offset; decision 1 and every v9 record unchanged. `analysis/tests/test_start_walls.py`, 3 passed.
+- Next step: the related suites and the mock rehearsal (running), then the cost estimate.
+
+### 2026-11-28 09:16 UTC — mock rehearsal and the cost estimate
+- What I did: `python run_experiment.py configs/resolution/rf54_round1_head_on_sideways_gap.yaml --out
+  runs_mock/rf54` (08:50 to about 09:00 UTC). Related suites rerun (a first run was cut off by my own
+  20-minute `timeout`; it showed one failure: `test_ethnicity`'s list of configs written after
+  issue #92, which every new config breaks; RF-54's added).
+- Result: 272 sessions completed, USD 0. 2,717 calls, 1,369 prompt tokens a call (RF-40's real silent
+  calls: 1,367). In 1,782 prompts, the gap line is in 426 of the 1,160 later ones and in none of the
+  opening ones; the "both moved over" line in none (the mock's policy never moves both the same way).
+- **Cost estimate** (off-peak): RF-40's silent sessions cost USD 0.3751 for 2,265 real calls (USD
+  0.000166 a call). The template adds a line or two to some later prompts (about 1%). At RF-40's call
+  count, USD 0.38; at the mock's (which overstated RF-39's calls), USD 0.45. **About USD 0.38 to 0.46
+  for 272 sessions; about USD 0.11 to 0.14 for repeat 1 and the pairs (80).** Peak hours cost more:
+  run off-peak only.
+- Next step: ask the user for the size and the cap; record them in CLAUDE.md before any paid call.
+- Related suites (12 modules, 22 min): 365 passed, 21 skipped, 1 failed: `test_ethnicity`'s config
+  list for RF-54, the run having started before the fix was added; rerun alone after it, it passes
+  (12 passed, 22 skipped of that selection). The full suite is still to run before the PR.
+
 ## Open questions / risks
 - Both may correct at the same pause (the dance), as 6 of the pilot's 10 same-wall failures did. The
   cue may raise recoveries and the dance together.
