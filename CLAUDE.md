@@ -156,6 +156,8 @@ Budget:
   (5.61 topped up, 0.00 granted).
   After issue #155's run with its pilot (USD 0.3512 in the ledger, cap 0.60): **USD 5.26**,
   checked 2026-11-28.
+  After issue #157's run with its pilot (USD 0.3420 in the ledger, cap 0.60): **USD 4.91**,
+  checked 2026-11-28.
 
 ### Phase 1 (on hold): the behaviour dataset
 The task from the first supervisor meeting, on hold since the second meeting.

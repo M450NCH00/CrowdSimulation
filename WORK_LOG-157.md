@@ -77,10 +77,40 @@ The approval and cap are asked for after the mock rehearsal.
 - Outcomes against RF-40's same 24 (too few to read): resolved 22 against 19.
 - Decision [mine, within the approved plan]: nothing to fix; the remaining 248 started 13:33:11 UTC.
 
+### 2026-11-28 14:21 UTC — the full suite (while the run goes on)
+- `llm_negotiation/tests`: **2,536 passed, 23 skipped** (45 min); `analysis/tests`: **138 passed**. At
+  commit `a4893be7f`.
+
+### 2026-11-28 15:25 UTC — the run is complete (272 of 272), compared with RF-40 and RF-54
+- The remaining 248: 13:33:11 to 15:13:00 UTC. No sleep events (Kernel-Power 506/507) in the last 3 h.
+- **Spend:** USD 0.3420 in the ledger (2,116 lines with the pilot's 174, all off-peak, no error), cap
+  USD 0.60. Balance (`GET /user/balance`): **USD 4.91** (5.26 before). Recorded in `CLAUDE.md`'s Budget.
+- Analysis: `runs/rf55_round1_head_on_short_moved/analysis/rf55_tables.py` (three-way, reusing RF-54's
+  committed helpers) and `analysis.compare` (repeat 1). Written up in `comparison_report.md` there.
+- Result: resolved **206/256** (RF-40 163, RF-54 191); against RF-40, McNemar p < 0.0001; RF-54 against
+  RF-55, 49 lost and 34 gained (p = 0.12; 20 cm apart p = 0.053). Same-wall starts 112 (RF-40 111) and
+  recovered 0.71 (RF-40 0.40, RF-54 0.55; against RF-54, Fisher p = 0.021). Stepping back after both
+  moved the same way: 0.40 (RF-40 0.12, RF-54 0.17; against RF-54, p < 0.0001). Dances in same-wall
+  starts: 9 (4 failed), against 0 and 2.
+- So RF-54's gain was the move being told on short lines; the gap numbers did not add to it. Four sampled
+  RF-54 replies read an unchanged 0.2 m centre-to-centre gap as room (an inference from four replies).
+- Next step: commit, push, open the PR (closes #157).
+
 ## Open questions / risks
+- The dance rose (9 of 112 same-wall starts). People do it too (to check against RF-14's studies).
+- `resolve_v12` uses `resolve_v9`'s 2° threshold, more sensitive than RF-54's 0.1 m; part of the
+  difference from RF-54 may be that more moves were told.
 - `resolve_v12` tells *that* the other moved but not *where they now are* against the agent. If RF-55
   matches RF-54, the gap numbers added nothing; if it matches RF-40, the gain was the numbers (or
   "both moved over"); in between, both helped. A tie at this size (256) cannot be read finely:
   RF-54's gain was 28 sessions.
 
 ## Summary (fill in at the end)
+- **Built:** `resolve_v12` (frozen), `seen_short_moved` in `prompt.py` (no change to the perceiver or
+  the view record), its config and tests. Earlier templates and configs render and record as before
+  (tested; full suite 2,536 passed, 23 skipped; analysis 138).
+- **Run:** paid, USD 0.3420 of a USD 0.60 cap, 272 sessions, balance USD 4.91.
+- **Found:** telling people at 5 to 10 m that the other has moved over resolved 0.80 of RF-40's silent
+  design sessions against 0.64 (p < 0.0001), and more than RF-54's gap numbers did (0.75; p = 0.12).
+  Same-wall starts recovered 0.71; stepping back after both moved the same way rose to 0.40. The dance
+  rose too (9 of 112 same-wall starts).

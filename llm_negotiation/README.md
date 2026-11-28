@@ -163,6 +163,10 @@ of paid runs and a cap for its round, recorded in `CLAUDE.md`.
     `negsim/resolution/perceive.py`'s `sideways_since`). On RF-40's 272 silent sessions with thinking off it
     resolved 191 of 256 against 163 (McNemar p = 0.009); same-wall starts recovered 0.55 against 0.40. It also
     tells, on short lines, that the other moved at all, which `resolve_v9` left out; the two are not separated.
+  - only the move on short lines: RF-55 (#157, *done*, paid, USD 0.34: `runs/rf55_round1_head_on_short_moved/comparison_report.md`).
+    `resolve_v12` is `resolve_v9` plus its own "they have moved over to your {side}" at 5 to 10 m too
+    (`seen_short_moved`). It resolved 206 of 256 against RF-40's 163 and RF-54's 191: the move being told was the
+    helpful half of `resolve_v11`, and the gap numbers did not add to it. Same-wall starts recovered 0.71.
 - **Round 2, meeting in a narrow passage (lean):** RF-19 (#75) screening; RF-13 (#68) Phase B
   (optional; moved from round 1 by the user, 2026-10-27); RF-20 (#76) extract, test with earlier
   rules, verify.
