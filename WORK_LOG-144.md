@@ -134,6 +134,38 @@ off and 10 times with it on, on `deepseek-flash`: 400 calls.
   all right). One repeat is too few to compare, but the run went ahead as planned.
 - Started the other 360 calls at 03:37 UTC.
 
+### 2026-11-28 03:37 to 04:15 UTC — the rest of the run (360 calls, USD 0.1894)
+- Completed: 400 of 400 recorded, no failed call, all off-peak, fingerprint RF-40's on all 400. Ledger:
+  400 lines, USD 0.210605 for `rf53_stage1_frames_probe`. Balance at 04:16 UTC: **USD 1.38**.
+- Thinking on: 187/200 correct; thinking off: 114/200 (Fisher p < 0.0001).
+- 10 thinking-on replies were cut off at 8,000 tokens (6 on probe 3, 1 on p13, 3 on p15).
+- The report's tables come from `python -m negsim.probe.report` (new, `negsim/probe/report.py`: Wilson
+  intervals and a two-sided Fisher exact test in the standard library; tested against R's value).
+
+### 2026-11-28 04:16 to 04:40 UTC — hand check and report
+- **The scorer, by eye:** I listed every distinct (probe, arm, first line, label) of the 400 replies.
+  None was misread.
+- **Probe 3 is ambiguous English.** "I'll pass you on my right" can mean "you will be on my right"
+  (`probes.md`'s answer, left) or "I'll keep to my right" (right). The three "right" replies with
+  thinking on took the second reading consistently, and the six cut-off ones went back and forth
+  between the two. Reported, with group A also given without probe 3. The probe is not changed (frozen).
+- **With thinking off, the error is the step after the conversion.** 17 of the 19 wrong replies on
+  p01 and p07 state the conversion correctly ("their left, which is your right") and then move into
+  that side. Counted with a keyword pattern, and spot-read.
+- **Question 4:** 23 reasoning texts read (repeat 5 of every probe, and probe 3's three wrong ones).
+  All 23 end in the answer given. The conversion is done right wherever it is done, mostly by compass
+  or vectors.
+- **My own errors, caught before committing:** the first draft of the report had two numbers I had not
+  computed:
+  - "right in 133 of 160 replies" (it is 74 of 90);
+  - "every row but A passes Holm" (Holm stops at A, so A, F and D do not hold).
+  
+  Both were computed and corrected, and so was a ranking of reasoning lengths.
+- **Full suite** (started 03:28, before the approval commit): 2,501 passed, 20 skipped, 1 failed. The
+  failure is the old test asserting the committed cap was 0, which the approval replaced. The current
+  `tests/test_probe.py` passes (43), and after the run folder was committed, the run-count tests
+  (`test_avoidance_runs`, `test_resolution`, `test_viz`) passed too (217 with the probe tests).
+
 ## Open questions / risks
 - **`max_tokens` and the reasoning:** the pilot measured it (above). Cut-off replies count as `unclear`.
   Earlier, before the pilot: inferred, not stated by DeepSeek. If 8,000 is too small,
@@ -147,4 +179,29 @@ off and 10 times with it on, on `deepseek-flash`: 400 calls.
   changed before the run (a new version, `frames_probes_v2`).
 - The supervisor's exact words for SV15 are not recorded.
 
+- **Probe 3's wording** has two readings, so its expected answer is one of two defensible ones.
+- **Stage 2** is not approved. At stage 1's reasoning length it would cost about USD 5.6 off-peak for
+  silent and talk (balance USD 1.38) and take about 12.5 hours of calls. Its reply cap and reasoning
+  effort are open choices.
+
 ## Summary (fill in at the end)
+- **Built** (tasks 1 to 4):
+  - SV15 recorded;
+  - DeepSeek's thinking-mode documentation re-checked and cached;
+  - the reasoning text kept (thinking-off records unchanged: tested, and a before-and-after mock
+    rehearsal of RF-40's config);
+  - a probe runner (`negsim/probe/`), RF-43's probes frozen, a scorer and a report module, all tested
+    on the mock and on a fake transport.
+- **Run:** stage 1, paid, USD 0.2106 of a USD 0.50 cap, 400 calls, balance USD 1.38.
+- **Found:**
+  - thinking mode fixes the left-and-right conversion on the probes (0.94 correct against 0.57);
+  - its misses are an ambiguous probe and replies cut off at 8,000 reasoning tokens;
+  - with thinking off, the conversion is mostly stated right but the move goes into the same side,
+    the facing note does not help, and a heading is invented 19 times in 20 (never with thinking on);
+  - `max_tokens` counts the reasoning;
+  - reasoning costs about 26 times as much and takes about 14 times as long per call.
+- **Verified:**
+  - the full negsim suite (2,501 passed; the one failure is the replaced cap test, rerun passing);
+  - the probe and run-count tests after the data commit;
+  - every score checked by eye;
+  - every number in the report recomputed from the records.

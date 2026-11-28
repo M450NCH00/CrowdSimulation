@@ -147,6 +147,9 @@ Budget:
   endpoint shows two decimals, and 2.96 less 0.3476 is 2.6124).
   After issue #138's run with its pilot (USD 1.0239 in the ledger over its three experiments, cap 2.00):
   **USD 1.59**, checked 2026-11-27.
+  Checked again before issue #144's stage 1: **USD 1.59**, 2026-11-28 (no paid call since #138).
+  After issue #144's stage 1 with its pilot (USD 0.2106 in the ledger, cap 0.50): **USD 1.38**,
+  checked 2026-11-28.
 
 ### Phase 1 (on hold): the behaviour dataset
 The task from the first supervisor meeting, on hold since the second meeting.
