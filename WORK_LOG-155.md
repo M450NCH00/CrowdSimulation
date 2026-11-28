@@ -115,6 +115,33 @@ Decided by the user on 2026-11-28:
   list for RF-54, the run having started before the fix was added; rerun alone after it, it passes
   (12 passed, 22 skipped of that selection). The full suite is still to run before the PR.
 
+### 2026-11-28 10:45 UTC — approval, cap and balance (commit `d73bdfec0`)
+- The user answered "Yes go with your recommendation": all 272 sessions, cap **USD 0.60**. Recorded in
+  `CLAUDE.md` (pending sign-offs, item 1, #155 only) and the config (`budget.cap_usd: 0.60`), with a
+  test that the two agree (`test_rf54_sideways_gap.py`, 16 passed).
+- Balance (`GET /user/balance`, the key not printed): **USD 5.61** at 10:44 UTC (0.61 plus the user's
+  USD 5 top-up). Recorded in `CLAUDE.md`'s Budget.
+- Saturday, so off-peak all day (`pricing.tier_at`).
+- Next step: the pilot, `--client deepseek --confirm --limit 24`, started 10:46 UTC, then its replays.
+
+### 2026-11-28 11:00 UTC — the pilot (24 sessions, paid, off-peak)
+- 10:46:54 to 10:58:26 UTC. 211 calls, **USD 0.0369** (ledger: 211 lines), all off-peak, no error.
+  Projected for 272: about USD 0.42, inside the cap of USD 0.60.
+- Checks: the opening prompt of all 24 sessions is RF-40's word for word; the model fingerprint is
+  RF-40's (`bc19ba97…`, 163 of 163 attempts); the gap line in 196 later prompts, "both moved over" in
+  72 (the mock never moved both the same way, so this is its first real use). Read two collisions by
+  hand: the numbers follow the trajectory (both stepping towards the +y wall in the 20 cm geometry is
+  told as "both moved over to your left/right" and "now in line with yours … shrunk").
+- Outcomes against RF-40's same 24 sessions (too few to read): resolved (plan only) 15 against 18
+  (12 both, 6 lost, 3 gained); unreadable 2 against 3. Of the 20 design sessions, 12 started on the
+  same wall (RF-40: 8 of these 20); decision 1's prompt is identical, so that is sampling at
+  temperature 1.0. Same-wall starts resolved 5 of 12.
+- Seen in both collisions read: told the gap shrank, both people stepped further towards the same
+  wall. When both reach the wall and stop moving across, the gap line is not printed (neither moved),
+  as designed.
+- Decision [mine, within the approved plan]: nothing to fix; the remaining 248 started 11:00:07 UTC
+  (resuming the same folder, `stop_at_cap`).
+
 ## Open questions / risks
 - Both may correct at the same pause (the dance), as 6 of the pilot's 10 same-wall failures did. The
   cue may raise recoveries and the dance together.
