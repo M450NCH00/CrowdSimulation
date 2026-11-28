@@ -1,5 +1,7 @@
 # RF-43, task 4: static probes of the left-and-right conversion (optional, **not run**)
 
+*Issue #144 (RF-53), 2026-11-28:* these probes are frozen, with small wording changes listed in its header, as `llm_negotiation/configs/probe/frames_probes_v1.yaml`, which RF-53's stage 1 sends (`python -m negsim.probe`). This file stays as RF-43 wrote it.
+
 Issue #132. **Nothing here has been sent to a model.** A run would be a paid call. By `CLAUDE.md` it needs the user's approval and a cap recorded for its own issue first ("Pending sign-offs", item 1). It would also need the mock client first, like every feature.
 
 **Why.** RF-40's errors (README, E1 to E3) happened inside a simulation, mixed with timing, distance and late moves. These prompts test only the conversion, with one answer each. They separate:

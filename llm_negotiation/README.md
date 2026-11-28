@@ -144,7 +144,12 @@ of paid runs and a cap for its round, recorded in `CLAUDE.md`.
     `runs/rf52_grid_analysis/report.md`) runs it. The gate passed in both frames (0.87 and 0.85, against
     RF-40's 0.64); the absolute frame removes the wrong-way steps but both agents lean to one wall when aligned.
     RF-49 shows the gain is the grid's, not the menu's.
-    **The grid is an add-on that modifies no existing code** (AS1).
+    **The grid is an add-on that modifies no existing code** (AS1);
+  - thinking mode (SV15, the user's report of 2026-11-25): RF-53 (#144). Stage 1 is built, mock only:
+    `python -m negsim.probe configs/probe/rf53_stage1_frames_probe.yaml` sends RF-43's 20 static probes
+    (frozen as `configs/probe/frames_probes_v1.yaml`) 10 times with thinking off and 10 with it on, scores
+    each reply's first line (`negsim/probe/score.py`) and keeps the reasoning text, which the client no longer
+    drops. Its paid run awaits the user's approval; stage 2 (RF-40's sessions with thinking on) is not started.
 - **Round 2, meeting in a narrow passage (lean):** RF-19 (#75) screening; RF-13 (#68) Phase B
   (optional; moved from round 1 by the user, 2026-10-27); RF-20 (#76) extract, test with earlier
   rules, verify.
