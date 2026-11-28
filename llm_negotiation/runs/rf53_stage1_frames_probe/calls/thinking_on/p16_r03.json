@@ -1,0 +1,58 @@
+{
+  "record_version": 1,
+  "experiment_name": "rf53_stage1_frames_probe",
+  "call_id": "thinking_on/p16_r03",
+  "arm": "thinking_on",
+  "thinking": true,
+  "probe_id": "p16",
+  "group": "E",
+  "kind": "named_side",
+  "repeat": 3,
+  "probes_sha256": "6a2986651f1afa2b41109138375b20a430ee4533d9760c5486fb58f0320c4052",
+  "started_utc": "2026-11-28T03:45:50.518+00:00",
+  "messages": [
+    {
+      "role": "user",
+      "content": "You are walking along a straight corridor 1.75 m wide. Another person, Person 2, is walking towards you, facing you, 6 m ahead, in the middle of the corridor, as you are. The corridor has two long sides, the window side and the shop side. You are 0.9 m from the window side. Person 2 says: \"I'll keep to the window side.\" Which side do you move towards, the window side or the shop side?\n\nAnswer on the first line with your answer only (a word, a short phrase or a lane number), then give one sentence saying why on the next line."
+    }
+  ],
+  "request": {
+    "model": "deepseek-flash",
+    "temperature": 1.0,
+    "max_tokens": 8000,
+    "json_mode": false,
+    "thinking": true
+  },
+  "is_mock": false,
+  "raw_output": "Shop side  \nPerson 2 is taking the window side, so you should move to the opposite side to pass safely.",
+  "reasoning_content": "We need answer. Need parse. Corridor width 1.75. You are 0.9 m from window side. Other in middle? \"Person 2 ... in the middle of the corridor, as you are.\" Ambiguity: person 2 6m ahead, in middle; \"as you are\" maybe you are in middle? But says You are 0.9 m from window side. Width 1.75, middle would be 0.875 from each side, so you are 0.9 from window side, essentially middle but 0.025 off. Person2 says \"I'll keep to the window side.\" Which side do you move towards? Need reason about passing convention? This is classic \"Person says I'll keep to the window side\" means they will move toward window side, so you should move to shop side to avoid collision. But there may be hidden perspective/facing issue: Person 2 is facing you, their window side is same physical side? If both in corridor, window side absolute. They say keep to window side, so move to window? Wait if someone coming toward you says \"I'll keep to the window side\" meaning they will take window side, so you should take shop side. However possible pronoun interpretation: \"keep to my left/right\"? But says window side unambiguous.\n\nNeed account \"You are 0.9m from window side\" might make apparent left/right? The corridor sides named, so no. Maybe trick: Since you're 0.9 from window side and width 1.75, you have 0.85 to shop side. If Person 2 in middle at 6m and says will keep to window side, they will move toward window side. To let them, you move towards shop side. But is there enough room after both move? Let's calculate? Corridor 1.75 wide. You at 0.9 from window side = 0.85 from shop side; roughly center. Person 2 middle = 0.875 from window? If they keep window side, they move left (from our perspective?) You should move opposite: shop side. This increases separation.\n\nNeed answer first line only, then sentence. Could be \"Shop side\" not \"the shop side\". First line answer only. Second sentence why. Ensure no extra.\n\nNeed consider if \"window side\" from Person 2 facing you: If Person 2 says \"I'll keep to the window side\", physical side. Yes.\n\nLet's final concise. \n",
+  "finish_reason": "stop",
+  "response_id": "edd4ea3f-52be-4bec-bdaa-35779e0a46b3",
+  "model": "deepseek-flash",
+  "system_fingerprint": "bc19ba97cbe016479903222bb1578db6",
+  "usage": {
+    "prompt_tokens": 163,
+    "completion_tokens": 547,
+    "prompt_cache_hit_tokens": 0,
+    "prompt_cache_miss_tokens": 163,
+    "reasoning_tokens": 522
+  },
+  "cost_usd": 0.00035265,
+  "price_tier": "off_peak",
+  "latency_s": 3.338,
+  "expected": {
+    "correct": [
+      "shop"
+    ],
+    "wrong": [
+      "window"
+    ]
+  },
+  "score": {
+    "first_line": "Shop side",
+    "label": "shop",
+    "outcome": "correct",
+    "ambiguous": false
+  },
+  "api_error": null
+}
