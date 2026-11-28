@@ -267,3 +267,16 @@ The user answered four questions (all "Recommended"):
   stopped at the user's request (they are shutting down); **the user will run it next session.**
   The PR says so.
 - #55: RF-49 ticked, with the PR and findings; the "Next" paragraph updated. #138: a results comment.
+
+### 2026-11-28 01:46 to 02:37 UTC — the full suite, one fix, the PR's Tests line
+- The full negsim suite, run 01:46 to 02:33 UTC (47 min, not the 18 estimated): 2,456 passed,
+  18 skipped, 2 failed. It ran in peak hours; the cap-guard test
+  (`test_stop_at_cap_runs_until_the_guard_stops_it…`) passed anyway.
+- Both failures: `test_ethnicity.py::test_configs_written_before_have_no_ethnicity_anywhere` on
+  `rf49_round1_head_on_menu_abs_swap.yaml` and `menu_table_abs_swap_v1.yaml`, missing from its list
+  of configs written after #92. The other two RF-49 configs were skipped only because their names end
+  like RF-47's and RF-48's. Not an ethnicity leak: the swap config's design is RF-48's (RF-40's
+  ethnicity draw, approved), and the menu table is not an experiment config.
+- Fix: both added to the list (commit `c6d687883`, 02:36 UTC). `tests/test_ethnicity.py` then passed:
+  63 passed, 20 skipped. The full suite was not rerun after this one-line change [my choice].
+- PR #152's "Tests" line updated with these results.
