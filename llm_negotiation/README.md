@@ -157,6 +157,12 @@ of paid runs and a cap for its round, recorded in `CLAUDE.md`.
     (McNemar p = 0.60, within RF-40's own repeat-to-repeat noise). Both stepping towards the same wall fell
     from 0.24 to 0.05 (p = 0.0004). What still fails is mostly a swap: both step aside correctly, then move
     back across. The full stage 2 is not approved.
+  - the sideways gap: RF-54 (#155, *done*, paid, USD 0.35: `runs/rf54_round1_head_on_sideways_gap/comparison_report.md`).
+    RF-53's swap was mostly a same-wall start, so `resolve_v11` tells each person, worked out by code, how the
+    sideways gap between their centres changed since they last looked (`sideways_gap: true`;
+    `negsim/resolution/perceive.py`'s `sideways_since`). On RF-40's 272 silent sessions with thinking off it
+    resolved 191 of 256 against 163 (McNemar p = 0.009); same-wall starts recovered 0.55 against 0.40. It also
+    tells, on short lines, that the other moved at all, which `resolve_v9` left out; the two are not separated.
 - **Round 2, meeting in a narrow passage (lean):** RF-19 (#75) screening; RF-13 (#68) Phase B
   (optional; moved from round 1 by the user, 2026-10-27); RF-20 (#76) extract, test with earlier
   rules, verify.

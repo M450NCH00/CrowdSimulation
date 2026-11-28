@@ -217,6 +217,12 @@ class CoreTemplate:
         return bool(self.data.get("heard_frame", False))
 
     @property
+    def sideways_gap(self) -> bool:
+        """Whether the perceiver works out the sideways gap to each person seen at the last look too,
+        and the template prints it (``resolve_v11``, issue #155)."""
+        return bool(self.data.get("sideways_gap", False))
+
+    @property
     def walls(self) -> Optional[dict[str, str]]:
         """Issue #137 (``resolve_menu_abs_v1``): the names of the corridor's two long walls, by
         ``view.WALLS`` (wall a at +y), for a template written in the corridor's own frame; else None."""
@@ -370,6 +376,7 @@ class CoreTemplate:
                     lines.append(fill(v["seen_short_gender"], gender=v["genders"][person.gender]))
                 if person.signal != "none" and "seen_short_signal" in v:
                     lines.append(fill(v["seen_short_signal"], signal=v["signals_seen"][person.signal]))
+                lines += self._gap(person)
                 if "seen_short_extra" in v:  # resolve_v3 (issue #61): the factor lines on a short line too
                     lines += [fill(v["seen_short_extra"], line=line) for line in (*person.factor_lines, *person.pairwise_lines)]
                 continue
@@ -394,6 +401,7 @@ class CoreTemplate:
                     words = [self._towards(word, change, frame, walls) for word, change in zip(words, person.changes)]
                 joined = words[0] if len(words) == 1 else ", ".join(words[:-1]) + f" {v['and']} " + words[-1]
                 lines.append(fill(v["seen_changes"], changes=joined))
+            lines += self._gap(person)
             lines += [fill(v["seen_extra"], line=line) for line in (*person.factor_lines, *person.pairwise_lines)]
         return lines
 
@@ -412,6 +420,32 @@ class CoreTemplate:
         """Issue #137: "moved over towards {wall}" for a move to the agent's left or right."""
         side = {"moved_left": "left", "moved_right": "right"}.get(change)
         return word if side is None else fill(word, wall=walls[frame.wall_on(side)])
+
+    def _gap(self, person: Any) -> list[str]:
+        """Issue #155 (``resolve_v11``): how the sideways gap between the agent and this person changed
+        since the agent last looked, when either of the two moved across (to 0.1 m, as every distance
+        along the way is told): a line when both moved over to the same side, then where their centre
+        was and is against the agent's and whether the gap grew, shrank or stayed the same (to 0.1 m).
+        Nothing under a template without the lines, or for someone not seen at the last look."""
+        v, gap = self.data["view"], person.sideways
+        if gap is None or "seen_gap" not in v:
+            return []
+        zero = along(0.0)
+        me_moved, they_moved = along(abs(gap.moved_me_m)) != zero, along(abs(gap.moved_them_m)) != zero
+        if not (me_moved or they_moved):
+            return []
+        lines = []
+        if me_moved and they_moved and (gap.moved_me_m > 0.0) == (gap.moved_them_m > 0.0):
+            lines.append(fill(v["seen_gap_both"], side="left" if gap.moved_me_m > 0.0 else "right"))
+        then, now = along(abs(gap.gap_then_m)), along(abs(gap.gap_now_m))
+        trend = "grown" if float(now) > float(then) else "shrunk" if float(now) < float(then) else "same"
+
+        def where(metres: str, signed: float) -> str:
+            key = "in_line" if metres == zero else "left" if signed > 0.0 else "right"
+            return fill(v["gap_where"][key], metres=metres)
+
+        lines.append(fill(v["seen_gap"], then=where(then, gap.gap_then_m), now=where(now, gap.gap_now_m), trend=v["gap_trends"][trend]))
+        return lines
 
     def _line_offset(self, person: Any) -> list[str]:
         """Where the centre of someone ahead is against the straight line ahead of the agent

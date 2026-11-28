@@ -104,6 +104,22 @@ class Frame:
 
 
 @dataclass(frozen=True)
+class Sideways:
+    """Issue #155 (RF-54): how the sideways gap between the agent and someone in view changed since
+    the agent last looked, for a core template with ``sideways_gap`` (``resolve_v11``).
+
+    Every value is in metres across the agent's *path* (where its path takes it now, not where it is
+    walking mid-sidestep), positive to the agent's own left: ``gap_then_m`` and ``gap_now_m`` are
+    where the other's centre is against the agent's, at the last look and now; ``moved_me_m`` and
+    ``moved_them_m`` are how far each of the two moved across the path in between."""
+
+    gap_then_m: float
+    gap_now_m: float
+    moved_me_m: float
+    moved_them_m: float
+
+
+@dataclass(frozen=True)
 class Me:
     """ABOUT YOU. ``age`` and ``gender`` are ``None`` when their switch hides them."""
 
@@ -139,6 +155,9 @@ class SeenPerson:
     #: Issue #137: their centre's distance from wall a, in a view with a ``Frame``; else None (and
     #: left out of the record).
     from_a_m: Optional[float] = None
+    #: Issue #155: the sideways gap since the agent last looked, under a core template with
+    #: ``sideways_gap``, for someone seen then too; else None (and left out of the record).
+    sideways: Optional[Sideways] = None
 
     def __post_init__(self) -> None:
         if self.detail not in DETAILS:
@@ -262,6 +281,8 @@ class View:
         for person in described["seen"]:
             if person["from_a_m"] is None:
                 del person["from_a_m"]
+            if person["sideways"] is None:  # issue #155, likewise only when set
+                del person["sideways"]
         for done in described["history"]:
             if done["left_wall"] is None:
                 del done["left_wall"]
