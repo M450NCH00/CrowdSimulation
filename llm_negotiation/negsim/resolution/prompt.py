@@ -376,6 +376,10 @@ class CoreTemplate:
                     lines.append(fill(v["seen_short_gender"], gender=v["genders"][person.gender]))
                 if person.signal != "none" and "seen_short_signal" in v:
                     lines.append(fill(v["seen_short_signal"], signal=v["signals_seen"][person.signal]))
+                if "seen_short_moved" in v:  # resolve_v12 (issue #157): a move over on a short line too
+                    moved = [change for change in person.changes if change in ("moved_left", "moved_right")]
+                    if moved:
+                        lines.append(fill(v["seen_short_moved"], changes=v["since_last_look"][moved[0]]))
                 lines += self._gap(person)
                 if "seen_short_extra" in v:  # resolve_v3 (issue #61): the factor lines on a short line too
                     lines += [fill(v["seen_short_extra"], line=line) for line in (*person.factor_lines, *person.pairwise_lines)]
