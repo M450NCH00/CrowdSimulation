@@ -135,11 +135,15 @@ of paid runs and a cap for its round, recorded in `CLAUDE.md`.
   - the menu: RF-47 (#136) a menu of described actions (*done*, mock only: `negsim/resolution/menu.py`);
     RF-48 (#137) an absolute frame, with neutral landmark names for the walls (AS5 as revised, 2026-11-26;
     *done*, mock only: `resolve_menu_abs_v1`, "the blue wall" and "the yellow wall");
-    RF-49 (#138, paid) runs both;
+    RF-49 (#138, *done*, paid: `runs/rf49_analysis/report.md`) runs both. The gate failed in every config
+    (own 0.49, absolute 0.31 and 0.30, against RF-40's 0.64): with the menu a third of first plans carry on, one
+    "a little" step does not clear the other, and in the absolute frame both lean to the same wall (by place,
+    not colour);
   - the grid: RF-50 (#139, *done*: `negsim/grid/`) and RF-51 (#140, *done*, mock only: `negsim/grid/agents.py`,
     `python -m negsim.grid.experiment`) build it, RF-52 (#141, *done*, paid: `python -m negsim.grid.paid`,
     `runs/rf52_grid_analysis/report.md`) runs it. The gate passed in both frames (0.87 and 0.85, against
     RF-40's 0.64); the absolute frame removes the wrong-way steps but both agents lean to one wall when aligned.
+    RF-49 shows the gain is the grid's, not the menu's.
     **The grid is an add-on that modifies no existing code** (AS1).
 - **Round 2, meeting in a narrow passage (lean):** RF-19 (#75) screening; RF-13 (#68) Phase B
   (optional; moved from round 1 by the user, 2026-10-27); RF-20 (#76) extract, test with earlier
