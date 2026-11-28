@@ -1,0 +1,239 @@
+# Issue #144 (RF-53), stage 1: RF-43's static probes of the left-and-right conversion, frozen.
+#
+# Source: literature/frames-of-reference/probes.md (issue #132, RF-43, task 4), which drafted the 20
+# probes and their expected answers but sent none. This file is what is sent, word for word: each
+# probe's `prompt` is the whole user message (there is no system message). Like a prompt template it
+# is frozen: a wording change means frames_probes_v2, never an edit (CLAUDE.md, track #55's
+# constraints). The runner checks this file's SHA-256 against the config's `probes_sha256`.
+#
+# How the wording differs from probes.md, all the assistant's choices (WORK_LOG-144.md), none changing
+# what a probe asks:
+# - The other person is named "Person 2" in every probe, so that group C's note is resolve_v9's own
+#   sentence word for word ("(Person 2 is facing you: their left is your right, and their right is
+#   your left.)", heard_seen_facing), and A and C differ only by that note. A message is written as
+#   resolve_v9 writes one heard: Person 2 says: "...".
+# - The answer instruction comes last, after the question, and allows a short phrase ("your right",
+#   group D) as well as a word or a lane number.
+# - Each question names its options ("left or right?", "the north wall or the south wall?"), as
+#   probe 1 does in probes.md. Probes 13 and 15 name only left and right, so that "cannot tell" is
+#   the model's own answer, not an offered option.
+#
+# Scoring (negsim.probe.score): the first non-empty line of the reply is read for one label of the
+# probe's `kind`. `correct` lists the labels scored correct and `wrong` those scored wrong; any other
+# reading is "unclear" (reported apart, and in the hand check).
+schema_version: 1
+name: frames_probes_v1
+source: literature/frames-of-reference/probes.md
+answer_line: >-
+  Answer on the first line with your answer only (a word, a short phrase or a lane number), then
+  give one sentence saying why on the next line.
+
+groups:
+  A: You hear a side in the speaker's own frame (RF-40's E2)
+  B: You hear a side in your own frame (RF-40's E2, the listener's frame)
+  C: The same messages with resolve_v9's facing note (RF-40's E3)
+  D: You are the speaker (RF-40's E1)
+  E: An absolute frame with no heading (does the model invent a heading?)
+  F: An absolute frame with the heading told
+  G: A grid (variants D and E of action-space.md)
+
+# kind: side (left / right / cannot_tell), their_side (left / right of the other person, as said to
+# them; "my ..." is unclear), wall (north / south), named_side (window / shop), lane (1 to 5).
+probes:
+  - id: p01
+    group: A
+    kind: side
+    correct: [left]
+    wrong: [right]
+    prompt: >-
+      You are walking along a straight corridor 1.75 m wide. Another person, Person 2, is walking
+      towards you, facing you, 6 m ahead, in the middle of the corridor, as you are.
+      Person 2 says: "I'll keep to my left." Which way do you move, left or right?
+  - id: p02
+    group: A
+    kind: side
+    correct: [right]
+    wrong: [left]
+    prompt: >-
+      You are walking along a straight corridor 1.75 m wide. Another person, Person 2, is walking
+      towards you, facing you, 6 m ahead, in the middle of the corridor, as you are.
+      Person 2 says: "I'll keep to my right." Which way do you move, left or right?
+  - id: p03
+    group: A
+    kind: side
+    correct: [left]
+    wrong: [right]
+    prompt: >-
+      You are walking along a straight corridor 1.75 m wide. Another person, Person 2, is walking
+      towards you, facing you, 6 m ahead, in the middle of the corridor, as you are.
+      Person 2 says: "I'll pass you on my right." Which way do you move, left or right?
+  - id: p04
+    group: B
+    kind: side
+    correct: [right]
+    wrong: [left]
+    prompt: >-
+      You are walking along a straight corridor 1.75 m wide. Another person, Person 2, is walking
+      towards you, facing you, 6 m ahead, in the middle of the corridor, as you are.
+      Person 2 says: "Go ahead, plenty of room on your right." Which way do you move, left or right?
+  - id: p05
+    group: B
+    kind: side
+    correct: [left]
+    wrong: [right]
+    prompt: >-
+      You are walking along a straight corridor 1.75 m wide. Another person, Person 2, is walking
+      towards you, facing you, 6 m ahead, in the middle of the corridor, as you are.
+      Person 2 says: "Coming through on your right." Which way do you move, left or right?
+  - id: p06
+    group: B
+    kind: side
+    correct: [right]
+    wrong: [left]
+    prompt: >-
+      You are walking along a straight corridor 1.75 m wide. Another person, Person 2, is walking
+      towards you, facing you, 6 m ahead, in the middle of the corridor, as you are.
+      Person 2 says: "Coming through on your left." Which way do you move, left or right?
+  - id: p07
+    group: C
+    kind: side
+    correct: [left]
+    wrong: [right]
+    prompt: >-
+      You are walking along a straight corridor 1.75 m wide. Another person, Person 2, is walking
+      towards you, facing you, 6 m ahead, in the middle of the corridor, as you are.
+      Person 2 says: "I'll keep to my left." (Person 2 is facing you: their left is your right, and
+      their right is your left.) Which way do you move, left or right?
+  - id: p08
+    group: C
+    kind: side
+    correct: [right]
+    wrong: [left]
+    prompt: >-
+      You are walking along a straight corridor 1.75 m wide. Another person, Person 2, is walking
+      towards you, facing you, 6 m ahead, in the middle of the corridor, as you are.
+      Person 2 says: "Go ahead, plenty of room on your right." (Person 2 is facing you: their left is
+      your right, and their right is your left.) Which way do you move, left or right?
+  - id: p09
+    group: C
+    kind: side
+    correct: [left]
+    wrong: [right]
+    prompt: >-
+      You are walking along a straight corridor 1.75 m wide. Another person, Person 2, is walking
+      towards you, facing you, 6 m ahead, in the middle of the corridor, as you are.
+      Person 2 says: "Coming through on your right." (Person 2 is facing you: their left is your
+      right, and their right is your left.) Which way do you move, left or right?
+  - id: p10
+    group: D
+    kind: their_side
+    correct: [right]
+    wrong: [left]
+    prompt: >-
+      You are walking along a straight corridor 1.75 m wide. Another person, Person 2, is walking
+      towards you, facing you, 6 m ahead, in the middle of the corridor, as you are.
+      You have decided to move to your left. Tell Person 2 which side of them you will pass on, using
+      their left or right: what do you say?
+  - id: p11
+    group: D
+    kind: their_side
+    correct: [left]
+    wrong: [right]
+    prompt: >-
+      You are walking along a straight corridor 1.75 m wide. Another person, Person 2, is walking
+      towards you, facing you, 6 m ahead, in the middle of the corridor, as you are.
+      You have decided to move to your right. Tell Person 2 which side of them you will pass on, using
+      their left or right: what do you say?
+  - id: p12
+    group: D
+    kind: their_side
+    correct: [left]
+    wrong: [right]
+    prompt: >-
+      You are walking along a straight corridor 1.75 m wide. Another person, Person 2, is walking
+      ahead of you the same way, 3 m ahead, in the middle of the corridor, as you are, and you are
+      overtaking them. You will move to your left to pass. Tell Person 2 which side of them you will
+      pass on, using their left or right: what do you say?
+  - id: p13
+    group: E
+    kind: side
+    correct: [cannot_tell]
+    wrong: [left, right]
+    prompt: >-
+      You are walking along a straight corridor 1.75 m wide. Another person, Person 2, is walking
+      towards you, facing you, 6 m ahead, in the middle of the corridor, as you are. The corridor has
+      two long walls, the north wall and the south wall. You are 0.9 m from the north wall.
+      Is the north wall on your left or on your right?
+  - id: p14
+    group: E
+    kind: wall
+    correct: [north]
+    wrong: [south]
+    prompt: >-
+      You are walking along a straight corridor 1.75 m wide. Another person, Person 2, is walking
+      towards you, facing you, 6 m ahead, in the middle of the corridor, as you are. The corridor has
+      two long walls, the north wall and the south wall. You are 0.9 m from the north wall.
+      Person 2 says: "I'll keep to the south wall." Which wall do you move towards, the north wall or
+      the south wall?
+  - id: p15
+    group: E
+    kind: side
+    correct: [cannot_tell]
+    wrong: [left, right]
+    prompt: >-
+      You are walking along a straight corridor 1.75 m wide. Another person, Person 2, is walking
+      towards you, facing you, 6 m ahead, in the middle of the corridor, as you are. The corridor has
+      two long sides, the window side and the shop side. You are 0.9 m from the window side.
+      Is the window side on your left or on your right?
+  - id: p16
+    group: E
+    kind: named_side
+    correct: [shop]
+    wrong: [window]
+    prompt: >-
+      You are walking along a straight corridor 1.75 m wide. Another person, Person 2, is walking
+      towards you, facing you, 6 m ahead, in the middle of the corridor, as you are. The corridor has
+      two long sides, the window side and the shop side. You are 0.9 m from the window side.
+      Person 2 says: "I'll keep to the window side." Which side do you move towards, the window side
+      or the shop side?
+  - id: p17
+    group: F
+    kind: side
+    correct: [left]
+    wrong: [right, cannot_tell]
+    prompt: >-
+      You are walking along a straight corridor 1.75 m wide. Another person, Person 2, is walking
+      towards you, facing you, 6 m ahead, in the middle of the corridor, as you are. The corridor has
+      two long walls, the north wall and the south wall. You are 0.9 m from the north wall. You are
+      walking east. Is the north wall on your left or on your right?
+  - id: p18
+    group: F
+    kind: side
+    correct: [right]
+    wrong: [left, cannot_tell]
+    prompt: >-
+      You are walking along a straight corridor 1.75 m wide. Another person, Person 2, is walking
+      towards you, facing you, 6 m ahead, in the middle of the corridor, as you are. The corridor has
+      two long walls, the north wall and the south wall. You are 0.9 m from the north wall. You are
+      walking west. Is the north wall on your left or on your right?
+  - id: p19
+    group: G
+    kind: lane
+    # probes.md: lane 2 is Person 2's; lane 4 keeps you apart, and staying in lane 3 also avoids them.
+    correct: ["3", "4"]
+    wrong: ["2"]
+    prompt: >-
+      The corridor is 5 lanes wide, numbered 1 to 5 from the north wall. You are in lane 3, walking
+      east. Another person, Person 2, is in lane 3, 6 cells ahead, walking west towards you.
+      Person 2 says: "I'm moving to lane 2." Which lane do you move to, if you move?
+  - id: p20
+    group: G
+    kind: lane
+    # Walking west, Person 2's left is south, and the lanes count up towards the south wall. Lane 2
+    # is the answer of a model that takes their left for its own.
+    correct: ["4"]
+    wrong: ["2"]
+    prompt: >-
+      The corridor is 5 lanes wide, numbered 1 to 5 from the north wall. You are in lane 3, walking
+      east. Another person, Person 2, is in lane 3, 6 cells ahead, walking west towards you.
+      Person 2 says: "I'm stepping one lane to my left." Which lane will Person 2 be in?

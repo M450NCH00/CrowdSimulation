@@ -1,0 +1,49 @@
+# Issue #144 (RF-53), stage 1: RF-43's 20 static probes, 10 times with thinking off and 10 times with it
+# on, on deepseek-flash: 400 calls.
+#
+#   python -m negsim.probe configs/probe/rf53_stage1_frames_probe.yaml --plan
+#   python -m negsim.probe configs/probe/rf53_stage1_frames_probe.yaml --out runs_mock/rf53   # mock rehearsal
+#   python -m negsim.probe configs/probe/rf53_stage1_frames_probe.yaml --client deepseek --confirm --limit 40   # the pilot
+#
+# **Not approved for paid calls yet.** budget.cap_usd is 0, so the guard refuses every paid call until
+# the user's approval and cap for issue #144 are recorded in CLAUDE.md ("Pending sign-offs", item 1) and
+# the cap is set here to match.
+#
+# The settings, and whose choice each is (WORK_LOG-144.md):
+# - deepseek-flash, as RF-40 (RF-53's design).
+# - temperature 1.0, RF-40's, in both arms. DeepSeek: thinking mode "does not support the temperature
+#   ... parameter", which has "no effect" there (refs/ln_deepseek_thinking_mode_docs_2026-11-28.txt), so
+#   the arms cannot be matched on it [the assistant's choice: RF-40's setting where it applies].
+# - reply cap: 300 with thinking off (RF-40's and probes.md's). 8,000 with thinking on: DeepSeek's
+#   max_tokens is "the maximum number of tokens that can be generated" and defaults to 64K in thinking
+#   mode, so it most likely counts the reasoning [inference]; at RF-40's 300 a reply could be cut off
+#   while still reasoning. The pilot checks finish_reason and the reasoning tokens [the assistant's choice].
+# - reasoning effort: not sent, so DeepSeek's default, "high" [the assistant's choice: the default].
+# - no system message, and JSON mode off: a probe is one plain question (probes.md).
+schema_version: 1
+layer: probe
+experiment_name: rf53_stage1_frames_probe
+issue: 144
+description: >-
+  RF-53, stage 1: RF-43's static probes of the left-and-right conversion (frames_probes_v1), 10 repeats
+  with thinking off and 10 with thinking on, on deepseek-flash.
+probes: configs/probe/frames_probes_v1.yaml
+probes_sha256: 6a2986651f1afa2b41109138375b20a430ee4533d9760c5486fb58f0320c4052
+repeats: 10
+arms:
+  - name: thinking_off
+    thinking: disabled
+    max_tokens: 300
+  - name: thinking_on
+    thinking: enabled
+    max_tokens: 8000
+llm:
+  client: mock
+  mock_policy: probe_expected
+  model: deepseek-flash
+  temperature: 1.0
+  transport_retries: 2
+budget:
+  cap_usd: 0.0            # not approved yet: set to the user's cap once CLAUDE.md records it
+  ledger: spend_ledger.jsonl
+expected_fingerprint: bc19ba97cbe016479903222bb1578db6   # RF-40's deepseek-flash (RF-52's configs)
