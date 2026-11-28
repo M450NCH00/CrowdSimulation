@@ -217,11 +217,17 @@ def test_a_paid_client_sends_nothing_without_confirm(tmp_path):
     assert result.status == R.STATUS_AWAITING and transport.sent == [] and not (tmp_path / "ledger.jsonl").exists()
 
 
-def test_the_committed_cap_of_zero_refuses_every_paid_call(tmp_path):
+def test_a_cap_of_zero_refuses_every_paid_call(tmp_path):
     transport = Transport()
-    result = run(tmp_path, client=paid(tmp_path, config().budget["cap_usd"], transport), confirm=True, now=lambda: OFF_PEAK)
-    assert config().budget["cap_usd"] == 0.0  # until CLAUDE.md records the user's approval and cap
+    result = run(tmp_path, client=paid(tmp_path, 0.0, transport), confirm=True, now=lambda: OFF_PEAK)
     assert result.status == R.STATUS_CAP and transport.sent == [] and result.sent == 0
+
+
+def test_the_committed_cap_is_the_one_claude_md_records_for_issue_144_stage_1():
+    """The config held a cap of 0 until the user's approval of 2026-11-28 (USD 0.50) was recorded."""
+    recorded = (REPO_ROOT / "CLAUDE.md").read_text(encoding="utf-8")
+    assert "**Approved for issue #144 only, stage 1, 2026-11-28:**" in recorded and "a cap of **USD 0.50**" in recorded
+    assert config().budget["cap_usd"] == 0.50
 
 
 def test_no_paid_call_in_peak_hours_without_allow_peak(tmp_path):

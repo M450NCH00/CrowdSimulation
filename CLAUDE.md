@@ -258,7 +258,7 @@ on". Numbered SV15 (architecture section 8.8; recorded 2026-11-28, issue #144) a
     RF-43), the grid's cells and clash rule, when RF-41 runs, and the order of work.
 
 ## Pending sign-offs
-Items 1 and 5 are still pending (item 1 was approved for issues #64, #65, #98, #100, #101, #104, #66, #67, #108, #110, #115, #117, #119, #127, #129, #141 and #138 only).
+Items 1 and 5 are still pending (item 1 was approved for issues #64, #65, #98, #100, #101, #104, #66, #67, #108, #110, #115, #117, #119, #127, #129, #141, #138 and #144 (stage 1) only).
 **Do not treat any of them as approved** until the user records the
 supervisor's answer in this file, with a date. Items 2 and 3, the ethics
 sign-offs for perceived attractiveness and real ethnicity, were recorded by the
@@ -390,6 +390,13 @@ used in this track). Numbers in brackets are the decisions of track issue #55.
      at RF-40's measured cost per call (`WORK_LOG-138.md`), run off-peak, a pilot first. The balance was
      USD 2.61. The same day the user accepted RF-47's and RF-48's choices as built and chose to
      counterbalance which colour is at +y at the same size (`resolve_menu_abs_swap_v1`).
+   - **Approved for issue #144 only, stage 1, 2026-11-28:** the user approved paid runs for RF-53's stage 1
+     (#144), RF-43's 20 static probes sent 10 times with thinking off and 10 times with it on, and only for
+     it, choosing "Approve, cap USD 0.50 (Recommended)": a cap of **USD 0.50** on that experiment's own calls
+     (`experiment_name: rf53_stage1_frames_probe`; 400 calls on `deepseek-flash`, about USD 0.08 to 0.50
+     off-peak by reasoning length, `WORK_LOG-144.md`), a 40-call pilot first, run off-peak. The balance was
+     USD 1.59. Earlier the same day the user said budget was no worry for stage 1 ("I can top up some cash
+     later on"). **RF-53's stage 2 is not approved:** it needs its own approval and cap.
 2. **Approved by the supervisor, 2026-10-24** — Ethics sign-off for perceived
    attractiveness as a factor (#55, 3). *The user decided on 2026-10-24* that
    attractiveness (both directions) is **in** RF-10's design, because bias can
