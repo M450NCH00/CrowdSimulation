@@ -142,7 +142,7 @@ off and 10 times with it on, on `deepseek-flash`: 400 calls.
 - The report's tables come from `python -m negsim.probe.report` (new, `negsim/probe/report.py`: Wilson
   intervals and a two-sided Fisher exact test in the standard library; tested against R's value).
 
-### 2026-11-28 04:16 to 04:40 UTC — hand check and report
+### 2026-11-28 04:16 to 04:20 UTC — hand check and report
 - **The scorer, by eye:** I listed every distinct (probe, arm, first line, label) of the 400 replies.
   None was misread.
 - **Probe 3 is ambiguous English.** "I'll pass you on my right" can mean "you will be on my right"
