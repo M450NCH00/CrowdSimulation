@@ -172,6 +172,6 @@ def test_the_cap_is_the_one_claude_md_records_for_issue_157():
     from negsim.configutil import REPO_ROOT, load_yaml, resolve_path
 
     recorded = (REPO_ROOT / "CLAUDE.md").read_text(encoding="utf-8")
-    assert "**Approved for issue #157 only, 2026-11-28:**" in recorded and "**USD 0.60** on that experiment's own calls
-     (`experiment_name: rf55" in recorded
+    assert "**Approved for issue #157 only, 2026-11-28:**" in recorded
+    assert "**USD 0.60** on that experiment's own calls\n     (`experiment_name: rf55_round1_head_on_short_moved`" in recorded
     assert load_yaml(resolve_path(RF55))["budget"]["cap_usd"] == 0.60
