@@ -151,8 +151,12 @@ of paid runs and a cap for its round, recorded in `CLAUDE.md`.
     each reply's first line (`negsim/probe/score.py`) and keeps the reasoning text, which the client no longer
     drops. Stage 1 is *done* (paid, USD 0.21: `runs/rf53_stage1_frames_probe/report.md`): thinking on answered
     187 of 200 correctly, thinking off 114; with thinking off the conversion is mostly stated right but the
-    move then goes into the same side, the facing note does not help, and a heading is invented. Stage 2
-    (RF-40's sessions with thinking on) is not approved.
+    move then goes into the same side, the facing note does not help, and a heading is invented. Stage 2's
+    *pilot* is done (paid, USD 0.77: `runs/rf53_stage2_pilot_thinking/pilot_report.md`). It ran RF-40's 80
+    silent sessions of repeat 1 and the pairs with thinking on. They resolved 46 of 64 against RF-40's 42
+    (McNemar p = 0.60, within RF-40's own repeat-to-repeat noise). Both stepping towards the same wall fell
+    from 0.24 to 0.05 (p = 0.0004). What still fails is mostly a swap: both step aside correctly, then move
+    back across. The full stage 2 is not approved.
 - **Round 2, meeting in a narrow passage (lean):** RF-19 (#75) screening; RF-13 (#68) Phase B
   (optional; moved from round 1 by the user, 2026-10-27); RF-20 (#76) extract, test with earlier
   rules, verify.

@@ -166,6 +166,64 @@ off and 10 times with it on, on `deepseek-flash`: 400 calls.
   `tests/test_probe.py` passes (43), and after the run folder was committed, the run-count tests
   (`test_avoidance_runs`, `test_resolution`, `test_viz`) passed too (217 with the probe tests).
 
+### 2026-11-28 04:30 to 04:57 UTC — stage 2 pilot: approval, config, first 4 paid sessions
+- The user asked how much thinking mode improves resolution. Stage 1 cannot say, since it has no
+  simulation. The user approved a pilot of stage 2 first, choosing:
+  - cap **USD 1.00**;
+  - "Repeat 1, with pairs": RF-40's silent sessions, repeat 1 of every cell and geometry, and the 16
+    counterfactual-pair sessions, 80 in all.
+  Recorded in `CLAUDE.md`. The full stage 2 is not approved. Balance USD 1.38.
+- **Config** `configs/resolution/rf53_stage2_pilot_thinking.yaml`: RF-40's with only these changes:
+  - the name;
+  - `conditions: [silent]`;
+  - `repeats: 1`;
+  - `thinking: enabled`;
+  - `max_tokens: 16000` (stage 1 measured that the cap counts the reasoning) [my choice];
+  - `timeout_s: 240` [my choice];
+  - the cap.
+  A diff against RF-40's file shows nothing else. Tested (`tests/test_rf53_pilot_config.py`):
+  - every one of the 80 sessions is RF-40's, with the same people and the same repeat;
+  - the config equals RF-40's apart from these changes.
+- **New optional `llm.timeout_s`** in resolution configs (`negsim/resolution/experiment.py`). The
+  client's default of 60 s could time out a long thinking reply, and a timed-out call is retried and
+  counted at its worst case. It is stored and passed only when given, so no earlier config changes
+  (tested over every config in `configs/resolution/`).
+- `test_ethnicity.py`'s list of later configs gained the new config (this morning's lesson).
+- **Mock rehearsal:** 80 sessions, reasoning text recorded. `--plan` worst case USD 360 (every call at
+  its full 16,000-token cap at the peak price, retried). `stop_at_cap` keeps the real spend under USD
+  1.00.
+- **The first 4 paid sessions** (04:50 to 04:56 UTC):
+  - USD 0.0308, about USD 0.0077 a session, so about USD 0.62 for 80;
+  - RF-40's fingerprint; no cut-off, no transport error; longest call 33 s;
+  - reasoning mean 1,314 tokens a call;
+  - one malformed JSON reply (`{"other_passes"}`), read on the protocol's retry.
+- The other 76 started at about 04:57 UTC.
+
+### 2026-11-28 07:06 to 07:20 UTC — stage 2 pilot: the run's end, the comparison, the report
+- **The run** ended at 07:05:56 UTC (calls 04:50 to 07:01):
+  - 80 of 80 sessions completed;
+  - **USD 0.7702** for the 80 (632 ledger lines). The runner's "actual cost" after the second
+    invocation is the whole experiment's, not the 76's;
+  - all 632 calls on RF-40's fingerprint, all `finish_reason: stop` (none cut off at 16,000), all
+    off-peak, no transport error;
+  - 10 of 459 decision points unreadable after the retry (RF-40: 11 of 473).
+- **Balance USD 0.61**, checked 07:09 UTC (1.38 less 0.7702).
+- **Paired against RF-40** (`analysis.compare`, the 64 design sessions against RF-40's repeat 1):
+  - resolved 46/64 (0.72) with thinking on, 42/64 (0.66) off;
+  - 18 sessions resolved only with thinking on, 14 only off, McNemar p = 0.60;
+  - RF-40's own repeats differ in 26 to 31 of 64 sessions, so this churn is within its noise.
+- **How they stepped** (`runs/rf53_stage2_pilot_thinking/analysis/pilot_tables.py`, against all of
+  RF-40's 256):
+  - both towards the same wall: 3/64 (0.05) against 61/256 (0.24), Fisher p = 0.0004;
+  - both to their own same side: 52/64 against 169/256, p = 0.023.
+- **The failures that are left** (18), read by eye:
+  - 13 are a swap: both step correctly, then one or both move back across, reading the other's
+    sidestep as a drift towards them;
+  - 5 have one person who holds their line at every decision;
+  - none is a no-reversal failure. RF-40 had 43 of its 93 failures of that kind.
+- **Report:** `runs/rf53_stage2_pilot_thinking/pilot_report.md`. The full stage 2 is projected at
+  about USD 5 off-peak for silent and talk, and about 13 hours of calls `[inference]`.
+
 ## Open questions / risks
 - **`max_tokens` and the reasoning:** the pilot measured it (above). Cut-off replies count as `unclear`.
   Earlier, before the pilot: inferred, not stated by DeepSeek. If 8,000 is too small,
@@ -183,6 +241,10 @@ off and 10 times with it on, on `deepseek-flash`: 400 calls.
 - **Stage 2** is not approved. At stage 1's reasoning length it would cost about USD 5.6 off-peak for
   silent and talk (balance USD 1.38) and take about 12.5 hours of calls. Its reply cap and reasoning
   effort are open choices.
+  - *After the pilot:* about USD 5 more off-peak (balance USD 0.61) and about 13 hours. The pilot shows
+    no clear gain in the resolution rate, so a full run may not be worth it as designed. Whether to
+    try `reasoning_effort: low`, a template change for the swap, or the talk condition instead is
+    the user's choice.
 
 ## Summary (fill in at the end)
 - **Built** (tasks 1 to 4):
