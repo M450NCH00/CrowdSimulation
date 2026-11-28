@@ -489,6 +489,11 @@ Two results from step 1 that change later steps, both needing supervisor sign-of
   distil interpretable decision functions from LLM-driven crowds and demonstrate it on
   evacuation scenarios. The project needs a stated position relative to it.
 
+**Assignment 1 introduction** (issue #10) — `literature/llm-conflict-resolution/assignment1-intro/`:
+five papers selected from the step 1 review, a 496-word IEEE-style draft, and
+`open-gaps.md`. Zhang et al. was verified against its full text on 2026-09-13 (gap G1
+resolved). No blocking items remain; the non-blocking checks are in `open-gaps.md`.
+
 ## Directory layout
 
 ```
@@ -507,6 +512,9 @@ CrowdSimulation/
     personas.yaml                   5 age groups x 2 genders + SG population weights
     generated/                      pipeline output (git-ignored) — see "Output files" below
   literature/
+    papers.md                       reviewed papers backing the LLM-as-behaviour-source claim
+    refs.bib                        BibTeX for the above
+    search-log.md                   what was searched, rejected, and where access failed
     game-theory/                    issue #20: game theory for communication-free rules
       g1-conflict-games-conventions.md   conventions as correlated equilibria (priority)
       g2-norm-emergence.md               how a shared rule arises, spreads, breaks
@@ -635,6 +643,7 @@ CrowdSimulation/
                                     stays standard-library only. Has its own README
     codebooks/                      versioned keyword codebooks for intents and reasons (no LLM)
     tests/                          synthetic-data tests
+  refs/                             cached copies of every cited source (re-checkable)
 ```
 
 ## Output files (written to `dataset/generated/`)
