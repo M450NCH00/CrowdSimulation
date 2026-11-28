@@ -273,3 +273,26 @@ def test_a_failed_call_is_recorded_set_aside_and_sent_again(tmp_path):
     second = run(tmp_path, client=paid(tmp_path, 1.0, transport), confirm=True, now=lambda: OFF_PEAK, limit=1)
     assert second.sent == 1 and path.with_name("p01_r01.failed1.json").exists()
     assert json.loads(path.read_text(encoding="utf-8"))["api_error"] is None
+
+
+# --- the report ----------------------------------------------------------------------------------
+
+from negsim.probe import report as P  # noqa: E402
+
+
+def test_fisher_and_wilson_give_known_values():
+    assert abs(P.fisher_two_sided(8, 2, 1, 5) - 0.03497) < 1e-4  # R: fisher.test(matrix(c(8,1,2,5),2))
+    assert P.fisher_two_sided(5, 5, 5, 5) == 1.0
+    low, high = P.wilson(0, 10)
+    assert low == 0.0 and abs(high - 0.2775) < 1e-4
+    low, high = P.wilson(10, 10)
+    assert abs(low - 0.7225) < 1e-4 and high == 1.0
+
+
+def test_the_report_is_built_from_the_records(tmp_path):
+    run(tmp_path)
+    text = P.report(tmp_path / config().experiment_name)
+    assert "Records: 400 of 400 planned" in text
+    assert "| all | 200/200 (1.00; 0.98 to 1.00) | 200/200 (1.00; 0.98 to 1.00) | 1.00 |" in text
+    assert "| p13 | 0/10 | 0/10 |" in text  # the mock always answers right: no invented heading
+    assert "cut off at the reply cap 0" in text

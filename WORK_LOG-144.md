@@ -110,8 +110,33 @@ off and 10 times with it on, on `deepseek-flash`: 400 calls.
   assumes); estimates off-peak: thinking off USD 0.009; thinking on USD 0.07, 0.13, 0.25 or 0.49 at
   500, 1,000, 2,000 or 4,000 reasoning tokens a call.
 
+### 2026-11-28 03:30 UTC — approval, cap and balance (commit `0a242adcc`)
+- The user approved stage 1's paid run, choosing "Approve, cap USD 0.50 (Recommended)". Recorded in
+  `CLAUDE.md` ("Pending sign-offs", item 1, issue #144 stage 1 only; stage 2 not approved). The config's
+  cap went from 0 to 0.50, and its test now checks the cap against `CLAUDE.md`.
+- Balance (`GET /user/balance`, the key not printed): **USD 1.59** at 03:30 UTC, as last recorded.
+
+### 2026-11-28 03:32 to 03:36 UTC — the paid pilot (40 calls, USD 0.0212)
+- `--client deepseek --confirm --limit 40`, Saturday, so off-peak (all 40 costed off-peak).
+- **Fingerprint:** `bc19ba97cbe016479903222bb1578db6` on all 40, RF-40's.
+- **Cost:** USD 0.000742 with thinking off, USD 0.020494 with it on, so about USD 0.21 for all 400.
+- **Reasoning tokens (thinking on):** median 622, mean 1,649, from 127 to 8,000. They are longest on
+  probes 13 and 15 (no heading given: 6,585 and 5,798) and 14 (3,169).
+- **One reply was cut off:** probe 3 ("I'll pass you on my right") used all 8,000 tokens reasoning
+  (`finish_reason: length`, empty content, scored `unclear`). Since `reasoning_tokens` equals the
+  cap, **`max_tokens` does count the reasoning** (task 3's inference, now measured). The reasoning was
+  not a loop: it reached "left" (correct) several times but kept reconsidering whether "pass you on
+  my right" is the speaker's side or the listener's, which is a real ambiguity in the English.
+  **I kept the cap at 8,000** for the rest, so that every thinking-on call has the same settings; a
+  cut-off is reported as its own outcome [my choice].
+- **Scores, read by eye against the scorer:** every first line was read right. Thinking off: 12 of 20
+  (A 1/3, B 3/3, C 1/3, D 3/3, E 3/4, F 0/2, G 1/2). Thinking on: 19 of 20 (the cut-off one aside,
+  all right). One repeat is too few to compare, but the run went ahead as planned.
+- Started the other 360 calls at 03:37 UTC.
+
 ## Open questions / risks
-- **`max_tokens` and the reasoning:** inferred, not stated by DeepSeek. If 8,000 is too small,
+- **`max_tokens` and the reasoning:** the pilot measured it (above). Cut-off replies count as `unclear`.
+  Earlier, before the pilot: inferred, not stated by DeepSeek. If 8,000 is too small,
   replies end with `finish_reason: length` and an empty answer, scored `unclear`; the pilot shows it.
 - **The scorer is keyword matching.** It can misread a first line that reasons instead of answering
   (for example "Their left is my right, so I go left" reads as "left", flagged `ambiguous`). The
