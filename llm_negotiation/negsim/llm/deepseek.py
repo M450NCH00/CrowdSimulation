@@ -155,6 +155,9 @@ class DeepSeekClient(LLMClient):
             data = json.loads(raw.decode("utf-8"))
             choice = data["choices"][0]
             content = choice["message"].get("content")
+            # Issue #144: thinking mode returns its chain of thought beside the content
+            # (api-docs.deepseek.com/guides/thinking_mode, refs/ln_deepseek_thinking_mode_docs_2026-11-28.txt).
+            reasoning = choice["message"].get("reasoning_content")
         except (ValueError, KeyError, IndexError, TypeError, AttributeError) as exc:
             # The request was served, so it was billed even though the reply is unusable.
             raise LLMTransientError(
@@ -179,6 +182,7 @@ class DeepSeekClient(LLMClient):
             response_id=data.get("id"),
             system_fingerprint=data.get("system_fingerprint"),
             failed_attempts=failed_attempts,
+            reasoning_content=reasoning if isinstance(reasoning, str) else None,
         )
 
     def _scrub(self, text: str) -> str:

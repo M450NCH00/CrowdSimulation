@@ -65,9 +65,12 @@ class Attempt:
     latency_s: float = 0.0
     parse_error: Optional[str] = None
     api_error: Optional[str] = None
+    #: Issue #144 (RF-53): the model's reasoning text, in thinking mode only. It is written to the
+    #: record only when there is one, so a record with thinking off is exactly as before.
+    reasoning_content: Optional[str] = None
 
     def as_dict(self) -> dict[str, Any]:
-        return {
+        record = {
             "attempt": self.attempt,
             "wall_clock_utc": self.wall_clock_utc,
             "prompt_messages": self.prompt_messages,
@@ -84,6 +87,9 @@ class Attempt:
             "parse_error": self.parse_error,
             "api_error": self.api_error,
         }
+        if self.reasoning_content is not None:
+            record["reasoning_content"] = self.reasoning_content
+        return record
 
 
 @dataclass
@@ -404,3 +410,4 @@ def _fill(attempt: Attempt, response: LLMResponse) -> None:
     attempt.cost_usd = response.cost_usd
     attempt.price_tier = response.price_tier
     attempt.latency_s = response.latency_s
+    attempt.reasoning_content = response.reasoning_content

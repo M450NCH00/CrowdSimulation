@@ -87,6 +87,16 @@ def undecided(request: LLMRequest) -> str:
     return _reply("I am not sure yet.", "UNDECIDED")
 
 
+def mock_reasoning(request: LLMRequest, content: Optional[str]) -> str:
+    """The mock's reasoning text in thinking mode (issue #144): a fixed function of the request, so a
+    mock run with thinking on is as reproducible as one with it off. It reasons about nothing."""
+    label = request.metadata.get("probe_id") or request.metadata.get("turn_index", 0)
+    return (
+        f"Mock reasoning (no model was called) for request {label}: "
+        f"{len(request.messages)} message(s); the reply has {len(content or '')} characters."
+    )
+
+
 POLICIES: dict[str, Policy] = {
     "task_priority": task_priority,
     "first_speaker_goes": first_speaker_goes,
@@ -122,14 +132,20 @@ class MockClient(LLMClient):
             content = self._policy(request)
         prompt_chars = sum(len(m["content"] or "") for m in request.messages)
         prompt_tokens = math.ceil(prompt_chars * 0.3)
+        # Issue #144: with thinking on, a reasoning text too, counted in the completion as DeepSeek's
+        # reasoning tokens are. With thinking off nothing changes, so earlier mock runs are unchanged.
+        reasoning = mock_reasoning(request, content) if request.thinking else None
+        reasoning_tokens = math.ceil(len(reasoning) * 0.3) if reasoning else 0
         return LLMResponse(
             content=content,
             finish_reason="stop",
             usage=Usage(
                 prompt_tokens=prompt_tokens,
-                completion_tokens=math.ceil(len(content or "") * 0.3),
+                completion_tokens=math.ceil(len(content or "") * 0.3) + reasoning_tokens,
                 cache_miss_tokens=prompt_tokens,
+                reasoning_tokens=reasoning_tokens,
             ),
+            reasoning_content=reasoning,
             model=f"mock:{self.policy_name if self._script is None else 'script'}",
             latency_s=0.0,
             started_utc=datetime.now(timezone.utc).isoformat(timespec="milliseconds"),
