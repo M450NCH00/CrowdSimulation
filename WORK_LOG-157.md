@@ -62,6 +62,21 @@ The approval and cap are asked for after the mock rehearsal.
   off-peak only (Saturday and Sunday are off-peak all day in `pricing.tier_at`).
 - Next step: ask the user for the approval and cap; record them in `CLAUDE.md` before any paid call.
 
+### 2026-11-28 13:33 UTC — approval, cap, balance and the pilot (24 sessions, paid, off-peak)
+- The user chose "Approve, cap USD 0.60 (Recommended)": all 272 sessions. Recorded in `CLAUDE.md`
+  (pending sign-offs, item 1, #157 only) and the config, with a test that the two agree (commits
+  `6041d5404`, `2f945cecc`: the first committed a test file that did not compile, a string my heredoc
+  broke across two lines; fixed in the second, and 27 RF-54 and RF-55 tests pass).
+- Balance (`GET /user/balance`, the key not printed): **USD 5.26** at 13:22 UTC.
+- Pilot: `--client deepseek --confirm --limit 24`, 13:24:22 to about 13:31 UTC. 174 calls, **USD 0.0281**,
+  all off-peak, no API error. Projected for 272: about USD 0.32.
+- Checks: the opening prompt of all 24 sessions is RF-40's word for word; fingerprint `bc19ba97…` on
+  all 126 attempts; the move is in 37 of the 54 later short-line prompts; no gap line anywhere. One
+  session read by hand (`S_head_on_02dfbadb_1868bff4_r3`): the side is named right (person 0's step to
+  −y is person 1's left), and a person whose own sidestep waits for 3 m is told it has not moved yet.
+- Outcomes against RF-40's same 24 (too few to read): resolved 22 against 19.
+- Decision [mine, within the approved plan]: nothing to fix; the remaining 248 started 13:33:11 UTC.
+
 ## Open questions / risks
 - `resolve_v12` tells *that* the other moved but not *where they now are* against the agent. If RF-55
   matches RF-54, the gap numbers added nothing; if it matches RF-40, the gain was the numbers (or
