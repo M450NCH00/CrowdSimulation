@@ -1,0 +1,58 @@
+{
+  "record_version": 1,
+  "experiment_name": "rf53_stage1_frames_probe",
+  "call_id": "thinking_on/p02_r08",
+  "arm": "thinking_on",
+  "thinking": true,
+  "probe_id": "p02",
+  "group": "A",
+  "kind": "side",
+  "repeat": 8,
+  "probes_sha256": "6a2986651f1afa2b41109138375b20a430ee4533d9760c5486fb58f0320c4052",
+  "started_utc": "2026-11-28T04:04:19.184+00:00",
+  "messages": [
+    {
+      "role": "user",
+      "content": "You are walking along a straight corridor 1.75 m wide. Another person, Person 2, is walking towards you, facing you, 6 m ahead, in the middle of the corridor, as you are. Person 2 says: \"I'll keep to my right.\" Which way do you move, left or right?\n\nAnswer on the first line with your answer only (a word, a short phrase or a lane number), then give one sentence saying why on the next line."
+    }
+  ],
+  "request": {
+    "model": "deepseek-flash",
+    "temperature": 1.0,
+    "max_tokens": 8000,
+    "json_mode": false,
+    "thinking": true
+  },
+  "is_mock": false,
+  "raw_output": "Right\nBecause Person 2’s right is your left, so you pass by moving to your right.",
+  "reasoning_content": "We need answer. Need parse ambiguity. Corridor width, two people facing each other. Person2 says \"I'll keep to my right.\" Which way do you move, left or right? Need consider from your perspective? Need avoid collision. Person 2 facing you. \"my right\" relative to Person2. Need map.\n\nWe are walking along straight corridor. Another person ahead, facing us. \"I'll keep to my right.\" Which way do you move, left or right? We need decide. If Person2 keeps to their right, from our perspective that's our left? Let's set coordinates.\n\nLet corridor along x, you walking +x. You face +x. Person2 ahead at +x, walking -x facing you (-x). Person2's right: facing -x, right-hand direction is? Use coordinate: if facing +x, right is +y? Need choose. Let's define y to your left? Let's use standard top view. Let x right on paper = your forward. y up on paper = your left? Better.\n\nCoordinate: x = your forward (east). y = your left (north) if looking down? Hmm.\n\nUse relative: Person2 is facing opposite direction to you. Their right corresponds to your left (because when two people face each other, their right-left mirrored). Example: You face north; person faces south. Their right is west; your left when facing north is west. Yes, their right = your left. So if Person2 keeps to their right (your left), then you should move? To avoid, you could move to your right, so pass on your right? Need determine path.\n\nImagine corridor, center. Person2 says I'll keep to my right side of corridor (from their perspective). That means they move to one side of corridor. From your perspective, it's your left side? Let's example: You face north (walking upward on page). Person2 faces south (down), ahead north. Person2's right = west (left side of page). From your perspective facing north, west is left. So Person2 goes to your left. If they occupy left side relative to you, you should keep to your right (east side) to pass, no collision. But question wording: \"Which way do you move, left or right?\" Could be asking due to social convention? If they say keep to my right, do you also move to your right? Wait the usual coordination issue: If both keep to their own right, they pass on their left? Let's simulate: Initial center. Person2 moves to their right = your left. You might naturally move right to avoid. So answer: right. However maybe question is trick: In a corridor with someone approaching saying \"I'll keep to my right\", you should move to your left? Let's ensure.\n\nLet's set page top = direction you walk. Corridor vertical. You bottom walking up. Person2 top walking down facing you. Person2's right = page left? Imagine you're facing down (south) on page: your right arm points west (page left). Yes. So Person2 moves to page left. From your perspective facing up (north), page left is your left. They keep to your left. Therefore you should move to your right (page right). So answer \"Right\" from your perspective.\n\nBut there is potential confusion: If you are facing each other, \"my right\" appears as your left. If they stay right, you move to your right. So answer right. If the question asks \"Which way do you move, left or right?\" likely relative to yourself. Answer right.\n\nNeed final first line only answer, then one sentence why next line. Ensure first line answer only. \n",
+  "finish_reason": "stop",
+  "response_id": "ae4b5280-ee95-4caf-b10e-e411d97b4b66",
+  "model": "deepseek-flash",
+  "system_fingerprint": "bc19ba97cbe016479903222bb1578db6",
+  "usage": {
+    "prompt_tokens": 130,
+    "completion_tokens": 797,
+    "prompt_cache_hit_tokens": 0,
+    "prompt_cache_miss_tokens": 130,
+    "reasoning_tokens": 774
+  },
+  "cost_usd": 0.0004977,
+  "price_tier": "off_peak",
+  "latency_s": 4.5917,
+  "expected": {
+    "correct": [
+      "right"
+    ],
+    "wrong": [
+      "left"
+    ]
+  },
+  "score": {
+    "first_line": "Right",
+    "label": "right",
+    "outcome": "correct",
+    "ambiguous": false
+  },
+  "api_error": null
+}

@@ -248,7 +248,7 @@ class ResolutionConfig:
         if not isinstance(scenarios, Mapping):
             raise ConfigError(f"{where}.scenarios: a mapping of case id to scenario plug-in")
         templates = check_keys(raw.get("templates") or {}, f"{where}.templates", (), ("core", "debrief", "factors", "pairwise"))
-        llm = check_keys(raw["llm"], f"{where}.llm", (), ("client", "mock_policy", "model", "temperature", "max_tokens", "thinking", "transport_retries"))
+        llm = check_keys(raw["llm"], f"{where}.llm", (), ("client", "mock_policy", "model", "temperature", "max_tokens", "thinking", "transport_retries", "timeout_s"))
         budget = check_keys(raw.get("budget") or {}, f"{where}.budget", (), ("cap_usd", "ledger", "over_cap"))
         policy = str(llm.get("mock_policy", "resolution_rehearsal_v1"))
         if policy not in MOCK_POLICIES:
@@ -300,6 +300,9 @@ class ResolutionConfig:
                 "max_tokens": int(as_number(llm.get("max_tokens", 400), f"{where}.llm.max_tokens", minimum=1)),
                 "thinking": as_choice(llm.get("thinking", "disabled"), f"{where}.llm.thinking", ("disabled", "enabled")),
                 "transport_retries": int(as_number(llm.get("transport_retries", 2), f"{where}.llm.transport_retries", minimum=0)),
+                # Issue #144 (RF-53): how long one request may take, for thinking mode's long replies. Only
+                # when given, so that an older config is described, and its client built, as before (60 s).
+                **({"timeout_s": as_number(llm["timeout_s"], f"{where}.llm.timeout_s", minimum=1.0)} if "timeout_s" in llm else {}),
             },
             budget={
                 "cap_usd": as_number(budget.get("cap_usd", 0.05), f"{where}.budget.cap_usd", minimum=0.0),
@@ -582,7 +585,8 @@ def make_client(config: ResolutionConfig, client_name: Optional[str] = None) -> 
     prices = PriceTable.from_yaml()
     prices.price_of(config.llm["model"])
     guard = BudgetGuard(SpendLedger(resolve_path(config.budget["ledger"])), config.budget["cap_usd"], prices, scope=config.experiment_name)
-    return BudgetedClient(DeepSeekClient.from_env(max_retries=config.llm["transport_retries"]), guard)
+    timeout = {"timeout_s": config.llm["timeout_s"]} if "timeout_s" in config.llm else {}  # issue #144
+    return BudgetedClient(DeepSeekClient.from_env(max_retries=config.llm["transport_retries"], **timeout), guard)
 
 
 # --- one session ----------------------------------------------------------------------------------

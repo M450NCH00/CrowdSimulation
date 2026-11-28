@@ -1,0 +1,58 @@
+{
+  "record_version": 1,
+  "experiment_name": "rf53_stage1_frames_probe",
+  "call_id": "thinking_on/p16_r10",
+  "arm": "thinking_on",
+  "thinking": true,
+  "probe_id": "p16",
+  "group": "E",
+  "kind": "named_side",
+  "repeat": 10,
+  "probes_sha256": "6a2986651f1afa2b41109138375b20a430ee4533d9760c5486fb58f0320c4052",
+  "started_utc": "2026-11-28T04:14:55.352+00:00",
+  "messages": [
+    {
+      "role": "user",
+      "content": "You are walking along a straight corridor 1.75 m wide. Another person, Person 2, is walking towards you, facing you, 6 m ahead, in the middle of the corridor, as you are. The corridor has two long sides, the window side and the shop side. You are 0.9 m from the window side. Person 2 says: \"I'll keep to the window side.\" Which side do you move towards, the window side or the shop side?\n\nAnswer on the first line with your answer only (a word, a short phrase or a lane number), then give one sentence saying why on the next line."
+    }
+  ],
+  "request": {
+    "model": "deepseek-flash",
+    "temperature": 1.0,
+    "max_tokens": 8000,
+    "json_mode": false,
+    "thinking": true
+  },
+  "is_mock": false,
+  "raw_output": "Shop side\nPerson 2 is taking the window side, so moving to the shop side avoids a collision.",
+  "reasoning_content": "We need answer puzzle. Need parse carefully. Need answer first line only then one sentence why. Need determine side to move toward. Corridor width 1.75 m. You walking along straight corridor. Person2 walking towards you, facing you, 6m ahead, in middle of corridor, as you are? Wording: \"in the middle of the corridor, as you are.\" Means both initially in middle? But then \"You are 0.9 m from window side.\" Contradiction? Let's parse.\n\n\"You are walking along a straight corridor 1.75 m wide. Another person, Person 2, is walking towards you, facing you, 6 m ahead, in the middle of the corridor, as you are. The corridor has two long sides, the window side and the shop side. You are 0.9 m from the window side. Person 2 says: 'I'll keep to the window side.' Which side do you move towards, the window side or the shop side?\"\n\nPotential trick about perspective and \"as you are\" maybe Person2 is in middle as you are? But \"You are 0.9m from window side\", halfway is 0.875. 0.9 means slightly toward shop side (since width 1.75, window side at 0, shop at 1.75? Distance from window =0.9 >0.875, so slightly shop side). Person2 says \"I'll keep to the window side.\" If Person2 is facing me, their left/right? \"window side\" absolute side. They will move to window side (their right or left? It is a side of corridor, not relative). If they keep to window side, they occupy window side lane. I should move toward shop side to avoid collision. But there may be convention: In corridor, when facing someone, keep to your right? But instruction says Person 2 will keep to window side. Need decide side for me. If they move to window side, then I move toward shop side. However \"as you are\" meaning Person2 also 0.9m from window side? The question may exploit that if you're 0.9 m from window side, you're 0.85 from shop? Wait corridor width 1.75, halfway 0.875. 0.9 from window => 0.85 from shop. You are slightly closer to shop side, not middle. Person2 ahead \"in the middle ... as you are\" maybe both in middle? You are 0.9m from window side, but then \"middle\" might mean \"middle of path, as you are\" not exact. Need answer maybe \"window side\" due to person's \"I'll keep to window side\" said while facing you: their window side? Let's examine.\n\nThis resembles classic \"corridor problem\" or \"Which side should you move to avoid someone who says I'll keep to my left/right\" with opposite facing. But here they specify \"window side\" absolute, so no ambiguity? But why include measurements? Maybe due to \"I'll keep to the window side\" can mean Person2 will keep to their right/left? No, window side is objective. They might move to the window side, leaving shop side. So move shop side.\n\nBut perhaps trick: Person 2 is facing you, 6m ahead, \"in the middle of the corridor, as you are.\" \"You are 0.9 m from window side\" means neither in exact middle? Let's calculate if corridor 1.75 wide, centerline 0.875. You are 0.9 from window, i.e. 0.025 m (2.5 cm) toward shop from center. Person2 6m ahead, facing you, in middle, as you are: \"as you are\" could refer to facing them? Actually grammatical: \"Another person, Person 2, is walking towards you, facing you, 6 m ahead, in the middle of the corridor, as you are.\" The phrase \"as you are\" may mean Person2 is in middle, as you are (you are also in middle). But then next says you are 0.9 m from window, not exact middle due to maybe rounded? 0.9 rounds 0.875? If width 1.75, one decimal? 0.875 rounds 0.9. Maybe you are in the middle: 0.875 m from window rounds to 0.9 m. Ah! Important. They chose 1.75 wide, midpoint is 0.875, if reported to one decimal =0.9. So you are essentially in middle. Person2 also in middle, 6m ahead. Person2 says \"I'll keep to the window side.\" Which side do you move? Need coordinate in facing direction? Person 2 is facing you, so their \"window side\" is same physical window side, but their left/right relative is reversed. If Person2 says \"I'll keep to the window side\" they will move toward window side. So I go shop side. Simple.\n\nBut why include \"facing you\"? Maybe to clarify that their left/right is opposite, in case they said \"I'll keep to the [my] left.\" But they say window side. Could be to avoid ambiguity about which side is \"window side\" from their perspective? The corridor has two long sides, objective.\n\nWait, maybe question about social coordination: Person2 says \"I'll keep to the window side.\" If they're walking towards you facing you, they are on the side of the corridor? \"Window side\" could mean their right/left? No, \"window side\" identifies physical side. Then you should move shop side. But if Person2 says \"I'll keep to the window side\", maybe they intend to pass on the window side, so you should also go window side? Let's reason collision geometry.\n\nImagine corridor x from 0 window to 1.75 shop. You walk, say toward positive y? Person2 coming negative y, facing you. You are at y=0, x maybe 0.875. Person2 y=6, x=0.875. Person2 says I'll keep to window side. That means Person2 will move to x near 0 (window side). To avoid, you should move to x near 1.75 (shop side). Correct.\n\nPotential counterintuitive: If person says \"I'll keep to the window side\" and is facing you, they may mean \"I will keep to *your* window side\" or \"the window side from my facing direction\"? But side \"window\" is not left/right. There is only one window side of corridor. Unless corridor has windows along one side; both see same physical side. So not.\n\nBut there is \"You are 0.9m from window side\". Person2 is in middle, as you are. \"The corridor has two long sides, window side and shop side.\" \"Person 2 says: 'I'll keep to the window side.' Which side do you move towards?\" If Person 2 will keep to window side, then you move towards shop side. Measurement likely distract or determines if enough room? If Person2 moves to window side, perhaps if they stay \"window side\" and you're already 0.9 from window (slightly shop), you don't need move? But question asks which side move towards. Move shop.\n\nNeed answer first line only. Then one sentence why next line. Must exactly format. Answer maybe \"Shop side\" then sentence. Ensure \"first line answer only\". Let's craft final concise.\n\nBut let's not rush; there may be hidden issue: \"Person 2 says: 'I'll keep to the window side.' Which side do you move towards, the window side or the shop side?\" If Person2 keeps to the window side, you should move to shop side. But in many countries convention is pass on the right. If both walk in middle, person facing you may say \"I'll keep to the window side.\" Because they are facing you, their \"window side\" relative to their body? Wait a corridor with windows on one long side; if you walk in opposite directions, \"window side\" is on one person's right and the other's left. Person2 says \"I'll keep to the window side\" means they will hug that physical wall. If you also move to shop side, yes.\n\nCheck 0.9 m from window side: width 1.75, clearance on shop side = 0.85 m. If Person2 moves to window side, then you move shop side. Is there enough space? Person width not given, but corridors; 1.75 wide. You are 0.9 from window (i.e., 0.85 from shop). If you move toward shop side, you have 0.85m to wall, enough. If you move window, collision.\n\nWhat if the phrase \"as you are\" modifies \"in the middle\" but you're 0.9 from window, so since midpoint is 0.875, you're only 2.5 cm shop of middle. If Person2 says keep to window side, they will veer to their right? Let's map: Person2 facing you. If you're walking towards each other, window side might be on Person2's left or right depending. They say absolute side. They'll move to their left/right accordingly. Your \"move towards window side\" may be weird if you're already only 0.9m from window and Person2 takes that side; you should move away.\n\nPotential other interpretation: \"I'll keep to the window side\" could be a promise that Person2 will stay on *their* window side. If they are facing you, from their perspective \"window side\" might be on their left, but because windows on side, it's still same. No.\n\nNeed final with first line \"Shop side\" or \"The shop side\". \"shop side\" acceptable. Second line \"Person 2 is taking the window side, so I should move away to the shop side to avoid a collision.\" One sentence. The answer line only answer. Good.",
+  "finish_reason": "stop",
+  "response_id": "2deddc69-2834-46af-bb5e-90b81911c1dd",
+  "model": "deepseek-flash",
+  "system_fingerprint": "bc19ba97cbe016479903222bb1578db6",
+  "usage": {
+    "prompt_tokens": 163,
+    "completion_tokens": 2150,
+    "prompt_cache_hit_tokens": 0,
+    "prompt_cache_miss_tokens": 163,
+    "reasoning_tokens": 2127
+  },
+  "cost_usd": 0.00131445,
+  "price_tier": "off_peak",
+  "latency_s": 17.0363,
+  "expected": {
+    "correct": [
+      "shop"
+    ],
+    "wrong": [
+      "window"
+    ]
+  },
+  "score": {
+    "first_line": "Shop side",
+    "label": "shop",
+    "outcome": "correct",
+    "ambiguous": false
+  },
+  "api_error": null
+}

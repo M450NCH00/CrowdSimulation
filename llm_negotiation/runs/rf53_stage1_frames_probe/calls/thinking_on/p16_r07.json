@@ -1,0 +1,58 @@
+{
+  "record_version": 1,
+  "experiment_name": "rf53_stage1_frames_probe",
+  "call_id": "thinking_on/p16_r07",
+  "arm": "thinking_on",
+  "thinking": true,
+  "probe_id": "p16",
+  "group": "E",
+  "kind": "named_side",
+  "repeat": 7,
+  "probes_sha256": "6a2986651f1afa2b41109138375b20a430ee4533d9760c5486fb58f0320c4052",
+  "started_utc": "2026-11-28T04:02:52.310+00:00",
+  "messages": [
+    {
+      "role": "user",
+      "content": "You are walking along a straight corridor 1.75 m wide. Another person, Person 2, is walking towards you, facing you, 6 m ahead, in the middle of the corridor, as you are. The corridor has two long sides, the window side and the shop side. You are 0.9 m from the window side. Person 2 says: \"I'll keep to the window side.\" Which side do you move towards, the window side or the shop side?\n\nAnswer on the first line with your answer only (a word, a short phrase or a lane number), then give one sentence saying why on the next line."
+    }
+  ],
+  "request": {
+    "model": "deepseek-flash",
+    "temperature": 1.0,
+    "max_tokens": 8000,
+    "json_mode": false,
+    "thinking": true
+  },
+  "is_mock": false,
+  "raw_output": "Shop side  \nPerson 2 is taking the window side, so you should move to the opposite side to avoid colliding.",
+  "reasoning_content": "We need answer. Need reason carefully. Need answer first line only, then sentence. Need understand spatial. Corridor width 1.75. You are walking along straight corridor, Person2 towards you facing you, 6m ahead, in middle of corridor, as you are. Wait \"in middle ... as you are\" maybe both in middle? But then says You are 0.9 m from window side. Contradiction? Need parse: \"Another person, Person 2, is walking towards you, facing you, 6 m ahead, in the middle of the corridor, as you are.\" Means Person2 is in the middle of corridor, as you are? But you are 0.9 from window side, not middle. Maybe \"as you are\" modifies walking towards, facing you? Hmm.\n\nQuestion: corridor has two long sides window/shop. You are 0.9 m from window side. Person2 says: \"I'll keep to the window side.\" Which side do you move towards, window or shop? Need determine to pass safely, likely need move to shop side because Person2 will move to window side. But possible ambiguity due corridor width and current positions? Need infer.\n\nMaybe classic \"which side\" with convention: Person 2 facing you says keeps to window side. Since they face you, their left/right reversed. But window side is an absolute side, not their left. If P2 says \"I'll keep to the window side\", they will move toward window side. You should move to shop side to avoid collision. But maybe they are already 0.9 m from window side? Let's parse: You are 0.9 m from window side. Width 1.75, so distances: window side distance 0.9, shop side 0.85. You are nearly middle, slightly closer to window side? Actually if 0.9 from window, shop side 0.85, so closer to shop side? Wait width 1.75, distance to shop = 0.85, smaller, so you're 0.85 from shop, 0.90 from window. Nearly center but slightly shop side. Person2 \"in the middle of corridor, as you are\" perhaps says both are initially in middle? You 0.9 from window perhaps exact middle? 1.75/2=0.875, 0.9 rounded? Hmm.\n\nMaybe issue of communication: Person2 says \"I'll keep to the window side.\" If they keep to window side, do they mean their window side? The corridor window side is fixed. So they move to window side. You move toward shop side. But maybe because you're already 0.9m from window, you are on window side relative to center? Wait center distances 0.875. You are 0.9 from window: this is 0.025 m beyond center toward shop side (since distance to window greater than half, you're slightly closer to shop side). To yield, you need move away from window? Let's set coordinate x from window side (0) to shop side (1.75). You at x=0.9. Mid x=0.875, so you're just on shop side of center. P2 is in middle x=0.875 6m ahead. P2 says \"I'll keep to the window side\" meaning will move left toward x=0 (from your perspective maybe window side? Need orientation). You walking towards each other. Since corridor width, you pass side-by-side. If P2 goes to window side, you should move to shop side or at least keep/right? You are already on shop side of center, so shop side, easy. But maybe there is a catch: Person2 is facing you; when they say \"I'll keep to the window side\" they may mean \"my right/left\"? But phrase absolute. \n\nPotential trick: \"You are 0.9 m from window side\" and width 1.75, so only 0.85 m to shop side. Person 2 in middle. If P2 keeps to window side, which side do you move towards? If P2 moves to window, then remaining path is shop. But if you also need maintain 0.5? Hmm.\n\nCould be from an \"AI safety / coordination\" puzzle about passing in narrow corridor, with verbal communication and frame of reference. Person 2 says \"I'll keep to the window side\" but because they're facing you, their window side might be opposite? No, window side is objective; both can identify window. No reference reversal. Maybe if there are windows only on one side, \"window side\" means side near windows. So no ambiguity.\n\nBut maybe \"Person 2 is ... in the middle of the corridor, as you are.\" If both are in middle, then P2 says \"I'll keep to the window side.\" You need decide where to move. To avoid collision, if P2 goes to window side, you go shop side. Yet \"which side do you move towards\" could be asking: because P2 is facing you, their \"window side\" is on your right/left? But side names not egocentric. \n\nLet's examine exact wording: \"The corridor has two long sides, the window side and the shop side. You are 0.9 m from the window side. Person 2 says: \"I'll keep to the window side.\" Which side do you move towards, the window side or the shop side?\"\n\nMaybe there is potential that P2 saying \"I'll keep to the window side\" while facing you means if P2 keeps to *their* window side? Actually \"window side\" is unambiguous, but perhaps P2 might mean \"I'll keep to the window side\" from their perspective? Wait when they face you, the window is on their left or right depending initial? Let's coordinate orientation. Suppose corridor runs north-south. You walk north, P2 walks south facing you. Window side could be east or west. If \"You are 0.9 m from window side\" (let window be west). P2 is facing south, their left is east? If they say \"I'll keep to window side\", they should move west, which is their right? But no issue.\n\nMaybe the answer depends on passing convention and knowing their exact lane? Person2 says will keep to window side; you should move to shop side. But if you currently 0.9 from window side, shop side distance 0.85; moving to shop side gives enough gap? Let's compute if both target sides? If P2 keeps to window side, perhaps P2 moves to within their body radius of window; you need maybe move toward window? Wait in corridor passing, if oncoming person says \"I'll keep to the window side\" (i.e., they are already closer to window or will move there). To maximize separation, you should be on opposite side = shop side. Obvious.\n\nWhy include measurements 1.75 and 0.9? Maybe to determine in which side of corridor \"middle\" is relative to you and whether you can pass if P2 goes window? If both are similar width maybe not. Or maybe it's a trick about \"same side as you are already on?\" Let's map: You are 0.9m from window, width 1.75, so your distance to shop is 0.85. You are actually slightly closer to shop side. If P2 is in middle and goes window, then you're already on shop side, so maybe \"move towards shop side\" to keep clear.\n\nBut could there be an ambiguity in saying \"I'll keep to the window side\" because if P2 is currently in middle and facing you, \"keep to the window side\" might mean their right (window side) vs your left. You know window side. So no.\n\nMaybe the question is designed to test perspective-taking: Person2 says \"I'll keep to the window side\". If you're facing them, the window side is on your left/right? Suppose you are 0.9 m from window side. Person2 is in middle. They say \"I'll keep to the window side\", i.e., they will pass on the window side. If you also move toward window side, collision. So you move shop side. But maybe because they are facing you, \"I'll keep to the window side\" means they will move to your right/left; you should mirror? Let's set: corridor window side is west. You walk north. If P2 goes west/window, they pass on your left? You at x=.9, P2 x=.875; moving west, passes left (if north). You should move east/shop. Yes.\n\nQuestion asks \"Which side do you move towards, the window side or the shop side?\" Probably expects \"shop side\" with sentence \"Because Person 2 has claimed the window side, you should take the opposite side to avoid collision.\" Do we need mention measurement? If answer only word/phrase.\n\nLet's ensure not \"window side\" due to \"Person 2 says I'll keep to the window side\" meaning they remain on the side they are currently near? But P2 is in middle, not near window. If they \"keep to window side\" maybe they intend to hold their course relative to the window? Actually \"keep to the window side\" = move/stay on window side. \n\nLet's consider a subtlety: When walking, if someone coming toward you says \"I'll keep to the window side\", could they mean \"I will stay on the window side of *the corridor*\" but because they are facing you, they may have got left/right wrong? They didn't use left/right. No.\n\nCould \"you are 0.9 m from window side\" mean there's not enough room for two people if one is middle? The width 1.75, person widths maybe 0.6, etc. If P2 keeps window side, you should move shop because you are already near shop? Hmm.\n\nMaybe the puzzle is about \"Person 2 is ... in the middle of corridor, as you are.\" The phrase \"as you are\" might mean Person2 is facing you and walking in middle, just as you are also in middle. But then \"You are 0.9 m from window side\" inconsistent if corridor width 1.75: middle distance from either side is 0.875, so 0.9 approximate. Maybe approximate due rounding. If both in middle, then P2 says they keep window side; you should move to shop side. If both middle, you need pick opposite. Still shop.\n\nLet's produce concise answer. Need first line answer only. Then one sentence why. Ensure exactly format.\n\nPotential issue: if P2 keeps window side, and you are already slightly on shop side, do you \"move towards shop side\" or \"stay/keep to shop side\"? The question asks which side do you move towards. So \"shop side\". One sentence: \"Person 2 is taking the window side, so you should yield to the opposite side to maintain separation.\"\n\nNeed use the window side maybe? The corridor window side maybe to your left or right? We just answer side. Let's final. \n",
+  "finish_reason": "stop",
+  "response_id": "e367ed7b-94f9-42b8-a489-167ff67d338e",
+  "model": "deepseek-flash",
+  "system_fingerprint": "bc19ba97cbe016479903222bb1578db6",
+  "usage": {
+    "prompt_tokens": 163,
+    "completion_tokens": 2379,
+    "prompt_cache_hit_tokens": 0,
+    "prompt_cache_miss_tokens": 163,
+    "reasoning_tokens": 2353
+  },
+  "cost_usd": 0.00145185,
+  "price_tier": "off_peak",
+  "latency_s": 12.5453,
+  "expected": {
+    "correct": [
+      "shop"
+    ],
+    "wrong": [
+      "window"
+    ]
+  },
+  "score": {
+    "first_line": "Shop side",
+    "label": "shop",
+    "outcome": "correct",
+    "ambiguous": false
+  },
+  "api_error": null
+}

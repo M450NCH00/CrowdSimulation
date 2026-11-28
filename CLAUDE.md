@@ -147,6 +147,11 @@ Budget:
   endpoint shows two decimals, and 2.96 less 0.3476 is 2.6124).
   After issue #138's run with its pilot (USD 1.0239 in the ledger over its three experiments, cap 2.00):
   **USD 1.59**, checked 2026-11-27.
+  Checked again before issue #144's stage 1: **USD 1.59**, 2026-11-28 (no paid call since #138).
+  After issue #144's stage 1 with its pilot (USD 0.2106 in the ledger, cap 0.50): **USD 1.38**,
+  checked 2026-11-28.
+  After issue #144's stage 2 pilot (USD 0.7702 in the ledger, cap 1.00): **USD 0.61**,
+  checked 2026-11-28.
 
 ### Phase 1 (on hold): the behaviour dataset
 The task from the first supervisor meeting, on hold since the second meeting.
@@ -238,6 +243,11 @@ The user's notes from the meeting, word for word:
 > 7. Can tell the agent you are supposed to behave like this person, but no need to speak like the person
 > 8. My professor said I can take a look at this and see how they model the agent's decisions: https://labs.ycombinator.com/projects/games/index.html#mindustry-bloopers
 
+*Reported by the user on 2026-11-25, after RF-43, and not part of the notes above:* the supervisor
+also said in this meeting, in the user's words, "we can try to run the experiment with thinking mode
+on". Numbered SV15 (architecture section 8.8; recorded 2026-11-28, issue #144) and acted on in RF-53
+(#144).
+
 **Summary (not the supervisor's words; the notes above are the record):**
 - These are suggestions ("can ..."), not instructions. They are numbered SV7 to SV14 in
   `llm_negotiation/docs/architecture.md`, section 8.8, and are acted on in RF-42 to RF-52
@@ -253,7 +263,7 @@ The user's notes from the meeting, word for word:
     RF-43), the grid's cells and clash rule, when RF-41 runs, and the order of work.
 
 ## Pending sign-offs
-Items 1 and 5 are still pending (item 1 was approved for issues #64, #65, #98, #100, #101, #104, #66, #67, #108, #110, #115, #117, #119, #127, #129, #141 and #138 only).
+Items 1 and 5 are still pending (item 1 was approved for issues #64, #65, #98, #100, #101, #104, #66, #67, #108, #110, #115, #117, #119, #127, #129, #141, #138 and #144 (stage 1 and the stage 2 pilot) only).
 **Do not treat any of them as approved** until the user records the
 supervisor's answer in this file, with a date. Items 2 and 3, the ethics
 sign-offs for perceived attractiveness and real ethnicity, were recorded by the
@@ -385,6 +395,21 @@ used in this track). Numbers in brackets are the decisions of track issue #55.
      at RF-40's measured cost per call (`WORK_LOG-138.md`), run off-peak, a pilot first. The balance was
      USD 2.61. The same day the user accepted RF-47's and RF-48's choices as built and chose to
      counterbalance which colour is at +y at the same size (`resolve_menu_abs_swap_v1`).
+   - **Approved for issue #144 only, stage 1, 2026-11-28:** the user approved paid runs for RF-53's stage 1
+     (#144), RF-43's 20 static probes sent 10 times with thinking off and 10 times with it on, and only for
+     it, choosing "Approve, cap USD 0.50 (Recommended)": a cap of **USD 0.50** on that experiment's own calls
+     (`experiment_name: rf53_stage1_frames_probe`; 400 calls on `deepseek-flash`, about USD 0.08 to 0.50
+     off-peak by reasoning length, `WORK_LOG-144.md`), a 40-call pilot first, run off-peak. The balance was
+     USD 1.59. Earlier the same day the user said budget was no worry for stage 1 ("I can top up some cash
+     later on"). **RF-53's stage 2 is not approved:** it needs its own approval and cap.
+   - **Approved for issue #144 only, stage 2 pilot, 2026-11-28:** after stage 1, the user approved a pilot of
+     RF-53's stage 2 ("Yes, approve the pilot run first"), choosing "USD 1.00 (Recommended)": a cap of
+     **USD 1.00** on that experiment's own calls (`experiment_name: rf53_stage2_pilot_thinking`), and
+     "Repeat 1, with pairs (Recommended)": RF-40's silent sessions, repeat 1 of every cell and geometry and
+     the counterfactual pairs, 80 sessions, with thinking mode on and everything else RF-40's
+     (`configs/resolution/rf53_stage2_pilot_thinking.yaml`; about USD 0.6 to 0.8 off-peak from stage 1's
+     reasoning length, `WORK_LOG-144.md`), run off-peak. The balance was USD 1.38. **The full stage 2 is not
+     approved.**
 2. **Approved by the supervisor, 2026-10-24** — Ethics sign-off for perceived
    attractiveness as a factor (#55, 3). *The user decided on 2026-10-24* that
    attractiveness (both directions) is **in** RF-10's design, because bias can

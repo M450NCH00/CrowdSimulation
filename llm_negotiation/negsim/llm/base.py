@@ -101,6 +101,9 @@ class LLMResponse:
     failed_attempts: int = 0  # sends that failed before this reply arrived
     cost_usd: float = 0.0
     price_tier: Optional[str] = None
+    #: Issue #144 (RF-53): the model's reasoning (DeepSeek's ``message.reasoning_content``), returned
+    #: only in thinking mode; ``None`` with thinking off, so the records of such calls are unchanged.
+    reasoning_content: Optional[str] = None
 
 
 class LLMClient(ABC):

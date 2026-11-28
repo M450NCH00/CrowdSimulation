@@ -65,6 +65,25 @@ nothing in `llm_negotiation/` reads it.
 | HTTP client | Python standard library (`urllib`), not the `openai` package | **design decision** | One endpoint is used. No SDK version to pin, and only `negsim/llm/deepseek.py` ever handles the header that carries the key. |
 | Transport retries | 2 retries, on 429, 500, 503 and network errors | **design decision** | The documented advice for those codes. 400, 401, 402 and 422 abort the experiment. |
 
+### Thinking mode, re-checked on 2026-11-28 (issue #144, RF-53)
+
+Read on 2026-11-28 from `/guides/thinking_mode`, `/api/create-chat-completion` and
+`/quick_start/pricing`, cached in `refs/ln_deepseek_thinking_mode_docs_2026-11-28.txt`.
+
+| Fact | Value |
+|---|---|
+| The reasoning text | Returned as `message.reasoning_content`, "at the same level as content". |
+| Sending it back | Without `tools` it "does not need to be passed back; even if passed to the API, it will be ignored". negsim sends no `tools`, and its protocols send back only the parsed reply. |
+| Ignored parameters | `temperature`, `presence_penalty` and `frequency_penalty`: they "will not trigger an error but will also have no effect". `top_p` takes effect only in thinking mode (0.95 to 1.0). |
+| Effort | `reasoning_effort`: `none`, `low`, `high`, `max`; "The default effort is high". negsim does not send it. |
+| `max_tokens` | "The maximum number of tokens that can be generated"; default 8K without thinking, 64K with it (128K at `max`). The page does not say outright that the reasoning counts, but the larger default implies it `[inference]`: RF-53 gives thinking-on calls a cap of 8,000 and checks `finish_reason` in its pilot. |
+| Model and prices | `deepseek-flash` is `DeepSeek-V4.1-Flash-1017`; prices as in `configs/llm/deepseek_pricing.yaml` (unchanged). Peak hours are 01:00 to 04:00 and 06:00 to 10:00 UTC, **Monday to Friday** only. |
+
+**Since issue #144 the reasoning text is kept.** `DeepSeekClient` reads `reasoning_content` into
+`LLMResponse.reasoning_content`, and an attempt record (`negotiation.protocol.Attempt`) gains a
+`reasoning_content` key **only when there is a text**, so a record with thinking off is exactly as
+before. The mock client returns a fixed reasoning text when thinking is on.
+
 `negsim/llm/base.py` defines the client interface. `DeepSeekClient` and `MockClient`
 implement it, and nothing else in the code base knows which one it has. Any other
 OpenAI-compatible provider would be a third implementation of the same interface, or the

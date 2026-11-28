@@ -1,0 +1,58 @@
+{
+  "record_version": 1,
+  "experiment_name": "rf53_stage1_frames_probe",
+  "call_id": "thinking_on/p14_r07",
+  "arm": "thinking_on",
+  "thinking": true,
+  "probe_id": "p14",
+  "group": "E",
+  "kind": "wall",
+  "repeat": 7,
+  "probes_sha256": "6a2986651f1afa2b41109138375b20a430ee4533d9760c5486fb58f0320c4052",
+  "started_utc": "2026-11-28T04:02:23.979+00:00",
+  "messages": [
+    {
+      "role": "user",
+      "content": "You are walking along a straight corridor 1.75 m wide. Another person, Person 2, is walking towards you, facing you, 6 m ahead, in the middle of the corridor, as you are. The corridor has two long walls, the north wall and the south wall. You are 0.9 m from the north wall. Person 2 says: \"I'll keep to the south wall.\" Which wall do you move towards, the north wall or the south wall?\n\nAnswer on the first line with your answer only (a word, a short phrase or a lane number), then give one sentence saying why on the next line."
+    }
+  ],
+  "request": {
+    "model": "deepseek-flash",
+    "temperature": 1.0,
+    "max_tokens": 8000,
+    "json_mode": false,
+    "thinking": true
+  },
+  "is_mock": false,
+  "raw_output": "North wall\nBecause Person 2 is moving to the south wall, I should move to the opposite—the north wall—to pass safely.",
+  "reasoning_content": "We need answer. Need reason carefully. This is likely perspective/spatial. Corridor width 1.75 m. We are walking along straight corridor, another person facing us, 6 m ahead, in middle of corridor, as you are. Wait \"as you are\" means Person2 also in middle? Let's parse: \"Another person, Person 2, is walking towards you, facing you, 6 m ahead, in the middle of the corridor, as you are.\" Could mean Person2 is in middle, as are you? But earlier \"You are 0.9 m from north wall.\" Width 1.75, middle is 0.875 from north. 0.9 approx middle. So both in middle.\n\nPerson2 says: \"I'll keep to the south wall.\" Which wall do you move towards, north or south? This is classic: when someone says \"I'll keep to the south wall\" but they are facing you, their left/right? Wait they explicitly use south wall, not \"my right\". But there might be issue with perspective: Person2 facing you; their south wall may be other side? Actually no, wall labels fixed. If Person2 says \"I'll keep to the south wall,\" he means he moves toward the corridor's south wall (physical south). Since he is approaching you, he will move to your left or right? Need coordinate.\n\nWe need avoid collision. You are 0.9m from north, near middle. Person2 ahead in middle, facing you. They will keep to south wall (their side? Wait when facing you, Person2's left/right reversed relative to you but \"south wall\" is fixed, unless \"south\" from their perspective? South wall is corridor's wall. If physical south wall is on your right or left depending direction? Need draw.\n\nWe are walking along corridor; let's set you moving north? Or along east-west? Need define north wall/south wall. Corridor likely extends east-west, walls north/south. You and Person2 walking along corridor toward each other. Let you walk east, Person2 west? Need determine which wall is on your left/right. Let's set north wall is left or right? Coordinate: x east, y north. Corridor width in y (north-south). You walk along x. If you walk east, north is left (since facing east, left is north). Person2 facing west, his left is south. If you walk west, north is right. Doesn't matter physical \"south wall\" fixed.\n\nYou are 0.9 m from north wall, corridor width 1.75 so distance from south = 0.85. Nearly center, slightly closer south. Person2 initially \"in middle, as you are\" contradictory with 0.9? 0.9 approx middle. Person2 says keep to south wall. They move toward south wall. Which wall should you move toward to let pass? If Person2 goes to south wall, you should go to north wall, because opposite sides. But wait classic \"passing on the right\" or perspective of face-to-face? Let's examine.\n\nIf Person2 (coming towards you) goes to the south wall, that is on your (if east) right (south is right when facing east? Wait facing east, coordinate: east x+, north y+. Right-hand side when facing east is south? Let's compute: facing vector (1,0), left vector (0,1) north, right vector (0,-1) south. Yes if you head east, south is your right. Person2 heading west, south is his left. If he keeps to south (his left), he'll pass on your right? If you also move to? To avoid, you should keep to north (your left), passing left-to-left? Let's simulate.\n\nCorridor cross-section y (north-south). You at y≈0.85 from south? Let's use y=0 at south wall, north at 1.75. You at distance from north=0.9 => y=0.85 (almost center). Person2 initially at center y=0.875 and moving toward south wall (decreasing y). You want choose wall. If he moves to y small near south wall. To maximize separation, you go north (y high). So answer north. But question wording: Person2 says \"I'll keep to the south wall.\" Which wall do you move towards? Usually you should move towards opposite wall (north). However, potential trick: If Person 2 says \"I'll keep to the south wall\" while facing you, \"south wall\" could be from your perspective? No, anthropocentric? Let's parse \"The corridor has two long walls, the north wall and the south wall. You are 0.9 m from the north wall. Person 2 says: \"I'll keep to the south wall.\" Which wall do you move towards, the north wall or the south wall?\" This might be a problem about ambiguous reference frames? It explicitly names north/south to avoid left/right. The correct action: Person 2 keeps to the south wall; you should move towards north wall to give room. But maybe subtle geometry: You are 0.9 m from north wall—what side is that? With width 1.75, center is 0.875, so you're 0.025m from center toward north? Actually distance from north 0.9, so closer to south? Wait if width=1.75, distance from north=0.9, distance from south=0.85. Since distance to north > distance to south, you are slightly closer to south. But negligible. If Person2 (6 m ahead) says \"I'll keep to south wall.\" Since he is facing you, his notion of \"south wall\" from his orientation? No.\n\nMaybe the key is \"walking towards you, facing you, in the middle of the corridor, as you are\" and \"I'll keep to the south wall.\" When facing you, Person2's \"south\" could be your north? Wait if a person says \"I'll keep to the south wall,\" they are referencing the wall as named by you? Or perhaps when facing opposite, their perception of north/south might reverse if they don't know compass? But \"south wall\" is objective; they know which wall is south. Unless the phrase \"I'll keep to the south wall\" means \"my south wall\" (the wall on my left? no). The answer could be: move north wall because Person2 goes to the south wall, so use opposite side. The sentence: \"Since Person 2 is taking the south side, I should take the north side to pass safely.\" Need first line only answer. Should I answer \"north wall\" or \"North\". The question: \"Which wall do you move towards, the north wall or the south wall?\" Answer \"North wall\" maybe. First line only answer. Then one sentence why.\n\nBut wait let's not rush. This might be a puzzle about convention when walking in corridor: Keep left vs right. If someone coming towards you says \"I'll keep to the south wall,\" which way do you move? If they keep to south wall, you should keep to north wall regardless of facing. Yes.\n\nHowever, possible issue: Person 2 is \"6 m ahead, in the middle of the corridor, as you are.\" If you're both in middle, to pass, one goes to a wall. Person2 says \"I'll keep to the south wall.\" But you are 0.9 m from north wall, so your current position is almost middle, slightly closer to south? If you move north, you have 0.9 m space to north. If move south, you have 0.85 m to south. But Person2 will occupy south, so no.\n\nWhat if Person2 is facing you, so when he says \"I'll keep to the south wall,\" he will physically be moving to *your* right (since south is on your right if you walk in one direction). If he moves south, you should move south, not north, to follow \"keep left\" convention? Let's map actual walking directions not specified. Suppose corridor long axis east-west. Could be you are walking west, Person2 east. If you walk west, north is right, south is left. Person2 facing you (east), south is his right. He moves to south wall (his right). You moving west, south is your left. To avoid, should you move? Again physical opposite side is north. But \"keep left\" might mean you move south (your left) while he keeps right? Let's simulate: you heading west, at y center. Person2 heading east. He moves to south (y=0) (his right). If you choose south (y=0) too, collision; if north y=1.75, separation. So opposite wall.\n\nThus answer north.\n\nNeed final exactly first line answer only; second line one sentence. Ensure no extra. Could use \"North wall\" first line. Second line sentence.",
+  "finish_reason": "stop",
+  "response_id": "2824b3c5-d2f3-4045-9de9-02f6f964d15b",
+  "model": "deepseek-flash",
+  "system_fingerprint": "bc19ba97cbe016479903222bb1578db6",
+  "usage": {
+    "prompt_tokens": 163,
+    "completion_tokens": 1938,
+    "prompt_cache_hit_tokens": 0,
+    "prompt_cache_miss_tokens": 163,
+    "reasoning_tokens": 1908
+  },
+  "cost_usd": 0.00118725,
+  "price_tier": "off_peak",
+  "latency_s": 10.5357,
+  "expected": {
+    "correct": [
+      "north"
+    ],
+    "wrong": [
+      "south"
+    ]
+  },
+  "score": {
+    "first_line": "North wall",
+    "label": "north",
+    "outcome": "correct",
+    "ambiguous": false
+  },
+  "api_error": null
+}

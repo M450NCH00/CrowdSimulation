@@ -1,0 +1,58 @@
+{
+  "record_version": 1,
+  "experiment_name": "rf53_stage1_frames_probe",
+  "call_id": "thinking_on/p14_r10",
+  "arm": "thinking_on",
+  "thinking": true,
+  "probe_id": "p14",
+  "group": "E",
+  "kind": "wall",
+  "repeat": 10,
+  "probes_sha256": "6a2986651f1afa2b41109138375b20a430ee4533d9760c5486fb58f0320c4052",
+  "started_utc": "2026-11-28T04:14:17.202+00:00",
+  "messages": [
+    {
+      "role": "user",
+      "content": "You are walking along a straight corridor 1.75 m wide. Another person, Person 2, is walking towards you, facing you, 6 m ahead, in the middle of the corridor, as you are. The corridor has two long walls, the north wall and the south wall. You are 0.9 m from the north wall. Person 2 says: \"I'll keep to the south wall.\" Which wall do you move towards, the north wall or the south wall?\n\nAnswer on the first line with your answer only (a word, a short phrase or a lane number), then give one sentence saying why on the next line."
+    }
+  ],
+  "request": {
+    "model": "deepseek-flash",
+    "temperature": 1.0,
+    "max_tokens": 8000,
+    "json_mode": false,
+    "thinking": true
+  },
+  "is_mock": false,
+  "raw_output": "North wall  \nBecause Person 2 is keeping to the south wall, you should move to the opposite (north) side to pass safely.",
+  "reasoning_content": "We need answer. Need parse spatial. Corridor width 1.75, north/south walls. You are 0.9 m from north wall, so from south 0.85 m. Walking along straight corridor, another person 6m ahead in middle? Wait \"as you are\" maybe both in middle? Let's parse: \"Another person, Person 2, is walking towards you, facing you, 6 m ahead, in the middle of the corridor, as you are.\" Means you are both in middle? But then says you are 0.9m from north wall. Contradiction? Maybe corridor has two lanes? Need determine convention based on left/right traffic? Person 2 says \"I'll keep to the south wall.\" Which wall do you move towards? This is a social coordination / perspective question.\n\nLet's parse carefully. Corridor 1.75 m wide, two long walls north and south. Person 2 walking towards you, facing you, 6 m ahead, in the middle of corridor, as you are. \"as you are\" could mean Person 2 is facing you, as you are [facing them]? Hmm. You are 0.9 m from north wall. Person 2 says \"I'll keep to the south wall.\" Which wall do you move towards, north or south?\n\nPotential trick: If Person 2 keeps to south wall (from their perspective?) But walls are fixed north/south, not perspective. To pass safely, you should move toward north wall (away from their chosen south wall). But need consider your current offset: You're already 0.9 m from north, 0.85 m from south, almost center. Person 2 in middle. If they go south, you should go north. Seems simple.\n\nBut maybe there is ambiguity about Person 2's left/right due to facing opposite: \"I'll keep to the south wall\" from their point of view? Walls named north/south fixed, so no. Unless \"south wall\" spoken by person 2 is their left/right? They might call a wall south based on body orientation? \"north wall and south wall\" are fixed terms. Person 2 can say south wall objectively.\n\nBut possible hidden issue: Person 2 says \"I'll keep to the south wall\" but is facing you. When someone says \"keep to the south wall\", they might mean their left? But answer asks which wall do you move towards. If P2 takes south wall, you should take north wall to avoid collision. You are 0.9 m from north wall, so moving north wall is shorter? Actually from current position, north wall 0.9 away, south 0.85; but to give space, you move north because P2 south. \n\nHowever there might be an ambiguity: In UK walking convention, pass on left? But not needed.\n\nNeed final first line answer only, then sentence why. Ensure first line \"North wall\" or \"North\". They request a word/short phrase/lane number. \"North wall\". Second line one sentence. \n\nLet's craft concise. \nNeed maybe mention because Person 2 will occupy south side, moving north gives separation. \nFinal.",
+  "finish_reason": "stop",
+  "response_id": "a916a3fc-18dc-47a8-b2c9-a2ba47a6ca78",
+  "model": "deepseek-flash",
+  "system_fingerprint": "bc19ba97cbe016479903222bb1578db6",
+  "usage": {
+    "prompt_tokens": 163,
+    "completion_tokens": 699,
+    "prompt_cache_hit_tokens": 0,
+    "prompt_cache_miss_tokens": 163,
+    "reasoning_tokens": 669
+  },
+  "cost_usd": 0.00044385,
+  "price_tier": "off_peak",
+  "latency_s": 3.7733,
+  "expected": {
+    "correct": [
+      "north"
+    ],
+    "wrong": [
+      "south"
+    ]
+  },
+  "score": {
+    "first_line": "North wall",
+    "label": "north",
+    "outcome": "correct",
+    "ambiguous": false
+  },
+  "api_error": null
+}

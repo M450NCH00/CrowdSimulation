@@ -1,0 +1,58 @@
+{
+  "record_version": 1,
+  "experiment_name": "rf53_stage1_frames_probe",
+  "call_id": "thinking_on/p01_r07",
+  "arm": "thinking_on",
+  "thinking": true,
+  "probe_id": "p01",
+  "group": "A",
+  "kind": "side",
+  "repeat": 7,
+  "probes_sha256": "6a2986651f1afa2b41109138375b20a430ee4533d9760c5486fb58f0320c4052",
+  "started_utc": "2026-11-28T03:59:21.469+00:00",
+  "messages": [
+    {
+      "role": "user",
+      "content": "You are walking along a straight corridor 1.75 m wide. Another person, Person 2, is walking towards you, facing you, 6 m ahead, in the middle of the corridor, as you are. Person 2 says: \"I'll keep to my left.\" Which way do you move, left or right?\n\nAnswer on the first line with your answer only (a word, a short phrase or a lane number), then give one sentence saying why on the next line."
+    }
+  ],
+  "request": {
+    "model": "deepseek-flash",
+    "temperature": 1.0,
+    "max_tokens": 8000,
+    "json_mode": false,
+    "thinking": true
+  },
+  "is_mock": false,
+  "raw_output": "Left\nPerson 2 is facing me, so their left is my right; I should keep to my own left to pass on the opposite side.",
+  "reasoning_content": "We need answer. Need parse ambiguity perspective. Corridor, person 2 walking towards you, facing you, 6m ahead, in middle, as you are. Person2 says \"I'll keep to my left.\" Which way do you move, left or right? Need answer first line only word/short phrase/lane number, then one sentence why.\n\nThis is classic \"my left\" ambiguity. Person 2 faces you, so their left is your right. If they keep to their left, they move to your right (from your perspective). To avoid collision, you should keep to your left? Let's visualize.\n\nCorridor width 1.75, two people approaching. Person 2 says \"I'll keep to my left.\" If person2 moves to their left. Since they face you, their left corresponds to your right side. Thus they will occupy your right side of corridor. You should move to your left to pass on opposite sides. But wait conventional: both keep to their own left? If both keep to their left, they move to opposite sides? Let's coordinate.\n\nLet me define from my facing direction (north). Corridor width x left-right from my perspective. I walk north. Person2 walks south facing south. Their left is east? Need body orientation: If facing south, left hand points east (from my perspective right). Yes person2's left = my right.\n\nIf person2 keeps to his left, person2 shifts east/right from my perspective. I should choose left (west) to avoid. So answer left.\n\nBut possible puzzle: \"Which way do you move, left or right?\" Relative to you? answer right? Let's carefully parse: Person2 says \"I'll keep to my left.\" Since facing you, the person's left is your right. If they keep to their left, they move to your right. To avoid, you should move to your right? Wait if they move to your right, maybe you move to your left indeed to separate. Let's simulate positions: Corridor x: left from my POV = -1, right=+1. My initial x=0. Person2 initial x=0, y=6. I move north y increasing; Person2 south y decreasing. Person2 moves to their left: facing south, left is east? Assume east/right from my POV = +. They shift x=+0.5. I should shift opposite x=-0.5 (my left). They pass with person2 on my right and me on my left. Yes.\n\nBut if rule traffic says \"keep to your left\", both shift according to own left: I move left x=-, person2 (their left) x=+ -> safe. So answer: move to my left.\n\nNeed one sentence why next line. Must be exactly first line answer only, second sentence. Could say \"Left.\" first line? They said answer only (a word, short phrase, or lane number). \"Left\" okay. Then \"Person 2’s left is your right, so you should keep to your own left to pass on the opposite side.\" This is one sentence.\n\nNeed consider lane number? corridor 1.75 m wide maybe not relevant? Could answer \"Left lane.\" Short phrase. First line \"Left.\" second line sentence.\n\nEnsure no extra.",
+  "finish_reason": "stop",
+  "response_id": "ed0ea596-8590-4d3d-ba2d-b296374d2d45",
+  "model": "deepseek-flash",
+  "system_fingerprint": "bc19ba97cbe016479903222bb1578db6",
+  "usage": {
+    "prompt_tokens": 130,
+    "completion_tokens": 715,
+    "prompt_cache_hit_tokens": 0,
+    "prompt_cache_miss_tokens": 130,
+    "reasoning_tokens": 684
+  },
+  "cost_usd": 0.0004485,
+  "price_tier": "off_peak",
+  "latency_s": 4.2943,
+  "expected": {
+    "correct": [
+      "left"
+    ],
+    "wrong": [
+      "right"
+    ]
+  },
+  "score": {
+    "first_line": "Left",
+    "label": "left",
+    "outcome": "correct",
+    "ambiguous": false
+  },
+  "api_error": null
+}
