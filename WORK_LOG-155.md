@@ -142,11 +142,46 @@ Decided by the user on 2026-11-28:
 - Decision [mine, within the approved plan]: nothing to fix; the remaining 248 started 11:00:07 UTC
   (resuming the same folder, `stop_at_cap`).
 
+### 2026-11-28 11:45 UTC — the full suite (while the run goes on)
+- `llm_negotiation/tests`: **2,525 passed, 22 skipped** (42 min); `analysis/tests`: **138 passed**.
+  Both at commit `3a1753abf`.
+
+### 2026-11-28 12:45 UTC — the run is complete (272 of 272), compared with RF-40
+- The remaining 248: 11:00:07 to 12:40:03 UTC. No sleep events (Kernel-Power 506/507) in the last 3 h.
+- **Spend:** USD 0.3512 in the ledger (2,134 lines with the pilot's 211, all off-peak, no error), cap
+  USD 0.60, below the estimate (0.38 to 0.46). Balance (`GET /user/balance`): **USD 5.26** (5.61 before).
+  Recorded in `CLAUDE.md`'s Budget.
+- Analysis: `analysis.compare` (repeat 1) and `runs/rf54_round1_head_on_sideways_gap/analysis/rf54_tables.py`
+  (all 256 design sessions, RF-40's own churn, `analysis.start_walls`, the reaction after both moved
+  the same way). Written up in `runs/rf54_round1_head_on_sideways_gap/comparison_report.md`.
+- Result: resolved 191/256 against 163/256 (McNemar p = 0.009; RF-40's repeats against each other,
+  p 0.18 to 0.85); 20 cm apart 0.56 to 0.73 (p = 0.011), aligned 0.71 to 0.77 (p = 0.37). Repeat 1
+  alone 47/64 against 42/64 (p = 0.50). Same-wall starts recovered 0.55 against 0.40 (Fisher p = 0.037).
+  Both towards the same wall when level, 61 to 39. Dances: 2 of RF-54's same-wall starts, 0 of RF-40's.
+- Decisions of mine (to check):
+  - **Starts are not held equal.** Decision 1's prompt is identical, but its reply is sampled, so RF-54
+    drew fewer same-wall starts (97 against 111, p = 0.24). I estimated the share of the gain from the
+    starts by swapping the per-start rates: about 7 of 28 sessions. This is an estimate, not a test.
+  - **The reaction measure** is from the `plan_only` replay's positions, the same in both runs: a
+    decision after both moved 0.1 m or more towards the same wall since that person's last decision.
+    Stepping back rose only from 0.12 to 0.17 (p = 0.16); the replies were not read one by one.
+- The confound found at 08:51 stands: on short lines `resolve_v11` also says the other moved at all.
+- Next step: commit, push, open the PR (closes #155).
+
 ## Open questions / risks
-- Both may correct at the same pause (the dance), as 6 of the pilot's 10 same-wall failures did. The
-  cue may raise recoveries and the dance together.
+- The dance stayed rare (2 of 97 same-wall starts); the worry above did not happen at this size.
+- Which half of `resolve_v11` helped: the other's move on short lines, or the gap numbers. A template
+  with only the first would separate them (about USD 0.35), not decided.
 - The gap is centre to centre; the agent must compare it with the two widths itself. Saying how much
   room they need would be a second change (left out on purpose).
 - People do the pavement dance too (inference, to check against RF-14's studies).
 
 ## Summary (fill in at the end)
+- **Built:** `resolve_v11` (frozen), the gap measure (`Sideways`, `Body.path_rad`, `sideways_since`,
+  only under `sideways_gap: true`), its config and tests, `analysis/start_walls.py`. Earlier templates
+  and configs record exactly as before (tested; full suite 2,525 passed, 22 skipped; analysis 138).
+- **Run:** paid, USD 0.3512 of a USD 0.60 cap, 272 sessions, balance USD 5.26.
+- **Found:** RF-53's swap was mostly a same-wall start. With the cue, RF-40's silent sessions resolved
+  0.75 against 0.64 (p = 0.009), and same-wall starts recovered 0.55 against 0.40; the per-decision
+  reaction moved less (0.12 to 0.17, not significant). The cue also adds the other's move on short lines,
+  so the two causes are not separated.
