@@ -261,7 +261,7 @@ on". Numbered SV15 (architecture section 8.8; recorded 2026-11-28, issue #144) a
     RF-43), the grid's cells and clash rule, when RF-41 runs, and the order of work.
 
 ## Pending sign-offs
-Items 1 and 5 are still pending (item 1 was approved for issues #64, #65, #98, #100, #101, #104, #66, #67, #108, #110, #115, #117, #119, #127, #129, #141, #138 and #144 (stage 1) only).
+Items 1 and 5 are still pending (item 1 was approved for issues #64, #65, #98, #100, #101, #104, #66, #67, #108, #110, #115, #117, #119, #127, #129, #141, #138 and #144 (stage 1 and the stage 2 pilot) only).
 **Do not treat any of them as approved** until the user records the
 supervisor's answer in this file, with a date. Items 2 and 3, the ethics
 sign-offs for perceived attractiveness and real ethnicity, were recorded by the
@@ -400,6 +400,14 @@ used in this track). Numbers in brackets are the decisions of track issue #55.
      off-peak by reasoning length, `WORK_LOG-144.md`), a 40-call pilot first, run off-peak. The balance was
      USD 1.59. Earlier the same day the user said budget was no worry for stage 1 ("I can top up some cash
      later on"). **RF-53's stage 2 is not approved:** it needs its own approval and cap.
+   - **Approved for issue #144 only, stage 2 pilot, 2026-11-28:** after stage 1, the user approved a pilot of
+     RF-53's stage 2 ("Yes, approve the pilot run first"), choosing "USD 1.00 (Recommended)": a cap of
+     **USD 1.00** on that experiment's own calls (`experiment_name: rf53_stage2_pilot_thinking`), and
+     "Repeat 1, with pairs (Recommended)": RF-40's silent sessions, repeat 1 of every cell and geometry and
+     the counterfactual pairs, 80 sessions, with thinking mode on and everything else RF-40's
+     (`configs/resolution/rf53_stage2_pilot_thinking.yaml`; about USD 0.6 to 0.8 off-peak from stage 1's
+     reasoning length, `WORK_LOG-144.md`), run off-peak. The balance was USD 1.38. **The full stage 2 is not
+     approved.**
 2. **Approved by the supervisor, 2026-10-24** — Ethics sign-off for perceived
    attractiveness as a factor (#55, 3). *The user decided on 2026-10-24* that
    attractiveness (both directions) is **in** RF-10's design, because bias can
